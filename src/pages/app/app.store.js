@@ -5,12 +5,13 @@ export const INITIAL_STATE = Object.freeze({
 export const selectShowSidebar = (state, props, payload) => {
   const currentRoutePattern = selectCurrentRoutePattern(state, props, payload);
   const routesWithNavBar = [
-    "/projects/:projectId",
-    "/projects/:projectId/resources",
-    "/projects/:projectId/cgs",
-    "/projects/:projectId/backgrounds",
-    "/projects/:projectId/scenes",
-    "/projects/:projectId/scenes/:sceneId/editor",
+    "/project",
+    "/projects",
+    "/project/resources",
+    "/project/cgs",
+    "/project/resources/backgrounds",
+    "/project/scenes",
+    "/project/scene/editor",
   ];
   console.log({
     currentRoutePattern,
@@ -21,13 +22,14 @@ export const selectShowSidebar = (state, props, payload) => {
 
 export const selectCurrentRoutePattern = (state, props, payload) => {
   const routePatterms = [
+    "/project",
     "/projects",
-    "/projects/:projectId",
-    "/projects/:projectId/resources",
-    "/projects/:projectId/cgs",
-    "/projects/:projectId/backgrounds",
-    "/projects/:projectId/scenes",
-    "/projects/:projectId/scenes/:sceneId/editor",
+    "/projects/",
+    "/project/resources",
+    "/project/cgs",
+    "/project/resources/backgrounds",
+    "/project/scenes",
+    "/project/scene/editor",
   ];
   const currentRoute = state.currentRoute;
   const matchPaths = (path, pattern) => {
@@ -52,7 +54,6 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
 
 export const setCurrentRoute = (state, payload) => {
   state.currentRoute = payload;
-  return state;
 };
 
 export const toViewData = ({ state, props }, payload) => {

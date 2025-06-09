@@ -19,9 +19,9 @@ dataSchema:
 refs: {}
 
 template:
-  - rtgl-view w=f h=f p=m:
+  - rtgl-view w=f h=f p=md:
       - rtgl-text s=h2: Projects
-      - rtgl-view mt=m g=s:
+      - rtgl-view mt=md g=s:
           - rtgl-view:
               - rtgl-text s=lg: Project Name
               - rtgl-text s=sm: ${project.name}

@@ -14,19 +14,19 @@ refs: {}
 template:
   - rtgl-view d=h w=f h=f:
     - $if showSidebar:
-        - sidebar-component: []
+        - rvn-sidebar: []
     - rtgl-view w=f h=f:
       - $if currentRoutePattern == "/projects":
           - rvn-projects: []
-        $elif currentRoutePattern == "/projects/:projectId":
+        $elif currentRoutePattern == "/project":
           - rvn-project: []
-        $elif currentRoutePattern == "/projects/:projectId/resources":
+        $elif currentRoutePattern == "/project/resources":
           - rvn-resources: []
-        $elif currentRoutePattern == "/projects/:projectId/cgs":
+        $elif currentRoutePattern == "/project/cgs":
           - rvn-cgs: []
-        $elif currentRoutePattern == "/projects/:projectId/backgrounds":
+        $elif currentRoutePattern == "/project/resources/backgrounds":
           - rvn-backgrounds: []
-        $elif currentRoutePattern == "/projects/:projectId/scenes":
+        $elif currentRoutePattern == "/project/scenes":
           - rvn-scenes: []
-        $elif currentRoutePattern == "/projects/:projectId/scenes/:sceneId/editor":
+        $elif currentRoutePattern == "/project/scene/editor":
           - rvn-scene-editor: []
