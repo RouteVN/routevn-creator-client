@@ -1,0 +1,48 @@
+elementName: rvn-steps-editor
+
+dataSchema:
+  type: object
+  properties:
+    selectedStepId:
+      type: string
+
+propsSchema:
+  type: object
+  properties:
+    steps:
+      type: array
+      items:
+        type: object
+        properties:
+
+refs:
+  step-*:
+    eventListeners:
+      focus:
+        handler: handleOnFocus
+      # input:
+      #   handler: handleOnInput
+      # mousedown:
+      #   handler: handleBlockMouseDown
+      # mouseup:
+      #   handler: handleBlockMouseUp
+      # beforeinput:
+      #   handler: handleBlockBeforeInput
+      # compositionend:
+      #   handler: handleBlockCompositionEnd
+      # compositionstart:
+      #   handler: handleBlockCompositionStart
+      keydown:
+        handler: handleStepKeyDown
+
+template:
+  - rtgl-view w=f h=f p=m:
+    - rtgl-view w=f h=f p=m:
+      - $for step, i in steps:
+          - rtgl-view d=h w=f:
+            - $if selectedStepId == step.id:
+                - rtgl-view h=40 w=2 bgc=ac mr=m:
+              $else:
+                - rtgl-view h=40 w=2 mr=m:
+            - 'div#step-${step.id} style="width: 100%;" contenteditable=true':
+              - 'span style="font-size: 36px;"': Test Data

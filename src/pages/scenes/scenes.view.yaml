@@ -1,0 +1,17 @@
+elementName: rvn-scenes
+
+dataSchema:
+  type: object
+  properties: {}
+
+refs:
+  title:
+    eventListeners:
+      click:
+        required: true
+        handler: handleTitleClick
+
+template:
+  - rtgl-view w=f h=f p=m:
+    - rtgl-text#title s=h2: Scenes
+    - file-explorer-component: []

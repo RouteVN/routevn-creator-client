@@ -1,0 +1,155 @@
+html {
+  height: 100%;
+  margin: 0;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+:root {
+  --width-stretch: 100%;
+}
+
+/* Override in supported browsers */
+@supports (width: -webkit-fill-available) {
+  :root {
+    --width-stretch: -webkit-fill-available;
+  }
+}
+@supports (width: -moz-available) {
+  :root {
+    --width-stretch: -moz-available;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari */
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, -apple-system, "Helvetica Neue", sans-serif;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+:root {
+  --spacing-xs: 2px;
+  --spacing-sm: 4px;
+  --spacing-md: 8px;
+  --spacing-lg: 16px;
+  --spacing-xl: 32px;
+
+  --border-radius-xs: 1px;
+  --border-radius-sm: 2px;
+  --border-radius-md: 4px;
+  --border-radius-lg: 8px;
+  --border-radius-xl: 16px;
+  --border-radius-f: 50%;
+
+  --border-width-xs: 1px;
+  --border-width-sm: 2px;
+  --border-width-md: 4px;
+  --border-width-lg: 8px;
+  --border-width-xl: 16px;
+
+  --shadow-sm: 0px 2px 6px rgba(0, 0, 0, .45), 0px 3px 5px rgba(0, 0, 0, .35), inset 0px .5px 0px rgba(255, 255, 255, .08), inset 0px 0px .5px rgba(255, 255, 255, .35);
+  --shadow-md: 0px 5px 12px rgba(0, 0, 0, .45), 0px 3px 5px rgba(0, 0, 0, .35), inset 0px .5px 0px rgba(255, 255, 255, .08), inset 0px 0px .5px rgba(255, 255, 255, .35);
+  --shadow-lg: 0px 10px 24px rgba(0, 0, 0, .45), 0px 3px 5px rgba(0, 0, 0, .35), inset 0px .5px 0px rgba(255, 255, 255, .08), inset 0px 0px .5px rgba(255, 255, 255, .35);
+
+  --h1-font-size: 3rem;
+  --h1-font-weight: 800;
+  --h1-line-height: 1;
+  --h1-letter-spacing: -.025em;
+
+  --h2-font-size: 1.875rem;
+  --h2-font-weight: 600;
+  --h2-line-height: 2.25rem;
+  --h2-letter-spacing: -.025em;
+
+  --h3-font-size: 1.5rem;
+  --h3-font-weight: 600;
+  --h3-line-height: 2rem;
+  --h3-letter-spacing: -.025em;
+
+  --h4-font-size: 1.25rem;
+  --h4-font-weight: 600;
+  --h4-line-height: 1.75rem;
+  --h4-letter-spacing: -.025em;
+
+  --lg-font-size: 1.125rem;
+  --lg-font-weight: 400;
+  --lg-line-height: 1.75rem;
+  --lg-letter-spacing: normal;
+
+  --md-font-size: 1rem;
+  --md-font-weight: normal;
+  --md-line-height: 1.5rem;
+  --md-letter-spacing: normal;
+
+  --sm-font-size: .875rem;
+  --sm-font-weight: 400;
+  --sm-line-height: 1;
+  --sm-letter-spacing: normal;
+
+  --xs-font-size: .75rem;
+  --xs-font-weight: normal;
+  --xs-line-height: 1;
+  --xs-letter-spacing: normal;
+
+
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.145 0 0);
+
+  /* surface color */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+
+  /* item hovered color */
+  /* can also be used with opacity 0.5 for hover */
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+
+  /* item selected color */
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+
+  /* border/outline */
+  --border: oklch(0.922 0 0);
+
+  /* background of text inputs */
+  --input: oklch(0.922 0 0);
+
+  /* ring of text inputs */
+  --ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.305 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}

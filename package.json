@@ -8,6 +8,7 @@
     "jsdom": "^26.1.0",
     "json-e": "^4.8.0",
     "nanoid": "^5.1.5",
+    "rettangoli-fe": "^0.0.1",
     "rxjs": "^7.8.2",
     "slate": "^0.114.0",
     "snabbdom": "^3.6.2",
@@ -15,6 +16,6 @@
     "vite": "^6.3.5"
   },
   "scripts": {
-    "dev": "node watch.js --watch"
+    "build": "rm -rf _site && cp -r static _site && bun run ../rettangoli/packages/rettangoli-cli/cli.js fe build"
   }
 }

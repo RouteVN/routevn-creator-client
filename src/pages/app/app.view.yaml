@@ -1,0 +1,32 @@
+elementName: rvn-app
+
+dataSchema:
+  type: object
+  properties:
+    currentRoutePattern:
+      type: string
+      default: '/projects'
+    showSidebar:
+      type: boolean
+      default: true
+refs: {}
+
+template:
+  - rtgl-view d=h w=f h=f:
+    - $if showSidebar:
+        - sidebar-component: []
+    - rtgl-view w=f h=f:
+      - $if currentRoutePattern == "/projects":
+          - rvn-projects: []
+        $elif currentRoutePattern == "/projects/:projectId":
+          - rvn-project: []
+        $elif currentRoutePattern == "/projects/:projectId/resources":
+          - rvn-resources: []
+        $elif currentRoutePattern == "/projects/:projectId/cgs":
+          - rvn-cgs: []
+        $elif currentRoutePattern == "/projects/:projectId/backgrounds":
+          - rvn-backgrounds: []
+        $elif currentRoutePattern == "/projects/:projectId/scenes":
+          - rvn-scenes: []
+        $elif currentRoutePattern == "/projects/:projectId/scenes/:sceneId/editor":
+          - rvn-scene-editor: []

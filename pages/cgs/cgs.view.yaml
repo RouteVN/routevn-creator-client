@@ -1,9 +1,0 @@
-dataSchema:
-  type: object
-  properties: {}
-
-refs: {}
-
-template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h2: CGS
