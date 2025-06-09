@@ -1,0 +1,28 @@
+# TODO a way to configure dev and prod
+# all rtgl fe configuration
+fe:
+   dirs: ['src/components', 'src/pages'] # directories that contain components
+   setup: 'src/setup.js' # path to setup.js file
+   outfile: '_site/public/main.js' # output this is separate from rettangoli file
+  #  watchPort: 3001
+
+# all sites configuration
+# sites:
+#   path: 'sites'
+#   templateFolder: '..'
+
+# all visual testing configuration
+vt:
+  path: 'vt'
+  name: "Rettangoli UI Visual Tests"
+  description: "Visual testing for Rettangoli UI components"
+  sections:
+    - title: "Components"
+      type: "groupLabel"
+      items:
+        - title: "Command Line Actions"
+          files: "examplescomponents/button"
+          description: "Button component tests"
+        - title: "Command Line Background"
+          files: "examplescomponents/image"
+          description: "Image component tests"

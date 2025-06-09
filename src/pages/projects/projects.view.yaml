@@ -1,0 +1,57 @@
+elementName: rvn-projects
+
+dataSchema:
+  type: object
+  properties:
+    title:
+      type: string
+      default: Projects
+    createButtonText:
+      type: string
+      default: Create Project
+    projects:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+            default: Project 1
+          description:
+            type: string
+            default: Project 1 description
+
+refs:
+  createButton:
+    eventListeners:
+      click:
+        required: true
+        handler: handleCreateButtonClick
+  project-*:
+    eventListeners:
+      click:
+        required: true
+        handler: handleProjectsClick
+  create-project-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseDialogue
+
+template:
+  - rtgl-view h=100vh w=100vw ah=c:
+    - rtgl-view sm-w=f w=400:
+      - rtgl-view d=h w=f av=c mb=l mt=xl:
+        - rtgl-text s=h2: "${title}"
+        - rtgl-view flex=1:
+        - rtgl-button#createButton: ${createButtonText}
+      - rtgl-view w=f g=m:
+        - $for project, i in projects:
+            - rtgl-view#project-${project.id} h=64 w=f bw=xs p=m cur=p:
+              - rtgl-text s=lg: "${project.name}"
+              - rtgl-text s=sm: "${project.description}"
+  
+  - rtgl-dialog#create-project-dialog .isOpen=isOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#form .defaultValues=defaultValues .form=form w=f:

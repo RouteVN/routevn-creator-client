@@ -1,0 +1,11 @@
+elementName: rvn-command-line-background
+
+dataSchema:
+  type: object
+  properties: {}
+
+refs: {}
+
+template:
+  - rtgl-view w=f h=f p=m:
+    - rtgl-text s=h3: Command Line Background
