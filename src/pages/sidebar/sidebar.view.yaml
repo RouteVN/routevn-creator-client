@@ -13,8 +13,13 @@ dataSchema:
     itemsEncoded:
       type: string
 
-refs: []
+refs:
+  sidebar:
+    eventListeners:
+      itemClick:
+        handler: handleItemClick
+
 
 template:
-  - rtgl-sidebar items=${itemsEncoded}: []
+  - rtgl-sidebar#sidebar mode=shrunk-lg items=${itemsEncoded}: []
   

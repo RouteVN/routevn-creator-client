@@ -42,13 +42,13 @@ refs:
 template:
   - rtgl-view h=100vh w=100vw ah=c:
     - rtgl-view sm-w=f w=400:
-      - rtgl-view d=h w=f av=c mb=l mt=xl:
+      - rtgl-view d=h w=f av=c mb=xl mt=xl:
         - rtgl-text s=h2: "${title}"
         - rtgl-view flex=1:
         - rtgl-button#createButton: ${createButtonText}
-      - rtgl-view w=f g=m:
+      - rtgl-view w=f g=md:
         - $for project, i in projects:
-            - rtgl-view#project-${project.id} h=64 w=f bw=xs p=m cur=p:
+            - rtgl-view#project-${project.id} h=64 w=f bw=xs p=md cur=p:
               - rtgl-text s=lg: "${project.name}"
               - rtgl-text s=sm: "${project.description}"
   

@@ -2,19 +2,19 @@ export const INITIAL_STATE = Object.freeze({
   items: [
     {
       title: "Project",
-      slug: "/projects/projectid",
+      path: "/project",
     },
     {
       title: "Resources",
-      slug: "/projects/projectid/resources",
+      path: "/project/resources",
     },
     {
       title: "Scenes",
-      slug: "/projects/projectid/scenes",
+      path: "/project/scenes",
     },
     {
       title: "Settings",
-      slug: "/projects",
+      path: "/project/settings",
     },
   ],
 });

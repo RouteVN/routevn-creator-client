@@ -3,7 +3,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       id: "background",
       label: "Background",
-      route: "/projects/:projectId/backgrounds",
+      route: "/project/resources/backgrounds",
     },
     {
       id: "cg",
@@ -73,14 +73,15 @@ export const INITIAL_STATE = Object.freeze({
   ],
 });
 
-export const selectResourceRoute = (state, props, payload) => {
-  const { resourceId, projectId } = payload;
+export const selectResourceRoute = ({ state, props }, id) => {
+  // console.log('payload', payload)
+  // const { resourceId, projectId } = payload;
   const resources = state.assets.concat(state.ui).concat(state.system);
-  const resource = resources.find((resource) => resource.id === resourceId);
+  const resource = resources.find((resource) => resource.id === id);
   if (!resource) {
-    throw new Error(`Resource ${resourceId} not found`);
+    throw new Error(`Resource ${id} not found`);
   }
-  return resource.route.replace(":projectId", projectId);
+  return resource.route;
 };
 
 export const toViewData = ({ state, props }, payload) => {

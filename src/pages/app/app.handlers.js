@@ -1,9 +1,10 @@
 import { filter, fromEvent, tap } from "rxjs";
 
 export const handleOnMount = (deps) => {
-  console.log('handleOnMount');
-  // deps.store.setCurrentRoute(deps.router.getPathName());
-    deps.store.setCurrentRoute('/projects');
+  console.log('handleOnMount', deps.router.getPathName());
+  deps.store.setCurrentRoute(deps.router.getPathName());
+  deps.render();
+    // deps.store.setCurrentRoute('/projects');
 }
 
 export const handleRedirect = (payload, deps) => {
