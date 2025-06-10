@@ -26,7 +26,37 @@ template:
           - rvn-cgs: []
         $elif currentRoutePattern == "/project/resources/backgrounds":
           - rvn-backgrounds: []
+        $elif currentRoutePattern == "/project/resources/characters":
+          - rvn-characters: []
+        $elif currentRoutePattern == "/project/resources/bgm":
+          - rvn-bgm: []
+        $elif currentRoutePattern == "/project/resources/sfx":
+          - rvn-sound-effects: []
+        $elif currentRoutePattern == "/project/resources/animations":
+          - rvn-animations: []
+        $elif currentRoutePattern == "/project/resources/positions":
+          - rvn-positions: []
+        $elif currentRoutePattern == "/project/resources/visuals":
+          - rvn-visuals: []
+        $elif currentRoutePattern == "/project/resources/videos":
+          - rvn-videos: []
+        $elif currentRoutePattern == "/project/resources/design-tokens":
+          - rvn-design-tokens: []
+        $elif currentRoutePattern == "/project/resources/components":
+          - rvn-components: []
+        $elif currentRoutePattern == "/project/resources/screens":
+          - rvn-screens: []
+        $elif currentRoutePattern == "/project/resources/choices":
+          - rvn-choices: []
+        $elif currentRoutePattern == "/project/resources/dialogue":
+          - rvn-dialogue: []
+        $elif currentRoutePattern == "/project/resources/variables":
+          - rvn-variables: []
+        $elif currentRoutePattern == "/project/resources/presets":
+          - rvn-preset: []
         $elif currentRoutePattern == "/project/scenes":
           - rvn-scenes: []
-        $elif currentRoutePattern == "/project/scene/editor":
+        $elif currentRoutePattern == "/project/scene-editor":
           - rvn-scene-editor: []
+        $elif currentRoutePattern == "/project/settings":
+          - rvn-settings: []

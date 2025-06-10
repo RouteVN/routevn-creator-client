@@ -1,0 +1,16 @@
+elementName: rvn-settings
+
+viewDataSchema:
+  type: object
+
+propsSchema:
+  type: object
+  properties: {}
+
+refs: {}
+
+events: {}
+
+template:
+  - rtgl-view w=f h=f p=md:
+    - rtgl-text s=h2: settings

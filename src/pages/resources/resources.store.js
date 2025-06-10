@@ -8,67 +8,81 @@ export const INITIAL_STATE = Object.freeze({
     {
       id: "cg",
       label: "CG",
-      route: "/projects/:projectId/cgs",
+      route: "/project/cgs",
     },
     {
       id: "character",
       label: "Character",
+      route: "/project/resources/characters"
     },
     {
       id: "background-music",
       label: "Bacgkround Music",
+      route: '/project/resources/bgm'
     },
     {
       id: "sound-effects",
       label: "Sound Effects",
+      route: '/project/resources/sfx'
     },
     {
       id: "animation-effects",
       label: "Animation Effects",
+      route: '/project/resources/animations'
     },
     {
       id: "positions",
       label: "Positions",
+      route: '/project/resources/positions'
     },
     {
       id: "visuals",
       label: "Visuals",
+      route: '/project/resources/visuals'
     },
     {
       id: "videos",
       label: "Videos",
+      route: '/project/resources/videos'
     },
   ],
   ui: [
     {
       id: "design-tokens",
       label: "Design Tokens",
+      route: '/project/resources/design-tokens'
     },
     {
       id: "components",
       label: "Components",
+      route: '/project/resources/components'
     },
     {
       id: "screens",
       label: "Screens",
+      route: '/project/resources/screens'
     },
     {
       id: "choices",
       label: "Choices",
+      route: '/project/resources/choices'
     },
     {
       id: "dialogue",
       label: "Dialogue",
+      route: '/project/resources/dialogue'
     },
   ],
   system: [
     {
       id: "variables",
       label: "Variables",
+      route: '/project/resources/variables'
     },
     {
       id: "presets",
       label: "Presets",
+      route: '/project/resources/presets'
     },
   ],
 });
