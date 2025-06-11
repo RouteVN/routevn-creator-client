@@ -70,6 +70,21 @@ const createAutoMergeData = () => {
   }
 
   const createItem = (targetId, payload) => {
+    const trasverseFind = (relationships, targetId) => {
+      for (const item of relationships) {
+        if (item.id === targetId) {
+          return item;
+        }
+        if (item.children && item.children.length > 0) {
+          const found = trasverseFind(item.children, targetId);
+          if (found) {
+            return found;
+          }
+        }
+      }
+      return null;
+    };
+
     doc = Automerge.change(doc, { message: 'createItem', time: Date.now() }, doc => {
       const id = nanoid();
       doc.items[id] = payload;
@@ -78,11 +93,15 @@ const createAutoMergeData = () => {
           id,
           children: []
         })
-        // const foundItem = trasverseFind(doc.relationships)
-        // foundItem.children.push({
-        //   id,
-        //   children: []
-        // })
+      } else {
+        const foundItem = trasverseFind(doc.relationships, targetId)
+        if (!foundItem) {
+          throw new Error('Item not found')
+        }
+        foundItem.children.push({
+          id,
+          children: []
+        })
       }
     });
     return doc;

@@ -3,8 +3,14 @@ import { h } from 'snabbdom/build/h';
 
 import { CustomSubject } from './common';
 
+import { createAutoMergeData } from './automerge/sample.js'
+import stepsEditorAutomergeData from './automerge/sample3.js'
 
-
+const backgroundsData = createAutoMergeData()
+backgroundsData.createItem('_root', {
+  name: 'Initial Item',
+  level: 0
+})
 
 class WebRouter {
   // _routes;
@@ -74,12 +80,20 @@ const router = new WebRouter();
 
 const componentDependencies = {
   subject,
-  router
+  router,
+  localData: {
+    backgrounds: backgroundsData,
+    'scene:1': stepsEditorAutomergeData(),
+  },
 }
 
 const pageDependencies = {
   subject, 
   router,
+  localData: {
+    backgrounds: backgroundsData,
+    'scene:1': stepsEditorAutomergeData(),
+  },
 }
 
 const deps = {
