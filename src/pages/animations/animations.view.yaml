@@ -4,8 +4,74 @@ dataSchema:
   type: object
   properties: {}
 
-refs: {}
+refs:
+  fileexplorer:
+    eventListeners:
+      targetchanged:
+        required: true
+        handler: handleTargetChanged
+      rightclick-container:
+        handler: handleFileExplorerRightClickContainer
+      rightclick-item:
+        handler: handleFileExplorerRightClickItem
+  dropdown-menu:
+    eventListeners:
+      click-overlay:
+        handler: handleDropdownMenuClickOverlay
+      click-item:
+        handler: handleDropdownMenuClickItem
+  keyframe-*:
+    eventListeners:
+      contextmenu:
+        handler: handleKeyframeRightClick
+  timeline-preview:
+    eventListeners:
+      mousemove:
+        handler: handleTimelinePreviewMouseMove
 
-template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h2: Animations
+template: 
+  - rtgl-view d=h w=f h=f: 
+    - rtgl-view w=f h=f p=md w=200:
+      - rtgl-text s=h2: Animations
+      - rvn-file-explorer#fileexplorer .items=items:
+    - rtgl-view d=h w=f h=100vh g=lg:
+      - rtgl-view flex=1 h=f:
+        - rtgl-text: Animation Item
+        - rtgl-view h=48:
+
+        - rtgl-view g=md w=f pos=rel:
+          - rtgl-view d=h w=f:
+            - rtgl-view w=f ah=e:
+              - rtgl-text s=sm: 'Total Duration: 4s'
+
+          - rtgl-view d=h w=f:
+            - rtgl-view w=64 av=c:
+            - rtgl-view#timeline-preview h=24 w=f bgc=mu:
+
+          - rtgl-view h=12: 
+
+          - rtgl-view d=h w=f av=c:
+            - rtgl-view w=64 av=c:
+              - rtgl-text s=sm: Alpha
+            - rtgl-view d=h w=f h=40 bgc=mu g=xs:
+              - rtgl-view d=h h=f bgc=ac flex=1 p=sm:
+                - rtgl-view flex=1:
+                  - rtgl-text s=xs c=mu-fg: '1.2'
+                - rtgl-view ah=e h=f:
+                  - rtgl-text s=xs c=mu-fg: '0.2'
+                  - rtgl-view flex=1:
+                  - rtgl-text s=xs c=mu-fg: '1.1s'
+              - rtgl-view#keyframe-alpha-2 ah=e h=f bgc=ac flex=1 p=sm:
+                - rtgl-text s=xs c=mu-fg: '0.8'
+                - rtgl-view flex=1:
+                - rtgl-text s=xs c=mu-fg: '2.5s'
+          - rtgl-view d=h w=f av=c:
+            - rtgl-view w=64 av=c:
+              - rtgl-text s=sm: Scale
+            - rtgl-view w=f h=40 bgc=mu:
+          - $if timelinePreview.isShown:
+            - 'rtgl-view pos=abs style="top: 0; left: ${timelinePreview.position.x}px" h=f w=1 bgc=de':
+      - rtgl-view flex=1 h=f:
+        - rtgl-text: Preview
+        - rtgl-view w=f h=400 bgc=fg:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:

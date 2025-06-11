@@ -24,14 +24,16 @@ template:
           - rvn-resources: []
         $elif currentRoutePattern == "/project/cgs":
           - rvn-cgs: []
+        $elif currentRoutePattern == "/project/resources/images":
+          - rvn-images: []
         $elif currentRoutePattern == "/project/resources/backgrounds":
           - rvn-backgrounds: []
         $elif currentRoutePattern == "/project/resources/characters":
           - rvn-characters: []
-        $elif currentRoutePattern == "/project/resources/bgm":
-          - rvn-bgm: []
-        $elif currentRoutePattern == "/project/resources/sfx":
-          - rvn-sound-effects: []
+        $elif currentRoutePattern == "/project/resources/character-sprites":
+          - rvn-character-sprites: []
+        $elif currentRoutePattern == "/project/resources/audio":
+          - rvn-audio: []
         $elif currentRoutePattern == "/project/resources/animations":
           - rvn-animations: []
         $elif currentRoutePattern == "/project/resources/positions":
