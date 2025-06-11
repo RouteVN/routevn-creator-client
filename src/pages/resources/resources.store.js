@@ -1,14 +1,9 @@
 export const INITIAL_STATE = Object.freeze({
   assets: [
     {
-      id: "background",
-      label: "Background",
-      route: "/project/resources/backgrounds",
-    },
-    {
-      id: "cg",
-      label: "CG",
-      route: "/project/cgs",
+      id: "images",
+      label: "Images",
+      route: "/project/resources/images",
     },
     {
       id: "character",
@@ -16,14 +11,9 @@ export const INITIAL_STATE = Object.freeze({
       route: "/project/resources/characters"
     },
     {
-      id: "background-music",
-      label: "Bacgkround Music",
-      route: '/project/resources/bgm'
-    },
-    {
-      id: "sound-effects",
-      label: "Sound Effects",
-      route: '/project/resources/sfx'
+      id: "audio",
+      label: "Audio",
+      route: '/project/resources/audio'
     },
     {
       id: "animation-effects",
@@ -34,11 +24,6 @@ export const INITIAL_STATE = Object.freeze({
       id: "positions",
       label: "Positions",
       route: '/project/resources/positions'
-    },
-    {
-      id: "visuals",
-      label: "Visuals",
-      route: '/project/resources/visuals'
     },
     {
       id: "videos",

@@ -1,4 +1,3 @@
-import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
   const { store, localData, render, getRefIds } = deps;
