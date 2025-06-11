@@ -139,3 +139,26 @@ export const subscriptions = (deps) => {
   ];
 };
 
+export const handleContainerContextMenu = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.preventDefault();
+  dispatchEvent(new CustomEvent("rightclick-container", {
+    detail: {
+      x: e.clientX,
+      y: e.clientY,
+    },
+  }));
+};
+
+export const handleItemContextMenu = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.preventDefault();
+  dispatchEvent(new CustomEvent("rightclick-item", {
+    detail: {
+      x: e.clientX,
+      y: e.clientY,
+      id: e.currentTarget.id.replace('item-', ''),
+    },
+  }));
+};
+
