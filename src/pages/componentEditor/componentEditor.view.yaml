@@ -1,4 +1,4 @@
-elementName: rvn-typography
+elementName: rvn-component-editor
 
 dataSchema:
   type: object
@@ -31,13 +31,9 @@ template:
         - rtgl-view w=f:
           - 'rtgl-view d=h w=f g=md av=c bgc=bg style="position: sticky; top: 0;"':
             - rtgl-svg wh=24 svg=text:
-            - rtgl-text s=h4: Typography
+            - rtgl-text s=h4: Component Editor
           - rtgl-view d=h g=md fw=w mt=lg:
-            - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
-            - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
-            - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
-            - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
-            - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
+            - rtgl-view w=400 h=300 bgc=fg:
     - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
       - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
       - rtgl-text s=lg: Details
