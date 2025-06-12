@@ -24,7 +24,7 @@ refs:
 template: 
   - rtgl-view d=h w=f h=f: 
     - rtgl-view w=f h=f p=md w=200:
-      - rtgl-text s=h2: Character Sprites
+      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=items:
     - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
       - rtgl-view g=lg w=f:

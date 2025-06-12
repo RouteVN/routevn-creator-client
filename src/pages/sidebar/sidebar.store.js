@@ -5,8 +5,16 @@ export const INITIAL_STATE = Object.freeze({
       path: "/project",
     },
     {
-      title: "Resources",
-      path: "/project/resources",
+      title: "Assets",
+      path: "/project/resources/images",
+    },
+    {
+      title: "User Interface",
+      path: "/project/resources/colors",
+    },
+    {
+      title: "System Config",
+      path: "/project/resources/variables",
     },
     {
       title: "Scenes",

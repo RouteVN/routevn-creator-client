@@ -67,7 +67,6 @@ export const toViewData = ({ state, props }, payload) => {
   return {
     items: state.items,
     dropdownMenu: state.dropdownMenu,
-    resourceCategory: 'assets',
-    selectedResourceId: 'characters',
   };
 }
+
