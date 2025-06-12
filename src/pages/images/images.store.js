@@ -1,5 +1,31 @@
 
 export const INITIAL_STATE = Object.freeze({
+  assetItems: [{
+    id: 'images',
+    name: 'Images',
+    path: '/project/resources/images'
+  }, {
+    id: 'audio',
+    name: 'Audio',
+    path: '/project/resources/audio'
+  }, {
+    id: 'videos',
+    name: 'Videos',
+    path: '/project/resources/videos'
+  }, {
+    id: 'characters',
+    name: 'Characters',
+    path: '/project/resources/characters'
+  }, {
+    id: 'positions',
+    name: 'Positions',
+    path: '/project/resources/positions'
+  }, {
+    id: 'animations',
+    name: 'Animations',
+    path: '/project/resources/animations'
+  }],
+  selectedAssetId: 'images',
   items: [],
   dropdownMenu: {
     isOpen: false,
@@ -63,10 +89,27 @@ export const hideDropdownMenu = (state) => {
   }
 }
 
+export const selectAssetItem = ({ state }, id) => {
+  return state.assetItems.find(item => item.id === id);
+}
+
 export const toViewData = ({ state, props }, payload) => {
+  const assetItems = state.assetItems.map(item => {
+    const isSelected = state.selectedAssetId === item.id;
+    return {
+      id: item.id,
+      name: item.name,
+      path: item.path,
+      bgc: isSelected ? 'mu' : 'bg',
+    }
+  })
+
   return {
+    assetItems,
     items: state.items,
     dropdownMenu: state.dropdownMenu,
+    resourceCategory: 'assets',
+    selectedResourceId: 'images',
   };
 }
 

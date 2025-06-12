@@ -33,9 +33,19 @@ export const INITIAL_STATE = Object.freeze({
   ],
   ui: [
     {
-      id: "design-tokens",
-      label: "Design Tokens",
-      route: '/project/resources/design-tokens'
+      id: 'colors',
+      label: 'Colors',
+      route: '/project/resources/colors'
+    },
+    {
+      id: 'Fonts',
+      label: 'fonts',
+      route: '/project/resources/fonts'
+    },
+    {
+      id: "typography",
+      label: "Typography",
+      route: '/project/resources/typography'
     },
     {
       id: "components",

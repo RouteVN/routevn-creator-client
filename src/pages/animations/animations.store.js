@@ -96,11 +96,12 @@ export const setTimelinePreviewMousePosition = (state, { x }) => {
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  console.log('toViewData', state)
   return {
     items: state.items,
     dropdownMenu: state.dropdownMenu,
     timelinePreview: state.timelinePreview,
+    resourceCategory: 'assets',
+    selectedResourceId: 'animations',
   };
 }
 

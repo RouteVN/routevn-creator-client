@@ -15,7 +15,7 @@ export const selectShowSidebar = (state, props, payload) => {
     "/project/resources/animations",
     "/project/resources/positions",
     "/project/resources/videos",
-    "/project/resources/design-tokens",
+    "/project/resources/colors",
     "/project/resources/components",
     "/project/resources/screens",
     "/project/resources/choices",
@@ -25,6 +25,8 @@ export const selectShowSidebar = (state, props, payload) => {
     "/project/scenes",
     "/project/scene-editor",
     "/project/settings",
+    "/project/resources/fonts",
+    "/project/resources/typography",
   ];
   console.log({
     currentRoutePattern,
@@ -45,7 +47,8 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
     "/project/resources/animations",
     "/project/resources/positions",
     "/project/resources/videos",
-    "/project/resources/design-tokens",
+    "/project/resources/colors",
+    "/project/resources/typography",
     "/project/resources/components",
     "/project/resources/screens",
     "/project/resources/choices",
@@ -55,6 +58,7 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
     "/project/scenes",
     "/project/scene-editor",
     "/project/settings",
+    "/project/resources/fonts",
   ];
   const currentRoute = state.currentRoute;
   const matchPaths = (path, pattern) => {

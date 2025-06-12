@@ -1,0 +1,30 @@
+elementName: rvn-resource-types
+
+viewDataSchema:
+  type: object
+  properties: {}
+
+propsSchema:
+  type: object
+  properties:
+    resourceCategory:
+      type: string
+      enum:
+        - assets
+        - userInterface
+        - systemConfig
+    selectedResourceId:
+      type: string
+
+refs:
+  item-*:
+    eventListeners:
+      click:
+        handler: handleItemClick
+
+template: 
+  - rtgl-text ml=md s=sm c=mu-fg mv=md: ${label}
+  - $for item in items:
+    - rtgl-view#item-${item.id} w=f h=24 av=c ph=md bgc=${item.bgc} cur=p:
+      - rtgl-text s=xs: ${item.name}
+  - rtgl-view w=f h=1 bgc=ac mv=md:

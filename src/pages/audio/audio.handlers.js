@@ -57,3 +57,13 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   store.setItems(items)
   render();
 }
+
+
+export const handleAssetItemClick = (e, deps) => {
+  const { subject, store } = deps;
+  const id = e.target.id.split('-')[2];
+  const assetItem = store.selectAssetItem(id);
+  subject.dispatch('redirect', {
+    path: assetItem.path,
+  })
+}

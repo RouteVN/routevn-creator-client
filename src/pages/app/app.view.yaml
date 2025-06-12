@@ -42,8 +42,8 @@ template:
           - rvn-visuals: []
         $elif currentRoutePattern == "/project/resources/videos":
           - rvn-videos: []
-        $elif currentRoutePattern == "/project/resources/design-tokens":
-          - rvn-design-tokens: []
+        $elif currentRoutePattern == "/project/resources/typography":
+          - rvn-typography: []
         $elif currentRoutePattern == "/project/resources/components":
           - rvn-components: []
         $elif currentRoutePattern == "/project/resources/screens":
@@ -62,3 +62,7 @@ template:
           - rvn-scene-editor: []
         $elif currentRoutePattern == "/project/settings":
           - rvn-settings: []
+        $elif currentRoutePattern == "/project/resources/colors":
+          - rvn-colors: []
+        $elif currentRoutePattern == "/project/resources/fonts":
+          - rvn-fonts: []

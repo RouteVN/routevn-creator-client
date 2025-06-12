@@ -1,6 +1,6 @@
 
 export const handleOnMount = (deps) => {
-  const { store, localData, render, getRefIds } = deps;
+  const { store, localData } = deps;
   const items = localData.backgrounds.toJSONFlat()
   store.setItems(items)
 }
