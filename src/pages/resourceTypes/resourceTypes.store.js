@@ -43,9 +43,19 @@ const userInterfaceItems = [
     path: "/project/resources/fonts",
   },
   {
+    id: "typography",
+    name: "Typography",
+    path: "/project/resources/typography",
+  },
+  {
     id: "components",
     name: "Components",
     path: "/project/resources/components",
+  },
+  {
+    id: "layouts",
+    name: "Layouts",
+    path: "/project/resources/layouts",
   },
 ];
 

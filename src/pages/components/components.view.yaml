@@ -20,6 +20,10 @@ refs:
         handler: handleDropdownMenuClickOverlay
       click-item:
         handler: handleDropdownMenuClickItem
+  component-item*:
+    eventListeners:
+      click:
+        handler: handleComponentItemClick
 
 template:
   - rtgl-view d=h w=f h=f: 
@@ -33,7 +37,7 @@ template:
             - rtgl-svg wh=24 svg=text:
             - rtgl-text s=h4: Components
           - rtgl-view d=h g=md fw=w mt=lg:
-            - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
+            - rtgl-image#component-item-1 w=240 h=135 src=/public/project_logo_placeholder.png:
             - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
             - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
             - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:

@@ -58,9 +58,13 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   render();
 }
 
-export const handleComponentItemClick = (e, deps) => {
+
+
+export const handleLayoutItemClick = (e, deps) => {
+  console.log('aaaaaaaaaaaaa')
   const { subject } = deps;
   subject.dispatch('redirect', {
-    path: '/project/resources/component-editor',
+    path: '/project/resources/layout-editor',
   })
 }
+

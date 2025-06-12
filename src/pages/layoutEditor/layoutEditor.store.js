@@ -68,7 +68,6 @@ export const toViewData = ({ state, props }, payload) => {
     items: state.items,
     dropdownMenu: state.dropdownMenu,
     resourceCategory: 'userInterface',
-    selectedResourceId: 'typography',
+    selectedResourceId: 'layouts',
   };
 }
-

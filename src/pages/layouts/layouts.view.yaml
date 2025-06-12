@@ -1,4 +1,4 @@
-elementName: rvn-typography
+elementName: rvn-layouts
 
 dataSchema:
   type: object
@@ -20,6 +20,11 @@ refs:
         handler: handleDropdownMenuClickOverlay
       click-item:
         handler: handleDropdownMenuClickItem
+  layout-item*:
+    eventListeners:
+      click:
+        handler: handleLayoutItemClick
+
 
 template:
   - rtgl-view d=h w=f h=f: 
@@ -31,9 +36,9 @@ template:
         - rtgl-view w=f:
           - 'rtgl-view d=h w=f g=md av=c bgc=bg style="position: sticky; top: 0;"':
             - rtgl-svg wh=24 svg=text:
-            - rtgl-text s=h4: Typography
+            - rtgl-text s=h4: Layouts
           - rtgl-view d=h g=md fw=w mt=lg:
-            - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
+            - rtgl-image#layout-item-1 w=240 h=135 src=/public/project_logo_placeholder.png:
             - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
             - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
             - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:

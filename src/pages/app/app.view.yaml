@@ -66,3 +66,9 @@ template:
           - rvn-colors: []
         $elif currentRoutePattern == "/project/resources/fonts":
           - rvn-fonts: []
+        $elif currentRoutePattern == "/project/resources/layouts":
+          - rvn-layouts: []
+        $elif currentRoutePattern == "/project/resources/layout-editor":
+          - rvn-layout-editor: []
+        $elif currentRoutePattern == "/project/resources/component-editor":
+          - rvn-component-editor: []

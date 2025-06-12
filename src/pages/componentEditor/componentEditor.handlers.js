@@ -57,10 +57,3 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   store.setItems(items)
   render();
 }
-
-export const handleComponentItemClick = (e, deps) => {
-  const { subject } = deps;
-  subject.dispatch('redirect', {
-    path: '/project/resources/component-editor',
-  })
-}
