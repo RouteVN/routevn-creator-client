@@ -53,7 +53,6 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     level: 0,
   })
   const items = localData.backgrounds.toJSONFlat()
-  console.log('items', items)
   store.setItems(items)
   render();
 }
@@ -61,7 +60,6 @@ export const handleDropdownMenuClickItem = (e, deps) => {
 
 
 export const handleLayoutItemClick = (e, deps) => {
-  console.log('aaaaaaaaaaaaa')
   const { subject } = deps;
   subject.dispatch('redirect', {
     path: '/project/resources/layout-editor',
