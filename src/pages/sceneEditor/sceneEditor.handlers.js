@@ -1,5 +1,5 @@
 export const handleOnMount = (deps) => {
-  return;
+  // return;
   const { store, render, localData, getRefIds } = deps;
   const { steps } = localData["scene:1"].toJSON();
   store.setCurrentSteps(steps);

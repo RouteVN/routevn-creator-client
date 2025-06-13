@@ -7,3 +7,10 @@ export const handleTitleClick = (e, deps) => {
     path: '/projects/1/scenes/1/editor',
   })
 }
+
+export const handleFileExplorerClickItem = (e, deps) => {
+  const { subject} = deps;
+  subject.dispatch('redirect', {
+    path: '/project/scene-editor',
+  })
+};

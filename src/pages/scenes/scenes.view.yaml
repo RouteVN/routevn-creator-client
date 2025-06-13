@@ -5,13 +5,13 @@ dataSchema:
   properties: {}
 
 refs:
-  title:
+  fileexplorer:
     eventListeners:
-      click:
+      click-item:
         required: true
-        handler: handleTitleClick
+        handler: handleFileExplorerClickItem
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text#title s=h2: Scenes
-    - file-explorer-component: []
+  - rtgl-view d=h w=f h=f: 
+    - rtgl-view w=f h=f p=md w=200:
+      - rvn-file-explorer#fileexplorer .items=items:

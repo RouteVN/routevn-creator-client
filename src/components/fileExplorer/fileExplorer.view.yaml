@@ -36,13 +36,15 @@ refs:
         handler: handleItemMouseDown
       contextmenu:
         handler: handleItemContextMenu
+      click:
+        handler: handleItemClick
   container:
     eventListeners:
       contextmenu:
         handler: handleContainerContextMenu
 
 template:
-  - rtgl-view w=f h=f p=md w=200: 
+  - rtgl-view w=f h=f p=md w=200 bwr=xs: 
     - rtgl-view w=f g=sm:
       - 'rtgl-view w=f h=f style="position: relative;"':
         - $for item, i in items:
