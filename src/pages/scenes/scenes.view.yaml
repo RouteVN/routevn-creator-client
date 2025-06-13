@@ -10,8 +10,16 @@ refs:
       click-item:
         required: true
         handler: handleFileExplorerClickItem
+  whiteboard:
+    eventListeners:
+      item-position-changed:
+        handler: handleWhiteboardItemPositionChanged
+      item-selected:
+        handler: handleWhiteboardItemSelected
 
 template:
   - rtgl-view d=h w=f h=f: 
     - rtgl-view w=f h=f p=md w=200:
       - rvn-file-explorer#fileexplorer .items=items:
+    - rtgl-view w=f h=f:
+      - rvn-whiteboard#whiteboard .items=whiteboardItems:
