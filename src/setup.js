@@ -2,6 +2,7 @@ import { createWebPatch } from 'rettangoli-fe';
 import { h } from 'snabbdom/build/h';
 
 import { CustomSubject } from './common';
+import { createRepository } from './repository';
 
 import { createAutoMergeData } from './automerge/sample.js'
 import stepsEditorAutomergeData from './automerge/sample3.js'
@@ -11,6 +12,34 @@ backgroundsData.createItem('_root', {
   name: 'Initial Item',
   level: 0
 })
+
+const initialData = {
+  project: {
+    name: 'Project 1',
+    description: 'Project 1 description'
+  },
+  images: {
+    items: {
+      image1: {
+        name: 'Image 1',
+        url: 'https://via.placeholder.com/150',
+      },
+      image2: {
+        name: 'Image 2',
+        url: 'https://via.placeholder.com/150',
+      },
+    },
+    tree: [{
+      id: 'image1',
+      children: [{
+        id: 'image2',
+        children: [],
+      }]
+    }]
+  }
+}
+
+const repository = createRepository(initialData);
 
 class WebRouter {
   // _routes;
@@ -81,6 +110,7 @@ const router = new WebRouter();
 const componentDependencies = {
   subject,
   router,
+  repository,
   localData: {
     backgrounds: backgroundsData,
     'scene:1': stepsEditorAutomergeData(),
@@ -90,6 +120,7 @@ const componentDependencies = {
 const pageDependencies = {
   subject, 
   router,
+  repository,
   localData: {
     backgrounds: backgroundsData,
     'scene:1': stepsEditorAutomergeData(),
