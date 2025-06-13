@@ -58,7 +58,7 @@ template:
     - rtgl-text s=h2: Scene Editor
     - rtgl-view d=h w=f h=f p=m:
       - rtgl-view flex=1:
-        - steps-editor-component#steps-editor .steps=currentSteps:
+        - rvn-steps-editor#steps-editor .steps=currentSteps:
       - rtgl-view flex=1:
         - rtgl-view h=300:
           - rtgl-text s=h2: Preview Section

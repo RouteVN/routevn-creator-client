@@ -65,10 +65,6 @@ export const getSelectedItemIndex = (_mouseY, itemRects, offset) => {
   return sortedItems.length - 1;
 };
 
-export const handleItemClick = (e, deps) => {
-  console.log("item clicked", e.currentTarget.id);
-};
-
 export const handleItemMouseDown = (e, deps) => {
   const { store, getRefIds } = deps;
   const refIds = getRefIds();
@@ -162,3 +158,11 @@ export const handleItemContextMenu = (e, deps) => {
   }));
 };
 
+export const handleItemClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  dispatchEvent(new CustomEvent("click-item", {
+    detail: {
+      id: e.currentTarget.id.replace('item-', ''),
+    },
+  }));
+};
