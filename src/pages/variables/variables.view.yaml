@@ -32,13 +32,8 @@ template:
           - 'rtgl-view d=h w=f g=md av=c bgc=bg style="position: sticky; top: 0;"':
             - rtgl-svg wh=24 svg=text:
             - rtgl-text s=h4: Variables
-          - rtgl-view d=h g=md fw=w mt=lg:
-            - rtgl-view ah=c bw=xs pb=md:
-              - 'rtgl-view wh=64 style="background-color: #a31113"':
-              - rtgl-text: Primary Color
-            - rtgl-view ah=c bw=xs pb=md:
-              - 'rtgl-view wh=64 style="background-color: #11c313"':
-              - rtgl-text: Secondary Color
+          - rtgl-view d=h g=md fw=w mt=lg p=md w=f:
+            - rtgl-table .data=tableData w=f:
     - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
       - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
       - rtgl-text s=lg: Details
