@@ -43,9 +43,17 @@ export const selectSelectedItemId = (state, props, payload) => {
 }
 
 export const toViewData = ({ state, props }, payload) => {
+  let items = props.items || [];
+  items = items.map((item) => {
+    return {
+      ...item,
+      ml: item._level * 16,
+    }
+  })
+
   return {
     ...state,
-    items: props.items || []
+    items,
   };
 }
 

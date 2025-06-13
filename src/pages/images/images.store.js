@@ -106,7 +106,11 @@ export const toViewData = ({ state, props }, payload) => {
 
   return {
     assetItems,
-    items: state.items,
+    items: state.items.map((item) => {
+      return {
+        ...item,
+      }
+    }),
     dropdownMenu: state.dropdownMenu,
     resourceCategory: 'assets',
     selectedResourceId: 'images',

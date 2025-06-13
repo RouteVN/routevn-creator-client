@@ -48,8 +48,8 @@ template:
     - rtgl-view w=f g=sm:
       - 'rtgl-view w=f h=f style="position: relative;"':
         - $for item, i in items:
-            - rtgl-view#item-${item.id} w=f h=f p=md h=32 w=f cur=p av=c:
-              - 'rtgl-text s=sm style="padding-left: ${item.level * 16}px;"': "${item.name}"
+            - 'rtgl-view#item-${item.id} style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 w=f cur=p av=c':
+              - rtgl-text s=sm: "${item.name}"
         - $if targetDragIndex != -2:
             - 'rtgl-view pos=abs w=200 bgc=ac h=2 style="top: ${32 * (targetDragIndex + 1)}px"':
     - rtgl-view#container w=f h=f:

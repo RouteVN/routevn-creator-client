@@ -1,9 +1,10 @@
+import { toFlatItems } from '../../repository';
 
 export const handleOnMount = (deps) => {
-  const { store, localData, render, getRefIds } = deps;
-  const items = localData.backgrounds.toJSONFlat()
-  console.log('items', items)
-  store.setItems(items)
+  const { store, repository } = deps;
+  const { images } = repository.getState();
+  const items = toFlatItems(images);
+  store.setItems(items);
 }
 
 export const handleTargetChanged = (payload, deps) => {
@@ -47,14 +48,21 @@ export const handleDropdownMenuClickOverlay = (e, deps) => {
 }
 
 export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, localData } = deps;
+  const { store, render, repository } = deps;
   store.hideDropdownMenu();
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0,
+
+  repository.addAction({
+    actionType: 'arrayPush',
+    target: 'images',
+    value: {
+      id: 'image1' + Math.random(),
+      name: 'New Item',
+      children: [],
+    }
   })
-  const items = localData.backgrounds.toJSONFlat()
-  console.log('items', items)
+
+  const { images } = repository.getState();
+  const items = toFlatItems(images);
   store.setItems(items)
   render();
 }
