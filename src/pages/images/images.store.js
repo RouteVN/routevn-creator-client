@@ -34,6 +34,14 @@ export const INITIAL_STATE = Object.freeze({
       x: 0,
       y: 0,
     },
+  },
+  popover: {
+    isOpen: false,
+    itemId: null,
+    position: {
+      x: 0,
+      y: 0,
+    },
   }
 });
 
@@ -49,7 +57,13 @@ export const showDropdownMenuFileExplorerItem = (state, { position, id }) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
+    itemId: id,
     items: [
+      {
+        label: 'New Folder',
+        type: 'item',
+        value: 'new-child-folder',
+      },
       {
         label: 'Rename',
         type: 'item',
@@ -93,6 +107,38 @@ export const selectAssetItem = ({ state }, id) => {
   return state.assetItems.find(item => item.id === id);
 }
 
+export const selectDropdownMenuItemId = ({ state }) => {
+  return state.dropdownMenu.itemId;
+}
+
+export const selectDropdownMenuPosition = ({ state }) => {
+  return state.dropdownMenu.position;
+}
+
+export const showPopover = (state, { position, itemId }) => {
+  state.popover = {
+    isOpen: true,
+    position,
+    itemId,
+  };
+}
+
+export const hidePopover = (state) => {
+  state.popover = {
+    isOpen: false,
+    itemId: null,
+    position: {
+      x: 0,
+      y: 0,
+    },
+  };
+}
+
+export const selectPopoverItem = ({ state }) => {
+  if (!state.popover.itemId) return null;
+  return state.items.find(item => item.id === state.popover.itemId);
+}
+
 export const toViewData = ({ state, props }, payload) => {
   const assetItems = state.assetItems.map(item => {
     const isSelected = state.selectedAssetId === item.id;
@@ -104,6 +150,34 @@ export const toViewData = ({ state, props }, payload) => {
     }
   })
 
+  // Get current item for rename form
+  const currentItem = state.popover.itemId ? 
+    state.items.find(item => item.id === state.popover.itemId) : null;
+
+  // Form configuration for renaming
+  const renameForm = currentItem ? {
+    fields: [{
+      id: 'name',
+      fieldName: 'name',
+      inputType: 'inputText',
+      label: 'Name',
+      value: currentItem.name || '',
+      required: true,
+    }],
+    actions: {
+      layout: '',
+      buttons: [{
+        id: 'submit',
+        variant: 'pr',
+        content: 'Rename',
+      }, {
+        id: 'cancel',
+        variant: 'se',
+        content: 'Cancel',
+      }],
+    }
+  } : null;
+
   return {
     assetItems,
     items: state.items.map((item) => {
@@ -112,6 +186,8 @@ export const toViewData = ({ state, props }, payload) => {
       }
     }),
     dropdownMenu: state.dropdownMenu,
+    popover: state.popover,
+    form: renameForm,
     resourceCategory: 'assets',
     selectedResourceId: 'images',
   };

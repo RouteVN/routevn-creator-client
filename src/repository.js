@@ -1,14 +1,14 @@
 const set = (state, path, value) => {
   const newState = structuredClone(state);
-  const keys = path.split('.');
+  const keys = path.split(".");
   let current = newState;
-  
+
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i];
     current[key] = { ...current[key] };
     current = current[key];
   }
-  
+
   current[keys[keys.length - 1]] = value;
   return newState;
 };
@@ -17,6 +17,185 @@ const get = (state, path) => {
   return path.split(".").reduce((acc, key) => {
     return acc[key];
   }, state);
+};
+
+// Helper function to find a node in the tree
+const findNodeInTree = (tree, nodeId) => {
+  if (!tree || !Array.isArray(tree)) return null;
+  
+  for (let node of tree) {
+    if (node && node.id === nodeId) {
+      return { node, parent: null, parentArray: tree };
+    }
+    if (node && node.children) {
+      const result = findNodeInTree(node.children, nodeId);
+      if (result) {
+        return { ...result, parent: node };
+      }
+    }
+  }
+  return null;
+};
+
+// Helper function to remove a node from tree
+const removeNodeFromTree = (tree, nodeId) => {
+  if (!tree || !Array.isArray(tree)) return false;
+  
+  for (let i = 0; i < tree.length; i++) {
+    if (tree[i] && tree[i].id === nodeId) {
+      tree.splice(i, 1);
+      return true;
+    }
+    if (tree[i] && tree[i].children && removeNodeFromTree(tree[i].children, nodeId)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// Tree manipulation functions
+const treePush = (state, target, value) => {
+  const newState = structuredClone(state);
+  const targetData = get(newState, target);
+  const { parent, item, previousSibling } = value;
+  
+  // Ensure tree and items exist
+  if (!targetData.tree) {
+    targetData.tree = [];
+  }
+  if (!targetData.items) {
+    targetData.items = {};
+  }
+  
+  // Add item to items object
+  targetData.items[item.id] = { ...item };
+  delete targetData.items[item.id].id; // Remove id from item data
+  
+  // Create tree node
+  const newNode = {
+    id: item.id,
+    children: []
+  };
+  
+  if (parent === '_root') {
+    // Add to root level
+    if (previousSibling) {
+      const index = targetData.tree.findIndex(node => node.id === previousSibling);
+      if (index !== -1) {
+        targetData.tree.splice(index + 1, 0, newNode);
+      } else {
+        targetData.tree.push(newNode);
+      }
+    } else {
+      targetData.tree.unshift(newNode);
+    }
+  } else {
+    // Add to specific parent
+    const parentInfo = findNodeInTree(targetData.tree, parent);
+    if (parentInfo && parentInfo.node) {
+      if (!parentInfo.node.children) {
+        parentInfo.node.children = [];
+      }
+      if (previousSibling) {
+        const index = parentInfo.node.children.findIndex(node => node.id === previousSibling);
+        if (index !== -1) {
+          parentInfo.node.children.splice(index + 1, 0, newNode);
+        } else {
+          parentInfo.node.children.push(newNode);
+        }
+      } else {
+        parentInfo.node.children.unshift(newNode);
+      }
+    }
+  }
+  
+  return newState;
+};
+
+const treeDelete = (state, target, value) => {
+  const newState = structuredClone(state);
+  const targetData = get(newState, target);
+  const { id } = value;
+  
+  // Ensure tree and items exist
+  if (!targetData.tree) {
+    targetData.tree = [];
+  }
+  if (!targetData.items) {
+    targetData.items = {};
+  }
+  
+  // Remove from tree
+  removeNodeFromTree(targetData.tree, id);
+  
+  // Remove from items
+  delete targetData.items[id];
+  
+  return newState;
+};
+
+const treeUpdate = (state, target, value) => {
+  const newState = structuredClone(state);
+  const targetData = get(newState, target);
+  const { id, replace, item } = value;
+  
+  if (replace) {
+    // Full replace
+    targetData.items[id] = { ...item };
+    delete targetData.items[id].id;
+  } else {
+    // Partial update
+    targetData.items[id] = { ...targetData.items[id], ...item };
+    delete targetData.items[id].id;
+  }
+  
+  return newState;
+};
+
+const treeMove = (state, target, value) => {
+  const newState = structuredClone(state);
+  const targetData = get(newState, target);
+  const { id, parent, previousSibling } = value;
+  
+  // Find and remove node from current position
+  const nodeInfo = findNodeInTree(targetData.tree, id);
+  if (!nodeInfo) return state;
+  
+  const nodeToMove = structuredClone(nodeInfo.node);
+  removeNodeFromTree(targetData.tree, id);
+  
+  // Insert at new position
+  if (parent === '_root') {
+    if (previousSibling) {
+      const index = targetData.tree.findIndex(node => node.id === previousSibling);
+      if (index !== -1) {
+        targetData.tree.splice(index + 1, 0, nodeToMove);
+      } else {
+        targetData.tree.push(nodeToMove);
+      }
+    } else {
+      targetData.tree.unshift(nodeToMove);
+    }
+  } else {
+    const parentInfo = findNodeInTree(targetData.tree, parent);
+    if (parentInfo && parentInfo.node) {
+      if (!parentInfo.node.children) {
+        parentInfo.node.children = [];
+      }
+      if (previousSibling) {
+        const index = parentInfo.node.children.findIndex(node => node.id === previousSibling);
+        if (index !== -1) {
+          parentInfo.node.children.splice(index + 1, 0, nodeToMove);
+        } else {
+          parentInfo.node.children.push(nodeToMove);
+        }
+      } else {
+        parentInfo.node.children.unshift(nodeToMove);
+      }
+    }
+  }
+  
+  return newState;
 };
 
 export const createRepository = (initialState, initialActionSteams) => {
@@ -31,64 +210,25 @@ export const createRepository = (initialState, initialActionSteams) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);
-      }
-      if (actionType === "arrayPush") {
-        const targetItem = get(acc, target);
-        // targetItem.push(value);
-        targetItem.tree.push({
-          id: value.id,
-          children: []
-        })
-        targetItem.items[value.id] = value;
+      } else if (actionType === "treePush") {
+        return treePush(acc, target, value);
+      } else if (actionType === "treeDelete") {
+        return treeDelete(acc, target, value);
+      } else if (actionType === "treeUpdate") {
+        return treeUpdate(acc, target, value);
+      } else if (actionType === "treeMove") {
+        return treeMove(acc, target, value);
       }
       return acc;
     }, structuredClone(initialState));
   };
 
-   return {
+  return {
     addAction,
     getState,
   };
 };
 
-
-// input:
-// {
-//   items: {
-//     image1: {
-//       name: 'Image 1',
-//       url: 'https://via.placeholder.com/150',
-//     },
-//     image2: {
-//       name: 'Image 2',
-//       url: 'https://via.placeholder.com/150',
-//     },
-//   },
-//   tree: [{
-//     id: 'image1',
-//     children: [{
-//       id: 'image2',
-//       children: [],
-//     }]
-//   }]
-// }
-// 
-// output:
-// [
-//   {
-//     id: 'image1',
-//     name: 'Image 1',
-//     url: 'https://via.placeholder.com/150',
-//     _level: 0
-//   },
-//   {
-//     id: 'image2',
-//     name: 'Image 2',
-//     url: 'https://via.placeholder.com/150',
-//     _level: 1
-//   },
-// ]
-// 
 export const toFlatItems = (data) => {
   const { items, tree } = data;
   const flatItems = [];
@@ -97,19 +237,19 @@ export const toFlatItems = (data) => {
   const traverse = (node, level = 0) => {
     if (visited.has(node.id)) return;
     visited.add(node.id);
-    
+
     const item = {
       ...items[node.id],
       id: node.id,
-      _level: level
+      _level: level,
     };
     flatItems.push(item);
 
     if (node.children) {
-      node.children.forEach(child => traverse(child, level + 1));
+      node.children.forEach((child) => traverse(child, level + 1));
     }
   };
 
-  tree.forEach(node => traverse(node));
+  tree.forEach((node) => traverse(node));
   return flatItems;
 };

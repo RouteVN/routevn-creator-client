@@ -49,18 +49,72 @@ export const handleDropdownMenuClickOverlay = (e, deps) => {
 
 export const handleDropdownMenuClickItem = (e, deps) => {
   const { store, render, repository } = deps;
-  store.hideDropdownMenu();
 
-  repository.addAction({
-    actionType: 'arrayPush',
-    target: 'images',
-    value: {
-      id: 'image1' + Math.random(),
-      name: 'New Item',
-      children: [],
+  console.log('e.detail', e.detail)
+
+  const { item } = e.detail;
+  if (item.value === 'new-item') {
+    const { images } = repository.getState();
+    const lastItem = images.tree[images.tree.length - 1]?.id;
+    const previousSibling = lastItem ? lastItem : undefined;
+    repository.addAction({
+      actionType: 'treePush',
+      target: 'images',
+      value: {
+        parent: '_root',
+        previousSibling,
+        item: {
+          id: 'image' + Date.now(),
+          name: 'New Item',
+        }
+      }
+    })
+  } else if (item.value === 'rename-item') {
+    const itemId = store.selectDropdownMenuItemId();
+    const { x, y } = store.selectDropdownMenuPosition();
+    store.showPopover({ 
+      position: { x, y }, 
+      itemId 
+    });
+  } else if (item.value === 'delete-item') {
+    const itemId = store.selectDropdownMenuItemId();
+    const { images } = repository.getState();
+    const currentItem = images.items[itemId];
+    
+    if (currentItem) {
+      repository.addAction({
+        actionType: 'treeDelete',
+        target: 'images',
+        value: {
+          id: itemId
+        }
+      });
     }
-  })
+  } else if (item.value === 'new-child-folder') {
+    const itemId = store.selectDropdownMenuItemId();
+    const { images } = repository.getState();
+    const currentItem = images.items[itemId];
+    const lastItem = images.tree[images.tree.length - 1]?.id;
+    const previousSibling = lastItem ? lastItem : undefined;
+    
+    if (currentItem) {
+      repository.addAction({
+        actionType: 'treePush',
+        target: 'images',
+        value: {
+          parent: itemId,
+          previousSibling,
+          item: {
+            id: 'image' + Date.now(),
+            name: 'New Folder',
+          }
+        }
+      });
+    }
+  }
 
+
+  store.hideDropdownMenu();
   const { images } = repository.getState();
   const items = toFlatItems(images);
   store.setItems(items)
@@ -74,4 +128,40 @@ export const handleAssetItemClick = (e, deps) => {
   subject.dispatch('redirect', {
     path: assetItem.path,
   })
+}
+
+export const handlePopoverClickOverlay = (e, deps) => {
+  const { store, render } = deps;
+  store.hidePopover();
+  render();
+}
+
+export const handleFormActionClick = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { formValues, actionId } = e.detail;
+  
+  if (actionId === 'submit' && formValues.name) {
+    const itemId = store.selectPopoverItem()?.id;
+    if (itemId) {
+      repository.addAction({
+        actionType: 'treeUpdate',
+        target: 'images',
+        value: {
+          id: itemId,
+          replace: false,
+          item: {
+            name: formValues.name
+          }
+        }
+      });
+      
+      // Update local state
+      const { images } = repository.getState();
+      const items = toFlatItems(images);
+      store.setItems(items);
+    }
+  }
+  
+  store.hidePopover();
+  render();
 }

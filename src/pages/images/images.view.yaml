@@ -24,6 +24,14 @@ refs:
     eventListeners:
       click:
         handler: handleAssetItemClick
+  popover:
+    eventListeners:
+      click-overlay:
+        handler: handlePopoverClickOverlay
+  form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -100,3 +108,5 @@ template:
         - rtgl-text s=sm: Scene 2
         - rtgl-text s=sm: Scene 3
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
+  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+    - rtgl-form#form slot=content .form=form:
