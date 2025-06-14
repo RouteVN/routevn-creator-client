@@ -1,3 +1,5 @@
+import { nanoid } from 'nanoid';
+
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { images } = repository.getState();
@@ -59,7 +61,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
         parent: '_root',
         previousSibling,
         item: {
-          id: 'image' + Date.now(),
+          id: 'image_' + nanoid(),
           type: 'folder',
           name: 'New Folder',
         }
@@ -101,7 +103,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
           parent: itemId,
           previousSibling,
           item: {
-            id: 'image' + Date.now(),
+            id: 'image_' + nanoid(),
             type: 'folder',
             name: 'New Folder',
           }
@@ -168,11 +170,18 @@ export const handleGroupClick = (e, deps) => {
   render();
 }
 
+export const handleImageItemClick = (e, deps) => {
+  const { store, render } = deps;
+  const itemId = e.currentTarget.id.replace('image-item-', '');
+  store.setSelectedItemId(itemId);
+  render();
+}
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { files } = e.detail;
   console.log('selected', e.currentTarget.id);
-  const id = e.currentTarget.id.replace('drag-drop-', '');
+  const id = e.currentTarget.id.replace('drag-drop-bar-', '').replace('drag-drop-item-', '');
   // upload files to server
   // update repository
 
@@ -231,6 +240,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const successfulUploads = uploadResults.filter(result => result.success);
   
   successfulUploads.forEach((result) => {
+    console.log('parent', id);
+    console.log('result', result);
     repository.addAction({
       actionType: 'treePush',
       target: 'images',
@@ -238,9 +249,11 @@ export const handleDragDropFileSelected = async (e, deps) => {
         parent: id,
         // previousSibling,
         item: {
-          id: 'image' + Date.now() + Math.random(), // Add randomness to ensure unique IDs
+          id: 'image_' + nanoid(),
           type: 'image',
           name: result.file.name,
+          fileType: result.file.type,
+          fileSize: result.file.size,
         }
       }
     });

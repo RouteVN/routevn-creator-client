@@ -31,7 +31,11 @@ refs:
     eventListeners:
       action-click:
         handler: handleFormActionClick
-  drag-drop-*:
+  drag-drop-item-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  drag-drop-bar-*:
     eventListeners:
       file-selected:
         handler: handleDragDropFileSelected
@@ -39,6 +43,10 @@ refs:
     eventListeners:
       click:
         handler: handleGroupClick
+  image-item-*:
+    eventListeners:
+      click:
+        handler: handleImageItemClick
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -57,39 +65,35 @@ template:
               - rtgl-svg wh=24 svg=folder:
               - rtgl-text s=h4: ${group.fullLabel}
             - $if !group.isCollapsed:
-                - rtgl-view d=h g=md:
-                  - $if group.hasChildren:
-                      - $for item in group.children:
-                          - rtgl-image w=200 h=150 src="/public/project_logo_placeholder.png":
-                    $else:
-                      - rvn-drag-drop#drag-drop-${group.id}:
+                - rtgl-view w=f:
+                  - rtgl-view d=h g=md fw=w:
+                    - $if group.hasChildren:
+                        - $for item in group.children:
+                            - 'rtgl-view#image-item-${item.id} cur=p style="${item.id === selectedItemId ? "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""}"':
+                              - rtgl-image w=200 h=150 src="/public/project_logo_placeholder.png":
+                      $else:
+                        - rvn-drag-drop#drag-drop-item-${group.id}:
+                - $if group.hasChildren:
+                    - rvn-drag-drop-bar#drag-drop-bar-${group.id}:
     - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
-      - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
-      - rtgl-text s=lg: Details
-      - rtgl-text c=mu-fg: Name 
-      - rtgl-text: My Background
-      - rtgl-text c=mu-fg: Description
-      - rtgl-text: This is a description of the background
-      - rtgl-text c=mu-fg: File Type
-      - rtgl-text: PNG
-      - rtgl-text c=mu-fg: File Size
-      - rtgl-text: 100 KB
-      - rtgl-text c=mu-fg: Created At
-      - rtgl-text: '2021-01-01'
-      - rtgl-text c=mu-fg: Updated At
-      - rtgl-text: '2021-01-01'
-      - rtgl-text c=mu-fg: Version
-      - rtgl-text: 4 (view history)
-      - rtgl-text c=mu-fg: Tags
-      - rtgl-view d=h fw=w g=sm:
-        - rtgl-text s=sm: Tag 1
-        - rtgl-text s=sm: Tag 2
-        - rtgl-text s=sm: Tag 3
-      - rtgl-text c=mu-fg: Used in Scenes
-      - rtgl-view d=h fw=w g=sm:
-        - rtgl-text s=sm: Scene 1
-        - rtgl-text s=sm: Scene 2
-        - rtgl-text s=sm: Scene 3
+      - $if selectedItem:
+          - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
+          - rtgl-text s=lg: Details
+          - rtgl-text c=mu-fg: Name 
+          - rtgl-text: ${selectedItem.name}
+          - rtgl-text c=mu-fg: Type
+          - rtgl-text: ${selectedItem.typeDisplay}
+          - $if selectedItem.displayFileType:
+              - rtgl-text c=mu-fg: File Type
+              - rtgl-text: ${selectedItem.displayFileType}
+          - $if selectedItem.displayFileSize:
+              - rtgl-text c=mu-fg: File Size
+              - rtgl-text: ${selectedItem.displayFileSize}
+          - rtgl-text c=mu-fg: Path
+          - rtgl-text s=sm: ${selectedItem.fullPath}
+        $else:
+          - rtgl-view h=f aj=c ai=c:
+            - rtgl-text c=mu-fg s=lg: No selection
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
   - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
     - rtgl-form#form slot=content .form=form:

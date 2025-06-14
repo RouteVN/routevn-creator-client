@@ -1,8 +1,17 @@
 import { toFlatGroups, toFlatItems } from "../../repository";
 
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+};
+
 export const INITIAL_STATE = Object.freeze({
-  items: [],
+  imagesData: { tree: [], items: {} },
   collapsedIds: [],
+  selectedItemId: null,
   dropdownMenu: {
     isOpen: false,
     items: [],
@@ -21,12 +30,10 @@ export const INITIAL_STATE = Object.freeze({
   }
 });
 
-export const addItem = (state, item) => {
-  state.items.push(item)
-}
+// Removed addItem - not used with new tree structure
 
-export const setItems = (state, items) => {
-  state.items = items
+export const setItems = (state, imagesData) => {
+  state.imagesData = imagesData
 }
 
 export const showDropdownMenuFileExplorerItem = (state, { position, id }) => {
@@ -80,7 +87,8 @@ export const hideDropdownMenu = (state) => {
 }
 
 export const selectAssetItem = ({ state }, id) => {
-  return state.assetItems.find(item => item.id === id);
+  // This function doesn't seem to be used correctly - assetItems doesn't exist in state
+  return null;
 }
 
 export const selectDropdownMenuItemId = ({ state }) => {
@@ -121,13 +129,26 @@ export const toggleGroupCollapse = (state, groupId) => {
 
 export const selectPopoverItem = ({ state }) => {
   if (!state.popover.itemId) return null;
-  return state.items.find(item => item.id === state.popover.itemId);
+  // Get item from the imagesData.items object
+  return state.imagesData.items[state.popover.itemId] ? 
+    { ...state.imagesData.items[state.popover.itemId], id: state.popover.itemId } : null;
+}
+
+export const setSelectedItemId = (state, itemId) => {
+  state.selectedItemId = itemId;
+}
+
+export const selectSelectedItem = ({ state }) => {
+  if (!state.selectedItemId) return null;
+  // state.imagesData contains the full structure with tree and items
+  const flatItems = toFlatItems(state.imagesData);
+  return flatItems.find(item => item.id === state.selectedItemId);
 }
 
 export const toViewData = ({ state, props }, payload) => {
   // Get current item for rename form
-  const currentItem = state.popover.itemId ? 
-    state.items.find(item => item.id === state.popover.itemId) : null;
+  const currentItem = state.popover.itemId && state.imagesData.items[state.popover.itemId] ? 
+    { ...state.imagesData.items[state.popover.itemId], id: state.popover.itemId } : null;
 
   // Form configuration for renaming
   const renameForm = currentItem ? {
@@ -153,16 +174,30 @@ export const toViewData = ({ state, props }, payload) => {
     }
   } : null;
 
-  const flatItems = toFlatItems(state.items);
-  const flatGroups = toFlatGroups(state.items).map(group => ({
+  const flatItems = toFlatItems(state.imagesData);
+  const flatGroups = toFlatGroups(state.imagesData).map(group => ({
     ...group,
     isCollapsed: state.collapsedIds.includes(group.id),
     children: state.collapsedIds.includes(group.id) ? [] : group.children
   }));
 
+  // Get selected item details
+  const selectedItem = state.selectedItemId ? 
+    flatItems.find(item => item.id === state.selectedItemId) : null;
+
+  // Compute display values for selected item
+  const selectedItemDetails = selectedItem ? {
+    ...selectedItem,
+    typeDisplay: selectedItem.type === 'image' ? 'Image' : 'Folder',
+    displayFileType: selectedItem.fileType || (selectedItem.type === 'image' ? 'PNG' : null),
+    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
+    fullPath: selectedItem.fullLabel || selectedItem.name || '',
+  } : null;
+
   console.log({
     flatItems,
     flatGroups,
+    selectedItem,
   });
 
   return {
@@ -173,6 +208,8 @@ export const toViewData = ({ state, props }, payload) => {
     form: renameForm,
     resourceCategory: 'assets',
     selectedResourceId: 'images',
+    selectedItemId: state.selectedItemId,
+    selectedItem: selectedItemDetails,
   };
 }
 
