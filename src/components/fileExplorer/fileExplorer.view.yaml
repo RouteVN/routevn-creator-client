@@ -61,7 +61,7 @@ template:
                   - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
                 $else:
                   - rtgl-view wh=16:
-              - rtgl-svg svg=folder wh=16:
+              - rtgl-svg svg=${item.type} wh=16:
               - rtgl-text s=sm: "${item.name}"
         - $if targetDragIndex != -2:
             - 'rtgl-view pos=abs w=200 bgc=ac h=2 style="top: ${32 * (targetDragIndex + 1)}px"':

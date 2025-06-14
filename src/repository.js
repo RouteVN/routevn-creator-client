@@ -262,3 +262,72 @@ export const toFlatItems = (data) => {
   tree.forEach((node) => traverse(node));
   return flatItems;
 };
+
+/**
+ * 
+ * children will always be list of items
+ * example result:
+ * 
+ * [{
+ *   id: '..',
+ *   fullLabel: '...',
+ *   type: 'folder',
+ *   children: [...]
+ * }, {
+ *   id: '..',
+ *   fullLabel: '...',
+ *   type: 'folder',
+ *   children: [...]
+ * }]
+ */
+export const toFlatGroups = (data) => {
+  const { items, tree } = data;
+  const flatGroups = [];
+  const visited = new Set();
+
+  const traverse = (node, level = 0, parentChain = []) => {
+    if (visited.has(node.id)) return;
+    visited.add(node.id);
+
+    // Create groups for nodes that are folders (including empty folders)
+    if (node.children !== undefined && items[node.id]?.type === 'folder') {
+      // Build full label from parent chain
+      const parentLabels = parentChain.map(parentId => items[parentId]?.name).filter(Boolean);
+      const fullLabel = parentLabels.length > 0 
+        ? `${parentLabels.join(' > ')} > ${items[node.id]?.name || ''}`
+        : items[node.id]?.name || '';
+
+      // Create children items with full data (only non-folder items)
+      const children = node.children
+        .filter(child => items[child.id]?.type !== 'folder')
+        .map(child => ({
+          ...items[child.id],
+          id: child.id,
+          _level: level + 1,
+          parentId: node.id,
+          hasChildren: child.children && child.children.length > 0
+        }));
+
+      // Create the group
+      const group = {
+        ...items[node.id],
+        id: node.id,
+        fullLabel,
+        type: 'folder',
+        _level: level,
+        parentId: parentChain[parentChain.length - 1] || null,
+        hasChildren: node.children && node.children.length > 0,
+        children
+      };
+
+      flatGroups.push(group);
+
+      // Continue traversing children
+      const newParentChain = [...parentChain, node.id];
+      node.children.forEach((child) => traverse(child, level + 1, newParentChain));
+    }
+  };
+
+  tree.forEach((node) => traverse(node));
+  return flatGroups;
+};

@@ -1,21 +1,18 @@
-import { toFlatItems } from '../../repository';
-
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { images } = repository.getState();
-  const items = toFlatItems(images);
-  store.setItems(items);
+  store.setItems(images);
 }
 
-export const handleTargetChanged = (payload, deps) => {
-  const { store, localData, render } = deps;
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0
-  })
-  store.setItems(localData.backgrounds.toJSONFlat())
-  render();
-}
+// export const handleTargetChanged = (payload, deps) => {
+//   const { store, localData, render } = deps;
+//   localData.backgrounds.createItem('_root', {
+//     name: 'New Item',
+//     level: 0
+//   })
+//   store.setItems(localData.backgrounds.toJSONFlat())
+//   render();
+// }
 
 export const handleFileExplorerRightClickContainer = (e, deps) => {
   const { store, render } = deps;
@@ -63,7 +60,8 @@ export const handleDropdownMenuClickItem = (e, deps) => {
         previousSibling,
         item: {
           id: 'image' + Date.now(),
-          name: 'New Item',
+          type: 'folder',
+          name: 'New Folder',
         }
       }
     })
@@ -104,6 +102,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
           previousSibling,
           item: {
             id: 'image' + Date.now(),
+            type: 'folder',
             name: 'New Folder',
           }
         }
@@ -114,8 +113,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
 
   store.hideDropdownMenu();
   const { images } = repository.getState();
-  const items = toFlatItems(images);
-  store.setItems(items)
+  store.setItems(images)
   render();
 }
 
@@ -155,11 +153,104 @@ export const handleFormActionClick = (e, deps) => {
       
       // Update local state
       const { images } = repository.getState();
-      const items = toFlatItems(images);
-      store.setItems(items);
+      store.setItems(images);
     }
   }
   
   store.hidePopover();
+  render();
+}
+
+export const handleGroupClick = (e, deps) => {
+  const { store, render } = deps;
+  const groupId = e.currentTarget.id.replace('group-', '');
+  store.toggleGroupCollapse(groupId);
+  render();
+}
+
+export const handleDragDropFileSelected = async (e, deps) => {
+  const { store, render, httpClient, repository } = deps;
+  const { files } = e.detail;
+  console.log('selected', e.currentTarget.id);
+  const id = e.currentTarget.id.replace('drag-drop-', '');
+  // upload files to server
+  // update repository
+
+  // Create upload promises for all files
+  const uploadPromises = Array.from(files).map(async (file) => {
+    try {
+      const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
+        projectId: 'someprojectId',
+      });
+
+      console.log('downloadUrl', {
+        file: file.name,
+        downloadUrl,
+        uploadUrl,
+        fileId,
+      });
+
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type, // Ensure the Content-Type matches the file type
+        },
+      });
+      
+      if (response.ok) {
+        console.log('File uploaded successfully:', file.name);
+        return {
+          success: true,
+          file,
+          downloadUrl,
+          fileId,
+        };
+      } else {
+        console.error('File upload failed:', file.name, response.statusText);
+        return {
+          success: false,
+          file,
+          error: response.statusText,
+        };
+      }
+    } catch (error) {
+      console.error('File upload error:', file.name, error);
+      return {
+        success: false,
+        file,
+        error: error.message,
+      };
+    }
+  });
+
+  // Wait for all uploads to complete
+  const uploadResults = await Promise.all(uploadPromises);
+
+  // Add successfully uploaded files to repository
+  const successfulUploads = uploadResults.filter(result => result.success);
+  
+  successfulUploads.forEach((result) => {
+    repository.addAction({
+      actionType: 'treePush',
+      target: 'images',
+      value: {
+        parent: id,
+        // previousSibling,
+        item: {
+          id: 'image' + Date.now() + Math.random(), // Add randomness to ensure unique IDs
+          type: 'image',
+          name: result.file.name,
+        }
+      }
+    });
+  });
+
+  if (successfulUploads.length > 0) {
+    const { images } = repository.getState();
+    store.setItems(images);
+  }
+
+  console.log(`Uploaded ${successfulUploads.length} out of ${files.length} files successfully`);
   render();
 }

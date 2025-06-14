@@ -1,0 +1,27 @@
+elementName: rvn-drag-drop
+schema:
+  type: object
+  properties:
+    isDragging:
+      type: boolean
+    bgc:
+      type: string
+
+refs:
+  dragDrop:
+    eventListeners:
+      click:
+        handler: handleClick
+      dragenter:
+        handler: handleDragEnter
+      dragover:
+        handler: handleDragOver
+      dragleave:
+        handler: handleDragLeave
+      drop:
+        handler: handleDrop
+
+template:
+  - rtgl-view#dragDrop w=200 h=150 bw=xs br=md ah=c av=c g=md cur=p bgc=${bgc}:
+    - rtgl-svg svg=folder wh=32:
+    - rtgl-text: Upload Image

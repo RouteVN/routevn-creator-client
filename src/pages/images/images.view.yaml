@@ -7,9 +7,8 @@ dataSchema:
 refs:
   fileexplorer:
     eventListeners:
-      targetchanged:
-        required: true
-        handler: handleTargetChanged
+      # targetchanged:
+      #   handler: handleTargetChanged
       rightclick-container:
         handler: handleFileExplorerRightClickContainer
       rightclick-item:
@@ -32,22 +31,38 @@ refs:
     eventListeners:
       action-click:
         handler: handleFormActionClick
+  drag-drop-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  group-*:
+    eventListeners:
+      click:
+        handler: handleGroupClick
 
 template: 
   - rtgl-view d=h w=f h=f: 
     - rtgl-view w=f h=f p=md w=200:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-      - rvn-file-explorer#fileexplorer .items=items:
+      - rvn-file-explorer#fileexplorer .items=flatItems:
     - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
       - rtgl-view g=lg w=f:
-        - $for item in items:
+        - $for group in flatGroups:
           - rtgl-view w=f:
-            - 'rtgl-view d=h w=f g=md av=c bgc=bg style="position: sticky; top: 0;"':
-              - rtgl-svg wh=16 svg=folderArrowRight:
-              - rtgl-svg wh=24 svg=text:
-              - rtgl-text s=h4: ${item.fullLabel}
-            - rtgl-view:
-              - rtgl-image w=200 h=150 src=/public/project_logo_placeholder.png:
+            - 'rtgl-view#group-${group.id} d=h w=f g=md av=c bgc=bg cur=p style="position: sticky; top: 0;"':
+              - $if group.isCollapsed:
+                  - rtgl-svg wh=16 svg=folderArrowRight:
+                $else:
+                  - rtgl-svg wh=16 svg=folderArrowDown:
+              - rtgl-svg wh=24 svg=folder:
+              - rtgl-text s=h4: ${group.fullLabel}
+            - $if !group.isCollapsed:
+                - rtgl-view d=h g=md:
+                  - $if group.hasChildren:
+                      - $for item in group.children:
+                          - rtgl-image w=200 h=150 src="/public/project_logo_placeholder.png":
+                    $else:
+                      - rvn-drag-drop#drag-drop-${group.id}:
     - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
       - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
       - rtgl-text s=lg: Details
