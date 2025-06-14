@@ -249,6 +249,8 @@ export const toFlatItems = (data) => {
       id: node.id,
       _level: level,
       fullLabel,
+      hasChildren: node.children && node.children.length > 0,
+      parentId: parentChain[parentChain.length - 1] || null,
     };
     flatItems.push(item);
 

@@ -27,6 +27,10 @@ propsSchema:
             type: string
           level:
             type: number
+          hasChildren:
+            type: boolean
+          parentId:
+            type: string
 
 refs:
   item-*:
@@ -38,6 +42,10 @@ refs:
         handler: handleItemContextMenu
       click:
         handler: handleItemClick
+  arrow-*:
+    eventListeners:
+      click:
+        handler: handleArrowClick
   container:
     eventListeners:
       contextmenu:
@@ -49,7 +57,10 @@ template:
       - 'rtgl-view w=f h=f style="position: relative;"':
         - $for item, i in items:
             - 'rtgl-view#item-${item.id} g=md d=h style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 w=f cur=p av=c':
-              - rtgl-svg svg=folderArrowRight wh=16:
+              - $if item.hasChildren:
+                  - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
+                $else:
+                  - rtgl-view wh=16:
               - rtgl-svg svg=folder wh=16:
               - rtgl-text s=sm: "${item.name}"
         - $if targetDragIndex != -2:

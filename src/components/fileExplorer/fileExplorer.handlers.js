@@ -166,3 +166,11 @@ export const handleItemClick = (e, deps) => {
     },
   }));
 };
+
+export const handleArrowClick = (e, deps) => {
+  const { store, render } = deps;
+  e.stopPropagation(); // Prevent triggering item click
+  const folderId = e.currentTarget.id.replace('arrow-', '');
+  store.toggleFolderExpand(folderId);
+  render();
+};
