@@ -8,7 +8,6 @@ const set = (state, path, value) => {
     current[key] = { ...current[key] };
     current = current[key];
   }
-
   current[keys[keys.length - 1]] = value;
   return newState;
 };
