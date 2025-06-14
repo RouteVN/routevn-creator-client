@@ -1,11 +1,46 @@
 import { createWebPatch } from 'rettangoli-fe';
 import { h } from 'snabbdom/build/h';
 
-import { CustomSubject } from './common';
+import { CustomSubject, createHttpClient } from './common';
 import { createRepository } from './repository';
 
 import { createAutoMergeData } from './automerge/sample.js'
 import stepsEditorAutomergeData from './automerge/sample3.js'
+
+
+/**
+ * @typedef {Object} HttpClient
+ * @property {Object} creator - Creatorendpoints
+ * @property {function(string): Promise<string>} creator.uploadFile - Upload file
+ * @property {function(string): Promise<string>} creator.getFileContent - Get file content
+ * @property {function(string): void} setAuthToken - Set auth token
+ */
+
+const createRouteVnHttpClient = ({ baseUrl, headers }) => {
+  /**
+   * @type {HttpClient}
+   */
+  const httpClient = createHttpClient({
+    baseUrl,
+    headers,
+    apis: {
+      creator: {
+        uploadFile: {},
+        getFileContent: {},
+      },
+    },
+  });
+
+  return httpClient;
+};
+
+ const httpClient = createRouteVnHttpClient({
+  baseUrl: 'http://192.168.0.3:8788',
+  headers: {
+    "X-Platform": "web",
+  },
+});
+
 
 const backgroundsData = createAutoMergeData()
 backgroundsData.createItem('_root', {
@@ -21,6 +56,7 @@ const initialData = {
   images: {
     items: {
       image1: {
+        type: 'folder',
         name: 'Image 1',
         url: 'https://via.placeholder.com/150',
       },
@@ -31,6 +67,7 @@ const initialData = {
     },
     tree: [{
       id: 'image1',
+      type: 'folder',
       children: [{
         id: 'image2',
         children: [],
@@ -39,7 +76,16 @@ const initialData = {
   }
 }
 
-const repository = createRepository(initialData);
+const localStorageRepository = localStorage.getItem('repository') 
+const localData = localStorageRepository ? JSON.parse(localStorageRepository) : initialData;
+
+const repository = createRepository(localData);
+
+setInterval(() => {
+  const state = repository.getState()
+  localStorage.setItem('repository', JSON.stringify(state));
+}, 5000);
+
 
 class WebRouter {
   // _routes;
@@ -108,6 +154,7 @@ const subject = new CustomSubject();
 const router = new WebRouter();
 
 const componentDependencies = {
+  httpClient,
   subject,
   router,
   repository,
@@ -118,6 +165,7 @@ const componentDependencies = {
 }
 
 const pageDependencies = {
+  httpClient,
   subject, 
   router,
   repository,

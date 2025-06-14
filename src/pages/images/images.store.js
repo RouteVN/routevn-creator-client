@@ -1,32 +1,8 @@
+import { toFlatGroups, toFlatItems } from "../../repository";
 
 export const INITIAL_STATE = Object.freeze({
-  assetItems: [{
-    id: 'images',
-    name: 'Images',
-    path: '/project/resources/images'
-  }, {
-    id: 'audio',
-    name: 'Audio',
-    path: '/project/resources/audio'
-  }, {
-    id: 'videos',
-    name: 'Videos',
-    path: '/project/resources/videos'
-  }, {
-    id: 'characters',
-    name: 'Characters',
-    path: '/project/resources/characters'
-  }, {
-    id: 'positions',
-    name: 'Positions',
-    path: '/project/resources/positions'
-  }, {
-    id: 'animations',
-    name: 'Animations',
-    path: '/project/resources/animations'
-  }],
-  selectedAssetId: 'images',
   items: [],
+  collapsedIds: [],
   dropdownMenu: {
     isOpen: false,
     items: [],
@@ -134,22 +110,21 @@ export const hidePopover = (state) => {
   };
 }
 
+export const toggleGroupCollapse = (state, groupId) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
+}
+
 export const selectPopoverItem = ({ state }) => {
   if (!state.popover.itemId) return null;
   return state.items.find(item => item.id === state.popover.itemId);
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  const assetItems = state.assetItems.map(item => {
-    const isSelected = state.selectedAssetId === item.id;
-    return {
-      id: item.id,
-      name: item.name,
-      path: item.path,
-      bgc: isSelected ? 'mu' : 'bg',
-    }
-  })
-
   // Get current item for rename form
   const currentItem = state.popover.itemId ? 
     state.items.find(item => item.id === state.popover.itemId) : null;
@@ -178,15 +153,21 @@ export const toViewData = ({ state, props }, payload) => {
     }
   } : null;
 
-  const items = state.items.map((item) => {
-    return {
-      ...item,
-    }
-  })
+  const flatItems = toFlatItems(state.items);
+  const flatGroups = toFlatGroups(state.items).map(group => ({
+    ...group,
+    isCollapsed: state.collapsedIds.includes(group.id),
+    children: state.collapsedIds.includes(group.id) ? [] : group.children
+  }));
+
+  console.log({
+    flatItems,
+    flatGroups,
+  });
 
   return {
-    assetItems,
-    items,
+    flatItems,
+    flatGroups,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: renameForm,
