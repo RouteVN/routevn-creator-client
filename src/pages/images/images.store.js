@@ -178,13 +178,15 @@ export const toViewData = ({ state, props }, payload) => {
     }
   } : null;
 
+  const items = state.items.map((item) => {
+    return {
+      ...item,
+    }
+  })
+
   return {
     assetItems,
-    items: state.items.map((item) => {
-      return {
-        ...item,
-      }
-    }),
+    items,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: renameForm,

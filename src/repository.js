@@ -234,19 +234,27 @@ export const toFlatItems = (data) => {
   const flatItems = [];
   const visited = new Set();
 
-  const traverse = (node, level = 0) => {
+  const traverse = (node, level = 0, parentChain = []) => {
     if (visited.has(node.id)) return;
     visited.add(node.id);
+
+    // Build full label from parent chain
+    const parentLabels = parentChain.map(parentId => items[parentId]?.name).filter(Boolean);
+    const fullLabel = parentLabels.length > 0 
+      ? `${parentLabels.join(' > ')} > ${items[node.id]?.name || ''}`
+      : items[node.id]?.name || '';
 
     const item = {
       ...items[node.id],
       id: node.id,
       _level: level,
+      fullLabel,
     };
     flatItems.push(item);
 
     if (node.children) {
-      node.children.forEach((child) => traverse(child, level + 1));
+      const newParentChain = [...parentChain, node.id];
+      node.children.forEach((child) => traverse(child, level + 1, newParentChain));
     }
   };
 

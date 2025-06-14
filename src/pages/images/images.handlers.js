@@ -50,8 +50,6 @@ export const handleDropdownMenuClickOverlay = (e, deps) => {
 export const handleDropdownMenuClickItem = (e, deps) => {
   const { store, render, repository } = deps;
 
-  console.log('e.detail', e.detail)
-
   const { item } = e.detail;
   if (item.value === 'new-item') {
     const { images } = repository.getState();
@@ -96,7 +94,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     const currentItem = images.items[itemId];
     const lastItem = images.tree[images.tree.length - 1]?.id;
     const previousSibling = lastItem ? lastItem : undefined;
-    
+
     if (currentItem) {
       repository.addAction({
         actionType: 'treePush',
