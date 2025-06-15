@@ -180,23 +180,13 @@ export const handleImageItemClick = (e, deps) => {
 export const handleDragDropFileSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { files } = e.detail;
-  console.log('selected', e.currentTarget.id);
   const id = e.currentTarget.id.replace('drag-drop-bar-', '').replace('drag-drop-item-', '');
-  // upload files to server
-  // update repository
 
   // Create upload promises for all files
   const uploadPromises = Array.from(files).map(async (file) => {
     try {
       const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
         projectId: 'someprojectId',
-      });
-
-      console.log('downloadUrl', {
-        file: file.name,
-        downloadUrl,
-        uploadUrl,
-        fileId,
       });
 
       const response = await fetch(uploadUrl, {
@@ -240,17 +230,15 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const successfulUploads = uploadResults.filter(result => result.success);
   
   successfulUploads.forEach((result) => {
-    console.log('parent', id);
-    console.log('result', result);
     repository.addAction({
       actionType: 'treePush',
       target: 'images',
       value: {
         parent: id,
-        // previousSibling,
         item: {
           id: 'image_' + nanoid(),
           type: 'image',
+          fileId: result.fileId,
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,

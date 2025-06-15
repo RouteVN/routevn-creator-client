@@ -70,14 +70,14 @@ template:
                     - $if group.hasChildren:
                         - $for item in group.children:
                             - 'rtgl-view#image-item-${item.id} cur=p style="${item.id === selectedItemId ? "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""}"':
-                              - rtgl-image w=200 h=150 src="/public/project_logo_placeholder.png":
+                              - rvn-file-image w=200 h=150 fileId=${item.fileId}:
                       $else:
                         - rvn-drag-drop#drag-drop-item-${group.id}:
                 - $if group.hasChildren:
                     - rvn-drag-drop-bar#drag-drop-bar-${group.id}:
     - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
       - $if selectedItem:
-          - rtgl-image w=240 h=135 src=/public/project_logo_placeholder.png:
+          - rvn-file-image w=240 h=135 fileId=${selectedItem.fileId}:
           - rtgl-text s=lg: Details
           - rtgl-text c=mu-fg: Name 
           - rtgl-text: ${selectedItem.name}
