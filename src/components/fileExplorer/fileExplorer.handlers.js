@@ -21,7 +21,7 @@ export const handleOnMount = (deps) => {
  */
 export const getSelectedItemIndex = (_mouseY, itemRects, offset) => {
   if (!itemRects) {
-    return -1;
+    return { index: -1, position: 0 };
   }
 
   const mouseY = _mouseY + offset;
@@ -32,23 +32,29 @@ export const getSelectedItemIndex = (_mouseY, itemRects, offset) => {
     .map(([id, rect]) => ({ id, ...rect }));
 
   if (sortedItems.length === 0) {
-    return -1;
+    return { index: -1, position: 0 };
   }
 
   if (mouseY < sortedItems[0].top) {
-    return -1;
+    return { index: -1, position: sortedItems[0].top };
   }
 
   const lastItem = sortedItems[sortedItems.length - 1];
   if (mouseY > lastItem.bottom) {
-    return sortedItems.length - 1;
+    return { index: sortedItems.length - 1, position: lastItem.bottom };
   }
 
   for (let i = 0; i < sortedItems.length; i++) {
     const currentItem = sortedItems[i];
 
     if (mouseY >= currentItem.top && mouseY <= currentItem.bottom) {
-      return i;
+      // Mouse is over an item - show line at top or bottom based on position
+      const middleY = currentItem.top + (currentItem.height / 2);
+      if (mouseY < middleY) {
+        return { index: i - 1, position: currentItem.top };
+      } else {
+        return { index: i, position: currentItem.bottom };
+      }
     }
 
     if (i < sortedItems.length - 1) {
@@ -57,19 +63,25 @@ export const getSelectedItemIndex = (_mouseY, itemRects, offset) => {
         const distanceToCurrentBottom = mouseY - currentItem.bottom;
         const distanceToNextTop = nextItem.top - mouseY;
 
-        return distanceToCurrentBottom <= distanceToNextTop ? i : i + 1;
+        if (distanceToCurrentBottom <= distanceToNextTop) {
+          return { index: i, position: currentItem.bottom };
+        } else {
+          return { index: i, position: nextItem.top };
+        }
       }
     }
   }
 
-  return sortedItems.length - 1;
+  return { index: sortedItems.length - 1, position: sortedItems[sortedItems.length - 1].bottom };
 };
 
 export const handleItemMouseDown = (e, deps) => {
-  const { store, getRefIds } = deps;
+  const { store, getRefIds, render } = deps;
   const refIds = getRefIds();
-  console.log('refIds', refIds)
 
+  // Get the container element to calculate relative positions
+  const containerRect = e.currentTarget.parentElement.getBoundingClientRect();
+  
   const itemRects = Object.keys(refIds).reduce((acc, key) => {
     const ref = refIds[key];
     const rect = ref.elm.getBoundingClientRect();
@@ -78,45 +90,56 @@ export const handleItemMouseDown = (e, deps) => {
       bottom: rect.bottom,
       height: rect.height,
       y: rect.top,
+      relativeTop: rect.top - containerRect.top,
+      relativeBottom: rect.bottom - containerRect.top,
     };
     return acc;
   }, {});
-  store.startDragging({ id: e.currentTarget.id, itemRects });
+  
+  store.startDragging({ id: e.currentTarget.id, itemRects, containerTop: containerRect.top });
+  render();
 };
 
 export const handleWindowMouseUp = (e, deps) => {
   const { store, dispatchEvent, render } = deps;
 
-  if (!store.selectIsDragging() ) {
+  if (!store.selectIsDragging()) {
     return;
   }
 
+  const targetIndex = store.selectTargetDragIndex();
+  
   store.stopDragging();
 
   dispatchEvent(new CustomEvent("targetchanged", {
     detail: {
-      target: store.selectTargetDragIndex(),
+      target: targetIndex,
     },
   }));
   render();
 };
 
 export const handleWindowMouseMove = (e, deps) => {
-  if (!deps.store.selectIsDragging()) {
+  const isDragging = deps.store.selectIsDragging();
+  
+  if (!isDragging) {
     return;
   }
   const { store, render } = deps;
   const itemRects = store.selectItemRects();
+  const containerTop = store.selectContainerTop();
 
-  const selectedItemIndex = getSelectedItemIndex(e.clientY, itemRects, -16);
+  const result = getSelectedItemIndex(e.clientY, itemRects, -16);
+  
+  // Convert absolute position to relative position
+  const relativePosition = result.position - containerTop;
 
-  console.log('selectedItemIndex', selectedItemIndex)
-
-  if (store.selectTargetDragIndex() === selectedItemIndex) {
+  if (store.selectTargetDragIndex() === result.index && store.selectTargetDragPosition() === relativePosition) {
     return;
   }
 
-  store.setTargetDragIndex(selectedItemIndex);
+  store.setTargetDragIndex(result.index);
+  store.setTargetDragPosition(relativePosition);
   render();
 };
 

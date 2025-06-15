@@ -5,58 +5,71 @@ export const INITIAL_STATE = Object.freeze({
 
   // -2 means no target drag index
   targetDragIndex: -2,
+  targetDragPosition: 0,
   itemRects: {},
+  containerTop: 0,
   
   // Track collapsed folder IDs
   collapsedIds: [],
 });
 
-export const startDragging = (state, { id, itemRects }) => {
+export const startDragging = (state, { id, itemRects, containerTop }) => {
   state.isDragging = true;
   state.selectedItemId = id;
   state.itemRects = itemRects;
+  state.containerTop = containerTop;
 }
 
 export const stopDragging = (state) => {
   state.isDragging = false;
   state.selectedItemId = undefined;
   state.targetDragIndex = -2;
+  state.targetDragPosition = 0;
   state.itemRects = {};
+  state.containerTop = 0;
 }
 
 export const setTargetDragIndex = (state, index) => {
   state.targetDragIndex = index;
-  console.log('setTargetDragIndex, state', state.targetDragIndex)
 }
 
-export const selectTargetDragIndex = (state, props, payload) => {
+export const setTargetDragPosition = (state, position) => {
+  state.targetDragPosition = position;
+}
+
+export const selectTargetDragIndex = ({ state }) => {
   return state.targetDragIndex;
 }
 
-export const selectItemRects = (state, props, payload) => {
+export const selectTargetDragPosition = ({ state }) => {
+  return state.targetDragPosition;
+}
+
+export const selectItemRects = ({ state }) => {
   return state.itemRects;
 }
 
-export const selectIsDragging = (state, props, payload) => {
+export const selectContainerTop = ({ state }) => {
+  return state.containerTop;
+}
+
+export const selectIsDragging = ({ state }) => {
   return state.isDragging;
 }
 
-export const selectSelectedItemId = (state, props, payload) => {
+export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 }
 
 export const toggleFolderExpand = (state, folderId) => {
   const currentIndex = state.collapsedIds.indexOf(folderId);
-  console.log(`Toggle folder ${folderId}: currentIndex=${currentIndex}, collapsedIds=`, state.collapsedIds);
   
   if (currentIndex >= 0) {
     // Remove from collapsed list (expand)
     state.collapsedIds.splice(currentIndex, 1);
-    console.log(`Expanded folder ${folderId}, new collapsedIds=`, state.collapsedIds);
   } else {
     // Add to collapsed list (collapse)
     state.collapsedIds.push(folderId);
-    console.log(`Collapsed folder ${folderId}, new collapsedIds=`, state.collapsedIds);
   }
 }
 
@@ -87,11 +100,6 @@ export const toViewData = ({ state, props }, payload) => {
     const isCollapsed = state.collapsedIds.includes(item.id);
     const arrowIcon = item.hasChildren ? (isCollapsed ? 'folderArrowRight' : 'folderArrowDown') : null;
     
-    // Debug logging
-    if (item.hasChildren) {
-      console.log(`Item ${item.name} (${item.id}): collapsed=${isCollapsed}, arrowIcon=${arrowIcon}`);
-    }
-    
     return {
       ...item,
       ml: item._level * 16,
@@ -99,9 +107,14 @@ export const toViewData = ({ state, props }, payload) => {
     }
   });
 
-  return {
+  const viewData = {
     ...state,
     items: processedItems,
+    targetDragIndex: state.targetDragIndex,
+    targetDragPosition: state.targetDragPosition,
+    isDragging: state.isDragging,
   };
+  
+  return viewData;
 }
 
