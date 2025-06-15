@@ -56,7 +56,7 @@ const removeNodeFromTree = (tree, nodeId) => {
 const treePush = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
-  const { parent, item, previousSibling } = value;
+  const { parent, item, position } = value;
   
   // Ensure tree and items exist
   if (!targetData.tree) {
@@ -76,18 +76,37 @@ const treePush = (state, target, value) => {
     children: []
   };
   
-  if (parent === '_root') {
-    // Add to root level
-    if (previousSibling) {
-      const index = targetData.tree.findIndex(node => node.id === previousSibling);
-      if (index !== -1) {
-        targetData.tree.splice(index + 1, 0, newNode);
-      } else {
-        targetData.tree.push(newNode);
+  // Helper function to insert node at the specified position
+  const insertAtPosition = (array, node, position) => {
+    if (position === 'first') {
+      array.unshift(node);
+    } else if (position === 'last') {
+      array.push(node);
+    } else if (position && typeof position === 'object') {
+      if (position.after) {
+        const index = array.findIndex(n => n.id === position.after);
+        if (index !== -1) {
+          array.splice(index + 1, 0, node);
+        } else {
+          array.push(node); // Fallback to end if not found
+        }
+      } else if (position.before) {
+        const index = array.findIndex(n => n.id === position.before);
+        if (index !== -1) {
+          array.splice(index, 0, node);
+        } else {
+          array.unshift(node); // Fallback to beginning if not found
+        }
       }
     } else {
-      targetData.tree.unshift(newNode);
+      // Default to first if position is undefined
+      array.unshift(node);
     }
+  };
+
+  if (parent === '_root') {
+    // Add to root level
+    insertAtPosition(targetData.tree, newNode, position);
   } else {
     // Add to specific parent
     const parentInfo = findNodeInTree(targetData.tree, parent);
@@ -95,16 +114,7 @@ const treePush = (state, target, value) => {
       if (!parentInfo.node.children) {
         parentInfo.node.children = [];
       }
-      if (previousSibling) {
-        const index = parentInfo.node.children.findIndex(node => node.id === previousSibling);
-        if (index !== -1) {
-          parentInfo.node.children.splice(index + 1, 0, newNode);
-        } else {
-          parentInfo.node.children.push(newNode);
-        }
-      } else {
-        parentInfo.node.children.unshift(newNode);
-      }
+      insertAtPosition(parentInfo.node.children, newNode, position);
     }
   }
   
@@ -151,10 +161,58 @@ const treeUpdate = (state, target, value) => {
   return newState;
 };
 
+/**
+ * Moves a node from one position to another in the tree structure
+ * 
+ * @param {Object} state - The current state object
+ * @param {string} target - Path to the target data (e.g., 'fileExplorer')
+ * @param {Object} value - Move operation parameters
+ * @param {string} value.id - ID of the node to move
+ * @param {string} value.parent - ID of the new parent node ('_root' for root level)
+ * @param {string|Object} [value.position] - Position specification:
+ *   - 'first': Insert at the beginning
+ *   - 'last': Insert at the end
+ *   - { after: 'nodeId' }: Insert after the specified node
+ *   - { before: 'nodeId' }: Insert before the specified node
+ *   - undefined: Default to 'first'
+ * @returns {Object} New state with the node moved to its new position
+ * 
+ * @example
+ * // Move node 'file1' to root level at the beginning
+ * const newState = treeMove(state, 'fileExplorer', {
+ *   id: 'file1',
+ *   parent: '_root',
+ *   position: 'first'
+ * });
+ * 
+ * @example
+ * // Move node 'file2' to root level at the end
+ * const newState = treeMove(state, 'fileExplorer', {
+ *   id: 'file2',
+ *   parent: '_root',
+ *   position: 'last'
+ * });
+ * 
+ * @example
+ * // Move node 'file3' after 'folder1'
+ * const newState = treeMove(state, 'fileExplorer', {
+ *   id: 'file3',
+ *   parent: '_root',
+ *   position: { after: 'folder1' }
+ * });
+ * 
+ * @example
+ * // Move node 'file4' before 'file5' in 'folder2'
+ * const newState = treeMove(state, 'fileExplorer', {
+ *   id: 'file4',
+ *   parent: 'folder2',
+ *   position: { before: 'file5' }
+ * });
+ */
 const treeMove = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
-  const { id, parent, previousSibling } = value;
+  const { id, parent, position } = value;
   
   // Find and remove node from current position
   const nodeInfo = findNodeInTree(targetData.tree, id);
@@ -163,34 +221,44 @@ const treeMove = (state, target, value) => {
   const nodeToMove = structuredClone(nodeInfo.node);
   removeNodeFromTree(targetData.tree, id);
   
-  // Insert at new position
-  if (parent === '_root') {
-    if (previousSibling) {
-      const index = targetData.tree.findIndex(node => node.id === previousSibling);
-      if (index !== -1) {
-        targetData.tree.splice(index + 1, 0, nodeToMove);
-      } else {
-        targetData.tree.push(nodeToMove);
+  // Helper function to insert node at the specified position
+  const insertAtPosition = (array, node, position) => {
+    if (position === 'first') {
+      array.unshift(node);
+    } else if (position === 'last') {
+      array.push(node);
+    } else if (position && typeof position === 'object') {
+      if (position.after) {
+        const index = array.findIndex(n => n.id === position.after);
+        if (index !== -1) {
+          array.splice(index + 1, 0, node);
+        } else {
+          array.push(node); // Fallback to end if not found
+        }
+      } else if (position.before) {
+        const index = array.findIndex(n => n.id === position.before);
+        if (index !== -1) {
+          array.splice(index, 0, node);
+        } else {
+          array.unshift(node); // Fallback to beginning if not found
+        }
       }
     } else {
-      targetData.tree.unshift(nodeToMove);
+      // Default to first if position is undefined
+      array.unshift(node);
     }
+  };
+
+  // Insert at new position
+  if (parent === '_root') {
+    insertAtPosition(targetData.tree, nodeToMove, position);
   } else {
     const parentInfo = findNodeInTree(targetData.tree, parent);
     if (parentInfo && parentInfo.node) {
       if (!parentInfo.node.children) {
         parentInfo.node.children = [];
       }
-      if (previousSibling) {
-        const index = parentInfo.node.children.findIndex(node => node.id === previousSibling);
-        if (index !== -1) {
-          parentInfo.node.children.splice(index + 1, 0, nodeToMove);
-        } else {
-          parentInfo.node.children.push(nodeToMove);
-        }
-      } else {
-        parentInfo.node.children.unshift(nodeToMove);
-      }
+      insertAtPosition(parentInfo.node.children, nodeToMove, position);
     }
   }
   

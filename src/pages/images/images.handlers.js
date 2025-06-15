@@ -1,20 +1,63 @@
-import { nanoid } from 'nanoid';
+import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { images } = repository.getState();
   store.setItems(images);
-}
 
-// export const handleTargetChanged = (payload, deps) => {
-//   const { store, localData, render } = deps;
-//   localData.backgrounds.createItem('_root', {
-//     name: 'New Item',
-//     level: 0
-//   })
-//   store.setItems(localData.backgrounds.toJSONFlat())
-//   render();
-// }
+  return () => {}
+};
+
+export const handleTargetChanged = (e, deps) => {
+  const { store, render, repository } = deps;
+
+  console.log("handleTargetChanged", e.detail);
+  
+  const { target, source, position } = e.detail;
+  
+  if (!source || !source.id) {
+    console.warn("No source item provided");
+    return;
+  }
+
+  let repositoryPosition;
+  let parent;
+
+  if (position === 'inside') {
+    // Drop inside a folder
+    if (!target || target.type !== 'folder') {
+      console.warn("Cannot drop inside non-folder item");
+      return;
+    }
+    parent = target.id;
+    repositoryPosition = 'last'; // Add to end of folder
+  } else if (position === 'above') {
+    // Drop above target item
+    parent = target?.parentId || "_root";
+    repositoryPosition = { before: target.id };
+  } else if (position === 'below') {
+    // Drop below target item  
+    parent = target?.parentId || "_root";
+    repositoryPosition = { after: target.id };
+  } else {
+    console.warn("Unknown drop position:", position);
+    return;
+  }
+
+  repository.addAction({
+    actionType: "treeMove",
+    target: "images",
+    value: {
+      id: source.id,
+      parent: parent,
+      position: repositoryPosition,
+    },
+  });
+
+  const { images } = repository.getState();
+  store.setItems(images);
+  render();
+};
 
 export const handleFileExplorerRightClickContainer = (e, deps) => {
   const { store, render } = deps;
@@ -38,167 +81,164 @@ export const handleFileExplorerRightClickItem = (e, deps) => {
     id: e.detail.id,
   });
   render();
-}
+};
 
 export const handleDropdownMenuClickOverlay = (e, deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
-}
+};
 
 export const handleDropdownMenuClickItem = (e, deps) => {
   const { store, render, repository } = deps;
 
   const { item } = e.detail;
-  if (item.value === 'new-item') {
-    const { images } = repository.getState();
-    const lastItem = images.tree[images.tree.length - 1]?.id;
-    const previousSibling = lastItem ? lastItem : undefined;
+  if (item.value === "new-item") {
     repository.addAction({
-      actionType: 'treePush',
-      target: 'images',
+      actionType: "treePush",
+      target: "images",
       value: {
-        parent: '_root',
-        previousSibling,
+        parent: "_root",
+        position: "last",
         item: {
-          id: 'image_' + nanoid(),
-          type: 'folder',
-          name: 'New Folder',
-        }
-      }
-    })
-  } else if (item.value === 'rename-item') {
+          id: "image_" + nanoid(),
+          type: "folder",
+          name: "New Folder",
+        },
+      },
+    });
+  } else if (item.value === "rename-item") {
     const itemId = store.selectDropdownMenuItemId();
     const { x, y } = store.selectDropdownMenuPosition();
-    store.showPopover({ 
-      position: { x, y }, 
-      itemId 
+    store.showPopover({
+      position: { x, y },
+      itemId,
     });
-  } else if (item.value === 'delete-item') {
+  } else if (item.value === "delete-item") {
     const itemId = store.selectDropdownMenuItemId();
     const { images } = repository.getState();
     const currentItem = images.items[itemId];
-    
-    if (currentItem) {
-      repository.addAction({
-        actionType: 'treeDelete',
-        target: 'images',
-        value: {
-          id: itemId
-        }
-      });
-    }
-  } else if (item.value === 'new-child-folder') {
-    const itemId = store.selectDropdownMenuItemId();
-    const { images } = repository.getState();
-    const currentItem = images.items[itemId];
-    const lastItem = images.tree[images.tree.length - 1]?.id;
-    const previousSibling = lastItem ? lastItem : undefined;
 
     if (currentItem) {
       repository.addAction({
-        actionType: 'treePush',
-        target: 'images',
+        actionType: "treeDelete",
+        target: "images",
+        value: {
+          id: itemId,
+        },
+      });
+    }
+  } else if (item.value === "new-child-folder") {
+    const itemId = store.selectDropdownMenuItemId();
+    const { images } = repository.getState();
+    const currentItem = images.items[itemId];
+
+    if (currentItem) {
+      repository.addAction({
+        actionType: "treePush",
+        target: "images",
         value: {
           parent: itemId,
-          previousSibling,
+          position: "last",
           item: {
-            id: 'image_' + nanoid(),
-            type: 'folder',
-            name: 'New Folder',
-          }
-        }
+            id: "image_" + nanoid(),
+            type: "folder",
+            name: "New Folder",
+          },
+        },
       });
     }
   }
 
-
   store.hideDropdownMenu();
   const { images } = repository.getState();
-  store.setItems(images)
+  store.setItems(images);
   render();
-}
+};
 
 export const handleAssetItemClick = (e, deps) => {
   const { subject, store } = deps;
-  const id = e.target.id.split('-')[2];
+  const id = e.target.id.split("-")[2];
   const assetItem = store.selectAssetItem(id);
-  subject.dispatch('redirect', {
+  subject.dispatch("redirect", {
     path: assetItem.path,
-  })
-}
+  });
+};
 
 export const handlePopoverClickOverlay = (e, deps) => {
   const { store, render } = deps;
   store.hidePopover();
   render();
-}
+};
 
 export const handleFormActionClick = (e, deps) => {
   const { store, render, repository } = deps;
   const { formValues, actionId } = e.detail;
-  
-  if (actionId === 'submit' && formValues.name) {
+
+  if (actionId === "submit" && formValues.name) {
     const itemId = store.selectPopoverItem()?.id;
     if (itemId) {
       repository.addAction({
-        actionType: 'treeUpdate',
-        target: 'images',
+        actionType: "treeUpdate",
+        target: "images",
         value: {
           id: itemId,
           replace: false,
           item: {
-            name: formValues.name
-          }
-        }
+            name: formValues.name,
+          },
+        },
       });
-      
+
       // Update local state
       const { images } = repository.getState();
       store.setItems(images);
     }
   }
-  
+
   store.hidePopover();
   render();
-}
+};
 
 export const handleGroupClick = (e, deps) => {
   const { store, render } = deps;
-  const groupId = e.currentTarget.id.replace('group-', '');
+  const groupId = e.currentTarget.id.replace("group-", "");
   store.toggleGroupCollapse(groupId);
   render();
-}
+};
 
 export const handleImageItemClick = (e, deps) => {
   const { store, render } = deps;
-  const itemId = e.currentTarget.id.replace('image-item-', '');
+  const itemId = e.currentTarget.id.replace("image-item-", "");
   store.setSelectedItemId(itemId);
   render();
-}
+};
 
 export const handleDragDropFileSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { files } = e.detail;
-  const id = e.currentTarget.id.replace('drag-drop-bar-', '').replace('drag-drop-item-', '');
+  const id = e.currentTarget.id
+    .replace("drag-drop-bar-", "")
+    .replace("drag-drop-item-", "");
 
   // Create upload promises for all files
   const uploadPromises = Array.from(files).map(async (file) => {
     try {
-      const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
-        projectId: 'someprojectId',
-      });
+      const { downloadUrl, uploadUrl, fileId } =
+        await httpClient.creator.uploadFile({
+          projectId: "someprojectId",
+        });
 
       const response = await fetch(uploadUrl, {
-        method: 'PUT',
+        method: "PUT",
         body: file,
         headers: {
-          'Content-Type': file.type, // Ensure the Content-Type matches the file type
+          "Content-Type": file.type, // Ensure the Content-Type matches the file type
         },
       });
-      
+
       if (response.ok) {
-        console.log('File uploaded successfully:', file.name);
+        console.log("File uploaded successfully:", file.name);
         return {
           success: true,
           file,
@@ -206,7 +246,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
           fileId,
         };
       } else {
-        console.error('File upload failed:', file.name, response.statusText);
+        console.error("File upload failed:", file.name, response.statusText);
         return {
           success: false,
           file,
@@ -214,7 +254,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
         };
       }
     } catch (error) {
-      console.error('File upload error:', file.name, error);
+      console.error("File upload error:", file.name, error);
       return {
         success: false,
         file,
@@ -227,23 +267,24 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const uploadResults = await Promise.all(uploadPromises);
 
   // Add successfully uploaded files to repository
-  const successfulUploads = uploadResults.filter(result => result.success);
-  
+  const successfulUploads = uploadResults.filter((result) => result.success);
+
   successfulUploads.forEach((result) => {
     repository.addAction({
-      actionType: 'treePush',
-      target: 'images',
+      actionType: "treePush",
+      target: "images",
       value: {
         parent: id,
+        position: "last",
         item: {
-          id: 'image_' + nanoid(),
-          type: 'image',
+          id: "image_" + nanoid(),
+          type: "image",
           fileId: result.fileId,
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
-        }
-      }
+        },
+      },
     });
   });
 
@@ -252,6 +293,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store.setItems(images);
   }
 
-  console.log(`Uploaded ${successfulUploads.length} out of ${files.length} files successfully`);
+  console.log(
+    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
+  );
   render();
-}
+};
