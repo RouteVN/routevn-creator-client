@@ -7,8 +7,8 @@ dataSchema:
 refs:
   fileexplorer:
     eventListeners:
-      # targetchanged:
-      #   handler: handleTargetChanged
+      target-changed:
+        handler: handleTargetChanged
       rightclick-container:
         handler: handleFileExplorerRightClickContainer
       rightclick-item:
