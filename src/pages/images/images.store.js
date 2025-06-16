@@ -8,17 +8,6 @@ const formatFileSize = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 };
 
-// Context menu constants
-const CONTEXT_MENU_ITEMS = [
-  { label: 'New Folder', type: 'item', value: 'new-child-folder' },
-  { label: 'Rename', type: 'item', value: 'rename-item' },
-  { label: 'Delete', type: 'item', value: 'delete-item' }
-];
-
-const EMPTY_CONTEXT_MENU_ITEMS = [
-  { label: 'New Folder', type: 'item', value: 'new-item' }
-];
-
 export const INITIAL_STATE = Object.freeze({
   imagesData: { tree: [], items: {} },
   selectedItemId: null,
@@ -79,8 +68,6 @@ export const toViewData = ({ state, props }, payload) => {
   return {
     flatItems,
     flatGroups,
-    contextMenuItems: CONTEXT_MENU_ITEMS,
-    emptyContextMenuItems: EMPTY_CONTEXT_MENU_ITEMS,
     resourceCategory: 'assets',
     selectedResourceId: 'images',
     selectedItemId: state.selectedItemId,

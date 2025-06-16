@@ -18,7 +18,7 @@ template:
         - $for field, i in visibleFields:
             - $if field.type == 'image':
                 - rvn-file-image w=${field.width} h=${field.height} fileId=${field.fileId}:
-            - $elif field.type == 'text':
+              $elif field.type == 'text':
                 - rtgl-text c=mu-fg: ${field.label}
                 - rtgl-text s=${field.size || 'md'}: ${field.value}
       $else:

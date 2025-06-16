@@ -1,11 +1,26 @@
 elementName: rvn-drag-drop
-schema:
+
+propsSchema:
+  type: object
+  properties:
+    uploadText:
+      type: string
+      description: Text to display for upload action
+    acceptedFileTypes:
+      type: array
+      description: Array of accepted file extensions (e.g. ['.mp3', '.wav'])
+
+viewDataSchema:
   type: object
   properties:
     isDragging:
       type: boolean
     bgc:
       type: string
+    uploadText:
+      type: string
+    acceptedFileTypes:
+      type: array
 
 refs:
   dragDrop:
@@ -24,4 +39,4 @@ refs:
 template:
   - rtgl-view#dragDrop w=200 h=150 bw=xs br=md ah=c av=c g=md cur=p bgc=${bgc}:
     - rtgl-svg svg=folder wh=32:
-    - rtgl-text: Upload Image
+    - rtgl-text: ${uploadText}
