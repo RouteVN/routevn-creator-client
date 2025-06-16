@@ -17,6 +17,8 @@ refs:
         handler: handleSpritesButtonClick
       files-uploaded:
         handler: handleDragDropFileSelected
+      character-created:
+        handler: handleCharacterCreated
 
 template: 
   - rtgl-view d=h w=f h=f: 

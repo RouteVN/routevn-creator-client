@@ -106,12 +106,48 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
+export const handleCharacterCreated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { groupId, name, description } = e.detail;
+  
+  // Add character to repository
+  repository.addAction({
+    actionType: "treePush",
+    target: "characters",
+    value: {
+      parent: groupId,
+      position: "last",
+      item: {
+        id: nanoid(),
+        type: "character",
+        name: name,
+        description: description,
+        sprites: {
+          items: {},
+          tree: [],
+        },
+        // No fileId for now - this will be a text-based character
+      },
+    },
+  });
+
+  // Update store with new data
+  const { characters } = repository.getState();
+  store.setItems(characters);
+  render();
+};
+
 export const handleSpritesButtonClick = (e, deps) => {
   const { subject, render } = deps;
+  const { itemId } = e.detail;
 
+  // Dispatch redirect with path and payload for query params
   subject.dispatch('redirect', {
     path: '/project/resources/character-sprites',
-  })
+    payload: {
+      characterId: itemId
+    }
+  });
 
   render();
 }
