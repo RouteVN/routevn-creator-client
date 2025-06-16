@@ -1,0 +1,26 @@
+elementName: rvn-detail-panel
+
+propsSchema:
+  type: object
+  properties:
+    title:
+      type: string
+    fields:
+      type: array
+    emptyMessage:
+      type: string
+
+template:
+  - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
+    - $if hasContent:
+        - $if title:
+            - rtgl-text s=lg: ${title}
+        - $for field, i in visibleFields:
+            - $if field.type == 'image':
+                - rvn-file-image w=${field.width} h=${field.height} fileId=${field.fileId}:
+            - $elif field.type == 'text':
+                - rtgl-text c=mu-fg: ${field.label}
+                - rtgl-text s=${field.size || 'md'}: ${field.value}
+      $else:
+        - rtgl-view h=f aj=c ai=c:
+          - rtgl-text c=mu-fg s=lg: ${emptyMessage}

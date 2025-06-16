@@ -31,6 +31,16 @@ propsSchema:
             type: boolean
           parentId:
             type: string
+    contextMenuItems:
+      type: array
+      description: Menu items for right-clicking on an item
+    emptyContextMenuItems:
+      type: array
+      description: Menu items for right-clicking on empty space
+    repositoryTarget:
+      type: string
+      description: Repository target for data operations (e.g. 'images', 'audio')
+      required: true
 
 refs:
   item-*:
@@ -50,6 +60,20 @@ refs:
     eventListeners:
       contextmenu:
         handler: handleContainerContextMenu
+  dropdown-menu:
+    eventListeners:
+      click-overlay:
+        handler: handleDropdownMenuClickOverlay
+      click-item:
+        handler: handleDropdownMenuClickItem
+  popover:
+    eventListeners:
+      click-overlay:
+        handler: handlePopoverClickOverlay
+  form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
 
 styles:
   ':host':
@@ -59,7 +83,7 @@ styles:
     'user-select': 'none'
 
 template:
-  - rtgl-view w=200 h=f bwr=xs: 
+  - rtgl-view w=f h=f bwr=xs: 
     - 'rtgl-view w=f g=sm style="position: relative;"':
       - rtgl-view w=f h=f:
         - $for item, i in items:
@@ -73,3 +97,6 @@ template:
       - $if targetDragIndex != -2 && targetDropPosition != 'inside':
           - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"':
     - rtgl-view#container w=f h=f:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
+  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+    - rtgl-form#form slot=content .form=form:

@@ -290,9 +290,14 @@ export const createRepository = (initialState, initialActionSteams) => {
     }, structuredClone(initialState));
   };
 
+  const getActionStream = () => {
+    return actionStream;
+  }
+
   return {
     addAction,
     getState,
+    getActionStream,
   };
 };
 

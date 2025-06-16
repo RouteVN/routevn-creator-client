@@ -1,114 +1,59 @@
+import { toFlatGroups, toFlatItems } from "../../repository";
 
 export const INITIAL_STATE = Object.freeze({
-  assetItems: [{
-    id: 'images',
-    name: 'Images',
-    path: '/project/resources/images'
-  }, {
-    id: 'audio',
-    name: 'Audio',
-    path: '/project/resources/audio'
-  }, {
-    id: 'videos',
-    name: 'Videos',
-    path: '/project/resources/videos'
-  }, {
-    id: 'characters',
-    name: 'Characters',
-    path: '/project/resources/characters'
-  }, {
-    id: 'positions',
-    name: 'Positions',
-    path: '/project/resources/positions'
-  }, {
-    id: 'animations',
-    name: 'Animations',
-    path: '/project/resources/animations'
-  }],
-  selectedAssetId: 'audio',
-  items: [],
-  dropdownMenu: {
-    isOpen: false,
-    items: [],
-    position: {
-      x: 0,
-      y: 0,
-    },
-  }
+  audioData: { tree: [], items: {} },
+  selectedItemId: null,
 });
 
-export const addItem = (state, item) => {
-  state.items.push(item)
+
+// Context menu constants
+const CONTEXT_MENU_ITEMS = [
+  { label: 'New Folder', type: 'item', value: 'new-child-folder' },
+  { label: 'Rename', type: 'item', value: 'rename-item' },
+  { label: 'Delete', type: 'item', value: 'delete-item' }
+];
+
+const EMPTY_CONTEXT_MENU_ITEMS = [
+  { label: 'New Folder', type: 'item', value: 'new-item' }
+];
+
+export const setItems = (state, audioData) => {
+  state.audioData = audioData
 }
 
-export const setItems = (state, items) => {
-  state.items = items
-}
-
-export const showDropdownMenuFileExplorerItem = (state, { position, id }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'Rename',
-        type: 'item',
-        value: 'rename-item',
-      },
-      {
-        label: 'Delete',
-        type: 'item',
-        value: 'delete-item',
-      },
-    ],
-  }
-}
-
-export const selectAssetItem = ({ state }, id) => {
-  return state.assetItems.find(item => item.id === id);
-}
-
-export const showDropdownMenuFileExplorerEmpty = (state, { position }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'New Background',
-        type: 'item',
-        value: 'new-item',
-      },
-    ],
-  }
-}
-
-export const hideDropdownMenu = (state) => {
-  state.dropdownMenu = {
-    isOpen: false,
-    position: {
-      x: 0,
-      y: 0,
-    },
-    items: [],
-  }
+export const setSelectedItemId = (state, itemId) => {
+  state.selectedItemId = itemId;
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  const assetItems = state.assetItems.map(item => {
-    const isSelected = state.selectedAssetId === item.id;
-    return {
-      id: item.id,
-      name: item.name,
-      path: item.path,
-      bgc: isSelected ? 'mu' : 'bg',
-    }
-  })
-  return {
-    assetItems,
-    items: state.items,
-    dropdownMenu: state.dropdownMenu,
+  console.log("🎵 Audio toViewData called with state:", state);
+  
+  const flatItems = toFlatItems(state.audioData);
+  const flatGroups = toFlatGroups(state.audioData);
+
+  console.log("🎵 Audio processed data:", {
+    audioData: state.audioData,
+    flatItems,
+    flatGroups
+  });
+
+  // Get selected item details
+  const selectedItem = state.selectedItemId ? 
+    flatItems.find(item => item.id === state.selectedItemId) : null;
+  
+  const viewData = {
+    flatItems,
+    flatGroups,
+    contextMenuItems: CONTEXT_MENU_ITEMS,
+    emptyContextMenuItems: EMPTY_CONTEXT_MENU_ITEMS,
     resourceCategory: 'assets',
     selectedResourceId: 'audio',
+    repositoryTarget: 'audio',
+    selectedItemId: state.selectedItemId,
   };
+  
+  console.log("🎵 Audio returning viewData:", viewData);
+  
+  return viewData;
 }
 
