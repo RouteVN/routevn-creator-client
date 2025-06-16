@@ -1,4 +1,5 @@
 import { fromEvent, tap } from "rxjs";
+import { nanoid } from "nanoid";
 
 /**
  *  we need to find the item that is under the mouse
@@ -136,9 +137,8 @@ export const handleWindowMouseUp = (e, deps) => {
     position: dropPosition,
   };
   
-  dispatchEvent(new CustomEvent("target-changed", {
-    detail,
-  }));
+  // Handle the drag/drop internally instead of emitting target-changed
+  handleTargetChanged({ detail }, deps);
 };
 
 export const handleWindowMouseMove = (e, deps) => {
@@ -212,26 +212,30 @@ export const subscriptions = (deps) => {
 };
 
 export const handleContainerContextMenu = (e, deps) => {
-  const { dispatchEvent } = deps;
+  const { store, render, props } = deps;
   e.preventDefault();
-  dispatchEvent(new CustomEvent("rightclick-container", {
-    detail: {
-      x: e.clientX,
-      y: e.clientY,
-    },
-  }));
+  
+  // Show dropdown menu for empty space
+  store.showDropdownMenuFileExplorerEmpty({
+    position: { x: e.clientX, y: e.clientY },
+    emptyContextMenuItems: props.emptyContextMenuItems
+  });
+  render();
 };
 
 export const handleItemContextMenu = (e, deps) => {
-  const { dispatchEvent } = deps;
+  const { store, render, props } = deps;
   e.preventDefault();
-  dispatchEvent(new CustomEvent("rightclick-item", {
-    detail: {
-      x: e.clientX,
-      y: e.clientY,
-      id: e.currentTarget.id.replace('item-', ''),
-    },
-  }));
+  
+  const itemId = e.currentTarget.id.replace('item-', '');
+  
+  // Show dropdown menu for item
+  store.showDropdownMenuFileExplorerItem({
+    position: { x: e.clientX, y: e.clientY },
+    id: itemId,
+    contextMenuItems: props.contextMenuItems
+  });
+  render();
 };
 
 export const handleItemClick = (e, deps) => {
@@ -255,4 +259,264 @@ export const handleArrowClick = (e, deps) => {
   const folderId = e.currentTarget.id.replace('arrow-', '');
   store.toggleFolderExpand(folderId);
   render();
+};
+
+export const handleDropdownMenuClickOverlay = (e, deps) => {
+  const { store, render } = deps;
+  store.hideDropdownMenu();
+  render();
+};
+
+export const handleDropdownMenuClickItem = (e, deps) => {
+  const { store, dispatchEvent, render } = deps;
+  const detail = e.detail;
+  const itemId = store.selectDropdownMenuItemId();
+  
+  // Extract the actual item (rtgl-dropdown-menu wraps it)
+  const item = detail.item || detail;
+  
+  console.log("handleDropdownMenuClickItem:", { detail, item, itemId });
+  
+  // Store position before hiding dropdown (for rename popover)
+  const position = store.selectDropdownMenuPosition();
+  console.log("Stored position:", position);
+  
+  // Hide dropdown
+  store.hideDropdownMenu();
+  render();
+  
+  // Handle rename action internally (show popover)
+  if (item.value === 'rename-item' && itemId) {
+    console.log("Showing popover for rename at position:", position);
+    store.showPopover({ position, itemId });
+    render();
+    return; // Don't emit event for rename, handle it internally
+  }
+  
+  // Handle file action internally
+  handleFileAction({ detail: { ...detail, itemId } }, deps);
+};
+
+export const handlePopoverClickOverlay = (e, deps) => {
+  const { store, render } = deps;
+  store.hidePopover();
+  render();
+};
+
+export const handleFormActionClick = (e, deps) => {
+  const { store, dispatchEvent, render } = deps;
+  const detail = e.detail;
+  
+  console.log("handleFormActionClick:", detail);
+  
+  // Extract action and values from detail (form structure may vary)
+  const action = detail.action || detail.actionId;
+  const values = detail.values || detail.formValues || detail;
+  
+  console.log("Extracted:", { action, values });
+  
+  if (action === 'cancel') {
+    console.log("Canceling rename");
+    store.hidePopover();
+    render();
+    return;
+  }
+  
+  if (action === 'submit') {
+    console.log("Submitting rename");
+    // Get the popover item ID from state
+    const storeState = store.getState ? store.getState() : store.state;
+    const itemId = storeState ? storeState.popover.itemId : null;
+    
+    // Hide popover
+    store.hidePopover();
+    render();
+    
+    // Handle rename file action internally
+    handleFileAction({ 
+      detail: {
+        value: 'rename-item-confirmed',
+        itemId,
+        newName: values.name
+      }
+    }, deps);
+  }
+};
+
+export const handleFileAction = (e, deps) => {
+  const { dispatchEvent, repository, props } = deps;
+  const detail = e.detail;
+  const repositoryTarget = props.repositoryTarget;
+  
+  if (!repositoryTarget) {
+    throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
+  }
+  
+  console.log("🔧 handleFileAction called with:", {
+    detail,
+    repositoryTarget,
+    propsRepositoryTarget: props.repositoryTarget,
+    allProps: props
+  });
+  
+  // Extract the actual item from the detail (rtgl-dropdown-menu adds index)
+  const item = detail.item || detail;
+  const itemId = detail.itemId;
+
+  console.log("🔧 Extracted values:", { item, itemId });
+
+  if (item.value === "new-item") {
+    console.log("🔧 Processing new-item action for target:", repositoryTarget);
+    
+    const repositoryStateBefore = repository.getState();
+    console.log("🔧 Repository state BEFORE action:", {
+      target: repositoryTarget,
+      targetData: repositoryStateBefore[repositoryTarget]
+    });
+    
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: "_root",
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "folder",
+          name: "New Folder",
+        },
+      },
+    });
+    
+    const repositoryStateAfter = repository.getState();
+    console.log("🔧 Repository state AFTER action:", {
+      target: repositoryTarget,
+      targetData: repositoryStateAfter[repositoryTarget]
+    });
+  } else if (item.value === "rename-item-confirmed") {
+    // Handle rename confirmation from popover form
+    if (itemId && detail.newName) {
+      repository.addAction({
+        actionType: "treeUpdate",
+        target: repositoryTarget,
+        value: {
+          id: itemId,
+          replace: false,
+          item: {
+            name: detail.newName,
+          },
+        },
+      });
+    }
+  } else if (item.value === "delete-item") {
+    const repositoryState = repository.getState();
+    const targetData = repositoryState[repositoryTarget];
+    const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
+
+    if (currentItem) {
+      repository.addAction({
+        actionType: "treeDelete",
+        target: repositoryTarget,
+        value: {
+          id: itemId,
+        },
+      });
+    }
+  } else if (item.value === "new-child-folder") {
+    const repositoryState = repository.getState();
+    const targetData = repositoryState[repositoryTarget];
+    const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
+
+    if (currentItem) {
+      repository.addAction({
+        actionType: "treePush",
+        target: repositoryTarget,
+        value: {
+          parent: itemId,
+          position: "last",
+          item: {
+            id: nanoid(),
+            type: "folder",
+            name: "New Folder",
+          },
+        },
+      });
+    }
+  }
+
+  // Emit data-changed event after any repository action
+  console.log("🔧 Emitting data-changed event:", { target: repositoryTarget });
+  dispatchEvent(new CustomEvent("data-changed", {
+    detail: { target: repositoryTarget },
+    bubbles: true,
+    composed: true
+  }));
+  console.log("🔧 data-changed event emitted successfully");
+};
+
+export const handleTargetChanged = (e, deps) => {
+  const { dispatchEvent, repository, props } = deps;
+  const repositoryTarget = props.repositoryTarget;
+  
+  if (!repositoryTarget) {
+    throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
+  }
+
+  console.log("handleTargetChanged", e.detail);
+  
+  const { target, source, position } = e.detail;
+  
+  if (!source || !source.id) {
+    console.warn("No source item provided");
+    return;
+  }
+
+  let repositoryPosition;
+  let parent;
+
+  if (position === 'inside') {
+    // Drop inside a folder
+    if (!target || target.type !== 'folder') {
+      console.warn("Cannot drop inside non-folder item");
+      return;
+    }
+    parent = target.id;
+    repositoryPosition = 'last'; // Add to end of folder
+  } else if (position === 'above') {
+    // Drop above target item
+    if (!target || !target.id) {
+      console.warn("No target item for above position");
+      return;
+    }
+    parent = target.parentId || "_root";
+    repositoryPosition = { before: target.id };
+  } else if (position === 'below') {
+    // Drop below target item  
+    if (!target || !target.id) {
+      console.warn("No target item for below position");
+      return;
+    }
+    parent = target.parentId || "_root";
+    repositoryPosition = { after: target.id };
+  } else {
+    console.warn("Unknown drop position:", position);
+    return;
+  }
+
+  repository.addAction({
+    actionType: "treeMove",
+    target: repositoryTarget,
+    value: {
+      id: source.id,
+      parent: parent,
+      position: repositoryPosition,
+    },
+  });
+
+  // Emit data-changed event after repository action
+  dispatchEvent(new CustomEvent("data-changed", {
+    detail: { target: repositoryTarget },
+    bubbles: true,
+    composed: true
+  }));
 };

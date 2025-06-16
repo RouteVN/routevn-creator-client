@@ -12,6 +12,21 @@ export const INITIAL_STATE = Object.freeze({
   
   // Track collapsed folder IDs
   collapsedIds: [],
+  
+  // Dropdown menu state
+  dropdownMenu: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    itemId: null
+  },
+  
+  // Popover state
+  popover: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    itemId: null
+  }
 });
 
 export const startDragging = (state, { id, itemRects, containerTop }) => {
@@ -87,6 +102,68 @@ export const toggleFolderExpand = (state, folderId) => {
   }
 }
 
+export const showDropdownMenuFileExplorerItem = (state, { position, id, contextMenuItems }) => {
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    itemId: id,
+    items: contextMenuItems || []
+  }
+}
+
+export const showDropdownMenuFileExplorerEmpty = (state, { position, emptyContextMenuItems }) => {
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    itemId: null,
+    items: emptyContextMenuItems || []
+  }
+}
+
+export const hideDropdownMenu = (state) => {
+  state.dropdownMenu = {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    itemId: null
+  }
+}
+
+export const selectDropdownMenuItemId = ({ state }) => {
+  return state.dropdownMenu.itemId;
+}
+
+export const selectDropdownMenuPosition = ({ state }) => {
+  return state.dropdownMenu.position;
+}
+
+export const showPopover = (state, { position, itemId }) => {
+  state.popover = {
+    isOpen: true,
+    position,
+    itemId,
+  };
+}
+
+export const hidePopover = (state) => {
+  state.popover = {
+    isOpen: false,
+    itemId: null,
+    position: { x: 0, y: 0 },
+  };
+}
+
+export const selectPopoverItem = ({ state, props }) => {
+  if (!state.popover.itemId) return null;
+  // Find the item from the props.items array
+  const flatItems = props.items || [];
+  return flatItems.find(item => item.id === state.popover.itemId);
+}
+
+export const selectPopoverItemId = ({ state }) => {
+  return state.popover.itemId;
+}
+
 export const toViewData = ({ state, props }, payload) => {
   let items = props.items || [];
   
@@ -125,7 +202,7 @@ export const toViewData = ({ state, props }, payload) => {
     let hBgc = "mu"
     let bgc = ""
     if (state.targetDropPosition === 'inside' && item.id === targetDragItem?.id) {
-      bc = "o";
+      bc = "fg"
     }
 
     if (state.isDragging) {
@@ -154,6 +231,33 @@ export const toViewData = ({ state, props }, payload) => {
     targetDragLeftOffset = targetDragItem._level * 24;
   }
 
+  // Get current item for rename form
+  const currentItem = selectPopoverItem({ state, props });
+  
+  // Form configuration for renaming
+  const renameForm = currentItem ? {
+    fields: [{
+      id: 'name',
+      fieldName: 'name',
+      inputType: 'inputText',
+      label: 'Name',
+      value: currentItem.name || '',
+      required: true,
+    }],
+    actions: {
+      layout: '',
+      buttons: [{
+        id: 'submit',
+        variant: 'pr',
+        content: 'Rename',
+      }, {
+        id: 'cancel',
+        variant: 'se',
+        content: 'Cancel',
+      }],
+    }
+  } : null;
+
   const viewData = {
     ...state,
     items: processedItems,
@@ -162,6 +266,9 @@ export const toViewData = ({ state, props }, payload) => {
     targetDropPosition: state.targetDropPosition,
     targetDragLeftOffset,
     isDragging: state.isDragging,
+    dropdownMenu: state.dropdownMenu,
+    popover: state.popover,
+    form: renameForm,
   };
   
   return viewData;

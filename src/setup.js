@@ -54,36 +54,20 @@ const initialData = {
     description: 'Project 1 description'
   },
   images: {
-    items: {
-      image1: {
-        type: 'folder',
-        name: 'Image 1',
-        url: 'https://via.placeholder.com/150',
-      },
-      image2: {
-        name: 'Image 2',
-        url: 'https://via.placeholder.com/150',
-      },
-    },
-    tree: [{
-      id: 'image1',
-      type: 'folder',
-      children: [{
-        id: 'image2',
-        children: [],
-      }]
-    }]
+    items: {},
+    tree: []
+  },
+  audio: {
+    items: {},
+    tree: []
   }
 }
 
-const localStorageRepository = localStorage.getItem('repository') 
-const localData = localStorageRepository ? JSON.parse(localStorageRepository) : initialData;
-
-const repository = createRepository(localData);
-
+const localStorageRepositoryEventStream = localStorage.getItem('repositoryEventStream') 
+const localEventStream = localStorageRepositoryEventStream ? JSON.parse(localStorageRepositoryEventStream) : [];
+const repository = createRepository(initialData, localEventStream);
 setInterval(() => {
-  const state = repository.getState()
-  localStorage.setItem('repository', JSON.stringify(state));
+  localStorage.setItem('repositoryEventStream', JSON.stringify(repository.getActionStream()));
 }, 5000);
 
 
