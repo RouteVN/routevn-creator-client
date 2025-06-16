@@ -1,5 +1,40 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
+  isDialogOpen: false,
+  targetGroupId: null,
+  
+  defaultValues: {
+    name: '',
+    description: '',
+  },
+
+  form: {
+    title: 'Add Character',
+    description: 'Create a new character',
+    fields: [{
+      id: 'name',
+      fieldName: 'name',
+      inputType: 'inputText',
+      label: 'Name',
+      description: 'Enter the character name',
+      required: true,
+    }, {
+      id: 'description',
+      fieldName: 'description',
+      inputType: 'inputText',
+      label: 'Description',
+      description: 'Enter the character description',
+      required: false,
+    }],
+    actions: {
+      layout: '',
+      buttons: [{
+        id: 'submit',
+        variant: 'pr',
+        content: 'Add Character',
+      }],
+    }
+  }
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -9,6 +44,14 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
+}
+
+export const toggleDialog = (state) => {
+  state.isDialogOpen = !state.isDialogOpen;
+}
+
+export const setTargetGroupId = (state, groupId) => {
+  state.targetGroupId = groupId;
 }
 
 export const toViewData = ({ state, props }) => {
@@ -29,5 +72,8 @@ export const toViewData = ({ state, props }) => {
     flatGroups,
     selectedItemId: props.selectedItemId,
     uploadText: "Upload Character Avatar",
+    isDialogOpen: state.isDialogOpen,
+    defaultValues: state.defaultValues,
+    form: state.form,
   };
 };

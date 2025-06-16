@@ -68,6 +68,14 @@ const initialData = {
   characters: {
     items: {},
     tree: []
+  },
+  fonts: {
+    items: {},
+    tree: []
+  },
+  positions: {
+    items: {},
+    tree: []
   }
 }
 
@@ -88,7 +96,12 @@ class WebRouter {
   };
 
   getPayload = () => {
-    return {};
+    const searchParams = new URLSearchParams(window.location.search);
+    const payload = {};
+    for (const [key, value] of searchParams.entries()) {
+      payload[key] = value;
+    }
+    return payload;
   };
 
   setPayload = (payload) => {

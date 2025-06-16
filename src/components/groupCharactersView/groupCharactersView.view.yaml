@@ -31,6 +31,20 @@ refs:
     eventListeners:
       click:
         handler: handleSpritesButtonClick
+  add-character-button-*:
+    eventListeners:
+      click:
+        handler: handleAddCharacterClick
+  add-character-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseDialog
+      submit-form:
+        handler: handleSubmitForm
+  character-form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -48,14 +62,19 @@ template:
               - rtgl-view w=f:
                 - $if group.hasChildren:
                     - $for item in group.children:
-                        - 'rtgl-view#character-item-${item.id} d=h g=xl fw=w mt=lg bw=xs br=lg p=lg cur=p style="${item.selectedStyle}"':
+                        - 'rtgl-view#character-item-${item.id} w=f d=h g=xl fw=w mt=lg bw=xs br=lg p=lg cur=p style="${item.selectedStyle}"':
                           - rtgl-image w=96 h=96 br=f src=/public/project_logo_placeholder.png:
                           - rtgl-view flex=1 g=md:
                             - rtgl-text s=h2: ${item.name}
-                            - rtgl-text c=mu-fg: ${item.description || "Character description"}
+                            - rtgl-text c=mu-fg: ${item.description}
                           - rtgl-view h=f av=c:
                             - rtgl-button#sprites-button-${item.id}: Sprites
                   $else:
-                    - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText:
+                    - rtgl-view#add-character-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
+                      - rtgl-text: Add Character
               - $if group.hasChildren:
                   - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText:
+  
+  - rtgl-dialog#add-character-dialog .isOpen=isDialogOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#character-form .defaultValues=defaultValues .form=form w=f:
