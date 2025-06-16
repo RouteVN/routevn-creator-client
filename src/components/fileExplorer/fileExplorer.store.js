@@ -1,4 +1,15 @@
 
+// Context menu constants
+const CONTEXT_MENU_ITEMS = [
+  { label: 'New Folder', type: 'item', value: 'new-child-folder' },
+  { label: 'Rename', type: 'item', value: 'rename-item' },
+  { label: 'Delete', type: 'item', value: 'delete-item' }
+];
+
+const EMPTY_CONTEXT_MENU_ITEMS = [
+  { label: 'New Folder', type: 'item', value: 'new-item' }
+];
+
 export const INITIAL_STATE = Object.freeze({
   isDragging: false,
   selectedItemId: undefined,
@@ -102,21 +113,21 @@ export const toggleFolderExpand = (state, folderId) => {
   }
 }
 
-export const showDropdownMenuFileExplorerItem = (state, { position, id, contextMenuItems }) => {
+export const showDropdownMenuFileExplorerItem = (state, { position, id }) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
     itemId: id,
-    items: contextMenuItems || []
+    items: CONTEXT_MENU_ITEMS
   }
 }
 
-export const showDropdownMenuFileExplorerEmpty = (state, { position, emptyContextMenuItems }) => {
+export const showDropdownMenuFileExplorerEmpty = (state, { position }) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
     itemId: null,
-    items: emptyContextMenuItems || []
+    items: EMPTY_CONTEXT_MENU_ITEMS
   }
 }
 

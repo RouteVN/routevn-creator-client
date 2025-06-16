@@ -1,11 +1,11 @@
-elementName: rvn-group-images-view
+elementName: rvn-group-videos-view
 
 propsSchema:
   type: object
   properties:
     flatGroups:
       type: array
-      description: Array of image groups to display
+      description: Array of video groups to display
     selectedItemId:
       type: string
       description: ID of currently selected item
@@ -23,10 +23,10 @@ refs:
     eventListeners:
       click:
         handler: handleGroupClick
-  image-item-*:
+  video-item-*:
     eventListeners:
       click:
-        handler: handleImageItemClick
+        handler: handleVideoItemClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -45,8 +45,8 @@ template:
                 - rtgl-view d=h g=md fw=w:
                   - $if group.hasChildren:
                       - $for item in group.children:
-                          - 'rtgl-view#image-item-${item.id} cur=p style="${item.selectedStyle}"':
-                            - rvn-file-image w=200 h=150 fileId=${item.fileId}:
+                          - 'rtgl-view#video-item-${item.id} cur=p style="${item.selectedStyle}"':
+                            - rvn-file-video w=200 h=150 fileId=${item.fileId}:
                     $else:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
               - $if group.hasChildren:

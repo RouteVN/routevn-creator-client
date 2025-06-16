@@ -18,8 +18,8 @@ refs:
 
 template: 
   - rtgl-view d=h w=f h=f: 
-    - rtgl-view w=f h=f p=md w=200:
+    - rtgl-view w=f h=f p=md w=240:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-      - rvn-file-explorer#fileexplorer .items=flatItems .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems .repositoryTarget=repositoryTarget:
+      - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-images-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
     - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

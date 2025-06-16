@@ -28,7 +28,7 @@ export const toViewData = ({ state, props }) => {
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
-    uploadText: "Upload Image",
-    acceptedFileTypes: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+    uploadText: "Upload Audio",
+    acceptedFileTypes: ['.mp3', '.wav', '.ogg', '.aac', '.flac', '.m4a']
   };
 };

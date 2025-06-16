@@ -60,6 +60,14 @@ const initialData = {
   audio: {
     items: {},
     tree: []
+  },
+  videos: {
+    items: {},
+    tree: []
+  },
+  characters: {
+    items: {},
+    tree: []
   }
 }
 
