@@ -1,18 +1,18 @@
-elementName: rvn-command-line-background
+elementName: rvn-command-line-layouts
 
 viewDataSchema:
   type: object
   properties: {}
 
 refs:
-  image-selector:
+  layout-selector:
     eventListeners:
       click:
-        handler: handleImageSelectorClick
-  image-item-*:
+        handler: handleLayoutSelectorClick
+  layout-item-*:
     eventListeners:
       click:
-        handler: handleImageItemClick
+        handler: handleLayoutItemClick
   submit-button:
     eventListeners:
       click:
@@ -20,17 +20,17 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h3: Command Line Background
+    - rtgl-text s=h3: Command Line Layouts
 
     - $if mode == 'current':
       - rtgl-view:
-        - rtgl-text: Incoming
-        - rtgl-view#image-selector w=100 h=75 av=c ah=c bgc=ac cur=p: 
-          - rtgl-text: Select Image
+        - rtgl-text: Current Layout
+        - rtgl-view#layout-selector w=200 h=75 av=c ah=c bgc=ac cur=p: 
+          - rtgl-text: Select Layout
         - rtgl-button#submit-button: Submit
 
     - $if mode == 'gallery':
-      - rtgl-text: Gallery
+      - rtgl-text: Layout Gallery
       - rtgl-view d=h w=f:
         - rtgl-view h=f flex=1:
           - $for item in items:
@@ -42,5 +42,8 @@ template:
             - $for item in group.children:
               - rtgl-view w=200 h=150 bgc=ac:
                 - rtgl-text: ${item.name}
-                - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId}:
-
+                - $if item.filePath:
+                    - rvn-file-image#layout-item-${item.id} w=200 h=150 fileId=${item.fileId}:
+                  $else:
+                    - rtgl-view#layout-item-${item.id} w=200 h=150 av=c ah=c cur=p:
+                      - rtgl-text s=sm c=mu-fg: Layout Template

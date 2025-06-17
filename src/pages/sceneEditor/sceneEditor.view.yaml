@@ -72,6 +72,24 @@ template:
       - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
         - rtgl-view#actions-container w=500 h=800 bgc=mu p=m:
           - $if mode == "actions":
-              - command-line-actions-component#command-line-actions:
+              - rvn-command-line-actions#command-line-actions:
+            $elif mode == "richtext":
+              - rvn-command-line-rich-text#command-line-rich-text:
+            $elif mode == "dialoguebox":
+              - rvn-command-line-dialogue-box#command-line-dialogue-box:
+            $elif mode == "choices":
+              - rvn-command-line-choices#command-line-choices:
             $elif mode == "background":
-              - command-line-background-component#command-line-background:
+              - rvn-command-line-background#command-line-background:
+            $elif mode == "bgm":
+              - rvn-command-line-bgm#command-line-bgm:
+            $elif mode == "soundeffects":
+              - rvn-command-line-sound-effects#command-line-sound-effects:
+            $elif mode == "characters":
+              - rvn-command-line-characters#command-line-characters:
+            $elif mode == "layouts":
+              - rvn-command-line-layouts#command-line-layouts:
+            $elif mode == "scenetransition":
+              - rvn-command-line-scene-transition#command-line-scene-transition:
+            $elif mode == "conditional":
+              - rvn-command-line-conditional#command-line-conditional:

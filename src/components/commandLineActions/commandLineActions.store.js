@@ -2,15 +2,63 @@ export const INITIAL_STATE = Object.freeze({
   items: [
     {
       id: "1",
-      label: "Text",
+      label: "Rich Text",
       icon: "text",
-      mode: "text",
+      mode: "richtext",
     },
     {
       id: "2",
+      label: "Dialogue Box",
+      icon: "message",
+      mode: "dialoguebox",
+    },
+    {
+      id: "3",
+      label: "Choices",
+      icon: "list",
+      mode: "choices",
+    },
+    {
+      id: "4",
       label: "Background",
       icon: "background",
       mode: "background",
+    },
+    {
+      id: "5",
+      label: "BGM",
+      icon: "audio",
+      mode: "bgm",
+    },
+    {
+      id: "6",
+      label: "Sound Effects",
+      icon: "audio",
+      mode: "soundeffects",
+    },
+    {
+      id: "7",
+      label: "Characters",
+      icon: "user",
+      mode: "characters",
+    },
+    {
+      id: "8",
+      label: "Layouts",
+      icon: "layout",
+      mode: "layouts",
+    },
+    {
+      id: "9",
+      label: "Scene Transition",
+      icon: "arrow-right",
+      mode: "scenetransition",
+    },
+    {
+      id: "10",
+      label: "Conditional",
+      icon: "code",
+      mode: "conditional",
     },
   ],
 });
@@ -21,7 +69,7 @@ export const toViewData = ({ state, props }, payload) => {
   };
 };
 
-export const selectItems = (state, props, payload) => {
+export const selectItems = ({ state, props }) => {
   return state.items;
 };
 

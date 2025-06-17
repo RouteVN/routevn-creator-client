@@ -1,6 +1,6 @@
 export const INITIAL_STATE = Object.freeze({
   resourceCategory: 'settings',
-  selectedResourceId: 'general',
+  selectedResourceId: 'user',
   repositoryTarget: 'settings',
   flatItems: [],
   detailTitle: '',
@@ -17,6 +17,3 @@ export const toViewData = ({ state, props }) => {
 export const selectState = ({ state }) => {
   return state;
 }
-
-
-

@@ -1,4 +1,3 @@
-
 import { toFlatGroups, toFlatItems } from "../../repository";
 
 export const INITIAL_STATE = Object.freeze({
@@ -17,11 +16,6 @@ export const setItems = (state, payload) => {
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
   const flatGroups = toFlatGroups(state.items);
-
-  console.log({
-    flatItems,
-    flatGroups,
-  });
 
   return {
     mode: state.mode,

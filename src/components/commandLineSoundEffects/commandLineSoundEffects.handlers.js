@@ -1,18 +1,13 @@
-
 export const handleOnMount = (deps) => {
   const { repository, store, render } = deps;
-  const { images } = repository.getState();
+  const { audio } = repository.getState();
   store.setItems({
-    'items': images
+    'items': audio
   })
 }
 
-export const handleImageItemClick = (payload, deps) => {
+export const handleAudioItemClick = (payload, deps) => {
   const { store, render } = deps;
-
-  // store.setSelectedItemId({
-  //   'itemId': payload.itemId
-  // })
 
   store.setMode({
     'mode': 'current'
@@ -26,8 +21,7 @@ export const handleSubmitClick = (payload, deps) => {
 
 }
 
-
-export const handleImageSelectorClick = (payload, deps) => {
+export const handleAudioSelectorClick = (payload, deps) => {
   const { store, render } = deps;
 
   store.setMode({
@@ -35,7 +29,4 @@ export const handleImageSelectorClick = (payload, deps) => {
   })
 
   render();
-
 }
-
-
