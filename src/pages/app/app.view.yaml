@@ -60,8 +60,10 @@ template:
           - rvn-scenes: []
         $elif currentRoutePattern == "/project/scene-editor":
           - rvn-scene-editor: []
-        $elif currentRoutePattern == "/project/settings":
+        $elif currentRoutePattern == "/project/settings/general":
           - rvn-settings: []
+        $elif currentRoutePattern == "/project/settings/user":
+          - rvn-settings-user: []
         $elif currentRoutePattern == "/project/resources/colors":
           - rvn-colors: []
         $elif currentRoutePattern == "/project/resources/fonts":

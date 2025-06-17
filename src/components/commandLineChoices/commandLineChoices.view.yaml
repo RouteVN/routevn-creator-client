@@ -1,0 +1,38 @@
+elementName: rvn-command-line-choices
+
+viewDataSchema:
+  type: object
+  properties: {}
+
+refs:
+  add-choice-button:
+    eventListeners:
+      click:
+        handler: handleAddChoiceClick
+  choice-item-*:
+    eventListeners:
+      click:
+        handler: handleChoiceItemClick
+  submit-button:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+
+template:
+  - rtgl-view w=f h=f p=m:
+    - rtgl-text s=h3: Command Line Choices
+
+    - rtgl-view g=md:
+      - rtgl-text: Player Choices Configuration
+      
+      - rtgl-view g=sm:
+        - $for choice, index in choices:
+          - rtgl-view#choice-item-${index} d=h av=c jc=s-b p=sm bgc=bg br=sm:
+            - rtgl-text: 'Choice ${index}: ${choice.text}'
+            - rtgl-button: Remove
+        
+        - rtgl-button#add-choice-button: Add Choice
+      
+      - rtgl-view d=h g=md mt=lg:
+        - rtgl-button#submit-button: Add Choices
+        - rtgl-button: Cancel

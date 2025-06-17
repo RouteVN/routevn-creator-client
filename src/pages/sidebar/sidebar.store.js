@@ -27,7 +27,7 @@ export const INITIAL_STATE = Object.freeze({
     },
     {
       title: "Settings",
-      path: "/project/settings",
+      path: "/project/settings/general",
       icon: "settings",
     },
   ],

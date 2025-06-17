@@ -1,18 +1,18 @@
-elementName: rvn-command-line-background
+elementName: rvn-command-line-characters
 
 viewDataSchema:
   type: object
   properties: {}
 
 refs:
-  image-selector:
+  character-selector:
     eventListeners:
       click:
-        handler: handleImageSelectorClick
-  image-item-*:
+        handler: handleCharacterSelectorClick
+  character-item-*:
     eventListeners:
       click:
-        handler: handleImageItemClick
+        handler: handleCharacterItemClick
   submit-button:
     eventListeners:
       click:
@@ -20,17 +20,17 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h3: Command Line Background
+    - rtgl-text s=h3: Command Line Characters
 
     - $if mode == 'current':
       - rtgl-view:
-        - rtgl-text: Incoming
-        - rtgl-view#image-selector w=100 h=75 av=c ah=c bgc=ac cur=p: 
-          - rtgl-text: Select Image
+        - rtgl-text: Current Character
+        - rtgl-view#character-selector w=200 h=75 av=c ah=c bgc=ac cur=p: 
+          - rtgl-text: Select Character
         - rtgl-button#submit-button: Submit
 
     - $if mode == 'gallery':
-      - rtgl-text: Gallery
+      - rtgl-text: Character Gallery
       - rtgl-view d=h w=f:
         - rtgl-view h=f flex=1:
           - $for item in items:
@@ -40,7 +40,6 @@ template:
           - $for group in groups:
             - rtgl-text: ${group.name}
             - $for item in group.children:
-              - rtgl-view w=200 h=150 bgc=ac:
+              - rtgl-view#character-item-${item.id} w=200 h=150 bgc=ac cur=p:
                 - rtgl-text: ${item.name}
-                - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId}:
-
+                - rtgl-text s=sm c=mu-fg: ${item.description || 'Character'}

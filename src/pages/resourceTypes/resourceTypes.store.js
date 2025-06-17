@@ -72,6 +72,19 @@ const systemConfigItems = [
   },
 ];
 
+const settingsItems = [
+  {
+    id: "general",
+    name: "General",
+    path: "/project/settings/general",
+  },
+  {
+    id: "user",
+    name: "User",
+    path: "/project/settings/user",
+  },
+];
+
 const resourceCategoryNames = {
   assets: {
     label: "Assets",
@@ -84,6 +97,10 @@ const resourceCategoryNames = {
   systemConfig: {
     label: "System Config",
     resources: systemConfigItems,
+  },
+  settings: {
+    label: "Settings",
+    resources: settingsItems,
   },
 };
 

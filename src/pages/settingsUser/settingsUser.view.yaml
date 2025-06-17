@@ -1,4 +1,4 @@
-elementName: rvn-settings
+elementName: rvn-settings-user
 
 viewDataSchema:
   type: object
@@ -16,8 +16,8 @@ template:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rtgl-view w=f h=f p=lg:
-      - rtgl-text s=h2: General Settings
+      - rtgl-text s=h2: User Settings
       - rtgl-view g=lg mt=lg:
-        - rtgl-text s=md: Settings content will go here
-        - rtgl-text s=sm c=mu-fg: This is a placeholder for the general settings interface
+        - rtgl-text s=md: User settings content will go here
+        - rtgl-text s=sm c=mu-fg: This is a placeholder for the user settings interface
     - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

@@ -1,0 +1,38 @@
+elementName: rvn-command-line-rich-text
+
+viewDataSchema:
+  type: object
+  properties: {}
+
+refs:
+  text-input:
+    eventListeners:
+      input:
+        handler: handleTextInput
+  submit-button:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+  format-button-*:
+    eventListeners:
+      click:
+        handler: handleFormatButtonClick
+
+template:
+  - rtgl-view w=f h=f p=m:
+    - rtgl-text s=h3: Command Line Rich Text
+
+    - rtgl-view g=md:
+      - rtgl-text: Text Content
+      
+      - rtgl-view d=h g=sm:
+        - rtgl-button#format-button-bold: Bold
+        - rtgl-button#format-button-italic: Italic
+        - rtgl-button#format-button-underline: Underline
+        - rtgl-button#format-button-color: Color
+      
+      - rtgl-textarea#text-input w=f h=200 placeholder="Enter your rich text content here..." value=${textContent}:
+      
+      - rtgl-view d=h g=md:
+        - rtgl-button#submit-button: Add Text
+        - rtgl-button: Cancel

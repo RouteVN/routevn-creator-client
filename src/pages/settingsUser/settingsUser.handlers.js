@@ -1,5 +1,5 @@
 export const handleOnMount = (deps) => {
-  // Initialize settings
+  // Initialize user settings
 }
 
 export const handleDataChanged = (e, deps) => {

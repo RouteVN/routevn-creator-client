@@ -1,0 +1,42 @@
+elementName: rvn-command-line-dialogue-box
+
+viewDataSchema:
+  type: object
+  properties: {}
+
+refs:
+  speaker-input:
+    eventListeners:
+      input:
+        handler: handleSpeakerInput
+  dialogue-input:
+    eventListeners:
+      input:
+        handler: handleDialogueInput
+  submit-button:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+
+template:
+  - rtgl-view w=f h=f p=m:
+    - rtgl-text s=h3: Command Line Dialogue Box
+
+    - rtgl-view g=md:
+      - rtgl-text: Dialogue Configuration
+      
+      - rtgl-view g=sm:
+        - rtgl-text: Speaker Name
+        - rtgl-input#speaker-input w=f placeholder="Enter character name..." value=${speakerName}:
+        
+        - rtgl-text: Dialogue Text
+        - rtgl-textarea#dialogue-input w=f h=120 placeholder="Enter dialogue text..." value=${dialogueText}:
+        
+        - rtgl-text: Preview
+        - rtgl-view w=f p=md bgc=bg br=sm:
+          - rtgl-text s=sm fw=b c=pr: ${speakerName || 'Speaker'}
+          - rtgl-text: ${dialogueText || 'Dialogue text will appear here...'}
+      
+      - rtgl-view d=h g=md mt=lg:
+        - rtgl-button#submit-button: Add Dialogue
+        - rtgl-button: Cancel
