@@ -1,92 +1,77 @@
+import { toFlatGroups, toFlatItems } from "../../repository";
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+};
 
 export const INITIAL_STATE = Object.freeze({
-  items: [],
-  dropdownMenu: {
-    isOpen: false,
-    items: [],
-    position: {
-      x: 0,
-      y: 0,
-    },
-  },
-  tableData: {
-    columns: [
-      { key: 'id', label: 'ID' },
-      { key: 'name', label: 'Name' },
-      { key: 'type', label: 'Type' },
-      { key: 'default', label: 'Default Value' },
-      { key: 'readOnly', label: 'Read Only' }
-    ],
-    rows: [
-      { id: 1, name: 'John Doe', type: 'string', default: 'John Doe', readOnly: false },
-      { id: 2, name: 'Jane Smith', type: 'number', default: '123', readOnly: false },
-      { id: 3, name: 'Bob Johnson', type: 'boolean', default: 'true', readOnly: false },
-      { id: 4, name: 'Alice Williams', type: 'array', default: '["apple", "banana", "cherry"]', readOnly: false },
-      { id: 5, name: 'Charlie Brown', type: 'object', default: '{ "name": "Charlie Brown", "age": 30 }', readOnly: false },
-      { id: 6, name: 'Diana Prince', type: 'date', default: '2025-01-01', readOnly: false },
-    ]
-  }
+  variablesData: { tree: [], items: {} },
+  selectedItemId: null,
 });
 
-export const addItem = (state, item) => {
-  state.items.push(item)
+export const setItems = (state, variablesData) => {
+  state.variablesData = variablesData
 }
 
-export const setItems = (state, items) => {
-  state.items = items
-}
-
-export const showDropdownMenuFileExplorerItem = (state, { position, id }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'Rename',
-        type: 'item',
-        value: 'rename-item',
-      },
-      {
-        label: 'Delete',
-        type: 'item',
-        value: 'delete-item',
-      },
-    ],
-  }
-}
-
-export const showDropdownMenuFileExplorerEmpty = (state, { position }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'New Background',
-        type: 'item',
-        value: 'new-item',
-      },
-    ],
-  }
-}
-
-export const hideDropdownMenu = (state) => {
-  state.dropdownMenu = {
-    isOpen: false,
-    position: {
-      x: 0,
-      y: 0,
-    },
-    items: [],
-  }
+export const setSelectedItemId = (state, itemId) => {
+  state.selectedItemId = itemId;
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  return {
-    items: state.items,
-    dropdownMenu: state.dropdownMenu,
+  console.log("🔧 Variables toViewData called with state:", state);
+  
+  const flatItems = toFlatItems(state.variablesData);
+  const flatGroups = toFlatGroups(state.variablesData);
+
+  console.log("🔧 Variables processed data:", {
+    variablesData: state.variablesData,
+    flatItems,
+    flatGroups
+  });
+
+  // Get selected item details
+  const selectedItem = state.selectedItemId ? 
+    flatItems.find(item => item.id === state.selectedItemId) : null;
+
+  // Compute display values for selected item
+  const selectedItemDetails = selectedItem ? {
+    ...selectedItem,
+    typeDisplay: selectedItem.type === 'variable' ? 'Variable' : 'Folder',
+    displayFileType: selectedItem.fileType || (selectedItem.type === 'variable' ? 'Variable' : null),
+    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
+    fullPath: selectedItem.fullLabel || selectedItem.name || '',
+  } : null;
+
+  // Transform selectedItem into detailPanel props
+  const detailTitle = selectedItemDetails ? 'Details' : null;
+  const detailFields = selectedItemDetails ? [
+    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
+    { type: 'text', label: 'Variable Type', value: selectedItemDetails.variableType, show: !!selectedItemDetails.variableType },
+    { type: 'text', label: 'Default Value', value: selectedItemDetails.defaultValue, show: !!selectedItemDetails.defaultValue },
+    { type: 'text', label: 'Read Only', value: selectedItemDetails.readonly ? 'Yes' : 'No', show: selectedItemDetails.readonly !== undefined },
+    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
+  ] : [];
+  const detailEmptyMessage = 'No selection';
+  
+  const viewData = {
+    flatItems,
+    flatGroups,
     resourceCategory: 'systemConfig',
     selectedResourceId: 'variables',
-    tableData: state.tableData,
+    repositoryTarget: 'variables',
+    selectedItemId: state.selectedItemId,
+    selectedItem: selectedItemDetails,
+    detailTitle,
+    detailFields,
+    detailEmptyMessage,
   };
+  
+  console.log("🔧 Variables returning viewData:", viewData);
+  
+  return viewData;
 }
-

@@ -1,6 +1,6 @@
 elementName: rvn-projects
 
-dataSchema:
+viewDataSchema:
   type: object
   properties:
     title:

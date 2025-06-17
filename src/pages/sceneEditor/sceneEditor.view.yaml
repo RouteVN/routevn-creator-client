@@ -1,6 +1,6 @@
 elementName: rvn-scene-editor
 
-dataSchema:
+viewDataSchema:
   type: object
   properties:
     currentSteps:

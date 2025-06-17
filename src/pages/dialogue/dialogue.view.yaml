@@ -1,6 +1,6 @@
 elementName: rvn-dialogue
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

@@ -1,6 +1,6 @@
 elementName: rvn-command-line-background
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

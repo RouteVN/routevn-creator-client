@@ -58,6 +58,8 @@ refs:
       mousedown:
         required: true
         handler: handleItemMouseDown
+      dblclick:
+        handler: handleItemDoubleClick
 
 template:
   - 'rtgl-view w=f h=f pos=rel style="overflow: hidden; background: #f5f5f5; min-height: 400px; cursor: ${containerCursor};"':

@@ -1,6 +1,6 @@
 elementName: rvn-fonts
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

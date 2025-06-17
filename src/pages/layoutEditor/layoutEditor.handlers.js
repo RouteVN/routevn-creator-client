@@ -1,59 +1,35 @@
-
 export const handleOnMount = (deps) => {
-  const { store, localData, render, getRefIds } = deps;
-  const items = localData.backgrounds.toJSONFlat()
-  store.setItems(items)
-}
+  const { router, store, repository } = deps;
+  const { layoutId } = router.getPayload();
+  const { layouts } = repository.getState();
+  const layout = layouts.items[layoutId];
+  store.setLayoutId(layoutId);
+  store.setItems(layout?.layout || { items: {}, tree: [] });
+  return () => {};
+};
 
 export const handleTargetChanged = (payload, deps) => {
-  const { store, localData, render } = deps;
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0
-  })
-  store.setItems(localData.backgrounds.toJSONFlat())
-  render();
-}
-
-export const handleFileExplorerRightClickContainer = (e, deps) => {
-  const { store, render } = deps;
-  const detail = e.detail;
-  store.showDropdownMenuFileExplorerEmpty({
-    position: {
-      x: detail.x,
-      y: detail.y,
-    },
-  });
+  const { render } = deps;
   render();
 };
 
-export const handleFileExplorerRightClickItem = (e, deps) => {
+export const handleFileExplorerItemClick = (e, deps) => {
   const { store, render } = deps;
-  store.showDropdownMenuFileExplorerItem({
-    position: {
-      x: e.detail.x,
-      y: e.detail.y,
-    },
-    id: e.detail.id,
-  });
+  const itemId = e.detail.id;
+  store.setSelectedItemId(itemId);
   render();
-}
+};
 
-export const handleDropdownMenuClickOverlay = (e, deps) => {
-  const { store, render } = deps;
-  store.hideDropdownMenu();
+export const handleAddLayoutClick = (e, deps) => {
+  const { render } = deps;
   render();
-}
+};
 
-export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, localData } = deps;
-  store.hideDropdownMenu();
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0,
-  })
-  const items = localData.backgrounds.toJSONFlat()
-  console.log('items', items)
-  store.setItems(items)
+export const handleDataChanged = (e, deps) => {
+  const { router, store, repository, render } = deps;
+  const { layoutId } = router.getPayload();
+  const { layouts } = repository.getState();
+  const layout = layouts.items[layoutId];
+  store.setItems(layout?.layout || { items: {}, tree: [] });
   render();
-}
+};

@@ -1,6 +1,6 @@
-elementName: rvn-positions
+elementName: rvn-placements
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 
@@ -11,15 +11,15 @@ refs:
         handler: handleDataChanged
   groupview:
     eventListeners:
-      position-item-click:
-        handler: handlePositionItemClick
-      files-uploaded:
-        handler: handleDragDropFileSelected
+      placement-item-click:
+        handler: handlePlacementItemClick
+      placement-created:
+        handler: handlePlacementCreated
 
 template:
   - rtgl-view d=h w=f h=f: 
     - rtgl-view w=f h=f p=md w=240:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - rvn-group-positions-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
+    - rvn-group-placements-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
     - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

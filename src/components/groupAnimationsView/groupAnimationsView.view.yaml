@@ -1,0 +1,98 @@
+elementName: rvn-group-animations-view
+
+propsSchema:
+  type: object
+  properties:
+    flatGroups:
+      type: array
+      description: Array of animation groups to display
+    selectedItemId:
+      type: string
+      description: ID of currently selected item
+
+refs:
+  group-*:
+    eventListeners:
+      click:
+        handler: handleGroupClick
+  animation-item-*:
+    eventListeners:
+      click:
+        handler: handleAnimationItemClick
+  add-animation-button-*:
+    eventListeners:
+      click:
+        handler: handleAddAnimationClick
+  add-animation-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseDialog
+      submit-form:
+        handler: handleSubmitForm
+  animation-form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
+
+template:
+  - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
+    - rtgl-view g=lg w=f:
+      - $for group in flatGroups:
+        - rtgl-view w=f:
+          - 'rtgl-view#group-${group.id} d=h w=f g=md av=c bgc=bg cur=p style="position: sticky; top: 0;"':
+            - $if group.isCollapsed:
+                - rtgl-svg wh=16 svg=folderArrowRight:
+              $else:
+                - rtgl-svg wh=16 svg=folderArrowDown:
+            - rtgl-svg wh=24 svg=folder:
+            - rtgl-text s=h4: ${group.fullLabel}
+          - $if !group.isCollapsed:
+              - rtgl-view w=f:
+                - rtgl-view w=f g=md fw=w:
+                  - $if group.hasChildren:
+                      - $for item in group.children:
+                          - 'rtgl-view#animation-item-${item.id} cur=p style="${item.selectedStyle}" w=f br=md p=md':
+                            - rtgl-view flex=1 h=f w=f bw=xs br=md p=md:
+                              - rtgl-text s=h3: ${item.name}
+                              - rtgl-view h=48:
+
+                              - rtgl-view g=md w=f pos=rel:
+                                - rtgl-view d=h w=f:
+                                  - rtgl-view w=f ah=e:
+                                    - rtgl-text s=sm: 'Total Duration: 4s'
+
+                                - rtgl-view d=h w=f:
+                                  - rtgl-view w=64 av=c:
+                                  - rtgl-view h=24 w=f bgc=mu:
+
+                                - rtgl-view h=12: 
+
+                                - rtgl-view d=h w=f av=c:
+                                  - rtgl-view w=64 av=c:
+                                    - rtgl-text s=sm: Alpha
+                                  - rtgl-view d=h w=f h=40 bgc=mu g=xs:
+                                    - rtgl-view d=h h=f bgc=ac flex=1 p=sm:
+                                      - rtgl-view flex=1:
+                                        - rtgl-text s=xs c=mu-fg: '1.2'
+                                      - rtgl-view ah=e h=f:
+                                        - rtgl-text s=xs c=mu-fg: '0.2'
+                                        - rtgl-view flex=1:
+                                        - rtgl-text s=xs c=mu-fg: '1.1s'
+                                    - rtgl-view ah=e h=f bgc=ac flex=1 p=sm:
+                                      - rtgl-text s=xs c=mu-fg: '0.8'
+                                      - rtgl-view flex=1:
+                                      - rtgl-text s=xs c=mu-fg: '2.5s'
+                                - rtgl-view d=h w=f av=c:
+                                  - rtgl-view w=64 av=c:
+                                    - rtgl-text s=sm: Scale
+                                  - rtgl-view w=f h=40 bgc=mu:
+                    $else:
+                      - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
+                        - rtgl-text: Add Animation
+              - $if group.hasChildren:
+                  - rtgl-view#add-animation-button-${group.id} w=200 h=60 av=c ah=c bw=xs cur=p:
+                    - rtgl-text: Add Animation
+  
+  - rtgl-dialog#add-animation-dialog .isOpen=isDialogOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:

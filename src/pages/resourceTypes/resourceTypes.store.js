@@ -20,9 +20,9 @@ const assetItems = [
     path: "/project/resources/characters",
   },
   {
-    id: "positions",
-    name: "Positions",
-    path: "/project/resources/positions",
+    id: "placements",
+    name: "Placements",
+    path: "/project/resources/placements",
   },
   {
     id: "animations",

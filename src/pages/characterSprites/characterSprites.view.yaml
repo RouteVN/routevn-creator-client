@@ -1,6 +1,6 @@
 elementName: rvn-character-sprites
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

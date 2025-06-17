@@ -1,11 +1,11 @@
-elementName: rvn-group-positions-view
+elementName: rvn-group-components-view
 
 propsSchema:
   type: object
   properties:
     flatGroups:
       type: array
-      description: Array of position groups to display
+      description: Array of component groups to display
     selectedItemId:
       type: string
       description: ID of currently selected item
@@ -23,10 +23,12 @@ refs:
     eventListeners:
       click:
         handler: handleGroupClick
-  position-item-*:
+  component-item-*:
     eventListeners:
       click:
-        handler: handlePositionItemClick
+        handler: handleComponentItemClick
+      dblclick:
+        handler: handleComponentItemDoubleClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -45,9 +47,8 @@ template:
                 - rtgl-view d=h g=md fw=w:
                   - $if group.hasChildren:
                       - $for item in group.children:
-                          - 'rtgl-view#position-item-${item.id} cur=p style="${item.selectedStyle}" w=200 h=150 br=md bgc=se bw=xs av=c ah=c':
-                            - rtgl-text s=lg: Position
-                            - rtgl-text s=sm c=mu-fg: ${item.name}
+                          - 'rtgl-view#component-item-${item.id} cur=p style="${item.selectedStyle}"':
+                            - rvn-file-image w=200 h=150 fileId=${item.fileId}:
                     $else:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
               - $if group.hasChildren:

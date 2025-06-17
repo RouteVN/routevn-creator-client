@@ -2,7 +2,7 @@ elementName: rvn-sidebar
 
 title: okok
 description: okok
-dataSchema:
+viewDataSchema:
   type: object
   properties:
     items:

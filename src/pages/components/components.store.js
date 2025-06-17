@@ -1,73 +1,71 @@
 
+import { toFlatGroups, toFlatItems } from "../../repository";
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+};
+
 export const INITIAL_STATE = Object.freeze({
-  items: [],
-  dropdownMenu: {
-    isOpen: false,
-    items: [],
-    position: {
-      x: 0,
-      y: 0,
-    },
-  }
+  componentsData: { tree: [], items: {} },
+  selectedItemId: null,
 });
 
-export const addItem = (state, item) => {
-  state.items.push(item)
+export const setItems = (state, componentsData) => {
+  state.componentsData = componentsData
 }
 
-export const setItems = (state, items) => {
-  state.items = items
+export const setSelectedItemId = (state, itemId) => {
+  state.selectedItemId = itemId;
 }
 
-export const showDropdownMenuFileExplorerItem = (state, { position, id }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'Rename',
-        type: 'item',
-        value: 'rename-item',
-      },
-      {
-        label: 'Delete',
-        type: 'item',
-        value: 'delete-item',
-      },
-    ],
-  }
-}
-
-export const showDropdownMenuFileExplorerEmpty = (state, { position }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'New Background',
-        type: 'item',
-        value: 'new-item',
-      },
-    ],
-  }
-}
-
-export const hideDropdownMenu = (state) => {
-  state.dropdownMenu = {
-    isOpen: false,
-    position: {
-      x: 0,
-      y: 0,
-    },
-    items: [],
-  }
+export const selectSelectedItem = ({ state }) => {
+  if (!state.selectedItemId) return null;
+  const flatItems = toFlatItems(state.componentsData);
+  return flatItems.find(item => item.id === state.selectedItemId);
 }
 
 export const toViewData = ({ state, props }, payload) => {
+  const flatItems = toFlatItems(state.componentsData);
+  const flatGroups = toFlatGroups(state.componentsData);
+
+  // Get selected item details
+  const selectedItem = state.selectedItemId ? 
+    flatItems.find(item => item.id === state.selectedItemId) : null;
+
+  // Compute display values for selected item
+  const selectedItemDetails = selectedItem ? {
+    ...selectedItem,
+    typeDisplay: selectedItem.type === 'component' ? 'Component' : 'Folder',
+    displayFileType: selectedItem.fileType || (selectedItem.type === 'component' ? 'YAML' : null),
+    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
+    fullPath: selectedItem.fullLabel || selectedItem.name || '',
+  } : null;
+
+  // Transform selectedItem into detailPanel props
+  const detailTitle = selectedItemDetails ? 'Component Details' : null;
+  const detailFields = selectedItemDetails ? [
+    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
+    { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
+    { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
+    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
+  ] : [];
+  const detailEmptyMessage = 'Select a component to view details';
+
   return {
-    items: state.items,
-    dropdownMenu: state.dropdownMenu,
+    flatItems,
+    flatGroups,
     resourceCategory: 'userInterface',
     selectedResourceId: 'components',
+    selectedItemId: state.selectedItemId,
+    selectedItem: selectedItemDetails,
+    detailTitle,
+    detailFields,
+    detailEmptyMessage,
+    repositoryTarget: 'components',
   };
 }

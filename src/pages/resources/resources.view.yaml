@@ -1,6 +1,6 @@
 elementName: rvn-resources
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

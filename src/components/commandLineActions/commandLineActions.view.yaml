@@ -1,6 +1,6 @@
 elementName: rvn-command-line-actions
 
-dataSchema:
+viewDataSchema:
   type: object
   properties:
     items:

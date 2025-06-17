@@ -1,73 +1,51 @@
+import { toFlatItems, toFlatGroups } from '../../repository.js';
 
 export const INITIAL_STATE = Object.freeze({
-  items: [],
-  dropdownMenu: {
-    isOpen: false,
-    items: [],
-    position: {
-      x: 0,
-      y: 0,
-    },
-  }
+  layoutData: { tree: [], items: {} },
+  selectedItemId: null,
+  layoutId: null,
 });
 
-export const addItem = (state, item) => {
-  state.items.push(item)
-}
+export const setItems = (state, layoutData) => {
+  state.layoutData = layoutData;
+};
 
-export const setItems = (state, items) => {
-  state.items = items
-}
+export const setLayoutId = (state, layoutId) => {
+  state.layoutId = layoutId;
+};
 
-export const showDropdownMenuFileExplorerItem = (state, { position, id }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'Rename',
-        type: 'item',
-        value: 'rename-item',
-      },
-      {
-        label: 'Delete',
-        type: 'item',
-        value: 'delete-item',
-      },
-    ],
-  }
-}
+export const setSelectedItemId = (state, itemId) => {
+  state.selectedItemId = itemId;
+};
 
-export const showDropdownMenuFileExplorerEmpty = (state, { position }) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [
-      {
-        label: 'New Background',
-        type: 'item',
-        value: 'new-item',
-      },
-    ],
-  }
-}
-
-export const hideDropdownMenu = (state) => {
-  state.dropdownMenu = {
-    isOpen: false,
-    position: {
-      x: 0,
-      y: 0,
-    },
-    items: [],
-  }
-}
+export const selectLayoutId = ({ state }) => {
+  return state.layoutId;
+};
 
 export const toViewData = ({ state, props }, payload) => {
+  const flatItems = toFlatItems(state.layoutData);
+  const flatGroups = toFlatGroups(state.layoutData);
+  
+  const selectedItem = state.selectedItemId ? 
+    flatItems.find(item => item.id === state.selectedItemId) : null;
+  
+  const detailTitle = selectedItem ? selectedItem.name : '';
+  const detailFields = selectedItem ? [
+    { label: 'Name', value: selectedItem.name },
+    { label: 'Type', value: selectedItem.type || 'Layout Item' },
+    { label: 'ID', value: selectedItem.id }
+  ] : [];
+  const detailEmptyMessage = 'Select a layout item to view details';
+  
   return {
-    items: state.items,
-    dropdownMenu: state.dropdownMenu,
+    flatItems,
+    flatGroups,
+    selectedItemId: state.selectedItemId,
+    repositoryTarget: `layouts.items.${state.layoutId}.layout`,
+    detailTitle,
+    detailFields,
+    detailEmptyMessage,
     resourceCategory: 'userInterface',
-    selectedResourceId: 'layouts',
+    selectedResourceId: 'layout-editor',
   };
 }

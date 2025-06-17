@@ -1,0 +1,73 @@
+elementName: rvn-group-colors-view
+
+propsSchema:
+  type: object
+  properties:
+    flatGroups:
+      type: array
+      description: Array of color groups to display
+    selectedItemId:
+      type: string
+      description: ID of currently selected item
+
+refs:
+  drag-drop-item-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  drag-drop-bar-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  group-*:
+    eventListeners:
+      click:
+        handler: handleGroupClick
+  color-item-*:
+    eventListeners:
+      click:
+        handler: handleColorItemClick
+  add-color-button-*:
+    eventListeners:
+      click:
+        handler: handleAddColorClick
+  add-color-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseDialog
+      submit-form:
+        handler: handleSubmitForm
+  color-form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
+
+template:
+  - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
+    - rtgl-view g=lg w=f:
+      - $for group in flatGroups:
+        - rtgl-view w=f:
+          - 'rtgl-view#group-${group.id} d=h w=f g=md av=c bgc=bg cur=p style="position: sticky; top: 0;"':
+            - $if group.isCollapsed:
+                - rtgl-svg wh=16 svg=folderArrowRight:
+              $else:
+                - rtgl-svg wh=16 svg=folderArrowDown:
+            - rtgl-svg wh=24 svg=folder:
+            - rtgl-text s=h4: ${group.fullLabel}
+          - $if !group.isCollapsed:
+              - rtgl-view w=f:
+                - $if group.hasChildren:
+                    - rtgl-view d=h g=md fw=w mt=lg:
+                      - $for item in group.children:
+                          - 'rtgl-view#color-item-${item.id} ah=c bw=xs pb=md cur=p style="${item.selectedStyle}"':
+                            - 'rtgl-view wh=64 br=md style="background-color: ${item.hex}"':
+                            - rtgl-text: ${item.name}
+                  $else:
+                    - rtgl-view#add-color-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
+                      - rtgl-text: Add Color
+              - $if group.hasChildren:
+                  - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText:
+  
+  - rtgl-dialog#add-color-dialog .isOpen=isDialogOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#color-form .defaultValues=defaultValues .form=form w=f:

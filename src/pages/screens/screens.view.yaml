@@ -1,6 +1,6 @@
 elementName: rvn-screens
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

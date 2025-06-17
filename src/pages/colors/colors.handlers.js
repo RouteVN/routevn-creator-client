@@ -1,59 +1,133 @@
 
+import { nanoid } from "nanoid";
+
 export const handleOnMount = (deps) => {
-  const { store, localData, render, getRefIds } = deps;
-  const items = localData.backgrounds.toJSONFlat()
-  store.setItems(items)
-}
+  const { store, repository } = deps;
+  const { colors } = repository.getState();
+  store.setItems(colors);
 
-export const handleTargetChanged = (payload, deps) => {
-  const { store, localData, render } = deps;
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0
-  })
-  store.setItems(localData.backgrounds.toJSONFlat())
-  render();
-}
+  return () => {}
+};
 
-export const handleFileExplorerRightClickContainer = (e, deps) => {
-  const { store, render } = deps;
-  const detail = e.detail;
-  store.showDropdownMenuFileExplorerEmpty({
-    position: {
-      x: detail.x,
-      y: detail.y,
-    },
-  });
+
+export const handleDataChanged = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { colors } = repository.getState();
+  store.setItems(colors);
   render();
 };
 
-export const handleFileExplorerRightClickItem = (e, deps) => {
+
+export const handleColorItemClick = (e, deps) => {
   const { store, render } = deps;
-  store.showDropdownMenuFileExplorerItem({
-    position: {
-      x: e.detail.x,
-      y: e.detail.y,
-    },
-    id: e.detail.id,
+  const { itemId } = e.detail; // Extract from forwarded event
+  store.setSelectedItemId(itemId);
+  render();
+};
+
+export const handleDragDropFileSelected = async (e, deps) => {
+  const { store, render, httpClient, repository } = deps;
+  const { files, targetGroupId } = e.detail; // Extract from forwarded event
+  const id = targetGroupId;
+
+  // Create upload promises for all files
+  const uploadPromises = Array.from(files).map(async (file) => {
+    try {
+      const { downloadUrl, uploadUrl, fileId } =
+        await httpClient.creator.uploadFile({
+          projectId: "someprojectId",
+        });
+
+      const response = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type, // Ensure the Content-Type matches the file type
+        },
+      });
+
+      if (response.ok) {
+        console.log("File uploaded successfully:", file.name);
+        return {
+          success: true,
+          file,
+          downloadUrl,
+          fileId,
+        };
+      } else {
+        console.error("File upload failed:", file.name, response.statusText);
+        return {
+          success: false,
+          file,
+          error: response.statusText,
+        };
+      }
+    } catch (error) {
+      console.error("File upload error:", file.name, error);
+      return {
+        success: false,
+        file,
+        error: error.message,
+      };
+    }
   });
-  render();
-}
 
-export const handleDropdownMenuClickOverlay = (e, deps) => {
-  const { store, render } = deps;
-  store.hideDropdownMenu();
-  render();
-}
+  // Wait for all uploads to complete
+  const uploadResults = await Promise.all(uploadPromises);
 
-export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, localData } = deps;
-  store.hideDropdownMenu();
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0,
-  })
-  const items = localData.backgrounds.toJSONFlat()
-  console.log('items', items)
-  store.setItems(items)
+  // Add successfully uploaded files to repository
+  const successfulUploads = uploadResults.filter((result) => result.success);
+
+  successfulUploads.forEach((result) => {
+    repository.addAction({
+      actionType: "treePush",
+      target: "colors",
+      value: {
+        parent: id,
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "color",
+          fileId: result.fileId,
+          name: result.file.name,
+          fileType: result.file.type,
+          fileSize: result.file.size,
+        },
+      },
+    });
+  });
+
+  if (successfulUploads.length > 0) {
+    const { colors } = repository.getState();
+    store.setItems(colors);
+  }
+
+  console.log(
+    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
+  );
   render();
-}
+};
+
+export const handleColorCreated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { groupId, name, hex } = e.detail;
+
+  repository.addAction({
+    actionType: "treePush",
+    target: "colors",
+    value: {
+      parent: groupId,
+      position: "last",
+      item: {
+        id: nanoid(),
+        type: "color",
+        name: name,
+        hex: hex,
+      },
+    },
+  });
+
+  const { colors } = repository.getState();
+  store.setItems(colors);
+  render();
+};
