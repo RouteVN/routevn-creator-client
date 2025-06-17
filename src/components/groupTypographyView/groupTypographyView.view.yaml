@@ -1,0 +1,73 @@
+elementName: rvn-group-typography-view
+
+propsSchema:
+  type: object
+  properties:
+    flatGroups:
+      type: array
+      description: Array of typography groups to display
+    selectedItemId:
+      type: string
+      description: ID of currently selected item
+
+refs:
+  drag-drop-item-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  drag-drop-bar-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  group-*:
+    eventListeners:
+      click:
+        handler: handleGroupClick
+  typography-item-*:
+    eventListeners:
+      click:
+        handler: handleTypographyItemClick
+  add-typography-button-*:
+    eventListeners:
+      click:
+        handler: handleAddTypographyClick
+  add-typography-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseDialog
+      submit-form:
+        handler: handleSubmitForm
+  typography-form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
+
+template:
+  - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
+    - rtgl-view g=lg w=f:
+      - $for group in flatGroups:
+        - rtgl-view w=f:
+          - 'rtgl-view#group-${group.id} d=h w=f g=md av=c bgc=bg cur=p style="position: sticky; top: 0;"':
+            - $if group.isCollapsed:
+                - rtgl-svg wh=16 svg=folderArrowRight:
+              $else:
+                - rtgl-svg wh=16 svg=folderArrowDown:
+            - rtgl-svg wh=24 svg=folder:
+            - rtgl-text s=h4: ${group.fullLabel}
+          - $if !group.isCollapsed:
+              - rtgl-view w=f:
+                - $if group.hasChildren:
+                    - rtgl-view d=h g=md fw=w mt=lg:
+                      - $for item in group.children:
+                          - 'rtgl-view#typography-item-${item.id} ah=c bw=xs pb=md cur=p style="${item.selectedStyle}"':
+                            - 'rtgl-view w=200 h=80 av=c ah=c br=md bc=bo style="color: ${item.fontColor}; font-size: ${item.fontSize}px; font-weight: ${item.fontWeight};"':
+                              - rtgl-text: ${item.name}
+                  $else:
+                    - rtgl-view#add-typography-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
+                      - rtgl-text: Add Typography
+              - $if group.hasChildren:
+                  - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText:
+  
+  - rtgl-dialog#add-typography-dialog .isOpen=isDialogOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#typography-form .defaultValues=defaultValues .form=form w=f:

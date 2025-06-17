@@ -1,6 +1,6 @@
 elementName: rvn-characters
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

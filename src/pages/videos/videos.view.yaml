@@ -1,6 +1,6 @@
 elementName: rvn-videos
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

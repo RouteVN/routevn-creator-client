@@ -57,6 +57,10 @@ const initialData = {
     items: {},
     tree: []
   },
+  animations: {
+    items: {},
+    tree: []
+  },
   audio: {
     items: {},
     tree: []
@@ -73,7 +77,35 @@ const initialData = {
     items: {},
     tree: []
   },
-  positions: {
+  placements: {
+    items: {},
+    tree: []
+  },
+  colors: {
+    items: {},
+    tree: []
+  },
+  typography: {
+    items: {},
+    tree: []
+  },
+  variables: {
+    items: {},
+    tree: []
+  },
+  components: {
+    items: {},
+    tree: []
+  },
+  layouts: {
+    items: {},
+    tree: []
+  },
+  preset: {
+    items: {},
+    tree: []
+  },
+  scenes: {
     items: {},
     tree: []
   }

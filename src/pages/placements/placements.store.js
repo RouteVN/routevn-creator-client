@@ -9,12 +9,12 @@ const formatFileSize = (bytes) => {
 };
 
 export const INITIAL_STATE = Object.freeze({
-  positionData: { tree: [], items: {} },
+  placementData: { tree: [], items: {} },
   selectedItemId: null,
 });
 
-export const setItems = (state, positionData) => {
-  state.positionData = positionData
+export const setItems = (state, placementData) => {
+  state.placementData = placementData
 }
 
 export const setSelectedItemId = (state, itemId) => {
@@ -22,13 +22,13 @@ export const setSelectedItemId = (state, itemId) => {
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  console.log("📍 Positions toViewData called with state:", state);
+  console.log("🎯 Placements toViewData called with state:", state);
   
-  const flatItems = toFlatItems(state.positionData);
-  const flatGroups = toFlatGroups(state.positionData);
+  const flatItems = toFlatItems(state.placementData);
+  const flatGroups = toFlatGroups(state.placementData);
 
-  console.log("📍 Positions processed data:", {
-    positionData: state.positionData,
+  console.log("🎯 Placements processed data:", {
+    placementData: state.placementData,
     flatItems,
     flatGroups
   });
@@ -40,29 +40,34 @@ export const toViewData = ({ state, props }, payload) => {
   // Compute display values for selected item
   const selectedItemDetails = selectedItem ? {
     ...selectedItem,
-    typeDisplay: selectedItem.type === 'position' ? 'Position' : 'Folder',
-    displayFileType: selectedItem.fileType || (selectedItem.type === 'position' ? 'JSON' : null),
+    typeDisplay: selectedItem.type === 'placement' ? 'Placement' : 'Folder',
+    displayFileType: selectedItem.fileType || (selectedItem.type === 'placement' ? 'JSON' : null),
     displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
   } : null;
 
   // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? 'Details' : null;
+  const detailTitle = selectedItemDetails ? 'Placement Details' : null;
   const detailFields = selectedItemDetails ? [
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
+    { type: 'text', label: 'Position X', value: selectedItemDetails.positionX, show: !!selectedItemDetails.positionX },
+    { type: 'text', label: 'Position Y', value: selectedItemDetails.positionY, show: !!selectedItemDetails.positionY },
+    { type: 'text', label: 'Scale', value: selectedItemDetails.scale, show: !!selectedItemDetails.scale },
+    { type: 'text', label: 'Anchor', value: selectedItemDetails.anchor, show: !!selectedItemDetails.anchor },
+    { type: 'text', label: 'Rotation', value: selectedItemDetails.rotation, show: !!selectedItemDetails.rotation },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : [];
-  const detailEmptyMessage = 'No selection';
+  const detailEmptyMessage = 'Select a placement to view details';
   
   const viewData = {
     flatItems,
     flatGroups,
     resourceCategory: 'assets',
-    selectedResourceId: 'positions',
-    repositoryTarget: 'positions',
+    selectedResourceId: 'placements',
+    repositoryTarget: 'placements',
     selectedItemId: state.selectedItemId,
     selectedItem: selectedItemDetails,
     detailTitle,
@@ -70,7 +75,7 @@ export const toViewData = ({ state, props }, payload) => {
     detailEmptyMessage,
   };
   
-  console.log("📍 Positions returning viewData:", viewData);
+  console.log("🎯 Placements returning viewData:", viewData);
   
   return viewData;
 }

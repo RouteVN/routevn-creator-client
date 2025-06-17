@@ -1,0 +1,59 @@
+elementName: rvn-group-variables-view
+
+propsSchema:
+  type: object
+  properties:
+    flatGroups:
+      type: array
+      description: Array of variable groups to display
+    selectedItemId:
+      type: string
+      description: ID of currently selected item
+
+refs:
+  group-*:
+    eventListeners:
+      click:
+        handler: handleGroupClick
+  variable-item-*:
+    eventListeners:
+      click:
+        handler: handleVariableItemClick
+  add-variable-button-*:
+    eventListeners:
+      click:
+        handler: handleAddVariableClick
+  add-variable-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseDialog
+  variable-form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
+  table-*:
+    eventListeners:
+      row-click:
+        handler: handleTableRowClick
+
+template:
+  - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
+    - rtgl-view g=lg w=f:
+      - $for group, i in flatGroups:
+        - rtgl-view w=f:
+          - 'rtgl-view#group-${group.id} d=h w=f g=md av=c bgc=bg cur=p style="position: sticky; top: 0;"':
+            - $if group.isCollapsed:
+                - rtgl-svg wh=16 svg=folderArrowRight:
+              $else:
+                - rtgl-svg wh=16 svg=folderArrowDown:
+            - rtgl-svg wh=24 svg=folder:
+            - rtgl-text s=h4: ${group.fullLabel}
+          - $if !group.isCollapsed:
+              - rtgl-view d=h g=md fw=w mt=lg p=md w=f:
+                - rtgl-table#table-${group.id} .data=flatGroups[${i}].tableData w=f:
+              - rtgl-view#add-variable-button-${group.id} w=f h=60 av=c ah=c bw=xs cur=p mt=md:
+                - rtgl-text: Add Variable
+  
+  - rtgl-dialog#add-variable-dialog .isOpen=isDialogOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#variable-form .defaultValues=defaultValues .form=form w=f:

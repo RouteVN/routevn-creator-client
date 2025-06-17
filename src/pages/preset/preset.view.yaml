@@ -1,11 +1,25 @@
 elementName: rvn-preset
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 
-refs: {}
+refs:
+  fileexplorer:
+    eventListeners:
+      data-changed:
+        handler: handleDataChanged
+  groupview:
+    eventListeners:
+      preset-item-click:
+        handler: handlePresetItemClick
+      preset-created:
+        handler: handlePresetCreated
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h2: Preset
+  - rtgl-view d=h w=f h=f: 
+    - rtgl-view w=f h=f p=md w=240:
+      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+      - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
+    - rvn-group-presets-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
+    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

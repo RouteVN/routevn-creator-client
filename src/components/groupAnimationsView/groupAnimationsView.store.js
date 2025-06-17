@@ -1,5 +1,32 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
+  isDialogOpen: false,
+  targetGroupId: null,
+  
+  defaultValues: {
+    name: '',
+  },
+
+  form: {
+    title: 'Add Animation',
+    description: 'Create a new animation',
+    fields: [{
+      id: 'name',
+      fieldName: 'name',
+      inputType: 'inputText',
+      label: 'Name',
+      description: 'Enter the animation name',
+      required: true,
+    }],
+    actions: {
+      layout: '',
+      buttons: [{
+        id: 'submit',
+        variant: 'pr',
+        content: 'Add Animation',
+      }],
+    }
+  }
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -9,6 +36,14 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
+}
+
+export const toggleDialog = (state) => {
+  state.isDialogOpen = !state.isDialogOpen;
+}
+
+export const setTargetGroupId = (state, groupId) => {
+  state.targetGroupId = groupId;
 }
 
 export const toViewData = ({ state, props }) => {
@@ -28,7 +63,8 @@ export const toViewData = ({ state, props }) => {
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
-    uploadText: "Upload Position",
-    acceptedFileTypes: ['.json', '.txt', '.yaml', '.yml', '.xml']
+    isDialogOpen: state.isDialogOpen,
+    defaultValues: state.defaultValues,
+    form: state.form,
   };
 };

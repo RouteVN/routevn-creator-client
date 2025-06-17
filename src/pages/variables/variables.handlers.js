@@ -1,59 +1,56 @@
+import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
-  const { store, localData, render, getRefIds } = deps;
-  const items = localData.backgrounds.toJSONFlat()
-  store.setItems(items)
+  const { store, repository } = deps;
+  const { variables } = repository.getState();
+  store.setItems(variables || { tree: [], items: {} })
+
+  return () => {}
 }
 
-export const handleTargetChanged = (payload, deps) => {
-  const { store, localData, render } = deps;
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0
-  })
-  store.setItems(localData.backgrounds.toJSONFlat())
-  render();
-}
-
-export const handleFileExplorerRightClickContainer = (e, deps) => {
-  const { store, render } = deps;
-  const detail = e.detail;
-  store.showDropdownMenuFileExplorerEmpty({
-    position: {
-      x: detail.x,
-      y: detail.y,
-    },
-  });
+export const handleDataChanged = (e, deps) => {
+  const { store, render, repository } = deps;
+  
+  const repositoryState = repository.getState();
+  const { variables } = repositoryState;
+  
+  const variableData = variables || { tree: [], items: {} };
+  
+  store.setItems(variableData);
   render();
 };
 
-export const handleFileExplorerRightClickItem = (e, deps) => {
+export const handleVariableItemClick = (e, deps) => {
   const { store, render } = deps;
-  store.showDropdownMenuFileExplorerItem({
-    position: {
-      x: e.detail.x,
-      y: e.detail.y,
+  const { itemId } = e.detail; // Extract from forwarded event
+  store.setSelectedItemId(itemId);
+  render();
+};
+
+export const handleVariableCreated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { groupId, name, type, defaultValue, readonly } = e.detail;
+
+  // Add new variable to repository
+  repository.addAction({
+    actionType: "treePush",
+    target: "variables",
+    value: {
+      parent: groupId,
+      position: "last",
+      item: {
+        id: nanoid(),
+        type: "variable",
+        name: name,
+        variableType: type,
+        defaultValue: defaultValue,
+        readonly: readonly,
+      },
     },
-    id: e.detail.id,
   });
-  render();
-}
 
-export const handleDropdownMenuClickOverlay = (e, deps) => {
-  const { store, render } = deps;
-  store.hideDropdownMenu();
+  // Update store with new variables data
+  const { variables } = repository.getState();
+  store.setItems(variables);
   render();
-}
-
-export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, localData } = deps;
-  store.hideDropdownMenu();
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0,
-  })
-  const items = localData.backgrounds.toJSONFlat()
-  console.log('items', items)
-  store.setItems(items)
-  render();
-}
+};

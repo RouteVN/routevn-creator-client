@@ -1,84 +1,66 @@
+import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
-  const { store, localData, render, getRefIds } = deps;
-  const items = localData.backgrounds.toJSONFlat()
-  store.setItems(items)
+  const { store, repository } = deps;
+  const { animations } = repository.getState();
+  store.setItems(animations || { tree: [], items: {} })
+
+  return () => {}
 }
 
-export const handleTargetChanged = (payload, deps) => {
-  const { store, localData, render } = deps;
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0
-  })
-  store.setItems(localData.backgrounds.toJSONFlat())
-  render();
-}
-
-export const handleFileExplorerRightClickContainer = (e, deps) => {
-  const { store, render } = deps;
-  const detail = e.detail;
-  store.showDropdownMenuFileExplorerEmpty({
-    position: {
-      x: detail.x,
-      y: detail.y,
-    },
+export const handleDataChanged = (e, deps) => {
+  const { store, render, repository } = deps;
+  console.log("🎬 Animations handleDataChanged received event:", e.detail);
+  
+  const repositoryState = repository.getState();
+  const { animations } = repositoryState;
+  
+  console.log("🎬 Repository state:", {
+    animations,
+    fullState: repositoryState
   });
+  
+  const animationData = animations || { tree: [], items: {} };
+  console.log("🎬 Setting animation data:", animationData);
+  
+  store.setItems(animationData);
+  console.log("🎬 Animation store updated, triggering render");
+  render();
+  console.log("🎬 Animation render completed");
+};
+
+export const handleAnimationItemClick = (e, deps) => {
+  const { store, render } = deps;
+  const { itemId } = e.detail; // Extract from forwarded event
+  store.setSelectedItemId(itemId);
   render();
 };
 
-export const handleFileExplorerRightClickItem = (e, deps) => {
-  const { store, render } = deps;
-  store.showDropdownMenuFileExplorerItem({
-    position: {
-      x: e.detail.x,
-      y: e.detail.y,
+export const handleAnimationCreated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { groupId, name } = e.detail;
+
+  // Add new animation to repository
+  repository.addAction({
+    actionType: "treePush",
+    target: "animations",
+    value: {
+      parent: groupId,
+      position: "last",
+      item: {
+        id: nanoid(),
+        type: "animation",
+        name: name,
+        duration: "4s",
+        keyframes: 3,
+      },
     },
-    id: e.detail.id,
   });
-  render();
-}
 
-export const handleDropdownMenuClickOverlay = (e, deps) => {
-  const { store, render } = deps;
-  store.hideDropdownMenu();
+  // Update store with new animations data
+  const { animations } = repository.getState();
+  store.setItems(animations);
+  
+  console.log(`Animation "${name}" created successfully in group ${groupId}`);
   render();
-}
-
-export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, localData } = deps;
-  store.hideDropdownMenu();
-  localData.backgrounds.createItem('_root', {
-    name: 'New Item',
-    level: 0,
-  })
-  const items = localData.backgrounds.toJSONFlat()
-  console.log('items', items)
-  store.setItems(items)
-  render();
-}
-
-export const handleKeyframeRightClick = (e, deps) => {
-  e.preventDefault();
-  const { store, render } = deps;
-  store.showKeyframeDropdownMenu({
-    position: {
-      x: e.clientX,
-      y: e.clientY,
-    },
-    id: e.detail.id,
-  });
-  render();
-}
-
-export const handleTimelinePreviewMouseMove = (e, deps) => {
-  const { store, render } = deps;
-  const target = e.target;
-  const rect = target.getBoundingClientRect();
-  const x = e.clientX - rect.left + 64;
-
-  store.setTimelinePreviewMousePosition({
-    x,
-  });
-  render();
-}
+};

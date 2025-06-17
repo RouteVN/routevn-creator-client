@@ -76,8 +76,10 @@ export const selectPan = ({ state, props }, payload) => ({ x: state.panX, y: sta
 export const selectZoomLevel = ({ state, props }, payload) => state.zoomLevel;
 
 export const toViewData = ({ state, props }) => {
+  const items = props.items || [];
+  
   return {
-    items: props.items || [],
+    items,
     isPanMode: state.isPanMode,
     panX: state.panX,
     panY: state.panY,

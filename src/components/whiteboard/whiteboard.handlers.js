@@ -77,6 +77,25 @@ export const handleItemMouseDown = (event, deps) => {
   }));
 };
 
+export const handleItemDoubleClick = (event, deps) => {
+  event.stopPropagation();
+  
+  const fullId = event.currentTarget.id;
+  const itemId = fullId ? fullId.replace('item-', '') : '';
+  
+  if (!itemId) {
+    console.error('ERROR: No itemId found for double-click');
+    return;
+  }
+  
+  // Dispatch double-click event
+  deps.dispatchEvent(new CustomEvent('item-double-click', {
+    detail: { itemId },
+    bubbles: true,
+    composed: true
+  }));
+};
+
 export const handleWindowMouseMove = (event, deps) => {
   const { store, getRefIds, dispatchEvent, render } = deps;
   

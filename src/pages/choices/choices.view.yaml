@@ -1,6 +1,6 @@
 elementName: rvn-choices
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

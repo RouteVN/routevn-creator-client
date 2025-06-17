@@ -7,16 +7,29 @@ export const handleGroupClick = (e, deps) => {
   render();
 };
 
-export const handlePositionItemClick = (e, deps) => {
+export const handleLayoutItemClick = (e, deps) => {
   const { dispatchEvent } = deps;
-  const itemId = e.currentTarget.id.replace("position-item-", "");
+  const itemId = e.currentTarget.id.replace("layout-item-", "");
   
-  // Forward position item selection to parent
-  dispatchEvent(new CustomEvent("position-item-click", {
+  // Forward layout item selection to parent
+  dispatchEvent(new CustomEvent("image-item-click", {
     detail: { itemId },
     bubbles: true,
     composed: true
   }));
+};
+
+export const handleLayoutItemDoubleClick = (e, deps) => {
+  const { subject } = deps;
+  const itemId = e.currentTarget.id.replace("layout-item-", "");
+  
+  // Redirect to layout editor with layoutId payload
+  subject.dispatch('redirect', {
+    path: '/project/resources/layout-editor',
+    payload: {
+      layoutId: itemId
+    }
+  });
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {

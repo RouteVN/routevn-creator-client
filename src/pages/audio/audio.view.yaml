@@ -1,6 +1,6 @@
 elementName: rvn-audio
 
-dataSchema:
+viewDataSchema:
   type: object
   properties: {}
 

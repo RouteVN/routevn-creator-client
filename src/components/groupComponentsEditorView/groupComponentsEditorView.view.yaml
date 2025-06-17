@@ -1,0 +1,41 @@
+elementName: rvn-group-components-editor-view
+
+viewDataSchema:
+  type: object
+  properties:
+    flatGroups:
+      type: array
+    selectedItemId:
+      type: string
+
+refs:
+  dropdown-menu:
+    eventListeners:
+      click-overlay:
+        handler: handleDropdownMenuClickOverlay
+      click-item:
+        handler: handleDropdownMenuClickItem
+
+template:
+  - rtgl-view w=f h=f d=v g=md p=md:
+    - rtgl-view d=h av=c jc=s-b:
+      - rtgl-text s=lg: Components
+      - rtgl-button onclick=handleAddComponentClick: Add Component
+    - $if flatGroups.length > 0:
+      - rtgl-view w=f h=f g=md:
+        - $for group in flatGroups:
+          - rtgl-view w=f:
+            - rtgl-text s=md fw=b: ${group.name}
+            - rtgl-view d=h fw=w g=sm mt=sm:
+              - $for item in group.items:
+                - rtgl-view#component-item-${item.id}:
+                  - $if item.filePath:
+                      - rtgl-image w=100 h=60 src=${item.filePath}:
+                    $else:
+                      - rtgl-view w=100 h=60 bgc=fg:
+                        - rtgl-svg wh=24 svg=image c=mu-fg:
+                  - rtgl-text s=sm mt=xs: ${item.name}
+    - $else:
+      - rtgl-view w=f h=200 d=h av=c jc=c:
+        - rtgl-text c=mu-fg: No components found
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
