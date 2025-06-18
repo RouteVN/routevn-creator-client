@@ -2,6 +2,7 @@ export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
   targetGroupId: null,
+  searchQuery: '',
   
   defaultValues: {
     name: '',

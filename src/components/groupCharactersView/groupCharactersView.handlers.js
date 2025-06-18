@@ -85,6 +85,15 @@ export const handleFormActionClick = (e, deps) => {
 };
 
 
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const query = e.target.value;
+  
+  // Update search query in store
+  store.setSearchQuery(query);
+  render();
+};
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent } = deps;
   const { files } = e.detail;

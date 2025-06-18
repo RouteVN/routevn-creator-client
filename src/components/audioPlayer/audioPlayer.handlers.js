@@ -1,16 +1,18 @@
-let updateInterval = null;
-
 export const handleOnMount = async (deps) => {
-  const { store, attrs, httpClient, render } = deps;
+  const { store, attrs, httpClient, render, audioManager } = deps;
   const { fileId, autoPlay } = attrs;
 
-  // Store render function globally for time updates
-  globalRender = render;
+  // Generate unique component ID
+  const componentId = `audio-player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  store.setComponentId(componentId);
+
+  // Register with audio manager
+  audioManager.registerPlayer(componentId, store, render);
 
   if (!fileId) {
     console.warn('AudioPlayer: No fileId provided');
     return () => {
-      globalRender = null;
+      audioManager.unregisterPlayer(componentId);
     };
   }
 
@@ -31,7 +33,7 @@ export const handleOnMount = async (deps) => {
 
     // Auto-play if requested
     if (autoPlay) {
-      await handlePlay(store);
+      await handlePlay(store, audioManager);
       render();
     }
 
@@ -42,26 +44,25 @@ export const handleOnMount = async (deps) => {
 
   // Cleanup function
   return () => {
-    cleanup(store);
-    globalRender = null;
+    cleanup(store, audioManager);
   };
 };
 
 export const handlePlayPause = async (e, deps) => {
   e.preventDefault();
-  const { store, render } = deps;
+  const { store, render, audioManager } = deps;
   const state = store.getState();
 
   if (state.isPlaying) {
-    handlePause(store);
+    handlePause(store, audioManager);
   } else {
-    await handlePlay(store);
+    await handlePlay(store, audioManager);
   }
   render();
 };
 
 export const handleProgressBarClick = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, audioManager } = deps;
   const state = store.getState();
   
   if (!state.duration) return;
@@ -73,14 +74,24 @@ export const handleProgressBarClick = (e, deps) => {
   const seekTime = percentage * state.duration;
   
   store.setCurrentTime(seekTime);
+  store.setPauseTime(seekTime);
+  
+  // Always stop current source first
+  stopCurrentSource(store);
   
   // If playing, restart from new position
   if (state.isPlaying) {
-    stopCurrentSource(store);
+    // Stop time updates during seek
+    audioManager.stopTimeUpdates(state.componentId);
+    
+    // Start playback from new position
     startPlaybackFromTime(store, seekTime);
-  } else {
-    store.setPauseTime(seekTime);
+    store.setStartTime(state.audioContext.currentTime - seekTime);
+    
+    // Resume time updates
+    audioManager.startTimeUpdates(state.componentId);
   }
+  
   render();
 };
 
@@ -115,13 +126,16 @@ const loadAudioFile = async (fileId, store, httpClient) => {
   }
 };
 
-const handlePlay = async (store) => {
+const handlePlay = async (store, audioManager) => {
   const state = store.getState();
   
   if (!state.audioBuffer || !state.audioContext) {
     console.warn('Audio not loaded yet');
     return;
   }
+
+  // Always stop current source first to prevent overlapping
+  stopCurrentSource(store);
 
   // Resume audio context if suspended (required by some browsers)
   if (state.audioContext.state === 'suspended') {
@@ -135,10 +149,10 @@ const handlePlay = async (store) => {
   store.setStartTime(state.audioContext.currentTime - startTime);
 
   // Start time update interval
-  startTimeUpdates(store);
+  audioManager.startTimeUpdates(state.componentId);
 };
 
-const handlePause = (store) => {
+const handlePause = (store, audioManager) => {
   const state = store.getState();
   
   stopCurrentSource(store);
@@ -146,10 +160,7 @@ const handlePause = (store) => {
   store.setPauseTime(state.currentTime);
   
   // Stop time updates
-  if (updateInterval) {
-    clearInterval(updateInterval);
-    updateInterval = null;
-  }
+  audioManager.stopTimeUpdates(state.componentId);
 };
 
 const startPlaybackFromTime = (store, startTime) => {
@@ -160,18 +171,10 @@ const startPlaybackFromTime = (store, startTime) => {
   sourceNode.buffer = state.audioBuffer;
   sourceNode.connect(state.gainNode);
   
-  // Handle playback end
+  // Handle playback end - but let AudioManager handle cleanup to avoid conflicts
   sourceNode.onended = () => {
-    if (state.isPlaying) {
-      store.setPlaying(false);
-      store.setCurrentTime(0);
-      store.setPauseTime(0);
-      
-      if (updateInterval) {
-        clearInterval(updateInterval);
-        updateInterval = null;
-      }
-    }
+    // Don't interfere with manual operations, let AudioManager handle auto-stop
+    console.debug('Audio source ended naturally');
   };
   
   store.setSourceNode(sourceNode);
@@ -185,58 +188,23 @@ const stopCurrentSource = (store) => {
   
   if (state.sourceNode) {
     try {
+      // Disconnect from gain node first to prevent audio artifacts
+      state.sourceNode.disconnect();
       state.sourceNode.stop();
     } catch (error) {
-      // Source might already be stopped
+      // Source might already be stopped or disconnected
+      console.debug('Source already stopped:', error.message);
     }
     store.setSourceNode(null);
   }
 };
 
-// Store the render function globally so the interval can access it
-let globalRender = null;
-
-const startTimeUpdates = (store) => {
-  if (updateInterval) {
-    clearInterval(updateInterval);
-  }
-  
-  updateInterval = setInterval(() => {
-    const state = store.getState();
-    
-    if (!state.isPlaying || state.isSeeking) {
-      return;
-    }
-    
-    const elapsed = state.audioContext.currentTime - state.startTime;
-    const currentTime = Math.min(elapsed, state.duration);
-    
-    store.setCurrentTime(currentTime);
-    
-    // Trigger render to update UI
-    if (globalRender) {
-      globalRender();
-    }
-    
-    // Auto-stop at end
-    if (currentTime >= state.duration) {
-      handlePause(store);
-      store.setCurrentTime(0);
-      store.setPauseTime(0);
-      if (globalRender) {
-        globalRender();
-      }
-    }
-  }, 100); // Update every 100ms
-};
-
-const cleanup = (store) => {
+const cleanup = (store, audioManager) => {
   const state = store.getState();
   
-  // Stop time updates
-  if (updateInterval) {
-    clearInterval(updateInterval);
-    updateInterval = null;
+  // Stop time updates and unregister from audio manager
+  if (state.componentId) {
+    audioManager.unregisterPlayer(state.componentId);
   }
   
   // Stop current source

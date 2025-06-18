@@ -1,5 +1,6 @@
 
 import { nanoid } from "nanoid";
+import { toFlatItems } from "../../repository";
 
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
@@ -18,10 +19,32 @@ export const handleDataChanged = (e, deps) => {
 };
 
 
-export const handleVideoItemClick = (e, deps) => {
-  const { store, render } = deps;
+export const handleVideoItemClick = async (e, deps) => {
+  const { store, render, httpClient, repository } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
+  
+  // Get the selected item to check if it's a video
+  const { videos } = repository.getState();
+  const flatItems = toFlatItems(videos);
+  const selectedItem = flatItems.find(item => item.id === itemId);
+  
+  // If it's a video and we don't have the URL cached, fetch it
+  if (selectedItem && selectedItem.type === 'video' && selectedItem.fileId) {
+    const state = store.getState();
+    if (!state.videoUrls[selectedItem.fileId]) {
+      try {
+        const { url } = await httpClient.creator.getFileContent({ 
+          fileId: selectedItem.fileId, 
+          projectId: 'someprojectId' 
+        });
+        store.setVideoUrl({ fileId: selectedItem.fileId, url });
+      } catch (error) {
+        console.error('Error fetching video URL:', error);
+      }
+    }
+  }
+  
   render();
 };
 

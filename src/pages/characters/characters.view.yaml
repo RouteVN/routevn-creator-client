@@ -19,6 +19,10 @@ refs:
         handler: handleDragDropFileSelected
       character-created:
         handler: handleCharacterCreated
+  detail-panel:
+    eventListeners:
+      image-file-selected:
+        handler: handleDetailPanelImageSelected
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -26,4 +30,4 @@ template:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-characters-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

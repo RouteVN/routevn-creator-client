@@ -55,10 +55,14 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Character Details' : null;
   const detailFields = selectedItemDetails ? [
-    // Show character avatar if they have a fileId, otherwise show placeholder
-    selectedItemDetails.fileId ? 
-      { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135 } :
-      { type: 'text', label: 'Avatar', value: 'No avatar uploaded', show: true },
+    // Always show character avatar - editable for uploading/replacing
+    { 
+      type: 'image', 
+      fileId: selectedItemDetails.fileId || null, 
+      width: 240, 
+      height: 135, 
+      editable: true 
+    },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Description', value: selectedItemDetails.description || 'No description provided', size: 'md' },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },

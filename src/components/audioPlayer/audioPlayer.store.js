@@ -9,7 +9,8 @@ export const INITIAL_STATE = Object.freeze({
   gainNode: null,
   startTime: 0,
   pauseTime: 0,
-  isSeeking: false
+  isSeeking: false,
+  componentId: null
 });
 
 export const setLoading = (state, isLoading) => {
@@ -54,6 +55,10 @@ export const setPauseTime = (state, pauseTime) => {
 
 export const setSeeking = (state, isSeeking) => {
   state.isSeeking = isSeeking;
+};
+
+export const setComponentId = (state, componentId) => {
+  state.componentId = componentId;
 };
 
 // Helper function to format time in MM:SS format
