@@ -1,0 +1,64 @@
+elementName: rvn-audio-player
+
+propsSchema:
+  type: object
+  properties:
+    fileId:
+      type: string
+      description: ID of the audio file to play
+    autoPlay:
+      type: boolean
+      description: Whether to start playing automatically
+      default: false
+
+viewDataSchema:
+  type: object
+  properties:
+    isPlaying:
+      type: boolean
+    isLoading:
+      type: boolean
+    currentTime:
+      type: number
+    duration:
+      type: number
+    currentTimeFormatted:
+      type: string
+    durationFormatted:
+      type: string
+    progressPercentage:
+      type: number
+
+refs:
+  play-pause-btn:
+    eventListeners:
+      click:
+        handler: handlePlayPause
+  progress-bar:
+    eventListeners:
+      click:
+        handler: handleProgressBarClick
+
+template:
+  - rtgl-view w=f p=md bgc=bg br=md bc=bo bw=xs:
+    - $if isLoading:
+        - rtgl-view w=f av=c p=md:
+          - rtgl-text c=mu-fg: Loading audio...
+      $else:
+        - rtgl-view w=f g=sm:
+          # Play/Pause button and time display
+          - rtgl-view d=h av=c g=md:
+            - rtgl-button#play-pause-btn w=40 h=40 bgc=pr br=full av=c ah=c:
+              - $if isPlaying:
+                  - rtgl-svg wh=16 svg=pause c=pr-fg:
+                $else:
+                  - rtgl-svg wh=16 svg=play c=pr-fg:
+            - rtgl-view d=h av=c g=sm:
+              - rtgl-text s=sm c=mu-fg: ${currentTimeFormatted}
+              - rtgl-text s=sm c=mu-fg: /
+              - rtgl-text s=sm c=mu-fg: ${durationFormatted}
+          
+          # Progress bar
+          - rtgl-view w=f:
+            - 'rtgl-view#progress-bar w=f h=6 bgc=mu br=full cur=p pos=rel style="overflow: hidden;"':
+              - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"':

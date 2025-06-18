@@ -20,7 +20,7 @@ refs:
 
 template: 
   - rtgl-view d=h w=f h=f: 
-    - rtgl-view w=f h=f p=md w=240:
+    - rtgl-view w=f h=f w=240 bwr=xs:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-colors-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:

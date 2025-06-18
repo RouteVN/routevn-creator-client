@@ -23,8 +23,9 @@ refs:
         handler: handleItemClick
 
 template: 
-  - rtgl-text ml=md s=sm c=mu-fg mv=md: ${label}
-  - $for item in items:
-    - rtgl-view#item-${item.id} w=f h=24 av=c ph=md bgc=${item.bgc} cur=p:
-      - rtgl-text s=xs: ${item.name}
-  - rtgl-view w=f h=1 bgc=ac mv=md:
+  - rtgl-text ml=lg s=sm c=mu-fg mv=md: ${label}
+  - rtgl-view g=xs w=f:
+    - $for item in items:
+      - rtgl-view#item-${item.id} w=f h=24 av=c ph=lg pv=sm bgc=${item.bgc} h-bgc=mu cur=p:
+        - rtgl-text s=sm: ${item.name}
+  - rtgl-view w=f h=1 bgc=mu mv=md:

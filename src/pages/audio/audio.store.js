@@ -22,16 +22,8 @@ export const setSelectedItemId = (state, itemId) => {
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  console.log("🎵 Audio toViewData called with state:", state);
-  
   const flatItems = toFlatItems(state.audioData);
   const flatGroups = toFlatGroups(state.audioData);
-
-  console.log("🎵 Audio processed data:", {
-    audioData: state.audioData,
-    flatItems,
-    flatGroups
-  });
 
   // Get selected item details
   const selectedItem = state.selectedItemId ? 
@@ -47,18 +39,22 @@ export const toViewData = ({ state, props }, payload) => {
   } : null;
 
   // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? 'Details' : null;
-  const detailFields = selectedItemDetails ? [
-    { type: 'audio', fileId: selectedItemDetails.fileId, width: 240, height: 60 },
+  const detailTitle = selectedItemDetails ? 'Audio Details' : null;
+  const detailFields = selectedItemDetails && selectedItemDetails.type === 'audio' ? [
+    { type: 'audio', fileId: selectedItemDetails.fileId, autoPlay: true },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
+  ] : selectedItemDetails ? [
+    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
+    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : [];
   const detailEmptyMessage = 'No selection';
   
-  const viewData = {
+  return {
     flatItems,
     flatGroups,
     resourceCategory: 'assets',
@@ -70,9 +66,5 @@ export const toViewData = ({ state, props }, payload) => {
     detailFields,
     detailEmptyMessage,
   };
-  
-  console.log("🎵 Audio returning viewData:", viewData);
-  
-  return viewData;
 }
 

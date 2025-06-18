@@ -31,23 +31,29 @@ refs:
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
+      - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+        # TODO implment search
+        - rtgl-input placeholder=Search: 
+        # TODO implment zoom controls (increase/decrease audio size)
       - $for group in flatGroups:
-        - rtgl-view w=f:
-          - 'rtgl-view#group-${group.id} d=h w=f g=md av=c bgc=bg cur=p style="position: sticky; top: 0;"':
+        - rtgl-view w=f ph=md:
+          - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
             - $if group.isCollapsed:
                 - rtgl-svg wh=16 svg=folderArrowRight:
               $else:
                 - rtgl-svg wh=16 svg=folderArrowDown:
-            - rtgl-svg wh=24 svg=folder:
-            - rtgl-text s=h4: ${group.fullLabel}
+            - rtgl-view d=h av=c g=md:
+              - rtgl-svg wh=16 svg=folder:
+              - rtgl-text: ${group.fullLabel}
           - $if !group.isCollapsed:
-              - rtgl-view w=f:
-                - rtgl-view d=h g=md fw=w:
+              - rtgl-view w=f mb=md p=sm:
+                - rtgl-view d=h fw=w:
                   - $if group.hasChildren:
                       - $for item in group.children:
                           - 'rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}"':
-                            - rtgl-image w=200 h=150 src=/public/project_logo_placeholder.png:
+                            - rtgl-image br=md w=200 h=150 src=/public/project_logo_placeholder.png:
                     $else:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
               - $if group.hasChildren:
                   - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+    - rtgl-view h=33vh:

@@ -83,17 +83,18 @@ styles:
     'user-select': 'none'
 
 template:
-  - rtgl-view w=f h=f bwr=xs: 
-    - 'rtgl-view w=f g=sm style="position: relative;"':
+  - rtgl-view w=f h=f: 
+    - 'rtgl-view w=f g=sm pos=rel':
       - rtgl-view w=f h=f:
         - $for item, i in items:
-            - 'rtgl-view#item-${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} g=md d=h style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=p av=c bc=${item.bc} bw=xs':
+            - 'rtgl-view#item-${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=p av=c bc=${item.bc} bw=xs':
               - $if item.hasChildren:
                   - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
                 $else:
                   - rtgl-view wh=16:
-              - rtgl-svg svg=${item.type} wh=16:
-              - rtgl-text s=sm: "${item.name}"
+              - rtgl-view d=h g=md av=c w=f:
+                - rtgl-svg svg=${item.type} wh=16:
+                - rtgl-text s=sm ellipsis=true: "${item.name}"
       - $if targetDragIndex != -2 && targetDropPosition != 'inside':
           - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"':
     - rtgl-view#container w=f h=f:

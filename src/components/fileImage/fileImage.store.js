@@ -25,10 +25,10 @@ export const selectIsLoading = (state) => {
   return state.isLoading;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state, attrs }, payload) => {
   return {
     src: state.src,
     isLoading: state.isLoading,
-    containerAttrString: stringifyAttrs(props),
+    containerAttrString: stringifyAttrs(attrs),
   };
 };

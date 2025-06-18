@@ -31,17 +31,17 @@ refs:
         handler: handleFormActionClick
 
 template:
-  - rtgl-view w=f h=f p=md:
-    - rtgl-text s=h2: Projects
-    - rtgl-view mt=md g=s:
-      - rtgl-view:
-          - rtgl-text s=lg: Project Name
+  - rtgl-view w=f h=f p=lg:
+    - rtgl-text s=h4: Project
+    - rtgl-view mt=md g=md:
+      - rtgl-view g=sm:
+          - rtgl-text s=sm c=mu-fg: Project Name
           - rtgl-text#form-value-name s=sm: ${project.name}
-      - rtgl-view:
-          - rtgl-text s=lg: Description
+      - rtgl-view g=sm:
+          - rtgl-text s=sm c=mu-fg: Description
           - rtgl-text#form-value-description s=sm: ${project.description}
-      - rtgl-view:
-          - rtgl-text s=lg: Image
+      - rtgl-view g=sm:
+          - rtgl-text s=sm c=mu-fg: Image
           - rtgl-image w=64 h=64 br=m src=${project.imageUrl}:
     - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
       - rtgl-form#form slot=content .form=form:
