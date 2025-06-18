@@ -20,8 +20,8 @@ refs:
     eventListeners:
       focus:
         handler: handleOnFocus
-      # input:
-      #   handler: handleOnInput
+      input:
+        handler: handleOnInput
       # mousedown:
       #   handler: handleBlockMouseDown
       # mouseup:
@@ -45,4 +45,4 @@ template:
               $else:
                 - rtgl-view h=40 w=2 mr=m:
             - 'div#step-${step.id} style="width: 100%;" contenteditable=true':
-              - 'span style="font-size: 36px;"': Test Data
+              - 'span style="font-size: 36px;"': ${step.instructions.presentationInstructions.dialogue.text}

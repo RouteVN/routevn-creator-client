@@ -7,6 +7,8 @@ export const handleOnMount = (deps) => {
 
 export const handleStepKeyDown = (e, deps) => {
   const { editor, dispatchEvent } = deps;
+  const id = e.target.id.replace(/^step-/, "");
+  console.log('id', id)
   let newOffset;
   switch (e.key) {
     case "Enter":
@@ -15,6 +17,7 @@ export const handleStepKeyDown = (e, deps) => {
         dispatchEvent(
           new CustomEvent("newLine", {
             detail: {
+              stepId: id,
               // editor: editor,
             },
           })
@@ -128,14 +131,21 @@ export const handleBlockBeforeInput = (e, deps) => {
 };
 
 export const handleOnInput = (e, deps) => {
-  return;
-  const { editor } = deps;
   const { dispatchEvent } = deps;
+
+  const stepId = e.target.id.replace(/^step-/, "");
+  const content = e.target.textContent;
+
+  const detail = {
+    stepId,
+    content,
+  }
+
+  console.log('detail', detail)
+
   dispatchEvent(
-    new CustomEvent("editorDataChanaged", {
-      detail: {
-        editor: editor,
-      },
+    new CustomEvent("editor-data-chanaged", {
+      detail,
     })
   );
 };
@@ -163,8 +173,9 @@ export const updateSelection = (id, deps) => {
 
 export const updateSelectedStep = (stepId, deps) => {
   const { store, getRefIds } = deps;
-  console.log("getRefIds()", getRefIds());
-  const stepRef = getRefIds()[`step-${stepId}`];
+  const refIds = getRefIds();
+  console.log("refIds", refIds);
+  const stepRef = refIds[`step-${stepId}`];
   console.log("stepRef", stepRef);
   stepRef.elm.focus();
   // store.setSelectedStepIndex(index);
