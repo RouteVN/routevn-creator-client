@@ -28,7 +28,7 @@ viewDataSchema:
 refs:
   steps-editor:
     eventListeners:
-      editorDataChanaged:
+      editor-data-chanaged:
         handler: handleEditorDataChanaged
       newLine:
         handler: handleNewLine
@@ -52,14 +52,49 @@ refs:
     eventListeners:
       actionClicked:
         handler: handleActionClicked
+  section-tab-*:
+    eventListeners:
+      click:
+        handler: handleSectionTabClick
+      contextmenu:
+        handler: handleSectionTabRightClick
+  section-add:
+    eventListeners:
+      click:
+        handler: handleSectionAddClick
+  dropdown-menu:
+    eventListeners:
+      click-overlay:
+        handler: handleDropdownMenuClickOverlay
+      click-item:
+        handler: handleDropdownMenuClickItem
+  popover:
+    eventListeners:
+      click-overlay:
+        handler: handlePopoverClickOverlay
+  form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
+  add-instruction-button:
+    eventListeners:
+      click:
+        handler: handleAddInstructionButtonClick
 
 template:
   - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h2: Scene Editor
+    - rtgl-text s=h2: Scene Editor - ${scene.name}
     - rtgl-view d=h w=f h=f p=m:
-      - rtgl-view flex=1:
-        - rvn-steps-editor#steps-editor .steps=currentSteps:
-      - rtgl-view flex=1:
+      - rtgl-view:
+        - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
+          - $for section in sections:
+            - rtgl-view#section-tab-${section.id} w=120 h=40 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
+              - rtgl-text s=sm: ${section.name}
+          - rtgl-view#section-add h=40 av=c ph=lg ah=c bw=sm cur=p:
+            - rtgl-text s=sm: +
+        - rtgl-view w=f:
+          - rvn-steps-editor#steps-editor .steps=currentSteps:
+      - rtgl-view w=f:
         - rtgl-view h=300:
           - rtgl-text s=h2: Preview Section
         - rtgl-view w=f:
@@ -68,28 +103,32 @@ template:
             - $if background:
                 - rtgl-view#background-action av=c ph=m bgc=mu h-bgc=ac h=32 w=f cur=p:
                   - rtgl-svg svg=text wh=24:
+            - rtgl-button#add-instruction-button: Add
   - $if mode != "steps-editor":
-      - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
-        - rtgl-view#actions-container w=500 h=800 bgc=mu p=m:
-          - $if mode == "actions":
-              - rvn-command-line-actions#command-line-actions:
-            $elif mode == "richtext":
-              - rvn-command-line-rich-text#command-line-rich-text:
-            $elif mode == "dialoguebox":
-              - rvn-command-line-dialogue-box#command-line-dialogue-box:
-            $elif mode == "choices":
-              - rvn-command-line-choices#command-line-choices:
-            $elif mode == "background":
-              - rvn-command-line-background#command-line-background:
-            $elif mode == "bgm":
-              - rvn-command-line-bgm#command-line-bgm:
-            $elif mode == "soundeffects":
-              - rvn-command-line-sound-effects#command-line-sound-effects:
-            $elif mode == "characters":
-              - rvn-command-line-characters#command-line-characters:
-            $elif mode == "layouts":
-              - rvn-command-line-layouts#command-line-layouts:
-            $elif mode == "scenetransition":
-              - rvn-command-line-scene-transition#command-line-scene-transition:
-            $elif mode == "conditional":
-              - rvn-command-line-conditional#command-line-conditional:
+    - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
+      - rtgl-view#actions-container w=500 h=800 bgc=mu p=m:
+        - $if mode == "actions":
+            - rvn-command-line-actions#command-line-actions:
+          $elif mode == "richtext":
+            - rvn-command-line-rich-text#command-line-rich-text:
+          $elif mode == "dialoguebox":
+            - rvn-command-line-dialogue-box#command-line-dialogue-box:
+          $elif mode == "choices":
+            - rvn-command-line-choices#command-line-choices:
+          $elif mode == "background":
+            - rvn-command-line-background#command-line-background:
+          $elif mode == "bgm":
+            - rvn-command-line-bgm#command-line-bgm:
+          $elif mode == "soundeffects":
+            - rvn-command-line-sound-effects#command-line-sound-effects:
+          $elif mode == "characters":
+            - rvn-command-line-characters#command-line-characters:
+          $elif mode == "layouts":
+            - rvn-command-line-layouts#command-line-layouts:
+          $elif mode == "scenetransition":
+            - rvn-command-line-scene-transition#command-line-scene-transition:
+          $elif mode == "conditional":
+            - rvn-command-line-conditional#command-line-conditional:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
+  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+    - rtgl-form#form slot=content .form=form:

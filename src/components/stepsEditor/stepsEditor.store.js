@@ -13,4 +13,3 @@ export const toViewData = ({ state, props }, payload) => {
     selectedStepId: state.selectedStepId,
   }
 }
-
