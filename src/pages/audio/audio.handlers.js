@@ -11,23 +11,11 @@ export const handleOnMount = (deps) => {
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
-  console.log("🎵 Audio handleDataChanged received event:", e.detail);
-  
-  const repositoryState = repository.getState();
-  const { audio } = repositoryState;
-  
-  console.log("🎵 Repository state:", {
-    audio,
-    fullState: repositoryState
-  });
-  
+  const { audio } = repository.getState();
   const audioData = audio || { tree: [], items: {} };
-  console.log("🎵 Setting audio data:", audioData);
   
   store.setItems(audioData);
-  console.log("🎵 Audio store updated, triggering render");
   render();
-  console.log("🎵 Audio render completed");
 };
 
 export const handleAudioItemClick = (e, deps) => {

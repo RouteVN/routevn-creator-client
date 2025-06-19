@@ -2,6 +2,7 @@ export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
   targetGroupId: null,
+  searchQuery: '',
   
   defaultValues: {
     name: '',
@@ -54,11 +55,40 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+}
+
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
+  const searchQuery = state.searchQuery.toLowerCase().trim();
   
-  // Apply collapsed state to flatGroups
-  const flatGroups = (props.flatGroups || []).map(group => ({
+  // Filter groups based on search query
+  let filteredGroups = props.flatGroups || [];
+  
+  if (searchQuery) {
+    filteredGroups = filteredGroups.map(group => {
+      // Filter children based on search query
+      const filteredChildren = (group.children || []).filter(item => {
+        const name = (item.name || '').toLowerCase();
+        const description = (item.description || '').toLowerCase();
+        return name.includes(searchQuery) || description.includes(searchQuery);
+      });
+      
+      // Only include groups that have matching children or if the group name itself matches
+      const groupName = (group.name || '').toLowerCase();
+      const shouldIncludeGroup = filteredChildren.length > 0 || groupName.includes(searchQuery);
+      
+      return shouldIncludeGroup ? {
+        ...group,
+        children: filteredChildren,
+        hasChildren: filteredChildren.length > 0
+      } : null;
+    }).filter(Boolean); // Remove null groups
+  }
+  
+  // Apply collapsed state to filtered groups
+  const flatGroups = filteredGroups.map(group => ({
     ...group,
     isCollapsed: state.collapsedIds.includes(group.id),
     children: state.collapsedIds.includes(group.id) ? [] : (group.children || []).map(item => ({
@@ -75,5 +105,6 @@ export const toViewData = ({ state, props }) => {
     isDialogOpen: state.isDialogOpen,
     defaultValues: state.defaultValues,
     form: state.form,
+    searchQuery: state.searchQuery,
   };
 };

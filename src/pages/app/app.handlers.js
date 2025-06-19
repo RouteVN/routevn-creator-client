@@ -20,6 +20,34 @@ export const handleWindowPop = (payload, deps) => {
   deps.render();
 }
 
+export const handleUpdatePlacement = (payload, deps) => {
+  const { repository } = deps;
+  const { itemId, updates } = payload;
+  
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "placements",
+    value: {
+      itemId: itemId,
+      updates: updates
+    }
+  });
+}
+
+export const handleUpdateColor = (payload, deps) => {
+  const { repository } = deps;
+  const { itemId, updates } = payload;
+  
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "colors",
+    value: {
+      itemId: itemId,
+      updates: updates
+    }
+  });
+}
+
 export const subscriptions = (deps) => {
   const { subject } = deps;
   return [
@@ -28,6 +56,18 @@ export const subscriptions = (deps) => {
       tap(({ action, payload }) => {
         console.log('111111111111111111')
         deps.handlers.handleRedirect(payload, deps);
+      })
+    ),
+    subject.pipe(
+      filter(({ action, payload }) => action === 'update-placement'),
+      tap(({ action, payload }) => {
+        deps.handlers.handleUpdatePlacement(payload, deps);
+      })
+    ),
+    subject.pipe(
+      filter(({ action, payload }) => action === 'update-color'),
+      tap(({ action, payload }) => {
+        deps.handlers.handleUpdateColor(payload, deps);
       })
     ),
     fromEvent(window, "popstate").pipe(

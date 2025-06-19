@@ -12,6 +12,7 @@ const formatFileSize = (bytes) => {
 export const INITIAL_STATE = Object.freeze({
   videosData: { tree: [], items: {} },
   selectedItemId: null,
+  videoUrls: {}, // Cache for video URLs by fileId
 });
 
 export const setItems = (state, videosData) => {
@@ -22,11 +23,8 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 }
 
-export const selectSelectedItem = ({ state }) => {
-  if (!state.selectedItemId) return null;
-  // state.videosData contains the full structure with tree and items
-  const flatItems = toFlatItems(state.videosData);
-  return flatItems.find(item => item.id === state.selectedItemId);
+export const setVideoUrl = (state, { fileId, url }) => {
+  state.videoUrls[fileId] = url;
 }
 
 export const toViewData = ({ state, props }, payload) => {
@@ -46,35 +44,33 @@ export const toViewData = ({ state, props }, payload) => {
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
   } : null;
 
-  console.log({
-    flatItems,
-    flatGroups,
-    selectedItem,
-  });
-
   // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? 'Details' : null;
-  const detailFields = selectedItemDetails ? [
-    { type: 'video', fileId: selectedItemDetails.fileId, width: 240, height: 135 },
+  const detailTitle = selectedItemDetails ? 'Video Details' : null;
+  const detailFields = selectedItemDetails && selectedItemDetails.type === 'video' ? [
+    { type: 'video', fileId: selectedItemDetails.fileId, width: 240, height: 135, autoPlay: true, controls: true, videoUrl: state.videoUrls[selectedItemDetails.fileId] },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
+  ] : selectedItemDetails ? [
+    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
+    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : [];
   const detailEmptyMessage = 'No selection';
-
+  
   return {
     flatItems,
     flatGroups,
     resourceCategory: 'assets',
     selectedResourceId: 'videos',
+    repositoryTarget: 'videos',
     selectedItemId: state.selectedItemId,
     selectedItem: selectedItemDetails,
     detailTitle,
     detailFields,
     detailEmptyMessage,
-    repositoryTarget: 'videos',
   };
 }
 

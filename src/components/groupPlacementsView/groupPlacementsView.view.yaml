@@ -1,5 +1,11 @@
 elementName: rvn-group-placements-view
 
+viewDataSchema:
+  type: object
+  properties:
+    searchQuery:
+      type: string
+
 propsSchema:
   type: object
   properties:
@@ -11,6 +17,10 @@ propsSchema:
       description: ID of currently selected item
 
 refs:
+  search-input:
+    eventListeners:
+      input-keydown:
+        handler: handleSearchInput
   group-*:
     eventListeners:
       click:
@@ -19,6 +29,8 @@ refs:
     eventListeners:
       click:
         handler: handlePlacementItemClick
+      dblclick:
+        handler: handlePlacementItemDoubleClick
   add-placement-button-*:
     eventListeners:
       click:
@@ -37,28 +49,45 @@ refs:
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
-      - $for group in flatGroups:
-        - rtgl-view w=f:
-          - 'rtgl-view#group-${group.id} d=h w=f g=md av=c bgc=bg cur=p style="position: sticky; top: 0;"':
-            - $if group.isCollapsed:
-                - rtgl-svg wh=16 svg=folderArrowRight:
-              $else:
-                - rtgl-svg wh=16 svg=folderArrowDown:
-            - rtgl-svg wh=24 svg=folder:
-            - rtgl-text s=h4: ${group.fullLabel}
-          - $if !group.isCollapsed:
-              - rtgl-view w=f:
-                - rtgl-view d=h g=md fw=w:
-                  - $if group.hasChildren:
-                      - $for item in group.children:
-                          - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" w=200 h=150 br=md bgc=se bw=xs av=c ah=c':
-                            - rtgl-text s=lg: Placement
-                            - rtgl-text s=sm c=mu-fg: ${item.name}
-                            - rtgl-text s=xs c=mu-fg: 'X: ${item.positionX}, Y: ${item.positionY}'
-                    $else:
-                      - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
-                        - rtgl-text: Add Placement
+      - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+        - rtgl-input#search-input placeholder="Search placements..." value=${searchQuery}: 
+        # TODO implement zoom controls (increase/decrease placement size)
+      - $if flatGroups.length > 0:
+          - $for group in flatGroups:
+            - rtgl-view w=f ph=md:
+              - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
+                - $if group.isCollapsed:
+                    - rtgl-svg wh=16 svg=folderArrowRight:
+                  $else:
+                    - rtgl-svg wh=16 svg=folderArrowDown:
+                - rtgl-view d=h av=c g=md:
+                  - rtgl-svg wh=16 svg=folder:
+                  - rtgl-text: ${group.fullLabel}
+              - $if !group.isCollapsed:
+                  - rtgl-view w=f mb=md p=sm:
+                    - rtgl-view d=h fw=w w=f:
+                      - $if group.hasChildren:
+                          - $for item in group.children:
+                              - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" w=f h=150 br=md bw=xs p=md':
+                                - rtgl-text: ${item.name}
+                                - rtgl-text s=sm: 'X: ${item.positionX}'
+                                - rtgl-text s=sm: 'Y: ${item.positionY}'
+                                - rtgl-text s=sm: 'Scale: ${item.scale}'
+                                - rtgl-text s=sm: 'Rotation: ${item.rotation}'
+                                - rtgl-text s=sm: 'Anchor: ${item.anchor}'
+                                - rtgl-text s=sm: 'Z-Index: ${item.zIndex}'
+                        $else:
+                          - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
+                            - rtgl-text: Add Placement
+        $elif searchQuery:
+          - rtgl-view w=f h=400 av=c ah=c:
+            - rtgl-text s=lg c=mu-fg: No placements found matching "${searchQuery}"
+    - rtgl-view h=33vh:
   
   - rtgl-dialog#add-placement-dialog .isOpen=isDialogOpen:
-    - rtgl-view slot=content g=md:
+    - rtgl-view slot=content d=h g=md:
       - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
+      - rtgl-view:
+        - rtgl-text: Preview
+        - rtgl-view w=300 h=300 bgc=fg:
+        - rtgl-button: Select Preview Image

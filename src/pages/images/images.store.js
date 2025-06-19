@@ -54,14 +54,11 @@ export const toViewData = ({ state, props }, payload) => {
   });
 
   // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? 'Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135 },
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
-    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
+    { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135, editable: true },
+    { type: 'text', value: selectedItemDetails.name },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
-    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : [];
   const detailEmptyMessage = 'No selection';
 
@@ -72,7 +69,7 @@ export const toViewData = ({ state, props }, payload) => {
     selectedResourceId: 'images',
     selectedItemId: state.selectedItemId,
     selectedItem: selectedItemDetails,
-    detailTitle,
+    detailTitle: undefined,
     detailFields,
     detailEmptyMessage,
     repositoryTarget: 'images',
