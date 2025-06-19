@@ -15,6 +15,8 @@ refs:
         handler: handlePlacementItemClick
       placement-created:
         handler: handlePlacementCreated
+      placement-edited:
+        handler: handlePlacementEdited
 
 template:
   - rtgl-view d=h w=f h=f: 

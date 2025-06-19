@@ -63,31 +63,14 @@ template:
                   - rtgl-text: ${group.fullLabel}
               - $if !group.isCollapsed:
                   - rtgl-view w=f mb=md p=sm:
-                    - rtgl-view d=h fw=w:
+                    - rtgl-view d=h fw=w w=f:
                       - $if group.hasChildren:
                           - $for item in group.children:
-                              - 'rtgl-view#animation-item-${item.id} cur=p style="${item.selectedStyle}" w=200 br=md':
+                              - 'rtgl-view#animation-item-${item.id} cur=p style="${item.selectedStyle}" w=f br=md':
                                 - rtgl-view flex=1 h=f w=f bw=xs br=md p=md bgc=bg:
                                   - rtgl-text s=h4: ${item.name}
                                   - rtgl-view h=12:
-                                  - rtgl-view g=md w=f pos=rel:
-                                    - rtgl-view d=h w=f:
-                                      - rtgl-view w=f ah=e:
-                                        - rtgl-text s=sm: 'Total: 4s'
-                                    - rtgl-view d=h w=f:
-                                      - rtgl-view w=48 av=c:
-                                      - rtgl-view h=16 w=f bgc=mu br=sm:
-                                    - rtgl-view h=8: 
-                                    - rtgl-view d=h w=f av=c:
-                                      - rtgl-view w=48 av=c:
-                                        - rtgl-text s=xs: Alpha
-                                      - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
-                                        - rtgl-view d=h h=f bgc=ac flex=1 br=sm:
-                                        - rtgl-view d=h h=f bgc=ac flex=1 br=sm:
-                                    - rtgl-view d=h w=f av=c:
-                                      - rtgl-view w=48 av=c:
-                                        - rtgl-text s=xs: Scale
-                                      - rtgl-view w=f h=24 bgc=mu br=sm:
+                                  - rvn-keyframe-timeline:
                         $else:
                           - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
                             - rtgl-text: Add Animation
@@ -101,5 +84,10 @@ template:
     - rtgl-view h=33vh:
   
   - rtgl-dialog#add-animation-dialog .isOpen=isDialogOpen:
-    - rtgl-view slot=content g=md:
-      - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
+    - rtgl-view slot=content d=h g=md:
+      - rtgl-view:
+        - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
+        - rvn-keyframe-timeline:
+      - rtgl-view:
+        - rtgl-text: Preview
+        - rtgl-view w=300 h=300 bgc=fg:

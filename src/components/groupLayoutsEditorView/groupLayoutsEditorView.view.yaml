@@ -3,12 +3,44 @@ elementName: rvn-group-layouts-editor-view
 viewDataSchema:
   type: object
   properties:
-    flatGroups:
-      type: array
-    selectedItemId:
+    searchQuery:
       type: string
 
+propsSchema:
+  type: object
+  properties:
+    flatGroups:
+      type: array
+      description: Array of layout groups to display
+    selectedItemId:
+      type: string
+      description: ID of currently selected item
+
 refs:
+  search-input:
+    eventListeners:
+      input-keydown:
+        handler: handleSearchInput
+  drag-drop-item-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  drag-drop-bar-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  group-*:
+    eventListeners:
+      click:
+        handler: handleGroupClick
+  layout-item-*:
+    eventListeners:
+      click:
+        handler: handleLayoutItemClick
+  add-layout-button-*:
+    eventListeners:
+      click:
+        handler: handleAddLayoutClick
   dropdown-menu:
     eventListeners:
       click-overlay:
@@ -17,25 +49,40 @@ refs:
         handler: handleDropdownMenuClickItem
 
 template:
-  - rtgl-view w=f h=f d=v g=md p=md:
-    - rtgl-view d=h av=c jc=s-b:
-      - rtgl-text s=lg: Layouts
-      - rtgl-button onclick=handleAddLayoutClick: Add Layout
-    - $if flatGroups.length > 0:
-      - rtgl-view w=f h=f g=md:
-        - $for group in flatGroups:
-          - rtgl-view w=f:
-            - rtgl-text s=md fw=b: ${group.name}
-            - rtgl-view d=h fw=w g=sm mt=sm:
-              - $for item in group.items:
-                - rtgl-view#layout-item-${item.id}:
-                  - $if item.filePath:
-                      - rtgl-image w=100 h=60 src=${item.filePath}:
-                    else:
-                      - rtgl-view w=100 h=60 bgc=fg:
-                        - rtgl-svg wh=24 svg=image c=mu-fg:
-                  - rtgl-text s=sm mt=xs: ${item.name}
-    - $else:
-      - rtgl-view w=f h=200 d=h av=c jc=c:
-        - rtgl-text c=mu-fg: No layouts found
+  - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
+    - rtgl-view g=lg w=f:
+      - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+        - rtgl-input#search-input placeholder="Search layouts..." value=${searchQuery}:
+      - $if flatGroups.length > 0:
+          - $for group in flatGroups:
+            - rtgl-view w=f ph=md:
+              - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
+                - $if group.isCollapsed:
+                    - rtgl-svg wh=16 svg=folderArrowRight:
+                  $else:
+                    - rtgl-svg wh=16 svg=folderArrowDown:
+                - rtgl-view d=h av=c g=md:
+                  - rtgl-svg wh=16 svg=folder:
+                  - rtgl-text: ${group.fullLabel}
+              - $if !group.isCollapsed:
+                  - rtgl-view w=f mb=md p=sm:
+                    - rtgl-view d=h fw=w g=md:
+                      - $if group.hasChildren:
+                          - $for item in group.children:
+                              - 'rtgl-view#layout-item-${item.id} ah=c bw=xs pb=md cur=p style="${item.selectedStyle}"':
+                                - $if item.filePath:
+                                    - rtgl-image w=200 h=150 br=md src=${item.filePath}:
+                                  $else:
+                                    - rtgl-view w=200 h=150 br=md av=c ah=c bgc=fg:
+                                      - rtgl-svg wh=24 svg=image c=mu-fg:
+                                - rtgl-text: ${item.name}
+                        $else:
+                          - rtgl-view#add-layout-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
+                            - rtgl-text: Add Layout
+                  - $if group.hasChildren:
+                      - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText:
+        $elif searchQuery:
+          - rtgl-view w=f h=400 av=c ah=c:
+            - rtgl-text s=lg c=mu-fg: No layouts found matching "${searchQuery}"
+    - rtgl-view h=33vh:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:

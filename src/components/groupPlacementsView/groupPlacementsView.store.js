@@ -1,7 +1,10 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
+  searchQuery: '',
   isDialogOpen: false,
   targetGroupId: null,
+  editMode: false,
+  editItemId: null,
   
   defaultValues: {
     name: '',
@@ -82,28 +85,96 @@ export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;
 }
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+}
+
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
+export const setEditMode = (state, editMode, itemId = null, itemData = null) => {
+  state.editMode = editMode;
+  state.editItemId = itemId;
+  
+  if (editMode && itemData) {
+    // Update form for edit mode
+    state.form.title = 'Edit Placement';
+    state.form.description = 'Edit the placement configuration';
+    state.form.actions.buttons[0].content = 'Update Placement';
+    
+    // Update default values with current item data
+    state.defaultValues = {
+      name: itemData.name || '',
+      positionX: itemData.positionX || '0',
+      positionY: itemData.positionY || '0',
+      scale: itemData.scale || '1',
+      anchor: itemData.anchor || 'center',
+      rotation: itemData.rotation || '0',
+    };
+  } else {
+    // Reset form for add mode
+    state.form.title = 'Add Placement';
+    state.form.description = 'Create a new placement configuration';
+    state.form.actions.buttons[0].content = 'Add Placement';
+    
+    // Reset default values
+    state.defaultValues = {
+      name: '',
+      positionX: '0',
+      positionY: '0',
+      scale: '1',
+      anchor: 'center',
+      rotation: '0',
+    };
+  }
+}
+
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
+  const searchQuery = state.searchQuery.toLowerCase();
   
-  // Apply collapsed state to flatGroups
-  const flatGroups = (props.flatGroups || []).map(group => ({
-    ...group,
-    isCollapsed: state.collapsedIds.includes(group.id),
-    children: state.collapsedIds.includes(group.id) ? [] : (group.children || []).map(item => ({
-      ...item,
-      selectedStyle: item.id === selectedItemId ? 
-        "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
-    }))
-  }));
+  // Helper function to check if an item matches the search query
+  const matchesSearch = (item) => {
+    if (!searchQuery) return true;
+    
+    const name = (item.name || '').toLowerCase();
+    const description = (item.description || '').toLowerCase();
+    
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+  
+  // Apply collapsed state and search filtering to flatGroups
+  const flatGroups = (props.flatGroups || [])
+    .map(group => {
+      // Filter children based on search query
+      const filteredChildren = (group.children || []).filter(matchesSearch);
+      
+      // Only show groups that have matching children or if there's no search query
+      const hasMatchingChildren = filteredChildren.length > 0;
+      const shouldShowGroup = !searchQuery || hasMatchingChildren;
+      
+      return {
+        ...group,
+        isCollapsed: state.collapsedIds.includes(group.id),
+        children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => ({
+          ...item,
+          selectedStyle: item.id === selectedItemId ? 
+            "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
+        })),
+        hasChildren: filteredChildren.length > 0,
+        shouldDisplay: shouldShowGroup
+      };
+    })
+    .filter(group => group.shouldDisplay);
 
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
+    searchQuery: state.searchQuery,
     isDialogOpen: state.isDialogOpen,
+    editMode: state.editMode,
+    editItemId: state.editItemId,
     defaultValues: state.defaultValues,
     form: state.form,
   };

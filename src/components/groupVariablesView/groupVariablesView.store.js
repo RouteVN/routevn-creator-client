@@ -1,5 +1,6 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
+  searchQuery: '',
   isDialogOpen: false,
   targetGroupId: null,
   
@@ -66,64 +67,77 @@ export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;
 }
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+}
+
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
+  const searchQuery = state.searchQuery.toLowerCase();
   
-  console.log("🔧 Variables groupView props.flatGroups:", props.flatGroups);
+  // Helper function to check if an item matches the search query
+  const matchesSearch = (item) => {
+    if (!searchQuery) return true;
+    
+    const name = (item.name || '').toLowerCase();
+    const type = (item.variableType || '').toLowerCase();
+    const defaultValue = (item.defaultValue || '').toLowerCase();
+    
+    return name.includes(searchQuery) || type.includes(searchQuery) || defaultValue.includes(searchQuery);
+  };
   
-  // Apply collapsed state to flatGroups and create table data
-  const flatGroups = (props.flatGroups || []).map(group => {
-    const isCollapsed = state.collapsedIds.includes(group.id);
-    const children = isCollapsed ? [] : (group.children || []);
-    
-    console.log(`🔧 Group ${group.id} (${group.fullLabel}):`, {
-      isCollapsed,
-      hasChildren: group.hasChildren,
-      childrenCount: children.length,
-      children
-    });
-    
-    // Create table data for this group's variables - using the original format
-    const tableData = {
-      columns: [
-        { key: 'name', label: 'Name' },
-        { key: 'type', label: 'Type' },
-        { key: 'default', label: 'Default Value' },
-        { key: 'readOnly', label: 'Read Only' }
-      ],
-      rows: children.length > 0 ? children.map(item => ({
-        id: item.id,
-        name: item.name,
-        type: item.variableType || 'string',
-        default: item.defaultValue || '',
-        readOnly: item.readonly ? 'Yes' : 'No'
-      })) : []
-    };
+  // Apply collapsed state and search filtering to flatGroups
+  const flatGroups = (props.flatGroups || [])
+    .map(group => {
+      // Filter children based on search query
+      const filteredChildren = (group.children || []).filter(matchesSearch);
+      
+      // Only show groups that have matching children or if there's no search query
+      const hasMatchingChildren = filteredChildren.length > 0;
+      const shouldShowGroup = !searchQuery || hasMatchingChildren;
+      
+      const isCollapsed = state.collapsedIds.includes(group.id);
+      const children = isCollapsed ? [] : filteredChildren;
+      
+      // Create table data for this group's variables
+      const tableData = {
+        columns: [
+          { key: 'name', label: 'Name' },
+          { key: 'type', label: 'Type' },
+          { key: 'default', label: 'Default Value' },
+          { key: 'readOnly', label: 'Read Only' }
+        ],
+        rows: children.length > 0 ? children.map(item => ({
+          id: item.id,
+          name: item.name,
+          type: item.variableType || 'string',
+          default: item.defaultValue || '',
+          readOnly: item.readonly ? 'Yes' : 'No'
+        })) : []
+      };
 
-    console.log(`🔧 TableData for group ${group.id}:`, tableData);
+      return {
+        ...group,
+        isCollapsed,
+        children,
+        tableData,
+        hasChildren: filteredChildren.length > 0,
+        shouldDisplay: shouldShowGroup
+      };
+    })
+    .filter(group => group.shouldDisplay);
 
-    return {
-      ...group,
-      isCollapsed,
-      children,
-      tableData
-    };
-  });
-
-  const result = {
-    group1: flatGroups[0].tableData,
+  return {
+    group1: flatGroups[0]?.tableData || { columns: [], rows: [] },
     flatGroups,
     selectedItemId: props.selectedItemId,
+    searchQuery: state.searchQuery,
     isDialogOpen: state.isDialogOpen,
     defaultValues: state.defaultValues,
     form: state.form,
   };
-  
-  console.log("🔧 Variables groupView returning:", result);
-  
-  return result;
 };

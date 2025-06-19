@@ -131,3 +131,17 @@ export const handleColorCreated = (e, deps) => {
   store.setItems(colors);
   render();
 };
+
+export const handleColorEdited = (e, deps) => {
+  const { store, render, repository, subject } = deps;
+  const { itemId, name, hex } = e.detail;
+
+  // Dispatch to app handlers for repository update
+  subject.dispatch('update-color', {
+    itemId,
+    updates: {
+      name,
+      hex
+    }
+  });
+};

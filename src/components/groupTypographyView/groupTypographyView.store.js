@@ -1,5 +1,6 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
+  searchQuery: '',
   isDialogOpen: false,
   targetGroupId: null,
   
@@ -62,6 +63,10 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 }
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+}
+
 export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;
 }
@@ -72,17 +77,46 @@ export const setTargetGroupId = (state, groupId) => {
 
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
+  const searchQuery = state.searchQuery.toLowerCase();
   
-  // Apply collapsed state to flatGroups
-  const flatGroups = (props.flatGroups || []).map(group => ({
-    ...group,
-    isCollapsed: state.collapsedIds.includes(group.id),
-    children: state.collapsedIds.includes(group.id) ? [] : (group.children || []).map(item => ({
-      ...item,
-      selectedStyle: item.id === selectedItemId ? 
-        "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
-    }))
-  }));
+  // Helper function to check if an item matches the search query
+  const matchesSearch = (item) => {
+    if (!searchQuery) return true;
+    
+    const name = (item.name || '').toLowerCase();
+    const fontSize = (item.fontSize || '').toString().toLowerCase();
+    const fontColor = (item.fontColor || '').toLowerCase();
+    const fontWeight = (item.fontWeight || '').toLowerCase();
+    
+    return name.includes(searchQuery) || 
+           fontSize.includes(searchQuery) || 
+           fontColor.includes(searchQuery) || 
+           fontWeight.includes(searchQuery);
+  };
+  
+  // Apply collapsed state and search filtering to flatGroups
+  const flatGroups = (props.flatGroups || [])
+    .map(group => {
+      // Filter children based on search query
+      const filteredChildren = (group.children || []).filter(matchesSearch);
+      
+      // Only show groups that have matching children or if there's no search query
+      const hasMatchingChildren = filteredChildren.length > 0;
+      const shouldShowGroup = !searchQuery || hasMatchingChildren;
+      
+      return {
+        ...group,
+        isCollapsed: state.collapsedIds.includes(group.id),
+        children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => ({
+          ...item,
+          selectedStyle: item.id === selectedItemId ? 
+            "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
+        })),
+        hasChildren: filteredChildren.length > 0,
+        shouldDisplay: shouldShowGroup
+      };
+    })
+    .filter(group => group.shouldDisplay);
 
   return {
     flatGroups,
@@ -91,5 +125,6 @@ export const toViewData = ({ state, props }) => {
     isDialogOpen: state.isDialogOpen,
     defaultValues: state.defaultValues,
     form: state.form,
+    searchQuery: state.searchQuery
   };
 };

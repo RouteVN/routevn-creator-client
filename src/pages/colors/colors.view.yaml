@@ -17,6 +17,8 @@ refs:
         handler: handleDragDropFileSelected
       color-created:
         handler: handleColorCreated
+      color-edited:
+        handler: handleColorEdited
 
 template: 
   - rtgl-view d=h w=f h=f: 

@@ -54,3 +54,21 @@ export const handlePlacementCreated = (e, deps) => {
   store.setItems(placements);
   render();
 };
+
+export const handlePlacementEdited = (e, deps) => {
+  const { store, render, repository, subject } = deps;
+  const { itemId, name, positionX, positionY, scale, anchor, rotation } = e.detail;
+
+  // Dispatch to app handlers for repository update
+  subject.dispatch('update-placement', {
+    itemId,
+    updates: {
+      name,
+      positionX,
+      positionY,
+      scale,
+      anchor,
+      rotation
+    }
+  });
+};
