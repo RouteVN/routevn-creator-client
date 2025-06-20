@@ -32,14 +32,32 @@ refs:
         handler: handleEditorDataChanaged
       newLine:
         handler: handleNewLine
+      splitStep:
+        handler: handleSplitStep
       moveUp:
         handler: handleMoveUp
       moveDown:
         handler: handleMoveDown
+      mergeSteps:
+        handler: handleMergeSteps
+      stepSelectionChanged:
+        handler: handleStepSelectionChanged
   background-action:
     eventListeners:
       click:
         handler: handleBackgroundActionClick
+      contextmenu:
+        handler: handleBackgroundActionContextMenu
+  bgm-action:
+    eventListeners:
+      click:
+        handler: handleBgmActionClick
+      contextmenu:
+        handler: handleBgmActionContextMenu
+  command-line-*:
+    eventListeners:
+      submit:
+        handler: handleCommandLineSubmit
   actions-overlay:
     eventListeners:
       click:
@@ -82,28 +100,38 @@ refs:
         handler: handleAddInstructionButtonClick
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h2: Scene Editor - ${scene.name}
-    - rtgl-view d=h w=f h=f p=m:
+  - rtgl-view w=f h=f:
+    - rtgl-view bwb=xs w=f h=48 av=c ph=lg:
+      - rtgl-text c=mu-fg: ${scene.name}
+    - rtgl-view d=h w=f h=f:
       - rtgl-view:
         - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
           - $for section in sections:
-            - rtgl-view#section-tab-${section.id} w=120 h=40 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
+            - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
               - rtgl-text s=sm: ${section.name}
-          - rtgl-view#section-add h=40 av=c ph=lg ah=c bw=sm cur=p:
+          - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
             - rtgl-text s=sm: +
-        - rtgl-view w=f:
-          - rvn-steps-editor#steps-editor .steps=currentSteps:
+        - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
+          - rvn-steps-editor#steps-editor .steps=currentSteps .selectedStepId=selectedStepId:
+          - rtgl-view h=30vh:
+      - rtgl-view w=1 h=f bgc=mu:
       - rtgl-view w=f:
-        - rtgl-view h=300:
-          - rtgl-text s=h2: Preview Section
-        - rtgl-view w=f:
-          - rtgl-text s=h2: Instructions section
-          - rtgl-view g=m w=f:
+        - rtgl-view:
+          - rtgl-view w=700 h=400 bgc=fg:
+        - rtgl-view w=f h=1 bgc=mu:
+        - rtgl-view w=f m=md:
+          - rtgl-view d=h av=c:
+            - rtgl-text s=sm c=mu-fg: Instructions section
+            - rtgl-button#add-instruction-button s=sm: Add
+          - rtgl-view g=md w=f:
             - $if background:
-                - rtgl-view#background-action av=c ph=m bgc=mu h-bgc=ac h=32 w=f cur=p:
+                - rtgl-view#background-action g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
                   - rtgl-svg svg=text wh=24:
-            - rtgl-button#add-instruction-button: Add
+                  - rtgl-text s=sm: Background
+            - $if bgm:
+                - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=text wh=24:
+                  - rtgl-text s=sm: BGM
   - $if mode != "steps-editor":
     - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
       - rtgl-view#actions-container w=500 h=800 bgc=mu p=m:

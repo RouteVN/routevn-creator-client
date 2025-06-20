@@ -17,8 +17,16 @@ export const handleAudioItemClick = (payload, deps) => {
 }
 
 export const handleSubmitClick = (payload, deps) => {
-  const { store, render } = deps;
-
+  const { dispatchEvent } = deps;
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        bgm: {
+          audioId: payload?.audioId,
+        }
+      },
+    }),
+  );
 }
 
 export const handleAudioSelectorClick = (payload, deps) => {

@@ -8,7 +8,47 @@ const set = (state, path, value) => {
     current[key] = { ...current[key] };
     current = current[key];
   }
-  current[keys[keys.length - 1]] = value;
+  
+  const targetKey = keys[keys.length - 1];
+  
+  // Check if value is an object with replace and item properties
+  if (value && typeof value === 'object' && 'replace' in value && 'item' in value) {
+    const { replace, item } = value;
+    
+    // Only apply merge logic if item is an object and target exists
+    if (!replace && item && typeof item === 'object' && current[targetKey] && typeof current[targetKey] === 'object') {
+      // Merge new properties with existing object
+      current[targetKey] = { ...current[targetKey], ...item };
+    } else {
+      // Replace the whole thing (default behavior or when replace: true)
+      current[targetKey] = item;
+    }
+  } else {
+    // Original behavior - replace the whole thing
+    current[targetKey] = value;
+  }
+  
+  return newState;
+};
+
+const unset = (state, path) => {
+  const newState = structuredClone(state);
+  const keys = path.split(".");
+  let current = newState;
+
+  // Navigate to the parent of the property to delete
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (!current[key]) return newState; // Path doesn't exist, return unchanged
+    current[key] = { ...current[key] };
+    current = current[key];
+  }
+
+  const targetKey = keys[keys.length - 1];
+  if (current && typeof current === 'object' && targetKey in current) {
+    delete current[targetKey];
+  }
+  
   return newState;
 };
 
@@ -277,6 +317,8 @@ export const createRepository = (initialState, initialActionSteams) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);
+      } else if (actionType === "unset") {
+        return unset(acc, target);
       } else if (actionType === "treePush") {
         return treePush(acc, target, value);
       } else if (actionType === "treeDelete") {

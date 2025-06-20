@@ -1,9 +1,14 @@
 elementName: rvn-steps-editor
 
+onMount:
+  handler: handleOnMount
+
 viewDataSchema:
   type: object
   properties:
     selectedStepId:
+      type: string
+    mode:
       type: string
 
 propsSchema:
@@ -14,8 +19,14 @@ propsSchema:
       items:
         type: object
         properties:
+    selectedStepId:
+      type: string
 
 refs:
+  container:
+    eventListeners:
+      keydown:
+        handler: handleContainerKeyDown
   step-*:
     eventListeners:
       focus:
@@ -24,8 +35,8 @@ refs:
         handler: handleOnInput
       # mousedown:
       #   handler: handleBlockMouseDown
-      # mouseup:
-      #   handler: handleBlockMouseUp
+      mouseup:
+        handler: handleStepMouseUp
       # beforeinput:
       #   handler: handleBlockBeforeInput
       # compositionend:
@@ -35,14 +46,16 @@ refs:
       keydown:
         handler: handleStepKeyDown
 
+styles:
+  'div[contenteditable="true"]:focus':
+    outline: none
+
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-view w=f h=f p=m:
-      - $for step, i in steps:
-          - rtgl-view d=h w=f:
-            - $if selectedStepId == step.id:
-                - rtgl-view h=40 w=2 bgc=ac mr=m:
-              $else:
-                - rtgl-view h=40 w=2 mr=m:
-            - 'div#step-${step.id} style="width: 100%;" contenteditable=true':
-              - 'span style="font-size: 36px;"': ${step.instructions.presentationInstructions.dialogue.text}
+  - 'rtgl-view#container w=f h=f tabindex=0 style="outline: none;"':
+    - $for step, i in steps:
+      - 'rtgl-view d=h w=f av=c style="background-color: ${step.backgroundColor};"':
+        - rtgl-view h=f av=c w=32 ah=e mr=md:
+          - rtgl-text s=sm c=${step.lineColor}: ${step.lineNumber}
+        - rtgl-view wh=16 br=f mr=md:
+        - 'div#step-${step.id} style="width: 100%;" contenteditable=true':
+          - 'span style="font-size: 18px;"': ${step.instructions.presentationInstructions.dialogue.text}

@@ -15,7 +15,8 @@ export const INITIAL_STATE = Object.freeze({
     isOpen: false,
     position: { x: 0, y: 0 },
     items: [],
-    sectionId: null
+    sectionId: null,
+    instructionType: null
   },
   popover: {
     isOpen: false,
@@ -42,6 +43,10 @@ export const selectSelectedSectionId = ({ state, props }, payload) => {
   return state.selectedSectionId;
 }
 
+export const selectSelectedStepId = ({ state, props }, payload) => {
+  return state.selectedStepId;
+}
+
 export const setSelectedStepId = (state, selectedStepId) => {
   state.selectedStepId = selectedStepId;
 }
@@ -62,7 +67,20 @@ export const showSectionDropdownMenu = (state, { position, sectionId }) => {
       { label: 'Rename', type: 'item', value: 'rename-section' },
       { label: 'Delete', type: 'item', value: 'delete-section' }
     ],
-    sectionId
+    sectionId,
+    instructionType: null
+  };
+}
+
+export const showInstructionDropdownMenu = (state, { position, instructionType }) => {
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    items: [
+      { label: 'Delete', type: 'item', value: 'delete-instruction' }
+    ],
+    sectionId: null,
+    instructionType
   };
 }
 
@@ -71,7 +89,8 @@ export const hideDropdownMenu = (state) => {
     isOpen: false,
     position: { x: 0, y: 0 },
     items: [],
-    sectionId: null
+    sectionId: null,
+    instructionType: null
   };
 }
 
@@ -130,20 +149,22 @@ export const toViewData = ({ state, props }, payload) => {
     }
   } : null;
 
-  console.log('currentSection', currentSection)
+  const selectedStep = currentSection?.steps.find(step => step.id === state.selectedStepId);
 
   return {
     scene: state.scene,
     sections,
     currentSteps: currentSection?.steps || [],
     currentInstructions: [],
-    currentStep: {},
+    currentStep: selectedStep,
     // currentStep: currentSteps.find(step => step.id === state.selectedStepId),
-    // background: currentStep?.presentation?.background,
+    background: selectedStep?.instructions?.presentationInstructions?.background,
+    bgm: selectedStep?.instructions?.presentationInstructions?.bgm,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: renameForm,
+    selectedStepId: state.selectedStepId,
   };
 }
 

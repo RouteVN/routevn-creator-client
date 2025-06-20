@@ -1,147 +1,570 @@
-import { Transforms } from "slate";
+
+
+// Helper function to find the position on the last line closest to goal column
+const findLastLinePosition = (element, goalColumn) => {
+  const text = element.textContent;
+  const textLength = text.length;
+  
+  
+  // If no text or goal column is at end, return end position
+  if (textLength === 0 || goalColumn >= textLength) {
+    return textLength;
+  }
+  
+  // Create a range to test each position and find where the last line starts
+  let lastLineStartPos = 0;
+  let lastLineTop = null;
+  
+  // Walk backwards from the end to find where the last line starts
+  for (let pos = textLength; pos >= 0; pos--) {
+    try {
+      const range = document.createRange();
+      
+      // Position the range at this character position
+      let currentPos = 0;
+      let foundNode = false;
+      
+      const walkTextNodes = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const nodeLength = node.textContent.length;
+          if (currentPos + nodeLength >= pos) {
+            const offset = pos - currentPos;
+            range.setStart(node, offset);
+            range.setEnd(node, offset);
+            foundNode = true;
+            return true;
+          }
+          currentPos += nodeLength;
+        } else {
+          for (let child of node.childNodes) {
+            if (walkTextNodes(child)) return true;
+          }
+        }
+        return false;
+      };
+      
+      walkTextNodes(element);
+      
+      if (foundNode) {
+        const rect = range.getBoundingClientRect();
+        
+        if (lastLineTop === null) {
+          // First position (end of text) - this is definitely the last line
+          lastLineTop = rect.top;
+          lastLineStartPos = pos;
+        } else if (Math.abs(rect.top - lastLineTop) > 5) {
+          // We've moved to a different line (more than 5px difference)
+          // The previous position was the start of the last line
+          break;
+        } else {
+          // Still on the same line
+          lastLineStartPos = pos;
+        }
+      }
+    } catch (e) {
+      // If range creation fails, continue
+      continue;
+    }
+  }
+  
+  // Now find the position on the last line closest to the goal column
+  const lastLineLength = textLength - lastLineStartPos;
+  const positionOnLastLine = Math.min(goalColumn, lastLineLength);
+  const finalPosition = lastLineStartPos + positionOnLastLine;
+  
+  return finalPosition;
+};
+
+// Helper function to get cursor position in contenteditable
+const getCursorPosition = (element) => {
+  if (!element) {
+    return 0;
+  }
+  
+  // For Shadow DOM, we need to get the selection from the shadow root
+  let selection = window.getSelection();
+  let shadowRoot = element.getRootNode();
+  
+  // Check if we're in a shadow DOM
+  if (shadowRoot && shadowRoot.getSelection) {
+    selection = shadowRoot.getSelection();
+  }
+  
+  if (!selection || selection.rangeCount === 0) return 0;
+  
+  const range = selection.getRangeAt(0);
+  
+  // Check if the selection is actually within our element
+  if (!element.contains(range.startContainer)) {
+    return 0;
+  }
+  
+  const preCaretRange = range.cloneRange();
+  preCaretRange.selectNodeContents(element);
+  preCaretRange.setEnd(range.endContainer, range.endOffset);
+  const position = preCaretRange.toString().length;
+  return position;
+};
+
+// Helper function to check if cursor is on the first line of contenteditable
+const isCursorOnFirstLine = (element) => {
+  // Get shadow root for selection if needed
+  let selection = window.getSelection();
+  let shadowRoot = element.getRootNode();
+  
+  // Check if we're in a shadow DOM
+  if (shadowRoot && shadowRoot.getSelection) {
+    selection = shadowRoot.getSelection();
+  }
+  
+  if (!selection || selection.rangeCount === 0) return false;
+  
+  const range = selection.getRangeAt(0);
+  if (!element.contains(range.startContainer)) return false;
+  
+  // Get the bounding rectangle of the cursor position
+  const cursorRect = range.getBoundingClientRect();
+  
+  // Create a range at the very beginning of the element
+  const startRange = document.createRange();
+  
+  // Instead of using selectNodeContents and collapse, let's position at the actual start
+  let firstTextNode = null;
+  
+  // Walk through all text nodes to find the actual first position
+  const walkTextNodes = (node) => {
+    if (node.nodeType === Node.TEXT_NODE && !firstTextNode) {
+      firstTextNode = node;
+      return true; // Stop walking once we find the first text node
+    } else {
+      for (let child of node.childNodes) {
+        if (walkTextNodes(child)) return true;
+      }
+    }
+    return false;
+  };
+  
+  walkTextNodes(element);
+  
+  // If we found a text node, position the range there
+  if (firstTextNode) {
+    startRange.setStart(firstTextNode, 0);
+    startRange.setEnd(firstTextNode, 0);
+  } else {
+    // Fallback to element positioning if no text nodes found
+    startRange.selectNodeContents(element);
+    startRange.collapse(true);
+  }
+  
+  const startRect = startRange.getBoundingClientRect();
+  
+  // Consider the cursor on the first line if it's within a reasonable tolerance of the first line
+  const tolerance = 5; // pixels
+  const isOnFirstLine = Math.abs(cursorRect.top - startRect.top) <= tolerance;
+  
+  return isOnFirstLine;
+};
+
+// Helper function to check if cursor is on the last line of contenteditable
+const isCursorOnLastLine = (element) => {
+  // Get shadow root for selection if needed
+  let selection = window.getSelection();
+  let shadowRoot = element.getRootNode();
+  
+  // Check if we're in a shadow DOM
+  if (shadowRoot && shadowRoot.getSelection) {
+    selection = shadowRoot.getSelection();
+  }
+  
+  if (!selection || selection.rangeCount === 0) return false;
+  
+  const range = selection.getRangeAt(0);
+  if (!element.contains(range.startContainer)) return false;
+  
+  // Get the bounding rectangle of the cursor position
+  const cursorRect = range.getBoundingClientRect();
+  
+  // Create a range at the very end of the element
+  const endRange = document.createRange();
+  
+  // Instead of using selectNodeContents and collapse, let's position at the actual end
+  let lastTextNode = null;
+  let lastOffset = 0;
+  
+  // Walk through all text nodes to find the actual last position
+  const walkTextNodes = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      lastTextNode = node;
+      lastOffset = node.textContent.length;
+    } else {
+      for (let child of node.childNodes) {
+        walkTextNodes(child);
+      }
+    }
+  };
+  
+  walkTextNodes(element);
+  
+  // If we found a text node, position the range there
+  if (lastTextNode) {
+    endRange.setStart(lastTextNode, lastOffset);
+    endRange.setEnd(lastTextNode, lastOffset);
+  } else {
+    // Fallback to element positioning if no text nodes found
+    endRange.selectNodeContents(element);
+    endRange.collapse(false);
+  }
+  
+  const endRect = endRange.getBoundingClientRect();
+  
+  // Consider the cursor on the last line if it's within a reasonable tolerance of the last line
+  const tolerance = 5; // pixels
+  const isOnLastLine = Math.abs(cursorRect.top - endRect.top) <= tolerance;
+  
+  return isOnLastLine;
+};
+
 
 export const handleOnMount = (deps) => {
-  const { store } = deps;
-  const { props } = store;
+  const { store, getRefIds, props } = deps;
+  
+  // Focus container on mount to enable keyboard navigation
+  setTimeout(() => {
+    const container = getRefIds()['container']?.elm;
+    if (container) {
+      container.focus();
+    }
+  }, 0);
+};
+
+export const handleContainerKeyDown = (e, deps) => {
+  const { store, render, props, dispatchEvent } = deps;
+  const mode = store.selectMode();
+  
+  // Only handle container keydown if the target is the container itself
+  // If it's a contenteditable, let the step handler handle it
+  if (e.target.id !== 'container') {
+    return;
+  }
+  
+  if (mode === 'block') {
+    const currentStepId = props.selectedStepId;
+    const steps = props.steps || [];
+    
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        e.stopPropagation();
+        if (!currentStepId && steps.length > 0) {
+          // No selection, select the first step
+          dispatchEvent(new CustomEvent("stepSelectionChanged", {
+            detail: { stepId: steps[0].id }
+          }));
+        } else if (currentStepId) {
+          const currentIndex = steps.findIndex(step => step.id === currentStepId);
+          if (currentIndex > 0) {
+            const prevStepId = steps[currentIndex - 1].id;
+            dispatchEvent(new CustomEvent("stepSelectionChanged", {
+              detail: { stepId: prevStepId }
+            }));
+          }
+        }
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        e.stopPropagation();
+        if (!currentStepId && steps.length > 0) {
+          // No selection, select the first step
+          dispatchEvent(new CustomEvent("stepSelectionChanged", {
+            detail: { stepId: steps[0].id }
+          }));
+        } else if (currentStepId) {
+          const currentIndex = steps.findIndex(step => step.id === currentStepId);
+          if (currentIndex < steps.length - 1) {
+            const nextStepId = steps[currentIndex + 1].id;
+            dispatchEvent(new CustomEvent("stepSelectionChanged", {
+              detail: { stepId: nextStepId }
+            }));
+          }
+        }
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (currentStepId) {
+          // Focus the selected step to enter text-editor mode at the end
+          const stepElement = deps.getRefIds()[`step-${currentStepId}`]?.elm;
+          if (stepElement) {
+            // Position cursor at the end before focusing
+            const textLength = stepElement.textContent.length;
+            store.setCursorPosition(textLength);
+            store.setGoalColumn(textLength);
+            store.setNavigationDirection('end');
+            
+            // Use updateSelectedStep to properly position cursor at end
+            deps.handlers.updateSelectedStep(currentStepId, deps);
+          }
+        }
+        break;
+    }
+  }
 };
 
 export const handleStepKeyDown = (e, deps) => {
-  const { editor, dispatchEvent } = deps;
+  const { editor, dispatchEvent, store, render, props } = deps;
   const id = e.target.id.replace(/^step-/, "");
-  console.log('id', id)
   let newOffset;
+  const mode = store.selectMode();
+  
+  // Capture cursor position immediately before any key handling
+  if (mode === 'text-editor') {
+    const cursorPos = getCursorPosition(e.currentTarget);
+    store.setCursorPosition(cursorPos);
+    
+    // Update goal column for horizontal movement or when setting new vertical position
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
+      store.setGoalColumn(cursorPos);
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      // For vertical movement, ensure we have the current position as goal column if not set
+      const currentGoalColumn = store.selectGoalColumn();
+      if (currentGoalColumn === 0) {
+        store.setGoalColumn(cursorPos);
+      }
+    }
+  }
+  
   switch (e.key) {
+    case "Backspace":
+      if (mode === 'text-editor') {
+        // Check if cursor is at position 0
+        const currentPos = getCursorPosition(e.currentTarget);
+        
+        if (currentPos === 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Get current step content
+          const currentContent = e.currentTarget.textContent;
+          const currentStepId = e.currentTarget.id.replace(/^step-/, "");
+          
+          // Find the previous step
+          const currentIndex = props.steps.findIndex(step => step.id === currentStepId);
+          
+          if (currentIndex > 0) {
+            const prevStep = props.steps[currentIndex - 1];
+            
+            // Dispatch event to merge steps
+            dispatchEvent(
+              new CustomEvent("mergeSteps", {
+                detail: {
+                  prevStepId: prevStep.id,
+                  currentStepId: currentStepId,
+                  contentToAppend: currentContent,
+                },
+              })
+            );
+          }
+        }
+      }
+      break;
+    case "Escape":
+      e.preventDefault();
+      // Switch to block mode and blur the current element
+      store.setMode('block');
+      e.currentTarget.blur();
+      // Focus the container to enable block mode navigation
+      const container = deps.getRefIds()['container']?.elm;
+      if (container) {
+        container.focus();
+      }
+      render();
+      break;
     case "Enter":
-      e.preventDefault();
-      requestAnimationFrame(() => {
-        dispatchEvent(
-          new CustomEvent("newLine", {
-            detail: {
-              stepId: id,
-              // editor: editor,
-            },
-          })
-        );
-      });
+      if (mode === 'text-editor') {
+        e.preventDefault();
+        
+        // Get current cursor position and text content
+        const cursorPos = getCursorPosition(e.currentTarget);
+        const fullText = e.currentTarget.textContent;
+        
+        // Split the content at cursor position
+        const leftContent = fullText.substring(0, cursorPos);
+        const rightContent = fullText.substring(cursorPos);
+        
+        requestAnimationFrame(() => {
+          dispatchEvent(
+            new CustomEvent("splitStep", {
+              detail: {
+                stepId: id,
+                leftContent: leftContent,
+                rightContent: rightContent,
+              },
+            })
+          );
+        });
+      }
+      break;
     case "ArrowUp":
-      e.preventDefault();
-      dispatchEvent(
-        new CustomEvent("moveUp", {
-          detail: {
-            stepId: e.currentTarget.id.replace(/^step-/, ""),
-          },
-        })
-      );
+      if (mode === 'block') {
+        e.preventDefault();
+        // In block mode, just update selectedStepId without focusing
+        const currentIndex = props.steps.findIndex(step => step.id === id);
+        if (currentIndex > 0) {
+          const prevStep = props.steps[currentIndex - 1];
+          dispatchEvent(new CustomEvent("stepSelectionChanged", {
+            detail: { stepId: prevStep.id }
+          }));
+        }
+      } else {
+        // In text-editor mode, check if cursor is on first line
+        const isOnFirstLine = isCursorOnFirstLine(e.currentTarget);
+        
+        if (isOnFirstLine) {
+          // Cursor is on first line, move to previous step
+          e.preventDefault();
+          e.stopPropagation(); // Prevent bubbling to container
+          const goalColumn = store.selectGoalColumn() || 0;
+          
+          // Set navigating flag
+          store.setIsNavigating(true);
+          
+          dispatchEvent(
+            new CustomEvent("moveUp", {
+              detail: {
+                stepId: e.currentTarget.id.replace(/^step-/, ""),
+                cursorPosition: goalColumn,
+              },
+            })
+          );
+        }
+        // If not on first line, let native behavior handle it (don't preventDefault)
+      }
       break;
     case "ArrowDown":
-      e.preventDefault();
-      dispatchEvent(
-        new CustomEvent("moveDown", {
-          detail: {
-            stepId: e.currentTarget.id.replace(/^step-/, ""),
-          },
-        })
-      );
+      if (mode === 'block') {
+        e.preventDefault();
+        // In block mode, just update selectedStepId without focusing
+        const currentIndex = props.steps.findIndex(step => step.id === id);
+        if (currentIndex < props.steps.length - 1) {
+          const nextStep = props.steps[currentIndex + 1];
+          dispatchEvent(new CustomEvent("stepSelectionChanged", {
+            detail: { stepId: nextStep.id }
+          }));
+        }
+      } else {
+        // In text-editor mode, check if cursor is on last line
+        const isOnLastLine = isCursorOnLastLine(e.currentTarget);
+        
+        if (isOnLastLine) {
+          // Cursor is on last line, move to next step
+          e.preventDefault();
+          e.stopPropagation(); // Prevent bubbling to container
+          const goalColumn = store.selectGoalColumn() || 0;
+          
+          // Set navigating flag
+          store.setIsNavigating(true);
+          
+          dispatchEvent(
+            new CustomEvent("moveDown", {
+              detail: {
+                stepId: e.currentTarget.id.replace(/^step-/, ""),
+                cursorPosition: goalColumn,
+              },
+            })
+          );
+        }
+        // If not on last line, let native behavior handle it (don't preventDefault)
+      }
       break;
-    // case "ArrowRight":
-    //   e.preventDefault();
-    //   newOffset = Math.max(0, editor.selection.focus.offset + 1);
-    //   Transforms.select(editor, {
-    //     path: editor.selection.focus.path,
-    //     offset: newOffset,
-    //   });
-    //   deps.handlers.updateSelection(e.currentTarget.id, deps);
-    //   break;
-    // case "ArrowLeft":
-    //   e.preventDefault();
-    //   newOffset = Math.max(0, editor.selection.focus.offset - 1);
-    //   Transforms.select(editor, {
-    //     path: editor.selection.focus.path,
-    //     offset: newOffset,
-    //   });
-    //   deps.handlers.updateSelection(e.currentTarget.id, deps);
-    //   break;
+    case "ArrowRight":
+      if (mode === 'text-editor') {
+        // Check if cursor is at the end of the text
+        const currentPos = getCursorPosition(e.currentTarget);
+        const textLength = e.currentTarget.textContent.length;
+        
+        if (currentPos >= textLength) {
+          // Cursor is at end, move to next step
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Set navigating flag
+          store.setIsNavigating(true);
+          
+          dispatchEvent(
+            new CustomEvent("moveDown", {
+              detail: {
+                stepId: e.currentTarget.id.replace(/^step-/, ""),
+                cursorPosition: 0, // Go to beginning of next step
+              },
+            })
+          );
+        }
+        // If not at end, let native behavior handle it
+      }
+      break;
+    case "ArrowLeft":
+      if (mode === 'text-editor') {
+        // Check if cursor is at the beginning of the text
+        const currentPos = getCursorPosition(e.currentTarget);
+        
+        if (currentPos <= 0) {
+          // Cursor is at beginning, move to previous step
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Set navigating flag
+          store.setIsNavigating(true);
+          
+          dispatchEvent(
+            new CustomEvent("moveUp", {
+              detail: {
+                stepId: e.currentTarget.id.replace(/^step-/, ""),
+                cursorPosition: -1, // Special value to indicate "go to end"
+              },
+            })
+          );
+        }
+      }
+      break;
+
   }
-  // const blockRef = deps.getRefIds()[e.currentTarget.id].elm;
 
-  // blockRef.setAttribute('spellcheck', 'false');
-
-  // requestAnimationFrame(() => {
-  // deps.render();
-  // })
-
-  // setTimeout(() => {
-  //   blockRef.setAttribute('spellcheck', 'true');
-  //   deps.render();
-  // }, 2000)
-
-  // TODO fix spellcheck underline flickering
 };
 
-export const handleBlockMouseUp = (e, deps) => {
-  const { editor } = deps;
-  return;
-  const domSelection = window.getSelection();
-  if (!domSelection || !domSelection.rangeCount) return;
-
-  const range = domSelection.getRangeAt(0);
-  const startOffset = range.startOffset;
-  const endOffset = range.endOffset;
-
-  // Get the current node path based on the clicked element
-  // const nodePath = path
-  // const textPath = [...nodePath, 0] // Assuming each paragraph has text at index 0
-  // const textNode = ref.children[0].firstChild;
-
-  const blockId = e.currentTarget.id.split("-")[1];
-
-  const index = editor.children.findIndex((child) => child.id === blockId);
-
-  const textPath = [index, 0];
-  // Update Slate's selection state - use the correct path
-  editor.selection = {
-    anchor: { path: textPath, offset: startOffset },
-    focus: { path: textPath, offset: endOffset },
-  };
-
-  updateSelection(e.currentTarget.id, deps);
-};
-
-export const handleBlockBeforeInput = (e, deps) => {
-  return;
-  const { editor } = deps;
-  const { store, render } = deps;
-  // Input event
-  e.preventDefault();
-
-  // Skip insertion during IME composition
-  // if (isComposing) return
-
-  console.log("e.data", e.data);
-
-  if (e.data) {
-    Transforms.insertText(editor, e.data);
-    store.setEditorChildren(editor.children);
-    store.setEditorSelection(editor.selection);
-    render();
-    // requestAnimationFrame(() => {
-    deps.handlers.updateSelection(e.currentTarget.id, deps);
-    // })
-  }
+export const handleStepMouseUp = (e, deps) => {
+  const { store } = deps;
+  
+  // Save cursor position after mouse up (selection change)
+  // Use multiple attempts with slight delays to ensure selection is established
+  setTimeout(() => {
+    const cursorPos = getCursorPosition(e.currentTarget);
+    if (cursorPos > 0) {
+      store.setCursorPosition(cursorPos);
+      store.setGoalColumn(cursorPos);
+    } else {
+      // Try again with longer delay if position is 0
+      setTimeout(() => {
+        const cursorPos2 = getCursorPosition(e.currentTarget);
+        store.setCursorPosition(cursorPos2);
+        store.setGoalColumn(cursorPos2);
+      }, 10);
+    }
+  }, 0);
 };
 
 export const handleOnInput = (e, deps) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, store } = deps;
 
   const stepId = e.target.id.replace(/^step-/, "");
   const content = e.target.textContent;
+
+  // Save cursor position on every input
+  const cursorPos = getCursorPosition(e.target);
+  store.setCursorPosition(cursorPos);
 
   const detail = {
     stepId,
     content,
   }
-
-  console.log('detail', detail)
 
   dispatchEvent(
     new CustomEvent("editor-data-chanaged", {
@@ -150,43 +573,119 @@ export const handleOnInput = (e, deps) => {
   );
 };
 
-export const updateSelection = (id, deps) => {
-  return;
-  const { editor } = deps;
-  const ref = deps.getRefIds()[id].elm;
-  const textNode = ref.children[0].firstChild;
-  const range = document.createRange();
-  range.setStart(textNode, editor.selection?.focus.offset);
-  range.setEnd(textNode, editor.selection?.focus.offset);
-
-  const selection = window.getSelection();
-  if (selection) {
-    // requestAnimationFrame(() => {
-    selection.removeAllRanges();
-    selection.addRange(range);
-    // })
-
-    // Focus the element
-    // ref.focus();
-  }
-};
 
 export const updateSelectedStep = (stepId, deps) => {
   const { store, getRefIds } = deps;
   const refIds = getRefIds();
-  console.log("refIds", refIds);
   const stepRef = refIds[`step-${stepId}`];
-  console.log("stepRef", stepRef);
-  stepRef.elm.focus();
-  // store.setSelectedStepIndex(index);
+  
+  // Get goal column (desired position) instead of current position
+  const goalColumn = store.selectGoalColumn() || 0;
+  const textLength = stepRef.elm.textContent.length;
+  const direction = store.selectNavigationDirection();
+  
+  // Choose positioning strategy based on direction
+  let targetPosition;
+  if (direction === 'up') {
+    // For upward navigation, find position on last line
+    targetPosition = findLastLinePosition(stepRef.elm, goalColumn);
+  } else if (direction === 'end') {
+    // For end positioning (ArrowLeft navigation), position at absolute end
+    targetPosition = textLength;
+  } else {
+    // For downward navigation, use normal goal column positioning
+    targetPosition = Math.min(goalColumn, textLength);
+  }
+  
+  // Get shadow root for selection if needed
+  let shadowRoot = stepRef.elm.getRootNode();
+  let selection = window.getSelection();
+  
+  // Check if we're in a shadow DOM
+  if (shadowRoot && shadowRoot.getSelection) {
+    selection = shadowRoot.getSelection();
+  }
+  
+  // Create a range at the desired position before focusing
+  const range = document.createRange();
+  
+  // Try to set position before focus
+  let currentPos = 0;
+  let foundNode = false;
+  let lastTextNode = null;
+  let lastTextNodeLength = 0;
+  let actualPosition = 0;
+  
+  const walkTextNodes = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const nodeLength = node.textContent.length;
+      lastTextNode = node;
+      lastTextNodeLength = nodeLength;
+      
+      if (currentPos + nodeLength >= targetPosition) {
+        const offset = targetPosition - currentPos;
+        range.setStart(node, offset);
+        range.setEnd(node, offset);
+        actualPosition = targetPosition;
+        foundNode = true;
+        return true;
+      }
+      currentPos += nodeLength;
+    } else {
+      for (let child of node.childNodes) {
+        if (walkTextNodes(child)) return true;
+      }
+    }
+    return false;
+  };
+  
+  walkTextNodes(stepRef.elm);
+  
+  // If we didn't find a position (cursor beyond text), position at end
+  if (!foundNode && lastTextNode) {
+    range.setStart(lastTextNode, lastTextNodeLength);
+    range.setEnd(lastTextNode, lastTextNodeLength);
+    actualPosition = textLength;
+    foundNode = true;
+  }
+  
+  if (foundNode) {
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Update the current cursor position in store to reflect where we actually landed
+    store.setCursorPosition(actualPosition);
+  }
+  
+  // Now focus - the selection should be preserved
+  stepRef.elm.focus({ preventScroll: true });
 };
 
 export const handleOnFocus = (e, deps) => {
-  console.log("focus", e);
-  const { store, render } = deps;
+  const { store, render, dispatchEvent } = deps;
   const stepId = e.currentTarget.id.replace(/^step-/, "");
-  console.log("stepId", stepId);
-  store.setSelectedStepId(stepId);
+  
+  // Always update the selected step ID
+  dispatchEvent(new CustomEvent("stepSelectionChanged", {
+    detail: { stepId }
+  }));
+  store.setMode('text-editor'); // Switch to text-editor mode on focus
+  
+  // Check if we're navigating - if so, don't reset cursor or re-render
+  if (store.selectIsNavigating()) {
+    // Reset the flag but don't render
+    store.setIsNavigating(false);
+    return;
+  }
+  
+  // When user clicks to focus (not navigating), set goal column to current position
+  setTimeout(() => {
+    const cursorPos = getCursorPosition(e.currentTarget);
+    if (cursorPos >= 0) {
+      store.setGoalColumn(cursorPos);
+    }
+  }, 10);
+  
   render();
 };
 

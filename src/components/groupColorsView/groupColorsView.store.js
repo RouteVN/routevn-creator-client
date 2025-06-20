@@ -24,7 +24,7 @@ export const INITIAL_STATE = Object.freeze({
     }, {
       id: 'hex',
       fieldName: 'hex',
-      inputType: 'inputText',
+      inputType: 'colorPicker',
       label: 'Hex Value',
       description: 'Enter the hex color value (e.g., #ff0000)',
       required: true,

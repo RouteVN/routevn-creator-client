@@ -58,6 +58,10 @@ template:
                   - rtgl-view:
                     - rtgl-text c=mu-fg: ${field.label}
                     - rtgl-text s=${field.size}: ${field.value}
+                $elif field.type == 'color':
+                  - rtgl-view:
+                    - rtgl-text c=mu-fg: ${field.label}
+                    - rtgl-color-picker value={field.value}:
       $else:
         - rtgl-view w=f h=f av=c ah=c:
           - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}
