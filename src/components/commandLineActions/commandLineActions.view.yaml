@@ -20,8 +20,8 @@ refs:
         handler: handleActionClick
 
 template:
-  - rtgl-view w=f h=f p=md br=md:
-    - rtgl-text s=sm c=mu-fg: Command Line Actions
+  - rtgl-view w=f h=f p=lg br=md:
+    - rtgl-text s=sm c=mu-fg: Actions
     - rtgl-view h=f w=f g=sm mt=lg:
       - $for item, i in items:
           - rtgl-view#action-${item.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:

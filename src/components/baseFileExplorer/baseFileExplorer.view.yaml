@@ -1,0 +1,99 @@
+elementName: rvn-base-file-explorer
+
+viewDataSchema:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          type:
+            type: string
+
+propsSchema:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          id:
+            type: string
+          level:
+            type: number
+          hasChildren:
+            type: boolean
+          parentId:
+            type: string
+    contextMenuItems:
+      type: array
+      description: Menu items for right-clicking on an item
+    emptyContextMenuItems:
+      type: array
+      description: Menu items for right-clicking on empty space
+
+refs:
+  item-*:
+    eventListeners:
+      mousedown:
+        required: true
+        handler: handleItemMouseDown
+      contextmenu:
+        handler: handleItemContextMenu
+      click:
+        handler: handleItemClick
+  arrow-*:
+    eventListeners:
+      click:
+        handler: handleArrowClick
+  container:
+    eventListeners:
+      contextmenu:
+        handler: handleContainerContextMenu
+  dropdown-menu:
+    eventListeners:
+      click-overlay:
+        handler: handleDropdownMenuClickOverlay
+      click-item:
+        handler: handleDropdownMenuClickItem
+  popover:
+    eventListeners:
+      click-overlay:
+        handler: handlePopoverClickOverlay
+  form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
+
+styles:
+  ':host':
+    '-webkit-user-select': 'none'
+    '-moz-user-select': 'none'
+    '-ms-user-select': 'none'
+    'user-select': 'none'
+
+template:
+  - rtgl-view w=f h=f: 
+    - 'rtgl-view w=f g=sm pos=rel':
+      - rtgl-view w=f h=f:
+        - $for item, i in items:
+            - 'rtgl-view#item-${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=p av=c bc=${item.bc} bw=xs':
+              - $if item.hasChildren:
+                  - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
+                $else:
+                  - rtgl-view wh=16:
+              - rtgl-view d=h g=md av=c w=f:
+                - rtgl-svg svg=${item.type} wh=16:
+                - rtgl-text s=sm ellipsis=true: "${item.name}"
+      - $if targetDragIndex != -2 && targetDropPosition != 'inside':
+          - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"':
+    - rtgl-view#container w=f h=f:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
+  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+    - rtgl-form#form slot=content .form=form:

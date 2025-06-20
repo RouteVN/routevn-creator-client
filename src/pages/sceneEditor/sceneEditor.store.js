@@ -9,7 +9,8 @@ export const INITIAL_STATE = Object.freeze({
       presentationInstructions: {},
     }
   }],
-  mode: 'steps-editor',
+  // mode: 'steps-editor',
+  mode: 'background',
   selectedSectionId: '1',
   dropdownMenu: {
     isOpen: false,

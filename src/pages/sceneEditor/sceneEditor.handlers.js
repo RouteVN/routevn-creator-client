@@ -379,6 +379,13 @@ export const handleMoveUp = (e, deps) => {
   }
 };
 
+export const handleBackToActions = (e, deps) => {
+  console.log('handleBackToActions')
+  const { store, render } = deps;
+  store.setMode("actions");
+  render();
+};
+
 export const handleMoveDown = (e, deps) => {
   const { store, getRefIds, render } = deps;
   const currentStepId = e.detail.stepId;
