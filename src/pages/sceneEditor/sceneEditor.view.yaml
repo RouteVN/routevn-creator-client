@@ -32,6 +32,8 @@ refs:
         handler: handleEditorDataChanaged
       newLine:
         handler: handleNewLine
+      splitStep:
+        handler: handleSplitStep
       moveUp:
         handler: handleMoveUp
       moveDown:
@@ -82,23 +84,28 @@ refs:
         handler: handleAddInstructionButtonClick
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h2: Scene Editor - ${scene.name}
-    - rtgl-view d=h w=f h=f p=m:
+  - rtgl-view w=f h=f:
+    - rtgl-view bw=xs w=f h=48 av=c ph=lg:
+      - rtgl-text c=mu-fg: ${scene.name}
+    - rtgl-view d=h w=f h=f:
       - rtgl-view:
         - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
           - $for section in sections:
-            - rtgl-view#section-tab-${section.id} w=120 h=40 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
+            - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
               - rtgl-text s=sm: ${section.name}
-          - rtgl-view#section-add h=40 av=c ph=lg ah=c bw=sm cur=p:
+          - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
             - rtgl-text s=sm: +
-        - rtgl-view w=f:
+        - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
           - rvn-steps-editor#steps-editor .steps=currentSteps:
+          - rtgl-view h=30vh:
+      - rtgl-view w=1 h=f bgc=mu:
       - rtgl-view w=f:
-        - rtgl-view h=300:
-          - rtgl-text s=h2: Preview Section
-        - rtgl-view w=f:
-          - rtgl-text s=h2: Instructions section
+        - rtgl-view m=md:
+          - rtgl-text s=sm c=mu-fg: Preview Section
+          - rtgl-view w=400 h=300 bgc=fg:
+        - rtgl-view w=f h=1 bgc=mu mv=md:
+        - rtgl-view w=f m=md:
+          - rtgl-text s=sm c=mu-fg: Instructions section
           - rtgl-view g=m w=f:
             - $if background:
                 - rtgl-view#background-action av=c ph=m bgc=mu h-bgc=ac h=32 w=f cur=p:

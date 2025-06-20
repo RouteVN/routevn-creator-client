@@ -33,7 +33,7 @@ template:
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
         # TODO implment search
-        - rtgl-input placeholder=Search: 
+        - rtgl-input#search-input s=sm placeholder=Search: 
         # TODO implment zoom controls (increase/decrease audio size)
       - $for group in flatGroups:
         - rtgl-view w=f ph=md:

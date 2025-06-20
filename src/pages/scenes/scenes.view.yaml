@@ -24,14 +24,12 @@ refs:
 
 template:
   - rtgl-view d=h w=f h=f: 
-    - rtgl-view w=f h=f p=md w=240:
-      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+    - rtgl-view w=f h=f w=240 bwr=xs:
+      - rtgl-view ph=lg pv=md:
+        - rtgl-text s=sm c=mu-fg: Scenes
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rtgl-view w=f h=f pos=rel:
       - rvn-whiteboard#whiteboard .items=whiteboardItems:
-      - 'rtgl-view pos=abs b=20 l=50% style="transform: translateX(-50%); z-index: 100;"':
-        - 'rtgl-button#add-scene-btn bgc=pr p=md br=full style="box-shadow: 0 4px 12px rgba(0,0,0,0.3);"':
-          - rtgl-view d=h av=c g=sm:
-            - rtgl-svg wh=20 svg=plus c=pr-fg:
-            - rtgl-text c=pr-fg: Add Scene
     - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - 'rtgl-view pos=fix z=100 ah=c p=md w=300 bgc=mu br=md style="left: calc((100vw  - 300px) / 2); bottom: 20px;"':
+      - 'rtgl-button#add-scene-btn bgc=pr p=md br=full': Add Scene
