@@ -1,11 +1,10 @@
-
 export const handleOnMount = (deps) => {
   const { repository, store, render } = deps;
   const { images } = repository.getState();
   store.setItems({
-    'items': images
-  })
-}
+    items: images,
+  });
+};
 
 export const handleImageItemClick = (payload, deps) => {
   const { store, render } = deps;
@@ -15,27 +14,31 @@ export const handleImageItemClick = (payload, deps) => {
   // })
 
   store.setMode({
-    'mode': 'current'
-  })
+    mode: "current",
+  });
 
   render();
-}
+};
 
 export const handleSubmitClick = (payload, deps) => {
-  const { store, render } = deps;
-
-}
-
+  const { dispatchEvent } = deps;
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        background: {
+          imageId: payload?.imageId,
+        }
+      },
+    }),
+  );
+};
 
 export const handleImageSelectorClick = (payload, deps) => {
   const { store, render } = deps;
 
   store.setMode({
-    'mode': 'gallery'
-  })
+    mode: "gallery",
+  });
 
   render();
-
-}
-
-
+};

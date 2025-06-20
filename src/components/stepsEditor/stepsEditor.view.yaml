@@ -19,6 +19,8 @@ propsSchema:
       items:
         type: object
         properties:
+    selectedStepId:
+      type: string
 
 refs:
   container:

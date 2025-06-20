@@ -1,5 +1,4 @@
 export const INITIAL_STATE = Object.freeze({
-  selectedStepId: undefined,
   mode: 'block', // 'block' or 'text-editor'
   cursorPosition: 0, // Track cursor position for navigation
   goalColumn: 0, // Remember the desired column when moving vertically
@@ -7,10 +6,6 @@ export const INITIAL_STATE = Object.freeze({
   navigationDirection: 'down', // 'up' or 'down' - for proper cursor positioning
 });
 
-
-export const setSelectedStepId = (state, selectedStepId) => {
-  state.selectedStepId = selectedStepId;
-}
 
 export const setMode = (state, mode) => {
   state.mode = mode;
@@ -36,9 +31,6 @@ export const selectMode = ({ state }) => {
   return state.mode;
 }
 
-export const selectSelectedStepId = ({ state }) => {
-  return state.selectedStepId;
-}
 
 export const selectCursorPosition = ({ state }) => {
   return state.cursorPosition;
@@ -58,7 +50,7 @@ export const selectNavigationDirection = ({ state }) => {
 
 export const toViewData = ({ state, props }, payload) => {
   const steps = (props.steps || []).map((step, i) => {
-    const isSelected = state.selectedStepId === step.id;
+    const isSelected = props.selectedStepId === step.id;
     const isBlockMode = state.mode === 'block';
     return {
       ...step,
@@ -69,7 +61,7 @@ export const toViewData = ({ state, props }, payload) => {
   });
   return {
     steps,
-    selectedStepId: state.selectedStepId,
+    selectedStepId: props.selectedStepId,
     mode: state.mode,
   }
 }
