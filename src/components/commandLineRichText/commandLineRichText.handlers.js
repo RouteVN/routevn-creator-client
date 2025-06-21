@@ -15,10 +15,24 @@ export const handleFormatButtonClick = (e, deps) => {
 };
 
 export const handleSubmitClick = (e, deps) => {
-  const { store, render } = deps;
-  
-  // Placeholder for submitting rich text content
-  // This would dispatch an event with the formatted text content
-  
-  render();
+  const { dispatchEvent } = deps;
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        richText: {
+          textContent: e?.textContent,
+        }
+      },
+    }),
+  );
+};
+
+export const handleBreadcumbActionsClick = (payload, deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("back-to-actions", {
+      detail: {},
+    }),
+  );
 };

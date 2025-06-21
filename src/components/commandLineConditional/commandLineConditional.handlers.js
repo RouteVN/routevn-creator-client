@@ -31,9 +31,27 @@ export const handleValueInput = (e, deps) => {
 };
 
 export const handleSubmitClick = (e, deps) => {
-  const { store, render } = deps;
-  
-  // Placeholder for submitting conditional configuration
-  
-  render();
+  const { dispatchEvent } = deps;
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        conditional: {
+          conditionType: e?.conditionType,
+          selectedVariable: e?.selectedVariable,
+          operator: e?.operator,
+          comparisonValue: e?.comparisonValue,
+        }
+      },
+    }),
+  );
+};
+
+export const handleBreadcumbActionsClick = (payload, deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("back-to-actions", {
+      detail: {},
+    }),
+  );
 };

@@ -203,7 +203,7 @@ export const toViewData = ({ state, props }, payload) => {
     const isCollapsed = state.collapsedIds.includes(item.id);
     const arrowIcon = item.hasChildren ? (isCollapsed ? 'folderArrowRight' : 'folderArrowDown') : null;
 
-    let bc = "bg"
+    let bc = ""
     let hBgc = "mu"
     let bgc = ""
     if (state.targetDropPosition === 'inside' && item.id === targetDragItem?.id) {

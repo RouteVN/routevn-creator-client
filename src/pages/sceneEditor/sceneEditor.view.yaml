@@ -118,6 +118,26 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+  command-line-scene-transition:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-dialogue-box:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-choices:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-conditional:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-rich-text:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
 
 template:
   - rtgl-view w=f h=f:
