@@ -16,4 +16,12 @@ export const handleOnMount = async (deps) => {
   } finally {
     store.setIsLoading(false);
   }
+
+  return () => {
+
+  }
 };
+
+export const handleOnUpdate = () => {
+  console.log('on update')
+}

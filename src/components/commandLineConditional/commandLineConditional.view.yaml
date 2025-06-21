@@ -25,45 +25,52 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
+  breadcumb-actions:
+    eventListeners:
+      click:
+        handler: handleBreadcumbActionsClick
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h3: Command Line Conditional
-
+  - rtgl-view w=f h=f p=lg:
+    - rtgl-view d=h g=md:
+      - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+      - rtgl-text s=sm c=mu-fg mb=lg: '>'
+      - rtgl-text s=sm c=mu-fg mb=lg: Conditional
+    
+    - rtgl-text: Conditional Logic Configuration
+    
     - rtgl-view g=md:
-      - rtgl-text: Conditional Logic Configuration
+      - rtgl-text: Condition Type
+      - rtgl-select#condition-type-select w=f value=${conditionType}:
+        - rtgl-option value="variable": Variable Check
+        - rtgl-option value="flag": Flag Check
+        - rtgl-option value="custom": Custom Expression
       
-      - rtgl-view g=sm:
-        - rtgl-text: Condition Type
-        - rtgl-select#condition-type-select w=f value=${conditionType}:
-          - rtgl-option value="variable": Variable Check
-          - rtgl-option value="flag": Flag Check
-          - rtgl-option value="custom": Custom Expression
+      - $if conditionType == 'variable':
+        - rtgl-text: Variable
+        - rtgl-select#variable-select w=f value=${selectedVariable}:
+          - rtgl-option value="": Select Variable...
+          - rtgl-option value="score": Score
+          - rtgl-option value="health": Health
+          - rtgl-option value="level": Level
         
-        - $if conditionType == 'variable':
-          - rtgl-text: Variable
-          - rtgl-select#variable-select w=f value=${selectedVariable}:
-            - rtgl-option value="": Select Variable...
-            - rtgl-option value="score": Score
-            - rtgl-option value="health": Health
-            - rtgl-option value="level": Level
-          
-          - rtgl-text: Operator
-          - rtgl-select#operator-select w=f value=${operator}:
-            - rtgl-option value="==": Equals
-            - rtgl-option value="!=": Not Equals
-            - rtgl-option value=">": Greater Than
-            - rtgl-option value="<": Less Than
-            - rtgl-option value=">=": Greater or Equal
-            - rtgl-option value="<=": Less or Equal
-          
-          - rtgl-text: Value
-          - rtgl-input#value-input w=f placeholder="Enter value..." value=${comparisonValue}:
+        - rtgl-text: Operator
+        - rtgl-select#operator-select w=f value=${operator}:
+          - rtgl-option value="==": Equals
+          - rtgl-option value="!=": Not Equals
+          - rtgl-option value=">": Greater Than
+          - rtgl-option value="<": Less Than
+          - rtgl-option value=">=": Greater or Equal
+          - rtgl-option value="<=": Less or Equal
         
-        - rtgl-text: Preview
-        - rtgl-view w=f p=md bgc=bg br=sm:
-          - rtgl-text: IF ${selectedVariable || 'variable'} ${operator || 'operator'} ${comparisonValue || 'value'}
+        - rtgl-text: Value
+        - rtgl-input#value-input w=f placeholder="Enter value..." value=${comparisonValue}:
       
-      - rtgl-view d=h g=md mt=lg:
-        - rtgl-button#submit-button: Add Conditional
-        - rtgl-button: Cancel
+      - rtgl-text: Preview
+      - rtgl-view w=f p=md bgc=bg br=sm:
+        - rtgl-text: IF ${selectedVariable || 'variable'} ${operator || 'operator'} ${comparisonValue || 'value'}
+    
+    - rtgl-view flex=1:
+    - rtgl-view d=h av=c ah=e w=f g=lg:
+      - rtgl-button#reset-button v=ol: Reset
+      - rtgl-button#submit-button: Submit

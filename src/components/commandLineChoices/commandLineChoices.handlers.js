@@ -12,9 +12,24 @@ export const handleChoiceItemClick = (e, deps) => {
 };
 
 export const handleSubmitClick = (e, deps) => {
-  const { store, render } = deps;
-  
-  // Placeholder for submitting choices configuration
-  
-  render();
+  const { dispatchEvent } = deps;  
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        choices: {
+          choices: e?.choices,
+        }
+      },
+    }),
+  );
+};
+
+export const handleBreadcumbActionsClick = (payload, deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("back-to-actions", {
+      detail: {},
+    }),
+  );
 };

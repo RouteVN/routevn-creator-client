@@ -17,22 +17,29 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
+  breadcumb-actions:
+    eventListeners:
+      click:
+        handler: handleBreadcumbActionsClick
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h3: Command Line Choices
-
+  - rtgl-view w=f h=f p=lg:
+    - rtgl-view d=h g=md:
+      - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+      - rtgl-text s=sm c=mu-fg mb=lg: '>'
+      - rtgl-text s=sm c=mu-fg mb=lg: Choices
+    
+    - rtgl-text: Player Choices Configuration
+    
     - rtgl-view g=md:
-      - rtgl-text: Player Choices Configuration
+      - $for choice, index in choices:
+        - rtgl-view#choice-item-${index} d=h av=c jc=s-b p=sm bgc=bg br=sm:
+          - rtgl-text: 'Choice ${index}: ${choice.text}'
+          - rtgl-button: Remove
       
-      - rtgl-view g=sm:
-        - $for choice, index in choices:
-          - rtgl-view#choice-item-${index} d=h av=c jc=s-b p=sm bgc=bg br=sm:
-            - rtgl-text: 'Choice ${index}: ${choice.text}'
-            - rtgl-button: Remove
-        
-        - rtgl-button#add-choice-button: Add Choice
-      
-      - rtgl-view d=h g=md mt=lg:
-        - rtgl-button#submit-button: Add Choices
-        - rtgl-button: Cancel
+      - rtgl-button#add-choice-button: Add Choice
+    
+    - rtgl-view flex=1:
+    - rtgl-view d=h av=c ah=e w=f g=lg:
+      - rtgl-button#reset-button v=ol: Reset
+      - rtgl-button#submit-button: Submit

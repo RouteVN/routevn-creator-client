@@ -17,29 +17,77 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
+  breadcumb-actions:
+    eventListeners:
+      click:
+        handler: handleBreadcumbActionsClick
+  breadcumb-characters:
+    eventListeners:
+      click:
+        handler: handleBreadcumbCharactersClick
+  add-character-button:
+    eventListeners:
+      click:
+        handler: handleAddCharacterClick
+  remove-character-*:
+    eventListeners:
+      click:
+        handler: handleRemoveCharacterClick
+  placement-select-*:
+    eventListeners:
+      change:
+        handler: handlePlacementChange
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h3: Command Line Characters
-
+  - rtgl-view w=f h=f p=lg:
     - $if mode == 'current':
-      - rtgl-view:
-        - rtgl-text: Current Character
-        - rtgl-view#character-selector w=200 h=75 av=c ah=c bgc=ac cur=p: 
-          - rtgl-text: Select Character
+      - rtgl-view d=h g=md:
+        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+        - rtgl-text s=sm c=mu-fg mb=lg: '>'
+        - rtgl-text s=sm c=mu-fg mb=lg: Characters
+      - rtgl-text: Character Management
+      - rtgl-view g=md:
+        - $for character, i in selectedCharacters:
+          - rtgl-view g=sm p=md bgc=mu br=md:
+            - rtgl-view d=h av=c g=md:
+              - rtgl-view w=100 h=100 bgc=ac av=c ah=c:
+                - $if character.imageId:
+                    - rvn-file-image w=100 h=100 fileId=${character.imageId}:
+                  $else:
+                    - rtgl-text s=sm: ${character.displayName}
+              - rtgl-view flex=1 g=sm:
+                - rtgl-text fw=b: ${character.displayName}
+                - rtgl-view d=h av=c g=md:
+                  - rtgl-text s=sm: Placement
+                  - rtgl-select#placement-select-${i} .options=placementOptions .value=character[${i}].placement:
+              - rtgl-button#remove-character-${i} v=ol s=sm: Remove
+      - rtgl-view#character-selector w=345 h=120 av=c ah=c bgc=ac cur=p mb=lg: 
+        - rtgl-text: Add Character
+      - rtgl-view flex=1:
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+        - rtgl-button#reset-button v=ol: Reset
         - rtgl-button#submit-button: Submit
 
     - $if mode == 'gallery':
-      - rtgl-text: Character Gallery
-      - rtgl-view d=h w=f:
-        - rtgl-view h=f flex=1:
-          - $for item in items:
-            - rtgl-view w=f bgc=ac:
-              - rtgl-text: ${item.name}
-        - rtgl-view h=f flex=1:
+      - rtgl-view d=h g=md:
+        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+        - rtgl-text s=sm c=mu-fg mb=lg: '>'
+        - rtgl-text#breadcumb-characters s=sm c=mu-fg mb=lg cur=p: Characters
+        - rtgl-text s=sm c=mu-fg mb=lg: '>'
+        - rtgl-text s=sm c=mu-fg mb=lg: Character Selection
+      - 'rtgl-view d=h w=f g=lg style="min-height: 0;"':
+        - rtgl-view h=f flex=1 sv=true:
+          - rvn-base-file-explorer#base-file-explorer .items=items:
+        - rtgl-view h=f flex=2 sv=true g=lg:
           - $for group in groups:
-            - rtgl-text: ${group.name}
-            - $for item in group.children:
-              - rtgl-view#character-item-${item.id} w=200 h=150 bgc=ac cur=p:
-                - rtgl-text: ${item.name}
-                - rtgl-text s=sm c=mu-fg: ${item.description || 'Character'}
+            - rtgl-view g=md:
+              - rtgl-text: ${group.name}
+              - rtgl-view d=h w=f fw=w g=lg:
+                - $for item in group.children:
+                  - rtgl-view#character-item-${item.id} w=200 h=150 bgc=ac cur=p av=c ah=c:
+                    - $if item.imageId:
+                        - rvn-file-image w=180 h=120 fileId=${item.imageId}:
+                      $else:
+                        - rtgl-view w=180 h=120 av=c ah=c:
+                          - rtgl-text: ${item.name}
+                    - rtgl-text s=sm c=mu-fg mt=sm: ${item.name}

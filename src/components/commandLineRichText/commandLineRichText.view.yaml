@@ -17,14 +17,21 @@ refs:
     eventListeners:
       click:
         handler: handleFormatButtonClick
+  breadcumb-actions:
+    eventListeners:
+      click:
+        handler: handleBreadcumbActionsClick
 
 template:
-  - rtgl-view w=f h=f p=m:
-    - rtgl-text s=h3: Command Line Rich Text
-
+  - rtgl-view w=f h=f p=lg:
+    - rtgl-view d=h g=md:
+      - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+      - rtgl-text s=sm c=mu-fg mb=lg: '>'
+      - rtgl-text s=sm c=mu-fg mb=lg: Rich Text
+    
+    - rtgl-text: Text Content
+    
     - rtgl-view g=md:
-      - rtgl-text: Text Content
-      
       - rtgl-view d=h g=sm:
         - rtgl-button#format-button-bold: Bold
         - rtgl-button#format-button-italic: Italic
@@ -32,7 +39,8 @@ template:
         - rtgl-button#format-button-color: Color
       
       - rtgl-textarea#text-input w=f h=200 placeholder="Enter your rich text content here..." value=${textContent}:
-      
-      - rtgl-view d=h g=md:
-        - rtgl-button#submit-button: Add Text
-        - rtgl-button: Cancel
+    
+    - rtgl-view flex=1:
+    - rtgl-view d=h av=c ah=e w=f g=lg:
+      - rtgl-button#reset-button v=ol: Reset
+      - rtgl-button#submit-button: Submit

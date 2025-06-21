@@ -30,3 +30,21 @@ export const handleAudioSelectorClick = (payload, deps) => {
 
   render();
 }
+
+export const handleBreadcumbActionsClick = (payload, deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("back-to-actions", {
+      detail: {},
+    }),
+  );
+};
+
+export const handleBreadcumbSoundEffectsClick = (payload, deps) => {
+  const { store, render } = deps;
+  store.setMode({
+    mode: "current",
+  });
+  render();
+};

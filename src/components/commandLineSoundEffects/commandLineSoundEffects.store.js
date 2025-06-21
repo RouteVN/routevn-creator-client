@@ -17,9 +17,18 @@ export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
   const flatGroups = toFlatGroups(state.items);
 
+  const triggerOptions = [
+    { label: 'On Click', value: 'click' },
+    { label: 'On Hover', value: 'hover' },
+    { label: 'On Enter', value: 'enter' },
+    { label: 'On Exit', value: 'exit' },
+    { label: 'Manual', value: 'manual' }
+  ];
+
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
+    triggerOptions,
   };
 };

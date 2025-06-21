@@ -98,6 +98,46 @@ refs:
     eventListeners:
       click:
         handler: handleAddInstructionButtonClick
+  command-line-background:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-bgm:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-sound-effects:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-layouts:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-characters:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-scene-transition:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-dialogue-box:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-choices:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-conditional:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+  command-line-rich-text:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
 
 template:
   - rtgl-view w=f h=f:
@@ -134,7 +174,7 @@ template:
                   - rtgl-text s=sm: BGM
   - $if mode != "steps-editor":
     - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
-      - rtgl-view#actions-container w=500 h=800 bgc=mu p=m:
+      - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
         - $if mode == "actions":
             - rvn-command-line-actions#command-line-actions:
           $elif mode == "richtext":

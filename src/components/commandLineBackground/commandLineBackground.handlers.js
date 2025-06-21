@@ -6,16 +6,23 @@ export const handleOnMount = (deps) => {
   });
 };
 
-export const handleImageItemClick = (payload, deps) => {
+export const handleOnUpdate = () => {
+  console.log('on update')
+}
+
+export const handleImageItemClick = (e, deps) => {
   const { store, render } = deps;
 
-  // store.setSelectedItemId({
-  //   'itemId': payload.itemId
-  // })
+  const id = e.currentTarget.id.replace('image-item-', '');
 
-  store.setMode({
-    mode: "current",
+  store.setTempSelectedImageId({
+    imageId: id,
   });
+
+
+  // store.setMode({
+  //   mode: "current",
+  // });
 
   render();
 };
@@ -42,3 +49,23 @@ export const handleImageSelectorClick = (payload, deps) => {
 
   render();
 };
+
+export const handleBreadcumbActionsClick = (payload, deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("back-to-actions", {
+      detail: {},
+    }),
+  );
+};
+
+export const handleBreadcumbBackgroundClick = (payload, deps) => {
+  const { store, render } = deps;
+  store.setMode({
+    mode: "current",
+  });
+  render();
+};
+
+

@@ -15,9 +15,25 @@ export const handleDialogueInput = (e, deps) => {
 };
 
 export const handleSubmitClick = (e, deps) => {
-  const { store, render } = deps;
-  
-  // Placeholder for submitting dialogue configuration
-  
-  render();
+  const { dispatchEvent } = deps;
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        dialogueBox: {
+          speakerName: e?.speakerName,
+          dialogueText: e?.dialogueText,
+        }
+      },
+    }),
+  );
+};
+
+export const handleBreadcumbActionsClick = (payload, deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("back-to-actions", {
+      detail: {},
+    }),
+  );
 };
