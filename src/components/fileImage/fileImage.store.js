@@ -25,10 +25,13 @@ export const selectIsLoading = (state) => {
   return state.isLoading;
 };
 
-export const toViewData = ({ state, attrs }, payload) => {
+export const toViewData = ({ state, attrs, props }, payload) => {
+  console.log('stringifyAttrs(attrs)', stringifyAttrs(attrs))
   return {
     src: state.src,
     isLoading: state.isLoading,
     containerAttrString: stringifyAttrs(attrs),
+    key: attrs.key,
+    bw: attrs.bw,
   };
 };
