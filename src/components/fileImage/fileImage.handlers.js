@@ -23,5 +23,5 @@ export const handleOnMount = async (deps) => {
 };
 
 export const handleOnUpdate = () => {
-  console.log('on update')
+  
 }

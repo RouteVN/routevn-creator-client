@@ -10,7 +10,7 @@
         "jsdom": "^26.1.0",
         "json-e": "^4.8.0",
         "nanoid": "^5.1.5",
-        "rettangoli-fe": "0.0.2",
+        "rettangoli-fe": "0.0.3-rc3",
         "rxjs": "^7.8.2",
         "slate": "^0.114.0",
         "snabbdom": "^3.6.2",
@@ -204,7 +204,7 @@
 
     "punycode": ["punycode@2.3.1", "", {}, "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="],
 
-    "rettangoli-fe": ["rettangoli-fe@0.0.2", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.0.6", "rxjs": "^7.8.2", "snabbdom": "^3.6.2" } }, "sha512-iY0tFjSiZ3Ur04VxCiK/kB6G79wQjnpRDdGeZfqBamphDtcUqHrkr/4m/1KbgjO8YnkiJVbagjaeFeCotcokGw=="],
+    "rettangoli-fe": ["rettangoli-fe@0.0.3-rc3", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.0.6", "rxjs": "^7.8.2", "snabbdom": "^3.6.2" } }, "sha512-gaBA8t6lzeDuyOzWV5UE/TE+/OF9azxJn6is/z6MGAQjJJ4qSKLtyJdF7KXj9e8isw7f9VL6mCsocBt8Y5FJGg=="],
 
     "rollup": ["rollup@4.41.0", "", { "dependencies": { "@types/estree": "1.0.7" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.41.0", "@rollup/rollup-android-arm64": "4.41.0", "@rollup/rollup-darwin-arm64": "4.41.0", "@rollup/rollup-darwin-x64": "4.41.0", "@rollup/rollup-freebsd-arm64": "4.41.0", "@rollup/rollup-freebsd-x64": "4.41.0", "@rollup/rollup-linux-arm-gnueabihf": "4.41.0", "@rollup/rollup-linux-arm-musleabihf": "4.41.0", "@rollup/rollup-linux-arm64-gnu": "4.41.0", "@rollup/rollup-linux-arm64-musl": "4.41.0", "@rollup/rollup-linux-loongarch64-gnu": "4.41.0", "@rollup/rollup-linux-powerpc64le-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-musl": "4.41.0", "@rollup/rollup-linux-s390x-gnu": "4.41.0", "@rollup/rollup-linux-x64-gnu": "4.41.0", "@rollup/rollup-linux-x64-musl": "4.41.0", "@rollup/rollup-win32-arm64-msvc": "4.41.0", "@rollup/rollup-win32-ia32-msvc": "4.41.0", "@rollup/rollup-win32-x64-msvc": "4.41.0", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-HqMFpUbWlf/tvcxBFNKnJyzc7Lk+XO3FGc3pbNBLqEbOz0gPLRgcrlS3UF4MfUrVlstOaP/q0kM6GVvi+LrLRg=="],
 

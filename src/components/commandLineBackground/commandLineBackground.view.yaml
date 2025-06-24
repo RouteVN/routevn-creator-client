@@ -25,6 +25,10 @@ refs:
     eventListeners:
       click:
         handler: handleBreadcumbBackgroundClick
+  button-select:
+    eventListeners:
+      click:
+        handler: handleButtonSelectClickImage
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -34,8 +38,11 @@ template:
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
         - rtgl-text s=sm c=mu-fg mb=lg: Background
       - rtgl-text: Incoming
-      - rtgl-view#image-selector w=345 h=200 av=c ah=c bgc=ac cur=p: 
-        - rtgl-text: Select Image
+      - $if selectedImageId:
+          - rvn-file-image#image-selector fileId=${selectedFileId} w=345 h=200:
+        $else:
+          - rtgl-view#image-selector w=345 h=200 av=c ah=c bgc=ac cur=p: 
+            - rtgl-text: Select Image
       - rtgl-view:
         - rtgl-text: Select Animation
         - rtgl-select .options=animationOptions:
@@ -51,7 +58,7 @@ template:
         - rtgl-text#breadcumb-background s=sm c=mu-fg mb=lg cur=p: Background
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
         - rtgl-text s=sm c=mu-fg mb=lg: Image Selection
-      - 'rtgl-view d=h w=f g=lg style="min-height: 0;"':
+      - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
         - rtgl-view h=f flex=1 sv=true:
           - rvn-base-file-explorer#base-file-explorer .items=items:
         - rtgl-view h=f flex=2 sv=true g=lg:
@@ -60,5 +67,6 @@ template:
               - rtgl-text: ${group.name}
               - rtgl-view d=h w=f fw=w g=lg:
                 - $for item, j in group.children:
-                  - rtgl-text: 'bw: ${item.bw} ${item.key}'
                   - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+        - rtgl-button#button-select: Select
