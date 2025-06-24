@@ -25,6 +25,10 @@ refs:
     eventListeners:
       click:
         handler: handleBreadcumbBgmClick
+  button-select:
+    eventListeners:
+      click:
+        handler: handleButtonSelectClickAudio
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -34,8 +38,12 @@ template:
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
         - rtgl-text s=sm c=mu-fg mb=lg: BGM
       - rtgl-text: Background Music
-      - rtgl-view#audio-selector w=345 h=200 av=c ah=c bgc=ac cur=p: 
-        - rtgl-text: Select Audio
+      - $if selectedAudioId:
+          - rtgl-view#audio-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
+            - rtgl-text: Selected Audio
+        $else:
+          - rtgl-view#audio-selector w=345 h=200 av=c ah=c bgc=ac cur=p: 
+            - rtgl-text: Select Audio
       - rtgl-view:
         - rtgl-text: Select Loop Type
         - rtgl-select .options=loopOptions:
@@ -60,6 +68,8 @@ template:
               - rtgl-text: ${group.name}
               - rtgl-view d=h w=f fw=w g=lg:
                 - $for item in group.children:
-                  - rtgl-view#audio-item-${item.id} w=200 h=150 bgc=ac cur=p av=c ah=c:
+                  - rtgl-view#audio-item-${item.id} w=200 h=150 bgc=ac cur=p av=c ah=c bw=${item.bw}:
                     - rtgl-text: ${item.name}
                     - rtgl-text s=sm c=mu-fg: Audio File
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+        - rtgl-button#button-select: Select

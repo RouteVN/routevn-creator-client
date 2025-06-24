@@ -19,7 +19,7 @@ export const handleOnMount = (deps) => {
     scene,
   });
   store.setSelectedSectionId(scene.sections[0].id);
-  console.log('scene', scene)
+  store.setRepository(repository.getState());
 };
 
 export const handleSectionTabClick = (e, deps) => {
@@ -34,12 +34,10 @@ export const handleCommandLineSubmit = (e, deps) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const stepId = store.selectSelectedStepId();
-  console.log('e.detail', e.detail)
-  console.log('stepId', stepId)
+
   if (!stepId) {
     return;
   }
-  store.setMode("steps-editor");
   repository.addAction({
     actionType: "set",
     target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${stepId}.instructions.presentationInstructions`,
@@ -48,21 +46,24 @@ export const handleCommandLineSubmit = (e, deps) => {
       item: e.detail
     },
   })
-
+  
   const { scenes } = repository.getState();
   const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
+  .filter((item) => item.type === "scene")
+  .find((item) => item.id === sceneId);
   scene.sections = toFlatItems(scene.sections).map((section) => {
     return {
       ...section,
       steps: toFlatItems(section.steps),
     };
   });
+
   store.setScene({
     id: scene.id,
     scene,
   });
+  store.setRepository(repository.getState());
+  store.setMode("steps-editor");
 
   render();
 };
@@ -380,7 +381,6 @@ export const handleMoveUp = (e, deps) => {
 };
 
 export const handleBackToActions = (e, deps) => {
-  console.log('handleBackToActions')
   const { store, render } = deps;
   store.setMode("actions");
   render();
@@ -722,4 +722,11 @@ export const handleFormActionClick = (e, deps) => {
 
     render();
   }
+};
+
+export const handleToggleSectionsGraphView = (e, deps) => {
+  const { store, render } = deps;
+  store.toggleSectionsGraphView();
+  render();
+  console.log('render')
 };

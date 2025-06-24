@@ -26,7 +26,6 @@ export const selectIsLoading = (state) => {
 };
 
 export const toViewData = ({ state, attrs, props }, payload) => {
-  console.log('stringifyAttrs(attrs)', stringifyAttrs(attrs))
   return {
     src: state.src,
     isLoading: state.isLoading,

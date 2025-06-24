@@ -102,10 +102,14 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   command-line-bgm:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   command-line-sound-effects:
     eventListeners:
       back-to-actions:
@@ -138,22 +142,38 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+  toggle-sections-graph-view:
+    eventListeners:
+      click:
+        handler: handleToggleSectionsGraphView
 
 template:
   - rtgl-view w=f h=f:
     - rtgl-view bwb=xs w=f h=48 av=c ph=lg:
       - rtgl-text c=mu-fg: ${scene.name}
     - rtgl-view d=h w=f h=f:
-      - rtgl-view:
-        - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
-          - $for section in sections:
-            - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
-              - rtgl-text s=sm: ${section.name}
-          - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
-            - rtgl-text s=sm: +
-        - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
-          - rvn-steps-editor#steps-editor .steps=currentSteps .selectedStepId=selectedStepId:
-          - rtgl-view h=30vh:
+      - $if sectionsGraphView:
+          - 'rtgl-view w="calc((100vw - 64px) / 2)"':
+            - rtgl-view d=h w=f:
+              - rtgl-view flex=1:
+              - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
+                - rtgl-text s=sm: '<>'
+            - rtgl-view:
+              - rtgl-text: TODO show graph of sections
+        $else:
+          - rtgl-view:
+            - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
+              - $for section in sections:
+                - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
+                  - rtgl-text s=sm: ${section.name}
+              - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
+                - rtgl-text s=sm: +
+              - rtgl-view flex=1:
+              - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
+                - rtgl-text s=sm: '<>'
+            - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
+              - rvn-steps-editor#steps-editor .steps=currentSteps .selectedStepId=selectedStepId:
+              - rtgl-view h=30vh:
       - rtgl-view w=1 h=f bgc=mu:
       - rtgl-view w=f:
         - rtgl-view:
@@ -167,11 +187,12 @@ template:
             - $if background:
                 - rtgl-view#background-action g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
                   - rtgl-svg svg=text wh=24:
-                  - rtgl-text s=sm: Background
+                  - rvn-file-image fileId=${backgroundImage.fileId} w=50 h=35:
+                  - rtgl-text s=sm: ${backgroundImage.name}
             - $if bgm:
                 - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                   - rtgl-svg svg=text wh=24:
-                  - rtgl-text s=sm: BGM
+                  - rtgl-text s=sm: ${bgmAudio.name}
   - $if mode != "steps-editor":
     - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
       - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:

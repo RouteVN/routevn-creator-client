@@ -3,6 +3,7 @@ export const INITIAL_STATE = Object.freeze({
   sceneId: undefined,
   scene: undefined,
   selectedStepId: undefined,
+  sectionsGraphView: false,
   currentInstructions: [{
     id: '1',
     instructions: {
@@ -23,12 +24,17 @@ export const INITIAL_STATE = Object.freeze({
     position: { x: 0, y: 0 },
     sectionId: null
   },
+  repositoryState: {},
 });
 
 export const setScene = (state, payload) => {
   const { id, scene } = payload;
   state.scene = scene;
   state.sceneId = id;
+}
+
+export const setRepository = (state, repository) => {
+  state.repositoryState = repository;
 }
 
 export const selectScene = ({ state, props }, payload) => {
@@ -151,6 +157,17 @@ export const toViewData = ({ state, props }, payload) => {
 
   const selectedStep = currentSection?.steps.find(step => step.id === state.selectedStepId);
 
+  let backgroundImage;
+  let bgmAudio;
+
+  if (selectedStep?.instructions?.presentationInstructions?.background) {
+    backgroundImage = state.repositoryState.images.items[selectedStep.instructions.presentationInstructions.background.imageId];
+  }
+
+  if (selectedStep?.instructions?.presentationInstructions?.bgm) {
+    bgmAudio = state.repositoryState.audio.items[selectedStep.instructions.presentationInstructions.bgm.audioId];
+  }
+
   return {
     scene: state.scene,
     sections,
@@ -159,12 +176,15 @@ export const toViewData = ({ state, props }, payload) => {
     currentStep: selectedStep,
     // currentStep: currentSteps.find(step => step.id === state.selectedStepId),
     background: selectedStep?.instructions?.presentationInstructions?.background,
+    backgroundImage,
     bgm: selectedStep?.instructions?.presentationInstructions?.bgm,
+    bgmAudio,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: renameForm,
     selectedStepId: state.selectedStepId,
+    sectionsGraphView: state.sectionsGraphView,
   };
 }
 
@@ -197,5 +217,9 @@ export const selectNextStepId = ({ state, props }, payload) => {
 
 export const selectSelectedStep = (state, props, payload) => {
   return state.sections.find(section => section.id === state.selectedSectionId).steps.find(step => step.id === state.selectedStepId);
+}
+
+export const toggleSectionsGraphView = (state) => {
+  state.sectionsGraphView = !state.sectionsGraphView;
 }
 
