@@ -4,11 +4,16 @@ export const INITIAL_STATE = Object.freeze({
   goalColumn: 0, // Remember the desired column when moving vertically
   isNavigating: false, // Flag to prevent cursor reset during navigation
   navigationDirection: 'down', // 'up' or 'down' - for proper cursor positioning
+  repositoryState: {},
 });
 
 
 export const setMode = (state, mode) => {
   state.mode = mode;
+}
+
+export const setRepositoryState = (state, repositoryState) => {
+  state.repositoryState = repositoryState;
 }
 
 export const setCursorPosition = (state, position) => {
@@ -52,11 +57,22 @@ export const toViewData = ({ state, props }, payload) => {
   const steps = (props.steps || []).map((step, i) => {
     const isSelected = props.selectedStepId === step.id;
     const isBlockMode = state.mode === 'block';
+
+    let backgroundFileId;
+    if (step.instructions.presentationInstructions.background) {
+      console.log('step.instructions.presentationInstructions.background', step.instructions.presentationInstructions.background)
+      const imageId = step.instructions.presentationInstructions.background.imageId;
+      console.log('state.repositoryState.images.items', state.repositoryState.images.items)
+      backgroundFileId = state.repositoryState.images.items[imageId]?.fileId;
+      console.log('backgroundFileId', backgroundFileId)
+    }
+
     return {
       ...step,
       lineNumber: i + 1,
       lineColor: isSelected ? 'fg' : 'mu-fg',
       backgroundColor: (isSelected && isBlockMode) ? 'var(--muted)' : 'transparent',
+      backgroundFileId,
     }
   });
   return {

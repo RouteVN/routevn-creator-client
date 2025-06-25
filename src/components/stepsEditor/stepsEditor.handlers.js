@@ -224,9 +224,10 @@ const isCursorOnLastLine = (element) => {
   return isOnLastLine;
 };
 
-
 export const handleOnMount = (deps) => {
-  const { store, getRefIds, props } = deps;
+  const { store, getRefIds, repository } = deps;
+
+  store.setRepositoryState(repository.getState());
   
   // Focus container on mount to enable keyboard navigation
   setTimeout(() => {

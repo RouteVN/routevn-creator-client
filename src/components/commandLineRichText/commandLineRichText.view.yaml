@@ -5,10 +5,12 @@ viewDataSchema:
   properties: {}
 
 refs:
-  text-input:
+  text-display:
     eventListeners:
-      input:
-        handler: handleTextInput
+      mouseup:
+        handler: handleTextSelection
+      keyup:
+        handler: handleTextSelection
   submit-button:
     eventListeners:
       click:
@@ -33,14 +35,17 @@ template:
     
     - rtgl-view g=md:
       - rtgl-view d=h g=sm:
-        - rtgl-button#format-button-bold: Bold
-        - rtgl-button#format-button-italic: Italic
-        - rtgl-button#format-button-underline: Underline
-        - rtgl-button#format-button-color: Color
+        - rtgl-button#format-button-bold .disabled=${!hasSelection}: Bold
+        - rtgl-button#format-button-italic .disabled=${!hasSelection}: Italic
+        - rtgl-button#format-button-underline .disabled=${!hasSelection}: Underline
+        - rtgl-button#format-button-strikethrough .disabled=${!hasSelection}: Strikethrough
       
-      - rtgl-textarea#text-input w=f h=200 placeholder="Enter your rich text content here..." value=${textContent}:
+      - 'rtgl-view#text-display w=f h=200 p=md bgc=mu br=md contenteditable=false .innerHTML=${formattedContent} style="overflow-y: auto; border: 1px solid #ccc; white-space: pre-wrap;"':
+      
+      - $if hasSelection:
+        - rtgl-view p=sm bgc=ac br=md:
+          - rtgl-text s=sm: 'Selected: "${selectedText}"'
     
     - rtgl-view flex=1:
     - rtgl-view d=h av=c ah=e w=f g=lg:
-      - rtgl-button#reset-button v=ol: Reset
       - rtgl-button#submit-button: Submit

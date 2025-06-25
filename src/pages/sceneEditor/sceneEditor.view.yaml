@@ -54,6 +54,24 @@ refs:
         handler: handleBgmActionClick
       contextmenu:
         handler: handleBgmActionContextMenu
+  sound-effects-action:
+    eventListeners:
+      click:
+        handler: handleSoundEffectActionClick
+      contextmenu:
+        handler: handleSoundEffectActionContextMenu
+  characters-action:
+    eventListeners:
+      click:
+        handler: handleCharactersActionClick
+      contextmenu:
+        handler: handleCharactersActionContextMenu
+  scene-transition-action:
+    eventListeners:
+      click:
+        handler: handleSceneTransitionActionClick
+      contextmenu:
+        handler: handleSceneTransitionActionContextMenu
   command-line-*:
     eventListeners:
       submit:
@@ -114,6 +132,8 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   command-line-layouts:
     eventListeners:
       back-to-actions:
@@ -122,10 +142,14 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   command-line-scene-transition:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   command-line-dialogue-box:
     eventListeners:
       back-to-actions:
@@ -142,6 +166,8 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   toggle-sections-graph-view:
     eventListeners:
       click:
@@ -193,13 +219,32 @@ template:
                 - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                   - rtgl-svg svg=text wh=24:
                   - rtgl-text s=sm: ${bgmAudio.name}
+            - $if soundEffects:
+                - rtgl-view#sound-effects-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=text wh=24:
+                  - rtgl-text s=sm: ${soundEffectsNames}
+            - $if characters:
+                - rtgl-view#characters-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=text wh=24:
+                  - rtgl-view d=h g=sm av=c:
+                    - $for charData, i in charactersData:
+                      - $if charData.sprite:
+                          - rvn-file-image fileId=${charData.sprite.fileId} w=35 h=35:
+                        $else:
+                          - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
+                            - rtgl-text s=xs: No Sprite
+                  - rtgl-text s=sm: ${charactersNames}
+            - $if sceneTransition:
+                - rtgl-view#scene-transition-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=text wh=24:
+                  - rtgl-text s=sm: 'Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})'
   - $if mode != "steps-editor":
     - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
       - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
         - $if mode == "actions":
             - rvn-command-line-actions#command-line-actions:
           $elif mode == "richtext":
-            - rvn-command-line-rich-text#command-line-rich-text:
+            - rvn-command-line-rich-text#command-line-rich-text .stepContent=richTextContent:
           $elif mode == "dialoguebox":
             - rvn-command-line-dialogue-box#command-line-dialogue-box:
           $elif mode == "choices":

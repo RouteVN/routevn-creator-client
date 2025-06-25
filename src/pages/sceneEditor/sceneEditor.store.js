@@ -159,6 +159,8 @@ export const toViewData = ({ state, props }, payload) => {
 
   let backgroundImage;
   let bgmAudio;
+  let soundEffectsAudio = [];
+  let charactersData = [];
 
   if (selectedStep?.instructions?.presentationInstructions?.background) {
     backgroundImage = state.repositoryState.images.items[selectedStep.instructions.presentationInstructions.background.imageId];
@@ -167,6 +169,43 @@ export const toViewData = ({ state, props }, payload) => {
   if (selectedStep?.instructions?.presentationInstructions?.bgm) {
     bgmAudio = state.repositoryState.audio.items[selectedStep.instructions.presentationInstructions.bgm.audioId];
   }
+
+  if (selectedStep?.instructions?.presentationInstructions?.soundEffects) {
+    soundEffectsAudio = selectedStep.instructions.presentationInstructions.soundEffects.map(se => ({
+      ...se,
+      audio: state.repositoryState.audio.items[se.audioId]
+    }));
+  }
+
+  if (selectedStep?.instructions?.presentationInstructions?.characters) {
+    charactersData = selectedStep.instructions.presentationInstructions.characters.map(char => ({
+      ...char,
+      character: state.repositoryState.characters.items[char.characterId],
+      sprite: char.spriteId ? state.repositoryState.images.items[char.spriteId] : null
+    }));
+  }
+
+  let sceneTransitionData = null;
+  if (selectedStep?.instructions?.presentationInstructions?.sceneTransition) {
+    const sceneTransition = selectedStep.instructions.presentationInstructions.sceneTransition;
+    sceneTransitionData = {
+      ...sceneTransition,
+      scene: state.repositoryState.scenes.items[sceneTransition.sceneId]
+    };
+  }
+
+  let richTextContent = '';
+  if (selectedStep?.instructions?.presentationInstructions?.richText) {
+    // Check both possible text fields
+    richTextContent = selectedStep.instructions.presentationInstructions.richText.content || 
+                     selectedStep.instructions.presentationInstructions.richText.text || '';
+  } else if (selectedStep?.instructions?.presentationInstructions?.dialogue) {
+    // Fall back to dialogue text if rich text doesn't exist
+    richTextContent = selectedStep.instructions.presentationInstructions.dialogue.text || '';
+  }
+
+  const soundEffectsNames = soundEffectsAudio.map(se => se.audio.name).join(", ");
+  const charactersNames = charactersData.map(char => char.character?.name || 'Unknown').join(", ");
 
   return {
     scene: state.scene,
@@ -179,6 +218,16 @@ export const toViewData = ({ state, props }, payload) => {
     backgroundImage,
     bgm: selectedStep?.instructions?.presentationInstructions?.bgm,
     bgmAudio,
+    soundEffects: selectedStep?.instructions?.presentationInstructions?.soundEffects,
+    soundEffectsAudio,
+    soundEffectsNames,
+    characters: selectedStep?.instructions?.presentationInstructions?.characters,
+    charactersData,
+    charactersNames,
+    sceneTransition: selectedStep?.instructions?.presentationInstructions?.sceneTransition,
+    sceneTransitionData,
+    richText: selectedStep?.instructions?.presentationInstructions?.richText,
+    richTextContent,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
@@ -196,7 +245,7 @@ export const selectStepIdIndex = (state, props, payload) => {
 export const selectPreviousStepId = ({ state, props }, payload) => {
   const { stepId } = payload;
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
-  const currentSteps = currentSection?.steps || [];
+  const currentSteps = Array.isArray(currentSection?.steps) ? currentSection.steps : [];
   const stepIndex = currentSteps.findIndex(step => step.id === stepId);
   if (stepIndex === 0) {
     return stepId;
@@ -207,7 +256,7 @@ export const selectPreviousStepId = ({ state, props }, payload) => {
 export const selectNextStepId = ({ state, props }, payload) => {
   const { stepId } = payload;
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
-  const currentSteps = currentSection?.steps || [];
+  const currentSteps = Array.isArray(currentSection?.steps) ? currentSection.steps : [];
   const stepIndex = currentSteps.findIndex(step => step.id === stepId);
   if (stepIndex >= currentSteps.length - 1) {
     return stepId;
