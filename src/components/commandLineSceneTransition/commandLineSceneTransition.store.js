@@ -3,6 +3,8 @@ import { toFlatGroups, toFlatItems } from "../../repository";
 export const INITIAL_STATE = Object.freeze({
   mode: 'current',
   items: [],
+  selectedSceneId: undefined,
+  selectedAnimation: 'fade',
 });
 
 export const setMode = (state, payload) => {
@@ -11,6 +13,14 @@ export const setMode = (state, payload) => {
 
 export const setItems = (state, payload) => {
   state.items = payload.items;
+};
+
+export const setSelectedSceneId = (state, payload) => {
+  state.selectedSceneId = payload.sceneId;
+};
+
+export const setSelectedAnimation = (state, payload) => {
+  state.selectedAnimation = payload.animation;
 };
 
 export const toViewData = ({ state, props }, payload) => {
@@ -43,10 +53,17 @@ export const toViewData = ({ state, props }, payload) => {
   ];
 
 
+  // Get selected scene data
+  const selectedScene = state.selectedSceneId ? 
+    allItems.find(item => item.id === state.selectedSceneId) : null;
+
   return {
     mode: state.mode,
     items: flatItems,
     groups: enhancedGroups,
     animationOptions,
+    selectedSceneId: state.selectedSceneId,
+    selectedAnimation: state.selectedAnimation,
+    selectedScene,
   };
 };

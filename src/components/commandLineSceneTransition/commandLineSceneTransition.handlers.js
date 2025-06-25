@@ -6,12 +6,13 @@ export const handleOnMount = (deps) => {
   });
 };
 
-export const handleSceneItemClick = (payload, deps) => {
+export const handleSceneItemClick = (e, deps) => {
   const { store, render } = deps;
+  const sceneId = e.currentTarget.id.replace('scene-item-', '');
 
-  // store.setSelectedItemId({
-  //   'itemId': payload.itemId
-  // })
+  store.setSelectedSceneId({
+    sceneId: sceneId
+  });
 
   store.setMode({
     mode: "current",
@@ -21,14 +22,19 @@ export const handleSceneItemClick = (payload, deps) => {
 };
 
 export const handleSubmitClick = (payload, deps) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, store } = deps;
+  const { selectedSceneId, selectedAnimation } = store.getState();
+  
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         sceneTransition: {
-          sceneId: payload?.sceneId,
+          sceneId: selectedSceneId,
+          animation: selectedAnimation,
         }
       },
+      bubbles: true,
+      composed: true
     }),
   );
 };
@@ -57,6 +63,14 @@ export const handleBreadcumbSceneTransitionClick = (payload, deps) => {
   const { store, render } = deps;
   store.setMode({
     mode: "current",
+  });
+  render();
+};
+
+export const handleAnimationSelectChange = (e, deps) => {
+  const { store, render } = deps;
+  store.setSelectedAnimation({
+    animation: e.currentTarget.value
   });
   render();
 };

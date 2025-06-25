@@ -5,10 +5,18 @@ viewDataSchema:
   properties: {}
 
 refs:
-  audio-selector:
+  add-new-button:
     eventListeners:
       click:
-        handler: handleAudioSelectorClick
+        handler: handleAddNewClick
+  sound-effect-item-*:
+    eventListeners:
+      click:
+        handler: handleSoundEffectItemClick
+  delete-button-*:
+    eventListeners:
+      click:
+        handler: handleDeleteClick
   audio-item-*:
     eventListeners:
       click:
@@ -25,41 +33,59 @@ refs:
     eventListeners:
       click:
         handler: handleBreadcumbSoundEffectsClick
+  button-select:
+    eventListeners:
+      click:
+        handler: handleButtonSelectClickAudio
+  trigger-select-*:
+    eventListeners:
+      change:
+        handler: handleTriggerChange
 
 template:
   - rtgl-view w=f h=f p=lg:
     - $if mode == 'current':
-      - rtgl-view d=h g=md:
-        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Sound Effects
-      - rtgl-text: Sound Effects
-      - rtgl-view#audio-selector w=345 h=200 av=c ah=c bgc=ac cur=p: 
-        - rtgl-text: Select Sound Effect
-      - rtgl-view:
-        - rtgl-text: Select Trigger
-        - rtgl-select .options=triggerOptions:
-      - rtgl-view flex=1:
-      - rtgl-view d=h av=c ah=e w=f g=lg:
-        - rtgl-button#reset-button v=ol: Reset
-        - rtgl-button#submit-button: Submit
-
-    - $if mode == 'gallery':
-      - rtgl-view d=h g=md:
-        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text#breadcumb-sound-effects s=sm c=mu-fg mb=lg cur=p: Sound Effects
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Audio Selection
-      - 'rtgl-view d=h w=f g=lg style="min-height: 0;"':
-        - rtgl-view h=f flex=1 sv=true:
-          - rvn-base-file-explorer#base-file-explorer .items=items:
-        - rtgl-view h=f flex=2 sv=true g=lg:
-          - $for group in groups:
-            - rtgl-view g=md:
-              - rtgl-text: ${group.name}
-              - rtgl-view d=h w=f fw=w g=lg:
-                - $for item in group.children:
-                  - rtgl-view#audio-item-${item.id} w=200 h=150 bgc=ac cur=p av=c ah=c:
-                    - rtgl-text: ${item.name}
-                    - rtgl-text s=sm c=mu-fg: Sound Effect
+        - rtgl-view d=h g=md:
+          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+          - rtgl-text s=sm c=mu-fg mb=lg: '>'
+          - rtgl-text s=sm c=mu-fg mb=lg: Sound Effects
+        - rtgl-text: Sound Effects
+        
+        # List of sound effects
+        - rtgl-view w=f sv=true h=300:
+          - $for effect in soundEffects:
+            - rtgl-view d=h w=f p=md bgc=mu br=md mb=md:
+              - rtgl-view#sound-effect-item-${effect.id} flex=1 cur=p h-bgc=ac:
+                - rtgl-text: ${effect.name}
+                - rtgl-view d=h av=c g=md:
+                  - rtgl-text s=sm c=mu-fg: 'Trigger:'
+                  - rtgl-select#trigger-select-${effect.id} .options=triggerOptions .value=${effect.trigger} s=sm:
+              - rtgl-button#delete-button-${effect.id} v=ol s=sm: Delete
+          
+          # Add new button
+          - rtgl-button#add-new-button w=f: + Add New Sound Effect
+        
+        - rtgl-view flex=1:
+        - rtgl-view d=h av=c ah=e w=f g=lg:
+          - rtgl-button#submit-button: Submit
+      $elif mode == 'gallery':
+        - rtgl-view d=h g=md:
+          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+          - rtgl-text s=sm c=mu-fg mb=lg: '>'
+          - rtgl-text#breadcumb-sound-effects s=sm c=mu-fg mb=lg cur=p: Sound Effects
+          - rtgl-text s=sm c=mu-fg mb=lg: '>'
+          - rtgl-text s=sm c=mu-fg mb=lg: Audio Selection
+        - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
+          - rtgl-view h=f flex=1 sv=true:
+            - rvn-base-file-explorer#base-file-explorer .items=items:
+          - rtgl-view h=f flex=2 sv=true g=lg:
+            - $for group in groups:
+              - rtgl-view g=md:
+                - rtgl-text: ${group.name}
+                - rtgl-view d=h w=f fw=w g=lg:
+                  - $for item in group.children:
+                    - rtgl-view#audio-item-${item.id} w=200 h=150 bgc=ac cur=p av=c ah=c bw=${item.bw}:
+                      - rtgl-text: ${item.name}
+                      - rtgl-text s=sm c=mu-fg: Audio File
+        - rtgl-view d=h av=c ah=e w=f g=lg:
+          - rtgl-button#button-select: Select

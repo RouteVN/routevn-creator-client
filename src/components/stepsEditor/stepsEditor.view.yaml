@@ -57,5 +57,12 @@ template:
         - rtgl-view h=f av=c w=32 ah=e mr=md:
           - rtgl-text s=sm c=${step.lineColor}: ${step.lineNumber}
         - rtgl-view wh=16 br=f mr=md:
-        - 'div#step-${step.id} style="width: 100%;" contenteditable=true':
-          - 'span style="font-size: 18px;"': ${step.instructions.presentationInstructions.dialogue.text}
+        - rtgl-view d=h w=f av=c:
+          - 'div#step-${step.id} style="width: 100%;" contenteditable=true':
+            - 'span style="font-size: 18px;"': ${step.instructions.presentationInstructions.dialogue.text}
+          - rtgl-view d=h:
+            - $if step.backgroundFileId:
+              - rvn-file-image w=36 h=24 fileId=${step.backgroundFileId}: 
+            # - $else:
+            #   - rtgl-view w=36 h=24 bgc=mu av=c ah=c:
+            #     - rtgl-text s=xs: No Background

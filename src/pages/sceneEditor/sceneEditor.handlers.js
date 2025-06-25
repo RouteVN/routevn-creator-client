@@ -510,7 +510,7 @@ export const handleMergeSteps = (e, deps) => {
 
 export const handleBackgroundActionClick = (e, deps) => {
   const { store, render } = deps;
-  store.setMode("actions");
+  store.setMode("background");
   render();
 };
 
@@ -541,6 +541,58 @@ export const handleBgmActionContextMenu = (e, deps) => {
   });
   render();
 };
+
+export const handleSoundEffectActionClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("soundeffects");
+  render();
+};
+
+export const handleSoundEffectActionContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+  
+  store.showInstructionDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    instructionType: 'soundEffects'
+  });
+  render();
+};
+
+export const handleCharactersActionClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("characters");
+  render();
+};
+
+export const handleCharactersActionContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+  
+  store.showInstructionDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    instructionType: 'characters'
+  });
+  render();
+};
+
+export const handleSceneTransitionActionClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("scenetransition");
+  render();
+};
+
+export const handleSceneTransitionActionContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+  
+  store.showInstructionDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    instructionType: 'sceneTransition'
+  });
+  render();
+};
+
 
 export const handleActionsOverlayClick = (e, deps) => {
   const { store, render } = deps;
