@@ -16,6 +16,6 @@
     "vite": "^6.3.5"
   },
   "scripts": {
-    "build": "bunx rtgl@latest fe build"
+    "build": "cp -r static _site && bunx rtgl@latest fe build"
   }
 }
