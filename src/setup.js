@@ -1,4 +1,4 @@
-import { createWebPatch } from 'rettangoli-fe';
+import { createWebPatch } from '@rettangoli/fe';
 import { h } from 'snabbdom/build/h';
 
 import { CustomSubject, createHttpClient } from './common';

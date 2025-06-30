@@ -59,7 +59,7 @@ export const toViewData = ({ state, props }, payload) => {
     const isBlockMode = state.mode === 'block';
 
     let backgroundFileId;
-    if (step.instructions.presentationInstructions.background) {
+    if (step.instructions?.presentationInstructions?.background) {
       console.log('step.instructions.presentationInstructions.background', step.instructions.presentationInstructions.background)
       const imageId = step.instructions.presentationInstructions.background.imageId;
       console.log('state.repositoryState.images.items', state.repositoryState.images.items)

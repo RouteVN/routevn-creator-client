@@ -26,6 +26,16 @@ export const handleSectionTabClick = (e, deps) => {
   const { store, render } = deps;
   const id = e.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
+  
+  // Reset selected step to first step of new section
+  const scene = store.selectScene();
+  const newSection = scene.sections.find(section => section.id === id);
+  if (newSection && newSection.steps && newSection.steps.length > 0) {
+    store.setSelectedStepId(newSection.steps[0].id);
+  } else {
+    store.setSelectedStepId(undefined);
+  }
+  
   render();
 };
 
@@ -153,7 +163,12 @@ export const handleSectionAddClick = (e, deps) => {
   const newScene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
     .find((item) => item.id === sceneId);
-  newScene.sections = toFlatItems(newScene.sections);
+  newScene.sections = toFlatItems(newScene.sections).map((section) => {
+    return {
+      ...section,
+      steps: toFlatItems(section.steps),
+    };
+  });
   store.setScene({
     id: sceneId,
     scene: newScene,
@@ -663,7 +678,12 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     const newScene = toFlatItems(scenes)
       .filter((item) => item.type === "scene")
       .find((item) => item.id === sceneId);
-    newScene.sections = toFlatItems(newScene.sections);
+    newScene.sections = toFlatItems(newScene.sections).map((section) => {
+      return {
+        ...section,
+        steps: toFlatItems(section.steps),
+      };
+    });
     store.setScene({
       id: sceneId,
       scene: newScene,
@@ -765,7 +785,12 @@ export const handleFormActionClick = (e, deps) => {
       const newScene = toFlatItems(scenes)
         .filter((item) => item.type === "scene")
         .find((item) => item.id === sceneId);
-      newScene.sections = toFlatItems(newScene.sections);
+      newScene.sections = toFlatItems(newScene.sections).map((section) => {
+        return {
+          ...section,
+          steps: toFlatItems(section.steps),
+        };
+      });
       store.setScene({
         id: sceneId,
         scene: newScene,

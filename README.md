@@ -1,14 +1,28 @@
 
+This is the frontend code for RouteVN Creator
+
+## Development
+
+Install dependencies
 
 ```shell
-yq eval ./pages/sidebar/sidebar.view.yaml -o=json -P >  ./pages/sidebar/sidebar.view.js && sed -i '' '1s/^/export default /' ./pages/sidebar/sidebar.view.js
+bun install
 ```
 
-```
-for file in template.*; do
-  mv "$file" "${file/template/resources}"
-done
+Build the project
 
-sed -i '' 's/template/resources/g' template.js
+```shell
+bun run build
 ```
 
+Run the project
+
+```shell
+bunx serve _site
+```
+
+Open url:
+
+```shell
+http://localhost:3000/project
+```
