@@ -155,7 +155,7 @@ export const toViewData = ({ state, props }, payload) => {
     }
   } : null;
 
-  const selectedStep = currentSection?.steps.find(step => step.id === state.selectedStepId);
+  const selectedStep = currentSection?.steps?.find(step => step.id === state.selectedStepId);
 
   let backgroundImage;
   let bgmAudio;
@@ -210,7 +210,7 @@ export const toViewData = ({ state, props }, payload) => {
   return {
     scene: state.scene,
     sections,
-    currentSteps: currentSection?.steps || [],
+    currentSteps: Array.isArray(currentSection?.steps) ? currentSection.steps : [],
     currentInstructions: [],
     currentStep: selectedStep,
     // currentStep: currentSteps.find(step => step.id === state.selectedStepId),
