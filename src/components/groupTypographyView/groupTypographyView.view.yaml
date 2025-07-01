@@ -76,11 +76,9 @@ template:
                               - 'rtgl-view#typography-item-${item.id} ah=c bw=xs pb=md cur=p style="${item.selectedStyle}"':
                                 - 'rtgl-view w=200 h=80 av=c ah=c br=md bc=bo style="color: ${item.fontColor}; font-size: ${item.fontSize}px; font-weight: ${item.fontWeight};"':
                                   - rtgl-text: ${item.name}
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
-                          - rtgl-view#add-typography-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
-                            - rtgl-text: Add Typography
-                  - $if group.hasChildren:
-                      - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText:
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No typography found matching "${searchQuery}"

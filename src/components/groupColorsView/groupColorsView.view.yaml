@@ -78,11 +78,9 @@ template:
                               - 'rtgl-view#color-item-${item.id} ah=c bw=xs pb=md cur=p style="${item.selectedStyle}"':
                                 - 'rtgl-view wh=64 br=md style="background-color: ${item.hex}"':
                                 - rtgl-text: ${item.name}
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
-                          - rtgl-view#add-color-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
-                            - rtgl-text: Add Color
-                  - $if group.hasChildren:
-                      - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText:
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No colors found matching "${searchQuery}"

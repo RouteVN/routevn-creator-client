@@ -76,11 +76,9 @@ template:
                                     - rtgl-view w=200 h=150 br=md av=c ah=c bgc=fg:
                                       - rtgl-svg wh=24 svg=image c=mu-fg:
                                 - rtgl-text: ${item.name}
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
-                          - rtgl-view#add-layout-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
-                            - rtgl-text: Add Layout
-                  - $if group.hasChildren:
-                      - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText:
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No layouts found matching "${searchQuery}"

@@ -52,8 +52,7 @@ template:
                       - $for item in group.children:
                           - 'rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}"':
                             - rtgl-image br=md w=200 h=150 src=/public/project_logo_placeholder.png:
+                      - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                     $else:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
-              - $if group.hasChildren:
-                  - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
     - rtgl-view h=33vh:
