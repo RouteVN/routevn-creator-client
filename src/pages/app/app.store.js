@@ -6,7 +6,6 @@ export const selectShowSidebar = (state, props, payload) => {
   const currentRoutePattern = selectCurrentRoutePattern(state, props, payload);
   const routesWithNavBar = [
     "/project",
-    "/projects",
     "/project/resources",
     "/project/resources/images",
     "/project/resources/characters",
