@@ -4,10 +4,6 @@ import { h } from 'snabbdom/build/h';
 import { CustomSubject, createHttpClient } from './common';
 import { createRepository } from './repository';
 
-import { createAutoMergeData } from './automerge/sample.js'
-import stepsEditorAutomergeData from './automerge/sample3.js'
-
-
 /**
  * @typedef {Object} HttpClient
  * @property {Object} creator - Creatorendpoints
@@ -40,13 +36,6 @@ const createRouteVnHttpClient = ({ baseUrl, headers }) => {
     "X-Platform": "web",
   },
 });
-
-
-const backgroundsData = createAutoMergeData()
-backgroundsData.createItem('_root', {
-  name: 'Initial Item',
-  level: 0
-})
 
 const initialData = {
   project: {
@@ -274,10 +263,6 @@ const componentDependencies = {
   router,
   repository,
   audioManager,
-  localData: {
-    backgrounds: backgroundsData,
-    'scene:1': stepsEditorAutomergeData(),
-  },
 }
 
 const pageDependencies = {
@@ -286,10 +271,6 @@ const pageDependencies = {
   router,
   repository,
   audioManager,
-  localData: {
-    backgrounds: backgroundsData,
-    'scene:1': stepsEditorAutomergeData(),
-  },
 }
 
 const deps = {

@@ -1,7 +1,6 @@
 {
   "type": "module",
   "dependencies": {
-    "@automerge/automerge": "^2.2.9",
     "@rettangoli/fe": "^0.0.5",
     "esbuild": "^0.25.5",
     "immer": "^10.1.1",

@@ -29,10 +29,9 @@ export const handleCloseDialogue = (payload, deps) => {
 }
 
 export const handleProjectsClick = (e, deps) => {
-  // TODO sometimes e.target.id is undefined
-  const id = e.target.id
+  const id = e.currentTarget.id
   deps.subject.dispatch('redirect', {
-    path: `/projects/${id}`,
+    path: `/project`,
   });
 }
 
