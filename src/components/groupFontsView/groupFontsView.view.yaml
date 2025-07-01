@@ -64,10 +64,9 @@ template:
                                 - rtgl-view w=200 h=150 p=md bgc=bg bc=bo bw=xs br=md d=v av=c:
                                   - rtgl-text s=h5: ${item.name}
                                   - rtgl-text c=mu-fg s=sm: Font file
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
-                  - $if group.hasChildren:
-                      - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No fonts found matching "${searchQuery}"

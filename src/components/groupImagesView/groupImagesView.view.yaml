@@ -62,10 +62,9 @@ template:
                           - $for item in group.children:
                               - 'rtgl-view#image-item-${item.id} cur=p style="${item.selectedStyle}"':
                                 - rvn-file-image br=md w=200 h=150 fileId=${item.fileId}:
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
-                  - $if group.hasChildren:
-                      - rvn-drag-drop-bar#drag-drop-bar-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No images found matching "${searchQuery}"
