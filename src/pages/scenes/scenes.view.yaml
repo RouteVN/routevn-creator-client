@@ -24,7 +24,7 @@ refs:
 
 template:
   - rtgl-view d=h w=f h=f: 
-    - rtgl-view w=f h=f w=240 bwr=xs:
+    - 'rtgl-view w=f h=f w=240 bwr=xs z=1':
       - rtgl-view ph=lg pv=md:
         - rtgl-text s=sm c=mu-fg: Scenes
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
