@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../repository";
+import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
   const { repository, store, render } = deps;

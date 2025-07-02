@@ -1,6 +1,6 @@
 
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../repository";
+import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
