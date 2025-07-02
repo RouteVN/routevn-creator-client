@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from '../../repository.js';
+import { toFlatItems, toFlatGroups } from '../../deps/repository';
 
 export const INITIAL_STATE = Object.freeze({
   layoutData: { tree: [], items: {} },

@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "../../repository";
+import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { nanoid } from "nanoid";
 
 export const INITIAL_STATE = Object.freeze({

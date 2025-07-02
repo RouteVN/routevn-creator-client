@@ -305,7 +305,27 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-export const createRepository = (initialState, initialActionSteams) => {
+export const createRepository = (initialState, localStorageKey) => {
+  // If localStorageKey is provided, handle localStorage integration
+  if (localStorageKey && typeof localStorageKey === 'string') {
+    const storedEventStream = localStorage.getItem(localStorageKey);
+    const actionStream = storedEventStream ? JSON.parse(storedEventStream) : [];
+    
+    const repository = createRepositoryInternal(initialState, actionStream);
+    
+    // Auto-save to localStorage every 5 seconds
+    setInterval(() => {
+      localStorage.setItem(localStorageKey, JSON.stringify(repository.getActionStream()));
+    }, 5000);
+    
+    return repository;
+  }
+  
+  // Original behavior for backward compatibility
+  return createRepositoryInternal(initialState, []);
+};
+
+const createRepositoryInternal = (initialState, initialActionSteams) => {
   const actionStream = initialActionSteams || [];
 
   const addAction = (action) => {

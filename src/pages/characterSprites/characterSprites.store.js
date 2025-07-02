@@ -1,5 +1,5 @@
 
-import { toFlatGroups, toFlatItems } from "../../repository";
+import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 B';

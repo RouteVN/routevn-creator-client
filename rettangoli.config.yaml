@@ -6,11 +6,6 @@ fe:
    outfile: '_site/public/main.js' # output this is separate from rettangoli file
   #  watchPort: 3001
 
-# all sites configuration
-# sites:
-#   path: 'sites'
-#   templateFolder: '..'
-
 # all visual testing configuration
 vt:
   path: 'vt'
