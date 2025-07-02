@@ -18,7 +18,7 @@ refs:
 
 template: 
   - rtgl-view d=h w=f h=f: 
-    - rtgl-view w=f h=f w=240 bwr=xs:
+    - 'rtgl-view w=f h=f w=240 bwr=xs style="z-index:1;"':
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-fonts-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
