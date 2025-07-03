@@ -42,7 +42,7 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search videos..." value=${searchQuery}: 
+        - rtgl-input#search-input s=sm w=f placeholder="Search videos..." value=${searchQuery}: 
         # TODO implement zoom controls (increase/decrease video size)
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
