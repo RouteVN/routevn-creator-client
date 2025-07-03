@@ -5,6 +5,12 @@ viewDataSchema:
   properties:
     searchQuery:
       type: string
+    zoomLevel:
+      type: number
+    imageWidth:
+      type: number
+    imageHeight:
+      type: number
 
 propsSchema:
   type: object
@@ -21,6 +27,20 @@ refs:
     eventListeners:
       input-keydown:
         handler: handleSearchInput
+  zoom-slider:
+    eventListeners:
+      change:
+        handler: handleZoomChange
+      input:
+        handler: handleZoomChange
+  zoom-out:
+    eventListeners:
+      click:
+        handler: handleZoomOut
+  zoom-in:
+    eventListeners:
+      click:
+        handler: handleZoomIn
   drag-drop-item-*:
     eventListeners:
       file-selected:
@@ -42,8 +62,12 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm w=f placeholder="Search images..." value=${searchQuery}: 
-        # TODO implment zoom controls (increase/decrease image size)
+        - rtgl-view d=h av=c g=md w=f:
+          - rtgl-input#search-input s=sm flex=1 placeholder="Search images..." value=${searchQuery}: 
+          - rtgl-view d=h av=c g=sm:
+            - rtgl-button#zoom-out style="background:transparent;border:none;padding:4px 8px;cursor:pointer;": "-"
+            - 'input#zoom-slider type="range" min="0.5" max="2.0" step="0.1" value="${zoomLevel}" style="width: 120px;"': 
+            - rtgl-button#zoom-in style="background:transparent;border:none;padding:4px 8px;cursor:pointer;": "+"
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
             - rtgl-view w=f ph=md:
@@ -61,7 +85,7 @@ template:
                       - $if group.hasChildren:
                           - $for item in group.children:
                               - 'rtgl-view#image-item-${item.id} cur=p style="${item.selectedStyle}"':
-                                - rvn-file-image br=md w=200 h=150 fileId=${item.fileId}:
+                                - rvn-file-image br=md w=${imageWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageWidth}x${imageHeight}:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:

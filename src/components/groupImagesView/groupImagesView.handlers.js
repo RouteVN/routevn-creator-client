@@ -6,6 +6,33 @@ export const handleSearchInput = (e, deps) => {
   render();
 };
 
+export const handleZoomChange = (e, deps) => {
+  const { store, render } = deps;
+  const value = (e.target && e.target.value) || (e.currentTarget && e.currentTarget.value) || 1.0;
+  const zoomLevel = parseFloat(value);
+  
+  store.setZoomLevel(zoomLevel);
+  render();
+};
+
+export const handleZoomOut = (e, deps) => {
+  const { store, render } = deps;
+  const currentZoom = store.getState().zoomLevel || 1.0;
+  const newZoom = Math.max(0.5, currentZoom - 0.1);
+  
+  store.setZoomLevel(newZoom);
+  render();
+};
+
+export const handleZoomIn = (e, deps) => {
+  const { store, render } = deps;
+  const currentZoom = store.getState().zoomLevel || 1.0;
+  const newZoom = Math.min(2.0, currentZoom + 0.1);
+  
+  store.setZoomLevel(newZoom);
+  render();
+};
+
 export const handleGroupClick = (e, deps) => {
   const { store, render } = deps;
   const groupId = e.currentTarget.id.replace("group-", "");
