@@ -16,20 +16,34 @@ export const handleZoomChange = (e, deps) => {
 };
 
 export const handleZoomOut = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, getRefIds } = deps;
   const currentZoom = store.getState().zoomLevel || 1.0;
   const newZoom = Math.max(0.5, currentZoom - 0.1);
   
   store.setZoomLevel(newZoom);
+  
+  // Update slider DOM element directly
+  const sliderElement = getRefIds()['zoom-slider']?.elm;
+  if (sliderElement) {
+    sliderElement.value = newZoom;
+  }
+  
   render();
 };
 
 export const handleZoomIn = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, getRefIds } = deps;
   const currentZoom = store.getState().zoomLevel || 1.0;
   const newZoom = Math.min(4.0, currentZoom + 0.1);
   
   store.setZoomLevel(newZoom);
+  
+  // Update slider DOM element directly
+  const sliderElement = getRefIds()['zoom-slider']?.elm;
+  if (sliderElement) {
+    sliderElement.value = newZoom;
+  }
+  
   render();
 };
 
