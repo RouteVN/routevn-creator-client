@@ -27,7 +27,7 @@ export const handleZoomOut = (e, deps) => {
 export const handleZoomIn = (e, deps) => {
   const { store, render } = deps;
   const currentZoom = store.getState().zoomLevel || 1.0;
-  const newZoom = Math.min(2.0, currentZoom + 0.1);
+  const newZoom = Math.min(4.0, currentZoom + 0.1);
   
   store.setZoomLevel(newZoom);
   render();

@@ -18,7 +18,7 @@ export const setSearchQuery = (state, query) => {
 }
 
 export const setZoomLevel = (state, zoomLevel) => {
-  state.zoomLevel = Math.max(0.5, Math.min(2.0, zoomLevel));
+  state.zoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
 }
 
 export const toViewData = ({ state, props }) => {
