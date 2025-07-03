@@ -53,20 +53,27 @@ $elif currentRoutePattern == "/project/new-feature":
 
 ## Development
 
+Install `rtgl` cli
+
+```shell
+npm i -g rtgl
+```
+
+
 Install dependencies:
 ```shell
 bun install
 ```
 
-Build the project:
+Run the project in watch mode:
 ```shell
-bun run build
+bun run watch
 ```
 
-<!-- TODO implmement watch mode -->
+Or build project and serve without watch mode:
 
-Run the project:
 ```shell
+bun run build
 bunx serve _site
 ```
 
