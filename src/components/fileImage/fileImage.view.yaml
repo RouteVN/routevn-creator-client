@@ -19,4 +19,4 @@ propsSchema:
   required: []
 
 template:
-  - rtgl-image src=${src} bc=fg of=cov ${containerAttrString}:
+  - rtgl-image src=${src} bc=fg of=con ${containerAttrString}:

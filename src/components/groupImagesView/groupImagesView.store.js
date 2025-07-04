@@ -1,6 +1,7 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: '',
+  zoomLevel: 1.0,
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -14,6 +15,17 @@ export const toggleGroupCollapse = (state, groupId) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
+}
+
+export const setZoomLevel = (state, zoomLevel) => {
+  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+  
+  // Only update if the value actually changed (avoid infinite loops)
+  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) {
+    return; // No change needed
+  }
+  
+  state.zoomLevel = newZoomLevel;
 }
 
 export const toViewData = ({ state, props }) => {
@@ -54,11 +66,23 @@ export const toViewData = ({ state, props }) => {
     })
     .filter(group => group.shouldDisplay);
 
+  const baseHeight = 150;
+  const imageHeight = Math.round(baseHeight * state.zoomLevel);
+  // Set a reasonable max width to prevent extremely wide images
+  const maxWidth = Math.round(400 * state.zoomLevel);
+
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
     uploadText: "Upload Image",
     acceptedFileTypes: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'],
-    searchQuery: state.searchQuery
+    searchQuery: state.searchQuery,
+    zoomLevel: state.zoomLevel,
+    imageHeight,
+    maxWidth
   };
 };
+
+export const selectCurrentZoomLevel = ({state}) => {
+  return state.zoomLevel || 1.0;
+}
