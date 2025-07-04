@@ -2,6 +2,8 @@ export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: '',
   zoomLevel: 1.0,
+  previewActivated: false,
+  previewFileId: null,
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -26,6 +28,17 @@ export const setZoomLevel = (state, zoomLevel) => {
   }
   
   state.zoomLevel = newZoomLevel;
+}
+
+export const setPreviewFileId = (state, fileId) => {
+  state.previewFileId = fileId
+}
+
+export const setPreviewActivated = (state, activated, fileId = null) => {
+  state.previewActivated = activated
+  if (fileId !== null) {
+    state.previewFileId = fileId
+  }
 }
 
 export const toViewData = ({ state, props }) => {
@@ -78,6 +91,8 @@ export const toViewData = ({ state, props }) => {
     acceptedFileTypes: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'],
     searchQuery: state.searchQuery,
     zoomLevel: state.zoomLevel,
+    previewActivated: state.previewActivated,
+    previewFileId: state.previewFileId,
     imageHeight,
     maxWidth
   };

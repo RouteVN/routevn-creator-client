@@ -83,59 +83,29 @@ export const handleImageItemClick = (e, deps) => {
   }));
 };
 
-export const handleImageDoubleClick = async (e, deps) => {
-  const { httpClient } = deps;
+export const handleImageDoubleClick = (e, deps) => {
+  const { store, render } = deps;
   
   // Get the fileId from the image item
   const fileImageElement = e.currentTarget.querySelector('rvn-file-image');
-  const fileId = fileImageElement?.getAttribute('fileId');
-
-  if (fileId && httpClient) {
-    try {
-      // Get the actual image URL
-      const { url } = await httpClient.creator.getFileContent({ 
-        fileId: fileId, 
-        projectId: 'someprojectId' 
-      });
-
-      const overlay = document.createElement('div');
-      overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        cursor: zoom-out;
-      `;
-
-      const img = document.createElement('img');
-      img.src = url;
-      img.style.cssText = `
-        max-width: 90vw;
-        max-height: 90vh;
-        object-fit: contain;
-        pointer-events: none;
-      `;
-
-      overlay.appendChild(img);
-
-      overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) {
-          document.body.removeChild(overlay);
-        }
-      });
-
-      document.body.appendChild(overlay);
-    } catch (error) {
-      console.error('Failed to load fullscreen image:', error);
-    }
+  const fileId = fileImageElement?.getAttribute('fileid');
+  
+  if (fileId) {
+    // Try setting fileId first
+    store.setPreviewFileId(fileId);
+    store.setPreviewActivated(true);
+    render();
+  } else {
+    console.error("No fileId found for preview");
   }
 };
+
+export const handlePreviewOverlayClick = (_, deps) => {
+  const { store, render } = deps;
+  
+  store.setPreviewActivated(false);
+  render();
+}
 
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent } = deps;

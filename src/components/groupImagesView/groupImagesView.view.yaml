@@ -14,6 +14,10 @@ viewDataSchema:
       type: number
     maxWidth:
       type: number
+    previewActivated:
+      type: boolean
+    previewFileId:
+      type: string
 
 propsSchema:
   type: object
@@ -62,6 +66,10 @@ refs:
         handler: handleImageItemClick
       dblclick:
         handler: handleImageDoubleClick
+  preview-overlay:
+    eventListeners:
+      click:
+        handler: handlePreviewOverlayClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -98,4 +106,9 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No images found matching "${searchQuery}"
     - rtgl-view h=33vh:
+  - $if previewActivated:
+      - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
+        - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.8":
+        - $if previewFileId:
+            - rvn-file-image fileId=${previewFileId} z=3001:
       

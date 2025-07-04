@@ -147,10 +147,9 @@ export const handleDetailPanelImageSelected = async (e, deps) => {
   try {
     // Get image dimensions before uploading
     const dimensions = await getImageDimensions(file);
-    console.log('Image dimensions for replacement', file.name, ':', dimensions);
 
     // Upload the new file
-    const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
+    const { uploadUrl, fileId } = await httpClient.creator.uploadFile({
       projectId: "someprojectId",
     });
 
@@ -177,8 +176,8 @@ export const handleDetailPanelImageSelected = async (e, deps) => {
             name: file.name,
             fileType: file.type,
             fileSize: file.size,
-            width: dimensions?.width,
-            height: dimensions?.height,
+            width: dimensions.width,
+            height: dimensions.height,
           },
         },
       });
