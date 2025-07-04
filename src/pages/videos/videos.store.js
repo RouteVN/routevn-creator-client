@@ -47,7 +47,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Video Details' : null;
   const detailFields = selectedItemDetails && selectedItemDetails.type === 'video' ? [
-    ...(selectedItemDetails.thumbnailFileId ? [{ type: 'image', fileId: selectedItemDetails.thumbnailFileId, width: 240, height: 135 }] : []),
+    { type: 'image', fileId: selectedItemDetails.thumbnailFileId, width: 240, height: 135 },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },

@@ -147,69 +147,72 @@ export const handleDragDropFileSelected = async (e, deps) => {
             quality: 0.8
           });
           console.log(`Thumbnail extracted successfully for: ${file.name}`);
-        } catch (thumbnailError) {
-          console.warn(`Failed to extract thumbnail for ${file.name}:`, thumbnailError);
+        } catch (error) {
+            return {
+              success: false,
+              file,
+              error: error.message,
+            };
         }
       }
 
-      // Upload the main video file
-      const { downloadUrl, uploadUrl, fileId } =
-        await httpClient.creator.uploadFile({
+      // Get upload URLs for both video and thumbnail in parallel
+      const [videoUpload, thumbnailUpload] = await Promise.all([
+        httpClient.creator.uploadFile({
           projectId: "someprojectId",
-        });
+        }),
+        httpClient.creator.uploadFile({
+          projectId: "someprojectId",
+        })
+      ]);
 
-      const response = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type, // Ensure the Content-Type matches the file type
-        },
-      });
+      // Upload both files in parallel
+      const [videoResponse, thumbnailResponse] = await Promise.all([
+        fetch(videoUpload.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        }),
+        fetch(thumbnailUpload.uploadUrl, {
+          method: "PUT",
+          body: thumbnailData.blob,
+          headers: {
+            "Content-Type": thumbnailData.format,
+          },
+        })
+      ]);
 
-      if (response.ok) {
+      if (videoResponse.ok) {
         console.log("File uploaded successfully:", file.name);
         
-        // Upload thumbnail if extracted successfully
         let thumbnailFileId = null;
-        if (thumbnailData) {
-          try {
-            const thumbnailUpload = await httpClient.creator.uploadFile({
-              projectId: "someprojectId",
-            });
-            
-            const thumbnailResponse = await fetch(thumbnailUpload.uploadUrl, {
-              method: "PUT",
-              body: thumbnailData.blob,
-              headers: {
-                "Content-Type": thumbnailData.format,
-              },
-            });
-            
-            if (thumbnailResponse.ok) {
-              thumbnailFileId = thumbnailUpload.fileId;
-              console.log(`Thumbnail uploaded successfully for: ${file.name}`);
-            } else {
-              console.warn(`Thumbnail upload failed for ${file.name}:`, thumbnailResponse.statusText);
-            }
-          } catch (thumbnailUploadError) {
-            console.warn(`Thumbnail upload error for ${file.name}:`, thumbnailUploadError);
-          }
+        if (thumbnailResponse.ok) {
+          thumbnailFileId = thumbnailUpload.fileId;
+          console.log(`Thumbnail uploaded successfully for: ${file.name}`);
+        } else {
+          return {
+            success: false,
+            file,
+            error: thumbnailResponse.statusText,
+          };
         }
         
         return {
           success: true,
           file,
-          downloadUrl,
-          fileId,
+          downloadUrl: videoUpload.downloadUrl,
+          fileId: videoUpload.fileId,
           thumbnailFileId,
           thumbnailData
         };
       } else {
-        console.error("File upload failed:", file.name, response.statusText);
+        console.error("File upload failed:", file.name, videoResponse.statusText);
         return {
           success: false,
           file,
-          error: response.statusText,
+          error: videoResponse.statusText,
         };
       }
     } catch (error) {
