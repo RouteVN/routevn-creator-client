@@ -2,6 +2,7 @@ import { createWebPatch } from '@rettangoli/fe';
 import { h } from 'snabbdom/build/h';
 
 import { createRepository } from './deps/repository';
+import { createUserConfig } from './deps/userConfig';
 import Subject from './deps/subject';
 import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
 import Router from './deps/router';
@@ -78,7 +79,7 @@ const initialData = {
 }
 
 const repository = createRepository(initialData, 'repositoryEventStream');
-
+const userConfig = createUserConfig();
 
 const subject = new Subject();
 const router = new Router();
@@ -89,6 +90,7 @@ const componentDependencies = {
   subject,
   router,
   repository,
+  userConfig,
   audioManager,
 }
 
@@ -97,6 +99,7 @@ const pageDependencies = {
   subject, 
   router,
   repository,
+  userConfig,
   audioManager,
 }
 

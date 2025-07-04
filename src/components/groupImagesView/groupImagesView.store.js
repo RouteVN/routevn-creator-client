@@ -4,6 +4,12 @@ export const INITIAL_STATE = Object.freeze({
   zoomLevel: 1.0,
 });
 
+export const initializeFromUserConfig = (state, userConfig) => {
+  // This function is now optional since INITIAL_STATE loads from localStorage
+  // Keep it for backwards compatibility
+  console.log('initializeFromUserConfig - state already has zoom:', state.zoomLevel);
+};
+
 export const toggleGroupCollapse = (state, groupId) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
@@ -18,7 +24,28 @@ export const setSearchQuery = (state, query) => {
 }
 
 export const setZoomLevel = (state, zoomLevel) => {
-  state.zoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+  
+  // Only update if the value actually changed (avoid infinite loops)
+  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) {
+    return; // No change needed
+  }
+  
+  state.zoomLevel = newZoomLevel;
+  
+  // Save to localStorage immediately
+  try {
+    const stored = localStorage.getItem('routevn-user-config');
+    const config = stored ? JSON.parse(stored) : {};
+    if (!config.groupImagesView) {
+      config.groupImagesView = {};
+    }
+    config.groupImagesView.zoomLevel = newZoomLevel;
+    localStorage.setItem('routevn-user-config', JSON.stringify(config));
+    console.log('setZoomLevel - saved to localStorage:', newZoomLevel);
+  } catch (e) {
+    console.error('Failed to save zoom level:', e);
+  }
 }
 
 export const toViewData = ({ state, props }) => {

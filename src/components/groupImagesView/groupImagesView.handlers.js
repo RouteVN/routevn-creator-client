@@ -1,3 +1,5 @@
+// Zoom level persistence is now handled by Proxy in store.js
+
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
   const searchQuery = e.detail.value || '';
@@ -6,10 +8,33 @@ export const handleSearchInput = (e, deps) => {
   render();
 };
 
+export const handleOnMount = (deps) => {
+  const { store, render } = deps;
+  
+  // Load zoom level from localStorage
+  try {
+    const stored = localStorage.getItem('routevn-user-config');
+    if (stored) {
+      const config = JSON.parse(stored);
+      const storedZoomLevel = config.groupImagesView?.zoomLevel;
+      if (storedZoomLevel !== undefined) {
+        console.log('handleOnMount - loading zoom level from localStorage:', storedZoomLevel);
+        store.setZoomLevel(storedZoomLevel);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load zoom level from localStorage:', e);
+  }
+  
+  render();
+};
+
 export const handleZoomChange = (e, deps) => {
   const { store, render } = deps;
   const value = (e.target && e.target.value) || (e.currentTarget && e.currentTarget.value) || 1.0;
   const zoomLevel = parseFloat(value);
+  
+  console.log('handleZoomChange - zoomLevel:', zoomLevel);
   
   store.setZoomLevel(zoomLevel);
   render();
