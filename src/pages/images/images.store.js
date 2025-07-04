@@ -45,6 +45,7 @@ export const toViewData = ({ state, props }, payload) => {
     displayFileType: selectedItem.fileType || (selectedItem.type === 'image' ? 'PNG' : null),
     displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
+    dimensions: (selectedItem.width && selectedItem.height) ? { width: selectedItem.width, height: selectedItem.height } : null,
   } : null;
 
   console.log({
@@ -55,10 +56,11 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Transform selectedItem into detailPanel props
   const detailFields = selectedItemDetails ? [
-    { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135, editable: true },
+    { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135, editable: true, key: `image-${selectedItemDetails.fileId}` },
     { type: 'text', value: selectedItemDetails.name },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
+    { type: 'text', label: 'Dimensions', value: selectedItemDetails.dimensions ? `${selectedItemDetails.dimensions.width} × ${selectedItemDetails.dimensions.height}` : null, show: !!selectedItemDetails.dimensions },
   ] : [];
   const detailEmptyMessage = 'No selection';
 

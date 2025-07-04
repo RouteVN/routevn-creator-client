@@ -15,6 +15,9 @@ propsSchema:
           editable:
             type: boolean
             description: Whether the field is editable (for images, enables click-to-upload)
+          key:
+            type: string
+            description: Unique key for the field to force re-rendering when changed
     emptyMessage:
       type: string
 
@@ -39,12 +42,12 @@ template:
                   - $if field.editable:
                       - rtgl-view pos=rel:
                         - 'rtgl-view#editable-image-${i} cur=p style="position: relative;"':
-                          - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId}:
+                          - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId} key=${field.key}:
                           - 'rtgl-view pos=abs cor=full bgc=rgba(0,0,0,0.5) av=c ah=c style="opacity: 0; transition: opacity 0.2s;" h-style="opacity: 1;"':
                             - rtgl-svg svg=upload wh=24 c=wh:
                         - 'input#file-input-${i} type=file accept="image/*" style="display: none;"':
                     $else:
-                      - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId}:
+                      - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId} key=${field.key}:
                 $elif field.type == 'audio':
                   - rvn-audio-player fileId=${field.fileId} autoPlay=${field.autoPlay}:
                 $elif field.type == 'video':
