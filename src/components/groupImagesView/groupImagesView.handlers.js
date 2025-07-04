@@ -1,5 +1,3 @@
-// Zoom level persistence is now handled by Proxy in store.js
-
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
   const searchQuery = e.detail.value || '';
@@ -83,6 +81,60 @@ export const handleImageItemClick = (e, deps) => {
     bubbles: true,
     composed: true
   }));
+};
+
+export const handleImageDoubleClick = async (e, deps) => {
+  const { httpClient } = deps;
+  
+  // Get the fileId from the image item
+  const fileImageElement = e.currentTarget.querySelector('rvn-file-image');
+  const fileId = fileImageElement?.getAttribute('fileId');
+
+  if (fileId && httpClient) {
+    try {
+      // Get the actual image URL
+      const { url } = await httpClient.creator.getFileContent({ 
+        fileId: fileId, 
+        projectId: 'someprojectId' 
+      });
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        cursor: zoom-out;
+      `;
+
+      const img = document.createElement('img');
+      img.src = url;
+      img.style.cssText = `
+        max-width: 90vw;
+        max-height: 90vh;
+        object-fit: contain;
+        pointer-events: none;
+      `;
+
+      overlay.appendChild(img);
+
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) {
+          document.body.removeChild(overlay);
+        }
+      });
+
+      document.body.appendChild(overlay);
+    } catch (error) {
+      console.error('Failed to load fullscreen image:', error);
+    }
+  }
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {

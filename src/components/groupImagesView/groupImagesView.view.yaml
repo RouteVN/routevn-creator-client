@@ -60,6 +60,8 @@ refs:
     eventListeners:
       click:
         handler: handleImageItemClick
+      dblclick:
+        handler: handleImageDoubleClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
