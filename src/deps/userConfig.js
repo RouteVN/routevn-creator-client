@@ -8,11 +8,6 @@ function createUserConfig(initState = DEFAULT_USER_CONFIG, localStorageKey = 'ro
   const storedConfig = localStorage.getItem(localStorageKey);
   let currentConfig = storedConfig ? JSON.parse(storedConfig) : { ...initState };
 
-  // Auto-save disabled - immediate save on set() instead
-  // setInterval(() => {
-  //   localStorage.setItem(localStorageKey, JSON.stringify(currentConfig));
-  // }, 2000);
-
   return {
     set: (key, val) => {
       const keys = key.split('.');

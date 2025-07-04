@@ -10,9 +10,9 @@ viewDataSchema:
       type: string
     zoomLevel:
       type: number
-    imageWidth:
-      type: number
     imageHeight:
+      type: number
+    maxWidth:
       type: number
 
 propsSchema:
@@ -88,7 +88,7 @@ template:
                       - $if group.hasChildren:
                           - $for item in group.children:
                               - 'rtgl-view#image-item-${item.id} cur=p style="${item.selectedStyle}"':
-                                - rvn-file-image br=md w=${imageWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageWidth}x${imageHeight}:
+                                - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:

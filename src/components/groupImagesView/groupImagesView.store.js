@@ -4,12 +4,6 @@ export const INITIAL_STATE = Object.freeze({
   zoomLevel: 1.0,
 });
 
-export const initializeFromUserConfig = (state, userConfig) => {
-  // This function is now optional since INITIAL_STATE loads from localStorage
-  // Keep it for backwards compatibility
-  console.log('initializeFromUserConfig - state already has zoom:', state.zoomLevel);
-};
-
 export const toggleGroupCollapse = (state, groupId) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
@@ -32,20 +26,6 @@ export const setZoomLevel = (state, zoomLevel) => {
   }
   
   state.zoomLevel = newZoomLevel;
-  
-  // Save to localStorage immediately
-  try {
-    const stored = localStorage.getItem('routevn-user-config');
-    const config = stored ? JSON.parse(stored) : {};
-    if (!config.groupImagesView) {
-      config.groupImagesView = {};
-    }
-    config.groupImagesView.zoomLevel = newZoomLevel;
-    localStorage.setItem('routevn-user-config', JSON.stringify(config));
-    console.log('setZoomLevel - saved to localStorage:', newZoomLevel);
-  } catch (e) {
-    console.error('Failed to save zoom level:', e);
-  }
 }
 
 export const toViewData = ({ state, props }) => {
@@ -86,10 +66,10 @@ export const toViewData = ({ state, props }) => {
     })
     .filter(group => group.shouldDisplay);
 
-  const baseWidth = 200;
   const baseHeight = 150;
-  const imageWidth = Math.round(baseWidth * state.zoomLevel);
   const imageHeight = Math.round(baseHeight * state.zoomLevel);
+  // Set a reasonable max width to prevent extremely wide images
+  const maxWidth = Math.round(400 * state.zoomLevel);
 
   return {
     flatGroups,
@@ -98,7 +78,11 @@ export const toViewData = ({ state, props }) => {
     acceptedFileTypes: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'],
     searchQuery: state.searchQuery,
     zoomLevel: state.zoomLevel,
-    imageWidth,
-    imageHeight
+    imageHeight,
+    maxWidth
   };
 };
+
+export const selectCurrentZoomLevel = ({state}) => {
+  return state.zoomLevel || 1.0;
+}
