@@ -2,6 +2,84 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 
+const extractVideoThumbnail = async (videoFile, options = {}) => {
+  const {
+    timeOffset = 2,
+    width = 320,
+    height = 240,
+    format = 'image/jpeg',
+    quality = 0.8
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    video.onerror = (error) => {
+      reject(new Error(`Video load error: ${error.message || 'Unknown error'}`));
+    };
+    
+    video.onloadedmetadata = () => {
+      const seekTime = Math.min(timeOffset, video.duration - 0.1);
+      video.currentTime = seekTime;
+    };
+    
+    video.onseeked = () => {
+      try {
+        const videoAspectRatio = video.videoWidth / video.videoHeight;
+        const canvasAspectRatio = width / height;
+        
+        let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+        
+        if (videoAspectRatio > canvasAspectRatio) {
+          drawHeight = height;
+          drawWidth = height * videoAspectRatio;
+          offsetX = (width - drawWidth) / 2;
+        } else {
+          drawWidth = width;
+          drawHeight = width / videoAspectRatio;
+          offsetY = (height - drawHeight) / 2;
+        }
+        
+        ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const dataUrl = canvas.toDataURL(format, quality);
+            
+            video.remove();
+            canvas.remove();
+            URL.revokeObjectURL(video.src);
+            
+            resolve({
+              blob,
+              dataUrl,
+              width,
+              height,
+              format
+            });
+          } else {
+            reject(new Error('Failed to create thumbnail blob'));
+          }
+        }, format, quality);
+        
+      } catch (error) {
+        reject(new Error(`Thumbnail extraction error: ${error.message}`));
+      }
+    };
+    
+    video.src = URL.createObjectURL(videoFile);
+  });
+};
+
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { videos } = repository.getState();
@@ -56,6 +134,25 @@ export const handleDragDropFileSelected = async (e, deps) => {
   // Create upload promises for all files
   const uploadPromises = Array.from(files).map(async (file) => {
     try {
+      // Extract thumbnail for video files
+      let thumbnailData = null;
+      if (file.type.startsWith('video/')) {
+        try {
+          console.log(`Extracting thumbnail for video: ${file.name}`);
+          thumbnailData = await extractVideoThumbnail(file, {
+            timeOffset: 1,
+            width: 240,
+            height: 135,
+            format: 'image/jpeg',
+            quality: 0.8
+          });
+          console.log(`Thumbnail extracted successfully for: ${file.name}`);
+        } catch (thumbnailError) {
+          console.warn(`Failed to extract thumbnail for ${file.name}:`, thumbnailError);
+        }
+      }
+
+      // Upload the main video file
       const { downloadUrl, uploadUrl, fileId } =
         await httpClient.creator.uploadFile({
           projectId: "someprojectId",
@@ -71,11 +168,41 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
       if (response.ok) {
         console.log("File uploaded successfully:", file.name);
+        
+        // Upload thumbnail if extracted successfully
+        let thumbnailFileId = null;
+        if (thumbnailData) {
+          try {
+            const thumbnailUpload = await httpClient.creator.uploadFile({
+              projectId: "someprojectId",
+            });
+            
+            const thumbnailResponse = await fetch(thumbnailUpload.uploadUrl, {
+              method: "PUT",
+              body: thumbnailData.blob,
+              headers: {
+                "Content-Type": thumbnailData.format,
+              },
+            });
+            
+            if (thumbnailResponse.ok) {
+              thumbnailFileId = thumbnailUpload.fileId;
+              console.log(`Thumbnail uploaded successfully for: ${file.name}`);
+            } else {
+              console.warn(`Thumbnail upload failed for ${file.name}:`, thumbnailResponse.statusText);
+            }
+          } catch (thumbnailUploadError) {
+            console.warn(`Thumbnail upload error for ${file.name}:`, thumbnailUploadError);
+          }
+        }
+        
         return {
           success: true,
           file,
           downloadUrl,
           fileId,
+          thumbnailFileId,
+          thumbnailData
         };
       } else {
         console.error("File upload failed:", file.name, response.statusText);
@@ -112,6 +239,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
           id: nanoid(),
           type: "video",
           fileId: result.fileId,
+          thumbnailFileId: result.thumbnailFileId,
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,

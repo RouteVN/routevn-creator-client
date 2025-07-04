@@ -47,13 +47,6 @@ template:
                       - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId}:
                 $elif field.type == 'audio':
                   - rvn-audio-player fileId=${field.fileId} autoPlay=${field.autoPlay}:
-                $elif field.type == 'video':
-                  - $if field.videoUrl:
-                      - 'video w=f controls=${field.controls} autoplay=${field.autoPlay} style="border-radius: 8px; aspect-ratio: 16/9; max-height: 200px; object-fit: contain;"':
-                        - 'source src=${field.videoUrl} type="video/mp4"':
-                    $else:
-                      - 'rtgl-view w=f av=c ah=c bgc=mu br=md style="aspect-ratio: 16/9; max-height: 200px;"':
-                        - rtgl-text c=mu-fg: Loading video...
                 $elif field.type == 'text':
                   - rtgl-view:
                     - rtgl-text c=mu-fg: ${field.label}
