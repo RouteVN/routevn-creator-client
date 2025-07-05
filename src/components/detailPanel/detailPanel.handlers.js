@@ -26,8 +26,11 @@ export const handleFileInputChange = (e, deps) => {
   const file = e.target.files[0];
   
   if (file && field) {
+    // Use eventType from field
+    const eventType = field.eventType;
+    
     // Emit event to parent component with file and field information
-    dispatchEvent(new CustomEvent('image-file-selected', {
+    dispatchEvent(new CustomEvent(eventType, {
       detail: {
         file,
         field,
