@@ -3,7 +3,6 @@ export const INITIAL_STATE = Object.freeze({
   searchQuery: '',
   videoVisible: false,
   selectedVideo: null,
-  isLoadingVideo: false,
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -18,22 +17,15 @@ export const toggleGroupCollapse = (state, groupId) => {
 export const setVideoVisible = (state, video) => {
   state.videoVisible = true;
   state.selectedVideo = video;
-  state.isLoadingVideo = !video?.url;
 }
 
 export const setVideoNotVisible = (state) => {
   state.videoVisible = false;
   state.selectedVideo = null;
-  state.isLoadingVideo = false;
 }
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
-}
-
-export const setVideoLoaded = (state, video) => {
-  state.selectedVideo = video;
-  state.isLoadingVideo = false;
 }
 
 export const toViewData = ({ state, props }) => {
