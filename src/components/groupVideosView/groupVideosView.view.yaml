@@ -37,6 +37,12 @@ refs:
     eventListeners:
       click:
         handler: handleVideoItemClick
+      dblclick:
+        handler: handleVideoThumbnailDoubleClick
+  dialog-overlay:
+    eventListeners:
+      click:
+        handler: handleOutsideVideoClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -69,3 +75,15 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No videos found matching "${searchQuery}"
     - rtgl-view h=33vh:
+  - $if videoVisible:
+    - rtgl-view pos=fix cor=full ah=c z=9999:
+      - 'rtgl-view#dialog-overlay pos=fix cor=full ah=c av=c bgc=bg op=0.5':
+      - rtgl-view h=10vh:
+      - $if selectedVideo:
+        - rtgl-view#dialog-container z=10000 bw=xs bgc=bg w=80% h=80% br=sm av=c ah=c:
+          - $if selectedVideo.url:
+              - video controls=true autoplay=true style="height:100%; width:100%;":
+                  - 'source src=${selectedVideo.url} type=${selectedVideo.fileType}':
+            $else:
+              - rtgl-view w=f h=f av=c ah=c:
+                - rtgl-text s=lg c=mu-fg: Loading video...
