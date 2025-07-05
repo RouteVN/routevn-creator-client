@@ -28,10 +28,9 @@ export const handleVideoItemClick = (e, deps) => {
 };
 
 export const handleVideoThumbnailDoubleClick = async (e, deps) => {
-  const { store, render, httpClient } = deps;
+  const { store, render, httpClient, props = {} } = deps;
   const itemId = e.currentTarget.id.replace("video-item-", "");
   
-  const props = deps.props || {};
   const flatGroups = props.flatGroups || [];
   let selectedVideo = null;
   

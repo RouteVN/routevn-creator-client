@@ -2,7 +2,7 @@ export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: '',
   videoVisible: false,
-  selectedVideo: null,
+  selectedVideo: undefined
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -21,7 +21,7 @@ export const setVideoVisible = (state, video) => {
 
 export const setVideoNotVisible = (state) => {
   state.videoVisible = false;
-  state.selectedVideo = null;
+  state.selectedVideo = undefined;
 }
 
 export const setSearchQuery = (state, query) => {
