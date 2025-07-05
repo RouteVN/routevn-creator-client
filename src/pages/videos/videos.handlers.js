@@ -184,27 +184,15 @@ export const handleDragDropFileSelected = async (e, deps) => {
         })
       ]);
 
-      if (videoResponse.ok) {
+      if (videoResponse.ok && thumbnailResponse.ok) {
         console.log("File uploaded successfully:", file.name);
-        
-        let thumbnailFileId = null;
-        if (thumbnailResponse.ok) {
-          thumbnailFileId = thumbnailUpload.fileId;
-          console.log(`Thumbnail uploaded successfully for: ${file.name}`);
-        } else {
-          return {
-            success: false,
-            file,
-            error: thumbnailResponse.statusText,
-          };
-        }
         
         return {
           success: true,
           file,
           downloadUrl: videoUpload.downloadUrl,
           fileId: videoUpload.fileId,
-          thumbnailFileId,
+          thumbnailFileId: thumbnailUpload.fileId,
           thumbnailData
         };
       } else {

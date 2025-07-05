@@ -61,10 +61,7 @@ template:
                       - $if group.hasChildren:
                           - $for item in group.children:
                               - 'rtgl-view#video-item-${item.id} cur=p style="${item.selectedStyle}"':
-                                - $if item.thumbnailFileId:
-                                    - rvn-file-image br=md w=200 h=150 fileId=${item.thumbnailFileId}:
-                                  $else:
-                                    - rvn-file-image br=md w=200 h=150 fileId=${item.fileId}:
+                                - rvn-file-image br=md w=200 h=150 fileId=${item.thumbnailFileId}:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
