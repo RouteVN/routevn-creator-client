@@ -249,3 +249,115 @@ export const handleDragDropFileSelected = async (e, deps) => {
   );
   render();
 };
+
+export const handleReplaceItem = async (e, deps) => {
+  const { store, render, httpClient, repository } = deps;
+  const { file, field } = e.detail;
+  
+  // Get the currently selected item
+  const selectedItem = store.selectSelectedItem();
+  if (!selectedItem) {
+    console.warn('No item selected for video replacement');
+    return;
+  }
+  
+  try {
+    // Extract thumbnail for video files
+    let thumbnailData = null;
+    if (file.type.startsWith('video/')) {
+      try {
+        console.log(`Extracting thumbnail for video: ${file.name}`);
+        thumbnailData = await extractVideoThumbnail(file, {
+          timeOffset: 1,
+          width: 240,
+          height: 135,
+          format: 'image/jpeg',
+          quality: 0.8
+        });
+        console.log(`Thumbnail extracted successfully for: ${file.name}`);
+      } catch (error) {
+        console.error("Thumbnail extraction error:", file.name, error);
+        return {
+          success: false,
+          file,
+          error: error.message,
+        };
+      }
+    }
+
+    // Get upload URLs for both video and thumbnail in parallel
+    const [videoUpload, thumbnailUpload] = await Promise.all([
+      httpClient.creator.uploadFile({
+        projectId: "someprojectId",
+      }),
+      httpClient.creator.uploadFile({
+        projectId: "someprojectId",
+      })
+    ]);
+
+    // Upload both files in parallel
+    const [videoResponse, thumbnailResponse] = await Promise.all([
+      fetch(videoUpload.uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type,
+        },
+      }),
+      fetch(thumbnailUpload.uploadUrl, {
+        method: "PUT",
+        body: thumbnailData.blob,
+        headers: {
+          "Content-Type": thumbnailData.format,
+        },
+      })
+    ]);
+
+    if (videoResponse.ok && thumbnailResponse.ok) {
+      console.log("Video replaced successfully:", file.name);
+      
+      // Update the selected item in the repository with the new file information
+      repository.addAction({
+        actionType: "treeUpdate",
+        target: "videos",
+        value: {
+          id: selectedItem.id,
+          replace: false,
+          item: {
+            fileId: videoUpload.fileId,
+            thumbnailFileId: thumbnailUpload.fileId,
+            name: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+          },
+        },
+      });
+      
+      // Update the store with the new repository state
+      const { videos } = repository.getState();
+      store.setItems(videos);
+      render();
+      
+      return {
+        success: true,
+        file,
+        fileId: videoUpload.fileId,
+        thumbnailFileId: thumbnailUpload.fileId,
+      };
+    } else {
+      console.error("Video upload failed:", file.name, videoResponse.statusText);
+      return {
+        success: false,
+        file,
+        error: videoResponse.statusText,
+      };
+    }
+  } catch (error) {
+    console.error("Video upload error:", file.name, error);
+    return {
+      success: false,
+      file,
+      error: error.message,
+    };
+  }
+};

@@ -42,7 +42,7 @@ template:
                           - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId}:
                           - 'rtgl-view pos=abs cor=full bgc=rgba(0,0,0,0.5) av=c ah=c style="opacity: 0; transition: opacity 0.2s;" h-style="opacity: 1;"':
                             - rtgl-svg svg=upload wh=24 c=wh:
-                        - 'input#file-input-${i} type=file accept="image/*" style="display: none;"':
+                        - 'input#file-input-${i} type=file accept="${field.accept}" style="display: none;"':
                     $else:
                       - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId}:
                 $elif field.type == 'audio':
