@@ -1,6 +1,8 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: '',
+  videoVisible: false,
+  selectedVideo: undefined
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -10,6 +12,16 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
+}
+
+export const setVideoVisible = (state, video) => {
+  state.videoVisible = true;
+  state.selectedVideo = video;
+}
+
+export const setVideoNotVisible = (state) => {
+  state.videoVisible = false;
+  state.selectedVideo = undefined;
 }
 
 export const setSearchQuery = (state, query) => {
@@ -59,6 +71,8 @@ export const toViewData = ({ state, props }) => {
     selectedItemId: props.selectedItemId,
     uploadText: "Upload Video",
     acceptedFileTypes: ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'],
-    searchQuery: state.searchQuery
+    searchQuery: state.searchQuery,
+    videoVisible: state.videoVisible,
+    selectedVideo: state.selectedVideo,
   };
 };

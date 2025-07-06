@@ -15,7 +15,7 @@
     "vite": "^6.3.5"
   },
   "scripts": {
-    "build": "cp -r static _site && bunx rtgl@latest fe build",
+    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && bunx rtgl@latest fe build",
     "watch": "rtgl fe watch"
   }
 }

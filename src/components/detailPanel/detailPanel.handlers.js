@@ -27,7 +27,7 @@ export const handleFileInputChange = (e, deps) => {
   
   if (file && field) {
     // Emit event to parent component with file and field information
-    dispatchEvent(new CustomEvent('image-file-selected', {
+    dispatchEvent(new CustomEvent('replace-item', {
       detail: {
         file,
         field,
