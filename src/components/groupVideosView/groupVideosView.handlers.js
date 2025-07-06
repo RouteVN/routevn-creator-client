@@ -27,6 +27,39 @@ export const handleVideoItemClick = (e, deps) => {
   }));
 };
 
+export const handleVideoThumbnailDoubleClick = async (e, deps) => {
+  const { store, render, httpClient, props = {} } = deps;
+  const itemId = e.currentTarget.id.replace("video-item-", "");
+  
+  const flatGroups = props.flatGroups || [];
+  let selectedVideo = null;
+  
+  for (const group of flatGroups) {
+    if (group.children) {
+      selectedVideo = group.children.find(item => item.id === itemId);
+      if (selectedVideo) break;
+    }
+  }
+
+  // initial render for the loading screen
+  store.setVideoVisible(selectedVideo);
+  render()
+
+  const { url } = await httpClient.creator.getFileContent({ fileId: selectedVideo.fileId, projectId: 'someprojectId' });
+
+  // add updated url to object and render again
+  const updatedVideo = { ...selectedVideo, url };
+  
+  store.setVideoVisible(updatedVideo);
+  render();
+} 
+
+export const handleOutsideVideoClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setVideoNotVisible();
+  render();
+}
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent } = deps;
   const { files } = e.detail;
