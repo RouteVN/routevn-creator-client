@@ -5,7 +5,7 @@ export const handleOnMount = async (deps) => {
   }
 
   store.setIsLoading(true);
-  
+
   try {
     // TODO batch file requests
     const { url } = await httpClient.creator.getFileContent({ fileId: attrs.fileId, projectId: 'someprojectId' });
@@ -22,6 +22,17 @@ export const handleOnMount = async (deps) => {
   }
 };
 
-export const handleOnUpdate = () => {
-  
+export const handleOnUpdate = async (changes, deps) => {
+  const { store, attrs, httpClient, render } = deps;
+
+  try {
+    // TODO batch file requests
+    const { url } = await httpClient.creator.getFileContent({ fileId: attrs.fileId, projectId: 'someprojectId' });
+    store.setSrc(url);
+    render();
+  } catch (error) {
+    console.error('Failed to load image:', error);
+  } finally {
+    store.setIsLoading(false);
+  }
 }
