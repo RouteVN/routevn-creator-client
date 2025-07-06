@@ -17,8 +17,8 @@ refs:
         handler: handleDragDropFileSelected
   detail-panel:
     eventListeners:
-      image-file-selected:
-        handler: handleDetailPanelImageSelected
+      replace-item:
+        handler: handleReplaceItem
 
 template: 
   - rtgl-view d=h w=f h=f: 
