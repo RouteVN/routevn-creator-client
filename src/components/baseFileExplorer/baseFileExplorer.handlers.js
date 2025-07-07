@@ -292,8 +292,8 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     return; // Don't emit event for rename, handle it internally
   }
   
-  // Emit update-item-property event for other actions
-  dispatchEvent(new CustomEvent("update-item-property", {
+  // Emit file-action event for other actions
+  dispatchEvent(new CustomEvent("file-action", {
     detail: { ...detail, itemId },
     bubbles: true,
     composed: true
@@ -329,8 +329,8 @@ export const handleFormActionClick = (e, deps) => {
     store.hidePopover();
     render();
     
-    // Emit update-item-property event for rename confirmation
-    dispatchEvent(new CustomEvent("update-item-property", {
+    // Emit file-action event for rename confirmation
+    dispatchEvent(new CustomEvent("file-action", {
       detail: {
         value: 'rename-item-confirmed',
         itemId,

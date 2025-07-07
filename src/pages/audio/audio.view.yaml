@@ -19,8 +19,8 @@ refs:
     eventListeners:
       replace-item:
         handler: handleReplaceItem
-      update-item-property:
-        handler: handleUpdateItemProperty
+      file-action:
+        handler: handleFileAction
 
 template:
   - rtgl-view d=h w=f h=f: 

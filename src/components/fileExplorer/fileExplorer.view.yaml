@@ -36,8 +36,8 @@ refs:
         handler: handleClickItem
       target-changed:
         handler: handleTargetChanged
-      update-item-property:
-        handler: handleUpdateItemProperty
+      file-action:
+        handler: handleFileAction
 
 template:
   - rvn-base-file-explorer#base-file-explorer .items=items .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:

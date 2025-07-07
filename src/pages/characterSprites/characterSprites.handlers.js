@@ -116,7 +116,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleUpdateItemProperty = (e, deps) => {
+export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
   

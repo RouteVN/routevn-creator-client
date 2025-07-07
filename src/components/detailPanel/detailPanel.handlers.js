@@ -87,8 +87,8 @@ export const handleFormActionClick = (e, deps) => {
     store.hidePopover();
     render();
     
-    // Emit update-item-property event for rename confirmation
-    dispatchEvent(new CustomEvent("update-item-property", {
+    // Emit file-action event for rename confirmation
+    dispatchEvent(new CustomEvent("file-action", {
       detail: {
         value: 'rename-item-confirmed',
         newName: values.name
