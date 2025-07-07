@@ -46,8 +46,19 @@ export const handleTitleClick = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
   
-  // Show popover at the click position
-  store.showPopover({ position: { x: e.clientX, y: e.clientY } });
+  // Calculate position for left-bottom placement relative to mouse cursor
+  // Offset to the left and slightly down from the cursor
+  const position = {
+    x: e.clientX - 200, // Move 200px to the left of cursor
+    y: e.clientY + 10   // Move 10px down from cursor
+  };
+  
+  // Ensure popover doesn't go off-screen to the left
+  if (position.x < 10) {
+    position.x = 10;
+  }
+  
+  store.showPopover({ position });
   render();
 };
 
