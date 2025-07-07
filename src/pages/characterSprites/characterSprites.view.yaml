@@ -15,6 +15,10 @@ refs:
         handler: handleImageItemClick
       files-uploaded:
         handler: handleDragDropFileSelected
+  detail-panel:
+    eventListeners:
+      file-action:
+        handler: handleFileAction
 
 template: 
   - rtgl-view d=h w=f h=f: 
