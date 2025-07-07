@@ -1,5 +1,3 @@
-// Zoom level persistence is now handled by Proxy in store.js
-
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
   const searchQuery = e.detail.value || '';
@@ -84,6 +82,32 @@ export const handleImageItemClick = (e, deps) => {
     composed: true
   }));
 };
+
+export const handleImageDoubleClick = (e, deps) => {
+  const { store, render, props = {} } = deps;
+
+  // Get the fileId from the image item
+  const itemId = e.currentTarget.id.replace('image-item-', '');
+  const flatGroups = props.flatGroups || [];
+  let selectedImage = null;
+  
+  for (const group of flatGroups) {
+    if (group.children) {
+      selectedImage = group.children.find(item => item.id === itemId);
+      if (selectedImage) break;
+    }
+  }
+
+  store.showFullImagePreview(selectedImage.fileId);
+  render();
+};
+
+export const handlePreviewOverlayClick = (_, deps) => {
+  const { store, render } = deps;
+
+  store.hideFullImagePreview();
+  render();
+}
 
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent } = deps;

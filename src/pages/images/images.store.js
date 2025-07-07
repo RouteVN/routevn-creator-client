@@ -45,6 +45,7 @@ export const toViewData = ({ state, props }, payload) => {
     displayFileType: selectedItem.fileType || (selectedItem.type === 'image' ? 'PNG' : null),
     displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
+    dimensions: { width: selectedItem.width, height: selectedItem.height },
   } : null;
 
   console.log({
@@ -59,6 +60,7 @@ export const toViewData = ({ state, props }, payload) => {
     { type: 'text', value: selectedItemDetails.name },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
+    { type: 'text', label: 'Dimensions', value: selectedItemDetails.dimensions ? `${selectedItemDetails.dimensions.width} × ${selectedItemDetails.dimensions.height}` : null, show: !!selectedItemDetails.dimensions },
   ] : [];
   const detailEmptyMessage = 'No selection';
 

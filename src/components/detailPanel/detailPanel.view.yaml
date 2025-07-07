@@ -15,6 +15,9 @@ propsSchema:
           editable:
             type: boolean
             description: Whether the field is editable (for images, enables click-to-upload)
+          key:
+            type: string
+            description: Unique key for the field to force re-rendering when changed
     emptyMessage:
       type: string
 

@@ -1,5 +1,24 @@
 import { nanoid } from "nanoid";
 
+const getImageDimensions = (file) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(url); // Clean up memory
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url); // Clean up memory
+      resolve(null);
+    };
+    
+    img.src = url;
+  });
+};
+
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { images } = repository.getState();
@@ -32,6 +51,9 @@ export const handleDragDropFileSelected = async (e, deps) => {
   // Create upload promises for all files
   const uploadPromises = Array.from(files).map(async (file) => {
     try {
+      // Get image dimensions before uploading
+      const dimensions = await getImageDimensions(file);
+
       const { downloadUrl, uploadUrl, fileId } =
         await httpClient.creator.uploadFile({
           projectId: "someprojectId",
@@ -52,6 +74,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
           file,
           downloadUrl,
           fileId,
+          dimensions,
         };
       } else {
         console.error("File upload failed:", file.name, response.statusText);
@@ -91,6 +114,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
+          width: result.dimensions?.width,
+          height: result.dimensions?.height,
         },
       },
     });
@@ -119,8 +144,11 @@ export const handleReplaceItem = async (e, deps) => {
   }
   
   try {
+    // Get image dimensions before uploading
+    const dimensions = await getImageDimensions(file);
+
     // Upload the new file
-    const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
+    const { uploadUrl, fileId } = await httpClient.creator.uploadFile({
       projectId: "someprojectId",
     });
 
@@ -147,6 +175,8 @@ export const handleReplaceItem = async (e, deps) => {
             name: file.name,
             fileType: file.type,
             fileSize: file.size,
+            width: dimensions.width,
+            height: dimensions.height,
           },
         },
       });
@@ -163,3 +193,4 @@ export const handleReplaceItem = async (e, deps) => {
     console.error("Image upload error:", file.name, error);
   }
 };
+
