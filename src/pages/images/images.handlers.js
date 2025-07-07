@@ -132,7 +132,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleDetailPanelImageSelected = async (e, deps) => {
+export const handleReplaceItem = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { file, field } = e.detail;
   

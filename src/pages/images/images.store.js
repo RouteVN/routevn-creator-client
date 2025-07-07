@@ -56,7 +56,7 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Transform selectedItem into detailPanel props
   const detailFields = selectedItemDetails ? [
-    { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135, editable: true, key: `image-${selectedItemDetails.fileId}` },
+    { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135, editable: true, accept: 'image/*', eventType: 'image-file-selected' },
     { type: 'text', value: selectedItemDetails.name },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },

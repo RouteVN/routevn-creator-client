@@ -27,6 +27,13 @@ export const setVideoUrl = (state, { fileId, url }) => {
   state.videoUrls[fileId] = url;
 }
 
+export const selectSelectedItem = ({ state }) => {
+  if (!state.selectedItemId) return null;
+  // state.videosData contains the full structure with tree and items
+  const flatItems = toFlatItems(state.videosData);
+  return flatItems.find(item => item.id === state.selectedItemId);
+}
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.videosData);
   const flatGroups = toFlatGroups(state.videosData);
@@ -47,7 +54,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Video Details' : null;
   const detailFields = selectedItemDetails && selectedItemDetails.type === 'video' ? [
-    { type: 'video', fileId: selectedItemDetails.fileId, width: 240, height: 135, autoPlay: true, controls: true, videoUrl: state.videoUrls[selectedItemDetails.fileId] },
+    { type: 'image', fileId: selectedItemDetails.thumbnailFileId, width: 240, height: 135, editable: true, accept: 'video/*', eventType: 'video-file-selected' },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
