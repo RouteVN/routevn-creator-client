@@ -11,7 +11,7 @@ export const handleClickItem = (e, deps) => {
   }));
 };
 
-export const handleFileAction = (e, deps) => {
+export const handleUpdateItemProperty = (e, deps) => {
   const { dispatchEvent, repository, props } = deps;
   const detail = e.detail;
   const repositoryTarget = props.repositoryTarget;

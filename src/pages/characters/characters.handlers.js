@@ -212,7 +212,7 @@ export const handleDetailPanelImageSelected = async (e, deps) => {
   }
 };
 
-export const handleFileAction = (e, deps) => {
+export const handleUpdateItemProperty = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
   

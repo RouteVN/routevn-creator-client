@@ -17,8 +17,8 @@ refs:
         handler: handleDragDropFileSelected
   detail-panel:
     eventListeners:
-      file-action:
-        handler: handleFileAction
+      update-item-property:
+        handler: handleUpdateItemProperty
 
 template: 
   - rtgl-view d=h w=f h=f: 

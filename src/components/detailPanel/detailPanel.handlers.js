@@ -72,9 +72,9 @@ export const handleFormActionClick = (e, deps) => {
   const { store, dispatchEvent, render } = deps;
   const detail = e.detail;
   
-  // Extract action and values from detail
-  const action = detail.action || detail.actionId;
-  const values = detail.values || detail.formValues || detail;
+  // Extract action and values from detail - use correct property names
+  const action = detail.actionId;
+  const values = detail.formValues;
   
   if (action === 'cancel') {
     store.hidePopover();
@@ -87,8 +87,8 @@ export const handleFormActionClick = (e, deps) => {
     store.hidePopover();
     render();
     
-    // Emit file-action event for rename confirmation
-    dispatchEvent(new CustomEvent("file-action", {
+    // Emit update-item-property event for rename confirmation
+    dispatchEvent(new CustomEvent("update-item-property", {
       detail: {
         value: 'rename-item-confirmed',
         newName: values.name

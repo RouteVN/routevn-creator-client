@@ -23,8 +23,8 @@ refs:
     eventListeners:
       image-file-selected:
         handler: handleDetailPanelImageSelected
-      file-action:
-        handler: handleFileAction
+      update-item-property:
+        handler: handleUpdateItemProperty
 
 template: 
   - rtgl-view d=h w=f h=f: 
