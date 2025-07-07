@@ -41,3 +41,49 @@ export const handleFileInputChange = (e, deps) => {
     e.target.value = '';
   }
 };
+
+export const handleTitleClick = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+  
+  // Show popover at the click position
+  store.showPopover({ position: { x: e.clientX, y: e.clientY } });
+  render();
+};
+
+export const handlePopoverClickOverlay = (_, deps) => {
+  const { store, render } = deps;
+  store.hidePopover();
+  render();
+};
+
+export const handleFormActionClick = (e, deps) => {
+  const { store, dispatchEvent, render } = deps;
+  const detail = e.detail;
+  
+  // Extract action and values from detail
+  const action = detail.action || detail.actionId;
+  const values = detail.values || detail.formValues || detail;
+  
+  if (action === 'cancel') {
+    store.hidePopover();
+    render();
+    return;
+  }
+  
+  if (action === 'submit') {
+    // Hide popover
+    store.hidePopover();
+    render();
+    
+    // Emit file-action event for rename confirmation
+    dispatchEvent(new CustomEvent("file-action", {
+      detail: {
+        value: 'rename-item-confirmed',
+        newName: values.name
+      },
+      bubbles: true,
+      composed: true
+    }));
+  }
+};

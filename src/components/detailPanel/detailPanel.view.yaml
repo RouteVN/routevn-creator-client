@@ -30,6 +30,18 @@ refs:
     eventListeners:
       change:
         handler: handleFileInputChange
+  title-text-*:
+    eventListeners:
+      click:
+        handler: handleTitleClick
+  popover:
+    eventListeners:
+      click-overlay:
+        handler: handlePopoverClickOverlay
+  form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
 
 template:
   - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
@@ -53,7 +65,10 @@ template:
                 $elif field.type == 'text':
                   - rtgl-view:
                     - rtgl-text c=mu-fg: ${field.label}
-                    - rtgl-text s=${field.size}: ${field.value}
+                    - $if i == firstTextIndex:
+                        - rtgl-text#title-text-${i} s=${field.size} cur=p: ${field.value}
+                      $else:
+                        - rtgl-text s=${field.size}: ${field.value}
                 $elif field.type == 'color':
                   - rtgl-view:
                     - rtgl-text c=mu-fg: ${field.label}
@@ -61,3 +76,6 @@ template:
       $else:
         - rtgl-view w=f h=f av=c ah=c:
           - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}
+  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+    - $if form:
+        - rtgl-form#form slot=content .form=form:
