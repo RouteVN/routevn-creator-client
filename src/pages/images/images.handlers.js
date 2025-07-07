@@ -194,3 +194,35 @@ export const handleReplaceItem = async (e, deps) => {
   }
 };
 
+export const handleFileAction = (e, deps) => {
+  const { store, render, repository } = deps;
+  const detail = e.detail;
+  
+  if (detail.value === 'rename-item-confirmed') {
+    // Get the currently selected item
+    const selectedItem = store.selectSelectedItem();
+    if (!selectedItem) {
+      console.warn('No item selected for rename');
+      return;
+    }
+    
+    // Update the item name in the repository
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "images",
+      value: {
+        id: selectedItem.id,
+        replace: false,
+        item: {
+          name: detail.newName,
+        },
+      },
+    });
+    
+    // Update the store with the new repository state
+    const { images } = repository.getState();
+    store.setItems(images);
+    render();
+  }
+};
+

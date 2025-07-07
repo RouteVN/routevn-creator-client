@@ -41,3 +41,60 @@ export const handleFileInputChange = (e, deps) => {
     e.target.value = '';
   }
 };
+
+export const handleTitleClick = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+  
+  // Calculate position for left-bottom placement relative to mouse cursor
+  // Offset to the left and slightly down from the cursor
+  const position = {
+    x: e.clientX - 200, // Move 200px to the left of cursor
+    y: e.clientY + 10   // Move 10px down from cursor
+  };
+  
+  // Ensure popover doesn't go off-screen to the left
+  if (position.x < 10) {
+    position.x = 10;
+  }
+  
+  store.showPopover({ position });
+  render();
+};
+
+export const handlePopoverClickOverlay = (_, deps) => {
+  const { store, render } = deps;
+  store.hidePopover();
+  render();
+};
+
+export const handleFormActionClick = (e, deps) => {
+  const { store, dispatchEvent, render } = deps;
+  const detail = e.detail;
+  
+  // Extract action and values from detail - use correct property names
+  const action = detail.actionId;
+  const values = detail.formValues;
+  
+  if (action === 'cancel') {
+    store.hidePopover();
+    render();
+    return;
+  }
+  
+  if (action === 'submit') {
+    // Hide popover
+    store.hidePopover();
+    render();
+    
+    // Emit file-action event for rename confirmation
+    dispatchEvent(new CustomEvent("file-action", {
+      detail: {
+        value: 'rename-item-confirmed',
+        newName: values.name
+      },
+      bubbles: true,
+      composed: true
+    }));
+  }
+};
