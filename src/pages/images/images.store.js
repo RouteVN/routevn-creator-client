@@ -45,7 +45,7 @@ export const toViewData = ({ state, props }, payload) => {
     displayFileType: selectedItem.fileType || (selectedItem.type === 'image' ? 'PNG' : null),
     displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
-    dimensions: (selectedItem.width && selectedItem.height) ? { width: selectedItem.width, height: selectedItem.height } : null,
+    dimensions: { width: selectedItem.width, height: selectedItem.height },
   } : null;
 
   console.log({

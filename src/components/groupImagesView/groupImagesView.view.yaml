@@ -14,9 +14,9 @@ viewDataSchema:
       type: number
     maxWidth:
       type: number
-    previewActivated:
+    fullImagePreviewVisible:
       type: boolean
-    previewFileId:
+    fullImagePreviewFileId:
       type: string
 
 propsSchema:
@@ -106,9 +106,9 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No images found matching "${searchQuery}"
     - rtgl-view h=33vh:
-  - $if previewActivated:
+  - $if fullImagePreviewVisible:
       - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
         - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
-        - $if previewFileId:
-            - rvn-file-image fileId=${previewFileId} z=3001:
+        - $if fullImagePreviewFileId:
+            - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
       

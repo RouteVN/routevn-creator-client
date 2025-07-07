@@ -84,15 +84,21 @@ export const handleImageItemClick = (e, deps) => {
 };
 
 export const handleImageDoubleClick = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, props = {} } = deps;
 
   // Get the fileId from the image item
-  const fileId2 = e.currentTarget.id.replace('rvn-file-image', '');
-  const fileImageElement = e.currentTarget.querySelector('rvn-file-image');
-  const fileId = fileImageElement?.getAttribute('fileid');
-  console.log(fileId, fileId2);
+  const itemId = e.currentTarget.id.replace('image-item-', '');
+  const flatGroups = props.flatGroups || [];
+  let selectedImage = null;
+  
+  for (const group of flatGroups) {
+    if (group.children) {
+      selectedImage = group.children.find(item => item.id === itemId);
+      if (selectedImage) break;
+    }
+  }
 
-  store.showFullImagePreview(fileId);
+  store.showFullImagePreview(selectedImage.fileId);
   render();
 };
 
