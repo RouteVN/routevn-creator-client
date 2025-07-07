@@ -108,7 +108,7 @@ template:
     - rtgl-view h=33vh:
   - $if previewActivated:
       - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
-        - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.8":
+        - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
         - $if previewFileId:
             - rvn-file-image fileId=${previewFileId} z=3001:
       

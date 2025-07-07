@@ -85,25 +85,21 @@ export const handleImageItemClick = (e, deps) => {
 
 export const handleImageDoubleClick = (e, deps) => {
   const { store, render } = deps;
-  
+
   // Get the fileId from the image item
+  const fileId2 = e.currentTarget.id.replace('rvn-file-image', '');
   const fileImageElement = e.currentTarget.querySelector('rvn-file-image');
   const fileId = fileImageElement?.getAttribute('fileid');
-  
-  if (fileId) {
-    // Try setting fileId first
-    store.setPreviewFileId(fileId);
-    store.setPreviewActivated(true);
-    render();
-  } else {
-    console.error("No fileId found for preview");
-  }
+  console.log(fileId, fileId2);
+
+  store.showFullImagePreview(fileId);
+  render();
 };
 
 export const handlePreviewOverlayClick = (_, deps) => {
   const { store, render } = deps;
-  
-  store.setPreviewActivated(false);
+
+  store.hideFullImagePreview();
   render();
 }
 

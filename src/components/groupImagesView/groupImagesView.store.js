@@ -3,7 +3,7 @@ export const INITIAL_STATE = Object.freeze({
   searchQuery: '',
   zoomLevel: 1.0,
   previewActivated: false,
-  previewFileId: null,
+  previewFileId: undefined,
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -30,15 +30,14 @@ export const setZoomLevel = (state, zoomLevel) => {
   state.zoomLevel = newZoomLevel;
 }
 
-export const setPreviewFileId = (state, fileId) => {
+export const showFullImagePreview = (state, fileId) => {
+  state.previewActivated = true
   state.previewFileId = fileId
 }
 
-export const setPreviewActivated = (state, activated, fileId = null) => {
-  state.previewActivated = activated
-  if (fileId !== null) {
-    state.previewFileId = fileId
-  }
+export const hideFullImagePreview = (state) => {
+  state.previewActivated = false;
+  state.previewFileId = undefined;
 }
 
 export const toViewData = ({ state, props }) => {

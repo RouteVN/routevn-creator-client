@@ -53,7 +53,6 @@ export const handleDragDropFileSelected = async (e, deps) => {
     try {
       // Get image dimensions before uploading
       const dimensions = await getImageDimensions(file);
-      console.log('Image dimensions for', file.name, ':', dimensions);
 
       const { downloadUrl, uploadUrl, fileId } =
         await httpClient.creator.uploadFile({
