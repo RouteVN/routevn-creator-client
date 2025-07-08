@@ -34,11 +34,28 @@ export const selectCharacterId = ({ state }) => {
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   // state.spritesData contains the full structure with tree and items
+  if (!state.spritesData || !state.spritesData.items || !state.spritesData.tree) return null;
   const flatItems = toFlatItems(state.spritesData);
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
 export const toViewData = ({ state, props }, payload) => {
+  // Check if spritesData has the expected structure
+  if (!state.spritesData || !state.spritesData.items || !state.spritesData.tree) {
+    return {
+      flatItems: [],
+      flatGroups: [],
+      resourceCategory: 'assets',
+      selectedResourceId: 'character-sprites',
+      selectedItemId: state.selectedItemId,
+      selectedItem: null,
+      detailTitle: null,
+      detailFields: [],
+      detailEmptyMessage: 'Select a sprite to view details',
+      repositoryTarget: `characters.items.${state.characterId}.sprites`,
+    };
+  }
+  
   const flatItems = toFlatItems(state.spritesData);
   const flatGroups = toFlatGroups(state.spritesData);
 

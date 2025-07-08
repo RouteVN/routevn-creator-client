@@ -7,8 +7,24 @@ export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { characters } = repository.getState();
   const character = characters.items[characterId];
+  
+  // If character doesn't have sprites, create it
+  if (character && !character.sprites) {
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "characters",
+      value: {
+        id: characterId,
+        replace: false,
+        item: {
+          sprites: { items: {}, tree: [] },
+        },
+      },
+    });
+  }
+  
   store.setCharacterId(characterId);
-  store.setItems(character.sprites);
+  store.setItems(character?.sprites || { tree: [], items: {} });
   return () => {}
 };
 
@@ -19,7 +35,7 @@ export const handleDataChanged = (e, deps) => {
   const { store, repository } = deps;
   const { characters } = repository.getState();
   const character = characters.items[characterId];
-  store.setItems(character.sprites);
+  store.setItems(character?.sprites || { tree: [], items: {} });
   render();
 };
 
@@ -85,9 +101,27 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const successfulUploads = uploadResults.filter((result) => result.success);
 
   successfulUploads.forEach((result) => {
+    const characterId = store.selectCharacterId();
+    
+    // Ensure the character has a sprites property
+    const { characters } = repository.getState();
+    if (!characters.items[characterId]?.sprites) {
+      repository.addAction({
+        actionType: "treeUpdate",
+        target: "characters",
+        value: {
+          id: characterId,
+          replace: false,
+          item: {
+            sprites: { items: {}, tree: [] },
+          },
+        },
+      });
+    }
+    
     repository.addAction({
       actionType: "treePush",
-      target: `characters.items.${store.selectCharacterId()}.sprites`,
+      target: `characters.items.${characterId}.sprites`,
       value: {
         parent: id,
         position: "last",
@@ -107,7 +141,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
     const { store, repository } = deps;
     const { characters } = repository.getState();
     const character = characters.items[store.selectCharacterId()];
-    store.setItems(character.sprites);
+    store.setItems(character?.sprites || { tree: [], items: {} });
   }
 
   console.log(
@@ -142,8 +176,9 @@ export const handleFileAction = (e, deps) => {
     });
     
     // Update the store with the new repository state
-    const { characterSprites } = repository.getState();
-    store.setItems(characterSprites);
+    const { characters } = repository.getState();
+    const character = characters.items[store.selectCharacterId()];
+    store.setItems(character?.sprites || { tree: [], items: {} });
     render();
   }
 };

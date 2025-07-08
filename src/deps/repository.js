@@ -95,8 +95,17 @@ const removeNodeFromTree = (tree, nodeId) => {
 // Tree manipulation functions
 const treePush = (state, target, value) => {
   const newState = structuredClone(state);
-  const targetData = get(newState, target);
+  let targetData = get(newState, target);
   const { parent, item, position } = value;
+  
+  // If targetData is undefined, the path doesn't exist - create it
+  if (!targetData) {
+    console.warn(`treePush: Target path '${target}' does not exist, creating it`);
+    targetData = { tree: [], items: {} };
+    // Use set to create the path and get updated state
+    const stateWithPath = set(newState, target, targetData);
+    return treePush(stateWithPath, target, value);
+  }
   
   // Ensure tree and items exist
   if (!targetData.tree) {
