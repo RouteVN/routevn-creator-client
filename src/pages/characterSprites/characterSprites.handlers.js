@@ -14,9 +14,8 @@ export const handleOnMount = (deps) => {
 
 
 export const handleDataChanged = (e, deps) => {
-  const { router, render } = deps;
+  const { router, render, store, repository } = deps;
   const { characterId } = router.getPayload();
-  const { store, repository } = deps;
   const { characters } = repository.getState();
   const character = characters.items[characterId];
   store.setItems(character?.sprites || { tree: [], items: {} });
