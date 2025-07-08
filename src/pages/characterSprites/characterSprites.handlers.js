@@ -8,7 +8,7 @@ export const handleOnMount = (deps) => {
   const character = characters.items[characterId];
   
   store.setCharacterId(characterId);
-  store.setItems(character?.sprites || { tree: [], items: {} });
+  store.setItems(character.sprites);
   return () => {}
 };
 
@@ -18,7 +18,7 @@ export const handleDataChanged = (e, deps) => {
   const { characterId } = router.getPayload();
   const { characters } = repository.getState();
   const character = characters.items[characterId];
-  store.setItems(character?.sprites || { tree: [], items: {} });
+  store.setItems(character.sprites);
   render();
 };
 
@@ -108,7 +108,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
     // Update store with the latest repository state
     const { characters } = repository.getState();
     const character = characters.items[characterId];
-    store.setItems(character?.sprites || { tree: [], items: {} });
+    store.setItems(character.sprites);
   }
 
   console.log(
@@ -145,7 +145,7 @@ export const handleFileAction = (e, deps) => {
     // Update the store with the new repository state
     const { characters } = repository.getState();
     const character = characters.items[store.selectCharacterId()];
-    store.setItems(character?.sprites || { tree: [], items: {} });
+    store.setItems(character.sprites);
     render();
   }
 };
