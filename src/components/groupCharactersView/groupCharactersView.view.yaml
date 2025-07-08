@@ -84,9 +84,11 @@ template:
                                 - rtgl-text c=mu-fg: ${item.description}
                               - rtgl-view h=f av=c:
                                 - rtgl-button#sprites-button-${item.id}: Sprites
-                        - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                        - rtgl-view mt=lg:
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                       $else:
-                        - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                        - rtgl-view mt=lg:
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No characters found matching "${searchQuery}"
