@@ -34,6 +34,7 @@ export const selectCharacterId = ({ state }) => {
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   // state.spritesData contains the full structure with tree and items
+  if (!state.spritesData || !state.spritesData.items || !state.spritesData.tree) return null;
   const flatItems = toFlatItems(state.spritesData);
   return flatItems.find(item => item.id === state.selectedItemId);
 }

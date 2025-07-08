@@ -2,11 +2,16 @@
 import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
-  const { router } = deps;
+  const { router, store, repository } = deps;
   const { characterId } = router.getPayload();
-  const { store, repository } = deps;
   const { characters } = repository.getState();
   const character = characters.items[characterId];
+  
+  if (!character) {
+    alert("Character not found");
+    return () => {};
+  }
+  
   store.setCharacterId(characterId);
   store.setItems(character.sprites);
   return () => {}
@@ -14,11 +19,16 @@ export const handleOnMount = (deps) => {
 
 
 export const handleDataChanged = (e, deps) => {
-  const { router, render } = deps;
+  const { router, render, store, repository } = deps;
   const { characterId } = router.getPayload();
-  const { store, repository } = deps;
   const { characters } = repository.getState();
   const character = characters.items[characterId];
+  
+  if (!character) {
+    alert("Character not found");
+    return;
+  }
+  
   store.setItems(character.sprites);
   render();
 };
@@ -35,6 +45,15 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
+
+  const characterId = store.selectCharacterId();
+  const { characters } = repository.getState();
+  const character = characters.items[characterId];
+  
+  if (!character) {
+    alert("Character not found");
+    return;
+  }
 
   // Create upload promises for all files
   const uploadPromises = Array.from(files).map(async (file) => {
@@ -84,29 +103,29 @@ export const handleDragDropFileSelected = async (e, deps) => {
   // Add successfully uploaded files to repository
   const successfulUploads = uploadResults.filter((result) => result.success);
 
-  successfulUploads.forEach((result) => {
-    repository.addAction({
-      actionType: "treePush",
-      target: `characters.items.${store.selectCharacterId()}.sprites`,
-      value: {
-        parent: id,
-        position: "last",
-        item: {
-          id: nanoid(),
-          type: "image",
-          fileId: result.fileId,
-          name: result.file.name,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-        },
-      },
-    });
-  });
-
   if (successfulUploads.length > 0) {
-    const { store, repository } = deps;
+    successfulUploads.forEach((result) => {
+      repository.addAction({
+        actionType: "treePush",
+        target: `characters.items.${characterId}.sprites`,
+        value: {
+          parent: id,
+          position: "last",
+          item: {
+            id: nanoid(),
+            type: "image",
+            fileId: result.fileId,
+            name: result.file.name,
+            fileType: result.file.type,
+            fileSize: result.file.size,
+          },
+        },
+      });
+    });
+    
+    // Update store with the latest repository state
     const { characters } = repository.getState();
-    const character = characters.items[store.selectCharacterId()];
+    const character = characters.items[characterId];
     store.setItems(character.sprites);
   }
 
@@ -142,8 +161,9 @@ export const handleFileAction = (e, deps) => {
     });
     
     // Update the store with the new repository state
-    const { characterSprites } = repository.getState();
-    store.setItems(characterSprites);
+    const { characters } = repository.getState();
+    const character = characters.items[store.selectCharacterId()];
+    store.setItems(character.sprites);
     render();
   }
 };
