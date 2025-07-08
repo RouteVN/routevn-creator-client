@@ -3,12 +3,11 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@rettangoli/fe": "^0.0.6",
+        "@rettangoli/fe": "^0.0.7-rc5",
         "esbuild": "^0.25.5",
         "immer": "^10.1.1",
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
-        "json-e": "^4.8.0",
         "nanoid": "^5.1.5",
         "rxjs": "^7.8.2",
         "slate": "^0.114.0",
@@ -81,7 +80,7 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.5", "", { "os": "win32", "cpu": "x64" }, "sha512-TXv6YnJ8ZMVdX+SXWVBo/0p8LTcrUYngpWjvm91TMjjBQii7Oz11Lw5lbDV5Y0TzuhSJHwiH4hEtC1I42mMS0g=="],
 
-    "@rettangoli/fe": ["@rettangoli/fe@0.0.6", "", { "dependencies": { "esbuild": "^0.25.5", "immer": "^10.1.1", "jempl": "^0.0.6", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-Dxy4LTzI1LRgu2yYOq6/96Q8Bfjx/Kzknlw/iGERwZzwhS0jzuef3eM+VMx9eu7qCR17WPI8qnC7QysIs++Ujw=="],
+    "@rettangoli/fe": ["@rettangoli/fe@0.0.7-rc5", "", { "dependencies": { "esbuild": "^0.25.5", "immer": "^10.1.1", "jempl": "0.1.0-rc1", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-fulzRW1FkjgDPbxQ00d+gzibN3d8pjNpfJSLOm2N3hCoJsDxLGP/aeg5mubfR8IT4Yk2mMF2Grt4Bga33cmF1A=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.41.0", "", { "os": "android", "cpu": "arm" }, "sha512-KxN+zCjOYHGwCl4UCtSfZ6jrq/qi88JDUtiEFk8LELEHq2Egfc/FgW+jItZiOLRuQfb/3xJSgFuNPC9jzggX+A=="],
 
@@ -161,15 +160,11 @@
 
     "is-potential-custom-element-name": ["is-potential-custom-element-name@1.0.1", "", {}, "sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ=="],
 
-    "jempl": ["jempl@0.0.6", "", {}, "sha512-av65p7TGe5cD1YE2fGbqaIvma0V/OCRsl2dVFZ2SZFmD43D5CTWBgFByJbZ/be9q2rFKrcNke20/ty/bgCrMBA=="],
+    "jempl": ["jempl@0.1.0-rc1", "", {}, "sha512-zVw+LqTaWleUBXp2UkZKPX5eNd7teAspFlbedQMLNcWjny0bm5W55vtIi4RzLef5V2y3bcfy2ZuMUQb+Okhxyw=="],
 
     "js-yaml": ["js-yaml@4.1.0", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA=="],
 
     "jsdom": ["jsdom@26.1.0", "", { "dependencies": { "cssstyle": "^4.2.1", "data-urls": "^5.0.0", "decimal.js": "^10.5.0", "html-encoding-sniffer": "^4.0.0", "http-proxy-agent": "^7.0.2", "https-proxy-agent": "^7.0.6", "is-potential-custom-element-name": "^1.0.1", "nwsapi": "^2.2.16", "parse5": "^7.2.1", "rrweb-cssom": "^0.8.0", "saxes": "^6.0.0", "symbol-tree": "^3.2.4", "tough-cookie": "^5.1.1", "w3c-xmlserializer": "^5.0.0", "webidl-conversions": "^7.0.0", "whatwg-encoding": "^3.1.1", "whatwg-mimetype": "^4.0.0", "whatwg-url": "^14.1.1", "ws": "^8.18.0", "xml-name-validator": "^5.0.0" }, "peerDependencies": { "canvas": "^3.0.0" }, "optionalPeers": ["canvas"] }, "sha512-Cvc9WUhxSMEo4McES3P7oK3QaXldCfNWp7pl2NNeiIFlCoLr3kfq9kb1fxftiwk1FLV7CvpvDfonxtzUDeSOPg=="],
-
-    "json-e": ["json-e@4.8.0", "", { "dependencies": { "json-stable-stringify-without-jsonify": "^1.0.1" } }, "sha512-YOxEEr9dd9/y5PbXsKx/MCFyAR+UL5zbRBObbuHnjxvC3rY8EIfQMc64iULb97G4NcV5vadIzFdEHAYh0Cqljg=="],
-
-    "json-stable-stringify-without-jsonify": ["json-stable-stringify-without-jsonify@1.0.1", "", {}, "sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw=="],
 
     "lodash.escape": ["lodash.escape@4.0.1", "", {}, "sha512-nXEOnb/jK9g0DYMr1/Xvq6l5xMD7GDG55+GSYIYmS0G4tBk/hURD4JR9WCavs04t33WmJx9kCyp9vJ+mr4BOUw=="],
 
