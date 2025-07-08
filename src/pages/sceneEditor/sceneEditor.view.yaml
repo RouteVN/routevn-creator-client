@@ -3,27 +3,27 @@ elementName: rvn-scene-editor
 viewDataSchema:
   type: object
   properties:
-      currentLines:
+    currentLines:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+      currentInstructions:
         type: array
         items:
           type: object
           properties:
+            text:
+              type: string
             id:
               type: string
-        currentInstructions:
-          type: array
-          items:
-            type: object
-            properties:
-              text:
-                type: string
-              id:
-                type: string
-              type:
-                type: string
-                enum:
-                  - text
-                  - image
+            type:
+              type: string
+              enum:
+                - text
+                - image
 
 refs:
   lines-editor:
