@@ -3,45 +3,45 @@ elementName: rvn-scene-editor
 viewDataSchema:
   type: object
   properties:
-    currentSteps:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-    currentInstructions:
-      type: array
-      items:
-        type: object
-        properties:
-          text:
-            type: string
-          id:
-            type: string
-          type:
-            type: string
-            enum:
-              - text
-              - image
+      currentLines:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+        currentInstructions:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              id:
+                type: string
+              type:
+                type: string
+                enum:
+                  - text
+                  - image
 
 refs:
-  steps-editor:
+  lines-editor:
     eventListeners:
       editor-data-chanaged:
         handler: handleEditorDataChanaged
       newLine:
         handler: handleNewLine
-      splitStep:
-        handler: handleSplitStep
+      splitLine:
+        handler: handleSplitLine
       moveUp:
         handler: handleMoveUp
       moveDown:
         handler: handleMoveDown
-      mergeSteps:
-        handler: handleMergeSteps
-      stepSelectionChanged:
-        handler: handleStepSelectionChanged
+      mergeLines:
+        handler: handleMergeLines
+      lineSelectionChanged:
+        handler: handleLineSelectionChanged
   background-action:
     eventListeners:
       click:
@@ -198,7 +198,7 @@ template:
               - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
                 - rtgl-text s=sm: '<>'
             - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
-              - rvn-steps-editor#steps-editor .steps=currentSteps .selectedStepId=selectedStepId:
+              - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId:
               - rtgl-view h=30vh:
       - rtgl-view w=1 h=f bgc=mu:
       - rtgl-view w=f:
@@ -238,13 +238,13 @@ template:
                 - rtgl-view#scene-transition-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                   - rtgl-svg svg=text wh=24:
                   - rtgl-text s=sm: 'Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})'
-  - $if mode != "steps-editor":
+  - $if mode != "lines-editor":
     - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
       - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
         - $if mode == "actions":
             - rvn-command-line-actions#command-line-actions:
           $elif mode == "richtext":
-            - rvn-command-line-rich-text#command-line-rich-text .stepContent=richTextContent:
+            - rvn-command-line-rich-text#command-line-rich-text .lineContent=richTextContent:
           $elif mode == "dialoguebox":
             - rvn-command-line-dialogue-box#command-line-dialogue-box:
           $elif mode == "choices":

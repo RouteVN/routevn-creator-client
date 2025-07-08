@@ -1,4 +1,4 @@
-elementName: rvn-steps-editor
+elementName: rvn-lines-editor
 
 onMount:
   handler: handleOnMount
@@ -6,7 +6,7 @@ onMount:
 viewDataSchema:
   type: object
   properties:
-    selectedStepId:
+    selectedLineId:
       type: string
     mode:
       type: string
@@ -14,12 +14,12 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    steps:
+    lines:
       type: array
       items:
         type: object
         properties:
-    selectedStepId:
+    selectedLineId:
       type: string
 
 refs:
@@ -27,7 +27,7 @@ refs:
     eventListeners:
       keydown:
         handler: handleContainerKeyDown
-  step-*:
+  line-*:
     eventListeners:
       focus:
         handler: handleOnFocus
@@ -36,7 +36,7 @@ refs:
       # mousedown:
       #   handler: handleBlockMouseDown
       mouseup:
-        handler: handleStepMouseUp
+        handler: handleLineMouseUp
       # beforeinput:
       #   handler: handleBlockBeforeInput
       # compositionend:
@@ -44,7 +44,7 @@ refs:
       # compositionstart:
       #   handler: handleBlockCompositionStart
       keydown:
-        handler: handleStepKeyDown
+        handler: handleLineKeyDown
 
 styles:
   'div[contenteditable="true"]:focus':
@@ -52,17 +52,17 @@ styles:
 
 template:
   - 'rtgl-view#container w=f h=f tabindex=0 style="outline: none;"':
-    - $for step, i in steps:
-      - 'rtgl-view d=h w=f av=c style="background-color: ${step.backgroundColor};"':
+    - $for line, i in lines:
+      - 'rtgl-view d=h w=f av=c style="background-color: ${line.backgroundColor};"':
         - rtgl-view h=f av=c w=32 ah=e mr=md:
-          - rtgl-text s=sm c=${step.lineColor}: ${step.lineNumber}
+          - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
         - rtgl-view wh=16 br=f mr=md:
         - rtgl-view d=h w=f av=c:
-          - 'div#step-${step.id} style="width: 100%;" contenteditable=true':
-            - 'span style="font-size: 18px;"': ${step.instructions.presentationInstructions.dialogue.text}
+          - 'div#line-${line.id} style="width: 100%;" contenteditable=true':
+            - 'span style="font-size: 18px;"': ${line.instructions.presentationInstructions.dialogue.text}
           - rtgl-view d=h:
-            - $if step.backgroundFileId:
-              - rvn-file-image w=36 h=24 fileId=${step.backgroundFileId}: 
+            - $if line.backgroundFileId:
+              - rvn-file-image w=36 h=24 fileId=${line.backgroundFileId}: 
             # - $else:
             #   - rtgl-view w=36 h=24 bgc=mu av=c ah=c:
             #     - rtgl-text s=xs: No Background

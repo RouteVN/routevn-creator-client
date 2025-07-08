@@ -2,7 +2,7 @@
 export const INITIAL_STATE = Object.freeze({
   sceneId: undefined,
   scene: undefined,
-  selectedStepId: undefined,
+  selectedLineId: undefined,
   sectionsGraphView: false,
   currentInstructions: [{
     id: '1',
@@ -10,7 +10,7 @@ export const INITIAL_STATE = Object.freeze({
       presentationInstructions: {},
     }
   }],
-  mode: 'steps-editor',
+  mode: 'lines-editor',
   selectedSectionId: '1',
   dropdownMenu: {
     isOpen: false,
@@ -49,12 +49,12 @@ export const selectSelectedSectionId = ({ state, props }, payload) => {
   return state.selectedSectionId;
 }
 
-export const selectSelectedStepId = ({ state, props }, payload) => {
-  return state.selectedStepId;
+export const selectSelectedLineId = ({ state, props }, payload) => {
+  return state.selectedLineId;
 }
 
-export const setSelectedStepId = (state, selectedStepId) => {
-  state.selectedStepId = selectedStepId;
+export const setSelectedLineId = (state, selectedLineId) => {
+  state.selectedLineId = selectedLineId;
 }
 
 export const setMode = (state, mode) => {
@@ -117,7 +117,7 @@ export const hidePopover = (state) => {
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  // const currentStep = selectSelectedStep(state, props, payload)
+  // const currentLine = selectSelectedLine(state, props, payload)
 
   const sections = state.scene.sections.map(section => {
     return {
@@ -126,7 +126,7 @@ export const toViewData = ({ state, props }, payload) => {
     }
   })
 
-  // const currentSteps = state.sections.find(section => section.id === state.selectedSectionId).steps;
+  // const currentLines = state.sections.find(section => section.id === state.selectedSectionId).lines;
 
   // Get current section for rename form
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
@@ -155,30 +155,30 @@ export const toViewData = ({ state, props }, payload) => {
     }
   } : null;
 
-  const selectedStep = currentSection?.steps?.find(step => step.id === state.selectedStepId);
+  const selectedLine = currentSection?.steps?.find(line => line.id === state.selectedLineId);
 
   let backgroundImage;
   let bgmAudio;
   let soundEffectsAudio = [];
   let charactersData = [];
 
-  if (selectedStep?.instructions?.presentationInstructions?.background) {
-    backgroundImage = state.repositoryState.images.items[selectedStep.instructions.presentationInstructions.background.imageId];
+  if (selectedLine?.instructions?.presentationInstructions?.background) {
+    backgroundImage = state.repositoryState.images.items[selectedLine.instructions.presentationInstructions.background.imageId];
   }
 
-  if (selectedStep?.instructions?.presentationInstructions?.bgm) {
-    bgmAudio = state.repositoryState.audio.items[selectedStep.instructions.presentationInstructions.bgm.audioId];
+  if (selectedLine?.instructions?.presentationInstructions?.bgm) {
+    bgmAudio = state.repositoryState.audio.items[selectedLine.instructions.presentationInstructions.bgm.audioId];
   }
 
-  if (selectedStep?.instructions?.presentationInstructions?.soundEffects) {
-    soundEffectsAudio = selectedStep.instructions.presentationInstructions.soundEffects.map(se => ({
+  if (selectedLine?.instructions?.presentationInstructions?.soundEffects) {
+    soundEffectsAudio = selectedLine.instructions.presentationInstructions.soundEffects.map(se => ({
       ...se,
       audio: state.repositoryState.audio.items[se.audioId]
     }));
   }
 
-  if (selectedStep?.instructions?.presentationInstructions?.characters) {
-    charactersData = selectedStep.instructions.presentationInstructions.characters.map(char => ({
+  if (selectedLine?.instructions?.presentationInstructions?.characters) {
+    charactersData = selectedLine.instructions.presentationInstructions.characters.map(char => ({
       ...char,
       character: state.repositoryState.characters.items[char.characterId],
       sprite: char.spriteId ? state.repositoryState.images.items[char.spriteId] : null
@@ -186,8 +186,8 @@ export const toViewData = ({ state, props }, payload) => {
   }
 
   let sceneTransitionData = null;
-  if (selectedStep?.instructions?.presentationInstructions?.sceneTransition) {
-    const sceneTransition = selectedStep.instructions.presentationInstructions.sceneTransition;
+  if (selectedLine?.instructions?.presentationInstructions?.sceneTransition) {
+    const sceneTransition = selectedLine.instructions.presentationInstructions.sceneTransition;
     sceneTransitionData = {
       ...sceneTransition,
       scene: state.repositoryState.scenes.items[sceneTransition.sceneId]
@@ -195,13 +195,13 @@ export const toViewData = ({ state, props }, payload) => {
   }
 
   let richTextContent = '';
-  if (selectedStep?.instructions?.presentationInstructions?.richText) {
+  if (selectedLine?.instructions?.presentationInstructions?.richText) {
     // Check both possible text fields
-    richTextContent = selectedStep.instructions.presentationInstructions.richText.content || 
-                     selectedStep.instructions.presentationInstructions.richText.text || '';
-  } else if (selectedStep?.instructions?.presentationInstructions?.dialogue) {
+    richTextContent = selectedLine.instructions.presentationInstructions.richText.content || 
+                     selectedLine.instructions.presentationInstructions.richText.text || '';
+  } else if (selectedLine?.instructions?.presentationInstructions?.dialogue) {
     // Fall back to dialogue text if rich text doesn't exist
-    richTextContent = selectedStep.instructions.presentationInstructions.dialogue.text || '';
+    richTextContent = selectedLine.instructions.presentationInstructions.dialogue.text || '';
   }
 
   const soundEffectsNames = soundEffectsAudio.map(se => se.audio.name).join(", ");
@@ -210,62 +210,62 @@ export const toViewData = ({ state, props }, payload) => {
   return {
     scene: state.scene,
     sections,
-    currentSteps: Array.isArray(currentSection?.steps) ? currentSection.steps : [],
+    currentLines: Array.isArray(currentSection?.steps) ? currentSection.steps : [],
     currentInstructions: [],
-    currentStep: selectedStep,
-    // currentStep: currentSteps.find(step => step.id === state.selectedStepId),
-    background: selectedStep?.instructions?.presentationInstructions?.background,
+    currentLine: selectedLine,
+    // currentLine: currentLines.find(line => line.id === state.selectedLineId),
+    background: selectedLine?.instructions?.presentationInstructions?.background,
     backgroundImage,
-    bgm: selectedStep?.instructions?.presentationInstructions?.bgm,
+    bgm: selectedLine?.instructions?.presentationInstructions?.bgm,
     bgmAudio,
-    soundEffects: selectedStep?.instructions?.presentationInstructions?.soundEffects,
+    soundEffects: selectedLine?.instructions?.presentationInstructions?.soundEffects,
     soundEffectsAudio,
     soundEffectsNames,
-    characters: selectedStep?.instructions?.presentationInstructions?.characters,
+    characters: selectedLine?.instructions?.presentationInstructions?.characters,
     charactersData,
     charactersNames,
-    sceneTransition: selectedStep?.instructions?.presentationInstructions?.sceneTransition,
+    sceneTransition: selectedLine?.instructions?.presentationInstructions?.sceneTransition,
     sceneTransitionData,
-    richText: selectedStep?.instructions?.presentationInstructions?.richText,
+    richText: selectedLine?.instructions?.presentationInstructions?.richText,
     richTextContent,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: renameForm,
-    selectedStepId: state.selectedStepId,
+    selectedLineId: state.selectedLineId,
     sectionsGraphView: state.sectionsGraphView,
   };
 }
 
-export const selectStepIdIndex = (state, props, payload) => {
-  const { stepId } = payload;
-  return state.currentSteps.findIndex(step => step.id === stepId);
+export const selectLineIdIndex = (state, props, payload) => {
+  const { lineId } = payload;
+  return state.currentLines.findIndex(line => line.id === lineId);
 }
 
-export const selectPreviousStepId = ({ state, props }, payload) => {
-  const { stepId } = payload;
+export const selectPreviousLineId = ({ state, props }, payload) => {
+  const { lineId } = payload;
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
-  const currentSteps = Array.isArray(currentSection?.steps) ? currentSection.steps : [];
-  const stepIndex = currentSteps.findIndex(step => step.id === stepId);
-  if (stepIndex === 0) {
-    return stepId;
+  const currentLines = Array.isArray(currentSection?.steps) ? currentSection.steps : [];
+  const lineIndex = currentLines.findIndex(line => line.id === lineId);
+  if (lineIndex === 0) {
+    return lineId;
   }
-  return currentSteps[stepIndex - 1]?.id;
+  return currentLines[lineIndex - 1]?.id;
 }
 
-export const selectNextStepId = ({ state, props }, payload) => {
-  const { stepId } = payload;
+export const selectNextLineId = ({ state, props }, payload) => {
+  const { lineId } = payload;
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
-  const currentSteps = Array.isArray(currentSection?.steps) ? currentSection.steps : [];
-  const stepIndex = currentSteps.findIndex(step => step.id === stepId);
-  if (stepIndex >= currentSteps.length - 1) {
-    return stepId;
+  const currentLines = Array.isArray(currentSection?.steps) ? currentSection.steps : [];
+  const lineIndex = currentLines.findIndex(line => line.id === lineId);
+  if (lineIndex >= currentLines.length - 1) {
+    return lineId;
   }
-  return currentSteps[stepIndex + 1]?.id;
+  return currentLines[lineIndex + 1]?.id;
 }
 
-export const selectSelectedStep = (state, props, payload) => {
-  return state.sections.find(section => section.id === state.selectedSectionId).steps.find(step => step.id === state.selectedStepId);
+export const selectSelectedLine = (state, props, payload) => {
+  return state.sections.find(section => section.id === state.selectedSectionId).steps.find(line => line.id === state.selectedLineId);
 }
 
 export const toggleSectionsGraphView = (state) => {
