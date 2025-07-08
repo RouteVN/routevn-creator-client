@@ -1,12 +1,11 @@
 {
   "type": "module",
   "dependencies": {
-    "@rettangoli/fe": "^0.0.6",
+    "@rettangoli/fe": "^0.0.7-rc5",
     "esbuild": "^0.25.5",
     "immer": "^10.1.1",
     "js-yaml": "^4.1.0",
     "jsdom": "^26.1.0",
-    "json-e": "^4.8.0",
     "nanoid": "^5.1.5",
     "rxjs": "^7.8.2",
     "slate": "^0.114.0",
@@ -15,7 +14,7 @@
     "vite": "^6.3.5"
   },
   "scripts": {
-    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && bunx rtgl@latest fe build",
+    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && bunx rtgl fe build",
     "watch": "rtgl fe watch"
   }
 }
