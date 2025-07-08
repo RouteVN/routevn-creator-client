@@ -100,7 +100,6 @@ const treePush = (state, target, value) => {
   
   // If targetData is undefined, the path doesn't exist - create it
   if (!targetData) {
-    console.warn(`treePush: Target path '${target}' does not exist, creating it`);
     targetData = { tree: [], items: {} };
     // Use set to create the path and get updated state
     const stateWithPath = set(newState, target, targetData);

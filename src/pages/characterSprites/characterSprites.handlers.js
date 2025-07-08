@@ -2,26 +2,10 @@
 import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
-  const { router } = deps;
+  const { router, store, repository } = deps;
   const { characterId } = router.getPayload();
-  const { store, repository } = deps;
   const { characters } = repository.getState();
   const character = characters.items[characterId];
-  
-  // If character doesn't have sprites, create it
-  if (character && !character.sprites) {
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: "characters",
-      value: {
-        id: characterId,
-        replace: false,
-        item: {
-          sprites: { items: {}, tree: [] },
-        },
-      },
-    });
-  }
   
   store.setCharacterId(characterId);
   store.setItems(character?.sprites || { tree: [], items: {} });
@@ -100,47 +84,31 @@ export const handleDragDropFileSelected = async (e, deps) => {
   // Add successfully uploaded files to repository
   const successfulUploads = uploadResults.filter((result) => result.success);
 
-  successfulUploads.forEach((result) => {
+  if (successfulUploads.length > 0) {
     const characterId = store.selectCharacterId();
-    
-    // Ensure the character has a sprites property
-    const { characters } = repository.getState();
-    if (!characters.items[characterId]?.sprites) {
+
+    successfulUploads.forEach((result) => {
       repository.addAction({
-        actionType: "treeUpdate",
-        target: "characters",
+        actionType: "treePush",
+        target: `characters.items.${characterId}.sprites`,
         value: {
-          id: characterId,
-          replace: false,
+          parent: id,
+          position: "last",
           item: {
-            sprites: { items: {}, tree: [] },
+            id: nanoid(),
+            type: "image",
+            fileId: result.fileId,
+            name: result.file.name,
+            fileType: result.file.type,
+            fileSize: result.file.size,
           },
         },
       });
-    }
-    
-    repository.addAction({
-      actionType: "treePush",
-      target: `characters.items.${characterId}.sprites`,
-      value: {
-        parent: id,
-        position: "last",
-        item: {
-          id: nanoid(),
-          type: "image",
-          fileId: result.fileId,
-          name: result.file.name,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-        },
-      },
     });
-  });
-
-  if (successfulUploads.length > 0) {
-    const { store, repository } = deps;
+    
+    // Update store with the latest repository state
     const { characters } = repository.getState();
-    const character = characters.items[store.selectCharacterId()];
+    const character = characters.items[characterId];
     store.setItems(character?.sprites || { tree: [], items: {} });
   }
 
