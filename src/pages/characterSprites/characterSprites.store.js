@@ -40,22 +40,6 @@ export const selectSelectedItem = ({ state }) => {
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  // Check if spritesData has the expected structure
-  if (!state.spritesData || !state.spritesData.items || !state.spritesData.tree) {
-    return {
-      flatItems: [],
-      flatGroups: [],
-      resourceCategory: 'assets',
-      selectedResourceId: 'character-sprites',
-      selectedItemId: state.selectedItemId,
-      selectedItem: null,
-      detailTitle: null,
-      detailFields: [],
-      detailEmptyMessage: 'Select a sprite to view details',
-      repositoryTarget: `characters.items.${state.characterId}.sprites`,
-    };
-  }
-  
   const flatItems = toFlatItems(state.spritesData);
   const flatGroups = toFlatGroups(state.spritesData);
 
