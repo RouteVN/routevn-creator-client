@@ -54,21 +54,21 @@ export const selectNavigationDirection = ({ state }) => {
 }
 
 export const toViewData = ({ state, props }, payload) => {
-  const steps = (props.steps || []).map((step, i) => {
-    const isSelected = props.selectedStepId === step.id;
+  const lines = (props.lines || []).map((line, i) => {
+    const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === 'block';
 
     let backgroundFileId;
-    if (step.instructions?.presentationInstructions?.background) {
-      console.log('step.instructions.presentationInstructions.background', step.instructions.presentationInstructions.background)
-      const imageId = step.instructions.presentationInstructions.background.imageId;
+    if (line.instructions?.presentationInstructions?.background) {
+      console.log('line.instructions.presentationInstructions.background', line.instructions.presentationInstructions.background)
+      const imageId = line.instructions.presentationInstructions.background.imageId;
       console.log('state.repositoryState.images.items', state.repositoryState.images.items)
       backgroundFileId = state.repositoryState.images.items[imageId]?.fileId;
       console.log('backgroundFileId', backgroundFileId)
     }
 
     return {
-      ...step,
+      ...line,
       lineNumber: i + 1,
       lineColor: isSelected ? 'fg' : 'mu-fg',
       backgroundColor: (isSelected && isBlockMode) ? 'var(--muted)' : 'transparent',
@@ -76,8 +76,8 @@ export const toViewData = ({ state, props }, payload) => {
     }
   });
   return {
-    steps,
-    selectedStepId: props.selectedStepId,
+    lines,
+    selectedLineId: props.selectedLineId,
     mode: state.mode,
   }
 }

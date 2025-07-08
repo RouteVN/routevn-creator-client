@@ -243,30 +243,30 @@ export const handleContainerKeyDown = (e, deps) => {
   const mode = store.selectMode();
   
   // Only handle container keydown if the target is the container itself
-  // If it's a contenteditable, let the step handler handle it
+  // If it's a contenteditable, let the line handler handle it
   if (e.target.id !== 'container') {
     return;
   }
   
   if (mode === 'block') {
-    const currentStepId = props.selectedStepId;
-    const steps = props.steps || [];
+    const currentLineId = props.selectedLineId;
+    const lines = props.lines || [];
     
     switch (e.key) {
       case "ArrowUp":
         e.preventDefault();
         e.stopPropagation();
-        if (!currentStepId && steps.length > 0) {
-          // No selection, select the first step
-          dispatchEvent(new CustomEvent("stepSelectionChanged", {
-            detail: { stepId: steps[0].id }
+        if (!currentLineId && lines.length > 0) {
+          // No selection, select the first line
+          dispatchEvent(new CustomEvent("lineSelectionChanged", {
+            detail: { lineId: lines[0].id }
           }));
-        } else if (currentStepId) {
-          const currentIndex = steps.findIndex(step => step.id === currentStepId);
+        } else if (currentLineId) {
+          const currentIndex = lines.findIndex(line => line.id === currentLineId);
           if (currentIndex > 0) {
-            const prevStepId = steps[currentIndex - 1].id;
-            dispatchEvent(new CustomEvent("stepSelectionChanged", {
-              detail: { stepId: prevStepId }
+            const prevLineId = lines[currentIndex - 1].id;
+            dispatchEvent(new CustomEvent("lineSelectionChanged", {
+              detail: { lineId: prevLineId }
             }));
           }
         }
@@ -274,35 +274,35 @@ export const handleContainerKeyDown = (e, deps) => {
       case "ArrowDown":
         e.preventDefault();
         e.stopPropagation();
-        if (!currentStepId && steps.length > 0) {
-          // No selection, select the first step
-          dispatchEvent(new CustomEvent("stepSelectionChanged", {
-            detail: { stepId: steps[0].id }
+        if (!currentLineId && lines.length > 0) {
+          // No selection, select the first line
+          dispatchEvent(new CustomEvent("lineSelectionChanged", {
+            detail: { lineId: lines[0].id }
           }));
-        } else if (currentStepId) {
-          const currentIndex = steps.findIndex(step => step.id === currentStepId);
-          if (currentIndex < steps.length - 1) {
-            const nextStepId = steps[currentIndex + 1].id;
-            dispatchEvent(new CustomEvent("stepSelectionChanged", {
-              detail: { stepId: nextStepId }
+        } else if (currentLineId) {
+          const currentIndex = lines.findIndex(line => line.id === currentLineId);
+          if (currentIndex < lines.length - 1) {
+            const nextLineId = lines[currentIndex + 1].id;
+            dispatchEvent(new CustomEvent("lineSelectionChanged", {
+              detail: { lineId: nextLineId }
             }));
           }
         }
         break;
       case "Enter":
         e.preventDefault();
-        if (currentStepId) {
-          // Focus the selected step to enter text-editor mode at the end
-          const stepElement = deps.getRefIds()[`step-${currentStepId}`]?.elm;
-          if (stepElement) {
+        if (currentLineId) {
+          // Focus the selected line to enter text-editor mode at the end
+          const lineElement = deps.getRefIds()[`line-${currentLineId}`]?.elm;
+          if (lineElement) {
             // Position cursor at the end before focusing
-            const textLength = stepElement.textContent.length;
+            const textLength = lineElement.textContent.length;
             store.setCursorPosition(textLength);
             store.setGoalColumn(textLength);
             store.setNavigationDirection('end');
             
-            // Use updateSelectedStep to properly position cursor at end
-            deps.handlers.updateSelectedStep(currentStepId, deps);
+            // Use updateSelectedLine to properly position cursor at end
+            deps.handlers.updateSelectedLine(currentLineId, deps);
           }
         }
         break;
@@ -310,9 +310,9 @@ export const handleContainerKeyDown = (e, deps) => {
   }
 };
 
-export const handleStepKeyDown = (e, deps) => {
+export const handleLineKeyDown = (e, deps) => {
   const { editor, dispatchEvent, store, render, props } = deps;
-  const id = e.target.id.replace(/^step-/, "");
+  const id = e.target.id.replace(/^line-/, "");
   let newOffset;
   const mode = store.selectMode();
   
@@ -343,22 +343,22 @@ export const handleStepKeyDown = (e, deps) => {
           e.preventDefault();
           e.stopPropagation();
           
-          // Get current step content
+          // Get current line content
           const currentContent = e.currentTarget.textContent;
-          const currentStepId = e.currentTarget.id.replace(/^step-/, "");
+          const currentLineId = e.currentTarget.id.replace(/^line-/, "");
           
-          // Find the previous step
-          const currentIndex = props.steps.findIndex(step => step.id === currentStepId);
+          // Find the previous line
+          const currentIndex = props.lines.findIndex(line => line.id === currentLineId);
           
           if (currentIndex > 0) {
-            const prevStep = props.steps[currentIndex - 1];
+            const prevLine = props.lines[currentIndex - 1];
             
-            // Dispatch event to merge steps
+            // Dispatch event to merge lines
             dispatchEvent(
-              new CustomEvent("mergeSteps", {
+              new CustomEvent("mergeLines", {
                 detail: {
-                  prevStepId: prevStep.id,
-                  currentStepId: currentStepId,
+                  prevLineId: prevLine.id,
+                  currentLineId: currentLineId,
                   contentToAppend: currentContent,
                 },
               })
@@ -393,9 +393,9 @@ export const handleStepKeyDown = (e, deps) => {
         
         requestAnimationFrame(() => {
           dispatchEvent(
-            new CustomEvent("splitStep", {
+            new CustomEvent("splitLine", {
               detail: {
-                stepId: id,
+                lineId: id,
                 leftContent: leftContent,
                 rightContent: rightContent,
               },
@@ -407,12 +407,12 @@ export const handleStepKeyDown = (e, deps) => {
     case "ArrowUp":
       if (mode === 'block') {
         e.preventDefault();
-        // In block mode, just update selectedStepId without focusing
-        const currentIndex = props.steps.findIndex(step => step.id === id);
+        // In block mode, just update selectedLineId without focusing
+        const currentIndex = props.lines.findIndex(line => line.id === id);
         if (currentIndex > 0) {
-          const prevStep = props.steps[currentIndex - 1];
-          dispatchEvent(new CustomEvent("stepSelectionChanged", {
-            detail: { stepId: prevStep.id }
+          const prevLine = props.lines[currentIndex - 1];
+          dispatchEvent(new CustomEvent("lineSelectionChanged", {
+            detail: { lineId: prevLine.id }
           }));
         }
       } else {
@@ -420,7 +420,7 @@ export const handleStepKeyDown = (e, deps) => {
         const isOnFirstLine = isCursorOnFirstLine(e.currentTarget);
         
         if (isOnFirstLine) {
-          // Cursor is on first line, move to previous step
+          // Cursor is on first line, move to previous line
           e.preventDefault();
           e.stopPropagation(); // Prevent bubbling to container
           const goalColumn = store.selectGoalColumn() || 0;
@@ -431,7 +431,7 @@ export const handleStepKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("moveUp", {
               detail: {
-                stepId: e.currentTarget.id.replace(/^step-/, ""),
+                lineId: e.currentTarget.id.replace(/^line-/, ""),
                 cursorPosition: goalColumn,
               },
             })
@@ -443,12 +443,12 @@ export const handleStepKeyDown = (e, deps) => {
     case "ArrowDown":
       if (mode === 'block') {
         e.preventDefault();
-        // In block mode, just update selectedStepId without focusing
-        const currentIndex = props.steps.findIndex(step => step.id === id);
-        if (currentIndex < props.steps.length - 1) {
-          const nextStep = props.steps[currentIndex + 1];
-          dispatchEvent(new CustomEvent("stepSelectionChanged", {
-            detail: { stepId: nextStep.id }
+        // In block mode, just update selectedLineId without focusing
+        const currentIndex = props.lines.findIndex(line => line.id === id);
+        if (currentIndex < props.lines.length - 1) {
+          const nextLine = props.lines[currentIndex + 1];
+          dispatchEvent(new CustomEvent("lineSelectionChanged", {
+            detail: { lineId: nextLine.id }
           }));
         }
       } else {
@@ -456,7 +456,7 @@ export const handleStepKeyDown = (e, deps) => {
         const isOnLastLine = isCursorOnLastLine(e.currentTarget);
         
         if (isOnLastLine) {
-          // Cursor is on last line, move to next step
+          // Cursor is on last line, move to next line
           e.preventDefault();
           e.stopPropagation(); // Prevent bubbling to container
           const goalColumn = store.selectGoalColumn() || 0;
@@ -467,7 +467,7 @@ export const handleStepKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("moveDown", {
               detail: {
-                stepId: e.currentTarget.id.replace(/^step-/, ""),
+                lineId: e.currentTarget.id.replace(/^line-/, ""),
                 cursorPosition: goalColumn,
               },
             })
@@ -483,7 +483,7 @@ export const handleStepKeyDown = (e, deps) => {
         const textLength = e.currentTarget.textContent.length;
         
         if (currentPos >= textLength) {
-          // Cursor is at end, move to next step
+          // Cursor is at end, move to next line
           e.preventDefault();
           e.stopPropagation();
           
@@ -493,8 +493,8 @@ export const handleStepKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("moveDown", {
               detail: {
-                stepId: e.currentTarget.id.replace(/^step-/, ""),
-                cursorPosition: 0, // Go to beginning of next step
+                lineId: e.currentTarget.id.replace(/^line-/, ""),
+                cursorPosition: 0, // Go to beginning of next line
               },
             })
           );
@@ -508,7 +508,7 @@ export const handleStepKeyDown = (e, deps) => {
         const currentPos = getCursorPosition(e.currentTarget);
         
         if (currentPos <= 0) {
-          // Cursor is at beginning, move to previous step
+          // Cursor is at beginning, move to previous line
           e.preventDefault();
           e.stopPropagation();
           
@@ -518,7 +518,7 @@ export const handleStepKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("moveUp", {
               detail: {
-                stepId: e.currentTarget.id.replace(/^step-/, ""),
+                lineId: e.currentTarget.id.replace(/^line-/, ""),
                 cursorPosition: -1, // Special value to indicate "go to end"
               },
             })
@@ -531,7 +531,7 @@ export const handleStepKeyDown = (e, deps) => {
 
 };
 
-export const handleStepMouseUp = (e, deps) => {
+export const handleLineMouseUp = (e, deps) => {
   const { store } = deps;
   
   // Save cursor position after mouse up (selection change)
@@ -555,7 +555,7 @@ export const handleStepMouseUp = (e, deps) => {
 export const handleOnInput = (e, deps) => {
   const { dispatchEvent, store } = deps;
 
-  const stepId = e.target.id.replace(/^step-/, "");
+  const lineId = e.target.id.replace(/^line-/, "");
   const content = e.target.textContent;
 
   // Save cursor position on every input
@@ -563,7 +563,7 @@ export const handleOnInput = (e, deps) => {
   store.setCursorPosition(cursorPos);
 
   const detail = {
-    stepId,
+    lineId,
     content,
   }
 
@@ -575,21 +575,21 @@ export const handleOnInput = (e, deps) => {
 };
 
 
-export const updateSelectedStep = (stepId, deps) => {
+export const updateSelectedLine = (lineId, deps) => {
   const { store, getRefIds } = deps;
   const refIds = getRefIds();
-  const stepRef = refIds[`step-${stepId}`];
+  const lineRef = refIds[`line-${lineId}`];
   
   // Get goal column (desired position) instead of current position
   const goalColumn = store.selectGoalColumn() || 0;
-  const textLength = stepRef.elm.textContent.length;
+  const textLength = lineRef.elm.textContent.length;
   const direction = store.selectNavigationDirection();
   
   // Choose positioning strategy based on direction
   let targetPosition;
   if (direction === 'up') {
     // For upward navigation, find position on last line
-    targetPosition = findLastLinePosition(stepRef.elm, goalColumn);
+    targetPosition = findLastLinePosition(lineRef.elm, goalColumn);
   } else if (direction === 'end') {
     // For end positioning (ArrowLeft navigation), position at absolute end
     targetPosition = textLength;
@@ -599,7 +599,7 @@ export const updateSelectedStep = (stepId, deps) => {
   }
   
   // Get shadow root for selection if needed
-  let shadowRoot = stepRef.elm.getRootNode();
+  let shadowRoot = lineRef.elm.getRootNode();
   let selection = window.getSelection();
   
   // Check if we're in a shadow DOM
@@ -640,7 +640,7 @@ export const updateSelectedStep = (stepId, deps) => {
     return false;
   };
   
-  walkTextNodes(stepRef.elm);
+  walkTextNodes(lineRef.elm);
   
   // If we didn't find a position (cursor beyond text), position at end
   if (!foundNode && lastTextNode) {
@@ -650,7 +650,7 @@ export const updateSelectedStep = (stepId, deps) => {
     foundNode = true;
   }
   
-  if (foundNode) {
+  if (foundNode && selection) {
     selection.removeAllRanges();
     selection.addRange(range);
     
@@ -659,16 +659,16 @@ export const updateSelectedStep = (stepId, deps) => {
   }
   
   // Now focus - the selection should be preserved
-  stepRef.elm.focus({ preventScroll: true });
+  lineRef.elm.focus({ preventScroll: true });
 };
 
 export const handleOnFocus = (e, deps) => {
   const { store, render, dispatchEvent } = deps;
-  const stepId = e.currentTarget.id.replace(/^step-/, "");
+  const lineId = e.currentTarget.id.replace(/^line-/, "");
   
-  // Always update the selected step ID
-  dispatchEvent(new CustomEvent("stepSelectionChanged", {
-    detail: { stepId }
+  // Always update the selected line ID
+  dispatchEvent(new CustomEvent("lineSelectionChanged", {
+    detail: { lineId }
   }));
   store.setMode('text-editor'); // Switch to text-editor mode on focus
   

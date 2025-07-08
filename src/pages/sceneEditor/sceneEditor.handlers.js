@@ -27,13 +27,13 @@ export const handleSectionTabClick = (e, deps) => {
   const id = e.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
   
-  // Reset selected step to first step of new section
+  // Reset selected line to first line of new section
   const scene = store.selectScene();
   const newSection = scene.sections.find(section => section.id === id);
   if (newSection && newSection.steps && newSection.steps.length > 0) {
-    store.setSelectedStepId(newSection.steps[0].id);
+    store.setSelectedLineId(newSection.steps[0].id);
   } else {
-    store.setSelectedStepId(undefined);
+    store.setSelectedLineId(undefined);
   }
   
   render();
@@ -43,14 +43,14 @@ export const handleCommandLineSubmit = (e, deps) => {
   const { store, render, repository } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
-  const stepId = store.selectSelectedStepId();
+  const lineId = store.selectSelectedLineId();
 
-  if (!stepId) {
+  if (!lineId) {
     return;
   }
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${stepId}.instructions.presentationInstructions`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${lineId}.instructions.presentationInstructions`,
     value: {
       replace: false,
       item: e.detail
@@ -73,7 +73,7 @@ export const handleCommandLineSubmit = (e, deps) => {
     scene,
   });
   store.setRepository(repository.getState());
-  store.setMode("steps-editor");
+  store.setMode("lines-editor");
 
   render();
 };
@@ -83,11 +83,11 @@ export const handleEditorDataChanaged = (e, deps) => {
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
-  const stepId = e.detail.stepId;
+  const lineId = e.detail.lineId;
 
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${stepId}.instructions.presentationInstructions`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${lineId}.instructions.presentationInstructions`,
     value: {
       replace: false,
       item: {
@@ -113,7 +113,7 @@ export const handleEditorDataChanaged = (e, deps) => {
   //       },
   //       tree: [
   //         {
-  //           id: newStepId,
+  //           id: newLineId,
   //         },
   //       ],
   //     },
@@ -132,7 +132,7 @@ export const handleSectionAddClick = (e, deps) => {
 
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
-  const newStepId = nanoid();
+  const newLineId = nanoid();
 
   repository.addAction({
     actionType: "treePush",
@@ -151,7 +151,7 @@ export const handleSectionAddClick = (e, deps) => {
           },
           tree: [
             {
-              id: newStepId,
+              id: newLineId,
             },
           ],
         },
@@ -177,29 +177,29 @@ export const handleSectionAddClick = (e, deps) => {
   render();
 };
 
-export const handleSplitStep = (e, deps) => {
+export const handleSplitLine = (e, deps) => {
   const startTime = performance.now();
-  console.log('🕐 handleSplitStep - START at', startTime);
+  console.log('🕐 handleSplitLine - START at', startTime);
   
   const { store, render, repository, getRefIds } = deps;
 
   const sceneId = store.selectSceneId();
-  const newStepId = nanoid();
+  const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
-  const { stepId, leftContent, rightContent } = e.detail;
+  const { lineId, leftContent, rightContent } = e.detail;
 
-  console.log('handleSplitStep - splitting step:', stepId);
+  console.log('handleSplitLine - splitting line:', lineId);
 
   // Batch both operations into a single update cycle
   const repoStart = performance.now();
   console.log('🕐 Starting repository actions at', repoStart - startTime, 'ms');
   
-  // First, update the current step with the left content
+  // First, update the current line with the left content
   repository.addAction({
     actionType: "treeUpdate",
     target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps`,
     value: {
-      id: stepId,
+      id: lineId,
       replace: false,
       item: {
         instructions: {
@@ -216,15 +216,15 @@ export const handleSplitStep = (e, deps) => {
   const updateDone = performance.now();
   console.log('🕐 Update action done at', updateDone - startTime, 'ms (took', updateDone - repoStart, 'ms)');
 
-  // Then, create a new step with the right content and insert it after the current step
+  // Then, create a new line with the right content and insert it after the current line
   repository.addAction({
     actionType: "treePush",
     target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps`,
     value: {
       parent: "_root",
-      position: { after: stepId },
+      position: { after: lineId },
       item: {
-        id: newStepId,
+        id: newLineId,
         instructions: {
           presentationInstructions: {
             dialogue: {
@@ -261,23 +261,23 @@ export const handleSplitStep = (e, deps) => {
   const sceneDataDone = performance.now();
   console.log('🕐 Scene data update done at', sceneDataDone - startTime, 'ms (took', sceneDataDone - sceneDataStart, 'ms)');
 
-  // Pre-configure the stepsEditor before rendering
+  // Pre-configure the linesEditor before rendering
   const configStart = performance.now();
   console.log('🕐 Starting pre-config at', configStart - startTime, 'ms');
   
   const refIds = getRefIds();
-  const stepsEditorRef = refIds["steps-editor"];
+  const linesEditorRef = refIds["lines-editor"];
   
-  if (stepsEditorRef) {
-    // Set cursor position to 0 (beginning of new step)
-    stepsEditorRef.elm.store.setCursorPosition(0);
-    stepsEditorRef.elm.store.setGoalColumn(0);
-    stepsEditorRef.elm.store.setNavigationDirection('down');
-    stepsEditorRef.elm.store.setIsNavigating(true);
+  if (linesEditorRef) {
+    // Set cursor position to 0 (beginning of new line)
+    linesEditorRef.elm.store.setCursorPosition(0);
+    linesEditorRef.elm.store.setGoalColumn(0);
+    linesEditorRef.elm.store.setNavigationDirection('down');
+    linesEditorRef.elm.store.setIsNavigating(true);
   }
   
-  // Update selectedStepId through the store (not directly in stepsEditor)
-  store.setSelectedStepId(newStepId);
+  // Update selectedLineId through the store (not directly in linesEditor)
+  store.setSelectedLineId(newLineId);
 
   const configDone = performance.now();
   console.log('🕐 Pre-config done at', configDone - startTime, 'ms (took', configDone - configStart, 'ms)');
@@ -296,18 +296,18 @@ export const handleSplitStep = (e, deps) => {
     const focusStart = performance.now();
     console.log('🕐 Starting focus at', focusStart - startTime, 'ms');
     
-    if (stepsEditorRef) {
-      stepsEditorRef.elm.transformedHandlers.updateSelectedStep(newStepId);
+    if (linesEditorRef) {
+      linesEditorRef.elm.transformedHandlers.updateSelectedLine(newLineId);
       
-      const updateStepDone = performance.now();
-      console.log('🕐 updateSelectedStep done at', updateStepDone - startTime, 'ms (took', updateStepDone - focusStart, 'ms)');
+      const updateLineDone = performance.now();
+      console.log('🕐 updateSelectedLine done at', updateLineDone - startTime, 'ms (took', updateLineDone - focusStart, 'ms)');
       
-      // Also render the stepsEditor
-      stepsEditorRef.elm.render();
+      // Also render the linesEditor
+      linesEditorRef.elm.render();
       
       const finalRenderDone = performance.now();
-      console.log('🕐 Final render done at', finalRenderDone - startTime, 'ms (took', finalRenderDone - updateStepDone, 'ms)');
-      console.log('🕐 TOTAL handleSplitStep time:', finalRenderDone - startTime, 'ms');
+      console.log('🕐 Final render done at', finalRenderDone - startTime, 'ms (took', finalRenderDone - updateLineDone, 'ms)');
+      console.log('🕐 TOTAL handleSplitLine time:', finalRenderDone - startTime, 'ms');
     }
   });
 };
@@ -316,7 +316,7 @@ export const handleNewLine = (e, deps) => {
   const { store, render, repository } = deps;
 
   const sceneId = store.selectSceneId();
-  const newStepId = nanoid();
+  const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
 
   repository.addAction({
@@ -326,7 +326,7 @@ export const handleNewLine = (e, deps) => {
       parent: "_root",
       position: "last",
       item: {
-        id: newStepId,
+        id: newLineId,
         instructions: {
           presentationInstructions: {},
         },
@@ -354,43 +354,43 @@ export const handleNewLine = (e, deps) => {
 
 export const handleMoveUp = (e, deps) => {
   const { store, getRefIds, render } = deps;
-  const currentStepId = e.detail.stepId;
-  const previousStepId = store.selectPreviousStepId({ stepId: currentStepId });
+  const currentLineId = e.detail.lineId;
+  const previousLineId = store.selectPreviousLineId({ lineId: currentLineId });
   
 
-  // Only move if we have a different previous step
-  if (previousStepId && previousStepId !== currentStepId) {
+  // Only move if we have a different previous line
+  if (previousLineId && previousLineId !== currentLineId) {
     const refIds = getRefIds();
-    const stepsEditorRef = refIds["steps-editor"];
+    const linesEditorRef = refIds["lines-editor"];
     
-    // Update selectedStepId through the store
-    store.setSelectedStepId(previousStepId);
+    // Update selectedLineId through the store
+    store.setSelectedLineId(previousLineId);
     
     // Pass cursor position from event detail
     if (e.detail.cursorPosition !== undefined) {
       if (e.detail.cursorPosition === -1) {
-        // Special value: position at end of target step (for ArrowLeft navigation)
-        const targetStepRef = refIds[`step-${previousStepId}`];
-        const targetTextLength = targetStepRef?.elm?.textContent?.length || 0;
-        stepsEditorRef.elm.store.setCursorPosition(targetTextLength);
-        stepsEditorRef.elm.store.setGoalColumn(targetTextLength);
-        stepsEditorRef.elm.store.setNavigationDirection('end'); // Special direction for end positioning
+        // Special value: position at end of target line (for ArrowLeft navigation)
+        const targetLineRef = refIds[`line-${previousLineId}`];
+        const targetTextLength = targetLineRef?.elm?.textContent?.length || 0;
+        linesEditorRef.elm.store.setCursorPosition(targetTextLength);
+        linesEditorRef.elm.store.setGoalColumn(targetTextLength);
+        linesEditorRef.elm.store.setNavigationDirection('end'); // Special direction for end positioning
       } else {
-        stepsEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
-        // Set direction flag in store before calling updateSelectedStep
-        stepsEditorRef.elm.store.setNavigationDirection('up');
+        linesEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
+        // Set direction flag in store before calling updateSelectedLine
+        linesEditorRef.elm.store.setNavigationDirection('up');
       }
     } else {
-      // Set direction flag in store before calling updateSelectedStep
-      stepsEditorRef.elm.store.setNavigationDirection('up');
+      // Set direction flag in store before calling updateSelectedLine
+      linesEditorRef.elm.store.setNavigationDirection('up');
     }
-    stepsEditorRef.elm.transformedHandlers.updateSelectedStep(previousStepId);
+    linesEditorRef.elm.transformedHandlers.updateSelectedLine(previousLineId);
     
     // Force a render to update line colors after navigation
     setTimeout(() => {
       render();
-      // Also render the stepsEditor to update line colors
-      stepsEditorRef.elm.render();
+      // Also render the linesEditor to update line colors
+      linesEditorRef.elm.render();
     }, 0);
   }
 };
@@ -403,64 +403,64 @@ export const handleBackToActions = (e, deps) => {
 
 export const handleMoveDown = (e, deps) => {
   const { store, getRefIds, render } = deps;
-  const currentStepId = e.detail.stepId;
-  const nextStepId = store.selectNextStepId({ stepId: currentStepId });
+  const currentLineId = e.detail.lineId;
+  const nextLineId = store.selectNextLineId({ lineId: currentLineId });
   
 
-  // Only move if we have a different next step
-  if (nextStepId && nextStepId !== currentStepId) {
+  // Only move if we have a different next line
+  if (nextLineId && nextLineId !== currentLineId) {
     const refIds = getRefIds();
-    const stepsEditorRef = refIds["steps-editor"];
+    const linesEditorRef = refIds["lines-editor"];
     
-    // Update selectedStepId through the store
-    store.setSelectedStepId(nextStepId);
+    // Update selectedLineId through the store
+    store.setSelectedLineId(nextLineId);
     
     // Pass cursor position from event detail
     if (e.detail.cursorPosition !== undefined) {
-      stepsEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
+      linesEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
       if (e.detail.cursorPosition === 0) {
         // When moving to beginning, set goal column to 0 as well
-        stepsEditorRef.elm.store.setGoalColumn(0);
+        linesEditorRef.elm.store.setGoalColumn(0);
       }
     }
     
-    // Set direction flag in store before calling updateSelectedStep
-    stepsEditorRef.elm.store.setNavigationDirection('down');
-    stepsEditorRef.elm.transformedHandlers.updateSelectedStep(nextStepId);
+    // Set direction flag in store before calling updateSelectedLine
+    linesEditorRef.elm.store.setNavigationDirection('down');
+    linesEditorRef.elm.transformedHandlers.updateSelectedLine(nextLineId);
     
     // Force a render to update line colors after navigation
     setTimeout(() => {
       render();
-      // Also render the stepsEditor to update line colors
-      stepsEditorRef.elm.render();
+      // Also render the linesEditor to update line colors
+      linesEditorRef.elm.render();
     }, 0);
   }
 };
 
-export const handleMergeSteps = (e, deps) => {
+export const handleMergeLines = (e, deps) => {
   const { store, getRefIds, render, repository } = deps;
-  const { prevStepId, currentStepId, contentToAppend } = e.detail;
+  const { prevLineId, currentLineId, contentToAppend } = e.detail;
   
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   
-  // Get previous step content
+  // Get previous line content
   const scene = store.selectScene();
   const section = scene.sections.find(s => s.id === sectionId);
-  const prevStep = section.steps.find(s => s.id === prevStepId);
+  const prevLine = section.steps.find(s => s.id === prevLineId);
   
-  if (!prevStep) return;
+  if (!prevLine) return;
   
-  const prevContent = prevStep.instructions?.presentationInstructions?.dialogue?.text || '';
+  const prevContent = prevLine.instructions?.presentationInstructions?.dialogue?.text || '';
   const mergedContent = prevContent + contentToAppend;
   
   // Store the length of the previous content for cursor positioning
   const prevContentLength = prevContent.length;
   
-  // Update previous step with merged content
+  // Update previous line with merged content
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${prevStepId}.instructions.presentationInstructions`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${prevLineId}.instructions.presentationInstructions`,
     value: {
       replace: false,
       item: {
@@ -471,12 +471,12 @@ export const handleMergeSteps = (e, deps) => {
     }
   });
   
-  // Delete current step
+  // Delete current line
   repository.addAction({
     actionType: "treeDelete",
     target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps`,
     value: {
-      id: currentStepId,
+      id: currentLineId,
     },
   });
   
@@ -497,27 +497,27 @@ export const handleMergeSteps = (e, deps) => {
     scene: updatedScene,
   });
   
-  // Update selected step to the previous one
-  store.setSelectedStepId(prevStepId);
+  // Update selected line to the previous one
+  store.setSelectedLineId(prevLineId);
   
-  // Pre-configure the stepsEditor for cursor positioning
+  // Pre-configure the linesEditor for cursor positioning
   const refIds = getRefIds();
-  const stepsEditorRef = refIds["steps-editor"];
+  const linesEditorRef = refIds["lines-editor"];
   
-  if (stepsEditorRef) {
+  if (linesEditorRef) {
     // Set cursor position to where the previous content ended
-    stepsEditorRef.elm.store.setCursorPosition(prevContentLength);
-    stepsEditorRef.elm.store.setGoalColumn(prevContentLength);
-    stepsEditorRef.elm.store.setIsNavigating(true);
+    linesEditorRef.elm.store.setCursorPosition(prevContentLength);
+    linesEditorRef.elm.store.setGoalColumn(prevContentLength);
+    linesEditorRef.elm.store.setIsNavigating(true);
   }
   
   // Render and then focus
   render();
   
   requestAnimationFrame(() => {
-    if (stepsEditorRef) {
-      stepsEditorRef.elm.transformedHandlers.updateSelectedStep(prevStepId);
-      stepsEditorRef.elm.render();
+    if (linesEditorRef) {
+      linesEditorRef.elm.transformedHandlers.updateSelectedLine(prevLineId);
+      linesEditorRef.elm.render();
       
     }
   });
@@ -611,7 +611,7 @@ export const handleSceneTransitionActionContextMenu = (e, deps) => {
 
 export const handleActionsOverlayClick = (e, deps) => {
   const { store, render } = deps;
-  store.setMode("steps-editor");
+  store.setMode("lines-editor");
   render();
 };
 
@@ -700,13 +700,13 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     });
   } else if (action === "delete-instruction") {
     // Delete instruction using unset action
-    const selectedStepId = store.selectSelectedStepId();
+    const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
     
-    if (instructionType && selectedStepId && selectedSectionId) {
+    if (instructionType && selectedLineId && selectedSectionId) {
       repository.addAction({
         actionType: "unset",
-        target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.steps.items.${selectedStepId}.instructions.presentationInstructions.${instructionType}`,
+        target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.steps.items.${selectedLineId}.instructions.presentationInstructions.${instructionType}`,
       });
 
       // Update scene data
@@ -736,11 +736,11 @@ export const handlePopoverClickOverlay = (e, deps) => {
   render();
 };
 
-export const handleStepSelectionChanged = (e, deps) => {
+export const handleLineSelectionChanged = (e, deps) => {
   const { store, render } = deps;
-  const { stepId } = e.detail;
+  const { lineId } = e.detail;
   
-  store.setSelectedStepId(stepId);
+  store.setSelectedLineId(lineId);
   render();
 };
 
