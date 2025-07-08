@@ -90,6 +90,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
+          sprites: {
+            items: {},
+            tree: [],
+          },
         },
       },
     });

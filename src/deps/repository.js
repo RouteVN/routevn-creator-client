@@ -98,12 +98,20 @@ const treePush = (state, target, value) => {
   let targetData = get(newState, target);
   const { parent, item, position } = value;
   
-  // If targetData is undefined, the path doesn't exist - create it
+  // If targetData is undefined, the path doesn't exist
   if (!targetData) {
-    targetData = { tree: [], items: {} };
-    // Use set to create the path and get updated state
-    const stateWithPath = set(newState, target, targetData);
-    return treePush(stateWithPath, target, value);
+    // Special case: if this is a character sprites path, create it (for backwards compatibility)
+    if (target.includes('characters.items.') && target.endsWith('.sprites')) {
+      const characterId = target.split('.')[2];
+      const characters = get(newState, 'characters');
+      if (characters && characters.items && characters.items[characterId]) {
+        // Character exists but doesn't have sprites - create it
+        targetData = { tree: [], items: {} };
+        const stateWithPath = set(newState, target, targetData);
+        return treePush(stateWithPath, target, value);
+      }
+    }
+    throw new Error(`Target path '${target}' does not exist. Cannot push to non-existent path.`);
   }
   
   // Ensure tree and items exist

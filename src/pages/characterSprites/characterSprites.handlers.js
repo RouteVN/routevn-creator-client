@@ -7,6 +7,11 @@ export const handleOnMount = (deps) => {
   const { characters } = repository.getState();
   const character = characters.items[characterId];
   
+  if (!character) {
+    alert("Character not found");
+    return () => {};
+  }
+  
   store.setCharacterId(characterId);
   store.setItems(character.sprites);
   return () => {}
@@ -18,6 +23,12 @@ export const handleDataChanged = (e, deps) => {
   const { characterId } = router.getPayload();
   const { characters } = repository.getState();
   const character = characters.items[characterId];
+  
+  if (!character) {
+    alert("Character not found");
+    return;
+  }
+  
   store.setItems(character.sprites);
   render();
 };
@@ -34,6 +45,15 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
+
+  const characterId = store.selectCharacterId();
+  const { characters } = repository.getState();
+  const character = characters.items[characterId];
+  
+  if (!character) {
+    alert("Character not found");
+    return;
+  }
 
   // Create upload promises for all files
   const uploadPromises = Array.from(files).map(async (file) => {
@@ -84,8 +104,6 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const successfulUploads = uploadResults.filter((result) => result.success);
 
   if (successfulUploads.length > 0) {
-    const characterId = store.selectCharacterId();
-
     successfulUploads.forEach((result) => {
       repository.addAction({
         actionType: "treePush",
