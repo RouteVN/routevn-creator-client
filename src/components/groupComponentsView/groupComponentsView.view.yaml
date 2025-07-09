@@ -59,7 +59,7 @@ template:
                   - rtgl-text: ${group.fullLabel}
               - $if !group.isCollapsed:
                   - rtgl-view w=f mb=md p=sm:
-                    - rtgl-view d=h fw=w:
+                    - rtgl-view d=h fw=w g=md:
                       - $if group.hasChildren:
                           - $for item in group.children:
                               - 'rtgl-view#component-item-${item.id} cur=p style="${item.selectedStyle}"':
