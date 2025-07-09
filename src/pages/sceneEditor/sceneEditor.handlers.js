@@ -1,6 +1,66 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 
+// Helper function to extract fileIds from renderState
+function extractFileIdsFromRenderState(obj) {
+  const fileIds = new Set();
+
+  function traverse(value) {
+    if (value === null || value === undefined) return;
+
+    if (typeof value === 'string') {
+      // Check if this is a fileId (starts with 'file:')
+      if (value.startsWith('file:')) {
+        fileIds.add(value.replace('file:', ''));
+      }
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(traverse);
+      return;
+    }
+
+    if (typeof value === 'object') {
+      Object.keys(value).forEach(key => {
+        // Check if this property is 'url' or 'src' and extract fileId
+        if ((key === 'url' || key === 'src') && typeof value[key] === 'string') {
+          if (value[key].startsWith('file:')) {
+            fileIds.add(value[key].replace('file:', ''));
+          }
+        }
+        // Continue traversing nested objects
+        traverse(value[key]);
+      });
+    }
+  }
+
+  traverse(obj);
+  return Array.from(fileIds);
+}
+
+// Helper function to create assets object from fileIds
+async function createAssetsFromFileIds(fileIds, httpClient) {
+  const assets = {};
+
+  for (const fileId of fileIds) {
+    try {
+      const { url } = await httpClient.creator.getFileContent({
+        fileId,
+        projectId: 'someprojectId'
+      });
+      assets[`file:${fileId}`] = {
+        url,
+        type: 'image/png', // Default type, could be enhanced to detect actual type
+      };
+    } catch (error) {
+      console.error(`Failed to load file ${fileId}:`, error);
+    }
+  }
+
+  return assets;
+}
+
 export const handleOnMount = (deps) => {
   const { store, router, render, repository, getRefIds, drenderer } = deps;
   const { sceneId } = router.getPayload();
@@ -8,9 +68,9 @@ export const handleOnMount = (deps) => {
 
 
   setTimeout(() => {
-    const { canvas } = getRefIds()
-    console.log('canvas', drenderer.getCanvas())
-    canvas.elm.appendChild(drenderer.getCanvas())
+    // const { canvas } = getRefIds()
+    // console.log('canvas', drenderer.getCanvas())
+    // canvas.elm.appendChild(drenderer.getCanvas())
     store.setImages(images.items)
   }, 10)
 
@@ -440,23 +500,14 @@ export const handleMoveUp = (e, deps) => {
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
 
-      const renderState = store.selectRenderState()
-      console.log('renderState', renderState)
-
       setTimeout(async () => {
-        const { url } = await httpClient.creator.getFileContent({ 
-          fileId: 'NClcOC6ukuPmssECpMorp5A6', 
-          projectId: 'someprojectId' 
-        });
-        await drenderer.loadAssets({
-          'file:NClcOC6ukuPmssECpMorp5A6': {
-            url,
-            type: 'image/png',
-          },
-        })
+        const renderState = store.selectRenderState()
+        const fileIds = extractFileIdsFromRenderState(renderState);
+        const assets = await createAssetsFromFileIds(fileIds, httpClient);
+        const { canvas } = getRefIds()
+        await drenderer.init({ assets, canvas: canvas.elm })
         drenderer.render(renderState)
       }, 10)
-
     }, 0);
   }
 };
@@ -468,7 +519,7 @@ export const handleBackToActions = (e, deps) => {
 };
 
 export const handleMoveDown = (e, deps) => {
-  const { store, getRefIds, render } = deps;
+  const { store, getRefIds, render, drenderer, httpClient } = deps;
   const currentLineId = e.detail.lineId;
   const nextLineId = store.selectNextLineId({ lineId: currentLineId });
 
@@ -499,8 +550,14 @@ export const handleMoveDown = (e, deps) => {
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
 
-      const renderState = store.selectRenderState()
-      console.log('renderState', renderState)
+      setTimeout(async () => {
+        const renderState = store.selectRenderState()
+        const fileIds = extractFileIdsFromRenderState(renderState);
+        const assets = await createAssetsFromFileIds(fileIds, httpClient);
+        const { canvas } = getRefIds()
+        await drenderer.init({ assets, canvas: canvas.elm })
+        drenderer.render(renderState)
+      }, 10)
     }, 0);
   }
 };
@@ -720,7 +777,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   const action = e.detail.item.value; // Access value from item object
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
-      const presentationType = dropdownState.presentationType;
+  const presentationType = dropdownState.presentationType;
   const sceneId = store.selectSceneId();
 
   // Store position before hiding dropdown (for rename popover)
@@ -764,16 +821,16 @@ export const handleDropdownMenuClickItem = (e, deps) => {
       position,
       sectionId,
     });
-      } else if (action === "delete-presentation") {
-      // Delete presentation using unset action
-      const selectedLineId = store.selectSelectedLineId();
-      const selectedSectionId = store.selectSelectedSectionId();
+  } else if (action === "delete-presentation") {
+    // Delete presentation using unset action
+    const selectedLineId = store.selectSelectedLineId();
+    const selectedSectionId = store.selectSelectedSectionId();
 
-      if (presentationType && selectedLineId && selectedSectionId) {
-        repository.addAction({
-          actionType: "unset",
-          target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
-        });
+    if (presentationType && selectedLineId && selectedSectionId) {
+      repository.addAction({
+        actionType: "unset",
+        target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
+      });
 
       // Update scene data
       const { scenes } = repository.getState();

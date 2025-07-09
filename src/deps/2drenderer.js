@@ -11,39 +11,15 @@ import {
 } from "./renderer.js";
 
 export const create2dRenderer = async () => {
-  const app = new PixiTDR();
-  await app.init({
-    width: 1920,
-    height: 1080,
-    assetBufferMap: {},
-    eventHandler: (eventType, payload) => {
-      //
-    },
-    plugins: [
-      new SpriteRendererPlugin(),
-      new TextRendererPlugin(),
-      new ContainerRendererPlugin(),
-      new TextRevealingRendererPlugin(),
-      new GraphicsRendererPlugin(),
-      new SoundPlugin(),
-      new SliderRendererPlugin(),
-      new KeyframeTransitionPlugin(),
-    ],
-  });
+  let app;
 
   // document.getElementById("canvas").appendChild(app.canvas);
   // app.render(payload);
 
   return {
-    getCanvas: () => app.canvas,
-    render: app.render,
-    loadAssets: async (assets) => {
-      // const assets = {
-      //   "file:lakjf3lka": {
-      //     url: "/public/background-1-1.png",
-      //     type: "image/png",
-      //   },
-      // };
+    init: async (options = {}) => {
+      const { assets, canvas } = options;
+
       const assetBufferMap = {};
       await Promise.all(
         Object.entries(assets).map(async ([key, value]) => {
@@ -55,7 +31,38 @@ export const create2dRenderer = async () => {
           };
         })
       );
+
+      app = new PixiTDR();
+      await app.init({
+        width: 1920,
+        height: 1080,
+        assetBufferMap,
+        eventHandler: (eventType, payload) => {
+          //
+        },
+        plugins: [
+          new SpriteRendererPlugin(),
+          new TextRendererPlugin(),
+          new ContainerRendererPlugin(),
+          new TextRevealingRendererPlugin(),
+          new GraphicsRendererPlugin(),
+          new SoundPlugin(),
+          new SliderRendererPlugin(),
+          new KeyframeTransitionPlugin(),
+        ],
+      });
       await app.loadAssets(Object.keys(assets));
-    }
+
+      if (canvas) {
+        console.log('canvas', canvas)
+        // remove child first if there is
+        if (canvas.children.length > 0) {
+          canvas.removeChild(canvas.children[0])
+        }
+        canvas.appendChild(app.canvas);
+      }
+    },
+    // getCanvas: () => app.canvas,
+    render: (payload) => app.render(payload),
   }
 };
