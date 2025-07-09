@@ -78,9 +78,9 @@ template:
         - rtgl-view d=h av=c g=xl w=f:
           - 'rtgl-input#search-input s=sm pl=xl placeholder="Search images..." value=${searchQuery} style="border:none;"': 
           - rtgl-view d=h av=c g=sm:
-            - rtgl-button#zoom-out w=10 v="gh": "-"
+            - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
             - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}": 
-            - rtgl-button#zoom-in w=10 v="gh": "+"
+            - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
             - rtgl-view w=f ph=md:
