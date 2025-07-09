@@ -40,25 +40,30 @@ refs:
         handler: handleProgressBarClick
 
 template:
-  - rtgl-view w=f p=md bgc=bg br=md bc=bo bw=xs:
+  - rtgl-view w=f h=60 p=md bgc=mu br=md bc=bo bw=xs:
     - $if isLoading:
         - rtgl-view w=f av=c p=md:
           - rtgl-text c=mu-fg: Loading audio...
       $else:
-        - rtgl-view w=f g=sm:
-          # Play/Pause button and time display
-          - rtgl-view d=h av=c g=md:
-            - rtgl-button#play-pause-btn w=40 h=40 bgc=pr br=full av=c ah=c:
-              - $if isPlaying:
-                  - rtgl-svg wh=16 svg=pause c=pr-fg:
-                $else:
-                  - rtgl-svg wh=16 svg=play c=pr-fg:
-            - rtgl-view d=h av=c g=sm:
-              - rtgl-text s=sm c=mu-fg: ${currentTimeFormatted}
-              - rtgl-text s=sm c=mu-fg: /
-              - rtgl-text s=sm c=mu-fg: ${durationFormatted}
-          
+        - rtgl-view w=f g=sm bgc=mu:
           # Progress bar
           - rtgl-view w=f:
-            - 'rtgl-view#progress-bar w=f h=6 bgc=mu br=full cur=p pos=rel style="overflow: hidden;"':
+            - 'rtgl-view#progress-bar w=f h=6 br=full cur=p pos=rel style="overflow: hidden;"':
               - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"':
+
+          # Play/Pause button and time display
+          - rtgl-view ph=md d=h g=md av=c w=f h=f:
+            - rtgl-text w=250 ellipsis=true: text
+            - rtgl-view d=h av=c g=lg flex=1 ah=c:
+              - rtgl-button#play-pause-btn w=40 h=40 bgc=pr br=full av=c ah=c:
+                - $if isPlaying:
+                    - rtgl-svg wh=16 svg=pause c=pr-fg:
+                  $else:
+                    - rtgl-svg wh=16 svg=play c=pr-fg:
+              - rtgl-view d=h av=c g=sm:
+                - rtgl-text s=sm c=mu-fg: ${currentTimeFormatted}
+                - rtgl-text s=sm c=mu-fg: /
+                - rtgl-text s=sm c=mu-fg: ${durationFormatted}
+            - rtgl-svg#playerCloser svg=text w=30 h=30 :
+          
+          

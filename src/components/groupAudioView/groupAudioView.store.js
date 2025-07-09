@@ -7,8 +7,9 @@ export const INITIAL_STATE = Object.freeze({
     duration: 74,
     current: 0,
     isPlaying: false,
+    fileId: undefined,
   },
-  showAudioPlayer: true,
+  showAudioPlayer: false,
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -20,6 +21,11 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 }
 
+export const openAudioPlayer = (state, fileId) => {
+  state.playingAudio.fileId = fileId;
+  state.showAudioPlayer = true;
+}
+
 export const closeAudioPlayer = (state) => {
   state.showAudioPlayer = false;
   state.playingAudio = {
@@ -27,6 +33,7 @@ export const closeAudioPlayer = (state) => {
     duration: 0,
     current: 0,
     isPlaying: false,
+    fileId: undefined,
   };
 }
 

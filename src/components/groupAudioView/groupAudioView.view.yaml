@@ -27,6 +27,8 @@ refs:
     eventListeners:
       click:
         handler: handleAudioItemClick
+      dblclick:
+        handler: handleAudioItemDoubleClick
   playerCloser:
     eventListeners:
       click:
@@ -61,11 +63,5 @@ template:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
     - rtgl-view h=33vh:
     - $if showAudioPlayer:
-      - 'rtgl-view pos=fix cor=bottom bgc=mu h=80 style="left: 305px; right: 285px;"':
-        - 'input type=range style="width:100%;"':
-        - rtgl-view ph=md d=h g=md av=c w=f h=f:
-          - rtgl-text w=250 ellipsis=true: ${playingAudio.title}
-          - rtgl-view d=h av=c g=lg flex=1 ah=c:
-            - rtgl-svg svg=text w=40 h=40 :
-            - rtgl-text: "${playingAudio.current} / ${playingAudio.duration}"
-          - rtgl-svg#playerCloser svg=text w=30 h=30 :
+      - 'rtgl-view pos=fix cor=bottom h=60 style="left: 305px; right: 285px;"':
+        - rvn-audio-player fileId=${playingAudio.fileId} autoPlay=true:
