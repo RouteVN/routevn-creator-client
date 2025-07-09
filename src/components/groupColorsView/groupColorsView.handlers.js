@@ -27,35 +27,6 @@ export const handleColorItemClick = (e, deps) => {
   }));
 };
 
-export const handleColorItemDoubleClick = (e, deps) => {
-  const { store, render, props } = deps;
-  const itemId = e.currentTarget.id.replace("color-item-", "");
-  
-  // Find the item data from props
-  const flatGroups = props.flatGroups || [];
-  let itemData = null;
-  
-  for (const group of flatGroups) {
-    const foundItem = group.children?.find(child => child.id === itemId);
-    if (foundItem) {
-      itemData = foundItem;
-      break;
-    }
-  }
-  
-  if (itemData) {
-    // Set edit mode with item data
-    store.setEditMode(true, itemId, itemData);
-    
-    // Open dialog
-    if (!store.getState().isDialogOpen) {
-      store.toggleDialog();
-    }
-    
-    render();
-  }
-};
-
 export const handleAddColorClick = (e, deps) => {
   const { store, render } = deps;
   e.stopPropagation(); // Prevent group click
@@ -129,21 +100,3 @@ export const handleFormActionClick = (e, deps) => {
 };
 
 
-export const handleDragDropFileSelected = async (e, deps) => {
-  const { dispatchEvent } = deps;
-  const { files } = e.detail;
-  const targetGroupId = e.currentTarget.id
-    .replace("drag-drop-bar-", "")
-    .replace("drag-drop-item-", "");
-  
-  // Forward file uploads to parent (parent will handle the actual upload logic)
-  dispatchEvent(new CustomEvent("files-uploaded", {
-    detail: { 
-      files, 
-      targetGroupId,
-      originalEvent: e
-    },
-    bubbles: true,
-    composed: true
-  }));
-};

@@ -27,6 +27,10 @@ export const toViewData = ({ state, props }, payload) => {
   // Get selected item details
   const selectedItem = state.selectedItemId ? 
     flatItems.find(item => item.id === state.selectedItemId) : null;
+  
+  console.log('Selected item ID:', state.selectedItemId);
+  console.log('Selected item:', selectedItem);
+  console.log('Flat items:', flatItems);
 
   // Compute display values for selected item
   const selectedItemDetails = selectedItem ? {
@@ -39,7 +43,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Color Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'color', hex: selectedItemDetails.displayHex, width: 240, height: 60, show: !!selectedItemDetails.displayHex },
+    { type: 'color', value: selectedItemDetails.displayHex, width: 240, height: 60, show: !!selectedItemDetails.displayHex },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'Hex Value', value: selectedItemDetails.displayHex, show: !!selectedItemDetails.displayHex },

@@ -21,14 +21,6 @@ refs:
     eventListeners:
       input-keydown:
         handler: handleSearchInput
-  drag-drop-item-*:
-    eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
-  drag-drop-bar-*:
-    eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
   group-*:
     eventListeners:
       click:
@@ -37,8 +29,6 @@ refs:
     eventListeners:
       click:
         handler: handleColorItemClick
-      dblclick:
-        handler: handleColorItemDoubleClick
   add-color-button-*:
     eventListeners:
       click:
@@ -75,12 +65,13 @@ template:
                     - rtgl-view d=h fw=w g=md:
                       - $if group.hasChildren:
                           - $for item in group.children:
-                              - 'rtgl-view#color-item-${item.id} ah=c bw=xs pb=md cur=p style="${item.selectedStyle}"':
-                                - 'rtgl-view wh=64 br=md style="background-color: ${item.hex}"':
-                                - rtgl-text: ${item.name}
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                              - 'rtgl-view#color-item-${item.id} ah=c bw=xs cur=p style="${item.selectedStyle}"':
+                                - 'rtgl-view w=200 h=150 br=md style="background-color: ${item.hex}"':
+                          - 'rtgl-view#add-color-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
+                            - rtgl-text: Add Color
                         $else:
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                          - 'rtgl-view#add-color-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
+                            - rtgl-text: Add Color
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No colors found matching "${searchQuery}"
