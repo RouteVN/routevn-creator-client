@@ -96,6 +96,20 @@ export const handleProgressBarClick = (e, deps) => {
   render();
 };
 
+export const handleClose = (e, deps) => {
+  e.preventDefault();
+  const { dispatchEvent, store, audioManager } = deps;
+  
+  // Stop playback first
+  handlePause(store, audioManager);
+  
+  // Dispatch close event to parent component
+  dispatchEvent(new CustomEvent("audio-player-close", {
+    bubbles: true,
+    composed: true
+  }));
+};
+
 // Private helper functions
 const loadAudioFile = async (fileId, store, httpClient) => {
   store.setLoading(true);

@@ -44,6 +44,10 @@ refs:
     eventListeners:
       click:
         handler: handleProgressBarClick
+  playerCloser:
+    eventListeners:
+      click:
+        handler: handleClose
 
 template:
   - rtgl-view w=f h=60 p=md bgc=mu br=md bc=bo bw=xs:
