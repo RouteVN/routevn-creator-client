@@ -3,10 +3,7 @@ import { current } from "immer";
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   playingAudio: {
-    title: 'キズナミュージック♪',
-    duration: 74,
-    current: 0,
-    isPlaying: false,
+    title: '',
     fileId: undefined,
   },
   showAudioPlayer: false,
@@ -23,18 +20,14 @@ export const toggleGroupCollapse = (state, groupId) => {
 
 export const openAudioPlayer = (state, { fileId, fileName }) => {
   state.playingAudio.fileId = fileId;
-  state.playingAudio.title = fileName || 'Audio File';
+  state.playingAudio.title = fileName;
   state.showAudioPlayer = true;
-  console.log('Opening audio player for file:', fileId, 'with name:', state.playingAudio.title);
 }
 
 export const closeAudioPlayer = (state) => {
   state.showAudioPlayer = false;
   state.playingAudio = {
     title: '',
-    duration: 0,
-    current: 0,
-    isPlaying: false,
     fileId: undefined,
   };
 }
@@ -53,19 +46,9 @@ export const toViewData = ({ state, props }) => {
     }))
   }));
 
-  const convertSecondsToTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${minutes}:${secs < 10 ? '0' + secs : secs}`;
-  };
-
   return {
     flatGroups,
-    playingAudio: {
-      ...state.playingAudio,
-      current: convertSecondsToTime(state.playingAudio.current),
-      duration: convertSecondsToTime(state.playingAudio.duration),
-    },
+    playingAudio: state.playingAudio,
     showAudioPlayer: state.showAudioPlayer,
     selectedItemId: props.selectedItemId,
     uploadText: "Upload Audio",
