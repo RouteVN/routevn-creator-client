@@ -37,3 +37,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
     composed: true
   }));
 };
+
+export const handleAudioPlayerClose = (e, deps) => {
+  const { store, render } = deps;
+
+  store.closeAudioPlayer();
+  render();
+}
