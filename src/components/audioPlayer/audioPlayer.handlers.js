@@ -1,10 +1,11 @@
 export const handleOnMount = async (deps) => {
   const { store, attrs, httpClient, render, audioManager } = deps;
-  const { fileId, autoPlay } = attrs;
+  const { fileId, autoPlay, fileName } = attrs;
 
   // Generate unique component ID
   const componentId = `audio-player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   store.setComponentId(componentId);
+  store.setFileName(fileName);
 
   // Register with audio manager
   audioManager.registerPlayer(componentId, store, render);

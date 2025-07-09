@@ -33,7 +33,7 @@ export const handleAudioItemDoubleClick = (e, deps) => {
     }
   }
 
-  store.openAudioPlayer(selectedAudio.fileId);
+  store.openAudioPlayer({ fileId: selectedAudio.fileId, fileName: selectedAudio.name });
   render();
 };
 

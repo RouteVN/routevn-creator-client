@@ -21,9 +21,11 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 }
 
-export const openAudioPlayer = (state, fileId) => {
+export const openAudioPlayer = (state, { fileId, fileName }) => {
   state.playingAudio.fileId = fileId;
+  state.playingAudio.title = fileName || 'Audio File';
   state.showAudioPlayer = true;
+  console.log('Opening audio player for file:', fileId, 'with name:', state.playingAudio.title);
 }
 
 export const closeAudioPlayer = (state) => {
