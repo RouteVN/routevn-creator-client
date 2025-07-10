@@ -1,5 +1,6 @@
 
 import { nanoid } from "nanoid";
+import { AudioWaveformExtractor } from "../../utils/audioWaveform.js";
 
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
@@ -78,7 +79,23 @@ export const handleDragDropFileSelected = async (e, deps) => {
   // Add successfully uploaded files to repository
   const successfulUploads = uploadResults.filter((result) => result.success);
 
-  successfulUploads.forEach((result) => {
+  // Extract waveform data for all successful uploads
+  const waveformPromises = successfulUploads.map(async (result) => {
+    const waveformData = await AudioWaveformExtractor.extractWaveformData(result.file);
+    const compressedWaveform = waveformData ? AudioWaveformExtractor.compressWaveformData(waveformData) : null;
+    
+    return {
+      ...result,
+      waveformData: compressedWaveform,
+      duration: waveformData?.duration || null,
+    };
+  });
+
+  // Wait for all waveform extractions to complete
+  const uploadsWithWaveforms = await Promise.all(waveformPromises);
+
+  // Add all items to repository
+  uploadsWithWaveforms.forEach((result) => {
     repository.addAction({
       actionType: "treePush",
       target: "audio",
@@ -92,6 +109,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
+          waveformData: result.waveformData,
+          duration: result.duration,
         },
       },
     });
@@ -136,6 +155,9 @@ export const handleReplaceItem = async (e, deps) => {
     if (response.ok) {
       console.log("Audio replaced successfully:", file.name);
       
+      const waveformData = await AudioWaveformExtractor.extractWaveformData(file);
+      const compressedWaveform = waveformData ? AudioWaveformExtractor.compressWaveformData(waveformData) : null;
+      
       // Update the selected item in the repository with the new file information
       repository.addAction({
         actionType: "treeUpdate",
@@ -148,6 +170,8 @@ export const handleReplaceItem = async (e, deps) => {
             name: file.name,
             fileType: file.type,
             fileSize: file.size,
+            waveformData: compressedWaveform,
+            duration: waveformData?.duration || null,
           },
         },
       });

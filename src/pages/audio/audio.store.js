@@ -45,6 +45,8 @@ export const toViewData = ({ state, props }, payload) => {
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
+    { type: 'text', label: 'Duration', value: selectedItemDetails.duration ? `${Math.round(selectedItemDetails.duration)}s` : 'Unknown', show: !!selectedItemDetails.duration },
+    { type: 'waveform', label: 'Waveform', waveformData: selectedItemDetails.waveformData, duration: selectedItemDetails.duration, show: !!selectedItemDetails.waveformData },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : selectedItemDetails ? [
     { type: 'text', label: 'Name', value: selectedItemDetails.name },

@@ -38,6 +38,10 @@ refs:
     eventListeners:
       click:
         handler: handleColorFieldClick
+  audio-waveform-*:
+    eventListeners:
+      waveform-seek:
+        handler: handleWaveformSeek
   popover:
     eventListeners:
       click-overlay:
@@ -79,6 +83,10 @@ template:
                         - rtgl-text#title-text-${i} s=${field.size} cur=p: ${field.value}
                       $else:
                         - rtgl-text s=${field.size}: ${field.value}
+                $elif field.type == 'waveform':
+                  - rtgl-view:
+                    - rtgl-text c=mu-fg: ${field.label}
+                    - rvn-audio-waveform#audio-waveform-${i} waveformData=${field.waveformData} duration=${field.duration}:
                 $elif field.type == 'color':
                   - rtgl-view:
                     - 'rtgl-view#color-field-${i} w=200 h=150 br=md cur=p style="background-color: ${field.value}"':
