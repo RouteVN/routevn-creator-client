@@ -48,12 +48,12 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Audio Details' : null;
   const detailFields = selectedItemDetails && selectedItemDetails.type === 'audio' ? [
+    { type: 'image', label: 'Waveform', fileId: selectedItemDetails.waveformFileId, width: 270, height: 180, show: !!selectedItemDetails.waveformFileId },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
     { type: 'text', label: 'Duration', value: selectedItemDetails.duration ? `${Math.round(selectedItemDetails.duration)}s` : 'Unknown', show: !!selectedItemDetails.duration },
-    { type: 'image', label: 'Waveform', fileId: selectedItemDetails.waveformFileId, width: 270, height: 80, show: !!selectedItemDetails.waveformFileId },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : selectedItemDetails ? [
     { type: 'text', label: 'Name', value: selectedItemDetails.name },

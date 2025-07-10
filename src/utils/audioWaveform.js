@@ -39,14 +39,15 @@ export class AudioWaveformExtractor {
     }
   }
   
-  static async generateWaveformImage(waveformData, width = 800, height = 120) {
+  static async generateWaveformImage(waveformData, width = 600, height = 400) {
+    // Maintain 3:2 aspect ratio
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     
-    // Clear canvas
-    ctx.fillStyle = '#ffffff';
+    // Dark theme background
+    ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, width, height);
     
     if (!waveformData || !waveformData.data) {
@@ -56,28 +57,37 @@ export class AudioWaveformExtractor {
     const data = waveformData.data;
     const centerY = height / 2;
     
-    // Draw waveform
-    ctx.fillStyle = '#007bff';
-    ctx.strokeStyle = '#0056b3';
+    // Create gradient for waveform
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#4CAF50');
+    gradient.addColorStop(0.5, '#2196F3');
+    gradient.addColorStop(1, '#4CAF50');
     
+    // Draw waveform bars
     const barWidth = Math.max(1, width / data.length);
+    const barSpacing = 0.2; // 20% spacing between bars
     
     for (let i = 0; i < data.length; i++) {
       const amplitude = data[i];
-      const barHeight = amplitude * (height * 0.8);
+      const barHeight = amplitude * (height * 0.85);
       const x = i * barWidth;
       const y = centerY - barHeight / 2;
       
-      ctx.fillRect(x, y, Math.max(1, barWidth - 1), barHeight);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, y, Math.max(1, barWidth * (1 - barSpacing)), barHeight);
     }
     
-    // Draw center line
-    ctx.strokeStyle = '#e0e0e0';
+    // Draw subtle center line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, centerY);
     ctx.lineTo(width, centerY);
     ctx.stroke();
+    
+    // Add subtle glow effect
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#2196F3';
     
     // Convert canvas to blob
     return new Promise((resolve) => {
@@ -85,6 +95,11 @@ export class AudioWaveformExtractor {
         resolve(blob);
       }, 'image/png');
     });
+  }
+  
+  // Add a smaller version for thumbnails
+  static async generateWaveformThumbnail(waveformData) {
+    return this.generateWaveformImage(waveformData, 300, 200); // 3:2 ratio
   }
   
   static compressWaveformData(waveformData) {
