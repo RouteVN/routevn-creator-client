@@ -29,8 +29,11 @@ export const handleOnMount = async (deps) => {
     store.setLoading(false);
     render();
     
-    // Render waveform on canvas
-    await renderWaveform(waveformData, getRefIds);
+    // Get canvas element and render waveform
+    const canvas = getRefIds().canvas?.elm;
+    if (canvas) {
+      await renderWaveform(waveformData, canvas);
+    }
     
   } catch (error) {
     store.setError(true);
@@ -39,16 +42,7 @@ export const handleOnMount = async (deps) => {
   }
 };
 
-async function renderWaveform(waveformData, getRefIds) {
-  
-  const refIds = getRefIds();
-  const canvasRef = refIds.canvas;
-  
-  if (!canvasRef || !canvasRef.elm) {
-    return;
-  }
-  
-  const canvas = canvasRef.elm;
+async function renderWaveform(waveformData, canvas) {
   const ctx = canvas.getContext('2d');
   
   // Get the actual display size of the canvas
@@ -79,9 +73,9 @@ async function renderWaveform(waveformData, getRefIds) {
   
   // Create gradient for waveform
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, '#4CAF50');
-  gradient.addColorStop(0.5, '#2196F3');
-  gradient.addColorStop(1, '#4CAF50');
+  gradient.addColorStop(0, '#404040');
+  gradient.addColorStop(0.5, '#A1A1A1');
+  gradient.addColorStop(1, '#404040');
   
   // Draw waveform bars
   const barWidth = Math.max(1, width / data.length);

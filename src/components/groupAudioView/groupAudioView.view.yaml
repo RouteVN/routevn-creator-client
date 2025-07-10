@@ -70,5 +70,5 @@ template:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
     - rtgl-view h=33vh:
     - $if showAudioPlayer:
-      - 'rtgl-view pos=fix cor=bottom h=65 style="left: 305px; right: 285px;"':
+      - 'rtgl-view pos=fix cor=bottom h=64 style="left: 305px; right: 285px;"':
         - rvn-audio-player fileId=${playingAudio.fileId} autoPlay=true fileName=${playingAudio.title}:
