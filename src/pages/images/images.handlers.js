@@ -1,30 +1,11 @@
 import { nanoid } from "nanoid";
 
-const getImageDimensions = (file) => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    
-    img.onload = () => {
-      URL.revokeObjectURL(url); // Clean up memory
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(url); // Clean up memory
-      resolve(null);
-    };
-    
-    img.src = url;
-  });
-};
-
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { images } = repository.getState();
   store.setItems(images);
 
-  return () => {}
+  return () => { }
 };
 
 
@@ -44,62 +25,11 @@ export const handleImageItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
+  const { store, render, repository, uploadImageFiles } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Create upload promises for all files
-  const uploadPromises = Array.from(files).map(async (file) => {
-    try {
-      // Get image dimensions before uploading
-      const dimensions = await getImageDimensions(file);
-
-      const { downloadUrl, uploadUrl, fileId } =
-        await httpClient.creator.uploadFile({
-          projectId: "someprojectId",
-        });
-
-      const response = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type, // Ensure the Content-Type matches the file type
-        },
-      });
-
-      if (response.ok) {
-        console.log("File uploaded successfully:", file.name);
-        return {
-          success: true,
-          file,
-          downloadUrl,
-          fileId,
-          dimensions,
-        };
-      } else {
-        console.error("File upload failed:", file.name, response.statusText);
-        return {
-          success: false,
-          file,
-          error: response.statusText,
-        };
-      }
-    } catch (error) {
-      console.error("File upload error:", file.name, error);
-      return {
-        success: false,
-        file,
-        error: error.message,
-      };
-    }
-  });
-
-  // Wait for all uploads to complete
-  const uploadResults = await Promise.all(uploadPromises);
-
-  // Add successfully uploaded files to repository
-  const successfulUploads = uploadResults.filter((result) => result.success);
-
+  const successfulUploads = await uploadImageFiles(files, "someprojectId")
   successfulUploads.forEach((result) => {
     repository.addAction({
       actionType: "treePush",
@@ -114,8 +44,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
-          width: result.dimensions?.width,
-          height: result.dimensions?.height,
+          width: result.dimensions.width,
+          height: result.dimensions.height,
         },
       },
     });
@@ -126,78 +56,56 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store.setItems(images);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 
 export const handleReplaceItem = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
-  const { file, field } = e.detail;
-  
+  const { store, render, repository, uploadImageFiles } = deps;
+  const { file } = e.detail;
+
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     console.warn('No item selected for image replacement');
     return;
   }
-  
-  try {
-    // Get image dimensions before uploading
-    const dimensions = await getImageDimensions(file);
 
-    // Upload the new file
-    const { uploadUrl, fileId } = await httpClient.creator.uploadFile({
-      projectId: "someprojectId",
-    });
+  const uploadedFiles = await uploadImageFiles([file], "someprojectId");
 
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (response.ok) {
-      console.log("Image replaced successfully:", file.name);
-      
-      // Update the selected item in the repository with the new file information
-      repository.addAction({
-        actionType: "treeUpdate",
-        target: "images",
-        value: {
-          id: selectedItem.id,
-          replace: false,
-          item: {
-            fileId: fileId,
-            name: file.name,
-            fileType: file.type,
-            fileSize: file.size,
-            width: dimensions.width,
-            height: dimensions.height,
-          },
-        },
-      });
-      
-      // Update the store with the new repository state
-      const { images } = repository.getState();
-      store.setItems(images);
-      render();
-      
-    } else {
-      console.error("Image upload failed:", file.name, response.statusText);
-    }
-  } catch (error) {
-    console.error("Image upload error:", file.name, error);
+  if (uploadedFiles.length === 0) {
+    console.error('File upload failed, no files uploaded');
+    return;
   }
+
+  const uploadResult = uploadedFiles[0];
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "images",
+    value: {
+      id: selectedItem.id,
+      replace: false,
+      item: {
+        fileId: uploadResult.fileId,
+        name: uploadResult.file.name,
+        fileType: uploadResult.file.type,
+        fileSize: uploadResult.file.size,
+        width: uploadResult.dimensions.width,
+        height: uploadResult.dimensions.height,
+      },
+    },
+  });
+
+  // Update the store with the new repository state
+  const { images } = repository.getState();
+  store.setItems(images);
+  render();
+
 };
 
 export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
-  
+
   if (detail.value === 'rename-item-confirmed') {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
@@ -205,7 +113,7 @@ export const handleFileAction = (e, deps) => {
       console.warn('No item selected for rename');
       return;
     }
-    
+
     // Update the item name in the repository
     repository.addAction({
       actionType: "treeUpdate",
@@ -218,7 +126,7 @@ export const handleFileAction = (e, deps) => {
         },
       },
     });
-    
+
     // Update the store with the new repository state
     const { images } = repository.getState();
     store.setItems(images);
