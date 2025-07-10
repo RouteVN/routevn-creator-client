@@ -44,8 +44,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
-          width: result.dimensions?.width,
-          height: result.dimensions?.height,
+          width: result.dimensions.width,
+          height: result.dimensions.height,
         },
       },
     });
@@ -56,14 +56,11 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store.setItems(images);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 
 export const handleReplaceItem = async (e, deps) => {
-  const { store, render, httpClient, repository, getImageDimensions } = deps;
+  const { store, render, repository, uploadFiles } = deps;
   const { file } = e.detail;
 
   // Get the currently selected item
@@ -73,55 +70,36 @@ export const handleReplaceItem = async (e, deps) => {
     return;
   }
 
-  try {
-    // Get image dimensions before uploading
-    const dimensions = await getImageDimensions(file);
+  const uploadedFiles = await uploadFiles([file], "someprojectId");
 
-    // Upload the new file
-    const { uploadUrl, fileId } = await httpClient.creator.uploadFile({
-      projectId: "someprojectId",
-    });
-
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (response.ok) {
-      console.log("Image replaced successfully:", file.name);
-
-      // Update the selected item in the repository with the new file information
-      repository.addAction({
-        actionType: "treeUpdate",
-        target: "images",
-        value: {
-          id: selectedItem.id,
-          replace: false,
-          item: {
-            fileId: fileId,
-            name: file.name,
-            fileType: file.type,
-            fileSize: file.size,
-            width: dimensions.width,
-            height: dimensions.height,
-          },
-        },
-      });
-
-      // Update the store with the new repository state
-      const { images } = repository.getState();
-      store.setItems(images);
-      render();
-
-    } else {
-      console.error("Image upload failed:", file.name, response.statusText);
-    }
-  } catch (error) {
-    console.error("Image upload error:", file.name, error);
+  if (uploadedFiles.length === 0) {
+    console.error('File upload failed, no files uploaded');
+    return;
   }
+
+  const uploadResult = uploadedFiles[0];
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "images",
+    value: {
+      id: selectedItem.id,
+      replace: false,
+      item: {
+        fileId: uploadResult.fileId,
+        name: uploadResult.file.name,
+        fileType: uploadResult.file.type,
+        fileSize: uploadResult.file.size,
+        width: uploadResult.dimensions.width,
+        height: uploadResult.dimensions.height,
+      },
+    },
+  });
+
+  // Update the store with the new repository state
+  const { images } = repository.getState();
+  store.setItems(images);
+  render();
+
 };
 
 export const handleFileAction = (e, deps) => {

@@ -7,7 +7,6 @@ import Subject from './deps/subject';
 import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
 import Router from './deps/router';
 import AudioManager from './deps/audioManager';
-import { getImageDimensions } from './deps/getImageDimensions';
 import { createFileUploader } from './deps/createFileUploader';
 
 const httpClient = createRouteVnHttpClient({
@@ -89,7 +88,6 @@ const audioManager = new AudioManager();
 
 const uploadFiles = createFileUploader({
   httpClient,
-  getImageDimensions,
 });
 
 const componentDependencies = {
@@ -99,7 +97,6 @@ const componentDependencies = {
   repository,
   userConfig,
   audioManager,
-  getImageDimensions,
   uploadFiles
 }
 
@@ -110,7 +107,6 @@ const pageDependencies = {
   repository,
   userConfig,
   audioManager,
-  getImageDimensions,
   uploadFiles
 }
 
