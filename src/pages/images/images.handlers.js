@@ -25,11 +25,11 @@ export const handleImageItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, repository, uploadFiles } = deps;
+  const { store, render, repository, uploadImageFiles } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await uploadFiles(files, "someprojectId")
+  const successfulUploads = await uploadImageFiles(files, "someprojectId")
   successfulUploads.forEach((result) => {
     repository.addAction({
       actionType: "treePush",
@@ -60,7 +60,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleReplaceItem = async (e, deps) => {
-  const { store, render, repository, uploadFiles } = deps;
+  const { store, render, repository, uploadImageFiles } = deps;
   const { file } = e.detail;
 
   // Get the currently selected item
@@ -70,7 +70,7 @@ export const handleReplaceItem = async (e, deps) => {
     return;
   }
 
-  const uploadedFiles = await uploadFiles([file], "someprojectId");
+  const uploadedFiles = await uploadImageFiles([file], "someprojectId");
 
   if (uploadedFiles.length === 0) {
     console.error('File upload failed, no files uploaded');

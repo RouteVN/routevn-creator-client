@@ -18,7 +18,7 @@ const getImageDimensions = (file) => {
   });
 };
 
-export const createFileUploader = ({ httpClient }) => {
+export const createImageFileUploader = ({ httpClient }) => {
   return async (files, projectId) => {
     // Create upload promises for all files
     const uploadPromises = Array.from(files).map(async (file) => {
