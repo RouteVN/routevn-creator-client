@@ -82,6 +82,9 @@ template:
                 $elif field.type == 'color':
                   - rtgl-view:
                     - 'rtgl-view#color-field-${i} w=200 h=150 br=md cur=p style="background-color: ${field.value}"':
+                $elif field.type == 'waveform':
+                  - rtgl-view:
+                    - rvn-waveform-visualizer waveformDataFileId=${field.waveformDataFileId} width=270 height=180:
       $else:
         - rtgl-view w=f h=f av=c ah=c:
           - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}

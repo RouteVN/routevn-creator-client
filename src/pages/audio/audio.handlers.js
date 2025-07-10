@@ -27,78 +27,46 @@ export const handleAudioItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, repository, uploadAudioFiles } = deps;
+  const { store, render, repository, uploadAudioFiles, httpClient } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   const successfulUploads = await uploadAudioFiles(files, "someprojectId");
 
-  // Extract waveform data and generate images for all successful uploads
+  // Extract waveform data and upload to API Object Storage
   const waveformPromises = successfulUploads.map(async (result) => {
     const waveformData = await AudioWaveformExtractor.extractWaveformData(result.file);
     
     if (!waveformData) {
       return {
         ...result,
-        waveformFileId: null,
+        waveformDataFileId: null,
         duration: null,
       };
     }
     
-    // Generate both full-size and thumbnail waveform images
-    const [waveformBlob, thumbnailBlob] = await Promise.all([
-      AudioWaveformExtractor.generateWaveformImage(waveformData, 600, 400), // 3:2 ratio for detail view
-      AudioWaveformExtractor.generateWaveformThumbnail(waveformData) // Smaller for list view
-    ]);
+    // Upload waveform data to API Object Storage
+    const uploadResult = await AudioWaveformExtractor.uploadWaveformData(
+      waveformData, 
+      httpClient, 
+      "someprojectId"
+    );
     
-    if (!waveformBlob || !thumbnailBlob) {
+    if (uploadResult.success) {
+      console.log("Waveform data uploaded successfully for:", result.file.name);
       return {
         ...result,
-        waveformFileId: null,
-        waveformThumbnailFileId: null,
+        waveformDataFileId: uploadResult.fileId,
+        duration: waveformData.duration,
+      };
+    } else {
+      console.error("Failed to upload waveform data for:", result.file.name);
+      return {
+        ...result,
+        waveformDataFileId: null,
         duration: waveformData.duration,
       };
     }
-    
-    // Upload both images
-    try {
-      const [waveformUpload, thumbnailUpload] = await Promise.all([
-        httpClient.creator.uploadFile({ projectId: "someprojectId" }),
-        httpClient.creator.uploadFile({ projectId: "someprojectId" })
-      ]);
-      
-      const [waveformResponse, thumbnailResponse] = await Promise.all([
-        fetch(waveformUpload.uploadUrl, {
-          method: "PUT",
-          body: waveformBlob,
-          headers: { "Content-Type": "image/png" },
-        }),
-        fetch(thumbnailUpload.uploadUrl, {
-          method: "PUT",
-          body: thumbnailBlob,
-          headers: { "Content-Type": "image/png" },
-        })
-      ]);
-      
-      if (waveformResponse.ok && thumbnailResponse.ok) {
-        console.log("Waveform images uploaded successfully for:", result.file.name);
-        return {
-          ...result,
-          waveformFileId: waveformUpload.fileId,
-          waveformThumbnailFileId: thumbnailUpload.fileId,
-          duration: waveformData.duration,
-        };
-      }
-    } catch (error) {
-      console.error("Failed to upload waveform images:", error);
-    }
-    
-    return {
-      ...result,
-      waveformFileId: null,
-      waveformThumbnailFileId: null,
-      duration: waveformData.duration,
-    };
   });
 
   // Wait for all waveform extractions to complete
@@ -119,8 +87,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
-          waveformFileId: result.waveformFileId,
-          waveformThumbnailFileId: result.waveformThumbnailFileId,
+          waveformDataFileId: result.waveformDataFileId,
           duration: result.duration,
         },
       },
@@ -139,7 +106,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleReplaceItem = async (e, deps) => {
-  const { store, render, repository, uploadAudioFiles } = deps;
+  const { store, render, repository, uploadAudioFiles, httpClient } = deps;
   const { file } = e.detail;
   
   // Get the currently selected item
@@ -158,46 +125,23 @@ export const handleReplaceItem = async (e, deps) => {
   
   const uploadResult = uploadedFiles[0];
   
-  // Extract waveform data and generate images
+  // Extract waveform data and upload to API Object Storage
   const waveformData = await AudioWaveformExtractor.extractWaveformData(file);
-  let waveformFileId = null;
-  let waveformThumbnailFileId = null;
+  let waveformDataFileId = null;
   let duration = null;
   
   if (waveformData) {
-    const [waveformBlob, thumbnailBlob] = await Promise.all([
-      AudioWaveformExtractor.generateWaveformImage(waveformData, 600, 400),
-      AudioWaveformExtractor.generateWaveformThumbnail(waveformData)
-    ]);
+    const uploadResult = await AudioWaveformExtractor.uploadWaveformData(
+      waveformData, 
+      httpClient, 
+      "someprojectId"
+    );
     
-    if (waveformBlob && thumbnailBlob) {
-      try {
-        const [waveformUpload, thumbnailUpload] = await Promise.all([
-          httpClient.creator.uploadFile({ projectId: "someprojectId" }),
-          httpClient.creator.uploadFile({ projectId: "someprojectId" })
-        ]);
-        
-        const [waveformResponse, thumbnailResponse] = await Promise.all([
-          fetch(waveformUpload.uploadUrl, {
-            method: "PUT",
-            body: waveformBlob,
-            headers: { "Content-Type": "image/png" },
-          }),
-          fetch(thumbnailUpload.uploadUrl, {
-            method: "PUT",
-            body: thumbnailBlob,
-            headers: { "Content-Type": "image/png" },
-          })
-        ]);
-        
-        if (waveformResponse.ok && thumbnailResponse.ok) {
-          waveformFileId = waveformUpload.fileId;
-          waveformThumbnailFileId = thumbnailUpload.fileId;
-          console.log("Waveform images uploaded successfully");
-        }
-      } catch (error) {
-        console.error("Failed to upload waveform images:", error);
-      }
+    if (uploadResult.success) {
+      waveformDataFileId = uploadResult.fileId;
+      console.log("Waveform data uploaded successfully");
+    } else {
+      console.error("Failed to upload waveform data");
     }
     
     duration = waveformData.duration;
@@ -214,8 +158,7 @@ export const handleReplaceItem = async (e, deps) => {
         name: uploadResult.file.name,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
-        waveformFileId: waveformFileId,
-        waveformThumbnailFileId: waveformThumbnailFileId,
+        waveformDataFileId: waveformDataFileId,
         duration: duration,
       },
     },

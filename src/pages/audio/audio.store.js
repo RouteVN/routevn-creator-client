@@ -32,7 +32,7 @@ export const toViewData = ({ state }) => {
   let detailFields
   if (selectedItem) {
     detailFields = [
-      { type: 'image', label: 'Waveform', fileId: selectedItem.waveformFileId, width: 270, height: 180, show: !!selectedItem.waveformFileId },
+      { type: 'waveform', waveformDataFileId: selectedItem.waveformDataFileId, show: !!selectedItem.waveformDataFileId },
       { type: 'audio', fileId: selectedItem.fileId, editable: true, accept: 'audio/*', eventType: 'audio-file-selected' },
       { type: 'text', value: selectedItem.name },
       { type: 'text', label: 'File Type', value: selectedItem.fileType },
