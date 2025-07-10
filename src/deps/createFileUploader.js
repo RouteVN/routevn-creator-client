@@ -76,3 +76,58 @@ export const createImageFileUploader = ({ httpClient }) => {
     return successfulUploads;
   }
 }
+
+export const createAudioFileUploader = ({ httpClient }) => {
+  return async (files, projectId) => {
+    // Create upload promises for all files
+    const uploadPromises = Array.from(files).map(async (file) => {
+      try {
+        const { downloadUrl, uploadUrl, fileId } =
+          await httpClient.creator.uploadFile({
+            projectId,
+          });
+
+        const response = await fetch(uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type, // Ensure the Content-Type matches the file type
+          },
+        });
+
+        if (response.ok) {
+          console.log("File uploaded successfully:", file.name);
+          return {
+            success: true,
+            file,
+            downloadUrl,
+            fileId,
+          };
+        } else {
+          console.error("File upload failed:", file.name, response.statusText);
+          return {
+            success: false,
+            file,
+            error: response.statusText,
+          };
+        }
+      } catch (error) {
+        console.error("File upload error:", file.name, error);
+        return {
+          success: false,
+          file,
+          error: error.message,
+        };
+      }
+    });
+
+    // Wait for all uploads to complete
+    const uploadResults = await Promise.all(uploadPromises);
+
+    // Add successfully uploaded files to repository
+    // TODO: Add error handling for failed uploads
+    const successfulUploads = uploadResults.filter((result) => result.success);
+
+    return successfulUploads;
+  }
+}
