@@ -50,7 +50,7 @@ refs:
         handler: handleClose
 
 template:
-  - rtgl-view w=f h=65 p=md bgc=mu br=md bc=bo bw=xs:
+  - rtgl-view w=f h=64 p=md bgc=mu br=md bc=bo bw=xs:
     - $if isLoading:
         - rtgl-view w=f av=c p=md:
           - rtgl-text c=mu-fg: Loading audio...
