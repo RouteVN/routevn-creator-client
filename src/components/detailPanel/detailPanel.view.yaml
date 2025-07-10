@@ -72,8 +72,6 @@ template:
                         - 'input#file-input-${i} type=file accept="${field.accept}" style="display: none;"':
                     $else:
                       - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId} key=${field.fileId}:
-                $elif field.type == 'audio':
-                  - rvn-audio-player fileId=${field.fileId} autoPlay=${field.autoPlay}:
                 $elif field.type == 'text':
                   - rtgl-view:
                     - rtgl-text c=mu-fg: ${field.label}

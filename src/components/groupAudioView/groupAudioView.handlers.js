@@ -19,6 +19,24 @@ export const handleAudioItemClick = (e, deps) => {
   }));
 };
 
+export const handleAudioItemDoubleClick = (e, deps) => {
+  const { store, render, props = {} } = deps;
+  const itemId = e.currentTarget.id.replace("audio-item-", "");
+
+  const flatGroups = props.flatGroups || [];
+  let selectedAudio = null;
+  
+  for (const group of flatGroups) {
+    if (group.children) {
+      selectedAudio = group.children.find(item => item.id === itemId);
+      if (selectedAudio) break;
+    }
+  }
+
+  store.openAudioPlayer({ fileId: selectedAudio.fileId, fileName: selectedAudio.name });
+  render();
+};
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent } = deps;
   const { files } = e.detail;
@@ -37,3 +55,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
     composed: true
   }));
 };
+
+export const handleAudioPlayerClose = (e, deps) => {
+  const { store, render } = deps;
+
+  store.closeAudioPlayer();
+  render();
+}
