@@ -1,19 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-};
+import { formatFileSize } from "../../utils/index.js";
 
 export const INITIAL_STATE = Object.freeze({
   imagesData: { tree: [], items: {} },
   selectedItemId: null,
 });
-
-// Removed addItem - not used with new tree structure
 
 export const setItems = (state, imagesData) => {
   state.imagesData = imagesData
@@ -30,38 +21,26 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.imagesData);
   const flatGroups = toFlatGroups(state.imagesData);
 
   // Get selected item details
-  const selectedItem = state.selectedItemId ? 
+  const selectedItem = state.selectedItemId ?
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem ? {
-    ...selectedItem,
-    typeDisplay: selectedItem.type === 'image' ? 'Image' : 'Folder',
-    displayFileType: selectedItem.fileType || (selectedItem.type === 'image' ? 'PNG' : null),
-    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
-    fullPath: selectedItem.fullLabel || selectedItem.name || '',
-    dimensions: { width: selectedItem.width, height: selectedItem.height },
-  } : null;
-
-  console.log({
-    flatItems,
-    flatGroups,
-    selectedItem,
-  });
-
   // Transform selectedItem into detailPanel props
-  const detailFields = selectedItemDetails ? [
-    { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135, editable: true, accept: 'image/*', eventType: 'image-file-selected' },
-    { type: 'text', value: selectedItemDetails.name },
-    { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
-    { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
-    { type: 'text', label: 'Dimensions', value: selectedItemDetails.dimensions ? `${selectedItemDetails.dimensions.width} × ${selectedItemDetails.dimensions.height}` : null, show: !!selectedItemDetails.dimensions },
-  ] : [];
+  let detailFields
+  if (selectedItem) {
+    detailFields = [
+      { type: 'image', fileId: selectedItem.fileId, width: 240, height: 135, editable: true, accept: 'image/*', eventType: 'image-file-selected' },
+      { type: 'text', value: selectedItem.name },
+      { type: 'text', label: 'File Type', value: selectedItem.fileType },
+      { type: 'text', label: 'File Size', value: formatFileSize(selectedItem.fileSize) },
+      { type: 'text', label: 'Dimensions', value: `${selectedItem.width} × ${selectedItem.height}` },
+    ];
+  }
+
   const detailEmptyMessage = 'No selection';
 
   return {
@@ -70,7 +49,6 @@ export const toViewData = ({ state, props }, payload) => {
     resourceCategory: 'assets',
     selectedResourceId: 'images',
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
     detailTitle: undefined,
     detailFields,
     detailEmptyMessage,
