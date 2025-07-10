@@ -151,15 +151,3 @@ export const handleColorFormActionClick = (e, deps) => {
   }));
 };
 
-export const handleWaveformSeek = (e, deps) => {
-  const { dispatchEvent } = deps;
-  
-  // Forward the waveform seek event to parent component
-  dispatchEvent(new CustomEvent("waveform-seek", {
-    detail: {
-      time: e.detail.time
-    },
-    bubbles: true,
-    composed: true
-  }));
-};

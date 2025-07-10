@@ -29,6 +29,13 @@ export const toViewData = ({ state, props }, payload) => {
   const selectedItem = state.selectedItemId ? 
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
+  // Debug the selected item
+  if (selectedItem) {
+    console.log('Selected item raw data:', selectedItem);
+    console.log('Selected item waveformFileId:', selectedItem.waveformFileId);
+    console.log('Selected item duration:', selectedItem.duration);
+  }
+
   // Compute display values for selected item
   const selectedItemDetails = selectedItem ? {
     ...selectedItem,
@@ -46,7 +53,7 @@ export const toViewData = ({ state, props }, payload) => {
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
     { type: 'text', label: 'Duration', value: selectedItemDetails.duration ? `${Math.round(selectedItemDetails.duration)}s` : 'Unknown', show: !!selectedItemDetails.duration },
-    { type: 'waveform', label: 'Waveform', waveformData: selectedItemDetails.waveformData, duration: selectedItemDetails.duration, show: !!selectedItemDetails.waveformData },
+    { type: 'image', label: 'Waveform', fileId: selectedItemDetails.waveformFileId, width: 270, height: 80, show: !!selectedItemDetails.waveformFileId },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : selectedItemDetails ? [
     { type: 'text', label: 'Name', value: selectedItemDetails.name },

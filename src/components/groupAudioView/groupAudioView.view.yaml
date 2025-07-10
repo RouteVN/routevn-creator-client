@@ -61,7 +61,10 @@ template:
                   - $if group.hasChildren:
                       - $for item in group.children:
                           - 'rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}"':
-                            - rtgl-image br=md w=150 h=150 src=/public/project_logo_placeholder.png:
+                            - $if item.waveformFileId:
+                                - rvn-file-image br=md w=150 h=150 fileId=${item.waveformFileId}:
+                              $else:
+                                - rtgl-image br=md w=150 h=150 src=/public/project_logo_placeholder.png:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                     $else:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
