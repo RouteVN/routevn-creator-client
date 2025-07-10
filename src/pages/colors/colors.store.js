@@ -27,10 +27,6 @@ export const toViewData = ({ state, props }, payload) => {
   // Get selected item details
   const selectedItem = state.selectedItemId ? 
     flatItems.find(item => item.id === state.selectedItemId) : null;
-  
-  console.log('Selected item ID:', state.selectedItemId);
-  console.log('Selected item:', selectedItem);
-  console.log('Flat items:', flatItems);
 
   // Compute display values for selected item
   const selectedItemDetails = selectedItem ? {

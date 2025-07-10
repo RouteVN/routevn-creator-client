@@ -9,20 +9,12 @@ export const INITIAL_STATE = Object.freeze({
     isOpen: false,
     fieldIndex: -1,
     defaultValues: {
-      name: '',
       hex: '#ff0000',
     },
     form: {
       title: 'Edit Color',
       description: 'Edit the color',
       fields: [{
-        id: 'name',
-        fieldName: 'name',
-        inputType: 'inputText',
-        label: 'Name',
-        description: 'Enter the color name',
-        required: true,
-      }, {
         id: 'hex',
         fieldName: 'hex',
         inputType: 'colorPicker',
@@ -62,7 +54,6 @@ export const showColorDialog = (state, { fieldIndex, itemData }) => {
   
   // Update default values with current item data
   state.colorDialog.defaultValues = {
-    name: itemData.name || '',
     hex: itemData.value || '#ff0000',
   };
 }
@@ -73,7 +64,6 @@ export const hideColorDialog = (state) => {
   
   // Reset default values
   state.colorDialog.defaultValues = {
-    name: '',
     hex: '#ff0000',
   };
 }

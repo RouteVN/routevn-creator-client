@@ -144,7 +144,6 @@ export const handleColorFormActionClick = (e, deps) => {
   dispatchEvent(new CustomEvent("color-updated", {
     detail: {
       fieldIndex,
-      name: values.name,
       hex: values.hex
     },
     bubbles: true,

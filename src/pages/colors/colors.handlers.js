@@ -21,7 +21,6 @@ export const handleDataChanged = (e, deps) => {
 export const handleColorItemClick = (e, deps) => {
   const { store, render } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
-  console.log('Colors page received item click, ID:', itemId);
   store.setSelectedItemId(itemId);
   render();
 };
@@ -67,12 +66,10 @@ export const handleColorEdited = (e, deps) => {
 
 export const handleColorUpdated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { fieldIndex, name, hex } = e.detail;
   
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn('No item selected for color update');
     return;
   }
   
@@ -84,8 +81,7 @@ export const handleColorUpdated = (e, deps) => {
       id: selectedItem.id,
       replace: false,
       item: {
-        name: name,
-        hex: hex,
+        hex: e.detail.hex,
       },
     },
   });
@@ -104,7 +100,6 @@ export const handleFileAction = (e, deps) => {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
-      console.warn('No item selected for rename');
       return;
     }
     
