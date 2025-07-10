@@ -39,7 +39,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Color Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'color', hex: selectedItemDetails.displayHex, width: 240, height: 60, show: !!selectedItemDetails.displayHex },
+    { type: 'color', value: selectedItemDetails.displayHex, width: 240, height: 60, show: !!selectedItemDetails.displayHex },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'Hex Value', value: selectedItemDetails.displayHex, show: !!selectedItemDetails.displayHex },

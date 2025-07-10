@@ -10,8 +10,13 @@ export const INITIAL_STATE = Object.freeze({
   startTime: 0,
   pauseTime: 0,
   isSeeking: false,
-  componentId: null
+  componentId: null,
+  fileName: ''
 });
+
+export const setFileName = (state, fileName) => {
+  state.fileName = fileName;
+}
 
 export const setLoading = (state, isLoading) => {
   state.isLoading = isLoading;
@@ -64,26 +69,24 @@ export const setComponentId = (state, componentId) => {
 // Helper function to format time in MM:SS format
 const formatTime = (seconds) => {
   if (!seconds || !isFinite(seconds)) return '0:00';
-  
+
   const minutes = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const toViewData = ({ state, props }) => {
+export const toViewData = ({ state }) => {
   const currentTimeFormatted = formatTime(state.currentTime);
   const durationFormatted = formatTime(state.duration);
   const progressPercentage = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
-
   return {
     isPlaying: state.isPlaying,
+    fileName: state.fileName,
     isLoading: state.isLoading,
     currentTime: state.currentTime,
     duration: state.duration,
     currentTimeFormatted,
     durationFormatted,
     progressPercentage,
-    fileId: props.fileId,
-    autoPlay: props.autoPlay || false
   };
 };

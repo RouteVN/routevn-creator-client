@@ -1,17 +1,86 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 
+// Helper function to extract fileIds from renderState
+function extractFileIdsFromRenderState(obj) {
+  const fileIds = new Set();
+
+  function traverse(value) {
+    if (value === null || value === undefined) return;
+
+    if (typeof value === 'string') {
+      // Check if this is a fileId (starts with 'file:')
+      if (value.startsWith('file:')) {
+        fileIds.add(value.replace('file:', ''));
+      }
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(traverse);
+      return;
+    }
+
+    if (typeof value === 'object') {
+      Object.keys(value).forEach(key => {
+        // Check if this property is 'url' or 'src' and extract fileId
+        if ((key === 'url' || key === 'src') && typeof value[key] === 'string') {
+          if (value[key].startsWith('file:')) {
+            fileIds.add(value[key].replace('file:', ''));
+          }
+        }
+        // Continue traversing nested objects
+        traverse(value[key]);
+      });
+    }
+  }
+
+  traverse(obj);
+  return Array.from(fileIds);
+}
+
+// Helper function to create assets object from fileIds
+async function createAssetsFromFileIds(fileIds, httpClient) {
+  const assets = {};
+
+  for (const fileId of fileIds) {
+    try {
+      const { url } = await httpClient.creator.getFileContent({
+        fileId,
+        projectId: 'someprojectId'
+      });
+      assets[`file:${fileId}`] = {
+        url,
+        type: 'image/png', // Default type, could be enhanced to detect actual type
+      };
+    } catch (error) {
+      console.error(`Failed to load file ${fileId}:`, error);
+    }
+  }
+
+  return assets;
+}
+
 export const handleOnMount = (deps) => {
-  const { store, router, render, repository, getRefIds } = deps;
+  const { store, router, render, repository, getRefIds, drenderer } = deps;
   const { sceneId } = router.getPayload();
-  const { scenes } = repository.getState();
+  const { scenes, images } = repository.getState();
+
+
+  setTimeout(() => {
+    // const { canvas } = getRefIds()
+    // console.log('canvas', drenderer.getCanvas())
+    // canvas.elm.appendChild(drenderer.getCanvas())
+    store.setImages(images.items)
+  }, 10)
+
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
     .find((item) => item.id === sceneId);
   scene.sections = toFlatItems(scene.sections).map((section) => {
     return {
       ...section,
-      steps: toFlatItems(section.steps),
+      lines: toFlatItems(section.lines),
     };
   });
   store.setScene({
@@ -26,16 +95,16 @@ export const handleSectionTabClick = (e, deps) => {
   const { store, render } = deps;
   const id = e.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
-  
+
   // Reset selected line to first line of new section
   const scene = store.selectScene();
-  const newSection = scene.sections.find(section => section.id === id);
-  if (newSection && newSection.steps && newSection.steps.length > 0) {
-    store.setSelectedLineId(newSection.steps[0].id);
+  const newSection = scene.sections.find((section) => section.id === id);
+  if (newSection && newSection.lines && newSection.lines.length > 0) {
+    store.setSelectedLineId(newSection.lines[0].id);
   } else {
     store.setSelectedLineId(undefined);
   }
-  
+
   render();
 };
 
@@ -50,21 +119,21 @@ export const handleCommandLineSubmit = (e, deps) => {
   }
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${lineId}.instructions.presentationInstructions`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
     value: {
       replace: false,
-      item: e.detail
+      item: e.detail,
     },
-  })
-  
+  });
+
   const { scenes } = repository.getState();
   const scene = toFlatItems(scenes)
-  .filter((item) => item.type === "scene")
-  .find((item) => item.id === sceneId);
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === sceneId);
   scene.sections = toFlatItems(scene.sections).map((section) => {
     return {
       ...section,
-      steps: toFlatItems(section.steps),
+      lines: toFlatItems(section.lines),
     };
   });
 
@@ -87,7 +156,7 @@ export const handleEditorDataChanaged = (e, deps) => {
 
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${lineId}.instructions.presentationInstructions`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
     value: {
       replace: false,
       item: {
@@ -95,8 +164,8 @@ export const handleEditorDataChanaged = (e, deps) => {
           text: e.detail.content,
         },
       },
-    }
-  })
+    },
+  });
   // actionType: "treePush",
   // target: `scenes.items.${sceneId}.sections`,
   // value: {
@@ -105,11 +174,9 @@ export const handleEditorDataChanaged = (e, deps) => {
   //   item: {
   //     id: newSectionId,
   //     name: "Section New",
-  //     steps: {
+  //     lines: {
   //       items: {
-  //         instructions: {
-  //           presentationInstructions: {},
-  //         },
+  //         presentation: {},
   //       },
   //       tree: [
   //         {
@@ -121,7 +188,7 @@ export const handleEditorDataChanaged = (e, deps) => {
   // },
 };
 
-export const handleAddInstructionButtonClick = (e, deps) => {
+export const handleAddPresentationButtonClick = (e, deps) => {
   const { store, render } = deps;
   store.setMode("actions");
   render();
@@ -143,11 +210,9 @@ export const handleSectionAddClick = (e, deps) => {
       item: {
         id: newSectionId,
         name: "Section New",
-        steps: {
+        lines: {
           items: {
-            instructions: {
-              presentationInstructions: {},
-            },
+            presentation: {},
           },
           tree: [
             {
@@ -166,7 +231,7 @@ export const handleSectionAddClick = (e, deps) => {
   newScene.sections = toFlatItems(newScene.sections).map((section) => {
     return {
       ...section,
-      steps: toFlatItems(section.steps),
+      lines: toFlatItems(section.lines),
     };
   });
   store.setScene({
@@ -179,8 +244,8 @@ export const handleSectionAddClick = (e, deps) => {
 
 export const handleSplitLine = (e, deps) => {
   const startTime = performance.now();
-  console.log('🕐 handleSplitLine - START at', startTime);
-  
+  console.log("🕐 handleSplitLine - START at", startTime);
+
   const { store, render, repository, getRefIds } = deps;
 
   const sceneId = store.selectSceneId();
@@ -188,48 +253,50 @@ export const handleSplitLine = (e, deps) => {
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = e.detail;
 
-  console.log('handleSplitLine - splitting line:', lineId);
+  console.log("handleSplitLine - splitting line:", lineId);
 
   // Batch both operations into a single update cycle
   const repoStart = performance.now();
-  console.log('🕐 Starting repository actions at', repoStart - startTime, 'ms');
-  
+  console.log("🕐 Starting repository actions at", repoStart - startTime, "ms");
+
   // First, update the current line with the left content
   repository.addAction({
     actionType: "treeUpdate",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
     value: {
       id: lineId,
       replace: false,
       item: {
-        instructions: {
-          presentationInstructions: {
-            dialogue: {
-              text: leftContent,
-            }
+        presentation: {
+          dialogue: {
+            text: leftContent,
           },
         },
       },
-    }
+    },
   });
 
   const updateDone = performance.now();
-  console.log('🕐 Update action done at', updateDone - startTime, 'ms (took', updateDone - repoStart, 'ms)');
+  console.log(
+    "🕐 Update action done at",
+    updateDone - startTime,
+    "ms (took",
+    updateDone - repoStart,
+    "ms)",
+  );
 
   // Then, create a new line with the right content and insert it after the current line
   repository.addAction({
     actionType: "treePush",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
     value: {
       parent: "_root",
       position: { after: lineId },
       item: {
         id: newLineId,
-        instructions: {
-          presentationInstructions: {
-            dialogue: {
-              text: rightContent,
-            }
+        presentation: {
+          dialogue: {
+            text: rightContent,
           },
         },
       },
@@ -237,12 +304,22 @@ export const handleSplitLine = (e, deps) => {
   });
 
   const pushDone = performance.now();
-  console.log('🕐 Push action done at', pushDone - startTime, 'ms (took', pushDone - updateDone, 'ms)');
+  console.log(
+    "🕐 Push action done at",
+    pushDone - startTime,
+    "ms (took",
+    pushDone - updateDone,
+    "ms)",
+  );
 
   // Update the scene data
   const sceneDataStart = performance.now();
-  console.log('🕐 Starting scene data update at', sceneDataStart - startTime, 'ms');
-  
+  console.log(
+    "🕐 Starting scene data update at",
+    sceneDataStart - startTime,
+    "ms",
+  );
+
   const { scenes } = repository.getState();
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
@@ -250,7 +327,7 @@ export const handleSplitLine = (e, deps) => {
   scene.sections = toFlatItems(scene.sections).map((section) => {
     return {
       ...section,
-      steps: toFlatItems(section.steps),
+      lines: toFlatItems(section.lines),
     };
   });
   store.setScene({
@@ -259,55 +336,89 @@ export const handleSplitLine = (e, deps) => {
   });
 
   const sceneDataDone = performance.now();
-  console.log('🕐 Scene data update done at', sceneDataDone - startTime, 'ms (took', sceneDataDone - sceneDataStart, 'ms)');
+  console.log(
+    "🕐 Scene data update done at",
+    sceneDataDone - startTime,
+    "ms (took",
+    sceneDataDone - sceneDataStart,
+    "ms)",
+  );
 
   // Pre-configure the linesEditor before rendering
   const configStart = performance.now();
-  console.log('🕐 Starting pre-config at', configStart - startTime, 'ms');
-  
+  console.log("🕐 Starting pre-config at", configStart - startTime, "ms");
+
   const refIds = getRefIds();
   const linesEditorRef = refIds["lines-editor"];
-  
+
   if (linesEditorRef) {
     // Set cursor position to 0 (beginning of new line)
     linesEditorRef.elm.store.setCursorPosition(0);
     linesEditorRef.elm.store.setGoalColumn(0);
-    linesEditorRef.elm.store.setNavigationDirection('down');
+    linesEditorRef.elm.store.setNavigationDirection("down");
     linesEditorRef.elm.store.setIsNavigating(true);
   }
-  
+
   // Update selectedLineId through the store (not directly in linesEditor)
   store.setSelectedLineId(newLineId);
 
   const configDone = performance.now();
-  console.log('🕐 Pre-config done at', configDone - startTime, 'ms (took', configDone - configStart, 'ms)');
+  console.log(
+    "🕐 Pre-config done at",
+    configDone - startTime,
+    "ms (took",
+    configDone - configStart,
+    "ms)",
+  );
 
   // Render and then focus immediately
   const renderStart = performance.now();
-  console.log('🕐 Starting render at', renderStart - startTime, 'ms');
-  
+  console.log("🕐 Starting render at", renderStart - startTime, "ms");
+
   render();
-  
+
   const renderDone = performance.now();
-  console.log('🕐 Render done at', renderDone - startTime, 'ms (took', renderDone - renderStart, 'ms)');
-  
+  console.log(
+    "🕐 Render done at",
+    renderDone - startTime,
+    "ms (took",
+    renderDone - renderStart,
+    "ms)",
+  );
+
   // Use requestAnimationFrame for faster execution than setTimeout
   requestAnimationFrame(() => {
     const focusStart = performance.now();
-    console.log('🕐 Starting focus at', focusStart - startTime, 'ms');
-    
+    console.log("🕐 Starting focus at", focusStart - startTime, "ms");
+
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine(newLineId);
-      
+
       const updateLineDone = performance.now();
-      console.log('🕐 updateSelectedLine done at', updateLineDone - startTime, 'ms (took', updateLineDone - focusStart, 'ms)');
-      
+      console.log(
+        "🕐 updateSelectedLine done at",
+        updateLineDone - startTime,
+        "ms (took",
+        updateLineDone - focusStart,
+        "ms)",
+      );
+
       // Also render the linesEditor
       linesEditorRef.elm.render();
-      
+
       const finalRenderDone = performance.now();
-      console.log('🕐 Final render done at', finalRenderDone - startTime, 'ms (took', finalRenderDone - updateLineDone, 'ms)');
-      console.log('🕐 TOTAL handleSplitLine time:', finalRenderDone - startTime, 'ms');
+      console.log(
+        "🕐 Final render done at",
+        finalRenderDone - startTime,
+        "ms (took",
+        finalRenderDone - updateLineDone,
+        "ms)",
+      );
+      console.log(
+        "🕐 TOTAL handleSplitLine time:",
+        finalRenderDone - startTime,
+        "ms",
+      );
     }
   });
 };
@@ -321,15 +432,13 @@ export const handleNewLine = (e, deps) => {
 
   repository.addAction({
     actionType: "treePush",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
     value: {
       parent: "_root",
       position: "last",
       item: {
         id: newLineId,
-        instructions: {
-          presentationInstructions: {},
-        },
+        presentation: {},
       },
     },
   });
@@ -341,7 +450,7 @@ export const handleNewLine = (e, deps) => {
   scene.sections = toFlatItems(scene.sections).map((section) => {
     return {
       ...section,
-      steps: toFlatItems(section.steps),
+      lines: toFlatItems(section.lines),
     };
   });
   store.setScene({
@@ -353,19 +462,18 @@ export const handleNewLine = (e, deps) => {
 };
 
 export const handleMoveUp = (e, deps) => {
-  const { store, getRefIds, render } = deps;
+  const { store, getRefIds, render, drenderer, httpClient } = deps;
   const currentLineId = e.detail.lineId;
   const previousLineId = store.selectPreviousLineId({ lineId: currentLineId });
-  
 
   // Only move if we have a different previous line
   if (previousLineId && previousLineId !== currentLineId) {
     const refIds = getRefIds();
     const linesEditorRef = refIds["lines-editor"];
-    
+
     // Update selectedLineId through the store
     store.setSelectedLineId(previousLineId);
-    
+
     // Pass cursor position from event detail
     if (e.detail.cursorPosition !== undefined) {
       if (e.detail.cursorPosition === -1) {
@@ -374,23 +482,32 @@ export const handleMoveUp = (e, deps) => {
         const targetTextLength = targetLineRef?.elm?.textContent?.length || 0;
         linesEditorRef.elm.store.setCursorPosition(targetTextLength);
         linesEditorRef.elm.store.setGoalColumn(targetTextLength);
-        linesEditorRef.elm.store.setNavigationDirection('end'); // Special direction for end positioning
+        linesEditorRef.elm.store.setNavigationDirection("end"); // Special direction for end positioning
       } else {
         linesEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
         // Set direction flag in store before calling updateSelectedLine
-        linesEditorRef.elm.store.setNavigationDirection('up');
+        linesEditorRef.elm.store.setNavigationDirection("up");
       }
     } else {
       // Set direction flag in store before calling updateSelectedLine
-      linesEditorRef.elm.store.setNavigationDirection('up');
+      linesEditorRef.elm.store.setNavigationDirection("up");
     }
     linesEditorRef.elm.transformedHandlers.updateSelectedLine(previousLineId);
-    
+
     // Force a render to update line colors after navigation
     setTimeout(() => {
       render();
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
+
+      setTimeout(async () => {
+        const renderState = store.selectRenderState()
+        const fileIds = extractFileIdsFromRenderState(renderState);
+        const assets = await createAssetsFromFileIds(fileIds, httpClient);
+        const { canvas } = getRefIds()
+        await drenderer.init({ assets, canvas: canvas.elm })
+        drenderer.render(renderState)
+      }, 10)
     }, 0);
   }
 };
@@ -402,19 +519,18 @@ export const handleBackToActions = (e, deps) => {
 };
 
 export const handleMoveDown = (e, deps) => {
-  const { store, getRefIds, render } = deps;
+  const { store, getRefIds, render, drenderer, httpClient } = deps;
   const currentLineId = e.detail.lineId;
   const nextLineId = store.selectNextLineId({ lineId: currentLineId });
-  
 
   // Only move if we have a different next line
   if (nextLineId && nextLineId !== currentLineId) {
     const refIds = getRefIds();
     const linesEditorRef = refIds["lines-editor"];
-    
+
     // Update selectedLineId through the store
     store.setSelectedLineId(nextLineId);
-    
+
     // Pass cursor position from event detail
     if (e.detail.cursorPosition !== undefined) {
       linesEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
@@ -423,16 +539,25 @@ export const handleMoveDown = (e, deps) => {
         linesEditorRef.elm.store.setGoalColumn(0);
       }
     }
-    
+
     // Set direction flag in store before calling updateSelectedLine
-    linesEditorRef.elm.store.setNavigationDirection('down');
+    linesEditorRef.elm.store.setNavigationDirection("down");
     linesEditorRef.elm.transformedHandlers.updateSelectedLine(nextLineId);
-    
+
     // Force a render to update line colors after navigation
     setTimeout(() => {
       render();
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
+
+      setTimeout(async () => {
+        const renderState = store.selectRenderState()
+        const fileIds = extractFileIdsFromRenderState(renderState);
+        const assets = await createAssetsFromFileIds(fileIds, httpClient);
+        const { canvas } = getRefIds()
+        await drenderer.init({ assets, canvas: canvas.elm })
+        drenderer.render(renderState)
+      }, 10)
     }, 0);
   }
 };
@@ -440,27 +565,27 @@ export const handleMoveDown = (e, deps) => {
 export const handleMergeLines = (e, deps) => {
   const { store, getRefIds, render, repository } = deps;
   const { prevLineId, currentLineId, contentToAppend } = e.detail;
-  
+
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
-  
+
   // Get previous line content
   const scene = store.selectScene();
-  const section = scene.sections.find(s => s.id === sectionId);
-  const prevLine = section.steps.find(s => s.id === prevLineId);
-  
+  const section = scene.sections.find((s) => s.id === sectionId);
+  const prevLine = section.lines.find((s) => s.id === prevLineId);
+
   if (!prevLine) return;
-  
-  const prevContent = prevLine.instructions?.presentationInstructions?.dialogue?.text || '';
+
+  const prevContent = prevLine.presentation?.dialogue?.text || "";
   const mergedContent = prevContent + contentToAppend;
-  
+
   // Store the length of the previous content for cursor positioning
   const prevContentLength = prevContent.length;
-  
+
   // Update previous line with merged content
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps.items.${prevLineId}.instructions.presentationInstructions`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.presentation`,
     value: {
       replace: false,
       item: {
@@ -468,18 +593,18 @@ export const handleMergeLines = (e, deps) => {
           text: mergedContent,
         },
       },
-    }
+    },
   });
-  
+
   // Delete current line
   repository.addAction({
     actionType: "treeDelete",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.steps`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
     value: {
       id: currentLineId,
     },
   });
-  
+
   // Update the scene data
   const { scenes } = repository.getState();
   const updatedScene = toFlatItems(scenes)
@@ -488,37 +613,36 @@ export const handleMergeLines = (e, deps) => {
   updatedScene.sections = toFlatItems(updatedScene.sections).map((section) => {
     return {
       ...section,
-      steps: toFlatItems(section.steps),
+      lines: toFlatItems(section.lines),
     };
   });
-  
+
   store.setScene({
     id: updatedScene.id,
     scene: updatedScene,
   });
-  
+
   // Update selected line to the previous one
   store.setSelectedLineId(prevLineId);
-  
+
   // Pre-configure the linesEditor for cursor positioning
   const refIds = getRefIds();
   const linesEditorRef = refIds["lines-editor"];
-  
+
   if (linesEditorRef) {
     // Set cursor position to where the previous content ended
     linesEditorRef.elm.store.setCursorPosition(prevContentLength);
     linesEditorRef.elm.store.setGoalColumn(prevContentLength);
     linesEditorRef.elm.store.setIsNavigating(true);
   }
-  
+
   // Render and then focus
   render();
-  
+
   requestAnimationFrame(() => {
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine(prevLineId);
       linesEditorRef.elm.render();
-      
     }
   });
 };
@@ -532,10 +656,10 @@ export const handleBackgroundActionClick = (e, deps) => {
 export const handleBackgroundActionContextMenu = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
-  
-  store.showInstructionDropdownMenu({
+
+  store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    instructionType: 'background'
+    presentationType: "background",
   });
   render();
 };
@@ -549,10 +673,10 @@ export const handleBgmActionClick = (e, deps) => {
 export const handleBgmActionContextMenu = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
-  
-  store.showInstructionDropdownMenu({
+
+  store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    instructionType: 'bgm'
+    presentationType: "bgm",
   });
   render();
 };
@@ -566,10 +690,10 @@ export const handleSoundEffectActionClick = (e, deps) => {
 export const handleSoundEffectActionContextMenu = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
-  
-  store.showInstructionDropdownMenu({
+
+  store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    instructionType: 'soundEffects'
+    presentationType: "soundEffects",
   });
   render();
 };
@@ -583,10 +707,10 @@ export const handleCharactersActionClick = (e, deps) => {
 export const handleCharactersActionContextMenu = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
-  
-  store.showInstructionDropdownMenu({
+
+  store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    instructionType: 'characters'
+    presentationType: "characters",
   });
   render();
 };
@@ -600,14 +724,13 @@ export const handleSceneTransitionActionClick = (e, deps) => {
 export const handleSceneTransitionActionContextMenu = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
-  
-  store.showInstructionDropdownMenu({
+
+  store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    instructionType: 'sceneTransition'
+    presentationType: "sceneTransition",
   });
   render();
 };
-
 
 export const handleActionsOverlayClick = (e, deps) => {
   const { store, render } = deps;
@@ -654,7 +777,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   const action = e.detail.item.value; // Access value from item object
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
-  const instructionType = dropdownState.instructionType;
+  const presentationType = dropdownState.presentationType;
   const sceneId = store.selectSceneId();
 
   // Store position before hiding dropdown (for rename popover)
@@ -681,7 +804,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     newScene.sections = toFlatItems(newScene.sections).map((section) => {
       return {
         ...section,
-        steps: toFlatItems(section.steps),
+        lines: toFlatItems(section.lines),
       };
     });
     store.setScene({
@@ -698,15 +821,15 @@ export const handleDropdownMenuClickItem = (e, deps) => {
       position,
       sectionId,
     });
-  } else if (action === "delete-instruction") {
-    // Delete instruction using unset action
+  } else if (action === "delete-presentation") {
+    // Delete presentation using unset action
     const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
-    
-    if (instructionType && selectedLineId && selectedSectionId) {
+
+    if (presentationType && selectedLineId && selectedSectionId) {
       repository.addAction({
         actionType: "unset",
-        target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.steps.items.${selectedLineId}.instructions.presentationInstructions.${instructionType}`,
+        target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
       });
 
       // Update scene data
@@ -717,7 +840,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
       scene.sections = toFlatItems(scene.sections).map((section) => {
         return {
           ...section,
-          steps: toFlatItems(section.steps),
+          lines: toFlatItems(section.lines),
         };
       });
       store.setScene({
@@ -739,7 +862,7 @@ export const handlePopoverClickOverlay = (e, deps) => {
 export const handleLineSelectionChanged = (e, deps) => {
   const { store, render } = deps;
   const { lineId } = e.detail;
-  
+
   store.setSelectedLineId(lineId);
   render();
 };
@@ -788,7 +911,7 @@ export const handleFormActionClick = (e, deps) => {
       newScene.sections = toFlatItems(newScene.sections).map((section) => {
         return {
           ...section,
-          steps: toFlatItems(section.steps),
+          lines: toFlatItems(section.lines),
         };
       });
       store.setScene({
@@ -805,5 +928,5 @@ export const handleToggleSectionsGraphView = (e, deps) => {
   const { store, render } = deps;
   store.toggleSectionsGraphView();
   render();
-  console.log('render')
+  console.log("render");
 };

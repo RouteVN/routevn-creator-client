@@ -34,6 +34,10 @@ refs:
     eventListeners:
       click:
         handler: handleTitleClick
+  color-field-*:
+    eventListeners:
+      click:
+        handler: handleColorFieldClick
   popover:
     eventListeners:
       click-overlay:
@@ -42,6 +46,14 @@ refs:
     eventListeners:
       action-click:
         handler: handleFormActionClick
+  color-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseColorDialog
+  color-form:
+    eventListeners:
+      action-click:
+        handler: handleColorFormActionClick
 
 template:
   - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
@@ -60,8 +72,6 @@ template:
                         - 'input#file-input-${i} type=file accept="${field.accept}" style="display: none;"':
                     $else:
                       - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId} key=${field.fileId}:
-                $elif field.type == 'audio':
-                  - rvn-audio-player fileId=${field.fileId} autoPlay=${field.autoPlay}:
                 $elif field.type == 'text':
                   - rtgl-view:
                     - rtgl-text c=mu-fg: ${field.label}
@@ -71,11 +81,14 @@ template:
                         - rtgl-text s=${field.size}: ${field.value}
                 $elif field.type == 'color':
                   - rtgl-view:
-                    - rtgl-text c=mu-fg: ${field.label}
-                    - rtgl-color-picker value={field.value}:
+                    - 'rtgl-view#color-field-${i} w=200 h=150 br=md cur=p style="background-color: ${field.value}"':
       $else:
         - rtgl-view w=f h=f av=c ah=c:
           - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}
   - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
     - $if form:
         - rtgl-form#form slot=content .form=form:
+  
+  - rtgl-dialog#color-dialog .isOpen=colorDialog.isOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#color-form .defaultValues=colorDialog.defaultValues .form=colorDialog.form w=f:

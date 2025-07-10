@@ -1,12 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-};
+import { formatFileSize } from "../../utils/index.js";
 
 export const INITIAL_STATE = Object.freeze({
   audioData: { tree: [], items: {} },
@@ -41,7 +34,6 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Audio Details' : null;
   const detailFields = selectedItemDetails && selectedItemDetails.type === 'audio' ? [
-    { type: 'audio', fileId: selectedItemDetails.fileId, autoPlay: true },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },

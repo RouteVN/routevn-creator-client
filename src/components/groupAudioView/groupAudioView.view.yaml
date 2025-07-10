@@ -27,6 +27,16 @@ refs:
     eventListeners:
       click:
         handler: handleAudioItemClick
+      dblclick:
+        handler: handleAudioItemDoubleClick
+  playerCloser:
+    eventListeners:
+      click:
+        handler: handleAudioPlayerClose
+  rvn-audio-player:
+    eventListeners:
+      audio-player-close:
+        handler: handleAudioPlayerClose
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -51,8 +61,11 @@ template:
                   - $if group.hasChildren:
                       - $for item in group.children:
                           - 'rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}"':
-                            - rtgl-image br=md w=200 h=150 src=/public/project_logo_placeholder.png:
+                            - rtgl-image br=md w=150 h=150 src=/public/project_logo_placeholder.png:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                     $else:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
     - rtgl-view h=33vh:
+    - $if showAudioPlayer:
+      - 'rtgl-view pos=fix cor=bottom h=60 style="left: 305px; right: 285px;"':
+        - rvn-audio-player fileId=${playingAudio.fileId} autoPlay=true fileName=${playingAudio.title}:
