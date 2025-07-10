@@ -8,7 +8,6 @@ import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
 import Router from './deps/router';
 import AudioManager from './deps/audioManager';
 import { create2dRenderer } from './deps/2drenderer';
-import { constructRenderState, constructPresentationState } from './deps/RouteEngine';
 
 const httpClient = createRouteVnHttpClient({
   baseUrl: 'http://localhost:8788',
@@ -95,20 +94,16 @@ const componentDependencies = {
   repository,
   userConfig,
   audioManager,
-  constructRenderState,
-  constructPresentationState,
   drenderer
 }
 
 const pageDependencies = {
   httpClient,
-  subject, 
+  subject,
   router,
   repository,
   userConfig,
   audioManager,
-  constructRenderState,
-  constructPresentationState,
   drenderer
 }
 

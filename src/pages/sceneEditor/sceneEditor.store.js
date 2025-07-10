@@ -1,4 +1,4 @@
-import { constructPresentationState, constructRenderState } from '../../deps/RouteEngine'
+import { constructPresentationState, constructRenderState } from 'route-engine-js'
 
 export const INITIAL_STATE = Object.freeze({
   images: {},
@@ -118,7 +118,7 @@ export const hidePopover = (state) => {
 
 export const selectRenderState = ({ state, props }) => {
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
-  
+
   const linesUpToSelectedLine = currentSection?.lines?.slice(0, currentSection?.lines?.findIndex(line => line.id === state.selectedLineId) + 1);
   const presentationState = constructPresentationState(linesUpToSelectedLine.map(line => line.presentation));
   const renderState = constructRenderState({
@@ -186,7 +186,7 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Get current section for rename form
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
-  
+
   // Form configuration for renaming
   const renameForm = currentSection ? {
     fields: [{
@@ -253,8 +253,8 @@ export const toViewData = ({ state, props }, payload) => {
   let richTextContent = '';
   if (selectedLine?.presentation?.richText) {
     // Check both possible text fields
-    richTextContent = selectedLine.presentation.richText.content || 
-                     selectedLine.presentation.richText.text || '';
+    richTextContent = selectedLine.presentation.richText.content ||
+      selectedLine.presentation.richText.text || '';
   } else if (selectedLine?.presentation?.dialogue) {
     // Fall back to dialogue text if rich text doesn't exist
     richTextContent = selectedLine.presentation.dialogue.text || '';

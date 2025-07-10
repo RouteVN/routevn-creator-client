@@ -1,5 +1,4 @@
-import {
-  PixiTDR,
+import RouteGraphics, {
   SpriteRendererPlugin,
   TextRendererPlugin,
   ContainerRendererPlugin,
@@ -8,13 +7,10 @@ import {
   SoundPlugin,
   SliderRendererPlugin,
   KeyframeTransitionPlugin,
-} from "./renderer.js";
+} from "route-graphics";
 
 export const create2dRenderer = async () => {
   let app;
-
-  // document.getElementById("canvas").appendChild(app.canvas);
-  // app.render(payload);
 
   return {
     init: async (options = {}) => {
@@ -32,7 +28,7 @@ export const create2dRenderer = async () => {
         })
       );
 
-      app = new PixiTDR();
+      app = new RouteGraphics();
       await app.init({
         width: 1920,
         height: 1080,
@@ -54,7 +50,6 @@ export const create2dRenderer = async () => {
       await app.loadAssets(Object.keys(assets));
 
       if (canvas) {
-        console.log('canvas', canvas)
         // remove child first if there is
         if (canvas.children.length > 0) {
           canvas.removeChild(canvas.children[0])
