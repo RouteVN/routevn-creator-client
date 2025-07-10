@@ -27,57 +27,11 @@ export const handleAudioItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
+  const { store, render, repository, uploadAudioFiles } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Create upload promises for all files
-  const uploadPromises = Array.from(files).map(async (file) => {
-    try {
-      const { downloadUrl, uploadUrl, fileId } =
-        await httpClient.creator.uploadFile({
-          projectId: "someprojectId",
-        });
-
-      const response = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type, // Ensure the Content-Type matches the file type
-        },
-      });
-
-      if (response.ok) {
-        console.log("File uploaded successfully:", file.name);
-        return {
-          success: true,
-          file,
-          downloadUrl,
-          fileId,
-        };
-      } else {
-        console.error("File upload failed:", file.name, response.statusText);
-        return {
-          success: false,
-          file,
-          error: response.statusText,
-        };
-      }
-    } catch (error) {
-      console.error("File upload error:", file.name, error);
-      return {
-        success: false,
-        file,
-        error: error.message,
-      };
-    }
-  });
-
-  // Wait for all uploads to complete
-  const uploadResults = await Promise.all(uploadPromises);
-
-  // Add successfully uploaded files to repository
-  const successfulUploads = uploadResults.filter((result) => result.success);
+  const successfulUploads = await uploadAudioFiles(files, "someprojectId");
 
   // Extract waveform data and generate images for all successful uploads
   const waveformPromises = successfulUploads.map(async (result) => {
@@ -102,7 +56,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
         ...result,
         waveformFileId: null,
         waveformThumbnailFileId: null,
-        duration: waveformData?.duration || null,
+        duration: waveformData.duration,
       };
     }
     
@@ -132,7 +86,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
           ...result,
           waveformFileId: waveformUpload.fileId,
           waveformThumbnailFileId: thumbnailUpload.fileId,
-          duration: waveformData?.duration || null,
+          duration: waveformData.duration,
         };
       }
     } catch (error) {
@@ -143,7 +97,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
       ...result,
       waveformFileId: null,
       waveformThumbnailFileId: null,
-      duration: waveformData?.duration || null,
+      duration: waveformData.duration,
     };
   });
 
@@ -185,8 +139,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleReplaceItem = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
-  const { file, field } = e.detail;
+  const { store, render, repository, uploadAudioFiles } = deps;
+  const { file } = e.detail;
   
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -195,94 +149,82 @@ export const handleReplaceItem = async (e, deps) => {
     return;
   }
   
-  try {
-    // Upload the new file
-    const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
-      projectId: "someprojectId",
-    });
-
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (response.ok) {
-      console.log("Audio replaced successfully:", file.name);
-      
-      const waveformData = await AudioWaveformExtractor.extractWaveformData(file);
-      let waveformFileId = null;
-      let waveformThumbnailFileId = null;
-      
-      if (waveformData) {
-        const [waveformBlob, thumbnailBlob] = await Promise.all([
-          AudioWaveformExtractor.generateWaveformImage(waveformData, 600, 400),
-          AudioWaveformExtractor.generateWaveformThumbnail(waveformData)
+  const uploadedFiles = await uploadAudioFiles([file], "someprojectId");
+  
+  if (uploadedFiles.length === 0) {
+    console.error('File upload failed, no files uploaded');
+    return;
+  }
+  
+  const uploadResult = uploadedFiles[0];
+  
+  // Extract waveform data and generate images
+  const waveformData = await AudioWaveformExtractor.extractWaveformData(file);
+  let waveformFileId = null;
+  let waveformThumbnailFileId = null;
+  let duration = null;
+  
+  if (waveformData) {
+    const [waveformBlob, thumbnailBlob] = await Promise.all([
+      AudioWaveformExtractor.generateWaveformImage(waveformData, 600, 400),
+      AudioWaveformExtractor.generateWaveformThumbnail(waveformData)
+    ]);
+    
+    if (waveformBlob && thumbnailBlob) {
+      try {
+        const [waveformUpload, thumbnailUpload] = await Promise.all([
+          httpClient.creator.uploadFile({ projectId: "someprojectId" }),
+          httpClient.creator.uploadFile({ projectId: "someprojectId" })
         ]);
         
-        if (waveformBlob && thumbnailBlob) {
-          try {
-            const [waveformUpload, thumbnailUpload] = await Promise.all([
-              httpClient.creator.uploadFile({ projectId: "someprojectId" }),
-              httpClient.creator.uploadFile({ projectId: "someprojectId" })
-            ]);
-            
-            const [waveformResponse, thumbnailResponse] = await Promise.all([
-              fetch(waveformUpload.uploadUrl, {
-                method: "PUT",
-                body: waveformBlob,
-                headers: { "Content-Type": "image/png" },
-              }),
-              fetch(thumbnailUpload.uploadUrl, {
-                method: "PUT",
-                body: thumbnailBlob,
-                headers: { "Content-Type": "image/png" },
-              })
-            ]);
-            
-            if (waveformResponse.ok && thumbnailResponse.ok) {
-              waveformFileId = waveformUpload.fileId;
-              waveformThumbnailFileId = thumbnailUpload.fileId;
-              console.log("Waveform images uploaded successfully");
-            }
-          } catch (error) {
-            console.error("Failed to upload waveform images:", error);
-          }
+        const [waveformResponse, thumbnailResponse] = await Promise.all([
+          fetch(waveformUpload.uploadUrl, {
+            method: "PUT",
+            body: waveformBlob,
+            headers: { "Content-Type": "image/png" },
+          }),
+          fetch(thumbnailUpload.uploadUrl, {
+            method: "PUT",
+            body: thumbnailBlob,
+            headers: { "Content-Type": "image/png" },
+          })
+        ]);
+        
+        if (waveformResponse.ok && thumbnailResponse.ok) {
+          waveformFileId = waveformUpload.fileId;
+          waveformThumbnailFileId = thumbnailUpload.fileId;
+          console.log("Waveform images uploaded successfully");
         }
+      } catch (error) {
+        console.error("Failed to upload waveform images:", error);
       }
-      
-      // Update the selected item in the repository with the new file information
-      repository.addAction({
-        actionType: "treeUpdate",
-        target: "audio",
-        value: {
-          id: selectedItem.id,
-          replace: false,
-          item: {
-            fileId: fileId,
-            name: file.name,
-            fileType: file.type,
-            fileSize: file.size,
-            waveformFileId: waveformFileId,
-            waveformThumbnailFileId: waveformThumbnailFileId,
-            duration: waveformData?.duration || null,
-          },
-        },
-      });
-      
-      // Update the store with the new repository state
-      const { audio } = repository.getState();
-      store.setItems(audio);
-      render();
-      
-    } else {
-      console.error("Audio upload failed:", file.name, response.statusText);
     }
-  } catch (error) {
-    console.error("Audio upload error:", file.name, error);
+    
+    duration = waveformData.duration;
   }
+  
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "audio",
+    value: {
+      id: selectedItem.id,
+      replace: false,
+      item: {
+        fileId: uploadResult.fileId,
+        name: uploadResult.file.name,
+        fileType: uploadResult.file.type,
+        fileSize: uploadResult.file.size,
+        waveformFileId: waveformFileId,
+        waveformThumbnailFileId: waveformThumbnailFileId,
+        duration: duration,
+      },
+    },
+  });
+  
+  // Update the store with the new repository state
+  const { audio } = repository.getState();
+  store.setItems(audio);
+  render();
 };
 
 export const handleFileAction = (e, deps) => {
