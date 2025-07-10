@@ -1,6 +1,5 @@
 
 import { nanoid } from "nanoid";
-import { AudioWaveformExtractor } from "../../utils/audioWaveform.js";
 
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
@@ -27,51 +26,14 @@ export const handleAudioItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, repository, uploadAudioFiles, httpClient } = deps;
+  const { store, render, repository, uploadAudioFiles } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   const successfulUploads = await uploadAudioFiles(files, "someprojectId");
 
-  // Extract waveform data and upload to API Object Storage
-  const waveformPromises = successfulUploads.map(async (result) => {
-    const waveformData = await AudioWaveformExtractor.extractWaveformData(result.file);
-    
-    if (!waveformData) {
-      return {
-        ...result,
-        waveformDataFileId: null,
-        duration: null,
-      };
-    }
-    
-    // Upload waveform data to API Object Storage
-    const uploadResult = await AudioWaveformExtractor.uploadWaveformData(
-      waveformData, 
-      httpClient, 
-      "someprojectId"
-    );
-    
-    if (uploadResult.success) {
-      return {
-        ...result,
-        waveformDataFileId: uploadResult.fileId,
-        duration: waveformData.duration,
-      };
-    } else {
-      return {
-        ...result,
-        waveformDataFileId: null,
-        duration: waveformData.duration,
-      };
-    }
-  });
-
-  // Wait for all waveform extractions to complete
-  const uploadsWithWaveforms = await Promise.all(waveformPromises);
-
   // Add all items to repository
-  uploadsWithWaveforms.forEach((result) => {
+  successfulUploads.forEach((result) => {
     repository.addAction({
       actionType: "treePush",
       target: "audio",
@@ -101,7 +63,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleReplaceItem = async (e, deps) => {
-  const { store, render, repository, uploadAudioFiles, httpClient } = deps;
+  const { store, render, repository, uploadAudioFiles } = deps;
   const { file } = e.detail;
   
   // Get the currently selected item
@@ -117,26 +79,6 @@ export const handleReplaceItem = async (e, deps) => {
   }
   
   const uploadResult = uploadedFiles[0];
-  
-  // Extract waveform data and upload to API Object Storage
-  const waveformData = await AudioWaveformExtractor.extractWaveformData(file);
-  let waveformDataFileId = null;
-  let duration = null;
-  
-  if (waveformData) {
-    const uploadResult = await AudioWaveformExtractor.uploadWaveformData(
-      waveformData, 
-      httpClient, 
-      "someprojectId"
-    );
-    
-    if (uploadResult.success) {
-      waveformDataFileId = uploadResult.fileId;
-    }
-    
-    duration = waveformData.duration;
-  }
-  
   repository.addAction({
     actionType: "treeUpdate",
     target: "audio",
@@ -148,8 +90,8 @@ export const handleReplaceItem = async (e, deps) => {
         name: uploadResult.file.name,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
-        waveformDataFileId: waveformDataFileId,
-        duration: duration,
+        waveformDataFileId: uploadResult.waveformDataFileId,
+        duration: uploadResult.duration,
       },
     },
   });

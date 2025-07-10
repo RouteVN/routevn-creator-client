@@ -1,7 +1,5 @@
-import { AudioWaveformExtractor } from "../../utils/audioWaveform.js";
-
 export const handleOnMount = async (deps) => {
-  const { attrs, store, render, getRefIds, httpClient } = deps;
+  const { attrs, store, render, getRefIds, httpClient, downloadWaveformData } = deps;
   
   if (!attrs.waveformDataFileId) {
     return;
@@ -13,7 +11,7 @@ export const handleOnMount = async (deps) => {
   
   try {
     // Download waveform data from API Object Storage
-    const waveformData = await AudioWaveformExtractor.downloadWaveformData(
+    const waveformData = await downloadWaveformData(
       attrs.waveformDataFileId,
       httpClient
     );

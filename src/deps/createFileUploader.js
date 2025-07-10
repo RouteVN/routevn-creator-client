@@ -77,11 +77,101 @@ export const createImageFileUploader = ({ httpClient }) => {
   }
 }
 
+// Audio waveform extraction and processing utilities
+const extractWaveformData = async (audioFile, samples = 1000) => {
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuffer = await audioFile.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    const channelData = audioBuffer.getChannelData(0);
+    const blockSize = Math.floor(channelData.length / samples);
+    const waveformData = [];
+    
+    for (let i = 0; i < samples; i++) {
+      const start = i * blockSize;
+      const end = start + blockSize;
+      let sum = 0;
+      
+      for (let j = start; j < end && j < channelData.length; j++) {
+        sum += Math.abs(channelData[j]);
+      }
+      
+      const average = sum / blockSize;
+      waveformData.push(average);
+    }
+    
+    const maxAmplitude = Math.max(...waveformData);
+    const normalizedData = waveformData.map(value => value / maxAmplitude);
+    
+    audioContext.close();
+    
+    return {
+      data: normalizedData,
+      duration: audioBuffer.duration,
+      sampleRate: audioBuffer.sampleRate,
+      channels: audioBuffer.numberOfChannels
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
+const uploadWaveformData = async (waveformData, httpClient, projectId) => {
+  try {
+    const waveformJson = JSON.stringify(waveformData);
+    const blob = new Blob([waveformJson], { type: 'application/json' });
+    
+    const { uploadUrl, fileId } = await httpClient.creator.uploadFile({
+      projectId: projectId,
+    });
+
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      body: blob,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (response.ok) {
+      return { fileId, success: true };
+    } else {
+      return { fileId: null, success: false };
+    }
+  } catch (error) {
+    return { fileId: null, success: false };
+  }
+};
+
+export const downloadWaveformData = async (fileId, httpClient) => {
+  try {
+    const { url } = await httpClient.creator.getFileContent({ 
+      fileId: fileId, 
+      projectId: 'someprojectId' 
+    });
+    const response = await fetch(url);
+    
+    if (response.ok) {
+      const waveformData = await response.json();
+      return waveformData;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    return null;
+  }
+};
+
 export const createAudioFileUploader = ({ httpClient }) => {
   return async (files, projectId) => {
     // Create upload promises for all files
     const uploadPromises = Array.from(files).map(async (file) => {
       try {
+        // Extract waveform data
+        const waveformData = await extractWaveformData(file);
+        
+        // Upload audio file
         const { downloadUrl, uploadUrl, fileId } =
           await httpClient.creator.uploadFile({
             projectId,
@@ -91,28 +181,45 @@ export const createAudioFileUploader = ({ httpClient }) => {
           method: "PUT",
           body: file,
           headers: {
-            "Content-Type": file.type, // Ensure the Content-Type matches the file type
+            "Content-Type": file.type,
           },
         });
 
-        if (response.ok) {
-          console.log("File uploaded successfully:", file.name);
-          return {
-            success: true,
-            file,
-            downloadUrl,
-            fileId,
-          };
-        } else {
-          console.error("File upload failed:", file.name, response.statusText);
+        if (!response.ok) {
           return {
             success: false,
             file,
             error: response.statusText,
           };
         }
+
+        // Upload waveform data if extraction was successful
+        let waveformDataFileId = null;
+        let duration = null;
+        
+        if (waveformData) {
+          const waveformUploadResult = await uploadWaveformData(
+            waveformData, 
+            httpClient, 
+            projectId
+          );
+          
+          if (waveformUploadResult.success) {
+            waveformDataFileId = waveformUploadResult.fileId;
+          }
+          
+          duration = waveformData.duration;
+        }
+
+        return {
+          success: true,
+          file,
+          downloadUrl,
+          fileId,
+          waveformDataFileId,
+          duration,
+        };
       } catch (error) {
-        console.error("File upload error:", file.name, error);
         return {
           success: false,
           file,
@@ -125,7 +232,6 @@ export const createAudioFileUploader = ({ httpClient }) => {
     const uploadResults = await Promise.all(uploadPromises);
 
     // Add successfully uploaded files to repository
-    // TODO: Add error handling for failed uploads
     const successfulUploads = uploadResults.filter((result) => result.success);
 
     return successfulUploads;
