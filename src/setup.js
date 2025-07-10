@@ -87,7 +87,6 @@ const subject = new Subject();
 const router = new Router();
 const audioManager = new AudioManager();
 const drenderer = await create2dRenderer();
-
 const uploadImageFiles = createImageFileUploader({
   httpClient,
 });
