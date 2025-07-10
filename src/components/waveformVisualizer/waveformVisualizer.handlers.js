@@ -2,8 +2,6 @@ import { AudioWaveformExtractor } from "../../utils/audioWaveform.js";
 
 export const handleOnMount = async (deps) => {
   const { attrs, store, render, getRefIds, httpClient } = deps;
-
-  console.log(attrs.waveformDataFileId);
   
   if (!attrs.waveformDataFileId) {
     return;
@@ -32,24 +30,21 @@ export const handleOnMount = async (deps) => {
     render();
     
     // Render waveform on canvas
-    await renderWaveform(waveformData, attrs, getRefIds);
+    await renderWaveform(waveformData, getRefIds);
     
   } catch (error) {
-    console.error('Failed to load waveform data:', error);
     store.setError(true);
     store.setLoading(false);
     render();
   }
 };
 
-async function renderWaveform(waveformData, attrs, getRefIds) {
-  console.log('Rendering waveform with data:', waveformData);
+async function renderWaveform(waveformData, getRefIds) {
   
   const refIds = getRefIds();
   const canvasRef = refIds.canvas;
   
   if (!canvasRef || !canvasRef.elm) {
-    console.error('Canvas element not found');
     return;
   }
   

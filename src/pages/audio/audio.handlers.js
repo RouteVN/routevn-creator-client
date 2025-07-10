@@ -53,14 +53,12 @@ export const handleDragDropFileSelected = async (e, deps) => {
     );
     
     if (uploadResult.success) {
-      console.log("Waveform data uploaded successfully for:", result.file.name);
       return {
         ...result,
         waveformDataFileId: uploadResult.fileId,
         duration: waveformData.duration,
       };
     } else {
-      console.error("Failed to upload waveform data for:", result.file.name);
       return {
         ...result,
         waveformDataFileId: null,
@@ -99,9 +97,6 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store.setItems(audio);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 
@@ -112,14 +107,12 @@ export const handleReplaceItem = async (e, deps) => {
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn('No item selected for audio replacement');
     return;
   }
   
   const uploadedFiles = await uploadAudioFiles([file], "someprojectId");
   
   if (uploadedFiles.length === 0) {
-    console.error('File upload failed, no files uploaded');
     return;
   }
   
@@ -139,9 +132,6 @@ export const handleReplaceItem = async (e, deps) => {
     
     if (uploadResult.success) {
       waveformDataFileId = uploadResult.fileId;
-      console.log("Waveform data uploaded successfully");
-    } else {
-      console.error("Failed to upload waveform data");
     }
     
     duration = waveformData.duration;
@@ -178,7 +168,6 @@ export const handleFileAction = (e, deps) => {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
-      console.warn('No item selected for rename');
       return;
     }
     

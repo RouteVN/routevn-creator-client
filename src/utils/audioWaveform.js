@@ -34,7 +34,6 @@ export class AudioWaveformExtractor {
         channels: audioBuffer.numberOfChannels
       };
     } catch (error) {
-      console.error('Failed to extract waveform data:', error);
       return null;
     }
   }
@@ -60,11 +59,9 @@ export class AudioWaveformExtractor {
       if (response.ok) {
         return { fileId, success: true };
       } else {
-        console.error("Waveform data upload failed:", response.statusText);
         return { fileId: null, success: false };
       }
     } catch (error) {
-      console.error("Failed to upload waveform data:", error);
       return { fileId: null, success: false };
     }
   }
@@ -82,11 +79,9 @@ export class AudioWaveformExtractor {
         const waveformData = await response.json();
         return waveformData;
       } else {
-        console.error("Failed to download waveform data:", response.statusText);
         return null;
       }
     } catch (error) {
-      console.error("Failed to download waveform data:", error);
       return null;
     }
   }
