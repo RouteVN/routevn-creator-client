@@ -13,12 +13,16 @@ refs:
     eventListeners:
       color-item-click:
         handler: handleColorItemClick
-      files-uploaded:
-        handler: handleDragDropFileSelected
       color-created:
         handler: handleColorCreated
       color-edited:
         handler: handleColorEdited
+  detail-panel:
+    eventListeners:
+      color-updated:
+        handler: handleColorUpdated
+      file-action:
+        handler: handleFileAction
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -26,4 +30,4 @@ template:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-colors-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

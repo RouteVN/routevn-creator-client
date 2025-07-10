@@ -3,6 +3,34 @@ export const INITIAL_STATE = Object.freeze({
   popover: {
     isOpen: false,
     position: { x: 0, y: 0 },
+  },
+  // Color dialog state
+  colorDialog: {
+    isOpen: false,
+    fieldIndex: -1,
+    defaultValues: {
+      hex: '#ff0000',
+    },
+    form: {
+      title: 'Edit Color',
+      description: 'Edit the color',
+      fields: [{
+        id: 'hex',
+        fieldName: 'hex',
+        inputType: 'colorPicker',
+        label: 'Hex Value',
+        description: 'Enter the hex color value (e.g., #ff0000)',
+        required: true,
+      }],
+      actions: {
+        layout: '',
+        buttons: [{
+          id: 'submit',
+          variant: 'pr',
+          content: 'Update Color',
+        }],
+      }
+    }
   }
 });
 
@@ -17,6 +45,26 @@ export const hidePopover = (state) => {
   state.popover = {
     isOpen: false,
     position: { x: 0, y: 0 },
+  };
+}
+
+export const showColorDialog = (state, { fieldIndex, itemData }) => {
+  state.colorDialog.isOpen = true;
+  state.colorDialog.fieldIndex = fieldIndex;
+  
+  // Update default values with current item data
+  state.colorDialog.defaultValues = {
+    hex: itemData.value || '#ff0000',
+  };
+}
+
+export const hideColorDialog = (state) => {
+  state.colorDialog.isOpen = false;
+  state.colorDialog.fieldIndex = -1;
+  
+  // Reset default values
+  state.colorDialog.defaultValues = {
+    hex: '#ff0000',
   };
 }
 
@@ -56,7 +104,7 @@ export const toViewData = ({ state, props }) => {
       }],
     }
   } : null;
-  
+
   return {
     title: props.title || '',
     visibleFields,
@@ -65,5 +113,10 @@ export const toViewData = ({ state, props }) => {
     popover: state.popover,
     form: renameForm,
     firstTextIndex,
+    colorDialog: {
+      isOpen: state.colorDialog.isOpen,
+      defaultValues: state.colorDialog.defaultValues,
+      form: state.colorDialog.form,
+    },
   };
 };

@@ -98,3 +98,55 @@ export const handleFormActionClick = (e, deps) => {
     }));
   }
 };
+
+export const handleColorFieldClick = (e, deps) => {
+  const { store, render, props } = deps;
+  
+  // Extract the field index from the element ID
+  const fieldIndex = parseInt(e.currentTarget.id.replace('color-field-', ''));
+  const field = props.fields[fieldIndex];
+  
+  if (field && field.type === 'color') {
+    // Open color dialog with current color data
+    store.showColorDialog({
+      fieldIndex,
+      itemData: {
+        name: field.name || '',
+        value: field.value || '#000000'
+      }
+    });
+    render();
+  }
+};
+
+export const handleCloseColorDialog = (e, deps) => {
+  const { store, render } = deps;
+  store.hideColorDialog();
+  render();
+};
+
+export const handleColorFormActionClick = (e, deps) => {
+  const { store, render, dispatchEvent } = deps;
+  const detail = e.detail;
+  
+  // Extract values from detail
+  const values = detail.formValues;
+  
+  // Get current dialog state
+  const state = store.getState ? store.getState() : store._state || store.state;
+  const fieldIndex = state.colorDialog.fieldIndex;
+  
+  // Hide dialog
+  store.hideColorDialog();
+  render();
+  
+  // Emit color-updated event for editing existing color
+  dispatchEvent(new CustomEvent("color-updated", {
+    detail: {
+      fieldIndex,
+      hex: values.hex
+    },
+    bubbles: true,
+    composed: true
+  }));
+};
