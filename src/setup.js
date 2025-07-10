@@ -7,7 +7,7 @@ import Subject from './deps/subject';
 import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
 import Router from './deps/router';
 import AudioManager from './deps/audioManager';
-import { createImageFileUploader } from './deps/createFileUploader';
+import { createImageFileUploader, createAudioFileUploader } from './deps/createFileUploader';
 import { create2dRenderer } from './deps/2drenderer';
 
 const httpClient = createRouteVnHttpClient({
@@ -90,6 +90,9 @@ const drenderer = await create2dRenderer();
 const uploadImageFiles = createImageFileUploader({
   httpClient,
 });
+const uploadAudioFiles = createAudioFileUploader({
+  httpClient,
+});
 
 const componentDependencies = {
   httpClient,
@@ -99,6 +102,7 @@ const componentDependencies = {
   userConfig,
   audioManager,
   uploadImageFiles,
+  uploadAudioFiles,
   drenderer
 }
 
@@ -110,6 +114,7 @@ const pageDependencies = {
   userConfig,
   audioManager,
   uploadImageFiles,
+  uploadAudioFiles,
   drenderer
 }
 

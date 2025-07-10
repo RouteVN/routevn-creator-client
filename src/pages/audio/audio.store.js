@@ -14,49 +14,43 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 }
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectSelectedItem = ({ state }) => {
+  if (!state.selectedItemId) return null;
+  const flatItems = toFlatItems(state.audioData);
+  return flatItems.find(item => item.id === state.selectedItemId);
+}
+
+export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.audioData);
   const flatGroups = toFlatGroups(state.audioData);
 
   // Get selected item details
-  const selectedItem = state.selectedItemId ? 
+  const selectedItem = state.selectedItemId ?
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem ? {
-    ...selectedItem,
-    typeDisplay: selectedItem.type === 'audio' ? 'Audio' : 'Folder',
-    displayFileType: selectedItem.fileType || (selectedItem.type === 'audio' ? 'MP3' : null),
-    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
-    fullPath: selectedItem.fullLabel || selectedItem.name || '',
-  } : null;
-
   // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? 'Audio Details' : null;
-  const detailFields = selectedItemDetails && selectedItemDetails.type === 'audio' ? [
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
-    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
-    { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
-    { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
-    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
-  ] : selectedItemDetails ? [
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
-    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
-    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
-  ] : [];
+  let detailFields
+  if (selectedItem) {
+    detailFields = [
+      { type: 'audio', fileId: selectedItem.fileId, editable: true, accept: 'audio/*', eventType: 'audio-file-selected' },
+      { type: 'text', value: selectedItem.name },
+      { type: 'text', label: 'File Type', value: selectedItem.fileType },
+      { type: 'text', label: 'File Size', value: formatFileSize(selectedItem.fileSize) },
+    ];
+  }
+
   const detailEmptyMessage = 'No selection';
-  
+
   return {
     flatItems,
     flatGroups,
     resourceCategory: 'assets',
     selectedResourceId: 'audio',
-    repositoryTarget: 'audio',
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
+    detailTitle: undefined,
     detailFields,
     detailEmptyMessage,
+    repositoryTarget: 'audio',
   };
 }
 
