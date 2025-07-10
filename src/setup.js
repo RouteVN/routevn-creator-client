@@ -7,6 +7,7 @@ import Subject from './deps/subject';
 import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
 import Router from './deps/router';
 import AudioManager from './deps/audioManager';
+import { create2dRenderer } from './deps/2drenderer';
 
 const httpClient = createRouteVnHttpClient({
   baseUrl: 'http://localhost:8788',
@@ -84,6 +85,7 @@ const userConfig = createUserConfig();
 const subject = new Subject();
 const router = new Router();
 const audioManager = new AudioManager();
+const drenderer = await create2dRenderer();
 
 const componentDependencies = {
   httpClient,
@@ -92,15 +94,17 @@ const componentDependencies = {
   repository,
   userConfig,
   audioManager,
+  drenderer
 }
 
 const pageDependencies = {
   httpClient,
-  subject, 
+  subject,
   router,
   repository,
   userConfig,
   audioManager,
+  drenderer
 }
 
 const deps = {

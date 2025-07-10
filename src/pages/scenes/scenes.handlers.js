@@ -122,50 +122,50 @@ export const handleAddSceneClick = (e, deps) => {
     targetParent = currentState.selectedItemId;
   }
 
-  const sectionId = nanoid();
-  const stepId = nanoid();
-  // Add new scene to repository
-  const repositoryAction = {
-    actionType: "treePush",
-    target: "scenes",
-    value: {
-      parent: targetParent,
-      position: "last",
-      item: {
-        id: newSceneId,
-        type: "scene",
-        name: newSceneName,
-        createdAt: new Date().toISOString(),
-        position: { x: 200, y: 200 },
-        sections: {
-          items: {
-            [sectionId]: {
-              name: "Section New",
-              steps: {
-                items: {
-                  [stepId]: {
-                    instructions: {
-                      presentationInstructions: {},
+        const sectionId = nanoid();
+      const stepId = nanoid();
+      // Add new scene to repository
+      const repositoryAction = {
+        actionType: "treePush",
+        target: "scenes",
+        value: {
+          parent: targetParent,
+          position: "last",
+          item: {
+            id: newSceneId,
+            type: "scene",
+            name: newSceneName,
+            createdAt: new Date().toISOString(),
+            position: { x: 200, y: 200 },
+            sections: {
+              items: {
+                [sectionId]: {
+                  name: "Section New",
+                  lines: {
+                    items: {
+                      [stepId]: {
+                        instructions: {
+                          presentationInstructions: {},
+                        },
+                      },
                     },
+                    tree: [
+                      {
+                        id: stepId,
+                      },
+                    ],
                   },
                 },
-                tree: [
-                  {
-                    id: stepId,
-                  },
-                ],
               },
+              tree: [
+                {
+                  id: sectionId,
+                },
+              ],
             },
           },
-          tree: [
-            {
-              id: sectionId,
-            },
-          ],
         },
-      },
-    },
-  };
+      };
 
   repository.addAction(repositoryAction);
 
