@@ -1,5 +1,3 @@
-import { current } from "immer";
-
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   playingAudio: {

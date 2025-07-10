@@ -41,7 +41,6 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Audio Details' : null;
   const detailFields = selectedItemDetails && selectedItemDetails.type === 'audio' ? [
-    { type: 'audio', fileId: selectedItemDetails.fileId, fileName: selectedItemDetails.name, autoPlay: true },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
