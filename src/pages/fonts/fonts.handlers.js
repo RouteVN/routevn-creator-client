@@ -25,6 +25,85 @@ export const handleFontItemClick = (e, deps) => {
   render();
 };
 
+export const handleReplaceItem = async (e, deps) => {
+  const { store, render, httpClient, repository } = deps;
+  const { file, field, fieldIndex } = e.detail;
+  
+  // Get the currently selected item
+  const selectedItem = store.selectSelectedItem();
+  if (!selectedItem || !file) {
+    return;
+  }
+  
+  // Upload the new font file
+  const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
+    projectId: "someprojectId",
+  });
+
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: {
+      "Content-Type": file.type,
+    },
+  });
+
+  if (response.ok) {
+    // Update the font in the repository
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "fonts",
+      value: {
+        id: selectedItem.id,
+        replace: false,
+        item: {
+          fileId,
+          name: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+        },
+      },
+    });
+
+    // Update the store with the new repository state
+    const { fonts } = repository.getState();
+    store.setItems(fonts);
+  }
+  
+  render();
+};
+
+export const handleFileAction = (e, deps) => {
+  const { store, render, repository } = deps;
+  const detail = e.detail;
+  
+  if (detail.value === 'rename-item-confirmed') {
+    // Get the currently selected item
+    const selectedItem = store.selectSelectedItem();
+    if (!selectedItem) {
+      return;
+    }
+    
+    // Update the item name in the repository
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "fonts",
+      value: {
+        id: selectedItem.id,
+        replace: false,
+        item: {
+          name: detail.newName,
+        },
+      },
+    });
+    
+    // Update the store with the new repository state
+    const { fonts } = repository.getState();
+    store.setItems(fonts);
+    render();
+  }
+};
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event

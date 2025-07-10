@@ -15,6 +15,12 @@ refs:
         handler: handleFontItemClick
       files-uploaded:
         handler: handleDragDropFileSelected
+  detail-panel:
+    eventListeners:
+      replace-item:
+        handler: handleReplaceItem
+      file-action:
+        handler: handleFileAction
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -22,4 +28,4 @@ template:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-fonts-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

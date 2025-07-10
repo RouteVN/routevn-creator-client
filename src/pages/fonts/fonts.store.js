@@ -47,6 +47,15 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Details' : null;
   const detailFields = selectedItemDetails ? [
+    // Add font preview first if it's a font file
+    ...(selectedItemDetails.type === 'font' && selectedItemDetails.name?.match(/\.(ttf|otf|woff|woff2)$/i) ? [{
+      type: 'font-preview',
+      fontFamily: selectedItemDetails.name.replace(/\.(ttf|otf|woff|woff2|eot)$/i, ''),
+      previewText: 'Aa',
+      fileId: selectedItemDetails.fileId,
+      editable: true,
+      accept: '.ttf,.otf,.woff,.woff2'
+    }] : []),
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },

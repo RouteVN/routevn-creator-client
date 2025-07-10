@@ -165,3 +165,18 @@ export const handleColorFormActionClick = (e, deps) => {
     composed: true
   }));
 };
+
+export const handleFontFieldClick = (e, deps) => {
+  const { getRefIds } = deps;
+  
+  // Extract the field index from the element ID
+  const fieldIndex = e.currentTarget.id.replace('font-field-', '');
+  
+  // Get the corresponding file input and trigger click
+  const refIds = getRefIds();
+  const fileInputRef = refIds[`file-input-${fieldIndex}`];
+  
+  if (fileInputRef && fileInputRef.elm) {
+    fileInputRef.elm.click();
+  }
+};

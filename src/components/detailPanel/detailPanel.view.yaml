@@ -42,6 +42,10 @@ refs:
     eventListeners:
       click:
         handler: handleColorFieldClick
+  font-field-*:
+    eventListeners:
+      click:
+        handler: handleFontFieldClick
   popover:
     eventListeners:
       click-overlay:
@@ -92,6 +96,11 @@ template:
                         - 'input#file-input-${i} type=file accept="${field.accept}" style="display: none;"':
                     $else:
                       - rvn-waveform-visualizer waveformDataFileId=${field.waveformDataFileId} width=270 height=180:
+                $elif field.type == 'font-preview':
+                  - rtgl-view:
+                    - 'rtgl-view#font-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p':
+                      - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
+                    - 'input#file-input-${i} type=file accept=".ttf,.otf,.woff,.woff2" style="display: none;"':
       $else:
         - rtgl-view w=f h=f av=c ah=c:
           - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}
