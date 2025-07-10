@@ -1,0 +1,37 @@
+elementName: rvn-waveform-visualizer
+
+onMount:
+  handler: handleOnMount
+
+propsSchema:
+  type: object
+  properties:
+    waveformDataFileId:
+      type: string
+      description: File ID of the waveform data in object storage
+    width:
+      type: number
+      default: 600
+      description: Width of the waveform visualization
+    height:
+      type: number
+      default: 400
+      description: Height of the waveform visualization
+    style:
+      type: object
+      description: Style configuration for the waveform
+
+refs:
+  canvas:
+    selector: canvas
+
+template:
+  - rtgl-view w=f h=f pos=rel w=250 h=150:
+    - $if isLoading:
+        - rtgl-view w=f h=f av=c ah=c:
+          - rtgl-text c=mu-fg: Loading waveform...
+      $elif hasError:
+        - rtgl-view w=f h=f av=c ah=c:
+          - rtgl-text c=er-fg: Failed to load waveform
+      $else:
+        - 'canvas#canvas style="width:100%; height:100%;"':

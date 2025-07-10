@@ -50,12 +50,12 @@ refs:
         handler: handleClose
 
 template:
-  - rtgl-view w=f h=60 p=md bgc=mu br=md bc=bo bw=xs:
+  - rtgl-view w=f h=64 p=md bgc=mu br=md bc=bo bw=xs:
     - $if isLoading:
         - rtgl-view w=f av=c p=md:
           - rtgl-text c=mu-fg: Loading audio...
       $else:
-        - rtgl-view w=f g=sm bgc=mu:
+        - rtgl-view w=f g=md bgc=mu:
           # Progress bar
           - rtgl-view w=f:
             - 'rtgl-view#progress-bar w=f h=6 br=full cur=p pos=rel style="overflow: hidden;"':

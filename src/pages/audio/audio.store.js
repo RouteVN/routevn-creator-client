@@ -32,10 +32,11 @@ export const toViewData = ({ state }) => {
   let detailFields
   if (selectedItem) {
     detailFields = [
-      { type: 'audio', fileId: selectedItem.fileId, editable: true, accept: 'audio/*', eventType: 'audio-file-selected' },
+      { type: 'audio', waveformDataFileId: selectedItem.waveformDataFileId, show: !!selectedItem.waveformDataFileId },
       { type: 'text', value: selectedItem.name },
       { type: 'text', label: 'File Type', value: selectedItem.fileType },
       { type: 'text', label: 'File Size', value: formatFileSize(selectedItem.fileSize) },
+      { type: 'text', label: 'Duration', value: selectedItem.duration ? `${Math.round(selectedItem.duration)}s` : 'Unknown', show: !!selectedItem.duration },
     ];
   }
 

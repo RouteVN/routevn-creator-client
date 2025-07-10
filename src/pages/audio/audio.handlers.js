@@ -32,6 +32,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
   const successfulUploads = await uploadAudioFiles(files, "someprojectId");
 
+  // Add all items to repository
   successfulUploads.forEach((result) => {
     repository.addAction({
       actionType: "treePush",
@@ -46,6 +47,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
+          waveformDataFileId: result.waveformDataFileId,
+          duration: result.duration,
         },
       },
     });
@@ -56,9 +59,6 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store.setItems(audio);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 
@@ -69,14 +69,12 @@ export const handleReplaceItem = async (e, deps) => {
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn('No item selected for audio replacement');
     return;
   }
   
   const uploadedFiles = await uploadAudioFiles([file], "someprojectId");
   
   if (uploadedFiles.length === 0) {
-    console.error('File upload failed, no files uploaded');
     return;
   }
   
@@ -92,6 +90,8 @@ export const handleReplaceItem = async (e, deps) => {
         name: uploadResult.file.name,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
+        waveformDataFileId: uploadResult.waveformDataFileId,
+        duration: uploadResult.duration,
       },
     },
   });
@@ -110,7 +110,6 @@ export const handleFileAction = (e, deps) => {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
-      console.warn('No item selected for rename');
       return;
     }
     
