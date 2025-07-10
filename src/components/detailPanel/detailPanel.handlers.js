@@ -150,4 +150,3 @@ export const handleColorFormActionClick = (e, deps) => {
     composed: true
   }));
 };
-

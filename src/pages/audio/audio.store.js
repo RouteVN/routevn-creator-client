@@ -29,13 +29,6 @@ export const toViewData = ({ state, props }, payload) => {
   const selectedItem = state.selectedItemId ? 
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
-  // Debug the selected item
-  if (selectedItem) {
-    console.log('Selected item raw data:', selectedItem);
-    console.log('Selected item waveformFileId:', selectedItem.waveformFileId);
-    console.log('Selected item duration:', selectedItem.duration);
-  }
-
   // Compute display values for selected item
   const selectedItemDetails = selectedItem ? {
     ...selectedItem,

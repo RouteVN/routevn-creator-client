@@ -101,17 +101,4 @@ export class AudioWaveformExtractor {
   static async generateWaveformThumbnail(waveformData) {
     return this.generateWaveformImage(waveformData, 300, 200); // 3:2 ratio
   }
-  
-  static compressWaveformData(waveformData) {
-    return JSON.stringify(waveformData);
-  }
-  
-  static decompressWaveformData(compressedData) {
-    try {
-      return JSON.parse(compressedData);
-    } catch (error) {
-      console.error('Failed to decompress waveform data:', error);
-      return null;
-    }
-  }
 }

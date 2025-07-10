@@ -38,10 +38,6 @@ refs:
     eventListeners:
       click:
         handler: handleColorFieldClick
-  audio-waveform-*:
-    eventListeners:
-      waveform-seek:
-        handler: handleWaveformSeek
   popover:
     eventListeners:
       click-overlay:
