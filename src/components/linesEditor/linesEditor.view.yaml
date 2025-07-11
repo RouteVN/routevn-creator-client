@@ -52,17 +52,17 @@ styles:
 
 template:
   - 'rtgl-view#container w=f h=f tabindex=0 style="outline: none;"':
-    - $for line, i in lines:
-      - 'rtgl-view d=h w=f av=c style="background-color: ${line.backgroundColor};"':
-        - rtgl-view h=f av=c w=32 ah=e mr=md:
-          - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
-        - rtgl-view wh=16 br=f mr=md:
-        - rtgl-view d=h w=f av=c:
-          - 'div#line-${line.id} style="width: 100%;" contenteditable=true':
-            - 'span style="font-size: 18px;"': ${line.instructions.presentationInstructions.dialogue.text}
-          - rtgl-view d=h:
-            - $if line.backgroundFileId:
-              - rvn-file-image w=36 h=24 fileId=${line.backgroundFileId}: 
-            # - $else:
-            #   - rtgl-view w=36 h=24 bgc=mu av=c ah=c:
-            #     - rtgl-text s=xs: No Background
+      - $for line, i in lines:
+          - 'rtgl-view d=h w=f av=c style="background-color: ${line.backgroundColor};"':
+              - rtgl-view h=f av=c w=32 ah=e mr=md:
+                  - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
+              - rtgl-view wh=16 br=f mr=md:
+              - rtgl-view d=h w=f av=c:
+                  - 'div#line-${line.id} style="width: 100%;" contenteditable=true':
+                      - 'span style="font-size: 18px;"': ${line.presentation.dialogue.text}
+                  - rtgl-view d=h:
+                      - $if line.backgroundFileId:
+                          - rvn-file-image w=36 h=24 fileId=${line.backgroundFileId}:
+                    # - $else:
+                    #   - rtgl-view w=36 h=24 bgc=mu av=c ah=c:
+                    #     - rtgl-text s=xs: No Background

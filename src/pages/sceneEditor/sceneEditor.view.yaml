@@ -14,8 +14,8 @@ viewDataSchema:
 refs:
   lines-editor:
     eventListeners:
-      editor-data-chanaged:
-        handler: handleEditorDataChanaged
+      editor-data-changed:
+        handler: handleEditorDataChanged
       newLine:
         handler: handleNewLine
       splitLine:
@@ -161,95 +161,95 @@ refs:
 
 template:
   - rtgl-view w=f h=f:
-    - rtgl-view bwb=xs w=f h=48 av=c ph=lg:
-      - rtgl-text c=mu-fg: ${scene.name}
-    - rtgl-view d=h w=f h=f:
-      - $if sectionsGraphView:
-          - 'rtgl-view w="calc((100vw - 64px) / 2)"':
-            - rtgl-view d=h w=f:
-              - rtgl-view flex=1:
-              - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
-                - rtgl-text s=sm: '<>'
-            - rtgl-view:
-              - rtgl-text: TODO show graph of sections
-        $else:
-          - rtgl-view:
-            - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
-              - $for section in sections:
-                - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
-                  - rtgl-text s=sm: ${section.name}
-              - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
-                - rtgl-text s=sm: +
-              - rtgl-view flex=1:
-              - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
-                - rtgl-text s=sm: '<>'
-            - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
-              - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId:
-              - rtgl-view h=30vh:
-      - rtgl-view w=1 h=f bgc=mu:
-      - rtgl-view w=f:
-        - rtgl-view:
-          - rtgl-view w=700 h=400 bgc=fg:
-            - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
-        - rtgl-view w=f h=1 bgc=mu:
-        - rtgl-view w=f m=md:
-          - rtgl-view d=h av=c:
-            - rtgl-text s=sm c=mu-fg: Presentation section
-            - rtgl-button#add-presentation-button s=sm: Add
-          - rtgl-view g=md w=f:
-            - $if background:
-                - rtgl-view#background-action g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
-                  - rtgl-svg svg=text wh=24:
-                  - rvn-file-image fileId=${backgroundImage.fileId} w=50 h=35:
-                  - rtgl-text s=sm: ${backgroundImage.name}
-            - $if bgm:
-                - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=text wh=24:
-                  - rtgl-text s=sm: ${bgmAudio.name}
-            - $if soundEffects:
-                - rtgl-view#sound-effects-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=text wh=24:
-                  - rtgl-text s=sm: ${soundEffectsNames}
-            - $if characters:
-                - rtgl-view#characters-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=text wh=24:
-                  - rtgl-view d=h g=sm av=c:
-                    - $for charData, i in charactersData:
-                      - $if charData.sprite:
-                          - rvn-file-image fileId=${charData.sprite.fileId} w=35 h=35:
-                        $else:
-                          - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
-                            - rtgl-text s=xs: No Sprite
-                  - rtgl-text s=sm: ${charactersNames}
-            - $if sceneTransition:
-                - rtgl-view#scene-transition-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=text wh=24:
-                  - rtgl-text s=sm: 'Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})'
+      - rtgl-view bwb=xs w=f h=48 av=c ph=lg:
+          - rtgl-text c=mu-fg: ${scene.name}
+      - rtgl-view d=h w=f h=f:
+          - $if sectionsGraphView:
+              - 'rtgl-view w="calc((100vw - 64px) / 2)"':
+                  - rtgl-view d=h w=f:
+                      - rtgl-view flex=1:
+                      - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
+                          - rtgl-text s=sm: "<>"
+                  - rtgl-view:
+                      - rtgl-text: TODO show graph of sections
+            $else:
+              - rtgl-view:
+                  - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
+                      - $for section in sections:
+                          - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
+                              - rtgl-text s=sm: ${section.name}
+                      - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
+                          - rtgl-text s=sm: +
+                      - rtgl-view flex=1:
+                      - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
+                          - rtgl-text s=sm: "<>"
+                  - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
+                      - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId:
+                      - rtgl-view h=30vh:
+          - rtgl-view w=1 h=f bgc=mu:
+          - rtgl-view w=f:
+              - rtgl-view:
+                  - rtgl-view w=700 h=400 bgc=fg:
+                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
+              - rtgl-view w=f h=1 bgc=mu:
+              - rtgl-view w=f m=md:
+                  - rtgl-view d=h av=c:
+                      - rtgl-text s=sm c=mu-fg: Presentation section
+                      - rtgl-button#add-presentation-button s=sm: Add
+                  - rtgl-view g=md w=f:
+                      - $if background:
+                          - rtgl-view#background-action g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                              - rtgl-svg svg=text wh=24:
+                              - rvn-file-image fileId=${backgroundImage.fileId} w=50 h=35:
+                              - rtgl-text s=sm: ${backgroundImage.name}
+                      - $if bgm:
+                          - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-svg svg=text wh=24:
+                              - rtgl-text s=sm: ${bgmAudio.name}
+                      - $if soundEffects:
+                          - rtgl-view#sound-effects-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-svg svg=text wh=24:
+                              - rtgl-text s=sm: ${soundEffectsNames}
+                      - $if characters:
+                          - rtgl-view#characters-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-svg svg=text wh=24:
+                              - rtgl-view d=h g=sm av=c:
+                                  - $for charData, i in charactersData:
+                                      - $if charData.sprite:
+                                          - rvn-file-image fileId=${charData.sprite.fileId} w=35 h=35:
+                                        $else:
+                                          - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
+                                              - rtgl-text s=xs: No Sprite
+                              - rtgl-text s=sm: ${charactersNames}
+                      - $if sceneTransition:
+                          - rtgl-view#scene-transition-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-svg svg=text wh=24:
+                              - rtgl-text s=sm: "Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})"
   - $if mode != "lines-editor":
-    - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
-      - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
-        - $if mode == "actions":
-            - rvn-command-line-actions#command-line-actions:
-          $elif mode == "richtext":
-            - rvn-command-line-rich-text#command-line-rich-text .lineContent=richTextContent:
-          $elif mode == "dialoguebox":
-            - rvn-command-line-dialogue-box#command-line-dialogue-box:
-          $elif mode == "choices":
-            - rvn-command-line-choices#command-line-choices:
-          $elif mode == "background":
-            - rvn-command-line-background#command-line-background:
-          $elif mode == "bgm":
-            - rvn-command-line-bgm#command-line-bgm:
-          $elif mode == "soundeffects":
-            - rvn-command-line-sound-effects#command-line-sound-effects:
-          $elif mode == "characters":
-            - rvn-command-line-characters#command-line-characters:
-          $elif mode == "layouts":
-            - rvn-command-line-layouts#command-line-layouts:
-          $elif mode == "scenetransition":
-            - rvn-command-line-scene-transition#command-line-scene-transition:
-          $elif mode == "conditional":
-            - rvn-command-line-conditional#command-line-conditional:
+      - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
+          - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
+              - $if mode == "actions":
+                  - rvn-command-line-actions#command-line-actions:
+                $elif mode == "richtext":
+                  - rvn-command-line-rich-text#command-line-rich-text .lineContent=richTextContent:
+                $elif mode == "dialoguebox":
+                  - rvn-command-line-dialogue-box#command-line-dialogue-box:
+                $elif mode == "choices":
+                  - rvn-command-line-choices#command-line-choices:
+                $elif mode == "background":
+                  - rvn-command-line-background#command-line-background:
+                $elif mode == "bgm":
+                  - rvn-command-line-bgm#command-line-bgm:
+                $elif mode == "soundeffects":
+                  - rvn-command-line-sound-effects#command-line-sound-effects:
+                $elif mode == "characters":
+                  - rvn-command-line-characters#command-line-characters:
+                $elif mode == "layouts":
+                  - rvn-command-line-layouts#command-line-layouts:
+                $elif mode == "scenetransition":
+                  - rvn-command-line-scene-transition#command-line-scene-transition:
+                $elif mode == "conditional":
+                  - rvn-command-line-conditional#command-line-conditional:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
   - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
-    - rtgl-form#form slot=content .form=form:
+      - rtgl-form#form slot=content .form=form:

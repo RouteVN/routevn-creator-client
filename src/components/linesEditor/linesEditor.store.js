@@ -53,18 +53,15 @@ export const selectNavigationDirection = ({ state }) => {
   return state.navigationDirection;
 }
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state, props }) => {
   const lines = (props.lines || []).map((line, i) => {
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === 'block';
 
     let backgroundFileId;
-    if (line.instructions?.presentationInstructions?.background) {
-      console.log('line.instructions.presentationInstructions.background', line.instructions.presentationInstructions.background)
-      const imageId = line.instructions.presentationInstructions.background.imageId;
-      console.log('state.repositoryState.images.items', state.repositoryState.images.items)
+    if (line.presentation?.background) {
+      const imageId = line.presentation.background.imageId;
       backgroundFileId = state.repositoryState.images.items[imageId]?.fileId;
-      console.log('backgroundFileId', backgroundFileId)
     }
 
     return {

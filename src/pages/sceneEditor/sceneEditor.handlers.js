@@ -147,8 +147,8 @@ export const handleCommandLineSubmit = (e, deps) => {
   render();
 };
 
-export const handleEditorDataChanaged = (e, deps) => {
-  const { repository, store } = deps;
+export const handleEditorDataChanged = (e, deps) => {
+  const { repository, store, render, drenderer, getRefIds, httpClient } = deps;
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -166,26 +166,18 @@ export const handleEditorDataChanaged = (e, deps) => {
       },
     },
   });
-  // actionType: "treePush",
-  // target: `scenes.items.${sceneId}.sections`,
-  // value: {
-  //   parent: "_root",
-  //   position: "last",
-  //   item: {
-  //     id: newSectionId,
-  //     name: "Section New",
-  //     lines: {
-  //       items: {
-  //         presentation: {},
-  //       },
-  //       tree: [
-  //         {
-  //           id: newLineId,
-  //         },
-  //       ],
-  //     },
-  //   },
-  // },
+
+  store.setLineTextContent({ lineId, text: e.detail.content });
+
+  setTimeout(async () => {
+    const renderState = store.selectRenderState()
+    const fileIds = extractFileIdsFromRenderState(renderState);
+    const assets = await createAssetsFromFileIds(fileIds, httpClient);
+    const { canvas } = getRefIds()
+    await drenderer.init({ assets, canvas: canvas.elm })
+    drenderer.render(renderState)
+  }, 10)
+
 };
 
 export const handleAddPresentationButtonClick = (e, deps) => {
