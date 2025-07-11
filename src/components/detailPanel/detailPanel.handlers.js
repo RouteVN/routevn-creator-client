@@ -44,8 +44,6 @@ export const handleFileInputChange = (e, deps) => {
 
 export const handleEditableAudioClick = (e, deps) => {
   const { getRefIds } = deps;
-  console.log('Editable audio click event triggered');
-  console.log(e.currentTarget.id);
   
   // Extract the field index from the element ID
   const fieldIndex = e.currentTarget.id.replace('editable-audio-', '');
