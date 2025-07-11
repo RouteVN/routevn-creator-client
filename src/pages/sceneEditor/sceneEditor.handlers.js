@@ -64,8 +64,52 @@ async function createAssetsFromFileIds(fileIds, httpClient) {
 export const handleOnMount = (deps) => {
   const { store, router, render, repository, getRefIds, drenderer } = deps;
   const { sceneId } = router.getPayload();
-  const { scenes, images } = repository.getState();
+  const { scenes, images, characters, placements } = repository.getState();
 
+  // Convert characters to the required format
+  const processedCharacters = {};
+  if (characters && characters.items) {
+    Object.keys(characters.items).forEach(characterId => {
+      const character = characters.items[characterId];
+      if (character.type === 'character') {
+        processedCharacters[characterId] = {
+          variables: {
+            name: character.name || 'Unnamed Character'
+          },
+          spriteParts: {}
+        };
+        
+        // Process sprite parts if they exist
+        if (character.sprites && character.sprites.items) {
+          Object.keys(character.sprites.items).forEach(spriteId => {
+            const sprite = character.sprites.items[spriteId];
+            if (sprite.fileId) {
+              processedCharacters[characterId].spriteParts[spriteId] = {
+                fileId: sprite.fileId
+              };
+            }
+          });
+        }
+      }
+    });
+  }
+
+  // Convert placements to the required format
+  const processedPlacements = {};
+  if (placements && placements.items) {
+    Object.keys(placements.items).forEach(placementId => {
+      const placement = placements.items[placementId];
+      if (placement.type === 'placement') {
+        processedPlacements[placementId] = {
+          x: placement.x || placement.positionX || 0,
+          y: placement.y || placement.positionY || 0,
+          xa: placement.xa || 0,
+          ya: placement.ya || 0,
+          anchor: placement.anchor || 'BottomCenter'
+        };
+      }
+    });
+  }
 
   setTimeout(() => {
     // const { canvas } = getRefIds()
@@ -89,6 +133,8 @@ export const handleOnMount = (deps) => {
   });
   store.setSelectedSectionId(scene.sections[0].id);
   store.setRepository(repository.getState());
+  store.setCharacters(processedCharacters);
+  store.setPlacements(processedPlacements);
 };
 
 export const handleSectionTabClick = (e, deps) => {

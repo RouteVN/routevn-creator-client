@@ -2,6 +2,8 @@ import { constructPresentationState, constructRenderState } from 'route-engine-j
 
 export const INITIAL_STATE = Object.freeze({
   images: {},
+  characters: {},
+  placements: {},
   sceneId: undefined,
   scene: undefined,
   selectedLineId: undefined,
@@ -31,6 +33,14 @@ export const setScene = (state, payload) => {
 
 export const setImages = (state, images) => {
   state.images = images;
+}
+
+export const setCharacters = (state, characters) => {
+  state.characters = characters;
+}
+
+export const setPlacements = (state, placements) => {
+  state.placements = placements;
 }
 
 export const setRepository = (state, repository) => {
@@ -142,7 +152,8 @@ export const selectRenderState = ({ state }) => {
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
 
   const linesUpToSelectedLine = currentSection?.lines?.slice(0, currentSection?.lines?.findIndex(line => line.id === state.selectedLineId) + 1);
-  const presentationState = constructPresentationState(linesUpToSelectedLine.map(line => line.presentation));
+  const presentationState = constructPresentationState(linesUpToSelectedLine.map(line => JSON.parse(JSON.stringify(line.presentation))));
+  console.log('presentationState', presentationState);
   const renderState = constructRenderState({
     presentationState,
     screen: {
@@ -152,7 +163,9 @@ export const selectRenderState = ({ state }) => {
     },
     resolveFile: (f) => `file:${f}`,
     assets: {
-      images: state.images
+      images: state.images,
+      placements: state.placements,
+      characters: state.characters,
     },
     ui: {
       screens: {
@@ -191,6 +204,7 @@ export const selectRenderState = ({ state }) => {
       }
     },
   });
+  console.log('renderState', renderState);
   return renderState;
 }
 
@@ -255,11 +269,11 @@ export const toViewData = ({ state, props }, payload) => {
     }));
   }
 
-  if (selectedLine?.presentation?.characters) {
-    charactersData = selectedLine.presentation.characters.map(char => ({
+  if (selectedLine?.presentation?.character?.items) {
+    charactersData = selectedLine.presentation.character.items.map(char => ({
       ...char,
-      character: state.repositoryState.characters.items[char.characterId],
-      sprite: char.spriteId ? state.repositoryState.images.items[char.spriteId] : null
+      character: state.repositoryState.characters.items[char.id],
+      sprite: char.spriteParts?.[0]?.spritePartId ? state.repositoryState.images.items[char.spriteParts[0].spritePartId] : null
     }));
   }
 
@@ -285,6 +299,8 @@ export const toViewData = ({ state, props }, payload) => {
   const soundEffectsNames = soundEffectsAudio.map(se => se.audio.name).join(", ");
   const charactersNames = charactersData.map(char => char.character?.name || 'Unknown').join(", ");
 
+  console.log('selectedLine', selectedLine);
+
   return {
     scene: state.scene,
     sections,
@@ -298,7 +314,7 @@ export const toViewData = ({ state, props }, payload) => {
     soundEffects: selectedLine?.presentation?.soundEffects,
     soundEffectsAudio,
     soundEffectsNames,
-    characters: selectedLine?.presentation?.characters,
+    characters: selectedLine?.presentation?.character?.items,
     charactersData,
     charactersNames,
     sceneTransition: selectedLine?.presentation?.sceneTransition,
