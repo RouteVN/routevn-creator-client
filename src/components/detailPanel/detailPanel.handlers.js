@@ -42,6 +42,23 @@ export const handleFileInputChange = (e, deps) => {
   }
 };
 
+export const handleEditableAudioClick = (e, deps) => {
+  const { getRefIds } = deps;
+  console.log('Editable audio click event triggered');
+  console.log(e.currentTarget.id);
+  
+  // Extract the field index from the element ID
+  const fieldIndex = e.currentTarget.id.replace('editable-audio-', '');
+  
+  // Get the corresponding audio file input and trigger click
+  const refIds = getRefIds();
+  const audioFileInputRef = refIds[`file-input-${fieldIndex}`];
+  
+  if (audioFileInputRef && audioFileInputRef.elm) {
+    audioFileInputRef.elm.click();
+  }
+};
+
 export const handleTitleClick = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();

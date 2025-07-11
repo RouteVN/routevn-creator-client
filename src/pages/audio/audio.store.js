@@ -32,7 +32,7 @@ export const toViewData = ({ state }) => {
   let detailFields
   if (selectedItem) {
     detailFields = [
-      { type: 'audio', waveformDataFileId: selectedItem.waveformDataFileId, show: !!selectedItem.waveformDataFileId },
+      { type: 'audio', waveformDataFileId: selectedItem.waveformDataFileId, editable: true, accept: 'audio/*' },
       { type: 'text', value: selectedItem.name },
       { type: 'text', label: 'File Type', value: selectedItem.fileType },
       { type: 'text', label: 'File Size', value: formatFileSize(selectedItem.fileSize) },
