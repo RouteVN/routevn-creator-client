@@ -16,7 +16,7 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const toViewData = ({ state, props }, payload) => {
   console.log("🎯 Placements toViewData called with state:", state);
-  
+
   const flatItems = toFlatItems(state.placementData);
   const flatGroups = toFlatGroups(state.placementData);
 
@@ -27,7 +27,7 @@ export const toViewData = ({ state, props }, payload) => {
   });
 
   // Get selected item details
-  const selectedItem = state.selectedItemId ? 
+  const selectedItem = state.selectedItemId ?
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
   // Compute display values for selected item
@@ -44,8 +44,8 @@ export const toViewData = ({ state, props }, payload) => {
   const detailFields = selectedItemDetails ? [
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
-    { type: 'text', label: 'Position X', value: selectedItemDetails.positionX, show: !!selectedItemDetails.positionX },
-    { type: 'text', label: 'Position Y', value: selectedItemDetails.positionY, show: !!selectedItemDetails.positionY },
+    { type: 'text', label: 'Position X', value: selectedItemDetails.x, show: !!selectedItemDetails.x },
+    { type: 'text', label: 'Position Y', value: selectedItemDetails.y, show: !!selectedItemDetails.y },
     { type: 'text', label: 'Scale', value: selectedItemDetails.scale, show: !!selectedItemDetails.scale },
     { type: 'text', label: 'Anchor', value: selectedItemDetails.anchor, show: !!selectedItemDetails.anchor },
     { type: 'text', label: 'Rotation', value: selectedItemDetails.rotation, show: !!selectedItemDetails.rotation },
@@ -54,7 +54,7 @@ export const toViewData = ({ state, props }, payload) => {
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : [];
   const detailEmptyMessage = 'Select a placement to view details';
-  
+
   const viewData = {
     flatItems,
     flatGroups,
@@ -67,8 +67,8 @@ export const toViewData = ({ state, props }, payload) => {
     detailFields,
     detailEmptyMessage,
   };
-  
+
   console.log("🎯 Placements returning viewData:", viewData);
-  
+
   return viewData;
 }

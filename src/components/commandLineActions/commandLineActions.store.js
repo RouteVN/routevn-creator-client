@@ -1,23 +1,23 @@
 export const INITIAL_STATE = Object.freeze({
   items: [
-    {
-      id: "1",
-      label: "Rich Text",
-      icon: "text",
-      mode: "richtext",
-    },
+    // {
+    //   id: "1",
+    //   label: "Rich Text",
+    //   icon: "text",
+    //   mode: "richtext",
+    // },
     {
       id: "2",
       label: "Dialogue Box",
       icon: "message",
       mode: "dialoguebox",
     },
-    {
-      id: "3",
-      label: "Choices",
-      icon: "list",
-      mode: "choices",
-    },
+    // {
+    //   id: "3",
+    //   label: "Choices",
+    //   icon: "list",
+    //   mode: "choices",
+    // },
     {
       id: "4",
       label: "Background",
@@ -48,18 +48,18 @@ export const INITIAL_STATE = Object.freeze({
       icon: "layout",
       mode: "layouts",
     },
-    {
-      id: "9",
-      label: "Scene Transition",
-      icon: "arrow-right",
-      mode: "scenetransition",
-    },
-    {
-      id: "10",
-      label: "Conditional",
-      icon: "code",
-      mode: "conditional",
-    },
+    // {
+    //   id: "9",
+    //   label: "Scene Transition",
+    //   icon: "arrow-right",
+    //   mode: "scenetransition",
+    // },
+    // {
+    //   id: "10",
+    //   label: "Conditional",
+    //   icon: "code",
+    //   mode: "conditional",
+    // },
   ],
 });
 

@@ -5,17 +5,17 @@ export const handleOnMount = (deps) => {
   const { placements } = repository.getState();
   store.setItems(placements || { tree: [], items: {} })
 
-  return () => {}
+  return () => { }
 }
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
-  
+
   const repositoryState = repository.getState();
   const { placements } = repositoryState;
-  
+
   const placementData = placements || { tree: [], items: {} };
-  
+
   store.setItems(placementData);
   render();
 };
@@ -29,7 +29,7 @@ export const handlePlacementItemClick = (e, deps) => {
 
 export const handlePlacementCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name, positionX, positionY, scale, anchor, rotation } = e.detail;
+  const { groupId, name, x, y, scale, anchor, rotation } = e.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -41,8 +41,8 @@ export const handlePlacementCreated = (e, deps) => {
         id: nanoid(),
         type: "placement",
         name: name,
-        positionX: positionX,
-        positionY: positionY,
+        x,
+        y,
         scale: scale,
         anchor: anchor,
         rotation: rotation,
@@ -57,15 +57,15 @@ export const handlePlacementCreated = (e, deps) => {
 
 export const handlePlacementEdited = (e, deps) => {
   const { store, render, repository, subject } = deps;
-  const { itemId, name, positionX, positionY, scale, anchor, rotation } = e.detail;
+  const { itemId, name, x, y, scale, anchor, rotation } = e.detail;
 
   // Dispatch to app handlers for repository update
   subject.dispatch('update-placement', {
     itemId,
     updates: {
       name,
-      positionX,
-      positionY,
+      x,
+      y,
       scale,
       anchor,
       rotation

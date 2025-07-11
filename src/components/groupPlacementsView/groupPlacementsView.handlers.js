@@ -103,8 +103,8 @@ export const handleFormActionClick = (e, deps) => {
         detail: {
           itemId: editItemId,
           name: formData.name,
-          positionX: formData.positionX,
-          positionY: formData.positionY,
+          x: formData.x,
+          y: formData.y,
           scale: formData.scale,
           anchor: formData.anchor,
           rotation: formData.rotation
@@ -118,8 +118,8 @@ export const handleFormActionClick = (e, deps) => {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
-          positionX: formData.positionX,
-          positionY: formData.positionY,
+          x: formData.x,
+          y: formData.y,
           scale: formData.scale,
           anchor: formData.anchor,
           rotation: formData.rotation

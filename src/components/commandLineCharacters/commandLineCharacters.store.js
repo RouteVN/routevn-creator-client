@@ -3,6 +3,7 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 export const INITIAL_STATE = Object.freeze({
   mode: 'current',
   items: [],
+  placements: { tree: [], items: {} },
   selectedCharacters: [], // Array of selected characters with their placements
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
@@ -17,10 +18,18 @@ export const setItems = (state, payload) => {
   state.items = payload.items;
 };
 
+export const setPlacements = (state, payload) => {
+  state.placements = payload.placements;
+};
+
 export const addCharacter = (state, character) => {
+  // Get the first available placement as default
+  const placementItems = toFlatItems(state.placements).filter(item => item.type === 'placement');
+  const defaultPlacement = placementItems.length > 0 ? placementItems[0].id : undefined;
+  
   state.selectedCharacters.push({
     ...character,
-    placement: 'center', // Default placement
+    placement: defaultPlacement,
     spriteId: undefined,
     spriteFileId: undefined
   });
@@ -109,15 +118,12 @@ export const toViewData = ({ state, props }, payload) => {
     }
   }
 
-  const placementOptions = [
-    { label: 'Far Left', value: 'far-left' },
-    { label: 'Left', value: 'left' },
-    { label: 'Center Left', value: 'center-left' },
-    { label: 'Center', value: 'center' },
-    { label: 'Center Right', value: 'center-right' },
-    { label: 'Right', value: 'right' },
-    { label: 'Far Right', value: 'far-right' }
-  ];
+  // Get placement options from repository instead of hardcoded values
+  const placementItems = toFlatItems(state.placements).filter(item => item.type === 'placement');
+  const placementOptions = placementItems.map(placement => ({
+    label: placement.name,
+    value: placement.id
+  }));
 
   // Precompute character display data
   const processedSelectedCharacters = state.selectedCharacters.map(character => ({
