@@ -116,12 +116,16 @@ export const hidePopover = (state) => {
   };
 }
 
-export const setLineTextContent = (state, lineId, text) => {
+export const setLineTextContent = (state, { lineId, text }) => {
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
-  if (!currentSection) return;
+  if (!currentSection) {
+    return
+  };
 
   const line = currentSection.lines.find(line => line.id === lineId);
-  if (!line) return;
+  if (!line) {
+    return
+  };
 
   if (!line.presentation) {
     line.presentation = {};
@@ -131,7 +135,7 @@ export const setLineTextContent = (state, lineId, text) => {
     line.presentation.dialogue = {};
   }
 
-  line.presentation.dialogue.content = text;
+  line.presentation.dialogue.text = text;
 }
 
 export const selectRenderState = ({ state }) => {
@@ -166,7 +170,7 @@ export const selectRenderState = ({ state }) => {
                   type: "text",
                   text: "${dialogue.character.name}",
                   style: {
-                    fontSize: 24,
+                    fontSize: 48,
                     fill: "white"
                   }
                 },
@@ -176,7 +180,7 @@ export const selectRenderState = ({ state }) => {
                   y: 100,
                   text: "${dialogue.text}",
                   style: {
-                    fontSize: 24,
+                    fontSize: 48,
                     fill: "white"
                   }
                 }

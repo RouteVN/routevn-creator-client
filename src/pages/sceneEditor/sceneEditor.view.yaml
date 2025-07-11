@@ -14,8 +14,8 @@ viewDataSchema:
 refs:
   lines-editor:
     eventListeners:
-      editor-data-chanaged:
-        handler: handleEditorDataChanaged
+      editor-data-changed:
+        handler: handleEditorDataChanged
       newLine:
         handler: handleNewLine
       splitLine:

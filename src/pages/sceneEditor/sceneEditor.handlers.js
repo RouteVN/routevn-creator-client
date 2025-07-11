@@ -147,8 +147,8 @@ export const handleCommandLineSubmit = (e, deps) => {
   render();
 };
 
-export const handleEditorDataChanaged = (e, deps) => {
-  const { repository, store, render } = deps;
+export const handleEditorDataChanged = (e, deps) => {
+  const { repository, store, render, drenderer, getRefIds, httpClient } = deps;
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -167,8 +167,16 @@ export const handleEditorDataChanaged = (e, deps) => {
     },
   });
 
-  store.setLineTextContent(lineId, e.detail.content);
-  render();
+  store.setLineTextContent({ lineId, text: e.detail.content });
+
+  setTimeout(async () => {
+    const renderState = store.selectRenderState()
+    const fileIds = extractFileIdsFromRenderState(renderState);
+    const assets = await createAssetsFromFileIds(fileIds, httpClient);
+    const { canvas } = getRefIds()
+    await drenderer.init({ assets, canvas: canvas.elm })
+    drenderer.render(renderState)
+  }, 10)
 
 };
 
@@ -486,6 +494,7 @@ export const handleMoveUp = (e, deps) => {
 
       setTimeout(async () => {
         const renderState = store.selectRenderState()
+        console.log("handleMoveUp - renderState", renderState);
         const fileIds = extractFileIdsFromRenderState(renderState);
         const assets = await createAssetsFromFileIds(fileIds, httpClient);
         const { canvas } = getRefIds()
