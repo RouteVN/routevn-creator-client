@@ -494,7 +494,6 @@ export const handleMoveUp = (e, deps) => {
 
       setTimeout(async () => {
         const renderState = store.selectRenderState()
-        console.log("handleMoveUp - renderState", renderState);
         const fileIds = extractFileIdsFromRenderState(renderState);
         const assets = await createAssetsFromFileIds(fileIds, httpClient);
         const { canvas } = getRefIds()
