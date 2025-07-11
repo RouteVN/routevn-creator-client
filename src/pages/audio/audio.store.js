@@ -36,7 +36,7 @@ export const toViewData = ({ state }) => {
       { type: 'text', value: selectedItem.name },
       { type: 'text', label: 'File Type', value: selectedItem.fileType },
       { type: 'text', label: 'File Size', value: formatFileSize(selectedItem.fileSize) },
-      { type: 'text', label: 'Duration', value: selectedItem.duration ? `${Math.round(selectedItem.duration)}s` : 'Unknown', show: !!selectedItem.duration },
+      { type: 'text', label: 'Duration', value: selectedItem.duration ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(selectedItem.duration % 60).toString().padStart(2, '0')}` : 'Unknown', show: !!selectedItem.duration },
     ];
   }
 
