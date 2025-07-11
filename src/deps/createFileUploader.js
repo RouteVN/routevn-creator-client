@@ -410,3 +410,74 @@ export const createVideoFileUploader = ({ httpClient }) => {
     return successfulUploads;
   }
 }
+
+export const createFontFileUploader = ({ httpClient, fontManager }) => {
+  return async (files, projectId) => {
+    // Create upload promises for all files
+    const uploadPromises = Array.from(files).map(async (file) => {
+      try {
+        // Load font file for preview using fontManager
+        const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+        const fontUrl = URL.createObjectURL(file);
+        
+        try {
+          await fontManager.load(fontName, fontUrl);
+        } catch (loadError) {
+          console.error('Font loading error:', file.name, loadError);
+          return {
+            success: false,
+            file,
+            error: loadError.message,
+          };
+        }
+
+        const { downloadUrl, uploadUrl, fileId } =
+          await httpClient.creator.uploadFile({
+            projectId,
+          });
+
+        const response = await fetch(uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (response.ok) {
+          console.log("Font file uploaded successfully:", file.name);
+          return {
+            success: true,
+            file,
+            downloadUrl,
+            fileId,
+            fontName,
+            fontUrl,
+          };
+        } else {
+          console.error("Font file upload failed:", file.name, response.statusText);
+          return {
+            success: false,
+            file,
+            error: response.statusText,
+          };
+        }
+      } catch (error) {
+        console.error("Font file upload error:", file.name, error);
+        return {
+          success: false,
+          file,
+          error: error.message,
+        };
+      }
+    });
+
+    // Wait for all uploads to complete
+    const uploadResults = await Promise.all(uploadPromises);
+
+    // Add successfully uploaded files to repository
+    const successfulUploads = uploadResults.filter((result) => result.success);
+
+    return successfulUploads;
+  }
+}

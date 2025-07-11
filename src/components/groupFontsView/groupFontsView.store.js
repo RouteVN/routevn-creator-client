@@ -45,8 +45,8 @@ export const toViewData = ({ state, props }) => {
         isCollapsed: state.collapsedIds.includes(group.id),
         children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => ({
           ...item,
-          selectedStyle: item.id === selectedItemId ? 
-            "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
+          fontFamily: item.fontFamily || 'sans-serif',
+          previewText: 'Aa',
         })),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup

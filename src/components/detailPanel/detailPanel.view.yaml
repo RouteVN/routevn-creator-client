@@ -1,3 +1,5 @@
+
+
 elementName: rvn-detail-panel
 
 propsSchema:
@@ -42,6 +44,10 @@ refs:
     eventListeners:
       click:
         handler: handleColorFieldClick
+  font-field-*:
+    eventListeners:
+      click:
+        handler: handleFontFieldClick
   popover:
     eventListeners:
       click-overlay:
@@ -84,6 +90,11 @@ template:
                 $elif field.type == 'color':
                   - rtgl-view:
                     - 'rtgl-view#color-field-${i} w=200 h=150 br=md cur=p style="background-color: ${field.value}"':
+                $elif field.type == 'font':
+                  - rtgl-view:
+                    - 'rtgl-view#font-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p':
+                      - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
+                    - 'input#file-input-${i} type=file accept=".ttf,.otf,.woff,.woff2" style="display: none;"':
                 $elif field.type == 'audio':
                   - $if field.editable:
                       - rtgl-view pos=rel:
