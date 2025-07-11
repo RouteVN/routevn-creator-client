@@ -25,18 +25,21 @@ export const selectComponentId = ({ state }) => {
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
-  
-  const selectedItem = state.selectedItemId ? 
+
+  const selectedItem = state.selectedItemId ?
     flatItems.find(item => item.id === state.selectedItemId) : null;
-  
+
+  console.log('selected item details:', selectedItem);
+
   const detailTitle = selectedItem ? selectedItem.name : '';
   const detailFields = selectedItem ? [
-    { label: 'Name', value: selectedItem.name },
-    { label: 'Type', value: selectedItem.type || 'Layout Item' },
-    { label: 'ID', value: selectedItem.id }
+    { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
+    { type: 'text', label: 'ID', value: selectedItem.id }
   ] : [];
   const detailEmptyMessage = 'Select a layout item to view details';
-  
+
+  console.log('detailFields', detailFields);
+
   return {
     flatItems,
     flatGroups,
