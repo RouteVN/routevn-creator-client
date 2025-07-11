@@ -44,6 +44,8 @@ export const toViewData = ({ state, props }) => {
     }))
   }));
 
+  console.log(flatGroups)
+
   return {
     flatGroups,
     playingAudio: state.playingAudio,

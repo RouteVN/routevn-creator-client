@@ -50,7 +50,7 @@ refs:
         handler: handleClose
 
 template:
-  - rtgl-view w=f h=64 p=md bgc=mu br=md bc=bo bw=xs:
+  - rtgl-view w=f h=f bgc=mu bc=bo bw=xs:
     - $if isLoading:
         - rtgl-view w=f av=c p=md:
           - rtgl-text c=mu-fg: Loading audio...
@@ -62,7 +62,7 @@ template:
               - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"':
 
           # Play/Pause button and time display
-          - rtgl-view ph=md d=h g=md av=c w=f h=f:
+          - rtgl-view ph=md d=h av=c w=f h=f p=md:
             - rtgl-text w=250 ellipsis=true: ${fileName}
             - rtgl-view d=h av=c g=lg flex=1 ah=c:
               - rtgl-button#play-pause-btn w=40 h=40 bgc=pr br=full av=c ah=c:

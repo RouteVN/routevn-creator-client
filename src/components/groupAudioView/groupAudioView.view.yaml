@@ -62,7 +62,9 @@ template:
                       - $for item in group.children:
                           - 'rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}"':
                             - $if item.waveformDataFileId:
-                                - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
+                                - rtgl-view:
+                                  - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
+                                  - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
                               $else:
                                 - rtgl-image br=md w=225 h=150 src=/public/project_logo_placeholder.png:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
@@ -70,5 +72,5 @@ template:
                       - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
     - rtgl-view h=33vh:
     - $if showAudioPlayer:
-      - 'rtgl-view pos=fix cor=bottom h=64 style="left: 305px; right: 285px;"':
+      - 'rtgl-view pos=fix cor=bottom h=72 style="left: 304px; right: 270px;"':
         - rvn-audio-player fileId=${playingAudio.fileId} autoPlay=true fileName=${playingAudio.title}:
