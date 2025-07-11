@@ -11,12 +11,7 @@ export const INITIAL_STATE = Object.freeze({
   pauseTime: 0,
   isSeeking: false,
   componentId: null,
-  fileName: ''
 });
-
-export const setFileName = (state, fileName) => {
-  state.fileName = fileName;
-}
 
 export const setLoading = (state, isLoading) => {
   state.isLoading = isLoading;
@@ -75,13 +70,13 @@ const formatTime = (seconds) => {
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const toViewData = ({ state }) => {
+export const toViewData = ({ state, props }) => {
   const currentTimeFormatted = formatTime(state.currentTime);
   const durationFormatted = formatTime(state.duration);
   const progressPercentage = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
   return {
     isPlaying: state.isPlaying,
-    fileName: state.fileName,
+    title: props.title,
     isLoading: state.isLoading,
     currentTime: state.currentTime,
     duration: state.duration,
