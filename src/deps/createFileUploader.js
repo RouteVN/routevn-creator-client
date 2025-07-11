@@ -411,36 +411,6 @@ export const createVideoFileUploader = ({ httpClient }) => {
   }
 }
 
-export const createFontManager = () => {
-  return {
-    async load(fontName, fontUrl) {
-      const fontFace = new FontFace(fontName, `url(${fontUrl})`);
-      await fontFace.load();
-      document.fonts.add(fontFace);
-      return fontFace;
-    }
-  };
-};
-
-export const loadFontFile = async (fontItem, httpClient, fontManager) => {
-  
-  try {
-    const response = await httpClient.creator.getFileContent({ 
-      fileId: fontItem.fileId, 
-      projectId: 'someprojectId' 
-    });
-    
-    if (response?.url) {
-      await fontManager.load(fontItem.fontFamily, response.url);
-      return { success: true, fontItem };
-    }
-    return { success: false, error: 'No URL received' };
-  } catch (error) {
-    console.error(`Failed to load font ${fontItem.name}:`, error);
-    return { success: false, error: error.message };
-  }
-};
-
 export const createFontFileUploader = ({ httpClient, fontManager }) => {
   return async (files, projectId) => {
     // Create upload promises for all files

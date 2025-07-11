@@ -21,7 +21,7 @@ export const handleOnMount = async (deps) => {
   extractItems(fonts.tree, fonts.items);
   
   // Load fonts in parallel using loadFontFile function
-  const loadPromises = flatItems.map(item => loadFontFile(item, httpClient, fontManager));
+  const loadPromises = flatItems.map(item => loadFontFile(item));
   
   await Promise.all(loadPromises);
 
@@ -167,7 +167,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store.setItems(fonts);
     
     // Load the newly uploaded fonts to ensure they're available
-    const loadPromises = newFontItems.map(item => loadFontFile(item, httpClient, fontManager));
+    const loadPromises = newFontItems.map(item => loadFontFile(item));
     await Promise.all(loadPromises);
   }
 

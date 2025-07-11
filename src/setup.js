@@ -7,7 +7,8 @@ import Subject from './deps/subject';
 import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
 import Router from './deps/router';
 import AudioManager from './deps/audioManager';
-import { createImageFileUploader, createAudioFileUploader, createVideoFileUploader, createFontFileUploader, downloadWaveformData, createFontManager, loadFontFile } from './deps/createFileUploader';
+import { createImageFileUploader, createAudioFileUploader, createVideoFileUploader, createFontFileUploader, downloadWaveformData } from './deps/createFileUploader';
+import { createFontManager, loadFontFile } from './deps/fontManager';
 import { create2dRenderer } from './deps/2drenderer';
 
 const httpClient = createRouteVnHttpClient({
@@ -101,6 +102,7 @@ const uploadFontFiles = createFontFileUploader({
   httpClient,
   fontManager,
 });
+const loadFontFileFunc = loadFontFile({ httpClient, fontManager });
 
 const componentDependencies = {
   httpClient,
@@ -114,7 +116,7 @@ const componentDependencies = {
   uploadVideoFiles,
   uploadFontFiles,
   fontManager,
-  loadFontFile,
+  loadFontFile: loadFontFileFunc,
   downloadWaveformData,
   drenderer
 }
@@ -131,7 +133,7 @@ const pageDependencies = {
   uploadVideoFiles,
   uploadFontFiles,
   fontManager,
-  loadFontFile,
+  loadFontFile: loadFontFileFunc,
   downloadWaveformData,
   drenderer
 }

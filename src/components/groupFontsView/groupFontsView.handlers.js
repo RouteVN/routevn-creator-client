@@ -52,7 +52,7 @@ export const handleOnMount = async (deps) => {
       fontFamily: item.fontFamily
     };
     
-    return loadFontFile(fontItem, httpClient, fontManager);
+    return loadFontFile(fontItem);
   });
   
   await Promise.all(loadPromises);
