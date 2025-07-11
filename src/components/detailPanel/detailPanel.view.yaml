@@ -30,6 +30,10 @@ refs:
     eventListeners:
       change:
         handler: handleFileInputChange
+  editable-audio-*:
+    eventListeners:
+      click:
+        handler: handleEditableAudioClick
   title-text-*:
     eventListeners:
       click:
@@ -67,8 +71,6 @@ template:
                       - rtgl-view pos=rel:
                         - 'rtgl-view#editable-image-${i} cur=p style="position: relative;"':
                           - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId} key=${field.fileId}:
-                          - 'rtgl-view pos=abs cor=full bgc=rgba(0,0,0,0.5) av=c ah=c style="opacity: 0; transition: opacity 0.2s;" h-style="opacity: 1;"':
-                            - rtgl-svg svg=upload wh=24 c=wh:
                         - 'input#file-input-${i} type=file accept="${field.accept}" style="display: none;"':
                     $else:
                       - rvn-file-image br=md w=${field.width} h=${field.height} fileId=${field.fileId} key=${field.fileId}:
@@ -83,8 +85,13 @@ template:
                   - rtgl-view:
                     - 'rtgl-view#color-field-${i} w=200 h=150 br=md cur=p style="background-color: ${field.value}"':
                 $elif field.type == 'audio':
-                  - rtgl-view:
-                    - rvn-waveform-visualizer waveformDataFileId=${field.waveformDataFileId} width=270 height=180:
+                  - $if field.editable:
+                      - rtgl-view pos=rel:
+                        - 'rtgl-view#editable-audio-${i} cur=p style="position: relative;"':
+                          - rvn-waveform-visualizer waveformDataFileId=${field.waveformDataFileId} width=270 height=180 key=${field.waveformDataFileId}:
+                        - 'input#file-input-${i} type=file accept="${field.accept}" style="display: none;"':
+                    $else:
+                      - rvn-waveform-visualizer waveformDataFileId=${field.waveformDataFileId} width=270 height=180:
       $else:
         - rtgl-view w=f h=f av=c ah=c:
           - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}

@@ -40,6 +40,48 @@ export const handleOnMount = async (deps) => {
   }
 };
 
+export const handleOnUpdate = async (changes, deps) => {
+  const { attrs, store, render, getRefIds, httpClient, downloadWaveformData } = deps;
+  
+  if (!attrs.waveformDataFileId) {
+    return;
+  }
+  
+  store.setLoading(true);
+  store.setError(false);
+  render();
+  
+  try {
+    // Download waveform data from API Object Storage
+    const waveformData = await downloadWaveformData(
+      attrs.waveformDataFileId,
+      httpClient
+    );
+    
+    if (!waveformData) {
+      store.setError(true);
+      store.setLoading(false);
+      render();
+      return;
+    }
+    
+    store.setWaveformData(waveformData);
+    store.setLoading(false);
+    render();
+    
+    // Get canvas element and render waveform
+    const canvas = getRefIds().canvas?.elm;
+    if (canvas) {
+      await renderWaveform(waveformData, canvas);
+    }
+    
+  } catch (error) {
+    store.setError(true);
+    store.setLoading(false);
+    render();
+  }
+};
+
 async function renderWaveform(waveformData, canvas) {
   const ctx = canvas.getContext('2d');
   
