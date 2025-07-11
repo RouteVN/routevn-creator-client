@@ -7,7 +7,6 @@ export const INITIAL_STATE = Object.freeze({
   defaultValues: {
     name: '',
     fontSize: '16',
-    fontColor: '#000000',
     fontWeight: 'normal',
   },
 
@@ -22,18 +21,25 @@ export const INITIAL_STATE = Object.freeze({
       description: 'Enter the typography style name',
       required: true,
     }, {
+      id: 'fontColor',
+      fieldName: 'fontColor',
+      inputType: 'inputText',
+      label: 'Color',
+      description: 'Enter the font color name',
+      required: true,
+    }, {
+      id: 'fontStyle',
+      fieldName: 'fontStyle',
+      inputType: 'inputText',
+      label: 'Font Style',
+      description: 'Enter the font style name',
+      required: true,
+    }, {
       id: 'fontSize',
       fieldName: 'fontSize',
       inputType: 'inputText',
       label: 'Font Size',
       description: 'Enter the font size (e.g., 16, 18, 24)',
-      required: true,
-    }, {
-      id: 'fontColor',
-      fieldName: 'fontColor',
-      inputType: 'inputText',
-      label: 'Font Color',
-      description: 'Enter the font color (e.g., #000000, #ff0000)',
       required: true,
     }, {
       id: 'fontWeight',
@@ -75,7 +81,7 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
-export const toViewData = ({ state, props }) => {
+export const toViewData = ({ state, props }, payload) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
   
@@ -123,8 +129,8 @@ export const toViewData = ({ state, props }) => {
     selectedItemId: props.selectedItemId,
     uploadText: "Upload Typography Files",
     isDialogOpen: state.isDialogOpen,
+    searchQuery: state.searchQuery,
     defaultValues: state.defaultValues,
-    form: state.form,
-    searchQuery: state.searchQuery
+    form: state.form
   };
 };

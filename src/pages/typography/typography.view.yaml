@@ -17,6 +17,14 @@ refs:
         handler: handleDragDropFileSelected
       typography-created:
         handler: handleTypographyCreated
+  detail-panel:
+    eventListeners:
+      title-click:
+        handler: handleTitleClick
+      action-click:
+        handler: handleDetailFormActionClick
+      typography-updated:
+        handler: handleTypographyUpdated
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -24,4 +32,4 @@ template:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-typography-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

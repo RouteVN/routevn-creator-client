@@ -31,6 +31,66 @@ export const INITIAL_STATE = Object.freeze({
         }],
       }
     }
+  },
+  // Typography dialog state
+  typographyDialog: {
+    isOpen: false,
+    fieldIndex: -1,
+    defaultValues: {
+      name: '',
+      fontSize: '16',
+      fontColor: '#000000',
+      fontStyle: '',
+      fontWeight: 'normal',
+    },
+    form: {
+      title: 'Edit Typography',
+      description: 'Edit the typography style',
+      fields: [{
+        id: 'name',
+        fieldName: 'name',
+        inputType: 'inputText',
+        label: 'Name',
+        description: 'Enter the typography style name',
+        required: true,
+      }, {
+        id: 'fontSize',
+        fieldName: 'fontSize',
+        inputType: 'inputText',
+        label: 'Font Size',
+        description: 'Enter the font size (e.g., 16, 18, 24)',
+        required: true,
+      }, {
+        id: 'fontColor',
+        fieldName: 'fontColor',
+        inputType: 'inputText',
+        label: 'Font Color',
+        description: 'Enter the font color',
+        required: true,
+      }, {
+        id: 'fontStyle',
+        fieldName: 'fontStyle',
+        inputType: 'inputText',
+        label: 'Font Family',
+        description: 'Enter the font name',
+        required: true,
+      }, {
+        id: 'fontWeight',
+        fieldName: 'fontWeight',
+        inputType: 'inputText',
+        label: 'Font Weight',
+        description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
+        required: true,
+      }],
+      actions: {
+        layout: '',
+        buttons: [{
+          id: 'submit',
+          variant: 'pr',
+          content: 'Update Typography',
+        }],
+      }
+    }
   }
 });
 
@@ -65,6 +125,34 @@ export const hideColorDialog = (state) => {
   // Reset default values
   state.colorDialog.defaultValues = {
     hex: '#ff0000',
+  };
+}
+
+export const showTypographyDialog = (state, { fieldIndex, itemData }) => {
+  state.typographyDialog.isOpen = true;
+  state.typographyDialog.fieldIndex = fieldIndex;
+  
+  // Update default values with current item data
+  state.typographyDialog.defaultValues = {
+    name: itemData.name || '',
+    fontSize: itemData.fontSize || '16',
+    fontColor: itemData.fontColor || '#000000',
+    fontStyle: itemData.fontStyle || '',
+    fontWeight: itemData.fontWeight || 'normal',
+  };
+}
+
+export const hideTypographyDialog = (state) => {
+  state.typographyDialog.isOpen = false;
+  state.typographyDialog.fieldIndex = -1;
+  
+  // Reset default values
+  state.typographyDialog.defaultValues = {
+    name: '',
+    fontSize: '16',
+    fontColor: '#000000',
+    fontStyle: '',
+    fontWeight: 'normal',
   };
 }
 
@@ -117,6 +205,11 @@ export const toViewData = ({ state, props }) => {
       isOpen: state.colorDialog.isOpen,
       defaultValues: state.colorDialog.defaultValues,
       form: state.colorDialog.form,
+    },
+    typographyDialog: {
+      isOpen: state.typographyDialog.isOpen,
+      defaultValues: state.typographyDialog.defaultValues,
+      form: state.typographyDialog.form,
     },
   };
 };

@@ -34,6 +34,7 @@ export const toViewData = ({ state, props }, payload) => {
     typeDisplay: selectedItem.type === 'typography' ? 'Typography' : 'Folder',
     displayFontSize: selectedItem.fontSize || null,
     displayFontColor: selectedItem.fontColor || null,
+    displayFontStyle: selectedItem.fontStyle || null,
     displayFontWeight: selectedItem.fontWeight || null,
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
   } : null;
@@ -41,14 +42,23 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Typography Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'typography', name: selectedItemDetails.name, fontSize: selectedItemDetails.displayFontSize, fontColor: selectedItemDetails.displayFontColor, fontWeight: selectedItemDetails.displayFontWeight, width: 240, height: 60, show: !!selectedItemDetails.displayFontSize },
+    { 
+      type: 'typography', 
+      name: selectedItemDetails.name,
+      fontSize: selectedItemDetails.displayFontSize || '16',
+      fontColor: selectedItemDetails.displayFontColor || '#000000',
+      fontStyle: selectedItemDetails.displayFontStyle || '',
+      fontWeight: selectedItemDetails.displayFontWeight || 'normal',
+      show: !!selectedItemDetails.displayFontSize 
+    },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'Font Size', value: selectedItemDetails.displayFontSize, show: !!selectedItemDetails.displayFontSize },
     { type: 'text', label: 'Font Color', value: selectedItemDetails.displayFontColor, show: !!selectedItemDetails.displayFontColor },
+    { type: 'text', label: 'Font Style', value: selectedItemDetails.displayFontStyle, show: !!selectedItemDetails.displayFontStyle },
     { type: 'text', label: 'Font Weight', value: selectedItemDetails.displayFontWeight, show: !!selectedItemDetails.displayFontWeight },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
-  ] : [];
+  ].filter(field => field.show !== false) : [];
   const detailEmptyMessage = 'Select a typography style to view details';
 
   return {
