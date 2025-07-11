@@ -27,19 +27,8 @@ export const handleFontItemClick = (e, deps) => {
   }));
 };
 
-// Helper function to load font face dynamically
-const loadFontFace = async (fontName, fontUrl) => {
-  if (!document.fonts) return null;
-  
-  const fontFace = new FontFace(fontName, `url(${fontUrl})`);
-  await fontFace.load();
-  document.fonts.add(fontFace);
-  return fontFace;
-};
-
-
 export const handleOnMount = async (deps) => {
-  const { props = {}, render, httpClient } = deps;
+  const { props = {}, render, httpClient, fontManager, loadFontFile } = deps;
   const { flatGroups = [] } = props;
   
   // Extract all font items from all groups
@@ -55,27 +44,15 @@ export const handleOnMount = async (deps) => {
     return;
   }
   
-  // Load existing fonts in parallel
-  const loadPromises = allFontItems.map(async (item) => {
-    if (!item.name || !item.name.match(/\.(ttf|otf|woff|woff2)$/i)) {
-      return;
-    }
+  // Load existing fonts in parallel using loadFontFile function
+  const loadPromises = allFontItems.map(item => {    
+    // Ensure fontFamily is set for loadFontFile
+    const fontItem = {
+      ...item,
+      fontFamily: item.fontFamily
+    };
     
-    const fontName = item.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
-    let fontUrl;
-    
-    // Try to get download URL from fileId if available
-    if (item.fileId && httpClient?.creator?.getFileContent) {
-      const response = await httpClient.creator.getFileContent({ 
-        fileId: item.fileId, 
-        projectId: 'someprojectId' 
-      });
-      fontUrl = response?.url;
-    }
-    
-    if (fontUrl) {
-      await loadFontFace(fontName, fontUrl);
-    }
+    return loadFontFile(fontItem, httpClient, fontManager);
   });
   
   await Promise.all(loadPromises);
@@ -83,19 +60,17 @@ export const handleOnMount = async (deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, fontManager } = deps;
   const { files } = e.detail;
   const targetGroupId = e.currentTarget.id
     .replace("drag-drop-bar-", "")
     .replace("drag-drop-item-", "");
   
-  // Load fonts for preview if they are font files
+  // Load fonts for preview
   for (const file of files) {
-    if (file.name.match(/\.(ttf|otf|woff|woff2)$/i)) {
-      const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
-      const fontUrl = URL.createObjectURL(file);
-      await loadFontFace(fontName, fontUrl);
-    }
+    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+    const fontUrl = URL.createObjectURL(file);
+    await fontManager.load(fontName, fontUrl);
   }
   
   // Forward file uploads to parent (parent will handle the actual upload logic)

@@ -45,7 +45,7 @@ export const toViewData = ({ state, props }) => {
         isCollapsed: state.collapsedIds.includes(group.id),
         children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => ({
           ...item,
-          fontFamily: item.name ? item.name.replace(/\.(ttf|otf|woff|woff2|eot)$/i, '') : 'sans-serif',
+          fontFamily: item.fontFamily || 'sans-serif',
           previewText: 'Aa',
         })),
         hasChildren: filteredChildren.length > 0,

@@ -176,7 +176,5 @@ export const handleFontFieldClick = (e, deps) => {
   const refIds = getRefIds();
   const fileInputRef = refIds[`file-input-${fieldIndex}`];
   
-  if (fileInputRef && fileInputRef.elm) {
-    fileInputRef.elm.click();
-  }
+  fileInputRef.elm.click();
 };

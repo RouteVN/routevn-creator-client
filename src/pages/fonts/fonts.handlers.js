@@ -1,10 +1,29 @@
-
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
-  const { store, repository } = deps;
+export const handleOnMount = async (deps) => {
+  const { store, repository, httpClient, fontManager, loadFontFile } = deps;
   const { fonts } = repository.getState();
   store.setItems(fonts);
+
+  // Load all existing fonts
+  const flatItems = [];
+  const extractItems = (tree, items) => {
+    tree.forEach(node => {
+      if (node.type === 'font' && items[node.id]) {
+        flatItems.push(items[node.id]);
+      }
+      if (node.children) {
+        extractItems(node.children, items);
+      }
+    });
+  };
+  
+  extractItems(fonts.tree, fonts.items);
+  
+  // Load fonts in parallel using loadFontFile function
+  const loadPromises = flatItems.map(item => loadFontFile(item, httpClient, fontManager));
+  
+  await Promise.all(loadPromises);
 
   return () => {}
 };
@@ -26,8 +45,8 @@ export const handleFontItemClick = (e, deps) => {
 };
 
 export const handleReplaceItem = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
-  const { file, field, fieldIndex } = e.detail;
+  const { store, render, uploadFontFiles, repository } = deps;
+  const { file } = e.detail;
   
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -35,21 +54,18 @@ export const handleReplaceItem = async (e, deps) => {
     return;
   }
   
-  // Upload the new font file
-  const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
-    projectId: "someprojectId",
-  });
+  // Validate file format
+  if (!file.name.match(/\.(ttf|otf|woff|woff2)$/i)) {
+    alert('Invalid file format. Please upload a font file (.ttf, .otf, .woff, or .woff2)');
+    return;
+  }
+  
+  // Upload the font - this already loads it for preview
+  const successfulUploads = await uploadFontFiles([file], "someprojectId");
 
-  const response = await fetch(uploadUrl, {
-    method: "PUT",
-    body: file,
-    headers: {
-      "Content-Type": file.type,
-    },
-  });
+  if (successfulUploads.length > 0) {
+    const result = successfulUploads[0];
 
-  if (response.ok) {
-    // Update the font in the repository
     repository.addAction({
       actionType: "treeUpdate",
       target: "fonts",
@@ -57,8 +73,9 @@ export const handleReplaceItem = async (e, deps) => {
         id: selectedItem.id,
         replace: false,
         item: {
-          fileId,
+          fileId: result.fileId,
           name: file.name,
+          fontFamily: result.fontName,
           fileType: file.type,
           fileSize: file.size,
         },
@@ -105,80 +122,53 @@ export const handleFileAction = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
+  const { store, render, uploadFontFiles, repository, httpClient, fontManager, loadFontFile } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Create upload promises for all files
-  const uploadPromises = Array.from(files).map(async (file) => {
-    try {
-      const { downloadUrl, uploadUrl, fileId } =
-        await httpClient.creator.uploadFile({
-          projectId: "someprojectId",
-        });
+  // Validate all files first
+  const invalidFiles = Array.from(files).filter(file => !file.name.match(/\.(ttf|otf|woff|woff2)$/i));
+  if (invalidFiles.length > 0) {
+    alert('Invalid file format. Please upload only font files (.ttf, .otf, .woff, or .woff2)');
+    return;
+  }
 
-      const response = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type, // Ensure the Content-Type matches the file type
-        },
-      });
+  // Upload files
+  const successfulUploads = await uploadFontFiles(files, "someprojectId");
 
-      if (response.ok) {
-        console.log("File uploaded successfully:", file.name);
-        return {
-          success: true,
-          file,
-          downloadUrl,
-          fileId,
-        };
-      } else {
-        console.error("File upload failed:", file.name, response.statusText);
-        return {
-          success: false,
-          file,
-          error: response.statusText,
-        };
-      }
-    } catch (error) {
-      console.error("File upload error:", file.name, error);
-      return {
-        success: false,
-        file,
-        error: error.message,
-      };
-    }
-  });
-
-  // Wait for all uploads to complete
-  const uploadResults = await Promise.all(uploadPromises);
-
-  // Add successfully uploaded files to repository
-  const successfulUploads = uploadResults.filter((result) => result.success);
-
+  // Add successfully uploaded files to repository and collect new font items
+  const newFontItems = [];
   successfulUploads.forEach((result) => {
+    const fontItem = {
+      id: nanoid(),
+      type: "font",
+      fileId: result.fileId,
+      name: result.file.name,
+      fontFamily: result.fontName,
+      fileType: result.file.type,
+      fileSize: result.file.size,
+    };
+    
     repository.addAction({
       actionType: "treePush",
       target: "fonts",
       value: {
         parent: id,
         position: "last",
-        item: {
-          id: nanoid(),
-          type: "font",
-          fileId: result.fileId,
-          name: result.file.name,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-        },
+        item: fontItem,
       },
     });
+    
+    newFontItems.push(fontItem);
   });
 
   if (successfulUploads.length > 0) {
     const { fonts } = repository.getState();
     store.setItems(fonts);
+    
+    // Load the newly uploaded fonts to ensure they're available
+    const loadPromises = newFontItems.map(item => loadFontFile(item, httpClient, fontManager));
+    await Promise.all(loadPromises);
   }
 
   console.log(
