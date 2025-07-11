@@ -1,19 +1,23 @@
 elementName: rvn-audio-player
 
-propsSchema:
+attrsSchema:
   type: object
   properties:
     fileId:
       type: string
       description: ID of the audio file to play
-    fileName:
-      type: string
-      description: Name of the audio file to display
-      default: ""
     autoPlay:
       type: boolean
       description: Whether to start playing automatically
       default: false
+
+propsSchema:
+  type: object
+  properties:
+    title:
+      type: string
+      description: Title of the audio player, used for accessibility
+      default: "Audio Player"
 
 viewDataSchema:
   type: object
@@ -32,8 +36,6 @@ viewDataSchema:
       type: string
     progressPercentage:
       type: number
-    fileName:
-      type: string
 
 refs:
   play-pause-btn:
@@ -63,7 +65,7 @@ template:
 
           # Play/Pause button and time display
           - rtgl-view ph=md d=h av=c w=f h=f p=md:
-            - rtgl-text w=250 ellipsis=true: ${fileName}
+            - rtgl-text w=250 ellipsis=true: ${title}
             - rtgl-view d=h av=c g=lg flex=1 ah=c:
               - rtgl-button#play-pause-btn w=40 h=40 bgc=pr br=full av=c ah=c:
                 - $if isPlaying:

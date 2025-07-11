@@ -1,11 +1,10 @@
 export const handleOnMount = async (deps) => {
-  const { store, attrs, httpClient, render, audioManager } = deps;
-  const { fileId, autoPlay, fileName } = attrs;
+  const { store, attrs, httpClient, render, audioManager, props } = deps;
+  const { fileId, autoPlay } = attrs;
 
   // Generate unique component ID
   const componentId = `audio-player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   store.setComponentId(componentId);
-  store.setFileName(fileName);
 
   // Register with audio manager
   audioManager.registerPlayer(componentId, store, render);
@@ -65,44 +64,44 @@ export const handlePlayPause = async (e, deps) => {
 export const handleProgressBarClick = (e, deps) => {
   const { store, render, audioManager } = deps;
   const state = store.getState();
-  
+
   if (!state.duration) return;
-  
+
   // Calculate click position as percentage of progress bar width
   const rect = e.currentTarget.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
   const percentage = clickX / rect.width;
   const seekTime = percentage * state.duration;
-  
+
   store.setCurrentTime(seekTime);
   store.setPauseTime(seekTime);
-  
+
   // Always stop current source first
   stopCurrentSource(store);
-  
+
   // If playing, restart from new position
   if (state.isPlaying) {
     // Stop time updates during seek
     audioManager.stopTimeUpdates(state.componentId);
-    
+
     // Start playback from new position
     startPlaybackFromTime(store, seekTime);
     store.setStartTime(state.audioContext.currentTime - seekTime);
-    
+
     // Resume time updates
     audioManager.startTimeUpdates(state.componentId);
   }
-  
+
   render();
 };
 
 export const handleClose = (e, deps) => {
   e.preventDefault();
   const { dispatchEvent, store, audioManager } = deps;
-  
+
   // Stop playback first
   handlePause(store, audioManager);
-  
+
   // Dispatch close event to parent component
   dispatchEvent(new CustomEvent("audio-player-close", {
     bubbles: true,
@@ -117,7 +116,7 @@ const loadAudioFile = async (fileId, store, httpClient) => {
   try {
     // Get file URL from httpClient (following fileImage pattern)
     const { url } = await httpClient.creator.getFileContent({ fileId, projectId: 'someprojectId' });
-    
+
     // Fetch audio data
     const response = await fetch(url);
     if (!response.ok) {
@@ -125,11 +124,11 @@ const loadAudioFile = async (fileId, store, httpClient) => {
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    
+
     // Decode audio data
     const state = store.getState();
     const audioBuffer = await state.audioContext.decodeAudioData(arrayBuffer);
-    
+
     store.setAudioBuffer(audioBuffer);
     store.setDuration(audioBuffer.duration);
     store.setLoading(false);
@@ -143,7 +142,7 @@ const loadAudioFile = async (fileId, store, httpClient) => {
 
 const handlePlay = async (store, audioManager) => {
   const state = store.getState();
-  
+
   if (!state.audioBuffer || !state.audioContext) {
     console.warn('Audio not loaded yet');
     return;
@@ -159,7 +158,7 @@ const handlePlay = async (store, audioManager) => {
 
   const startTime = state.pauseTime || 0;
   startPlaybackFromTime(store, startTime);
-  
+
   store.setPlaying(true);
   store.setStartTime(state.audioContext.currentTime - startTime);
 
@@ -169,38 +168,38 @@ const handlePlay = async (store, audioManager) => {
 
 const handlePause = (store, audioManager) => {
   const state = store.getState();
-  
+
   stopCurrentSource(store);
   store.setPlaying(false);
   store.setPauseTime(state.currentTime);
-  
+
   // Stop time updates
   audioManager.stopTimeUpdates(state.componentId);
 };
 
 const startPlaybackFromTime = (store, startTime) => {
   const state = store.getState();
-  
+
   // Create new source node
   const sourceNode = state.audioContext.createBufferSource();
   sourceNode.buffer = state.audioBuffer;
   sourceNode.connect(state.gainNode);
-  
+
   // Handle playback end - but let AudioManager handle cleanup to avoid conflicts
   sourceNode.onended = () => {
     // Don't interfere with manual operations, let AudioManager handle auto-stop
     console.debug('Audio source ended naturally');
   };
-  
+
   store.setSourceNode(sourceNode);
-  
+
   // Start playback from specified time
   sourceNode.start(0, startTime);
 };
 
 const stopCurrentSource = (store) => {
   const state = store.getState();
-  
+
   if (state.sourceNode) {
     try {
       // Disconnect from gain node first to prevent audio artifacts
@@ -216,20 +215,20 @@ const stopCurrentSource = (store) => {
 
 const cleanup = (store, audioManager) => {
   const state = store.getState();
-  
+
   // Stop time updates and unregister from audio manager
   if (state.componentId) {
     audioManager.unregisterPlayer(state.componentId);
   }
-  
+
   // Stop current source
   stopCurrentSource(store);
-  
+
   // Close audio context
   if (state.audioContext && state.audioContext.state !== 'closed') {
     state.audioContext.close();
   }
-  
+
   // Reset state
   store.setPlaying(false);
   store.setAudioContext(null);
