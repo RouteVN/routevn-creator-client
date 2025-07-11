@@ -116,13 +116,31 @@ export const hidePopover = (state) => {
   };
 }
 
-export const selectRenderState = ({ state, props }) => {
+export const setLineTextContent = (state, lineId, text) => {
+  const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
+  if (!currentSection) return;
+
+  const line = currentSection.lines.find(line => line.id === lineId);
+  if (!line) return;
+
+  if (!line.presentation) {
+    line.presentation = {};
+  }
+
+  if (!line.presentation.dialogue) {
+    line.presentation.dialogue = {};
+  }
+
+  line.presentation.dialogue.content = text;
+}
+
+export const selectRenderState = ({ state }) => {
   const currentSection = state.scene.sections.find(section => section.id === state.selectedSectionId);
 
   const linesUpToSelectedLine = currentSection?.lines?.slice(0, currentSection?.lines?.findIndex(line => line.id === state.selectedLineId) + 1);
   const presentationState = constructPresentationState(linesUpToSelectedLine.map(line => line.presentation));
   const renderState = constructRenderState({
-    presentationState: presentationState,
+    presentationState,
     screen: {
       width: 1920,
       height: 1080,

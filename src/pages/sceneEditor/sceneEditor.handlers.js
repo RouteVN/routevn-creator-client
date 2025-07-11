@@ -148,7 +148,7 @@ export const handleCommandLineSubmit = (e, deps) => {
 };
 
 export const handleEditorDataChanaged = (e, deps) => {
-  const { repository, store } = deps;
+  const { repository, store, render } = deps;
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -166,26 +166,10 @@ export const handleEditorDataChanaged = (e, deps) => {
       },
     },
   });
-  // actionType: "treePush",
-  // target: `scenes.items.${sceneId}.sections`,
-  // value: {
-  //   parent: "_root",
-  //   position: "last",
-  //   item: {
-  //     id: newSectionId,
-  //     name: "Section New",
-  //     lines: {
-  //       items: {
-  //         presentation: {},
-  //       },
-  //       tree: [
-  //         {
-  //           id: newLineId,
-  //         },
-  //       ],
-  //     },
-  //   },
-  // },
+
+  store.setLineTextContent(lineId, e.detail.content);
+  render();
+
 };
 
 export const handleAddPresentationButtonClick = (e, deps) => {
