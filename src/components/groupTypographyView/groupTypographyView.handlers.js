@@ -6,6 +6,19 @@ export const handleSearchInput = (e, deps) => {
   render();
 };
 
+export const handleOnMount = async (deps) => {
+  console.log('groupTypographyView handleOnMount called');
+  const { props = {}, render, httpClient, fontManager, loadFontFile, store, repository } = deps;
+  const { flatGroups = [] } = props;
+
+  const { colors, fonts } = repository.getState()
+
+  store.setColorsData(colors);
+  store.setFontsData(fonts);
+
+  render();
+};
+
 export const handleGroupClick = (e, deps) => {
   const { store, render } = deps;
   const groupId = e.currentTarget.id.replace("group-", "");
@@ -84,7 +97,8 @@ export const handleFormActionClick = (e, deps) => {
         fontSize: formData.fontSize,
         fontColor: formData.fontColor,
         fontStyle: formData.fontStyle,
-        fontWeight: formData.fontWeight
+        fontWeight: formData.fontWeight,
+        previewText: formData.previewText
       },
       bubbles: true,
       composed: true

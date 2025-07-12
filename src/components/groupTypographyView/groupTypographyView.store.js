@@ -1,13 +1,24 @@
+import { toFlatItems } from "../../deps/repository";
+
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: '',
   isDialogOpen: false,
   targetGroupId: null,
+  colorsData: {
+    items: {},
+    tree: []
+  },
+  fontsData: {
+    items: {},
+    tree: []
+  },
   
   defaultValues: {
     name: '',
     fontSize: '16',
     fontWeight: 'normal',
+    previewText: '',
   }
 });
 
@@ -32,11 +43,32 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
-import { toFlatItems } from "../../deps/repository";
+export const setColorsData = (state, colorsData) => {
+  state.colorsData = colorsData;
+}
+
+export const setFontsData = (state, fontsData) => {
+  state.fontsData = fontsData;
+}
 
 export const toViewData = ({ state, props }, payload) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
+  const getColorHex = (colorId) => {
+    if (!colorId) return '#000000';
+    const color = toFlatItems(state.colorsData)
+      .filter(item => item.type === 'color')
+      .find(color => color.id === colorId);
+    return color ? color.hex : '#000000';
+  };
+
+  const getFontName = (fontId) => {
+    if (!fontId) return null;
+    const font = toFlatItems(state.fontsData)
+      .filter(item => item.type === 'font')
+      .find(font => font.id === fontId);
+    return font ? font.fontFamily : fontId;
+  };
   
   // Generate color options from props
   const colorOptions = props.colorsData ? toFlatItems(props.colorsData)
@@ -99,6 +131,13 @@ export const toViewData = ({ state, props }, payload) => {
       label: 'Font Weight',
       description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
       required: true,
+    }, {
+      id: 'previewText',
+      fieldName: 'previewText',
+      inputType: 'inputText',
+      label: 'Preview Text',
+      description: 'Text to display in the typography preview',
+      required: false,
     }],
     actions: {
       layout: '',
@@ -140,6 +179,9 @@ export const toViewData = ({ state, props }, payload) => {
         isCollapsed: state.collapsedIds.includes(group.id),
         children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => ({
           ...item,
+          fontStyle: getFontName(item.fontId),
+          color: getColorHex(item.colorId),
+          previewText: item.previewText || 'The quick brown fox jumps over the lazy dog',
           selectedStyle: item.id === selectedItemId ? 
             "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
         })),

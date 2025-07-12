@@ -194,7 +194,8 @@ export const handleTypographyFieldClick = (e, deps) => {
         fontSize: field.fontSize || '16',
         fontColor: field.colorId || '',
         fontStyle: field.fontId || '',
-        fontWeight: field.fontWeight || 'normal'
+        fontWeight: field.fontWeight || 'normal',
+        previewText: field.previewText || ''
       },
       colorOptions: field.colorOptions || [],
       fontOptions: field.fontOptions || []
@@ -231,7 +232,8 @@ export const handleTypographyFormActionClick = (e, deps) => {
       fontSize: values.fontSize,
       fontColor: values.fontColor,
       fontStyle: values.fontStyle,
-      fontWeight: values.fontWeight
+      fontWeight: values.fontWeight,
+      previewText: values.previewText
     },
     bubbles: true,
     composed: true

@@ -1,0 +1,85 @@
+elementName: rvn-font-preview
+
+refs:
+  main:
+    eventListeners:
+      mount:
+        handler: handleOnMount
+
+viewDataSchema:
+  type: object
+  properties:
+    previewText:
+      type: string
+    fontFamily:
+      type: string
+    fontSize:
+      type: number
+    fontWeight:
+      type: [string, number]
+    color:
+      type: string
+    width:
+      type: number
+    height:
+      type: number
+    backgroundColor:
+      type: string
+    textAlign:
+      type: string
+    showLabel:
+      type: boolean
+    labelText:
+      type: string
+
+propsSchema:
+  type: object
+  properties:
+    previewText:
+      type: string
+      description: Text to display in preview
+    fontFamily:
+      type: string
+      description: Font family to use
+    fontSize:
+      type: number
+      description: Font size in pixels
+      default: 100
+    fontWeight:
+      type: [string, number]
+      description: Font weight
+      default: normal
+    color:
+      type: string
+      description: Text color
+      default: currentColor
+    width:
+      type: number
+      description: Preview container width
+      default: 200
+    height:
+      type: number
+      description: Preview container height
+      default: 150
+    backgroundColor:
+      type: string
+      description: Background color
+      default: transparent
+    textAlign:
+      type: string
+      description: Text alignment
+      default: center
+    showLabel:
+      type: boolean
+      description: Whether to show font family label
+      default: true
+    labelText:
+      type: string
+      description: Custom label text (defaults to fontFamily)
+
+template:
+  - rtgl-view#main d=v av=c ah=c:
+    - 'rtgl-view av=c ah=c bgc=bg bc=bo bw=xs br=md p=xs style="width: ${width}px; height: ${height}px; background-color: ${backgroundColor};"':
+      - 'rtgl-text style="font-family: ${fontFamily}, sans-serif; font-size: ${fontSize}px; font-weight: ${fontWeight}; color: ${color}; text-align: ${textAlign};"': ${previewText}
+    - $if showLabel:
+        - rtgl-text s=xs c=mu-fg mt=xs ta=c: ${labelText || fontFamily}

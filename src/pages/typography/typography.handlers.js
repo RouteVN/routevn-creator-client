@@ -114,7 +114,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
 export const handleTypographyCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name, fontSize, fontColor, fontStyle, fontWeight } = e.detail;
+  const { groupId, name, fontSize, fontColor, fontStyle, fontWeight, previewText } = e.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -130,6 +130,7 @@ export const handleTypographyCreated = (e, deps) => {
         colorId: fontColor, // Store color ID
         fontId: fontStyle,  // Store font ID
         fontWeight: fontWeight,
+        previewText: previewText || 'The quick brown fox jumps over the lazy dog',
       },
     },
   });
@@ -180,17 +181,39 @@ export const handleReplaceItem = (e, deps) => {
     return;
   }
   
-  const { fontSize, fontColor, fontStyle, fontWeight } = e.detail;
+  const { fontSize, fontColor, fontStyle, fontWeight, previewText } = e.detail;
   
-  // Validate required fields (dropdowns ensure valid color and font selections)
-  if (!fontSize || !fontColor || !fontStyle || !fontWeight) {
-    alert('Please fill in all required fields');
-    return;
+  // Create update object with only the fields that are provided
+  // This preserves existing values for fields that aren't being updated
+  const updateItem = {};
+  
+  if (fontSize !== undefined && fontSize !== null && fontSize !== '') {
+    // Validate font size is a number
+    if (isNaN(fontSize) || parseInt(fontSize) <= 0) {
+      alert('Please enter a valid font size (positive number)');
+      return;
+    }
+    updateItem.fontSize = fontSize;
   }
   
-  // Validate font size is a number
-  if (isNaN(fontSize) || parseInt(fontSize) <= 0) {
-    alert('Please enter a valid font size (positive number)');
+  if (fontColor !== undefined && fontColor !== null && fontColor !== '') {
+    updateItem.colorId = fontColor; // Store color ID
+  }
+  
+  if (fontStyle !== undefined && fontStyle !== null && fontStyle !== '') {
+    updateItem.fontId = fontStyle; // Store font ID
+  }
+  
+  if (fontWeight !== undefined && fontWeight !== null && fontWeight !== '') {
+    updateItem.fontWeight = fontWeight;
+  }
+  
+  if (previewText !== undefined && previewText !== null) {
+    updateItem.previewText = previewText || 'The quick brown fox jumps over the lazy dog';
+  }
+  
+  // Only update if there are changes to make
+  if (Object.keys(updateItem).length === 0) {
     return;
   }
   
@@ -201,12 +224,7 @@ export const handleReplaceItem = (e, deps) => {
     value: {
       id: selectedItem.id,
       replace: false,
-      item: {
-        fontSize: fontSize,
-        colorId: fontColor, // Store color ID
-        fontId: fontStyle,  // Store font ID
-        fontWeight: fontWeight,
-      },
+      item: updateItem,
     },
   });
   
