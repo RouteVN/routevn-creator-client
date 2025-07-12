@@ -38,6 +38,48 @@ export const handleFileAction = (e, deps) => {
         },
       },
     });
+  } else if (item.value === "add-container") {
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: "_root",
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "container",
+          name: "Container",
+        },
+      },
+    });
+  } else if (item.value === "add-sprite") {
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: "_root",
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "sprite",
+          name: "Sprite",
+        },
+      },
+    });
+  } else if (item.value === "add-text") {
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: "_root",
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "text",
+          name: "Text",
+        },
+      },
+    });
   } else if (item.value === "rename-item-confirmed") {
     // Handle rename confirmation from popover form
     if (itemId && detail.newName) {

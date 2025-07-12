@@ -40,6 +40,12 @@ export const toViewData = ({ state, props }, payload) => {
 
   console.log('detailFields', detailFields);
 
+  const emptyContextMenuItems = [
+    { text: 'Add Container', value: 'add-container' },
+    { text: 'Add Sprite', value: 'add-sprite' },
+    { text: 'Add Text', value: 'add-text' }
+  ];
+
   return {
     flatItems,
     flatGroups,
@@ -50,5 +56,6 @@ export const toViewData = ({ state, props }, payload) => {
     detailEmptyMessage,
     resourceCategory: 'userInterface',
     selectedResourceId: 'component-editor',
+    emptyContextMenuItems,
   };
 }
