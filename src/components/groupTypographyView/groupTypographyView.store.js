@@ -18,6 +18,7 @@ export const INITIAL_STATE = Object.freeze({
     name: '',
     fontSize: '16',
     fontWeight: 'normal',
+    previewText: '',
   }
 });
 
@@ -130,6 +131,13 @@ export const toViewData = ({ state, props }, payload) => {
       label: 'Font Weight',
       description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
       required: true,
+    }, {
+      id: 'previewText',
+      fieldName: 'previewText',
+      inputType: 'inputText',
+      label: 'Preview Text',
+      description: 'Text to display in the typography preview',
+      required: false,
     }],
     actions: {
       layout: '',

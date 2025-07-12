@@ -76,13 +76,6 @@ export const INITIAL_STATE = Object.freeze({
       title: 'Edit Typography',
       description: 'Edit the typography style',
       fields: [{
-        id: 'fontSize',
-        fieldName: 'fontSize',
-        inputType: 'inputText',
-        label: 'Font Size',
-        description: 'Enter the font size (e.g., 16, 18, 24)',
-        required: true,
-      }, {
         id: 'fontColor',
         fieldName: 'fontColor',
         inputType: 'select',
@@ -99,6 +92,13 @@ export const INITIAL_STATE = Object.freeze({
         description: 'Select a font style',
         placeholder: 'Choose a font',
         options: [], // Will be populated dynamically
+        required: true,
+      }, {
+        id: 'fontSize',
+        fieldName: 'fontSize',
+        inputType: 'inputText',
+        label: 'Font Size',
+        description: 'Enter the font size (e.g., 16, 18, 24)',
         required: true,
       }, {
         id: 'fontWeight',
