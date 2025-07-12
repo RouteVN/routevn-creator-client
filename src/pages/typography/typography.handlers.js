@@ -1,11 +1,12 @@
 
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
-  const { typography } = repository.getState();
+  const { typography, colors, fonts } = repository.getState();
   store.setItems(typography);
+  store.setColorsData(colors);
+  store.setFontsData(fonts);
 
   return () => {}
 };
@@ -13,8 +14,10 @@ export const handleOnMount = (deps) => {
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
-  const { typography } = repository.getState();
+  const { typography, colors, fonts } = repository.getState();
   store.setItems(typography);
+  store.setColorsData(colors);
+  store.setFontsData(fonts);
   render();
 };
 
@@ -124,8 +127,8 @@ export const handleTypographyCreated = (e, deps) => {
         type: "typography",
         name: name,
         fontSize: fontSize,
-        fontColor: fontColor,
-        fontStyle: fontStyle,
+        colorId: fontColor, // Store color ID
+        fontId: fontStyle,  // Store font ID
         fontWeight: fontWeight,
       },
     },
@@ -136,38 +139,39 @@ export const handleTypographyCreated = (e, deps) => {
   render();
 };
 
-export const handleDetailFormActionClick = (e, deps) => {
-  const { store, render, repository } = deps;
-  
-  // Handle rename form submission from detail panel
-  const actionId = e.detail.actionId;
-  
-  if (actionId === 'submit') {
-    const formData = e.detail.formValues;
-    const selectedItem = store.selectSelectedItem();
-    
-    if (selectedItem && formData.name) {
-      // Update the typography item name
-      repository.addAction({
-        actionType: "treeUpdate",
-        target: "typography",
-        value: {
-          id: selectedItem.id,
-          replace: false,
-          item: {
-            name: formData.name,
-          },
-        },
-      });
 
-      const { typography } = repository.getState();
-      store.setItems(typography);
-      render();
+export const handleFileAction = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { value, newName } = e.detail;
+  
+  if (value === 'rename-item-confirmed') {
+    // Get the currently selected item
+    const selectedItem = store.selectSelectedItem();
+    if (!selectedItem) {
+      return;
     }
+    
+    // Update the typography item name
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "typography",
+      value: {
+        id: selectedItem.id,
+        replace: false,
+        item: {
+          name: newName,
+        },
+      },
+    });
+    
+    // Update the store with the new repository state
+    const { typography } = repository.getState();
+    store.setItems(typography);
+    render();
   }
 };
 
-export const handleTypographyUpdated = (e, deps) => {
+export const handleReplaceItem = (e, deps) => {
   const { store, render, repository } = deps;
   
   // Get the currently selected item
@@ -176,34 +180,11 @@ export const handleTypographyUpdated = (e, deps) => {
     return;
   }
   
-  const { name, fontSize, fontColor, fontStyle, fontWeight } = e.detail;
+  const { fontSize, fontColor, fontStyle, fontWeight } = e.detail;
   
-  // Validate required fields
-  if (!name || !fontSize || !fontColor || !fontStyle || !fontWeight) {
+  // Validate required fields (dropdowns ensure valid color and font selections)
+  if (!fontSize || !fontColor || !fontStyle || !fontWeight) {
     alert('Please fill in all required fields');
-    return;
-  }
-  
-  // Get repository data for validation
-  const { fonts, colors } = repository.getState();
-  
-  // Check if color exists
-  const colorExists = toFlatItems(colors)
-    .filter(item => item.type === 'color')
-    .some(color => color.name === fontColor);
-  
-  if (!colorExists) {
-    alert(`Color "${fontColor}" not found. Please use an existing color name.`);
-    return;
-  }
-  
-  // Check if font exists  
-  const fontExists = toFlatItems(fonts)
-    .filter(item => item.type === 'font')
-    .some(font => font.fontFamily === fontStyle);
-  
-  if (!fontExists) {
-    alert(`Font "${fontStyle}" not found. Please use an existing font family name.`);
     return;
   }
   
@@ -221,10 +202,9 @@ export const handleTypographyUpdated = (e, deps) => {
       id: selectedItem.id,
       replace: false,
       item: {
-        name: name,
         fontSize: fontSize,
-        fontColor: fontColor,
-        fontStyle: fontStyle,
+        colorId: fontColor, // Store color ID
+        fontId: fontStyle,  // Store font ID
         fontWeight: fontWeight,
       },
     },

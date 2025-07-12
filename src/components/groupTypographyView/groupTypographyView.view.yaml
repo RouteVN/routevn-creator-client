@@ -15,6 +15,12 @@ propsSchema:
     selectedItemId:
       type: string
       description: ID of currently selected item
+    colorsData:
+      type: object
+      description: Colors repository data
+    fontsData:
+      type: object
+      description: Fonts repository data
 
 refs:
   search-input:

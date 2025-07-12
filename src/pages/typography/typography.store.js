@@ -3,11 +3,21 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
   typographyData: { tree: [], items: {} },
+  colorsData: { tree: [], items: {} },
+  fontsData: { tree: [], items: {} },
   selectedItemId: null,
 });
 
 export const setItems = (state, typographyData) => {
   state.typographyData = typographyData
+}
+
+export const setColorsData = (state, colorsData) => {
+  state.colorsData = colorsData
+}
+
+export const setFontsData = (state, fontsData) => {
+  state.fontsData = fontsData
 }
 
 export const setSelectedItemId = (state, itemId) => {
@@ -28,16 +38,58 @@ export const toViewData = ({ state, props }, payload) => {
   const selectedItem = state.selectedItemId ? 
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
+  // Helper functions to resolve IDs to names and values
+  const getColorName = (colorId) => {
+    if (!colorId) return null;
+    const color = toFlatItems(state.colorsData)
+      .filter(item => item.type === 'color')
+      .find(color => color.id === colorId);
+    return color ? color.name : colorId;
+  };
+  
+  const getColorHex = (colorId) => {
+    if (!colorId) return '#000000';
+    const color = toFlatItems(state.colorsData)
+      .filter(item => item.type === 'color')
+      .find(color => color.id === colorId);
+    return color ? color.hex : '#000000';
+  };
+  
+  const getFontName = (fontId) => {
+    if (!fontId) return null;
+    const font = toFlatItems(state.fontsData)
+      .filter(item => item.type === 'font')
+      .find(font => font.id === fontId);
+    return font ? font.fontFamily : fontId;
+  };
+
   // Compute display values for selected item
   const selectedItemDetails = selectedItem ? {
     ...selectedItem,
     typeDisplay: selectedItem.type === 'typography' ? 'Typography' : 'Folder',
     displayFontSize: selectedItem.fontSize || null,
-    displayFontColor: selectedItem.fontColor || null,
-    displayFontStyle: selectedItem.fontStyle || null,
+    displayFontColor: getColorName(selectedItem.colorId),
+    displayFontStyle: getFontName(selectedItem.fontId),
     displayFontWeight: selectedItem.fontWeight || null,
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
   } : null;
+
+  // Generate color and font options for dropdowns
+  const colorOptions = toFlatItems(state.colorsData)
+    .filter(item => item.type === 'color')
+    .map(color => ({
+      id: color.id,
+      label: color.name,
+      value: color.id
+    }));
+    
+  const fontOptions = toFlatItems(state.fontsData)
+    .filter(item => item.type === 'font')
+    .map(font => ({
+      id: font.id,
+      label: font.fontFamily,
+      value: font.id
+    }));
 
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Typography Details' : null;
@@ -46,9 +98,13 @@ export const toViewData = ({ state, props }, payload) => {
       type: 'typography', 
       name: selectedItemDetails.name,
       fontSize: selectedItemDetails.displayFontSize || '16',
-      fontColor: selectedItemDetails.displayFontColor || '#000000',
-      fontStyle: selectedItemDetails.displayFontStyle || '',
+      fontColor: getColorHex(selectedItemDetails.colorId),
+      fontStyle: getFontName(selectedItemDetails.fontId),
       fontWeight: selectedItemDetails.displayFontWeight || 'normal',
+      colorId: selectedItemDetails.colorId || '',
+      fontId: selectedItemDetails.fontId || '',
+      colorOptions: colorOptions,
+      fontOptions: fontOptions,
       show: !!selectedItemDetails.displayFontSize 
     },
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
@@ -72,6 +128,8 @@ export const toViewData = ({ state, props }, payload) => {
     detailFields,
     detailEmptyMessage,
     repositoryTarget: 'typography',
+    colorsData: state.colorsData,
+    fontsData: state.fontsData,
   };
 }
 

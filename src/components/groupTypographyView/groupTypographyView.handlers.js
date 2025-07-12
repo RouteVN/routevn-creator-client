@@ -1,6 +1,3 @@
-
-import { toFlatItems } from "../../deps/repository";
-
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
   const searchQuery = e.detail.value || '';
@@ -67,32 +64,9 @@ export const handleFormActionClick = (e, deps) => {
     const storeState = store.getState ? store.getState() : store._state || store.state;
     const { targetGroupId } = storeState;
     
-    // Validate required fields
+    // Validate required fields (dropdowns ensure valid color and font selections)
     if (!formData.name || !formData.fontSize || !formData.fontColor || !formData.fontStyle || !formData.fontWeight) {
       alert('Please fill in all required fields');
-      return;
-    }
-    
-    // Get repository data for validation
-    const { fonts, colors } = repository.getState();
-    
-    // Check if color exists
-    const colorExists = toFlatItems(colors)
-      .filter(item => item.type === 'color')
-      .some(color => color.name === formData.fontColor);
-    
-    if (!colorExists) {
-      alert(`Color "${formData.fontColor}" not found. Please use an existing color name.`);
-      return;
-    }
-    
-    // Check if font exists
-    const fontExists = toFlatItems(fonts)
-      .filter(item => item.type === 'font')
-      .some(font => font.fontFamily === formData.fontStyle);
-    
-    if (!fontExists) {
-      alert(`Font "${formData.fontStyle}" not found. Please use an existing font family name.`);
       return;
     }
     

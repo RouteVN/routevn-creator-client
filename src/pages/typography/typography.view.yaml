@@ -19,17 +19,15 @@ refs:
         handler: handleTypographyCreated
   detail-panel:
     eventListeners:
-      title-click:
-        handler: handleTitleClick
-      action-click:
-        handler: handleDetailFormActionClick
-      typography-updated:
-        handler: handleTypographyUpdated
+      file-action:
+        handler: handleFileAction
+      replace-item:
+        handler: handleReplaceItem
 
 template: 
   - rtgl-view d=h w=f h=f: 
     - 'rtgl-view w=f h=f w=240 bwr=xs z=1':
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - rvn-group-typography-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
+    - rvn-group-typography-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId .colorsData=colorsData .fontsData=fontsData:
     - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

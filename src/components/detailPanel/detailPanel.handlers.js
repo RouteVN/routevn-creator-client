@@ -191,12 +191,13 @@ export const handleTypographyFieldClick = (e, deps) => {
     store.showTypographyDialog({
       fieldIndex,
       itemData: {
-        name: field.name || '',
         fontSize: field.fontSize || '16',
-        fontColor: field.fontColor || '#000000',
-        fontStyle: field.fontStyle || '',
+        fontColor: field.colorId || '',
+        fontStyle: field.fontId || '',
         fontWeight: field.fontWeight || 'normal'
-      }
+      },
+      colorOptions: field.colorOptions || [],
+      fontOptions: field.fontOptions || []
     });
     render();
   }
@@ -227,7 +228,6 @@ export const handleTypographyFormActionClick = (e, deps) => {
   dispatchEvent(new CustomEvent("typography-updated", {
     detail: {
       fieldIndex,
-      name: values.name,
       fontSize: values.fontSize,
       fontColor: values.fontColor,
       fontStyle: values.fontStyle,

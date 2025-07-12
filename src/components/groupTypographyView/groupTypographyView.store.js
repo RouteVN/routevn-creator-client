@@ -8,55 +8,6 @@ export const INITIAL_STATE = Object.freeze({
     name: '',
     fontSize: '16',
     fontWeight: 'normal',
-  },
-
-  form: {
-    title: 'Add Typography',
-    description: 'Create a new typography style',
-    fields: [{
-      id: 'name',
-      fieldName: 'name',
-      inputType: 'inputText',
-      label: 'Name',
-      description: 'Enter the typography style name',
-      required: true,
-    }, {
-      id: 'fontColor',
-      fieldName: 'fontColor',
-      inputType: 'inputText',
-      label: 'Color',
-      description: 'Enter the font color name',
-      required: true,
-    }, {
-      id: 'fontStyle',
-      fieldName: 'fontStyle',
-      inputType: 'inputText',
-      label: 'Font Style',
-      description: 'Enter the font style name',
-      required: true,
-    }, {
-      id: 'fontSize',
-      fieldName: 'fontSize',
-      inputType: 'inputText',
-      label: 'Font Size',
-      description: 'Enter the font size (e.g., 16, 18, 24)',
-      required: true,
-    }, {
-      id: 'fontWeight',
-      fieldName: 'fontWeight',
-      inputType: 'inputText',
-      label: 'Font Weight',
-      description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
-      required: true,
-    }],
-    actions: {
-      layout: '',
-      buttons: [{
-        id: 'submit',
-        variant: 'pr',
-        content: 'Add Typography',
-      }],
-    }
   }
 });
 
@@ -81,9 +32,83 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
+import { toFlatItems } from "../../deps/repository";
+
 export const toViewData = ({ state, props }, payload) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
+  
+  // Generate color options from props
+  const colorOptions = props.colorsData ? toFlatItems(props.colorsData)
+    .filter(item => item.type === 'color')
+    .map(color => ({
+      id: color.id,
+      label: color.name,
+      value: color.id
+    })) : [];
+    
+  // Generate font options from props
+  const fontOptions = props.fontsData ? toFlatItems(props.fontsData)
+    .filter(item => item.type === 'font')
+    .map(font => ({
+      id: font.id,
+      label: font.fontFamily,
+      value: font.id
+    })) : [];
+  
+  // Generate dynamic form with dropdown options
+  const form = {
+    title: 'Add Typography',
+    description: 'Create a new typography style',
+    fields: [{
+      id: 'name',
+      fieldName: 'name',
+      inputType: 'inputText',
+      label: 'Name',
+      description: 'Enter the typography style name',
+      required: true,
+    }, {
+      id: 'fontColor',
+      fieldName: 'fontColor',
+      inputType: 'select',
+      label: 'Color',
+      description: 'Select a font color',
+      placeholder: 'Choose a color',
+      options: colorOptions,
+      required: true,
+    }, {
+      id: 'fontStyle',
+      fieldName: 'fontStyle',
+      inputType: 'select',
+      label: 'Font Style',
+      description: 'Select a font style',
+      placeholder: 'Choose a font',
+      options: fontOptions,
+      required: true,
+    }, {
+      id: 'fontSize',
+      fieldName: 'fontSize',
+      inputType: 'inputText',
+      label: 'Font Size',
+      description: 'Enter the font size (e.g., 16, 18, 24)',
+      required: true,
+    }, {
+      id: 'fontWeight',
+      fieldName: 'fontWeight',
+      inputType: 'inputText',
+      label: 'Font Weight',
+      description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
+      required: true,
+    }],
+    actions: {
+      layout: '',
+      buttons: [{
+        id: 'submit',
+        variant: 'pr',
+        content: 'Add Typography',
+      }],
+    }
+  };
   
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
@@ -131,6 +156,6 @@ export const toViewData = ({ state, props }, payload) => {
     isDialogOpen: state.isDialogOpen,
     searchQuery: state.searchQuery,
     defaultValues: state.defaultValues,
-    form: state.form
+    form: form
   };
 };
