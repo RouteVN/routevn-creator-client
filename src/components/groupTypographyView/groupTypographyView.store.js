@@ -1,56 +1,24 @@
+import { toFlatItems } from "../../deps/repository";
+
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: '',
   isDialogOpen: false,
   targetGroupId: null,
+  colorsData: {
+    items: {},
+    tree: []
+  },
+  fontsData: {
+    items: {},
+    tree: []
+  },
   
   defaultValues: {
     name: '',
     fontSize: '16',
-    fontColor: '#000000',
     fontWeight: 'normal',
-  },
-
-  form: {
-    title: 'Add Typography',
-    description: 'Create a new typography style',
-    fields: [{
-      id: 'name',
-      fieldName: 'name',
-      inputType: 'inputText',
-      label: 'Name',
-      description: 'Enter the typography style name',
-      required: true,
-    }, {
-      id: 'fontSize',
-      fieldName: 'fontSize',
-      inputType: 'inputText',
-      label: 'Font Size',
-      description: 'Enter the font size (e.g., 16, 18, 24)',
-      required: true,
-    }, {
-      id: 'fontColor',
-      fieldName: 'fontColor',
-      inputType: 'inputText',
-      label: 'Font Color',
-      description: 'Enter the font color (e.g., #000000, #ff0000)',
-      required: true,
-    }, {
-      id: 'fontWeight',
-      fieldName: 'fontWeight',
-      inputType: 'inputText',
-      label: 'Font Weight',
-      description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
-      required: true,
-    }],
-    actions: {
-      layout: '',
-      buttons: [{
-        id: 'submit',
-        variant: 'pr',
-        content: 'Add Typography',
-      }],
-    }
+    previewText: '',
   }
 });
 
@@ -75,9 +43,111 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
-export const toViewData = ({ state, props }) => {
+export const setColorsData = (state, colorsData) => {
+  state.colorsData = colorsData;
+}
+
+export const setFontsData = (state, fontsData) => {
+  state.fontsData = fontsData;
+}
+
+export const toViewData = ({ state, props }, payload) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
+  const getColorHex = (colorId) => {
+    if (!colorId) return '#000000';
+    const color = toFlatItems(state.colorsData)
+      .filter(item => item.type === 'color')
+      .find(color => color.id === colorId);
+    return color ? color.hex : '#000000';
+  };
+
+  const getFontName = (fontId) => {
+    if (!fontId) return null;
+    const font = toFlatItems(state.fontsData)
+      .filter(item => item.type === 'font')
+      .find(font => font.id === fontId);
+    return font ? font.fontFamily : fontId;
+  };
+  
+  // Generate color options from props
+  const colorOptions = props.colorsData ? toFlatItems(props.colorsData)
+    .filter(item => item.type === 'color')
+    .map(color => ({
+      id: color.id,
+      label: color.name,
+      value: color.id
+    })) : [];
+    
+  // Generate font options from props
+  const fontOptions = props.fontsData ? toFlatItems(props.fontsData)
+    .filter(item => item.type === 'font')
+    .map(font => ({
+      id: font.id,
+      label: font.fontFamily,
+      value: font.id
+    })) : [];
+  
+  // Generate dynamic form with dropdown options
+  const form = {
+    title: 'Add Typography',
+    description: 'Create a new typography style',
+    fields: [{
+      id: 'name',
+      fieldName: 'name',
+      inputType: 'inputText',
+      label: 'Name',
+      description: 'Enter the typography style name',
+      required: true,
+    }, {
+      id: 'fontColor',
+      fieldName: 'fontColor',
+      inputType: 'select',
+      label: 'Color',
+      description: 'Select a font color',
+      placeholder: 'Choose a color',
+      options: colorOptions,
+      required: true,
+    }, {
+      id: 'fontStyle',
+      fieldName: 'fontStyle',
+      inputType: 'select',
+      label: 'Font Style',
+      description: 'Select a font style',
+      placeholder: 'Choose a font',
+      options: fontOptions,
+      required: true,
+    }, {
+      id: 'fontSize',
+      fieldName: 'fontSize',
+      inputType: 'inputText',
+      label: 'Font Size',
+      description: 'Enter the font size (e.g., 16, 18, 24)',
+      required: true,
+    }, {
+      id: 'fontWeight',
+      fieldName: 'fontWeight',
+      inputType: 'inputText',
+      label: 'Font Weight',
+      description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
+      required: true,
+    }, {
+      id: 'previewText',
+      fieldName: 'previewText',
+      inputType: 'inputText',
+      label: 'Preview Text',
+      description: 'Text to display in the typography preview',
+      required: false,
+    }],
+    actions: {
+      layout: '',
+      buttons: [{
+        id: 'submit',
+        variant: 'pr',
+        content: 'Add Typography',
+      }],
+    }
+  };
   
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
@@ -109,6 +179,9 @@ export const toViewData = ({ state, props }) => {
         isCollapsed: state.collapsedIds.includes(group.id),
         children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => ({
           ...item,
+          fontStyle: getFontName(item.fontId),
+          color: getColorHex(item.colorId),
+          previewText: item.previewText || 'The quick brown fox jumps over the lazy dog',
           selectedStyle: item.id === selectedItemId ? 
             "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
         })),
@@ -123,8 +196,8 @@ export const toViewData = ({ state, props }) => {
     selectedItemId: props.selectedItemId,
     uploadText: "Upload Typography Files",
     isDialogOpen: state.isDialogOpen,
+    searchQuery: state.searchQuery,
     defaultValues: state.defaultValues,
-    form: state.form,
-    searchQuery: state.searchQuery
+    form: form
   };
 };

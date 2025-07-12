@@ -7,7 +7,8 @@ import Subject from './deps/subject';
 import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
 import Router from './deps/router';
 import AudioManager from './deps/audioManager';
-import { createImageFileUploader, createAudioFileUploader, createVideoFileUploader, downloadWaveformData } from './deps/createFileUploader';
+import { createImageFileUploader, createAudioFileUploader, createVideoFileUploader, createFontFileUploader, downloadWaveformData } from './deps/createFileUploader';
+import { createFontManager, loadFontFile } from './deps/fontManager';
 import { create2dRenderer } from './deps/2drenderer';
 
 const httpClient = createRouteVnHttpClient({
@@ -96,6 +97,12 @@ const uploadAudioFiles = createAudioFileUploader({
 const uploadVideoFiles = createVideoFileUploader({
   httpClient,
 });
+const fontManager = createFontManager();
+const uploadFontFiles = createFontFileUploader({
+  httpClient,
+  fontManager,
+});
+const loadFontFileFunc = loadFontFile({ httpClient, fontManager });
 
 const componentDependencies = {
   httpClient,
@@ -107,6 +114,9 @@ const componentDependencies = {
   uploadImageFiles,
   uploadAudioFiles,
   uploadVideoFiles,
+  uploadFontFiles,
+  fontManager,
+  loadFontFile: loadFontFileFunc,
   downloadWaveformData,
   drenderer
 }
@@ -121,6 +131,9 @@ const pageDependencies = {
   uploadImageFiles,
   uploadAudioFiles,
   uploadVideoFiles,
+  uploadFontFiles,
+  fontManager,
+  loadFontFile: loadFontFileFunc,
   downloadWaveformData,
   drenderer
 }

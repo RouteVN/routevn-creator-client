@@ -1,4 +1,3 @@
-
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
@@ -47,6 +46,15 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Details' : null;
   const detailFields = selectedItemDetails ? [
+    // Add font preview first if it's a font file
+    ...(selectedItemDetails.type === 'font' ? [{
+      type: 'font',
+      fontFamily: selectedItemDetails.fontFamily || 'sans-serif',
+      previewText: 'Aa',
+      fileId: selectedItemDetails.fileId,
+      editable: true,
+      accept: '.ttf,.otf,.woff,.woff2'
+    }] : []),
     { type: 'text', label: 'Name', value: selectedItemDetails.name },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
@@ -68,4 +76,3 @@ export const toViewData = ({ state, props }, payload) => {
     repositoryTarget: 'fonts',
   };
 }
-

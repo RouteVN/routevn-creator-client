@@ -4,6 +4,35 @@ export const INITIAL_STATE = Object.freeze({
     isOpen: false,
     position: { x: 0, y: 0 },
   },
+  // Text dialog state
+  textDialog: {
+    isOpen: false,
+    fieldIndex: -1,
+    fieldLabel: '',
+    defaultValues: {
+      text: '',
+    },
+    form: {
+      title: 'Edit Text',
+      description: 'Edit the text value',
+      fields: [{
+        id: 'text',
+        fieldName: 'text',
+        inputType: 'inputTextArea',
+        label: 'Text',
+        description: 'Enter the text',
+        required: true,
+      }],
+      actions: {
+        layout: '',
+        buttons: [{
+          id: 'submit',
+          variant: 'pr',
+          content: 'Update Text',
+        }],
+      }
+    }
+  },
   // Color dialog state
   colorDialog: {
     isOpen: false,
@@ -28,6 +57,70 @@ export const INITIAL_STATE = Object.freeze({
           id: 'submit',
           variant: 'pr',
           content: 'Update Color',
+        }],
+      }
+    }
+  },
+  // Typography dialog state
+  typographyDialog: {
+    isOpen: false,
+    fieldIndex: -1,
+    defaultValues: {
+      fontSize: '16',
+      fontColor: '',
+      fontStyle: '',
+      fontWeight: 'normal',
+      previewText: '',
+    },
+    form: {
+      title: 'Edit Typography',
+      description: 'Edit the typography style',
+      fields: [{
+        id: 'fontColor',
+        fieldName: 'fontColor',
+        inputType: 'select',
+        label: 'Font Color',
+        description: 'Select a font color',
+        placeholder: 'Choose a color',
+        options: [], // Will be populated dynamically
+        required: true,
+      }, {
+        id: 'fontStyle',
+        fieldName: 'fontStyle',
+        inputType: 'select',
+        label: 'Font Style',
+        description: 'Select a font style',
+        placeholder: 'Choose a font',
+        options: [], // Will be populated dynamically
+        required: true,
+      }, {
+        id: 'fontSize',
+        fieldName: 'fontSize',
+        inputType: 'inputText',
+        label: 'Font Size',
+        description: 'Enter the font size (e.g., 16, 18, 24)',
+        required: true,
+      }, {
+        id: 'fontWeight',
+        fieldName: 'fontWeight',
+        inputType: 'inputText',
+        label: 'Font Weight',
+        description: 'Enter the font weight (e.g., normal, bold, 400, 700)',
+        required: true,
+      }, {
+        id: 'previewText',
+        fieldName: 'previewText',
+        inputType: 'inputText',
+        label: 'Preview Text',
+        description: 'Text to display in the typography preview',
+        required: false,
+      }],
+      actions: {
+        layout: '',
+        buttons: [{
+          id: 'submit',
+          variant: 'pr',
+          content: 'Update Typography',
         }],
       }
     }
@@ -65,6 +158,42 @@ export const hideColorDialog = (state) => {
   // Reset default values
   state.colorDialog.defaultValues = {
     hex: '#ff0000',
+  };
+}
+
+export const showTypographyDialog = (state, { fieldIndex, itemData, colorOptions, fontOptions }) => {
+  state.typographyDialog.isOpen = true;
+  state.typographyDialog.fieldIndex = fieldIndex;
+  
+  // Update default values with current item data
+  state.typographyDialog.defaultValues = {
+    fontSize: itemData.fontSize || '16',
+    fontColor: itemData.fontColor || '',
+    fontStyle: itemData.fontStyle || '',
+    fontWeight: itemData.fontWeight || 'normal',
+    previewText: itemData.previewText || '',
+  };
+  
+  // Update dropdown options dynamically
+  if (colorOptions) {
+    state.typographyDialog.form.fields.find(field => field.id === 'fontColor').options = colorOptions;
+  }
+  if (fontOptions) {
+    state.typographyDialog.form.fields.find(field => field.id === 'fontStyle').options = fontOptions;
+  }
+}
+
+export const hideTypographyDialog = (state) => {
+  state.typographyDialog.isOpen = false;
+  state.typographyDialog.fieldIndex = -1;
+  
+  // Reset default values
+  state.typographyDialog.defaultValues = {
+    fontSize: '16',
+    fontColor: '',
+    fontStyle: '',
+    fontWeight: 'normal',
+    previewText: '',
   };
 }
 
@@ -117,6 +246,11 @@ export const toViewData = ({ state, props }) => {
       isOpen: state.colorDialog.isOpen,
       defaultValues: state.colorDialog.defaultValues,
       form: state.colorDialog.form,
+    },
+    typographyDialog: {
+      isOpen: state.typographyDialog.isOpen,
+      defaultValues: state.typographyDialog.defaultValues,
+      form: state.typographyDialog.form,
     },
   };
 };

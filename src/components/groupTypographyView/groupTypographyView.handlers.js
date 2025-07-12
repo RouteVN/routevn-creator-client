@@ -6,6 +6,19 @@ export const handleSearchInput = (e, deps) => {
   render();
 };
 
+export const handleOnMount = async (deps) => {
+  console.log('groupTypographyView handleOnMount called');
+  const { props = {}, render, httpClient, fontManager, loadFontFile, store, repository } = deps;
+  const { flatGroups = [] } = props;
+
+  const { colors, fonts } = repository.getState()
+
+  store.setColorsData(colors);
+  store.setFontsData(fonts);
+
+  render();
+};
+
 export const handleGroupClick = (e, deps) => {
   const { store, render } = deps;
   const groupId = e.currentTarget.id.replace("group-", "");
@@ -31,6 +44,8 @@ export const handleAddTypographyClick = (e, deps) => {
   const { store, render } = deps;
   e.stopPropagation(); // Prevent group click
   
+  console.log('Add typography button clicked', e.currentTarget.id);
+  
   // Extract group ID from the clicked button
   const groupId = e.currentTarget.id.replace("add-typography-button-", "");
   store.setTargetGroupId(groupId);
@@ -49,18 +64,30 @@ export const handleCloseDialog = (e, deps) => {
 };
 
 export const handleFormActionClick = (e, deps) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store, render, dispatchEvent, repository } = deps;
   
   // Check which button was clicked
   const actionId = e.detail.actionId;
   
   if (actionId === 'submit') {
-    // Get form values from the event detail - it's in formValues
+    // Get form values from the event detail
     const formData = e.detail.formValues;
     
-    // Get the target group ID from store - access the internal state properly
+    // Get the store state
     const storeState = store.getState ? store.getState() : store._state || store.state;
-    const targetGroupId = storeState.targetGroupId;
+    const { targetGroupId } = storeState;
+    
+    // Validate required fields (dropdowns ensure valid color and font selections)
+    if (!formData.name || !formData.fontSize || !formData.fontColor || !formData.fontStyle || !formData.fontWeight) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    // Validate font size is a number
+    if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
+      alert('Please enter a valid font size (positive number)');
+      return;
+    }
     
     // Forward typography creation to parent
     dispatchEvent(new CustomEvent("typography-created", {
@@ -69,7 +96,9 @@ export const handleFormActionClick = (e, deps) => {
         name: formData.name,
         fontSize: formData.fontSize,
         fontColor: formData.fontColor,
-        fontWeight: formData.fontWeight
+        fontStyle: formData.fontStyle,
+        fontWeight: formData.fontWeight,
+        previewText: formData.previewText
       },
       bubbles: true,
       composed: true
@@ -79,24 +108,4 @@ export const handleFormActionClick = (e, deps) => {
     store.toggleDialog();
     render();
   }
-};
-
-
-export const handleDragDropFileSelected = async (e, deps) => {
-  const { dispatchEvent } = deps;
-  const { files } = e.detail;
-  const targetGroupId = e.currentTarget.id
-    .replace("drag-drop-bar-", "")
-    .replace("drag-drop-item-", "");
-  
-  // Forward file uploads to parent (parent will handle the actual upload logic)
-  dispatchEvent(new CustomEvent("files-uploaded", {
-    detail: { 
-      files, 
-      targetGroupId,
-      originalEvent: e
-    },
-    bubbles: true,
-    composed: true
-  }));
 };

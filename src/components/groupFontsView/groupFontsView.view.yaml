@@ -60,10 +60,11 @@ template:
                     - rtgl-view d=h fw=w g=md:
                       - $if group.hasChildren:
                           - $for item in group.children:
-                              - 'rtgl-view#font-item-${item.id} cur=p style="${item.selectedStyle}"':
-                                - rtgl-view w=200 h=150 p=md bgc=bg bc=bo bw=xs br=md d=v av=c:
-                                  - rtgl-text s=h5: ${item.name}
-                                  - rtgl-text c=mu-fg s=sm: Font file
+                              - 'rtgl-view#font-item-${item.id} cur=p':
+                                - rtgl-view w=200 d=v av=c ah=c:
+                                  - rtgl-view w=f h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md p=xs:
+                                    - 'rtgl-text s=h4 style="font-family: ${item.fontFamily}, sans-serif; font-size: 100px; text-align: center;"': ${item.previewText}
+                                  - rtgl-text s=xs c=mu-fg mt=xs ta=c: ${item.fontFamily}
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:

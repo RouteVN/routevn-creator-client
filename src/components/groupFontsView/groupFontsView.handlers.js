@@ -27,12 +27,51 @@ export const handleFontItemClick = (e, deps) => {
   }));
 };
 
+export const handleOnMount = async (deps) => {
+  const { props = {}, render, httpClient, fontManager, loadFontFile } = deps;
+  const { flatGroups = [] } = props;
+  
+  // Extract all font items from all groups
+  const allFontItems = [];
+  
+  for (const group of flatGroups) {
+    if (group.children) {
+      allFontItems.push(...group.children);
+    }
+  }
+  
+  if (!allFontItems.length) {
+    return;
+  }
+  
+  // Load existing fonts in parallel using loadFontFile function
+  const loadPromises = allFontItems.map(item => {    
+    // Ensure fontFamily is set for loadFontFile
+    const fontItem = {
+      ...item,
+      fontFamily: item.fontFamily
+    };
+    
+    return loadFontFile(fontItem);
+  });
+  
+  await Promise.all(loadPromises);
+  render();
+};
+
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, fontManager } = deps;
   const { files } = e.detail;
   const targetGroupId = e.currentTarget.id
     .replace("drag-drop-bar-", "")
     .replace("drag-drop-item-", "");
+  
+  // Load fonts for preview
+  for (const file of files) {
+    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+    const fontUrl = URL.createObjectURL(file);
+    await fontManager.load(fontName, fontUrl);
+  }
   
   // Forward file uploads to parent (parent will handle the actual upload logic)
   dispatchEvent(new CustomEvent("files-uploaded", {
