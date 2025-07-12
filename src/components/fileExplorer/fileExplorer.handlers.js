@@ -1,5 +1,18 @@
 import { nanoid } from "nanoid";
 
+const lodashGet = (obj, path, defaultValue) => {
+  const parts = path.split('.');
+  let current = obj;
+  for (const part of parts) {
+    if (current && Object.prototype.hasOwnProperty.call(current, part)) {
+      current = current[part];
+    } else {
+      return defaultValue;
+    }
+  }
+  return current !== undefined ? current : defaultValue;
+};
+
 // Forward click-item event from base component
 export const handleClickItem = (e, deps) => {
   const { dispatchEvent } = deps;
@@ -12,17 +25,20 @@ export const handleClickItem = (e, deps) => {
 };
 
 export const handleFileAction = (e, deps) => {
+  console.log('BBBBBBBBBBBBBBBBBBBBBB')
   const { dispatchEvent, repository, props } = deps;
   const detail = e.detail;
   const repositoryTarget = props.repositoryTarget;
-  
+
   if (!repositoryTarget) {
     throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
   }
-  
+
   // Extract the actual item from the detail (rtgl-dropdown-menu adds index)
   const item = detail.item || detail;
   const itemId = detail.itemId;
+
+  console.log('item', item)
 
   if (item.value === "new-item") {
     repository.addAction({
@@ -129,6 +145,33 @@ export const handleFileAction = (e, deps) => {
         },
       });
     }
+  } else if (item.value.action === "new-child-item") {
+    const repositoryState = repository.getState();
+    console.log({
+      repositoryState,
+      repositoryTarget,
+      itemId
+    })
+    const targetData = lodashGet(repositoryState, repositoryTarget);
+    console.log('targetData', targetData);
+    const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
+
+    console.log('AAAAAAAAAAAAAAAAAA', currentItem)
+    if (currentItem) {
+      repository.addAction({
+        actionType: "treePush",
+        target: repositoryTarget,
+        value: {
+          parent: itemId,
+          position: "last",
+          item: {
+            id: nanoid(),
+            type: item.value.type || "folder",
+            name: item.value.name || "New Item",
+          },
+        },
+      });
+    }
   }
 
   // Emit data-changed event after any repository action
@@ -142,13 +185,13 @@ export const handleFileAction = (e, deps) => {
 export const handleTargetChanged = (e, deps) => {
   const { dispatchEvent, repository, props } = deps;
   const repositoryTarget = props.repositoryTarget;
-  
+
   if (!repositoryTarget) {
     throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
   }
-  
+
   const { target, source, position } = e.detail;
-  
+
   if (!source || !source.id) {
     console.warn("No source item provided");
     return;

@@ -4,6 +4,42 @@ export const INITIAL_STATE = Object.freeze({
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   componentId: null,
+  contextMenuItems: [
+    {
+      label: 'Container AAA', type: 'item', value: {
+        action: 'new-child-item', type: 'container', name: 'New Container'
+      }
+    },
+    {
+      label: 'Sprite', type: 'item', value: {
+        action: 'new-child-item', type: 'sprite', name: 'New Sprite'
+      }
+    },
+    {
+      label: 'Text', type: 'item', value: {
+        action: 'new-child-item', type: 'text', name: 'New Text'
+      }
+    },
+    { label: 'Rename', type: 'item', value: 'rename-item' },
+    { label: 'Delete', type: 'item', value: 'delete-item' }
+  ],
+  emptyContextMenuItems: [
+    {
+      label: 'Container AAA', type: 'item', value: {
+        action: 'new-child-item', type: 'container', name: 'New Container'
+      }
+    },
+    {
+      label: 'Sprite', type: 'item', value: {
+        action: 'new-child-item', type: 'sprite', name: 'New Sprite'
+      }
+    },
+    {
+      label: 'Text', type: 'item', value: {
+        action: 'new-child-item', type: 'text', name: 'New Text'
+      }
+    },
+  ]
 });
 
 export const setItems = (state, layoutData) => {
@@ -29,22 +65,12 @@ export const toViewData = ({ state, props }, payload) => {
   const selectedItem = state.selectedItemId ?
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
-  console.log('selected item details:', selectedItem);
-
   const detailTitle = selectedItem ? selectedItem.name : '';
   const detailFields = selectedItem ? [
     { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
     { type: 'text', label: 'ID', value: selectedItem.id }
   ] : [];
   const detailEmptyMessage = 'Select a layout item to view details';
-
-  console.log('detailFields', detailFields);
-
-  const emptyContextMenuItems = [
-    { text: 'Add Container', value: 'add-container' },
-    { text: 'Add Sprite', value: 'add-sprite' },
-    { text: 'Add Text', value: 'add-text' }
-  ];
 
   return {
     flatItems,
@@ -56,6 +82,7 @@ export const toViewData = ({ state, props }, payload) => {
     detailEmptyMessage,
     resourceCategory: 'userInterface',
     selectedResourceId: 'component-editor',
-    emptyContextMenuItems,
+    contextMenuItems: state.contextMenuItems,
+    emptyContextMenuItems: state.emptyContextMenuItems,
   };
 }
