@@ -138,10 +138,10 @@ export const showTypographyDialog = (state, { fieldIndex, itemData, colorOptions
   
   // Update dropdown options dynamically
   if (colorOptions) {
-    state.typographyDialog.form.fields[1].options = colorOptions;
+    state.typographyDialog.for.fields.find(id => id == 'fontColor').options = colorOptions;
   }
   if (fontOptions) {
-    state.typographyDialog.form.fields[2].options = fontOptions;
+    state.typographyDialog.for.fields.find(id => id == 'fontStyle').options = fontOptions;
   }
 }
 
