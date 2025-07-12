@@ -21,7 +21,7 @@ refs:
     eventListeners:
       file-action:
         handler: handleFileAction
-      replace-item:
+      typography-updated:
         handler: handleReplaceItem
 
 template: 

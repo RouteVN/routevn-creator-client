@@ -95,7 +95,10 @@ template:
                 $elif field.type == 'text':
                   - rtgl-view:
                     - rtgl-text c=mu-fg: ${field.label}
-                    - $if i == firstTextIndex:
+                    - $if field.editable:
+                        - 'rtgl-view#editable-text-${i} cur=p':
+                          - rtgl-text s=${field.size}: ${field.value}
+                      $elif i == firstTextIndex:
                         - rtgl-text#title-text-${i} s=${field.size} cur=p: ${field.value}
                       $else:
                         - rtgl-text s=${field.size}: ${field.value}
