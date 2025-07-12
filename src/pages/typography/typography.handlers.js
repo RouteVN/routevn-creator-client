@@ -3,8 +3,10 @@ import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
-  const { typography } = repository.getState();
+  const { typography, colors, fonts } = repository.getState();
   store.setItems(typography);
+  store.setColorsData(colors);
+  store.setFontsData(fonts);
 
   return () => {}
 };
@@ -12,8 +14,10 @@ export const handleOnMount = (deps) => {
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
-  const { typography } = repository.getState();
+  const { typography, colors, fonts } = repository.getState();
   store.setItems(typography);
+  store.setColorsData(colors);
+  store.setFontsData(fonts);
   render();
 };
 
@@ -110,7 +114,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
 export const handleTypographyCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name, fontSize, fontColor, fontWeight } = e.detail;
+  const { groupId, name, fontSize, fontColor, fontStyle, fontWeight } = e.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -123,12 +127,90 @@ export const handleTypographyCreated = (e, deps) => {
         type: "typography",
         name: name,
         fontSize: fontSize,
-        fontColor: fontColor,
+        colorId: fontColor, // Store color ID
+        fontId: fontStyle,  // Store font ID
         fontWeight: fontWeight,
       },
     },
   });
 
+  const { typography } = repository.getState();
+  store.setItems(typography);
+  render();
+};
+
+
+export const handleFileAction = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { value, newName } = e.detail;
+  
+  if (value === 'rename-item-confirmed') {
+    // Get the currently selected item
+    const selectedItem = store.selectSelectedItem();
+    if (!selectedItem) {
+      return;
+    }
+    
+    // Update the typography item name
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "typography",
+      value: {
+        id: selectedItem.id,
+        replace: false,
+        item: {
+          name: newName,
+        },
+      },
+    });
+    
+    // Update the store with the new repository state
+    const { typography } = repository.getState();
+    store.setItems(typography);
+    render();
+  }
+};
+
+export const handleReplaceItem = (e, deps) => {
+  const { store, render, repository } = deps;
+  
+  // Get the currently selected item
+  const selectedItem = store.selectSelectedItem();
+  if (!selectedItem) {
+    return;
+  }
+  
+  const { fontSize, fontColor, fontStyle, fontWeight } = e.detail;
+  
+  // Validate required fields (dropdowns ensure valid color and font selections)
+  if (!fontSize || !fontColor || !fontStyle || !fontWeight) {
+    alert('Please fill in all required fields');
+    return;
+  }
+  
+  // Validate font size is a number
+  if (isNaN(fontSize) || parseInt(fontSize) <= 0) {
+    alert('Please enter a valid font size (positive number)');
+    return;
+  }
+  
+  // Update the typography in the repository
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "typography",
+    value: {
+      id: selectedItem.id,
+      replace: false,
+      item: {
+        fontSize: fontSize,
+        colorId: fontColor, // Store color ID
+        fontId: fontStyle,  // Store font ID
+        fontWeight: fontWeight,
+      },
+    },
+  });
+  
+  // Update the store with the new repository state
   const { typography } = repository.getState();
   store.setItems(typography);
   render();

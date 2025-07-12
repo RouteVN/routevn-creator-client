@@ -178,3 +178,62 @@ export const handleFontFieldClick = (e, deps) => {
   
   fileInputRef.elm.click();
 };
+
+export const handleTypographyFieldClick = (e, deps) => {
+  const { store, render, props } = deps;
+  
+  // Extract the field index from the element ID
+  const fieldIndex = parseInt(e.currentTarget.id.replace('typography-field-', ''));
+  const field = props.fields[fieldIndex];
+  
+  if (field && field.type === 'typography') {
+    // Open typography dialog with current typography data
+    store.showTypographyDialog({
+      fieldIndex,
+      itemData: {
+        fontSize: field.fontSize || '16',
+        fontColor: field.colorId || '',
+        fontStyle: field.fontId || '',
+        fontWeight: field.fontWeight || 'normal'
+      },
+      colorOptions: field.colorOptions || [],
+      fontOptions: field.fontOptions || []
+    });
+    render();
+  }
+};
+
+export const handleCloseTypographyDialog = (e, deps) => {
+  const { store, render } = deps;
+  store.hideTypographyDialog();
+  render();
+};
+
+export const handleTypographyFormActionClick = (e, deps) => {
+  const { store, render, dispatchEvent } = deps;
+  const detail = e.detail;
+  
+  // Extract values from detail
+  const values = detail.formValues;
+  
+  // Get current dialog state
+  const state = store.getState ? store.getState() : store._state || store.state;
+  const fieldIndex = state.typographyDialog.fieldIndex;
+  
+  // Hide dialog
+  store.hideTypographyDialog();
+  render();
+  
+  // Emit typography-updated event for editing existing typography
+  dispatchEvent(new CustomEvent("typography-updated", {
+    detail: {
+      fieldIndex,
+      fontSize: values.fontSize,
+      fontColor: values.fontColor,
+      fontStyle: values.fontStyle,
+      fontWeight: values.fontWeight
+    },
+    bubbles: true,
+    composed: true
+  }));
+};

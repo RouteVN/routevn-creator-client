@@ -15,20 +15,18 @@ propsSchema:
     selectedItemId:
       type: string
       description: ID of currently selected item
+    colorsData:
+      type: object
+      description: Colors repository data
+    fontsData:
+      type: object
+      description: Fonts repository data
 
 refs:
   search-input:
     eventListeners:
       input-keydown:
         handler: handleSearchInput
-  drag-drop-item-*:
-    eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
-  drag-drop-bar-*:
-    eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
   group-*:
     eventListeners:
       click:
@@ -45,8 +43,6 @@ refs:
     eventListeners:
       close-dialogue:
         handler: handleCloseDialog
-      submit-form:
-        handler: handleSubmitForm
   typography-form:
     eventListeners:
       action-click:
@@ -76,9 +72,8 @@ template:
                               - 'rtgl-view#typography-item-${item.id} ah=c bw=xs pb=md cur=p style="${item.selectedStyle}"':
                                 - 'rtgl-view w=200 h=80 av=c ah=c br=md bc=bo style="color: ${item.fontColor}; font-size: ${item.fontSize}px; font-weight: ${item.fontWeight};"':
                                   - rtgl-text: ${item.name}
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
-                        $else:
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                      - 'rtgl-view#add-typography-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
+                        - rtgl-text: Add Typography
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No typography found matching "${searchQuery}"
