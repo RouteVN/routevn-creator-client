@@ -147,17 +147,13 @@ export const handleFileAction = (e, deps) => {
     }
   } else if (item.value.action === "new-child-item") {
     const repositoryState = repository.getState();
-    console.log({
-      repositoryState,
-      repositoryTarget,
-      itemId
-    })
     const targetData = lodashGet(repositoryState, repositoryTarget);
-    console.log('targetData', targetData);
     const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
-
-    console.log('AAAAAAAAAAAAAAAAAA', currentItem)
     if (currentItem) {
+      const {
+        action,
+        ...restItem
+      } = item.value;
       repository.addAction({
         actionType: "treePush",
         target: repositoryTarget,
@@ -165,9 +161,8 @@ export const handleFileAction = (e, deps) => {
           parent: itemId,
           position: "last",
           item: {
+            ...restItem,
             id: nanoid(),
-            type: item.value.type || "folder",
-            name: item.value.name || "New Item",
           },
         },
       });

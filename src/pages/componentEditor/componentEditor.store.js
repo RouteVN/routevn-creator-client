@@ -7,7 +7,7 @@ export const INITIAL_STATE = Object.freeze({
   contextMenuItems: [
     {
       label: 'Container AAA', type: 'item', value: {
-        action: 'new-child-item', type: 'container', name: 'New Container'
+        action: 'new-child-item', type: 'container', name: 'New Container', x: 0, y: 0
       }
     },
     {
@@ -65,11 +65,38 @@ export const toViewData = ({ state, props }, payload) => {
   const selectedItem = state.selectedItemId ?
     flatItems.find(item => item.id === state.selectedItemId) : null;
 
-  const detailTitle = selectedItem ? selectedItem.name : '';
-  const detailFields = selectedItem ? [
-    { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
-    { type: 'text', label: 'ID', value: selectedItem.id }
-  ] : [];
+  let detailTitle = '';
+  let detailFields = [];
+
+  // const detailTitle = selectedItem ? selectedItem.name : '';
+  if (selectedItem) {
+    detailTitle = selectedItem.name;
+
+    if (selectedItem.type === 'container') {
+      detailFields = [
+        { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
+        { type: 'text', label: 'ID', value: selectedItem.id },
+        { type: 'text', label: 'X', value: selectedItem.x },
+        { type: 'text', label: 'Y', value: selectedItem.y },
+      ];
+    } else if (selectedItem.type === 'sprite') {
+      detailFields = [
+        { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
+        { type: 'text', label: 'ID', value: selectedItem.id },
+        { type: 'text', label: 'X', value: selectedItem.x },
+        { type: 'text', label: 'Y', value: selectedItem.y },
+        { type: 'text', label: 'Image ID', value: selectedItem.imageId || '' },
+      ];
+    } else if (selectedItem.type === 'text') {
+      detailFields = [
+        { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
+        { type: 'text', label: 'ID', value: selectedItem.id },
+        { type: 'text', label: 'X', value: selectedItem.x },
+        { type: 'text', label: 'Y', value: selectedItem.y },
+        { type: 'text', label: 'Text Content', value: selectedItem.textContent || '' },
+      ];
+    }
+  }
   const detailEmptyMessage = 'Select a layout item to view details';
 
   return {
