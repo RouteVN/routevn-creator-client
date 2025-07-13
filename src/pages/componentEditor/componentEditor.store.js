@@ -26,7 +26,7 @@ export const INITIAL_STATE = Object.freeze({
   emptyContextMenuItems: [
     {
       label: 'Container AAA', type: 'item', value: {
-        action: 'new-child-item', type: 'container', name: 'New Container'
+        action: 'new-child-item', type: 'container', name: 'New Container', x: 0, y: 0
       }
     },
     {
@@ -54,6 +54,15 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
 
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
+}
+
+export const selectSelectedItem = ({ state }) => {
+  const flatItems = toFlatItems(state.layoutData);
+  return state.selectedItemId ? flatItems.find(item => item.id === state.selectedItemId) : undefined;
+}
+
 export const selectComponentId = ({ state }) => {
   return state.componentId;
 };
@@ -76,12 +85,34 @@ export const toViewData = ({ state, props }, payload) => {
       detailFields = [
         { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
         { type: 'text', label: 'ID', value: selectedItem.id },
-        { type: 'text', label: 'X', value: selectedItem.x },
-        { type: 'text', label: 'Y', value: selectedItem.y },
+        { id: 'x', type: 'text', label: 'X', value: selectedItem.x, editable: true },
+        {
+          id: 'y', type: 'text', label: 'Y', value: selectedItem.y, editable: true
+        },
+        {
+          id: 'direction', type: 'select', label: 'Direction', value: selectedItem.direction, editable: true, options: [{
+            label: 'Vertical', value: 'vertical'
+          }, {
+            label: 'Horizontal', value: 'horizontal'
+          }]
+        },
+        {
+          id: 'anchor', type: 'select', label: 'Anchor', value: selectedItem.anchor, editable: true, options: [{
+            label: 'Top Left', value: 'top-left'
+          }, {
+            label: 'Top Right', value: 'top-right'
+          }, {
+            label: 'Bottom Left', value: 'bottom-left'
+          }, {
+            label: 'Bottom Right', value: 'bottom-right'
+          }, {
+            label: 'Center', value: 'center'
+          }]
+        },
       ];
     } else if (selectedItem.type === 'sprite') {
       detailFields = [
-        { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
+        { type: 'text', label: 'Type', value: selectedItem.type },
         { type: 'text', label: 'ID', value: selectedItem.id },
         { type: 'text', label: 'X', value: selectedItem.x },
         { type: 'text', label: 'Y', value: selectedItem.y },
@@ -89,7 +120,7 @@ export const toViewData = ({ state, props }, payload) => {
       ];
     } else if (selectedItem.type === 'text') {
       detailFields = [
-        { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
+        { type: 'text', label: 'Type', value: selectedItem.type },
         { type: 'text', label: 'ID', value: selectedItem.id },
         { type: 'text', label: 'X', value: selectedItem.x },
         { type: 'text', label: 'Y', value: selectedItem.y },

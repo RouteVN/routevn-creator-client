@@ -1,6 +1,9 @@
 export const handleOnMount = async (deps) => {
   const { render, router, store, repository, getRefIds, drenderer } = deps;
   const { componentId } = router.getPayload();
+
+  console.log('componentId', componentId)
+
   const { components } = repository.getState();
   const component = components.items[componentId];
   store.setComponentId(componentId);
@@ -8,9 +11,6 @@ export const handleOnMount = async (deps) => {
 
 
   render();
-  // const renderState = store.selectRenderState()
-  // const fileIds = extractFileIdsFromRenderState(renderState);
-  // const assets = await createAssetsFromFileIds(fileIds, httpClient);
   const { canvas } = getRefIds()
   await drenderer.init({ assets: {}, canvas: canvas.elm })
   console.log('init init')
@@ -29,7 +29,6 @@ export const handleTargetChanged = (payload, deps) => {
 export const handleFileExplorerItemClick = (e, deps) => {
   const { store, render } = deps;
   const itemId = e.detail.id;
-  console.log('File Explorer item clicked:', itemId);
   store.setSelectedItemId(itemId);
   render();
 };
@@ -47,3 +46,50 @@ export const handleDataChanged = (e, deps) => {
   store.setItems(component?.layout || { items: {}, tree: [] });
   render();
 };
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+
+  const { repository, store, render, drenderer } = deps;
+
+  console.log('xxxxxxxxxx', e.detail.formValues);
+
+  const componentId = store.selectComponentId();
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `components.items.${componentId}.layout`,
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues
+    },
+  });
+
+  const { components } = repository.getState();
+  const component = components.items[componentId];
+  store.setItems(component?.layout || { items: {}, tree: [] });
+  render();
+
+
+  const selectedItem = store.selectSelectedItem();
+
+  drenderer.render({
+    elements: [{
+      id: 'id1',
+      type: 'graphics',
+      x1: selectedItem.x - 5,
+      y1: selectedItem.y - 5,
+      x2: 11,
+      y2: 11,
+      fill: 'red'
+    }
+    ],
+    transitions: []
+  })
+
+
+}
+
+
+
+

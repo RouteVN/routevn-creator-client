@@ -25,7 +25,6 @@ export const handleClickItem = (e, deps) => {
 };
 
 export const handleFileAction = (e, deps) => {
-  console.log('BBBBBBBBBBBBBBBBBBBBBB')
   const { dispatchEvent, repository, props } = deps;
   const detail = e.detail;
   const repositoryTarget = props.repositoryTarget;
@@ -129,7 +128,6 @@ export const handleFileAction = (e, deps) => {
     const repositoryState = repository.getState();
     const targetData = repositoryState[repositoryTarget];
     const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
-
     if (currentItem) {
       repository.addAction({
         actionType: "treePush",
@@ -149,24 +147,22 @@ export const handleFileAction = (e, deps) => {
     const repositoryState = repository.getState();
     const targetData = lodashGet(repositoryState, repositoryTarget);
     const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
-    if (currentItem) {
-      const {
-        action,
-        ...restItem
-      } = item.value;
-      repository.addAction({
-        actionType: "treePush",
-        target: repositoryTarget,
-        value: {
-          parent: itemId,
-          position: "last",
-          item: {
-            ...restItem,
-            id: nanoid(),
-          },
+    const {
+      action,
+      ...restItem
+    } = item.value;
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: itemId || "_root",
+        position: "last",
+        item: {
+          ...restItem,
+          id: nanoid(),
         },
-      });
-    }
+      },
+    });
   }
 
   // Emit data-changed event after any repository action
