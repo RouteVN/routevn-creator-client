@@ -112,7 +112,7 @@ export const handleFileAction = (e, deps) => {
     }
   } else if (item.value === "delete-item") {
     const repositoryState = repository.getState();
-    const targetData = repositoryState[repositoryTarget];
+    const targetData = lodashGet(repositoryState, repositoryTarget);
     const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
@@ -126,7 +126,7 @@ export const handleFileAction = (e, deps) => {
     }
   } else if (item.value === "new-child-folder") {
     const repositoryState = repository.getState();
-    const targetData = repositoryState[repositoryTarget];
+    const targetData = lodashGet(repositoryState, repositoryTarget);
     const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
     if (currentItem) {
       repository.addAction({
