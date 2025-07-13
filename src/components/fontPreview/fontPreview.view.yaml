@@ -1,10 +1,7 @@
 elementName: rvn-font-preview
 
-refs:
-  main:
-    eventListeners:
-      mount:
-        handler: handleOnMount
+onMount:
+  handler: handleOnMount
 
 viewDataSchema:
   type: object
@@ -27,12 +24,8 @@ viewDataSchema:
       type: string
     textAlign:
       type: string
-    showLabel:
-      type: boolean
-    labelText:
-      type: string
 
-propsSchema:
+attrsSchema:
   type: object
   properties:
     previewText:
@@ -41,45 +34,42 @@ propsSchema:
     fontFamily:
       type: string
       description: Font family to use
+    fileId:
+      type: string
+      description: File ID for the font file
     fontSize:
-      type: number
+      type: string
       description: Font size in pixels
-      default: 100
+      default: "100"
     fontWeight:
-      type: [string, number]
+      type: string
       description: Font weight
-      default: normal
+      default: "normal"
     color:
       type: string
       description: Text color
-      default: currentColor
+      default: "currentColor"
     width:
-      type: number
+      type: string
       description: Preview container width
-      default: 200
+      default: "200"
     height:
-      type: number
+      type: string
       description: Preview container height
-      default: 150
+      default: "150"
     backgroundColor:
       type: string
       description: Background color
-      default: transparent
+      default: "transparent"
     textAlign:
       type: string
       description: Text alignment
-      default: center
-    showLabel:
-      type: boolean
-      description: Whether to show font family label
-      default: true
-    labelText:
+      default: "center"
+    showBorder:
       type: string
-      description: Custom label text (defaults to fontFamily)
+      description: Whether to show border around preview
+      default: "true"
 
 template:
-  - rtgl-view#main d=v av=c ah=c:
-    - 'rtgl-view av=c ah=c bgc=bg bc=bo bw=xs br=md p=xs style="width: ${width}px; height: ${height}px; background-color: ${backgroundColor};"':
-      - 'rtgl-text style="font-family: ${fontFamily}, sans-serif; font-size: ${fontSize}px; font-weight: ${fontWeight}; color: ${color}; text-align: ${textAlign};"': ${previewText}
-    - $if showLabel:
-        - rtgl-text s=xs c=mu-fg mt=xs ta=c: ${labelText || fontFamily}
+  - 'rtgl-view#main av=c ah=c ${borderClass} style="width: ${width}px; height: ${height}px; background-color: ${backgroundColor};"':
+    - 'rtgl-text style="font-family: ${fontFamily}, sans-serif; font-size: ${fontSize}px; font-weight: ${fontWeight}; color: ${color}; text-align: ${textAlign};"': ${previewText}

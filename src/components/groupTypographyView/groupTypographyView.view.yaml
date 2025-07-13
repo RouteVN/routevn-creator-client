@@ -70,8 +70,7 @@ template:
                       - $if group.hasChildren:
                           - $for item in group.children:
                               - 'rtgl-view#typography-item-${item.id} w=f bw=xs pb=md cur=p style="${item.selectedStyle}"':
-                                - 'rtgl-view w=700 h=80 av=c br=md ml="sm" bc=bo style="font-family: ${item.fontStyle}, sans-serif; color: ${item.color}; font-size: ${item.fontSize}px; font-weight: ${item.fontWeight};"':
-                                  - rtgl-text: ${item.previewText}
+                                - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false:
                       - 'rtgl-view#add-typography-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
                         - rtgl-text: Add Typography
         $elif searchQuery:
