@@ -20,6 +20,9 @@ propsSchema:
             description: Unique key for the field to force re-rendering when changed
     emptyMessage:
       type: string
+    images:
+      type: object
+      description: Repository images data for imageId to fileId conversion
 
 refs:
   editable-image-*:
@@ -82,6 +85,26 @@ refs:
     eventListeners:
       option-selected:
         handler: handleSelectChange
+  image-selector-field-*:
+    eventListeners:
+      click:
+        handler: handleImageSelectorFieldClick
+  image-selector:
+    eventListeners:
+      image-selected:
+        handler: handleImageSelectorSelection
+  cancel-image-selection:
+    eventListeners:
+      click:
+        handler: handleCancelImageSelection
+  confirm-image-selection:
+    eventListeners:
+      click:
+        handler: handleConfirmImageSelection
+  image-selector-dialog:
+    eventListeners:
+      close-dialogue:
+        handler: handleCloseImageSelectorDialog
 
 template:
   - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
@@ -124,6 +147,15 @@ template:
                       - rtgl-view:
                           - 'rtgl-view#typography-field-${i} w=240 h=80 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p style="color: ${field.fontColor}; font-size: ${field.fontSize}px; font-weight: ${field.fontWeight};"':
                               - rtgl-text: ${field.name}
+                    $elif field.type == 'image-selector':
+                      - rtgl-view:
+                          - rtgl-text c=mu-fg: ${field.label}
+                          - $if field.fileId:
+                              - 'rtgl-view#image-selector-field-${i} cur=p br=md':
+                                  - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
+                            $else:
+                              - 'rtgl-view#image-selector-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p':
+                                  - rtgl-text c=mu-fg: Select Image
                     $elif field.type == 'audio':
                       - $if field.editable:
                           - rtgl-view pos=rel:
@@ -146,4 +178,11 @@ template:
   - rtgl-dialog#typography-dialog .isOpen=typographyDialog.isOpen:
       - rtgl-view slot=content g=md:
           - rtgl-form#typography-form .defaultValues=typographyDialog.defaultValues .form=typographyDialog.form w=f:
+
+  - rtgl-dialog#image-selector-dialog .isOpen=imageSelectorDialog.isOpen:
+      - rtgl-view slot=content g=md:
+          - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:
+          - rtgl-view d=f jc=fe g=sm:
+              - rtgl-button#cancel-image-selection variant=se: Cancel
+              - rtgl-button#confirm-image-selection variant=pr: OK
 

@@ -4,10 +4,11 @@ export const handleOnMount = async (deps) => {
 
   console.log("componentId", componentId);
 
-  const { components } = repository.getState();
+  const { components, images } = repository.getState();
   const component = components.items[componentId];
   store.setComponentId(componentId);
   store.setItems(component?.layout || { items: {}, tree: [] });
+  store.setImages({ images });
 
   render();
   const { canvas } = getRefIds();
@@ -81,4 +82,59 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
     ],
     transitions: [],
   });
+};
+
+export const handleRequestImageGroups = (e, deps) => {
+  const { getRefIds, store } = deps;
+  const { fieldIndex, currentValue } = e.detail;
+  
+  console.log('handleRequestImageGroups called');
+  console.log('fieldIndex:', fieldIndex);
+  console.log('currentValue:', currentValue);
+  
+  // Get groups from transformed repository data
+  const viewData = store.toViewData();
+  const groups = viewData.imageGroups;
+  
+  console.log('imageGroups:', groups);
+  
+  // Show dialog with groups using correct ref access pattern
+  const refIds = getRefIds();
+  const detailPanelRef = refIds['detail-panel'];
+  console.log('detailPanelRef:', detailPanelRef);
+  
+  if (detailPanelRef && detailPanelRef.elm && detailPanelRef.elm.store) {
+    console.log('calling showImageSelectorDialog');
+    detailPanelRef.elm.store.showImageSelectorDialog({
+      fieldIndex,
+      groups,
+      currentValue
+    });
+    detailPanelRef.elm.render();
+  } else {
+    console.log('detailPanelRef.elm.store not found');
+    console.log('detailPanelRef.elm:', detailPanelRef?.elm);
+  }
+};
+
+export const handleImageSelectorUpdated = (e, deps) => {
+  const { repository, store, render } = deps;
+  const { fieldIndex, imageId } = e.detail;
+  const componentId = store.selectComponentId();
+  
+  // Update the selected item with the new imageId
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `components.items.${componentId}.layout`,
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: { imageId },
+    },
+  });
+
+  const { components } = repository.getState();
+  const component = components.items[componentId];
+  store.setItems(component?.layout || { items: {}, tree: [] });
+  render();
 };

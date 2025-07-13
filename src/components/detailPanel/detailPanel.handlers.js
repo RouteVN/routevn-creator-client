@@ -294,3 +294,90 @@ export const handleTypographyFormActionClick = (e, deps) => {
   }));
 };
 
+export const handleImageSelectorFieldClick = (e, deps) => {
+  const { store, render, props, dispatchEvent } = deps;
+  
+  console.log('handleImageSelectorFieldClick called');
+  console.log('event target:', e.currentTarget);
+  console.log('event target id:', e.currentTarget.id);
+  
+  // Extract field index from element ID
+  const fieldIndex = parseInt(e.currentTarget.id.replace('image-selector-field-', ''));
+  const field = props.fields[fieldIndex];
+  
+  console.log('fieldIndex:', fieldIndex);
+  console.log('field:', field);
+  console.log('props.fields:', props.fields);
+  
+  if (field && field.type === 'image-selector') {
+    console.log('dispatching request-image-groups event');
+    // Request groups data from parent component
+    dispatchEvent(new CustomEvent('request-image-groups', {
+      detail: { fieldIndex, currentValue: field.value },
+      bubbles: true,
+      composed: true
+    }));
+  } else {
+    console.log('field not found or not image-selector type');
+  }
+};
+
+export const handleImageSelectorSelection = (e, deps) => {
+  const { store, render } = deps;
+  const { imageId } = e.detail;
+  
+  store.setTempSelectedImageId({ imageId });
+  render();
+};
+
+export const handleConfirmImageSelection = (e, deps) => {
+  const { store, render, dispatchEvent } = deps;
+  
+  const state = store.getState ? store.getState() : store._state || store.state;
+  const fieldIndex = state.imageSelectorDialog.fieldIndex;
+  const selectedImageId = state.imageSelectorDialog.selectedImageId;
+  
+  // Hide dialog
+  store.hideImageSelectorDialog();
+  render();
+  
+  // Emit update event
+  dispatchEvent(new CustomEvent('image-selector-updated', {
+    detail: {
+      fieldIndex,
+      imageId: selectedImageId
+    },
+    bubbles: true,
+    composed: true
+  }));
+};
+
+export const handleCancelImageSelection = (e, deps) => {
+  const { store, render } = deps;
+  store.hideImageSelectorDialog();
+  render();
+};
+
+export const handleCloseImageSelectorDialog = (e, deps) => {
+  const { store, render } = deps;
+  store.hideImageSelectorDialog();
+  render();
+};
+
+export const handleShowImageSelectorDialog = (e, deps) => {
+  const { store, render } = deps;
+  const { fieldIndex, groups, currentValue } = e.detail;
+  
+  console.log('handleShowImageSelectorDialog called');
+  console.log('fieldIndex:', fieldIndex);
+  console.log('groups:', groups);
+  console.log('currentValue:', currentValue);
+  
+  store.showImageSelectorDialog({
+    fieldIndex,
+    groups,
+    currentValue
+  });
+  render();
+};
+

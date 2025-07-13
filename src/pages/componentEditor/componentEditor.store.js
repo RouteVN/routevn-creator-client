@@ -4,6 +4,7 @@ export const INITIAL_STATE = Object.freeze({
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   componentId: null,
+  images: { tree: [], items: {} },
   contextMenuItems: [
     {
       label: 'Container AAA', type: 'item', value: {
@@ -12,12 +13,12 @@ export const INITIAL_STATE = Object.freeze({
     },
     {
       label: 'Sprite', type: 'item', value: {
-        action: 'new-child-item', type: 'sprite', name: 'New Sprite'
+        action: 'new-child-item', type: 'sprite', name: 'New Sprite', x: 0, y: 0
       }
     },
     {
       label: 'Text', type: 'item', value: {
-        action: 'new-child-item', type: 'text', name: 'New Text'
+        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0
       }
     },
     { label: 'Rename', type: 'item', value: 'rename-item' },
@@ -31,12 +32,12 @@ export const INITIAL_STATE = Object.freeze({
     },
     {
       label: 'Sprite', type: 'item', value: {
-        action: 'new-child-item', type: 'sprite', name: 'New Sprite'
+        action: 'new-child-item', type: 'sprite', name: 'New Sprite', x: 0, y: 0
       }
     },
     {
       label: 'Text', type: 'item', value: {
-        action: 'new-child-item', type: 'text', name: 'New Text'
+        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0
       }
     },
   ]
@@ -52,6 +53,10 @@ export const setComponentId = (state, componentId) => {
 
 export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
+};
+
+export const setImages = (state, { images }) => {
+  state.images = images;
 };
 
 export const selectSelectedItemId = ({ state }) => {
@@ -70,6 +75,7 @@ export const selectComponentId = ({ state }) => {
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
+  const imageGroups = toFlatGroups(state.images);
 
   const selectedItem = state.selectedItemId ?
     flatItems.find(item => item.id === state.selectedItemId) : null;
@@ -114,9 +120,9 @@ export const toViewData = ({ state, props }, payload) => {
       detailFields = [
         { type: 'text', label: 'Type', value: selectedItem.type },
         { type: 'text', label: 'ID', value: selectedItem.id },
-        { type: 'text', label: 'X', value: selectedItem.x },
-        { type: 'text', label: 'Y', value: selectedItem.y },
-        { type: 'text', label: 'Image ID', value: selectedItem.imageId || '' },
+        { id: 'x', type: 'text', label: 'X', value: selectedItem.x, editable: true },
+        { id: 'y', type: 'text', label: 'Y', value: selectedItem.y, editable: true },
+        { id: 'imageId', type: 'image-selector', label: 'Image', value: selectedItem.imageId || '' },
       ];
     } else if (selectedItem.type === 'text') {
       detailFields = [
@@ -133,6 +139,8 @@ export const toViewData = ({ state, props }, payload) => {
   return {
     flatItems,
     flatGroups,
+    imageGroups,
+    images: state.images,
     selectedItemId: state.selectedItemId,
     repositoryTarget: `components.items.${state.componentId}.layout`,
     detailTitle,

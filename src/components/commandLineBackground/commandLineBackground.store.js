@@ -51,15 +51,12 @@ export const toViewData = ({ state, props }, payload) => {
     }
   });
 
-
-
-
-
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
     selectedImageId: state.selectedImageId,
     selectedFileId: state.selectedFileId,
+    tempSelectedImageId: state.tempSelectedImageId,
   };
 };

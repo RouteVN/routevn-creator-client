@@ -1,3 +1,5 @@
+import { toFlatItems } from '../../deps/repository';
+
 export const INITIAL_STATE = Object.freeze({
   // Popover state for renaming
   popover: {
@@ -126,6 +128,13 @@ export const INITIAL_STATE = Object.freeze({
         }],
       }
     }
+  },
+  // Image selector dialog state
+  imageSelectorDialog: {
+    isOpen: false,
+    fieldIndex: -1,
+    groups: [],
+    selectedImageId: null,
   }
 });
 
@@ -205,9 +214,42 @@ export const hideTypographyDialog = (state) => {
   };
 }
 
+export const showImageSelectorDialog = (state, { fieldIndex, groups, currentValue }) => {
+  state.imageSelectorDialog.isOpen = true;
+  state.imageSelectorDialog.fieldIndex = fieldIndex;
+  state.imageSelectorDialog.groups = groups || [];
+  state.imageSelectorDialog.selectedImageId = currentValue || null;
+}
+
+export const hideImageSelectorDialog = (state) => {
+  state.imageSelectorDialog.isOpen = false;
+  state.imageSelectorDialog.fieldIndex = -1;
+  state.imageSelectorDialog.groups = [];
+  state.imageSelectorDialog.selectedImageId = null;
+}
+
+export const setTempSelectedImageId = (state, { imageId }) => {
+  state.imageSelectorDialog.selectedImageId = imageId;
+}
+
 export const toViewData = ({ state, props }) => {
   const hasContent = props.fields && props.fields.length > 0;
-  const visibleFields = props.fields ? props.fields.filter(field => field.show !== false) : [];
+  let visibleFields = props.fields ? props.fields.filter(field => field.show !== false) : [];
+  
+  // Convert imageId to fileId for image-selector fields
+  if (props.images) {
+    const flatImages = toFlatItems(props.images);
+    visibleFields = visibleFields.map(field => {
+      if (field.type === 'image-selector' && field.value) {
+        const imageItem = flatImages.find(img => img.id === field.value);
+        return {
+          ...field,
+          fileId: imageItem ? imageItem.fileId : null
+        };
+      }
+      return field;
+    });
+  }
 
   // Find the first text field index
   let firstTextIndex = -1;
@@ -258,6 +300,11 @@ export const toViewData = ({ state, props }) => {
       isOpen: state.typographyDialog.isOpen,
       defaultValues: state.typographyDialog.defaultValues,
       form: state.typographyDialog.form,
+    },
+    imageSelectorDialog: {
+      isOpen: state.imageSelectorDialog.isOpen,
+      groups: state.imageSelectorDialog.groups,
+      selectedImageId: state.imageSelectorDialog.selectedImageId,
     },
   };
 };

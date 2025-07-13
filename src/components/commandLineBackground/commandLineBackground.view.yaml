@@ -9,10 +9,10 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorClick
-  image-item-*:
+  rvn-image-selector:
     eventListeners:
-      click:
-        handler: handleImageItemClick
+      image-selected:
+        handler: handleImageSelected
   submit-button:
     eventListeners:
       click:
@@ -62,11 +62,6 @@ template:
         - rtgl-view h=f flex=1 sv=true:
           - rvn-base-file-explorer#base-file-explorer .items=items:
         - rtgl-view h=f flex=2 sv=true g=lg:
-          - $for group, i in groups:
-            - rtgl-view g=md:
-              - rtgl-text: ${group.name}
-              - rtgl-view d=h w=f fw=w g=lg:
-                - $for item, j in group.children:
-                  - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:
+          - rvn-image-selector .groups=groups .selectedImageId=tempSelectedImageId:
       - rtgl-view d=h av=c ah=e w=f g=lg:
         - rtgl-button#button-select: Select
