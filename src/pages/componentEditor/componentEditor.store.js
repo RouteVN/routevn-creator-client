@@ -18,7 +18,7 @@ export const INITIAL_STATE = Object.freeze({
     },
     {
       label: 'Text', type: 'item', value: {
-        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0
+        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0, textContent: 'text'
       }
     },
     { label: 'Rename', type: 'item', value: 'rename-item' },
@@ -37,7 +37,7 @@ export const INITIAL_STATE = Object.freeze({
     },
     {
       label: 'Text', type: 'item', value: {
-        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0
+        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0, textContent: 'text'
       }
     },
   ]
@@ -128,9 +128,9 @@ export const toViewData = ({ state, props }, payload) => {
       detailFields = [
         { type: 'text', label: 'Type', value: selectedItem.type },
         { type: 'text', label: 'ID', value: selectedItem.id },
-        { type: 'text', label: 'X', value: selectedItem.x },
-        { type: 'text', label: 'Y', value: selectedItem.y },
-        { type: 'text', label: 'Text Content', value: selectedItem.textContent || '' },
+        { id: 'x', type: 'text', label: 'X', value: selectedItem.x, editable: true },
+        { id: 'y', type: 'text', label: 'Y', value: selectedItem.y, editable: true },
+        { id: 'textContent', type: 'text', label: 'Text Content', value: selectedItem.textContent || '', editable: true },
       ];
     }
   }
