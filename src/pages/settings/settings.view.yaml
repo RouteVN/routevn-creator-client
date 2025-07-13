@@ -5,19 +5,18 @@ viewDataSchema:
   properties: {}
 
 refs:
-  fileexplorer:
+  left-panel:
     eventListeners:
       data-changed:
         handler: handleDataChanged
 
 template: 
   - rtgl-view d=h w=f h=f: 
-    - rtgl-view w=f h=f p=md w=240:
-      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-      - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - rtgl-view w=f h=f p=lg:
-      - rtgl-text s=h2: General Settings
-      - rtgl-view g=lg mt=lg:
-        - rtgl-text s=md: Settings content will go here
-        - rtgl-text s=sm c=mu-fg: This is a placeholder for the general settings interface
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rtgl-view d=h h=f:
+      - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
+      - rtgl-view flex=1 h=f p=lg:
+        - rtgl-text s=h2: General Settings
+        - rtgl-view g=lg mt=lg:
+          - rtgl-text s=md: Settings content will go here
+          - rtgl-text s=sm c=mu-fg: This is a placeholder for the general settings interface
+    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

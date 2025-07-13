@@ -5,7 +5,7 @@ viewDataSchema:
   properties: {}
 
 refs:
-  fileexplorer:
+  left-panel:
     eventListeners:
       data-changed:
         handler: handleDataChanged
@@ -19,8 +19,6 @@ refs:
         handler: handleTypographyCreated
   detail-panel:
     eventListeners:
-      file-action:
-        handler: handleFileAction
       typography-updated:
         handler: handleReplaceItem
       item-update:
@@ -28,8 +26,8 @@ refs:
 
 template: 
   - rtgl-view d=h w=f h=f: 
-    - 'rtgl-view w=f h=f w=240 bwr=xs z=1':
-      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-      - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - rvn-group-typography-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId .colorsData=colorsData .fontsData=fontsData:
+    - rtgl-view d=h h=f:
+      - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
+      - rtgl-view flex=1 h=f:
+        - rvn-group-typography-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId .colorsData=colorsData .fontsData=fontsData:
     - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

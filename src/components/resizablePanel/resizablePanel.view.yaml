@@ -1,0 +1,44 @@
+elementName: rvn-resizable-panel
+
+propsSchema:
+  type: object
+  properties:
+    resourceCategory:
+      type: string
+    selectedResourceId:
+      type: string
+    flatItems:
+      type: array
+    repositoryTarget:
+      type: string
+    initialWidth:
+      type: number
+      default: 280
+    minWidth:
+      type: number
+      default: 200
+    maxWidth:
+      type: number
+      default: 600
+
+refs:
+  fileexplorer:
+    eventListeners:
+      data-changed:
+        handler: handleDataChanged
+  resize-handle:
+    eventListeners:
+      mousedown:
+        handler: handleResizeStart
+
+styles:
+  '.resize-handle:hover':
+    background-color: 'var(--rtgl-primary, #007acc) !important'
+  '.resize-handle.resizing':
+    background-color: 'var(--rtgl-primary, #007acc) !important'
+
+template:
+  - 'rtgl-view h=f bwr=xs z=1 pos=rel style="width: ${panelWidth}px"':
+    - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+    - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
+    - 'rtgl-view#resize-handle style="position: absolute; top: 0; right: 0; width: 4px; height: 100%; cursor: col-resize; background-color: var(--rtgl-border, #e0e0e0); z-index: 1000; transition: background-color 0.2s ease;" class="${resizeHandleClass}"':

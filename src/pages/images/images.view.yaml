@@ -1,11 +1,15 @@
 elementName: rvn-images
 
+onMount:
+  handler: handleOnMount
+
+
 viewDataSchema:
   type: object
   properties: {}
 
 refs:
-  fileexplorer:
+  left-panel:
     eventListeners:
       data-changed:
         handler: handleDataChanged
@@ -26,8 +30,8 @@ refs:
 
 template: 
   - rtgl-view d=h w=f h=f: 
-    - 'rtgl-view w=f h=f w=240 bwr=xs z=1':
-      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-      - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - rvn-group-images-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
+    - rtgl-view d=h h=f:
+      - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
+      - rtgl-view flex=1 h=f:
+        - rvn-group-images-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
     - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
