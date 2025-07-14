@@ -1,7 +1,7 @@
 import { toTreeStructure } from "../../deps/repository";
 
 // loop through the tree structure and map
-const componentLayoutTreeStructureToRenderState = (layout) => {
+const componentLayoutTreeStructureToRenderState = (layout, imageItems) => {
   const mapNode = (node) => {
     let element = {
       id: node.id,
@@ -23,6 +23,11 @@ const componentLayoutTreeStructureToRenderState = (layout) => {
       };
     }
 
+    if (node.type === "sprite") {
+      const imageItem = imageItems[node.imageId];
+      element.url = `file:${imageItem.fileId}`;
+    }
+
     // Map children recursively while maintaining tree structure
     if (node.children && node.children.length > 0) {
       element.children = node.children.map(mapNode);
@@ -35,10 +40,16 @@ const componentLayoutTreeStructureToRenderState = (layout) => {
 };
 
 export const handleOnMount = async (deps) => {
-  const { render, router, store, repository, getRefIds, drenderer } = deps;
+  const {
+    render,
+    router,
+    store,
+    repository,
+    getRefIds,
+    drenderer,
+    httpClient,
+  } = deps;
   const { componentId } = router.getPayload();
-
-  console.log("componentId", componentId);
 
   const { components, images } = repository.getState();
   const component = components.items[componentId];
@@ -46,10 +57,36 @@ export const handleOnMount = async (deps) => {
   store.setItems(component?.layout || { items: {}, tree: [] });
   store.setImages({ images });
 
+  // Build assets object from all images
+  const assets = {};
+  const imageItems = images.items || {};
+
+  // load images on demand instead of all at once
+  for (const [imageId, imageData] of Object.entries(imageItems)) {
+    // Skip if fileId is undefined or null
+    if (!imageData.fileId) {
+      console.warn(`Skipping image ${imageId} - missing fileId`);
+      continue;
+    }
+
+    const fileKey = `file:${imageData.fileId}`;
+    try {
+      const { url } = await httpClient.creator.getFileContent({
+        fileId: imageData.fileId,
+        projectId: "someprojectId",
+      });
+      assets[fileKey] = {
+        url: url,
+        type: imageData.fileType,
+      };
+    } catch (error) {
+      console.error(`Failed to load asset for image ${imageId}:`, error);
+    }
+  }
+
   render();
   const { canvas } = getRefIds();
-  await drenderer.init({ assets: {}, canvas: canvas.elm });
-  console.log("init init");
+  await drenderer.init({ assets, canvas: canvas.elm });
   drenderer.render({
     elements: [],
     transitions: [],
@@ -97,15 +134,17 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
     },
   });
 
-  const { components } = repository.getState();
+  const {
+    components,
+    images: { items: imageItems },
+  } = repository.getState();
   const component = components.items[componentId];
 
   const componentLayoutTreeStructure = toTreeStructure(component.layout);
   const renderStateElements = componentLayoutTreeStructureToRenderState(
     componentLayoutTreeStructure,
+    imageItems,
   );
-  console.log("component tree structure", componentLayoutTreeStructure);
-  console.log("renderState", renderStateElements);
 
   store.setItems(component?.layout || { items: {}, tree: [] });
   render();
