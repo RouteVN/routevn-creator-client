@@ -1,6 +1,8 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: '',
+  isDialogOpen: false,
+  currentGroupId: null,
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -15,6 +17,18 @@ export const toggleGroupCollapse = (state, groupId) => {
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 }
+
+export const showDialog = (state, groupId) => {
+  state.isDialogOpen = true;
+  state.currentGroupId = groupId;
+}
+
+export const hideDialog = (state) => {
+  state.isDialogOpen = false;
+  state.currentGroupId = null;
+}
+
+export const selectCurrentGroupId = ({ state }) => state.currentGroupId;
 
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
@@ -58,7 +72,28 @@ export const toViewData = ({ state, props }) => {
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
-    uploadText: "Upload Component",
-    acceptedFileTypes: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+    isDialogOpen: state.isDialogOpen,
+    defaultValues: {
+      name: ''
+    },
+    form: {
+      title: 'Add Component',
+      fields: [{
+        id: 'name',
+        fieldName: 'name',
+        inputType: 'inputText',
+        label: 'Component Name',
+        description: 'Enter the component name',
+        required: true,
+      }],
+      actions: {
+        layout: '',
+        buttons: [{
+          id: 'submit',
+          variant: 'pr',
+          content: 'Add Component',
+        }],
+      }
+    }
   };
 };
