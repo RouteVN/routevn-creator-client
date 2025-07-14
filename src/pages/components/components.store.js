@@ -1,6 +1,5 @@
 
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-import { formatFileSize } from "../../utils/index.js";
 
 export const INITIAL_STATE = Object.freeze({
   componentsData: { tree: [], items: {} },
@@ -35,8 +34,6 @@ export const toViewData = ({ state, props }, payload) => {
   const selectedItemDetails = selectedItem ? {
     ...selectedItem,
     typeDisplay: selectedItem.type === 'component' ? 'Component' : 'Folder',
-    displayFileType: selectedItem.fileType || (selectedItem.type === 'component' ? 'YAML' : null),
-    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
     fullPath: selectedItem.fullLabel || selectedItem.name || '',
   } : null;
 
@@ -45,8 +42,6 @@ export const toViewData = ({ state, props }, payload) => {
   const detailFields = selectedItemDetails ? [
     { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
-    { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
-    { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : [];
   const detailEmptyMessage = 'Select a component to view details';

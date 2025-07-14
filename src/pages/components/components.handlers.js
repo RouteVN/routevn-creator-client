@@ -25,6 +25,33 @@ export const handleImageItemClick = (e, deps) => {
   render();
 };
 
+export const handleComponentCreated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { groupId, name } = e.detail;
+
+  repository.addAction({
+    actionType: "treePush",
+    target: "components",
+    value: {
+      parent: groupId,
+      position: "last",
+      item: {
+        id: nanoid(),
+        type: "component",
+        name: name,
+        layout: {
+          items: {},
+          tree: []
+        }
+      },
+    },
+  });
+
+  const { components } = repository.getState();
+  store.setItems(components);
+  render();
+};
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
