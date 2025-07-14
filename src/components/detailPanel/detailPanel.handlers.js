@@ -112,6 +112,9 @@ export const handleFormActionClick = (e, deps) => {
   }
 
   if (action === 'submit') {
+    console.log('Form submit clicked - dispatching item-update event');
+    console.log('Form values:', values);
+    
     // Hide popover
     store.hidePopover();
     render();
@@ -122,6 +125,8 @@ export const handleFormActionClick = (e, deps) => {
         formValues: values,
       },
     }));
+    
+    console.log('item-update event dispatched');
   }
 };
 

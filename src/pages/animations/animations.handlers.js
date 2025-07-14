@@ -64,3 +64,21 @@ export const handleAnimationCreated = (e, deps) => {
   console.log(`Animation "${name}" created successfully in group ${groupId}`);
   render();
 };
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "animations",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { animations } = repository.getState();
+  store.setItems(animations);
+  render();
+};

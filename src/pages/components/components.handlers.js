@@ -111,3 +111,21 @@ export const handleDragDropFileSelected = async (e, deps) => {
   );
   render();
 };
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "components",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { components } = repository.getState();
+  store.setItems(components);
+  render();
+};

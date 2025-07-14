@@ -122,3 +122,21 @@ export const handleFileAction = (e, deps) => {
     render();
   }
 };
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "colors",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { colors } = repository.getState();
+  store.setItems(colors);
+  render();
+};

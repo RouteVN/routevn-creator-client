@@ -20,6 +20,8 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
+export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.fontsData);
   const flatGroups = toFlatGroups(state.fontsData);
@@ -55,7 +57,7 @@ export const toViewData = ({ state, props }, payload) => {
       editable: true,
       accept: '.ttf,.otf,.woff,.woff2'
     }] : []),
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },

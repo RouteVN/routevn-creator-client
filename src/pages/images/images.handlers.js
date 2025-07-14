@@ -102,6 +102,24 @@ export const handleReplaceItem = async (e, deps) => {
 
 };
 
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "images",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { images } = repository.getState();
+  store.setItems(images);
+  render();
+};
+
 export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;

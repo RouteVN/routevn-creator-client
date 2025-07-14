@@ -14,6 +14,8 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 }
 
+export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
 export const toViewData = ({ state, props }, payload) => {
   console.log("🔧 Variables toViewData called with state:", state);
   
@@ -42,7 +44,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'Variable Type', value: selectedItemDetails.variableType, show: !!selectedItemDetails.variableType },
     { type: 'text', label: 'Default Value', value: selectedItemDetails.defaultValue, show: !!selectedItemDetails.defaultValue },

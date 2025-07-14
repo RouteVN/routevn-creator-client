@@ -32,6 +32,10 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
+}
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.spritesData);
   const flatGroups = toFlatGroups(state.spritesData);
@@ -53,7 +57,7 @@ export const toViewData = ({ state, props }, payload) => {
   const detailTitle = selectedItemDetails ? 'Sprite Details' : null;
   const detailFields = selectedItemDetails ? [
     { type: 'image', fileId: selectedItemDetails.fileId, width: 240, height: 135 },
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { id: 'name', type: 'text', label: 'Name', value: selectedItemDetails.name, editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },

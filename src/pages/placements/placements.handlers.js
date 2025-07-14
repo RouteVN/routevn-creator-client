@@ -55,6 +55,24 @@ export const handlePlacementCreated = (e, deps) => {
   render();
 };
 
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "placements",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { placements } = repository.getState();
+  store.setItems(placements);
+  render();
+};
+
 export const handlePlacementEdited = (e, deps) => {
   const { store, render, repository, subject } = deps;
   const { itemId, name, x, y, scale, anchor, rotation } = e.detail;

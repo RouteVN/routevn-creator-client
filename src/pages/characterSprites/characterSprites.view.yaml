@@ -19,6 +19,8 @@ refs:
     eventListeners:
       file-action:
         handler: handleFileAction
+      item-update:
+        handler: handleDetailPanelItemUpdate
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -26,4 +28,4 @@ template:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-images-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
