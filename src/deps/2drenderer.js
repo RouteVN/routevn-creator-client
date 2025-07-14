@@ -1,4 +1,5 @@
 import RouteGraphics, {
+  createAssetBufferManager,
   SpriteRendererPlugin,
   TextRendererPlugin,
   ContainerRendererPlugin,
@@ -11,28 +12,16 @@ import RouteGraphics, {
 
 export const create2dRenderer = async () => {
   let app;
+  let assetBufferManager;
 
   return {
     init: async (options = {}) => {
-      const { assets, canvas } = options;
-
-      const assetBufferMap = {};
-      await Promise.all(
-        Object.entries(assets).map(async ([key, value]) => {
-          const resp = await fetch(value.url);
-          const buffer = await resp.arrayBuffer();
-          assetBufferMap[key] = {
-            buffer,
-            type: value.type,
-          };
-        })
-      );
-
+      const { canvas } = options;
+      assetBufferManager = createAssetBufferManager();
       app = new RouteGraphics();
       await app.init({
         width: 1920,
         height: 1080,
-        assetBufferMap,
         eventHandler: (eventType, payload) => {
           //
         },
@@ -47,17 +36,17 @@ export const create2dRenderer = async () => {
           new KeyframeTransitionPlugin(),
         ],
       });
-      await app.loadAssets(Object.keys(assets));
-
       if (canvas) {
-        // remove child first if there is
         if (canvas.children.length > 0) {
-          canvas.removeChild(canvas.children[0])
+          canvas.removeChild(canvas.children[0]);
         }
         canvas.appendChild(app.canvas);
       }
     },
-    // getCanvas: () => app.canvas,
+    loadAssets: async (assets) => {
+      await assetBufferManager.load(assets);
+      await app.loadAssets(assetBufferManager.getBufferMap());
+    },
     render: (payload) => app.render(payload),
-  }
+  };
 };
