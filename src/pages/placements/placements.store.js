@@ -14,6 +14,10 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 }
 
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
+}
+
 export const toViewData = ({ state, props }, payload) => {
   console.log("🎯 Placements toViewData called with state:", state);
 
@@ -42,7 +46,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Placement Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { id: 'name', type: 'text', label: 'Name', value: selectedItemDetails.name, editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'Position X', value: selectedItemDetails.x, show: !!selectedItemDetails.x },
     { type: 'text', label: 'Position Y', value: selectedItemDetails.y, show: !!selectedItemDetails.y },

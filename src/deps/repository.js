@@ -466,3 +466,45 @@ export const toFlatGroups = (data) => {
   tree.forEach((node) => traverse(node));
   return flatGroups;
 };
+
+/**
+ * Converts the tree structure to a hierarchical format where each node contains
+ * its full item data and children are nested with their data
+ * 
+ * @param {Object} data - Object containing items and tree
+ * @param {Object} data.items - Map of item IDs to item data
+ * @param {Array} data.tree - Tree structure with nodes containing id and children
+ * @returns {Array} Hierarchical tree with full item data at each node
+ * 
+ * @example
+ * // Input: { items: { 'f1': { name: 'Folder' }, 'f2': { name: 'File' } }, tree: [{ id: 'f1', children: [{ id: 'f2', children: [] }] }] }
+ * // Output: [{ id: 'f1', name: 'Folder', children: [{ id: 'f2', name: 'File', children: [] }] }]
+ */
+export const toTreeStructure = (data) => {
+  const { items, tree } = data;
+
+  const traverse = (node, level = 0, parentChain = []) => {
+    // Build full label from parent chain
+    const parentLabels = parentChain.map(parentId => items[parentId]?.name).filter(Boolean);
+    const fullLabel = parentLabels.length > 0 
+      ? `${parentLabels.join(' > ')} > ${items[node.id]?.name || ''}`
+      : items[node.id]?.name || '';
+
+    // Create the node with full item data
+    const result = {
+      ...items[node.id],
+      id: node.id,
+      _level: level,
+      fullLabel,
+      parentId: parentChain[parentChain.length - 1] || null,
+      hasChildren: node.children && node.children.length > 0,
+      children: node.children ? node.children.map(child => 
+        traverse(child, level + 1, [...parentChain, node.id])
+      ) : []
+    };
+
+    return result;
+  };
+
+  return tree.map(node => traverse(node));
+};

@@ -14,6 +14,8 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 }
 
+export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
 
 export const toViewData = ({ state, props }, payload) => {
   console.log("🎬 Animations toViewData called with state:", state);
@@ -43,7 +45,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },

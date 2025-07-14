@@ -22,6 +22,10 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
+}
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.charactersData);
   const flatGroups = toFlatGroups(state.charactersData);
@@ -56,8 +60,8 @@ export const toViewData = ({ state, props }, payload) => {
       height: 135, 
       editable: true 
     },
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
-    { type: 'text', label: 'Description', value: selectedItemDetails.description || 'No description provided', size: 'md' },
+    { id: 'name', type: 'text', label: 'Name', value: selectedItemDetails.name, editable: true },
+    { id: 'description', type: 'text', label: 'Description', value: selectedItemDetails.description || 'No description provided', size: 'md', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },

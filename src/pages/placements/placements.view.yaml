@@ -17,6 +17,10 @@ refs:
         handler: handlePlacementCreated
       placement-edited:
         handler: handlePlacementEdited
+  detail-panel:
+    eventListeners:
+      item-update:
+        handler: handleDetailPanelItemUpdate
 
 template:
   - rtgl-view d=h w=f h=f: 
@@ -24,4 +28,4 @@ template:
       - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
       - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
     - rvn-group-placements-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

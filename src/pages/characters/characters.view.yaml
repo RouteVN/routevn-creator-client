@@ -23,8 +23,12 @@ refs:
     eventListeners:
       image-file-selected:
         handler: handleDetailPanelImageSelected
+      replace-item:
+        handler: handleReplaceItem
       file-action:
         handler: handleFileAction
+      item-update:
+        handler: handleDetailPanelItemUpdate
 
 template: 
   - rtgl-view d=h w=f h=f: 

@@ -20,6 +20,8 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
+export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.colorsData);
   const flatGroups = toFlatGroups(state.colorsData);
@@ -40,7 +42,7 @@ export const toViewData = ({ state, props }, payload) => {
   const detailTitle = selectedItemDetails ? 'Color Details' : null;
   const detailFields = selectedItemDetails ? [
     { type: 'color', value: selectedItemDetails.displayHex, width: 240, height: 60, show: !!selectedItemDetails.displayHex },
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'Hex Value', value: selectedItemDetails.displayHex, show: !!selectedItemDetails.displayHex },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }

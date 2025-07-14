@@ -12,30 +12,32 @@ export const handleOnUpdate = () => {
   
 }
 
-export const handleImageItemClick = (e, deps) => {
+export const handleImageSelected = (e, deps) => {
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace('image-item-', '');
+  const { imageId } = e.detail;
 
   store.setTempSelectedImageId({
-    imageId: id,
+    imageId: imageId,
   });
-
-
-  // store.setMode({
-  //   mode: "current",
-  // });
 
   render();
 };
 
 export const handleSubmitClick = (e, deps) => {
   const { dispatchEvent, store } = deps;
+  
+  const selectedImageId = store.selectSelectedImageId();
+  
+  if (!selectedImageId) {
+    return;
+  }
+  
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         background: {
-          imageId: store.selectSelectedImageId(),
+          imageId: selectedImageId,
         }
       },
     }),

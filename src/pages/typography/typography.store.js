@@ -30,6 +30,8 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
+export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.typographyData);
   const flatGroups = toFlatGroups(state.typographyData);
@@ -107,7 +109,7 @@ export const toViewData = ({ state, props }, payload) => {
       fontOptions: fontOptions,
       show: !!selectedItemDetails.displayFontSize 
     },
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'Font Size', value: selectedItemDetails.displayFontSize, show: !!selectedItemDetails.displayFontSize },
     { type: 'text', label: 'Font Color', value: selectedItemDetails.displayFontColor, show: !!selectedItemDetails.displayFontColor },

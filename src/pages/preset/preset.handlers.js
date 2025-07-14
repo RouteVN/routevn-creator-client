@@ -50,3 +50,21 @@ export const handlePresetCreated = (e, deps) => {
   store.setItems(preset);
   render();
 };
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "preset",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { preset } = repository.getState();
+  store.setItems(preset);
+  render();
+};

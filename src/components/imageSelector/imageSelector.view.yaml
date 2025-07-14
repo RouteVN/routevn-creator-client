@@ -1,0 +1,32 @@
+elementName: rvn-image-selector
+
+propsSchema:
+  type: object
+  properties:
+    groups:
+      type: array
+    selectedImageId:
+      type: string
+
+viewDataSchema:
+  type: object
+  properties:
+    groups:
+      type: array
+    selectedImageId:
+      type: string
+
+refs:
+  image-item-*:
+    eventListeners:
+      click:
+        handler: handleImageItemClick
+
+template:
+  - rtgl-view h=f sv=true g=lg:
+    - $for group, i in groups:
+      - rtgl-view g=md:
+        - rtgl-text: ${group.name}
+        - rtgl-view d=h w=f fw=w g=lg:
+          - $for item, j in group.children:
+            - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:

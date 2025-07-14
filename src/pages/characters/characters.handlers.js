@@ -156,6 +156,66 @@ export const handleSpritesButtonClick = (e, deps) => {
   render();
 }
 
+export const handleReplaceItem = async (e, deps) => {
+  const { store, render, httpClient, repository } = deps;
+  const { file } = e.detail;
+  
+  // Get the currently selected character
+  const selectedItem = store.selectSelectedItem();
+  if (!selectedItem) {
+    console.warn('No character selected for avatar upload');
+    return;
+  }
+  
+  try {
+    // Upload the new avatar file
+    const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
+      projectId: "someprojectId",
+    });
+
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      body: file,
+      headers: {
+        "Content-Type": file.type,
+      },
+    });
+
+    if (response.ok) {
+      console.log("Character avatar uploaded successfully:", file.name);
+      
+      const updateData = {
+        fileId: fileId,
+        fileType: file.type,
+        fileSize: file.size,
+        // Update name only if character doesn't have one or if it's the generic filename
+        ...((!selectedItem.name || selectedItem.name === 'Untitled Character') && { name: file.name.replace(/\.[^/.]+$/, "") })
+      };
+      
+      // Update the selected character in the repository with the new avatar
+      repository.addAction({
+        actionType: "treeUpdate",
+        target: "characters",
+        value: {
+          id: selectedItem.id,
+          replace: false,
+          item: updateData,
+        },
+      });
+      
+      // Update the store with the new repository state
+      const { characters } = repository.getState();
+      store.setItems(characters);
+      render();
+      
+    } else {
+      console.error("Avatar upload failed:", file.name, response.statusText);
+    }
+  } catch (error) {
+    console.error("Avatar upload error:", file.name, error);
+  }
+};
+
 export const handleDetailPanelImageSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { file, field } = e.detail;
@@ -214,6 +274,24 @@ export const handleDetailPanelImageSelected = async (e, deps) => {
   } catch (error) {
     console.error("Avatar upload error:", file.name, error);
   }
+};
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "characters",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { characters } = repository.getState();
+  store.setItems(characters);
+  render();
 };
 
 export const handleFileAction = (e, deps) => {

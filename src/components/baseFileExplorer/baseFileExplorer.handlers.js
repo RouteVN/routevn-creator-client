@@ -45,12 +45,12 @@ export const getSelectedItemIndex = (_mouseY, itemRects, offset, items = []) => 
       const itemId = currentItem.id.replace('item-', '');
       const actualItem = items.find(item => item.id === itemId);
       const isFolder = actualItem?.type === 'folder';
-      
+
       // Mouse is over an item - determine position with 35% top, 30% middle, 35% bottom
       const relativeY = mouseY - currentItem.top;
       const topThreshold = currentItem.height * 0.35;
       const bottomThreshold = currentItem.height * 0.65;
-      
+
       if (relativeY < topThreshold) {
         // Top 35% - drop above
         return { index: i - 1, position: currentItem.top, dropPosition: 'above' };
@@ -87,7 +87,7 @@ export const handleItemMouseDown = (e, deps) => {
 
   // Get the container element to calculate relative positions
   const containerRect = e.currentTarget.parentElement.getBoundingClientRect();
-  
+
   const itemRects = Object.keys(refIds).reduce((acc, key) => {
     const ref = refIds[key];
     if (!key.startsWith('item-')) {
@@ -104,7 +104,7 @@ export const handleItemMouseDown = (e, deps) => {
     };
     return acc;
   }, {});
-  
+
   const itemId = e.currentTarget.id.replace('item-', '');
   store.startDragging({ id: itemId, itemRects, containerTop: containerRect.top });
   render();
@@ -121,21 +121,21 @@ export const handleWindowMouseUp = (e, deps) => {
   const sourceId = store.selectSelectedItemId();
   const targetItem = props.items[targetIndex];
   const sourceItem = props.items.find(item => item.id === sourceId);
-  
+
   store.stopDragging();
   render();
-  
+
   // Don't trigger event if source and target are the same item
   if (sourceItem && targetItem && sourceItem.id === targetItem.id) {
     return;
   }
-  
+
   const detail = {
     target: targetItem,
     source: sourceItem,
     position: dropPosition,
   };
-  
+
   // Emit target-changed event
   dispatchEvent(new CustomEvent("target-changed", {
     detail,
@@ -146,7 +146,7 @@ export const handleWindowMouseUp = (e, deps) => {
 
 export const handleWindowMouseMove = (e, deps) => {
   const isDragging = deps.store.selectIsDragging();
-  
+
   if (!isDragging) {
     return;
   }
@@ -157,13 +157,13 @@ export const handleWindowMouseMove = (e, deps) => {
   const sourceId = store.selectSelectedItemId();
 
   const result = getSelectedItemIndex(e.clientY, itemRects, 0, items);
-  
+
   // Find the source item's index in the items array
   const sourceIndex = items.findIndex(item => item.id === sourceId);
-  
+
   // Check if the drop position would result in no movement
   let isNoOpDrop = false;
-  
+
   if (result.dropPosition === 'inside') {
     // Dropping inside the source itself
     isNoOpDrop = items[result.index]?.id === sourceId;
@@ -174,7 +174,7 @@ export const handleWindowMouseMove = (e, deps) => {
     // Dropping below the source (which means index would be sourceIndex)
     isNoOpDrop = result.index === sourceIndex;
   }
-  
+
   // If dragging would result in no movement, hide the drag indicators
   if (isNoOpDrop) {
     store.setTargetDragIndex(-2); // -2 means no drag indicator
@@ -183,13 +183,13 @@ export const handleWindowMouseMove = (e, deps) => {
     render();
     return;
   }
-  
+
   // Convert absolute position to relative position
   const relativePosition = result.position - containerTop;
 
-  if (store.selectTargetDragIndex() === result.index && 
-      store.selectTargetDragPosition() === relativePosition &&
-      store.selectTargetDropPosition() === result.dropPosition) {
+  if (store.selectTargetDragIndex() === result.index &&
+    store.selectTargetDragPosition() === relativePosition &&
+    store.selectTargetDropPosition() === result.dropPosition) {
     return;
   }
 
@@ -217,7 +217,7 @@ export const subscriptions = (deps) => {
 export const handleContainerContextMenu = (e, deps) => {
   const { store, render, props } = deps;
   e.preventDefault();
-  
+
   // Show dropdown menu for empty space
   store.showDropdownMenuFileExplorerEmpty({
     position: { x: e.clientX, y: e.clientY },
@@ -229,9 +229,9 @@ export const handleContainerContextMenu = (e, deps) => {
 export const handleItemContextMenu = (e, deps) => {
   const { store, render, props } = deps;
   e.preventDefault();
-  
+
   const itemId = e.currentTarget.id.replace('item-', '');
-  
+
   // Show dropdown menu for item
   store.showDropdownMenuFileExplorerItem({
     position: { x: e.clientX, y: e.clientY },
@@ -244,11 +244,13 @@ export const handleItemContextMenu = (e, deps) => {
 export const handleItemClick = (e, deps) => {
   const { dispatchEvent, store, render } = deps;
   const itemId = e.currentTarget.id.replace('item-', '');
-  
+
+  console.log('22222222222222')
+
   // Update selected item
   store.setSelectedItemId(itemId);
   render();
-  
+
   dispatchEvent(new CustomEvent("click-item", {
     detail: {
       id: itemId,
@@ -274,24 +276,24 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   const { store, dispatchEvent, render } = deps;
   const detail = e.detail;
   const itemId = store.selectDropdownMenuItemId();
-  
+
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
-  
+
   // Store position before hiding dropdown (for rename popover)
   const position = store.selectDropdownMenuPosition();
-  
+
   // Hide dropdown
   store.hideDropdownMenu();
   render();
-  
+
   // Handle rename action internally (show popover)
   if (item.value === 'rename-item' && itemId) {
     store.showPopover({ position, itemId });
     render();
     return; // Don't emit event for rename, handle it internally
   }
-  
+
   // Emit file-action event for other actions
   dispatchEvent(new CustomEvent("file-action", {
     detail: { ...detail, itemId },
@@ -309,26 +311,26 @@ export const handlePopoverClickOverlay = (e, deps) => {
 export const handleFormActionClick = (e, deps) => {
   const { store, dispatchEvent, render } = deps;
   const detail = e.detail;
-  
+
   // Extract action and values from detail (form structure may vary)
   const action = detail.action || detail.actionId;
   const values = detail.values || detail.formValues || detail;
-  
+
   if (action === 'cancel') {
     store.hidePopover();
     render();
     return;
   }
-  
+
   if (action === 'submit') {
     // Get the popover item ID from state
     const storeState = store.getState ? store.getState() : store.state;
     const itemId = storeState ? storeState.popover.itemId : null;
-    
+
     // Hide popover
     store.hidePopover();
     render();
-    
+
     // Emit file-action event for rename confirmation
     dispatchEvent(new CustomEvent("file-action", {
       detail: {

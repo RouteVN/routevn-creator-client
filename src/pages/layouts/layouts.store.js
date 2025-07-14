@@ -21,6 +21,8 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
+export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutsData);
   const flatGroups = toFlatGroups(state.layoutsData);
@@ -41,7 +43,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Transform selectedItem into detailPanel props
   const detailTitle = selectedItemDetails ? 'Layout Details' : null;
   const detailFields = selectedItemDetails ? [
-    { type: 'text', label: 'Name', value: selectedItemDetails.name },
+    { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
     { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
     { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },

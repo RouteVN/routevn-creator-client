@@ -1,8 +1,12 @@
+import { toFlatItems } from '../../deps/repository';
+
 export const INITIAL_STATE = Object.freeze({
   // Popover state for renaming
   popover: {
     isOpen: false,
     position: { x: 0, y: 0 },
+    fields: [],
+    actions: [],
   },
   // Text dialog state
   textDialog: {
@@ -124,13 +128,26 @@ export const INITIAL_STATE = Object.freeze({
         }],
       }
     }
+  },
+  // Image selector dialog state
+  imageSelectorDialog: {
+    isOpen: false,
+    fieldIndex: -1,
+    groups: [],
+    selectedImageId: null,
   }
 });
 
-export const showPopover = (state, { position }) => {
+export const selectField = ({ props }, id) => {
+  return props.fields.find(field => field.id === id);
+}
+
+export const showPopover = (state, { position, fields, actions }) => {
   state.popover = {
     isOpen: true,
     position,
+    fields,
+    actions,
   };
 }
 
@@ -144,7 +161,7 @@ export const hidePopover = (state) => {
 export const showColorDialog = (state, { fieldIndex, itemData }) => {
   state.colorDialog.isOpen = true;
   state.colorDialog.fieldIndex = fieldIndex;
-  
+
   // Update default values with current item data
   state.colorDialog.defaultValues = {
     hex: itemData.value || '#ff0000',
@@ -154,7 +171,7 @@ export const showColorDialog = (state, { fieldIndex, itemData }) => {
 export const hideColorDialog = (state) => {
   state.colorDialog.isOpen = false;
   state.colorDialog.fieldIndex = -1;
-  
+
   // Reset default values
   state.colorDialog.defaultValues = {
     hex: '#ff0000',
@@ -164,7 +181,7 @@ export const hideColorDialog = (state) => {
 export const showTypographyDialog = (state, { fieldIndex, itemData, colorOptions, fontOptions }) => {
   state.typographyDialog.isOpen = true;
   state.typographyDialog.fieldIndex = fieldIndex;
-  
+
   // Update default values with current item data
   state.typographyDialog.defaultValues = {
     fontSize: itemData.fontSize || '16',
@@ -173,7 +190,7 @@ export const showTypographyDialog = (state, { fieldIndex, itemData, colorOptions
     fontWeight: itemData.fontWeight || 'normal',
     previewText: itemData.previewText || '',
   };
-  
+
   // Update dropdown options dynamically
   if (colorOptions) {
     state.typographyDialog.form.fields.find(field => field.id === 'fontColor').options = colorOptions;
@@ -186,7 +203,7 @@ export const showTypographyDialog = (state, { fieldIndex, itemData, colorOptions
 export const hideTypographyDialog = (state) => {
   state.typographyDialog.isOpen = false;
   state.typographyDialog.fieldIndex = -1;
-  
+
   // Reset default values
   state.typographyDialog.defaultValues = {
     fontSize: '16',
@@ -197,10 +214,43 @@ export const hideTypographyDialog = (state) => {
   };
 }
 
+export const showImageSelectorDialog = (state, { fieldIndex, groups, currentValue }) => {
+  state.imageSelectorDialog.isOpen = true;
+  state.imageSelectorDialog.fieldIndex = fieldIndex;
+  state.imageSelectorDialog.groups = groups || [];
+  state.imageSelectorDialog.selectedImageId = currentValue || null;
+}
+
+export const hideImageSelectorDialog = (state) => {
+  state.imageSelectorDialog.isOpen = false;
+  state.imageSelectorDialog.fieldIndex = -1;
+  state.imageSelectorDialog.groups = [];
+  state.imageSelectorDialog.selectedImageId = null;
+}
+
+export const setTempSelectedImageId = (state, { imageId }) => {
+  state.imageSelectorDialog.selectedImageId = imageId;
+}
+
 export const toViewData = ({ state, props }) => {
   const hasContent = props.fields && props.fields.length > 0;
-  const visibleFields = props.fields ? props.fields.filter(field => field.show !== false) : [];
+  let visibleFields = props.fields ? props.fields.filter(field => field.show !== false) : [];
   
+  // Convert imageId to fileId for image-selector fields
+  if (props.images) {
+    const flatImages = toFlatItems(props.images);
+    visibleFields = visibleFields.map(field => {
+      if (field.type === 'image-selector' && field.value) {
+        const imageItem = flatImages.find(img => img.id === field.value);
+        return {
+          ...field,
+          fileId: imageItem ? imageItem.fileId : null
+        };
+      }
+      return field;
+    });
+  }
+
   // Find the first text field index
   let firstTextIndex = -1;
   for (let i = 0; i < visibleFields.length; i++) {
@@ -209,7 +259,7 @@ export const toViewData = ({ state, props }) => {
       break;
     }
   }
-  
+
   // Only create form configuration when popover is open
   const renameForm = state.popover.isOpen ? {
     fields: [{
@@ -226,10 +276,6 @@ export const toViewData = ({ state, props }) => {
         id: 'submit',
         variant: 'pr',
         content: 'Rename',
-      }, {
-        id: 'cancel',
-        variant: 'se',
-        content: 'Cancel',
       }],
     }
   } : null;
@@ -240,7 +286,10 @@ export const toViewData = ({ state, props }) => {
     hasContent,
     emptyMessage: props.emptyMessage || 'No selection',
     popover: state.popover,
-    form: renameForm,
+    form: {
+      fields: state.popover.fields,
+      actions: state.popover.actions,
+    },
     firstTextIndex,
     colorDialog: {
       isOpen: state.colorDialog.isOpen,
@@ -251,6 +300,11 @@ export const toViewData = ({ state, props }) => {
       isOpen: state.typographyDialog.isOpen,
       defaultValues: state.typographyDialog.defaultValues,
       form: state.typographyDialog.form,
+    },
+    imageSelectorDialog: {
+      isOpen: state.imageSelectorDialog.isOpen,
+      groups: state.imageSelectorDialog.groups,
+      selectedImageId: state.imageSelectorDialog.selectedImageId,
     },
   };
 };

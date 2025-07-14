@@ -156,3 +156,21 @@ export const handleDragDropFileSelected = async (e, deps) => {
   );
   render();
 };
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "fonts",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { fonts } = repository.getState();
+  store.setItems(fonts);
+  render();
+};

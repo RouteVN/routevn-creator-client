@@ -1,4 +1,3 @@
-
 import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
@@ -6,33 +5,31 @@ export const handleOnMount = (deps) => {
   const { characterId } = router.getPayload();
   const { characters } = repository.getState();
   const character = characters.items[characterId];
-  
+
   if (!character) {
     alert("Character not found");
     return () => {};
   }
-  
+
   store.setCharacterId(characterId);
   store.setItems(character.sprites);
-  return () => {}
+  return () => {};
 };
-
 
 export const handleDataChanged = (e, deps) => {
   const { router, render, store, repository } = deps;
   const { characterId } = router.getPayload();
   const { characters } = repository.getState();
   const character = characters.items[characterId];
-  
+
   if (!character) {
     alert("Character not found");
     return;
   }
-  
+
   store.setItems(character.sprites);
   render();
 };
-
 
 export const handleImageItemClick = (e, deps) => {
   const { store, render } = deps;
@@ -49,7 +46,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const characterId = store.selectCharacterId();
   const { characters } = repository.getState();
   const character = characters.items[characterId];
-  
+
   if (!character) {
     alert("Character not found");
     return;
@@ -122,7 +119,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
         },
       });
     });
-    
+
     // Update store with the latest repository state
     const { characters } = repository.getState();
     const character = characters.items[characterId];
@@ -135,22 +132,47 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  const characterId = store.selectCharacterId();
+  const selectedItemId = store.selectSelectedItemId();
+  const formValues = e.detail.formValues;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `characters.items.${characterId}.sprites`,
+    value: {
+      id: selectedItemId,
+      replace: false,
+      item: formValues,
+    },
+  });
+
+  const { characters } = repository.getState();
+  const character = characters.items[characterId];
+  console.log("After update - character sprites:", character?.sprites);
+
+  store.setItems(character?.sprites || { items: {}, tree: [] });
+  render();
+};
+
 export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
-  
-  if (detail.value === 'rename-item-confirmed') {
+
+  if (detail.value === "rename-item-confirmed") {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
-      console.warn('No item selected for rename');
+      console.warn("No item selected for rename");
       return;
     }
-    
+
     // Update the item name in the repository
     repository.addAction({
       actionType: "treeUpdate",
-      target: "characterSprites",
+      target: `characters.items.${store.selectCharacterId()}.sprites`,
       value: {
         id: selectedItem.id,
         replace: false,
@@ -159,7 +181,7 @@ export const handleFileAction = (e, deps) => {
         },
       },
     });
-    
+
     // Update the store with the new repository state
     const { characters } = repository.getState();
     const character = characters.items[store.selectCharacterId()];

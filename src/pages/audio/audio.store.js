@@ -20,6 +20,10 @@ export const selectSelectedItem = ({ state }) => {
   return flatItems.find(item => item.id === state.selectedItemId);
 }
 
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
+}
+
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.audioData);
   const flatGroups = toFlatGroups(state.audioData);
@@ -33,7 +37,7 @@ export const toViewData = ({ state }) => {
   if (selectedItem) {
     detailFields = [
       { type: 'audio', waveformDataFileId: selectedItem.waveformDataFileId, editable: true, accept: 'audio/*' },
-      { type: 'text', value: selectedItem.name },
+      { id: 'name', type: 'text', value: selectedItem.name, editable: true },
       { type: 'text', label: 'File Type', value: selectedItem.fileType },
       { type: 'text', label: 'File Size', value: formatFileSize(selectedItem.fileSize) },
       { type: 'text', label: 'Duration', value: selectedItem.duration ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(selectedItem.duration % 60).toString().padStart(2, '0')}` : 'Unknown', show: !!selectedItem.duration },

@@ -54,3 +54,21 @@ export const handleVariableCreated = (e, deps) => {
   store.setItems(variables);
   render();
 };
+
+export const handleDetailPanelItemUpdate = (e, deps) => {
+  const { repository, store, render } = deps;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "variables",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: e.detail.formValues,
+    },
+  });
+
+  const { variables } = repository.getState();
+  store.setItems(variables);
+  render();
+};

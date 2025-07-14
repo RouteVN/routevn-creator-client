@@ -1,5 +1,18 @@
 import { nanoid } from "nanoid";
 
+const lodashGet = (obj, path, defaultValue) => {
+  const parts = path.split('.');
+  let current = obj;
+  for (const part of parts) {
+    if (current && Object.prototype.hasOwnProperty.call(current, part)) {
+      current = current[part];
+    } else {
+      return defaultValue;
+    }
+  }
+  return current !== undefined ? current : defaultValue;
+};
+
 // Forward click-item event from base component
 export const handleClickItem = (e, deps) => {
   const { dispatchEvent } = deps;
@@ -15,14 +28,16 @@ export const handleFileAction = (e, deps) => {
   const { dispatchEvent, repository, props } = deps;
   const detail = e.detail;
   const repositoryTarget = props.repositoryTarget;
-  
+
   if (!repositoryTarget) {
     throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
   }
-  
+
   // Extract the actual item from the detail (rtgl-dropdown-menu adds index)
   const item = detail.item || detail;
   const itemId = detail.itemId;
+
+  console.log('item', item)
 
   if (item.value === "new-item") {
     repository.addAction({
@@ -35,6 +50,48 @@ export const handleFileAction = (e, deps) => {
           id: nanoid(),
           type: "folder",
           name: "New Folder",
+        },
+      },
+    });
+  } else if (item.value === "add-container") {
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: "_root",
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "container",
+          name: "Container",
+        },
+      },
+    });
+  } else if (item.value === "add-sprite") {
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: "_root",
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "sprite",
+          name: "Sprite",
+        },
+      },
+    });
+  } else if (item.value === "add-text") {
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: "_root",
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "text",
+          name: "Text",
         },
       },
     });
@@ -55,7 +112,7 @@ export const handleFileAction = (e, deps) => {
     }
   } else if (item.value === "delete-item") {
     const repositoryState = repository.getState();
-    const targetData = repositoryState[repositoryTarget];
+    const targetData = lodashGet(repositoryState, repositoryTarget);
     const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
@@ -69,9 +126,8 @@ export const handleFileAction = (e, deps) => {
     }
   } else if (item.value === "new-child-folder") {
     const repositoryState = repository.getState();
-    const targetData = repositoryState[repositoryTarget];
+    const targetData = lodashGet(repositoryState, repositoryTarget);
     const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
-
     if (currentItem) {
       repository.addAction({
         actionType: "treePush",
@@ -87,6 +143,26 @@ export const handleFileAction = (e, deps) => {
         },
       });
     }
+  } else if (item.value.action === "new-child-item") {
+    const repositoryState = repository.getState();
+    const targetData = lodashGet(repositoryState, repositoryTarget);
+    const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
+    const {
+      action,
+      ...restItem
+    } = item.value;
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: itemId || "_root",
+        position: "last",
+        item: {
+          ...restItem,
+          id: nanoid(),
+        },
+      },
+    });
   }
 
   // Emit data-changed event after any repository action
@@ -100,13 +176,13 @@ export const handleFileAction = (e, deps) => {
 export const handleTargetChanged = (e, deps) => {
   const { dispatchEvent, repository, props } = deps;
   const repositoryTarget = props.repositoryTarget;
-  
+
   if (!repositoryTarget) {
     throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
   }
-  
+
   const { target, source, position } = e.detail;
-  
+
   if (!source || !source.id) {
     console.warn("No source item provided");
     return;

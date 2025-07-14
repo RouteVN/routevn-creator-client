@@ -23,6 +23,8 @@ refs:
         handler: handleFileAction
       typography-updated:
         handler: handleReplaceItem
+      item-update:
+        handler: handleDetailPanelItemUpdate
 
 template: 
   - rtgl-view d=h w=f h=f: 
