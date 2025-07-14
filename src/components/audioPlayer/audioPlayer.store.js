@@ -1,12 +1,8 @@
 export const INITIAL_STATE = Object.freeze({
-  // UI 状态
   isLoading: false,
   isPlaying: false,
   currentTime: 0,
   duration: 0,
-  // 组件状态
-  componentId: null,
-  eventListeners: [],
 });
 
 export const setLoading = (state, isLoading) => {
@@ -25,15 +21,8 @@ export const setDuration = (state, duration) => {
   state.duration = duration;
 };
 
-export const setEventListeners = (state, listeners) => {
-  state.eventListeners = listeners;
-};
 
-export const setComponentId = (state, componentId) => {
-  state.componentId = componentId;
-};
 
-// 复合状态更新
 export const resetState = (state) => {
   state.isPlaying = false;
   state.currentTime = 0;
@@ -41,7 +30,6 @@ export const resetState = (state) => {
   state.isLoading = false;
 };
 
-// Pure calculation functions
 const formatTime = (seconds) => {
   if (!seconds || !isFinite(seconds)) return '0:00';
 
@@ -58,7 +46,6 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
   return percentage * duration;
 };
 
-// 选择器
 export const selectors = {
   getProgressPercentage: (state) => calculateProgressPercentage(state.currentTime, state.duration),
   getFormattedCurrentTime: (state) => formatTime(state.currentTime),
@@ -70,7 +57,6 @@ export const selectors = {
   })
 };
 
-// 纯计算函数
 export const calculations = {
   formatTime,
   calculateProgressPercentage,
