@@ -127,35 +127,55 @@ template:
                           - $if field.editable:
                               - "rtgl-view#editable-text-${field.id} cur=p":
                                   - rtgl-text s=${field.size}: ${field.value}
-                            $elif i == firstTextIndex:
-                              - rtgl-text#title-text-${i} s=${field.size} cur=p: ${field.value}
                             $else:
                               - rtgl-text s=${field.size}: ${field.value}
                     $elif field.type == 'select':
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
-                          - rtgl-select#select-${field.id} av=c .selectedValue=visibleFields[${i}].value .options=visibleFields[${i}].options:
+                          - $if field.editable:
+                              - rtgl-select#select-${field.id} av=c .selectedValue=visibleFields[${i}].value .options=visibleFields[${i}].options:
+                            $else:
+                              - rtgl-text: ${field.value}
                     $elif field.type == 'color':
                       - rtgl-view:
-                          - 'rtgl-view#color-field-${i} w=200 h=150 br=md cur=p style="background-color: ${field.value}"':
+                          - $if field.editable:
+                              - 'rtgl-view#color-field-${i} w=200 h=150 br=md cur=p style="background-color: ${field.value}"':
+                            $else:
+                              - 'rtgl-view w=200 h=150 br=md style="background-color: ${field.value}"':
                     $elif field.type == 'font':
                       - rtgl-view:
-                          - "rtgl-view#font-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p":
-                              - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
-                          - 'input#file-input-${i} type=file accept=".ttf,.otf,.woff,.woff2" style="display: none;"':
+                          - $if field.editable:
+                              - "rtgl-view#font-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p":
+                                  - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
+                              - 'input#file-input-${i} type=file accept=".ttf,.otf,.woff,.woff2" style="display: none;"':
+                            $else:
+                              - "rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md":
+                                  - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
                     $elif field.type == 'typography':
                       - rtgl-view:
-                          - 'rtgl-view#typography-field-${i} w=240 h=80 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p style="color: ${field.fontColor}; font-size: ${field.fontSize}px; font-weight: ${field.fontWeight};"':
-                              - rtgl-text: ${field.name}
+                          - $if field.editable:
+                              - 'rtgl-view#typography-field-${i} w=240 h=80 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p style="color: ${field.fontColor}; font-size: ${field.fontSize}px; font-weight: ${field.fontWeight};"':
+                                  - rtgl-text: ${field.name}
+                            $else:
+                              - 'rtgl-view w=240 h=80 av=c ah=c bgc=bg bc=bo bw=xs br=md style="color: ${field.fontColor}; font-size: ${field.fontSize}px; font-weight: ${field.fontWeight};"':
+                                  - rtgl-text: ${field.name}
                     $elif field.type == 'image-selector':
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
-                          - $if field.fileId:
-                              - 'rtgl-view#image-selector-field-${i} cur=p br=md':
-                                  - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
+                          - $if field.editable:
+                              - $if field.fileId:
+                                  - 'rtgl-view#image-selector-field-${i} cur=p br=md':
+                                      - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
+                                $else:
+                                  - 'rtgl-view#image-selector-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p':
+                                      - rtgl-text c=mu-fg: Select Image
                             $else:
-                              - 'rtgl-view#image-selector-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p':
-                                  - rtgl-text c=mu-fg: Select Image
+                              - $if field.fileId:
+                                  - 'rtgl-view br=md':
+                                      - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
+                                $else:
+                                  - 'rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md':
+                                      - rtgl-text c=mu-fg: No Image
                     $elif field.type == 'audio':
                       - $if field.editable:
                           - rtgl-view pos=rel:

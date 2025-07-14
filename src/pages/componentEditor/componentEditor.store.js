@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from '../../deps/repository';
+import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
   layoutData: { tree: [], items: {} },
@@ -7,40 +7,78 @@ export const INITIAL_STATE = Object.freeze({
   images: { tree: [], items: {} },
   contextMenuItems: [
     {
-      label: 'Container AAA', type: 'item', value: {
-        action: 'new-child-item', type: 'container', name: 'New Container', x: 0, y: 0
-      }
+      label: "Container AAA",
+      type: "item",
+      value: {
+        action: "new-child-item",
+        type: "container",
+        name: "New Container",
+        x: 0,
+        y: 0,
+      },
     },
     {
-      label: 'Sprite', type: 'item', value: {
-        action: 'new-child-item', type: 'sprite', name: 'New Sprite', x: 0, y: 0
-      }
+      label: "Sprite",
+      type: "item",
+      value: {
+        action: "new-child-item",
+        type: "sprite",
+        name: "New Sprite",
+        x: 0,
+        y: 0,
+      },
     },
     {
-      label: 'Text', type: 'item', value: {
-        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0, textContent: 'text'
-      }
+      label: "Text",
+      type: "item",
+      value: {
+        action: "new-child-item",
+        type: "text",
+        name: "New Text",
+        x: 0,
+        y: 0,
+        textContent: "text",
+      },
     },
-    { label: 'Rename', type: 'item', value: 'rename-item' },
-    { label: 'Delete', type: 'item', value: 'delete-item' }
+    { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
   ],
   emptyContextMenuItems: [
     {
-      label: 'Container AAA', type: 'item', value: {
-        action: 'new-child-item', type: 'container', name: 'New Container', x: 0, y: 0
-      }
+      label: "Container AAA",
+      type: "item",
+      value: {
+        action: "new-child-item",
+        type: "container",
+        name: "New Container",
+        x: 0,
+        y: 0,
+      },
     },
     {
-      label: 'Sprite', type: 'item', value: {
-        action: 'new-child-item', type: 'sprite', name: 'New Sprite', x: 0, y: 0
-      }
+      label: "Sprite",
+      type: "item",
+      value: {
+        action: "new-child-item",
+        type: "sprite",
+        name: "New Sprite",
+        x: 0,
+        y: 0,
+      },
     },
     {
-      label: 'Text', type: 'item', value: {
-        action: 'new-child-item', type: 'text', name: 'New Text', x: 0, y: 0, textContent: 'text'
-      }
+      label: "Text",
+      type: "item",
+      value: {
+        action: "new-child-item",
+        type: "text",
+        name: "New Text",
+        x: 0,
+        y: 0,
+        textContent: "text",
+      },
     },
-  ]
+  ],
 });
 
 export const setItems = (state, layoutData) => {
@@ -61,80 +99,158 @@ export const setImages = (state, { images }) => {
 
 export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
-}
+};
 
 export const selectSelectedItem = ({ state }) => {
   const flatItems = toFlatItems(state.layoutData);
-  return state.selectedItemId ? flatItems.find(item => item.id === state.selectedItemId) : undefined;
-}
+  return state.selectedItemId
+    ? flatItems.find((item) => item.id === state.selectedItemId)
+    : undefined;
+};
 
 export const selectComponentId = ({ state }) => {
   return state.componentId;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
   const imageGroups = toFlatGroups(state.images);
 
-  const selectedItem = state.selectedItemId ?
-    flatItems.find(item => item.id === state.selectedItemId) : null;
+  const selectedItem = state.selectedItemId
+    ? flatItems.find((item) => item.id === state.selectedItemId)
+    : null;
 
-  let detailTitle = '';
+  let detailTitle = "";
   let detailFields = [];
 
-  // const detailTitle = selectedItem ? selectedItem.name : '';
   if (selectedItem) {
     detailTitle = selectedItem.name;
 
-    if (selectedItem.type === 'container') {
+    if (selectedItem.type === "container") {
       detailFields = [
-        { type: 'text', label: 'Type', value: selectedItem.type || 'Layout Item' },
-        { type: 'text', label: 'ID', value: selectedItem.id },
-        { id: 'x', type: 'text', label: 'X', value: selectedItem.x, editable: true },
         {
-          id: 'y', type: 'text', label: 'Y', value: selectedItem.y, editable: true
+          type: "text",
+          label: "Type",
+          value: selectedItem.type || "Layout Item",
+        },
+        { type: "text", label: "ID", value: selectedItem.id },
+        {
+          id: "x",
+          type: "text",
+          label: "X",
+          value: selectedItem.x,
+          editable: true,
         },
         {
-          id: 'direction', type: 'select', label: 'Direction', value: selectedItem.direction, editable: true, options: [{
-            label: 'Vertical', value: 'vertical'
-          }, {
-            label: 'Horizontal', value: 'horizontal'
-          }]
+          id: "y",
+          type: "text",
+          label: "Y",
+          value: selectedItem.y,
+          editable: true,
         },
         {
-          id: 'anchor', type: 'select', label: 'Anchor', value: selectedItem.anchor, editable: true, options: [{
-            label: 'Top Left', value: 'top-left'
-          }, {
-            label: 'Top Right', value: 'top-right'
-          }, {
-            label: 'Bottom Left', value: 'bottom-left'
-          }, {
-            label: 'Bottom Right', value: 'bottom-right'
-          }, {
-            label: 'Center', value: 'center'
-          }]
+          id: "direction",
+          type: "select",
+          label: "Direction",
+          value: selectedItem.direction,
+          editable: true,
+          options: [
+            {
+              label: "Vertical",
+              value: "vertical",
+            },
+            {
+              label: "Horizontal",
+              value: "horizontal",
+            },
+          ],
+        },
+        {
+          id: "anchor",
+          type: "select",
+          label: "Anchor",
+          value: selectedItem.anchor,
+          editable: true,
+          options: [
+            {
+              label: "Top Left",
+              value: "top-left",
+            },
+            {
+              label: "Top Right",
+              value: "top-right",
+            },
+            {
+              label: "Bottom Left",
+              value: "bottom-left",
+            },
+            {
+              label: "Bottom Right",
+              value: "bottom-right",
+            },
+            {
+              label: "Center",
+              value: "center",
+            },
+          ],
         },
       ];
-    } else if (selectedItem.type === 'sprite') {
+    } else if (selectedItem.type === "sprite") {
       detailFields = [
-        { type: 'text', label: 'Type', value: selectedItem.type },
-        { type: 'text', label: 'ID', value: selectedItem.id },
-        { id: 'x', type: 'text', label: 'X', value: selectedItem.x, editable: true },
-        { id: 'y', type: 'text', label: 'Y', value: selectedItem.y, editable: true },
-        { id: 'imageId', type: 'image-selector', label: 'Image', value: selectedItem.imageId || '' },
+        { type: "text", label: "Type", value: selectedItem.type },
+        { type: "text", label: "ID", value: selectedItem.id },
+        {
+          id: "x",
+          type: "text",
+          label: "X",
+          value: selectedItem.x,
+          editable: true,
+        },
+        {
+          id: "y",
+          type: "text",
+          label: "Y",
+          value: selectedItem.y,
+          editable: true,
+        },
+        {
+          id: "imageId",
+          type: "image-selector",
+          label: "Image",
+          value: selectedItem.imageId || "",
+          editable: true,
+        },
       ];
-    } else if (selectedItem.type === 'text') {
+    } else if (selectedItem.type === "text") {
       detailFields = [
-        { type: 'text', label: 'Type', value: selectedItem.type },
-        { type: 'text', label: 'ID', value: selectedItem.id },
-        { id: 'x', type: 'text', label: 'X', value: selectedItem.x, editable: true },
-        { id: 'y', type: 'text', label: 'Y', value: selectedItem.y, editable: true },
-        { id: 'textContent', type: 'text', label: 'Text Content', value: selectedItem.textContent || '', editable: true },
+        { type: "text", label: "Type", value: selectedItem.type },
+        { type: "text", label: "ID", value: selectedItem.id },
+        {
+          id: "x",
+          type: "text",
+          label: "X",
+          value: selectedItem.x,
+          editable: true,
+        },
+        {
+          id: "y",
+          type: "text",
+          label: "Y",
+          value: selectedItem.y,
+          editable: true,
+        },
+        {
+          id: "textContent",
+          type: "text",
+          label: "Text Content",
+          value: selectedItem.textContent || "",
+          editable: true,
+        },
       ];
     }
   }
-  const detailEmptyMessage = 'Select a layout item to view details';
+  const detailEmptyMessage = "Select a layout item to view details";
 
   return {
     flatItems,
@@ -146,9 +262,9 @@ export const toViewData = ({ state, props }, payload) => {
     detailTitle,
     detailFields,
     detailEmptyMessage,
-    resourceCategory: 'userInterface',
-    selectedResourceId: 'component-editor',
+    resourceCategory: "userInterface",
+    selectedResourceId: "component-editor",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
   };
-}
+};

@@ -1,3 +1,39 @@
+import { toTreeStructure } from "../../deps/repository";
+
+// loop through the tree structure and map
+const componentLayoutTreeStructureToRenderState = (layout) => {
+  const mapNode = (node) => {
+    let element = {
+      id: node.id,
+      type: node.type,
+      x: parseInt(node.x),
+      y: parseInt(node.y),
+    };
+
+    if (node.type === "text") {
+      console.log("element", element);
+      element = {
+        ...element,
+        text: node.textContent,
+        style: {
+          fontSize: 24,
+          fill: "white",
+          wordWrapWidth: 300,
+        },
+      };
+    }
+
+    // Map children recursively while maintaining tree structure
+    if (node.children && node.children.length > 0) {
+      element.children = node.children.map(mapNode);
+    }
+
+    return element;
+  };
+
+  return layout.map(mapNode);
+};
+
 export const handleOnMount = async (deps) => {
   const { render, router, store, repository, getRefIds, drenderer } = deps;
   const { componentId } = router.getPayload();
@@ -63,13 +99,21 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
 
   const { components } = repository.getState();
   const component = components.items[componentId];
+
+  const componentLayoutTreeStructure = toTreeStructure(component.layout);
+  const renderStateElements = componentLayoutTreeStructureToRenderState(
+    componentLayoutTreeStructure,
+  );
+  console.log("component tree structure", componentLayoutTreeStructure);
+  console.log("renderState", renderStateElements);
+
   store.setItems(component?.layout || { items: {}, tree: [] });
   render();
 
   const selectedItem = store.selectSelectedItem();
 
   drenderer.render({
-    elements: [
+    elements: renderStateElements.concat([
       {
         id: "id1",
         type: "graphics",
@@ -79,7 +123,7 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
         y2: 11,
         fill: "red",
       },
-    ],
+    ]),
     transitions: [],
   });
 };
@@ -87,33 +131,33 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
 export const handleRequestImageGroups = (e, deps) => {
   const { getRefIds, store } = deps;
   const { fieldIndex, currentValue } = e.detail;
-  
-  console.log('handleRequestImageGroups called');
-  console.log('fieldIndex:', fieldIndex);
-  console.log('currentValue:', currentValue);
-  
+
+  console.log("handleRequestImageGroups called");
+  console.log("fieldIndex:", fieldIndex);
+  console.log("currentValue:", currentValue);
+
   // Get groups from transformed repository data
   const viewData = store.toViewData();
   const groups = viewData.imageGroups;
-  
-  console.log('imageGroups:', groups);
-  
+
+  console.log("imageGroups:", groups);
+
   // Show dialog with groups using correct ref access pattern
   const refIds = getRefIds();
-  const detailPanelRef = refIds['detail-panel'];
-  console.log('detailPanelRef:', detailPanelRef);
-  
+  const detailPanelRef = refIds["detail-panel"];
+  console.log("detailPanelRef:", detailPanelRef);
+
   if (detailPanelRef && detailPanelRef.elm && detailPanelRef.elm.store) {
-    console.log('calling showImageSelectorDialog');
+    console.log("calling showImageSelectorDialog");
     detailPanelRef.elm.store.showImageSelectorDialog({
       fieldIndex,
       groups,
-      currentValue
+      currentValue,
     });
     detailPanelRef.elm.render();
   } else {
-    console.log('detailPanelRef.elm.store not found');
-    console.log('detailPanelRef.elm:', detailPanelRef?.elm);
+    console.log("detailPanelRef.elm.store not found");
+    console.log("detailPanelRef.elm:", detailPanelRef?.elm);
   }
 };
 
@@ -121,7 +165,7 @@ export const handleImageSelectorUpdated = (e, deps) => {
   const { repository, store, render } = deps;
   const { fieldIndex, imageId } = e.detail;
   const componentId = store.selectComponentId();
-  
+
   // Update the selected item with the new imageId
   repository.addAction({
     actionType: "treeUpdate",

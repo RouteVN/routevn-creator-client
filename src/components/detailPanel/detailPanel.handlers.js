@@ -132,7 +132,7 @@ export const handleColorFieldClick = (e, deps) => {
   const fieldIndex = parseInt(e.currentTarget.id.replace('color-field-', ''));
   const field = props.fields[fieldIndex];
 
-  if (field && field.type === 'color') {
+  if (field && field.type === 'color' && field.editable) {
     // Open color dialog with current color data
     store.showColorDialog({
       fieldIndex,
@@ -178,16 +178,21 @@ export const handleColorFormActionClick = (e, deps) => {
 };
 
 export const handleFontFieldClick = (e, deps) => {
-  const { getRefIds } = deps;
+  const { getRefIds, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = e.currentTarget.id.replace('font-field-', '');
+  const fieldIndex = parseInt(e.currentTarget.id.replace('font-field-', ''));
+  const field = props.fields[fieldIndex];
 
-  // Get the corresponding file input and trigger click
-  const refIds = getRefIds();
-  const fileInputRef = refIds[`file-input-${fieldIndex}`];
+  if (field && field.editable) {
+    // Get the corresponding file input and trigger click
+    const refIds = getRefIds();
+    const fileInputRef = refIds[`file-input-${fieldIndex}`];
 
-  fileInputRef.elm.click();
+    if (fileInputRef && fileInputRef.elm) {
+      fileInputRef.elm.click();
+    }
+  }
 };
 
 export const handleTypographyFieldClick = (e, deps) => {
@@ -197,7 +202,7 @@ export const handleTypographyFieldClick = (e, deps) => {
   const fieldIndex = parseInt(e.currentTarget.id.replace('typography-field-', ''));
   const field = props.fields[fieldIndex];
 
-  if (field && field.type === 'typography') {
+  if (field && field.type === 'typography' && field.editable) {
     // Open typography dialog with current typography data
     store.showTypographyDialog({
       fieldIndex,
@@ -309,7 +314,7 @@ export const handleImageSelectorFieldClick = (e, deps) => {
   console.log('field:', field);
   console.log('props.fields:', props.fields);
   
-  if (field && field.type === 'image-selector') {
+  if (field && field.type === 'image-selector' && field.editable) {
     console.log('dispatching request-image-groups event');
     // Request groups data from parent component
     dispatchEvent(new CustomEvent('request-image-groups', {
@@ -318,7 +323,7 @@ export const handleImageSelectorFieldClick = (e, deps) => {
       composed: true
     }));
   } else {
-    console.log('field not found or not image-selector type');
+    console.log('field not found, not image-selector type, or not editable');
   }
 };
 
