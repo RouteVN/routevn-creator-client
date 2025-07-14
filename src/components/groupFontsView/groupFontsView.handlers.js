@@ -27,37 +27,6 @@ export const handleFontItemClick = (e, deps) => {
   }));
 };
 
-export const handleOnMount = async (deps) => {
-  const { props = {}, render, httpClient, fontManager, loadFontFile } = deps;
-  const { flatGroups = [] } = props;
-  
-  // Extract all font items from all groups
-  const allFontItems = [];
-  
-  for (const group of flatGroups) {
-    if (group.children) {
-      allFontItems.push(...group.children);
-    }
-  }
-  
-  if (!allFontItems.length) {
-    return;
-  }
-  
-  // Load existing fonts in parallel using loadFontFile function
-  const loadPromises = allFontItems.map(item => {    
-    // Ensure fontFamily is set for loadFontFile
-    const fontItem = {
-      ...item,
-      fontFamily: item.fontFamily
-    };
-    
-    return loadFontFile(fontItem);
-  });
-  
-  await Promise.all(loadPromises);
-  render();
-};
 
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent, fontManager } = deps;

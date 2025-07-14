@@ -1,29 +1,9 @@
 import { nanoid } from "nanoid";
 
 export const handleOnMount = async (deps) => {
-  const { store, repository, httpClient, fontManager, loadFontFile } = deps;
+  const { store, repository } = deps;
   const { fonts } = repository.getState();
   store.setItems(fonts);
-
-  // Load all existing fonts
-  const flatItems = [];
-  const extractItems = (tree, items) => {
-    tree.forEach(node => {
-      if (node.type === 'font' && items[node.id]) {
-        flatItems.push(items[node.id]);
-      }
-      if (node.children) {
-        extractItems(node.children, items);
-      }
-    });
-  };
-  
-  extractItems(fonts.tree, fonts.items);
-  
-  // Load fonts in parallel using loadFontFile function
-  const loadPromises = flatItems.map(item => loadFontFile(item));
-  
-  await Promise.all(loadPromises);
 
   return () => {}
 };

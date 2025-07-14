@@ -62,12 +62,12 @@ export const toViewData = ({ state, props }, payload) => {
     return color ? color.hex : '#000000';
   };
 
-  const getFontName = (fontId) => {
-    if (!fontId) return null;
+  const getFontData = (fontId) => {
+    if (!fontId) return { fontFamily: null, fileId: null };
     const font = toFlatItems(state.fontsData)
       .filter(item => item.type === 'font')
       .find(font => font.id === fontId);
-    return font ? font.fontFamily : fontId;
+    return font ? { fontFamily: font.fontFamily, fileId: font.fileId } : { fontFamily: fontId, fileId: null };
   };
   
   // Generate color options from props
@@ -177,14 +177,18 @@ export const toViewData = ({ state, props }, payload) => {
       return {
         ...group,
         isCollapsed: state.collapsedIds.includes(group.id),
-        children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => ({
-          ...item,
-          fontStyle: getFontName(item.fontId),
-          color: getColorHex(item.colorId),
-          previewText: item.previewText || 'The quick brown fox jumps over the lazy dog',
-          selectedStyle: item.id === selectedItemId ? 
-            "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
-        })),
+        children: state.collapsedIds.includes(group.id) ? [] : filteredChildren.map(item => {
+          const fontData = getFontData(item.fontId);
+          return {
+            ...item,
+            fontStyle: fontData.fontFamily,
+            fontFileId: fontData.fileId,
+            color: getColorHex(item.colorId),
+            previewText: item.previewText || 'The quick brown fox jumps over the lazy dog',
+            selectedStyle: item.id === selectedItemId ? 
+              "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
+          };
+        }),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup
       };
