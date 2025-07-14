@@ -1,16 +1,12 @@
 export const INITIAL_STATE = Object.freeze({
-  isPlaying: false,
+  // UI 状态
   isLoading: false,
+  isPlaying: false,
   currentTime: 0,
   duration: 0,
-  audioBuffer: null,
-  audioContext: null,
-  sourceNode: null,
-  gainNode: null,
-  startTime: 0,
-  pauseTime: 0,
-  isSeeking: false,
+  // 组件状态
   componentId: null,
+  eventListeners: [],
 });
 
 export const setLoading = (state, isLoading) => {
@@ -29,49 +25,20 @@ export const setDuration = (state, duration) => {
   state.duration = duration;
 };
 
-export const setAudioBuffer = (state, audioBuffer) => {
-  state.audioBuffer = audioBuffer;
-};
-
-export const setAudioContext = (state, audioContext) => {
-  state.audioContext = audioContext;
-};
-
-export const setSourceNode = (state, sourceNode) => {
-  state.sourceNode = sourceNode;
-};
-
-export const setGainNode = (state, gainNode) => {
-  state.gainNode = gainNode;
-};
-
-export const setStartTime = (state, startTime) => {
-  state.startTime = startTime;
-};
-
-export const setPauseTime = (state, pauseTime) => {
-  state.pauseTime = pauseTime;
-};
-
-export const setSeeking = (state, isSeeking) => {
-  state.isSeeking = isSeeking;
+export const setEventListeners = (state, listeners) => {
+  state.eventListeners = listeners;
 };
 
 export const setComponentId = (state, componentId) => {
   state.componentId = componentId;
 };
 
-// Compound state updates
-export const updatePlaybackState = (state, updates) => {
-  Object.assign(state, updates);
-};
-
-export const resetPlayback = (state) => {
+// 复合状态更新
+export const resetState = (state) => {
   state.isPlaying = false;
   state.currentTime = 0;
-  state.pauseTime = 0;
-  state.startTime = 0;
-  state.sourceNode = null;
+  state.duration = 0;
+  state.isLoading = false;
 };
 
 // Pure calculation functions
@@ -91,24 +58,11 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
   return percentage * duration;
 };
 
-const calculatePlaybackParams = (state, seekTime = null) => {
-  const startTime = seekTime !== null ? seekTime : (state.pauseTime || 0);
-  const contextStartTime = state.audioContext ? state.audioContext.currentTime - startTime : 0;
-  
-  return { 
-    startTime, 
-    contextStartTime,
-    shouldResume: state.audioContext?.state === 'suspended'
-  };
-};
-
-
+// 选择器
 export const selectors = {
   getProgressPercentage: (state) => calculateProgressPercentage(state.currentTime, state.duration),
   getFormattedCurrentTime: (state) => formatTime(state.currentTime),
   getFormattedDuration: (state) => formatTime(state.duration),
-  canPlay: (state) => Boolean(state.audioBuffer && state.audioContext && !state.isLoading),
-  isReady: (state) => Boolean(state.audioBuffer && state.audioContext),
   getPlaybackPosition: (state) => ({
     current: state.currentTime,
     duration: state.duration,
@@ -116,12 +70,11 @@ export const selectors = {
   })
 };
 
-// Pure functions for calculations
+// 纯计算函数
 export const calculations = {
   formatTime,
   calculateProgressPercentage,
   calculateSeekPosition,
-  calculatePlaybackParams
 };
 
 export const toViewData = ({ state, props }) => ({
