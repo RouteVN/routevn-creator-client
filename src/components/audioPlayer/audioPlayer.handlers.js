@@ -17,17 +17,13 @@ export const handleOnMount = async (deps) => {
   const { store, attrs, httpClient, render, audioManager } = deps;
   const { fileId, autoPlay } = attrs;
 
-  // 生成组件 ID
   const componentId = generateComponentId();
   store.setComponentId(componentId);
 
-  // 初始化 AudioManager
   audioManager.init();
 
-  // 设置事件监听器
   const listeners = [];
 
-  // 监听时间更新
   const handleTimeUpdate = (currentTime) => {
     store.setCurrentTime(currentTime);
     render();
@@ -35,7 +31,6 @@ export const handleOnMount = async (deps) => {
   audioManager.on('timeupdate', handleTimeUpdate);
   listeners.push(['timeupdate', handleTimeUpdate]);
 
-  // 监听播放状态
   const handlePlay = () => {
     store.setPlaying(true);
     render();
@@ -43,7 +38,6 @@ export const handleOnMount = async (deps) => {
   audioManager.on('play', handlePlay);
   listeners.push(['play', handlePlay]);
 
-  // 监听暂停状态
   const handlePause = () => {
     store.setPlaying(false);
     render();
@@ -51,7 +45,6 @@ export const handleOnMount = async (deps) => {
   audioManager.on('pause', handlePause);
   listeners.push(['pause', handlePause]);
 
-  // 监听播放结束
   const handleEnded = () => {
     store.setPlaying(false);
     store.setCurrentTime(0);
@@ -60,7 +53,6 @@ export const handleOnMount = async (deps) => {
   audioManager.on('ended', handleEnded);
   listeners.push(['ended', handleEnded]);
 
-  // 监听加载完成
   const handleLoaded = ({ duration }) => {
     store.setDuration(duration);
     store.setLoading(false);
@@ -69,7 +61,6 @@ export const handleOnMount = async (deps) => {
   audioManager.on('loaded', handleLoaded);
   listeners.push(['loaded', handleLoaded]);
 
-  // 监听错误
   const handleError = (error) => {
     console.error('Audio error:', error);
     store.setLoading(false);
@@ -78,10 +69,8 @@ export const handleOnMount = async (deps) => {
   audioManager.on('error', handleError);
   listeners.push(['error', handleError]);
 
-  // 保存监听器以便清理
   store.setEventListeners(listeners);
 
-  // 加载音频文件
   if (fileId) {
     try {
       store.setLoading(true);
@@ -90,7 +79,6 @@ export const handleOnMount = async (deps) => {
       const url = await getAudioUrl(fileId, httpClient);
       await audioManager.loadAudio(url);
 
-      // 自动播放
       if (autoPlay) {
         await audioManager.play();
       }
@@ -101,18 +89,14 @@ export const handleOnMount = async (deps) => {
     }
   }
 
-  // 清理函数
   return () => {
-    // 移除事件监听
     const eventListeners = store.getState().eventListeners;
     eventListeners.forEach(([event, handler]) => {
       audioManager.off(event, handler);
     });
 
-    // 清理 AudioManager
     audioManager.cleanup();
-    
-    // 重置状态
+
     store.resetState();
   };
 };
@@ -121,20 +105,16 @@ export const handleOnUpdate = async (prevProps, deps) => {
   const { store, attrs, httpClient, render, audioManager } = deps;
   const { fileId, autoPlay } = attrs;
 
-  // 如果 fileId 改变，重新加载音频
   if (prevProps.fileId !== fileId && fileId) {
     try {
       store.setLoading(true);
       render();
 
-      // 停止当前播放
       audioManager.stop();
 
-      // 加载新音频
       const url = await getAudioUrl(fileId, httpClient);
       await audioManager.loadAudio(url);
 
-      // 自动播放
       if (autoPlay) {
         await audioManager.play();
       }
@@ -157,29 +137,25 @@ export const handlePlayPause = async (e, deps) => {
   }
 };
 
-export const handleProgressBarClick = (e, deps) => {
+export const handleProgressBarClick = async (e, deps) => {
   const { store, audioManager } = deps;
   const state = store.getState();
 
   if (!state.duration) return;
 
-  // 计算点击位置
   const rect = e.currentTarget.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
   const seekTime = calculations.calculateSeekPosition(clickX, rect.width, state.duration);
 
-  // 跳转到指定时间
-  audioManager.seek(seekTime);
+  await audioManager.seek(seekTime);
 };
 
 export const handleClose = (e, deps) => {
   e.preventDefault();
   const { dispatchEvent, audioManager } = deps;
 
-  // 停止播放
   audioManager.stop();
 
-  // 发送关闭事件
   dispatchEvent(new CustomEvent("audio-player-close", {
     bubbles: true,
     composed: true
