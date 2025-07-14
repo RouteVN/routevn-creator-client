@@ -24,7 +24,7 @@ refs:
       targetchanged:
         required: true
         handler: handleTargetChanged
-      item-click:
+      click-item:
         handler: handleFileExplorerItemClick
       data-changed:
         handler: handleDataChanged
@@ -32,11 +32,21 @@ refs:
     eventListeners:
       layout-add-click:
         handler: handleAddLayoutClick
+  detail-panel:
+    eventListeners:
+      item-update:
+        handler: handleDetailPanelItemUpdate
+      request-image-groups:
+        handler: handleRequestImageGroups
+      image-selector-updated:
+        handler: handleImageSelectorUpdated
 
 template:
-  - rtgl-view d=h w=f h=f: 
-    - 'rtgl-view w=f h=f w=240 bwr=xs z=1':
-      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-      - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - rvn-group-layouts-editor-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+  - rtgl-view d=h w=f h=f:
+      - rtgl-view w=f h=f w=240:
+          - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+          - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
+      - rtgl-view flex=1:
+          - rtgl-view w=f h=500 bgc=mu:
+              - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
+      - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage .images=images:

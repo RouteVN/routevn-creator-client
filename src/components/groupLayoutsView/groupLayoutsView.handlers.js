@@ -34,28 +34,61 @@ export const handleLayoutItemDoubleClick = (e, deps) => {
 
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
-  const query = e.target.value;
+  const searchQuery = e.detail.value || '';
   
-  // Update search query in store
-  store.setSearchQuery(query);
+  store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
-  const { dispatchEvent } = deps;
-  const { files } = e.detail;
-  const targetGroupId = e.currentTarget.id
-    .replace("drag-drop-bar-", "")
-    .replace("drag-drop-item-", "");
+export const handleAddLayoutClick = (e, deps) => {
+  const { store, render } = deps;
+  const groupId = e.currentTarget.id.replace("add-layout-button-", "");
   
-  // Forward file uploads to parent (parent will handle the actual upload logic)
-  dispatchEvent(new CustomEvent("files-uploaded", {
-    detail: { 
-      files, 
-      targetGroupId,
-      originalEvent: e
-    },
-    bubbles: true,
-    composed: true
-  }));
+  store.showDialog(groupId);
+  render();
+};
+
+export const handleCloseDialog = (e, deps) => {
+  const { store, render } = deps;
+  
+  // Close dialog
+  store.hideDialog();
+  render();
+};
+
+export const handleFormActionClick = (e, deps) => {
+  const { store, render, dispatchEvent } = deps;
+  
+  // Check which button was clicked
+  const actionId = e.detail.actionId;
+  
+  if (actionId === 'submit') {
+    // Get form values from the event detail
+    const formData = e.detail.formValues;
+    const groupId = store.selectCurrentGroupId();
+    
+    // Validate required fields
+    if (!formData.name) {
+      alert('Please enter a layout name');
+      return;
+    }
+    
+    // Dispatch layout creation event to parent
+    dispatchEvent(new CustomEvent("layout-created", {
+      detail: { 
+        groupId,
+        name: formData.name
+      },
+      bubbles: true,
+      composed: true
+    }));
+    
+    // Close dialog
+    store.hideDialog();
+    render();
+  } else if (actionId === 'cancel') {
+    // Close dialog on cancel
+    store.hideDialog();
+    render();
+  }
 };

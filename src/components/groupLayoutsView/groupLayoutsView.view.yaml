@@ -21,14 +21,18 @@ refs:
     eventListeners:
       input-keydown:
         handler: handleSearchInput
-  drag-drop-item-*:
+  add-layout-button-*:
     eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
-  drag-drop-bar-*:
+      click:
+        handler: handleAddLayoutClick
+  add-layout-dialog:
     eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
+      close-dialogue:
+        handler: handleCloseDialog
+  layout-form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
   group-*:
     eventListeners:
       click:
@@ -59,15 +63,20 @@ template:
                   - rtgl-text: ${group.fullLabel}
               - $if !group.isCollapsed:
                   - rtgl-view w=f mb=md p=sm:
-                    - rtgl-view d=h fw=w g=md:
+                    - rtgl-view d=h fw=w w=f g=md:
                       - $if group.hasChildren:
                           - $for item in group.children:
-                              - 'rtgl-view#layout-item-${item.id} cur=p style="${item.selectedStyle}"':
-                                - rvn-file-image br=md w=200 h=150 fileId=${item.fileId}:
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
-                        $else:
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                              - 'rtgl-view#layout-item-${item.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p style="${item.selectedStyle}"':
+                                - rtgl-view av=c ah=c:
+                                  - rtgl-text s=md: ${item.name}
+                                  - rtgl-text s=sm c=mu-fg: Layout
+                      - 'rtgl-view#add-layout-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
+                        - rtgl-text: Add Layout
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No layouts found matching "${searchQuery}"
     - rtgl-view h=33vh:
+  
+  - rtgl-dialog#add-layout-dialog .isOpen=isDialogOpen:
+    - rtgl-view slot=content g=md:
+      - rtgl-form#layout-form .defaultValues=defaultValues .form=form w=f:
