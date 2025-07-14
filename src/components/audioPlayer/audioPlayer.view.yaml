@@ -54,7 +54,7 @@ refs:
 template:
   - rtgl-view w=f h=f bgc=mu bc=bo bw=xs:
     - $if isLoading:
-        - rtgl-view w=f av=c p=md:
+        - rtgl-view w=f av=c p=md h=f:
           - rtgl-text c=mu-fg: Loading audio...
       $else:
         - rtgl-view w=f g=md bgc=mu:

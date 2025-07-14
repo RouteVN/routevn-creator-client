@@ -1,16 +1,8 @@
 export const INITIAL_STATE = Object.freeze({
-  isPlaying: false,
   isLoading: false,
+  isPlaying: false,
   currentTime: 0,
   duration: 0,
-  audioBuffer: null,
-  audioContext: null,
-  sourceNode: null,
-  gainNode: null,
-  startTime: 0,
-  pauseTime: 0,
-  isSeeking: false,
-  componentId: null,
 });
 
 export const setLoading = (state, isLoading) => {
@@ -29,39 +21,15 @@ export const setDuration = (state, duration) => {
   state.duration = duration;
 };
 
-export const setAudioBuffer = (state, audioBuffer) => {
-  state.audioBuffer = audioBuffer;
+
+
+export const resetState = (state) => {
+  state.isPlaying = false;
+  state.currentTime = 0;
+  state.duration = 0;
+  state.isLoading = false;
 };
 
-export const setAudioContext = (state, audioContext) => {
-  state.audioContext = audioContext;
-};
-
-export const setSourceNode = (state, sourceNode) => {
-  state.sourceNode = sourceNode;
-};
-
-export const setGainNode = (state, gainNode) => {
-  state.gainNode = gainNode;
-};
-
-export const setStartTime = (state, startTime) => {
-  state.startTime = startTime;
-};
-
-export const setPauseTime = (state, pauseTime) => {
-  state.pauseTime = pauseTime;
-};
-
-export const setSeeking = (state, isSeeking) => {
-  state.isSeeking = isSeeking;
-};
-
-export const setComponentId = (state, componentId) => {
-  state.componentId = componentId;
-};
-
-// Helper function to format time in MM:SS format
 const formatTime = (seconds) => {
   if (!seconds || !isFinite(seconds)) return '0:00';
 
@@ -70,18 +38,38 @@ const formatTime = (seconds) => {
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const toViewData = ({ state, props }) => {
-  const currentTimeFormatted = formatTime(state.currentTime);
-  const durationFormatted = formatTime(state.duration);
-  const progressPercentage = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
-  return {
-    isPlaying: state.isPlaying,
-    title: props.title,
-    isLoading: state.isLoading,
-    currentTime: state.currentTime,
-    duration: state.duration,
-    currentTimeFormatted,
-    durationFormatted,
-    progressPercentage,
-  };
+const calculateProgressPercentage = (currentTime, duration) => 
+  duration > 0 ? (currentTime / duration) * 100 : 0;
+
+const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
+  const percentage = Math.max(0, Math.min(1, clickX / progressBarWidth));
+  return percentage * duration;
 };
+
+export const selectors = {
+  getProgressPercentage: (state) => calculateProgressPercentage(state.currentTime, state.duration),
+  getFormattedCurrentTime: (state) => formatTime(state.currentTime),
+  getFormattedDuration: (state) => formatTime(state.duration),
+  getPlaybackPosition: (state) => ({
+    current: state.currentTime,
+    duration: state.duration,
+    percentage: calculateProgressPercentage(state.currentTime, state.duration)
+  })
+};
+
+export const calculations = {
+  formatTime,
+  calculateProgressPercentage,
+  calculateSeekPosition,
+};
+
+export const toViewData = ({ state, props }) => ({
+  isPlaying: state.isPlaying,
+  title: props.title,
+  isLoading: state.isLoading,
+  currentTime: state.currentTime,
+  duration: state.duration,
+  currentTimeFormatted: selectors.getFormattedCurrentTime(state),
+  durationFormatted: selectors.getFormattedDuration(state),
+  progressPercentage: selectors.getProgressPercentage(state),
+});
