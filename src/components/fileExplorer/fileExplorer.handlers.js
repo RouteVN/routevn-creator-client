@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 
 const lodashGet = (obj, path, defaultValue) => {
-  const parts = path.split('.');
+  const parts = path.split(".");
   let current = obj;
   for (const part of parts) {
     if (current && Object.prototype.hasOwnProperty.call(current, part)) {
@@ -17,11 +17,13 @@ const lodashGet = (obj, path, defaultValue) => {
 export const handleClickItem = (e, deps) => {
   const { dispatchEvent } = deps;
   // Just forward the event
-  dispatchEvent(new CustomEvent("click-item", {
-    detail: e.detail,
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("click-item", {
+      detail: e.detail,
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleFileAction = (e, deps) => {
@@ -30,14 +32,16 @@ export const handleFileAction = (e, deps) => {
   const repositoryTarget = props.repositoryTarget;
 
   if (!repositoryTarget) {
-    throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
+    throw new Error(
+      "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
+    );
   }
 
   // Extract the actual item from the detail (rtgl-dropdown-menu adds index)
   const item = detail.item || detail;
   const itemId = detail.itemId;
 
-  console.log('item', item)
+  console.log("item", item);
 
   if (item.value === "new-item") {
     repository.addAction({
@@ -113,7 +117,8 @@ export const handleFileAction = (e, deps) => {
   } else if (item.value === "delete-item") {
     const repositoryState = repository.getState();
     const targetData = lodashGet(repositoryState, repositoryTarget);
-    const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
+    const currentItem =
+      targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
       repository.addAction({
@@ -127,7 +132,8 @@ export const handleFileAction = (e, deps) => {
   } else if (item.value === "new-child-folder") {
     const repositoryState = repository.getState();
     const targetData = lodashGet(repositoryState, repositoryTarget);
-    const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
+    const currentItem =
+      targetData && targetData.items ? targetData.items[itemId] : null;
     if (currentItem) {
       repository.addAction({
         actionType: "treePush",
@@ -146,11 +152,9 @@ export const handleFileAction = (e, deps) => {
   } else if (item.value.action === "new-child-item") {
     const repositoryState = repository.getState();
     const targetData = lodashGet(repositoryState, repositoryTarget);
-    const currentItem = targetData && targetData.items ? targetData.items[itemId] : null;
-    const {
-      action,
-      ...restItem
-    } = item.value;
+    const currentItem =
+      targetData && targetData.items ? targetData.items[itemId] : null;
+    const { action, ...restItem } = item.value;
     repository.addAction({
       actionType: "treePush",
       target: repositoryTarget,
@@ -166,11 +170,13 @@ export const handleFileAction = (e, deps) => {
   }
 
   // Emit data-changed event after any repository action
-  dispatchEvent(new CustomEvent("data-changed", {
-    detail: { target: repositoryTarget },
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("data-changed", {
+      detail: { target: repositoryTarget },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleTargetChanged = (e, deps) => {
@@ -178,7 +184,9 @@ export const handleTargetChanged = (e, deps) => {
   const repositoryTarget = props.repositoryTarget;
 
   if (!repositoryTarget) {
-    throw new Error("🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component");
+    throw new Error(
+      "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
+    );
   }
 
   const { target, source, position } = e.detail;
@@ -191,15 +199,15 @@ export const handleTargetChanged = (e, deps) => {
   let repositoryPosition;
   let parent;
 
-  if (position === 'inside') {
+  if (position === "inside") {
     // Drop inside a folder
-    if (!target || target.type !== 'folder') {
+    if (!target || target.type !== "folder") {
       console.warn("Cannot drop inside non-folder item");
       return;
     }
     parent = target.id;
-    repositoryPosition = 'last'; // Add to end of folder
-  } else if (position === 'above') {
+    repositoryPosition = "last"; // Add to end of folder
+  } else if (position === "above") {
     // Drop above target item
     if (!target || !target.id) {
       console.warn("No target item for above position");
@@ -207,8 +215,8 @@ export const handleTargetChanged = (e, deps) => {
     }
     parent = target.parentId || "_root";
     repositoryPosition = { before: target.id };
-  } else if (position === 'below') {
-    // Drop below target item  
+  } else if (position === "below") {
+    // Drop below target item
     if (!target || !target.id) {
       console.warn("No target item for below position");
       return;
@@ -231,9 +239,11 @@ export const handleTargetChanged = (e, deps) => {
   });
 
   // Emit data-changed event after repository action
-  dispatchEvent(new CustomEvent("data-changed", {
-    detail: { target: repositoryTarget },
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("data-changed", {
+      detail: { target: repositoryTarget },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };

@@ -1,43 +1,9 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
-
-// Helper function to extract fileIds from renderState
-function extractFileIdsFromRenderState(obj) {
-  const fileIds = new Set();
-
-  function traverse(value) {
-    if (value === null || value === undefined) return;
-
-    if (typeof value === 'string') {
-      // Check if this is a fileId (starts with 'file:')
-      if (value.startsWith('file:')) {
-        fileIds.add(value.replace('file:', ''));
-      }
-      return;
-    }
-
-    if (Array.isArray(value)) {
-      value.forEach(traverse);
-      return;
-    }
-
-    if (typeof value === 'object') {
-      Object.keys(value).forEach(key => {
-        // Check if this property is 'url' or 'src' and extract fileId
-        if ((key === 'url' || key === 'src') && typeof value[key] === 'string') {
-          if (value[key].startsWith('file:')) {
-            fileIds.add(value[key].replace('file:', ''));
-          }
-        }
-        // Continue traversing nested objects
-        traverse(value[key]);
-      });
-    }
-  }
-
-  traverse(obj);
-  return Array.from(fileIds);
-}
+import { toFlatItems, toTreeStructure } from "../../deps/repository";
+import {
+  extractFileIdsFromRenderState,
+  layoutTreeStructureToRenderState,
+} from "../../utils/index.js";
 
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(fileIds, httpClient) {
@@ -47,11 +13,11 @@ async function createAssetsFromFileIds(fileIds, httpClient) {
     try {
       const { url } = await httpClient.creator.getFileContent({
         fileId,
-        projectId: 'someprojectId'
+        projectId: "someprojectId",
       });
       assets[`file:${fileId}`] = {
         url,
-        type: 'image/png', // Default type, could be enhanced to detect actual type
+        type: "image/png", // Default type, could be enhanced to detect actual type
       };
     } catch (error) {
       console.error(`Failed to load file ${fileId}:`, error);
@@ -61,31 +27,41 @@ async function createAssetsFromFileIds(fileIds, httpClient) {
   return assets;
 }
 
-export const handleOnMount = (deps) => {
+// Helper function to render the scene state
+async function renderSceneState(store, drenderer, httpClient) {
+  const renderState = store.selectRenderState();
+  const fileIds = extractFileIdsFromRenderState(renderState);
+  const assets = await createAssetsFromFileIds(fileIds, httpClient);
+  await drenderer.loadAssets(assets);
+  drenderer.render(renderState);
+}
+
+export const handleOnMount = async (deps) => {
   const { store, router, render, repository, getRefIds, drenderer } = deps;
   const { sceneId } = router.getPayload();
-  const { scenes, images, characters, placements } = repository.getState();
+  const { scenes, images, characters, placements, layouts } =
+    repository.getState();
 
   // Convert characters to the required format
   const processedCharacters = {};
   if (characters && characters.items) {
-    Object.keys(characters.items).forEach(characterId => {
+    Object.keys(characters.items).forEach((characterId) => {
       const character = characters.items[characterId];
-      if (character.type === 'character') {
+      if (character.type === "character") {
         processedCharacters[characterId] = {
           variables: {
-            name: character.name || 'Unnamed Character'
+            name: character.name || "Unnamed Character",
           },
-          spriteParts: {}
+          spriteParts: {},
         };
-        
+
         // Process sprite parts if they exist
         if (character.sprites && character.sprites.items) {
-          Object.keys(character.sprites.items).forEach(spriteId => {
+          Object.keys(character.sprites.items).forEach((spriteId) => {
             const sprite = character.sprites.items[spriteId];
             if (sprite.fileId) {
               processedCharacters[characterId].spriteParts[spriteId] = {
-                fileId: sprite.fileId
+                fileId: sprite.fileId,
               };
             }
           });
@@ -97,15 +73,31 @@ export const handleOnMount = (deps) => {
   // Convert placements to the required format
   const processedPlacements = {};
   if (placements && placements.items) {
-    Object.keys(placements.items).forEach(placementId => {
+    Object.keys(placements.items).forEach((placementId) => {
       const placement = placements.items[placementId];
-      if (placement.type === 'placement') {
+      if (placement.type === "placement") {
         processedPlacements[placementId] = {
           x: placement.x || placement.positionX || 0,
           y: placement.y || placement.positionY || 0,
           xa: placement.xa || 0,
           ya: placement.ya || 0,
-          anchor: placement.anchor || 'BottomCenter'
+          anchor: placement.anchor || "BottomCenter",
+        };
+      }
+    });
+  }
+
+  const processedLayouts = {};
+  if (layouts && layouts.items) {
+    Object.keys(layouts.items).forEach((layoutId) => {
+      const layout = layouts.items[layoutId];
+      if (layout.type === "layout") {
+        processedLayouts[layoutId] = {
+          name: layout.name,
+          elements: layoutTreeStructureToRenderState(
+            toTreeStructure(layout.elements),
+            images.items,
+          ),
         };
       }
     });
@@ -113,10 +105,8 @@ export const handleOnMount = (deps) => {
 
   setTimeout(() => {
     // const { canvas } = getRefIds()
-    // console.log('canvas', drenderer.getCanvas())
-    // canvas.elm.appendChild(drenderer.getCanvas())
-    store.setImages(images.items)
-  }, 10)
+    store.setImages(images.items);
+  }, 10);
 
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
@@ -131,10 +121,19 @@ export const handleOnMount = (deps) => {
     id: scene.id,
     scene,
   });
+
   store.setSelectedSectionId(scene.sections[0].id);
   store.setRepository(repository.getState());
   store.setCharacters(processedCharacters);
   store.setPlacements(processedPlacements);
+  store.setLayouts(processedLayouts);
+
+  // Render first to make canvas ref available
+  render();
+
+  // Initialize drenderer with canvas
+  const { canvas } = getRefIds();
+  await drenderer.init({ canvas: canvas.elm });
 };
 
 export const handleSectionTabClick = (e, deps) => {
@@ -216,14 +215,8 @@ export const handleEditorDataChanged = (e, deps) => {
   store.setLineTextContent({ lineId, text: e.detail.content });
 
   setTimeout(async () => {
-    const renderState = store.selectRenderState()
-    const fileIds = extractFileIdsFromRenderState(renderState);
-    const assets = await createAssetsFromFileIds(fileIds, httpClient);
-    const { canvas } = getRefIds()
-    await drenderer.init({ assets, canvas: canvas.elm })
-    drenderer.render(renderState)
-  }, 10)
-
+    await renderSceneState(store, drenderer, httpClient);
+  }, 10);
 };
 
 export const handleAddPresentationButtonClick = (e, deps) => {
@@ -281,21 +274,12 @@ export const handleSectionAddClick = (e, deps) => {
 };
 
 export const handleSplitLine = (e, deps) => {
-  const startTime = performance.now();
-  console.log("🕐 handleSplitLine - START at", startTime);
-
   const { store, render, repository, getRefIds } = deps;
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = e.detail;
-
-  console.log("handleSplitLine - splitting line:", lineId);
-
-  // Batch both operations into a single update cycle
-  const repoStart = performance.now();
-  console.log("🕐 Starting repository actions at", repoStart - startTime, "ms");
 
   // First, update the current line with the left content
   repository.addAction({
@@ -313,15 +297,6 @@ export const handleSplitLine = (e, deps) => {
       },
     },
   });
-
-  const updateDone = performance.now();
-  console.log(
-    "🕐 Update action done at",
-    updateDone - startTime,
-    "ms (took",
-    updateDone - repoStart,
-    "ms)",
-  );
 
   // Then, create a new line with the right content and insert it after the current line
   repository.addAction({
@@ -341,22 +316,7 @@ export const handleSplitLine = (e, deps) => {
     },
   });
 
-  const pushDone = performance.now();
-  console.log(
-    "🕐 Push action done at",
-    pushDone - startTime,
-    "ms (took",
-    pushDone - updateDone,
-    "ms)",
-  );
-
   // Update the scene data
-  const sceneDataStart = performance.now();
-  console.log(
-    "🕐 Starting scene data update at",
-    sceneDataStart - startTime,
-    "ms",
-  );
 
   const { scenes } = repository.getState();
   const scene = toFlatItems(scenes)
@@ -373,18 +333,7 @@ export const handleSplitLine = (e, deps) => {
     scene,
   });
 
-  const sceneDataDone = performance.now();
-  console.log(
-    "🕐 Scene data update done at",
-    sceneDataDone - startTime,
-    "ms (took",
-    sceneDataDone - sceneDataStart,
-    "ms)",
-  );
-
   // Pre-configure the linesEditor before rendering
-  const configStart = performance.now();
-  console.log("🕐 Starting pre-config at", configStart - startTime, "ms");
 
   const refIds = getRefIds();
   const linesEditorRef = refIds["lines-editor"];
@@ -400,63 +349,17 @@ export const handleSplitLine = (e, deps) => {
   // Update selectedLineId through the store (not directly in linesEditor)
   store.setSelectedLineId(newLineId);
 
-  const configDone = performance.now();
-  console.log(
-    "🕐 Pre-config done at",
-    configDone - startTime,
-    "ms (took",
-    configDone - configStart,
-    "ms)",
-  );
-
   // Render and then focus immediately
-  const renderStart = performance.now();
-  console.log("🕐 Starting render at", renderStart - startTime, "ms");
 
   render();
 
-  const renderDone = performance.now();
-  console.log(
-    "🕐 Render done at",
-    renderDone - startTime,
-    "ms (took",
-    renderDone - renderStart,
-    "ms)",
-  );
-
   // Use requestAnimationFrame for faster execution than setTimeout
   requestAnimationFrame(() => {
-    const focusStart = performance.now();
-    console.log("🕐 Starting focus at", focusStart - startTime, "ms");
-
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine(newLineId);
 
-      const updateLineDone = performance.now();
-      console.log(
-        "🕐 updateSelectedLine done at",
-        updateLineDone - startTime,
-        "ms (took",
-        updateLineDone - focusStart,
-        "ms)",
-      );
-
       // Also render the linesEditor
       linesEditorRef.elm.render();
-
-      const finalRenderDone = performance.now();
-      console.log(
-        "🕐 Final render done at",
-        finalRenderDone - startTime,
-        "ms (took",
-        finalRenderDone - updateLineDone,
-        "ms)",
-      );
-      console.log(
-        "🕐 TOTAL handleSplitLine time:",
-        finalRenderDone - startTime,
-        "ms",
-      );
     }
   });
 };
@@ -539,13 +442,8 @@ export const handleMoveUp = (e, deps) => {
       linesEditorRef.elm.render();
 
       setTimeout(async () => {
-        const renderState = store.selectRenderState()
-        const fileIds = extractFileIdsFromRenderState(renderState);
-        const assets = await createAssetsFromFileIds(fileIds, httpClient);
-        const { canvas } = getRefIds()
-        await drenderer.init({ assets, canvas: canvas.elm })
-        drenderer.render(renderState)
-      }, 10)
+        await renderSceneState(store, drenderer, httpClient);
+      }, 10);
     }, 0);
   }
 };
@@ -589,13 +487,8 @@ export const handleMoveDown = (e, deps) => {
       linesEditorRef.elm.render();
 
       setTimeout(async () => {
-        const renderState = store.selectRenderState()
-        const fileIds = extractFileIdsFromRenderState(renderState);
-        const assets = await createAssetsFromFileIds(fileIds, httpClient);
-        const { canvas } = getRefIds()
-        await drenderer.init({ assets, canvas: canvas.elm })
-        drenderer.render(renderState)
-      }, 10)
+        await renderSceneState(store, drenderer, httpClient);
+      }, 10);
     }, 0);
   }
 };
@@ -702,6 +595,23 @@ export const handleBackgroundActionContextMenu = (e, deps) => {
   render();
 };
 
+export const handleLayoutActionClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("layouts");
+  render();
+};
+
+export const handleLayoutActionContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+
+  store.showPresentationDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    presentationType: "layout",
+  });
+  render();
+};
+
 export const handleBgmActionClick = (e, deps) => {
   const { store, render } = deps;
   store.setMode("bgm");
@@ -782,7 +692,6 @@ export const handleActionsContainerClick = (e, deps) => {
 
 export const handleActionClicked = (e, deps) => {
   const { store, render } = deps;
-  // console.log('e.deatil', e.detail)
   store.setMode(e.detail.item.mode);
   render();
 };
@@ -966,5 +875,4 @@ export const handleToggleSectionsGraphView = (e, deps) => {
   const { store, render } = deps;
   store.toggleSectionsGraphView();
   render();
-  console.log("render");
 };

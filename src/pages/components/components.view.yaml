@@ -15,15 +15,17 @@ refs:
         handler: handleImageItemClick
       files-uploaded:
         handler: handleDragDropFileSelected
+      component-created:
+        handler: handleComponentCreated
   detail-panel:
     eventListeners:
       item-update:
         handler: handleDetailPanelItemUpdate
 
-template: 
-  - rtgl-view d=h w=f h=f: 
-    - 'rtgl-view w=f h=f w=240 bwr=xs z=1':
-      - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-      - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - rvn-group-components-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+template:
+  - rtgl-view d=h w=f h=f:
+      - "rtgl-view w=f h=f w=240 bwr=xs z=1":
+          - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+          - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
+      - rvn-group-components-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
+      - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

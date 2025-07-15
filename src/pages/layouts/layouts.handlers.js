@@ -1,4 +1,3 @@
-
 import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
@@ -6,9 +5,8 @@ export const handleOnMount = (deps) => {
   const { layouts } = repository.getState();
   store.setItems(layouts);
 
-  return () => {}
+  return () => {};
 };
-
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -17,11 +15,37 @@ export const handleDataChanged = (e, deps) => {
   render();
 };
 
-
 export const handleImageItemClick = (e, deps) => {
   const { store, render } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
+  render();
+};
+
+export const handleLayoutCreated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { groupId, name } = e.detail;
+
+  repository.addAction({
+    actionType: "treePush",
+    target: "layouts",
+    value: {
+      parent: groupId,
+      position: "last",
+      item: {
+        id: nanoid(),
+        type: "layout",
+        name: name,
+        elements: {
+          items: {},
+          tree: [],
+        },
+      },
+    },
+  });
+
+  const { layouts } = repository.getState();
+  store.setItems(layouts);
   render();
 };
 
@@ -92,10 +116,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
-          layout: {
+          elements: {
             items: {},
-            tree: []
-          }
+            tree: [],
+          },
         },
       },
     });
@@ -129,4 +153,3 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
   store.setItems(layouts);
   render();
 };
-

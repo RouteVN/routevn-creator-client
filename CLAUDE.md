@@ -16,45 +16,11 @@ This command:
 
 ## Architecture
 
-This is a Visual Novel Frontend Interface built with the Rettangoli framework. The application follows a component-based architecture where each component/page consists of three files:
+This project uses a custom frontend framework based on 3 component files: view, store, handlers:
 
-- `.view.yaml` - Declarative UI template with data schema validation
-- `.store.js` - State management and data transformation
-- `.handlers.js` - Event handlers and business logic
+Read the links from the following files to familiarize with the code before starting to write any code.
 
-### Key Architectural Patterns
-
-1. **Component Structure**: Components are auto-discovered from `src/components/` and `src/pages/` directories. Each component becomes a custom element (e.g., `rvn-command-line-actions`).
-
-2. **View Templates**: YAML files use Rettangoli's templating syntax:
-   - Conditional rendering: `$if`, `$elif`, `$else`
-   - Loops: `$for item, i in items`
-   - Template interpolation: `${expression}`
-   - Element attributes use shorthand notation (e.g., `w=f` for width)
-
-3. **State Management**: Stores export:
-   - `INITIAL_STATE`: Frozen object with component's initial state
-   - `toViewData(({ state, props }, payload))`: Transforms state/props for the view
-   - Selector functions that extract specific data from state
-
-4. **Event System**: Uses RxJS Subject (CustomSubject) for component communication. Handlers receive `(event, deps)` where deps includes `dispatchEvent`, `store`, and other injected dependencies.
-
-5. **Routing**: Custom WebRouter implementation handles client-side routing. Pages conditionally render based on `currentRoutePattern`.
-
-### Dependencies Injection
-
-The `setup.js` file configures dependencies injected into all components:
-- `subject`: Event bus for inter-component communication
-- `router`: Client-side routing
-- `patch`: Virtual DOM patching function from Snabbdom
-- `h`: Hyperscript function for creating virtual nodes
-
-### Project Structure
-
-- `/src/components/`: Reusable UI components
-- `/src/pages/`: Top-level route components
-- `/static/`: Static HTML files and assets
-- `/_site/`: Build output directory
-- `/vt/`: Visual testing configuration
-
-The application is a visual novel creation tool with features for managing projects, resources (backgrounds, CGs), scenes, and includes a scene editor.
+- [Overview](https://raw.githubusercontent.com/yuusoft-org/rettangoli/refs/heads/main/packages/rettangoli-fe/docs/overview.md)
+- [View](https://raw.githubusercontent.com/yuusoft-org/rettangoli/refs/heads/main/packages/rettangoli-fe/docs/view.md)
+- [State Management](https://raw.githubusercontent.com/yuusoft-org/rettangoli/refs/heads/main/packages/rettangoli-fe/docs/store.md)
+- [Handlers](https://raw.githubusercontent.com/yuusoft-org/rettangoli/refs/heads/main/packages/rettangoli-fe/docs/handlers.md)

@@ -2,17 +2,37 @@ elementName: rvn-command-line-dialogue-box
 
 viewDataSchema:
   type: object
-  properties: {}
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+    submitDisabled:
+      type: boolean
+
+propsSchema:
+  type: object
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
 
 refs:
-  speaker-input:
+  layout-select:
     eventListeners:
-      input:
-        handler: handleSpeakerInput
-  dialogue-input:
-    eventListeners:
-      input:
-        handler: handleDialogueInput
+      option-selected:
+        handler: handleLayoutSelectChange
   submit-button:
     eventListeners:
       click:
@@ -24,26 +44,15 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
-    - rtgl-view d=h g=md:
-      - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-      - rtgl-text s=sm c=mu-fg mb=lg: '>'
-      - rtgl-text s=sm c=mu-fg mb=lg: Dialogue Box
-    
-    - rtgl-text: Dialogue Configuration
-    
-    - rtgl-view g=md:
-      - rtgl-text: Speaker Name
-      - rtgl-input#speaker-input w=f placeholder="Enter character name..." value=${speakerName}:
-      
-      - rtgl-text: Dialogue Text
-      - rtgl-textarea#dialogue-input w=f h=120 placeholder="Enter dialogue text..." value=${dialogueText}:
-      
-      - rtgl-text: Preview
-      - rtgl-view w=f p=md bgc=bg br=sm:
-        - rtgl-text s=sm fw=b c=pr: ${speakerName || 'Speaker'}
-        - rtgl-text: ${dialogueText || 'Dialogue text will appear here...'}
-    
-    - rtgl-view flex=1:
-    - rtgl-view d=h av=c ah=e w=f g=lg:
-      - rtgl-button#reset-button v=ol: Reset
-      - rtgl-button#submit-button: Submit
+      - rtgl-view d=h g=md:
+          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+          - rtgl-text s=sm c=mu-fg mb=lg: ">"
+          - rtgl-text s=sm c=mu-fg mb=lg: Dialogue Box
+
+      - rtgl-text: Select Layout for Dialogue Box
+
+      - rtgl-select#layout-select .options=layouts .value=selectedLayoutId placeholder="Choose a layout...":
+
+      - rtgl-view flex=1:
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+          - rtgl-button#submit-button dis=${submitDisabled}: Submit
