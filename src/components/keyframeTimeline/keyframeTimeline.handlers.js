@@ -2,15 +2,17 @@ export const handleOnMount = (deps) => {
   // Component mounted
 };
 
-// Placeholder for future timeline interaction handlers
-// export const handleKeyframeClick = (e, deps) => {
-//   // Handle keyframe selection
-// };
+export const handleMouseMove = (e, deps) => {
+  const { store, render } = deps;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = e.clientX - rect.left;
 
-// export const handleTrackClick = (e, deps) => {
-//   // Handle track selection
-// };
+  store.setMousePosition(x);
+  render();
+};
 
-// export const handleTimelineSeek = (e, deps) => {
-//   // Handle timeline scrubbing
-// };
+export const handleMouseLeave = (e, deps) => {
+  const { store, render } = deps;
+  store.hideTimelineLine(e.clientX);
+  render();
+};

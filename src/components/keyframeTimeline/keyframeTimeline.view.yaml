@@ -24,22 +24,45 @@ propsSchema:
                 duration:
                   type: number
 
+refs:
+  timeline-container:
+    eventListeners:
+      mousemove:
+        handler: handleMouseMove
+      mouseleave:
+        handler: handleMouseLeave
+
 template:
-  - rtgl-view g=md w=f pos=rel:
-    - rtgl-view d=h w=f:
-      - rtgl-view w=f ah=e:
-        - rtgl-text s=sm: 'Total: ${totalDuration}'
-    - rtgl-view d=h w=f:
-      - rtgl-view w=48 av=c:
-      - rtgl-view h=16 w=f bgc=mu br=sm:
-    - rtgl-view h=8: 
-    - rtgl-view d=h w=f av=c:
-      - rtgl-view w=48 av=c:
-        - rtgl-text s=xs: Alpha
-      - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
-        - rtgl-view d=h h=f bgc=ac flex=1 br=sm:
-        - rtgl-view d=h h=f bgc=ac flex=1 br=sm:
-    - rtgl-view d=h w=f av=c:
-      - rtgl-view w=48 av=c:
-        - rtgl-text s=xs: Scale
-      - rtgl-view w=f h=24 bgc=mu br=sm:
+  - rtgl-view#timeline-container g=md w=f pos=rel:
+      - rtgl-view d=h w=f:
+          - rtgl-view w=f ah=e:
+              - rtgl-text s=sm: "Total: ${totalDuration}"
+      - rtgl-view d=h w=f:
+          - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
+          - rtgl-view w=48 av=c:
+          - 'rtgl-view h=16 w=f bgc=mu br=sm pos=rel style="cursor: pointer;"':
+      - rtgl-view h=8:
+      - rtgl-view d=h w=f av=c:
+          - rtgl-view w=48 av=c:
+              - rtgl-text s=xs: Alpha
+          - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
+              - rtgl-text s=xs: 0
+          - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
+              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
+                  - rtgl-text s=xs: 0.2
+              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
+                  - rtgl-text s=xs: 1
+      - rtgl-view d=h w=f av=c:
+          - rtgl-view w=48 av=c:
+              - rtgl-text s=xs: Scale
+          - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
+              - rtgl-text s=xs: 1
+          - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
+              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
+                  - rtgl-text s=xs: 0.5
+              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
+                  - rtgl-text s=xs: 1
+      - $if showHoverLine:
+          - 'rtgl-view pos=abs ah=c style="top: 0; bottom: 0; left: ${mouseX}px"':
+              - rtgl-text: ${timeDisplay}
+              - rtgl-view h=f w=2 bgc=de:
