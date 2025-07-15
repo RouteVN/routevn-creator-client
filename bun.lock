@@ -9,7 +9,7 @@
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
         "nanoid": "^5.1.5",
-        "route-engine-js": "^0.0.2-rc1",
+        "route-engine-js": "^0.0.2-rc2",
         "route-graphics": "^0.0.2-rc1",
         "rxjs": "^7.8.2",
         "slate": "^0.114.0",
@@ -228,7 +228,7 @@
 
     "rollup": ["rollup@4.41.0", "", { "dependencies": { "@types/estree": "1.0.7" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.41.0", "@rollup/rollup-android-arm64": "4.41.0", "@rollup/rollup-darwin-arm64": "4.41.0", "@rollup/rollup-darwin-x64": "4.41.0", "@rollup/rollup-freebsd-arm64": "4.41.0", "@rollup/rollup-freebsd-x64": "4.41.0", "@rollup/rollup-linux-arm-gnueabihf": "4.41.0", "@rollup/rollup-linux-arm-musleabihf": "4.41.0", "@rollup/rollup-linux-arm64-gnu": "4.41.0", "@rollup/rollup-linux-arm64-musl": "4.41.0", "@rollup/rollup-linux-loongarch64-gnu": "4.41.0", "@rollup/rollup-linux-powerpc64le-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-musl": "4.41.0", "@rollup/rollup-linux-s390x-gnu": "4.41.0", "@rollup/rollup-linux-x64-gnu": "4.41.0", "@rollup/rollup-linux-x64-musl": "4.41.0", "@rollup/rollup-win32-arm64-msvc": "4.41.0", "@rollup/rollup-win32-ia32-msvc": "4.41.0", "@rollup/rollup-win32-x64-msvc": "4.41.0", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-HqMFpUbWlf/tvcxBFNKnJyzc7Lk+XO3FGc3pbNBLqEbOz0gPLRgcrlS3UF4MfUrVlstOaP/q0kM6GVvi+LrLRg=="],
 
-    "route-engine-js": ["route-engine-js@0.0.2-rc1", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.1.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2", "route-graphics": "^0.0.1" } }, "sha512-uxZSDiKNi4pFeNHmqEkx1HxiZKvKYlI79pbC5uDuJ74fjXJ8bKz+j8LiPkpVRuaK98nayP9oUoTl2UTRRNG8rQ=="],
+    "route-engine-js": ["route-engine-js@0.0.2-rc2", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.1.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2", "route-graphics": "^0.0.1" } }, "sha512-PfokT2IWgQiApblipENOEihmd8r9ASE1sR82xobdyhgT4CcQz72FJAyBUl2qJKF8k+UojwI+OYNIfe/uutYGog=="],
 
     "route-graphics": ["route-graphics@0.0.2-rc1", "", { "dependencies": { "pixi.js": "^8.7.1", "rxjs": "^7.8.2" } }, "sha512-Fkr8uAVnpUCYxbiSNxqD5rtwbbp+h225PekJvAx6ZMPRSkPbJJ+xD/aezAn0o1iSZkZkxC6rLGZBtmWEB7peiA=="],
 

@@ -25,6 +25,10 @@ refs:
     eventListeners:
       click:
         handler: handleBreadcumbLayoutsClick
+  button-select:
+    eventListeners:
+      click:
+        handler: handleButtonSelectClickLayout
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -34,8 +38,12 @@ template:
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
         - rtgl-text s=sm c=mu-fg mb=lg: Layouts
       - rtgl-text: Layout Selection
-      - rtgl-view#layout-selector w=345 h=200 av=c ah=c bgc=ac cur=p: 
-        - rtgl-text: Select Layout
+      - $if selectedLayoutId:
+          - rtgl-view#layout-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
+            - rtgl-text: ${selectedLayoutName}
+        $else:
+          - rtgl-view#layout-selector w=345 h=200 av=c ah=c bgc=ac cur=p: 
+            - rtgl-text: Select Layout
       - rtgl-view:
         - rtgl-text: Select Position
         - rtgl-select .options=positionOptions:
@@ -66,3 +74,5 @@ template:
                       $else:
                         - rtgl-view#layout-item-${item.id} w=200 h=150 av=c ah=c bgc=ac:
                           - rtgl-text s=sm c=mu-fg: Layout Template
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+        - rtgl-button#button-select: Select
