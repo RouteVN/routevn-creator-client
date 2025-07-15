@@ -193,40 +193,6 @@ export const selectRenderState = ({ state }) => {
     },
     ui: {
       layouts: state.layouts,
-      // layouts: {
-      // undefined: {
-      //   name: "Dialogue Screen",
-      //   elements: [
-      //     {
-      //       id: "dialogue-container",
-      //       type: "container",
-      //       x: 100,
-      //       y: 100,
-      //       children: [
-      //         {
-      //           id: "dialogue-character-name",
-      //           type: "text",
-      //           text: "${dialogue.character.name}",
-      //           style: {
-      //             fontSize: 48,
-      //             fill: "white",
-      //           },
-      //         },
-      //         {
-      //           id: "dialogue-text",
-      //           type: "text",
-      //           y: 100,
-      //           text: "${dialogue.text}",
-      //           style: {
-      //             fontSize: 48,
-      //             fill: "white",
-      //           },
-      //         },
-      //       ],
-      //     },
-      //   ],
-      // },
-      // },
     },
   });
   return renderState;
@@ -374,6 +340,12 @@ export const toViewData = ({ state, props }, payload) => {
     charactersNames,
     sceneTransition: selectedLine?.presentation?.sceneTransition,
     sceneTransitionData,
+    dialogue: selectedLine?.presentation?.dialogue,
+    dialogueData: selectedLine?.presentation?.dialogue?.dialogueBoxId
+      ? toFlatItems(state.repositoryState.layouts).find(
+          (l) => l.id === selectedLine?.presentation?.dialogue?.layoutId,
+        )
+      : null,
     richText: selectedLine?.presentation?.richText,
     richTextContent,
     mode: state.mode,
@@ -382,6 +354,10 @@ export const toViewData = ({ state, props }, payload) => {
     form: renameForm,
     selectedLineId: state.selectedLineId,
     sectionsGraphView: state.sectionsGraphView,
+    layouts: Object.entries(state.layouts).map(([id, item]) => ({
+      id,
+      ...item,
+    })),
   };
 };
 

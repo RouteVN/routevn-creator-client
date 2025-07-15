@@ -1,28 +1,25 @@
-export const handleSpeakerInput = (e, deps) => {
+export const handleLayoutSelectChange = (e, deps) => {
   const { store, render } = deps;
-  const name = e.target.value;
-  
-  store.setSpeakerName(name);
-  render();
-};
+  const layoutId = e.detail.value;
 
-export const handleDialogueInput = (e, deps) => {
-  const { store, render } = deps;
-  const text = e.target.value;
-  
-  store.setDialogueText(text);
+  store.setSelectedLayoutId({ layoutId });
   render();
 };
 
 export const handleSubmitClick = (e, deps) => {
-  const { dispatchEvent } = deps;
+  const { store, dispatchEvent } = deps;
+  const { selectedLayoutId } = store.getState();
+
+  if (!selectedLayoutId || selectedLayoutId === "") {
+    return;
+  }
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        dialogueBox: {
-          speakerName: e?.speakerName,
-          dialogueText: e?.dialogueText,
-        }
+        dialogue: {
+          layoutId: selectedLayoutId,
+        },
       },
     }),
   );

@@ -148,6 +148,8 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   command-line-choices:
     eventListeners:
       back-to-actions:
@@ -237,6 +239,10 @@ template:
                           - rtgl-view#scene-transition-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=text wh=24:
                               - rtgl-text s=sm: "Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})"
+                      - $if dialogue:
+                          - rtgl-view#dialogue-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-svg svg=text wh=24:
+                              - rtgl-text s=sm: "Dialogue Box: ${dialogueData.name}"
   - $if mode != "lines-editor":
       - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
           - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
@@ -245,7 +251,7 @@ template:
                 $elif mode == "richtext":
                   - rvn-command-line-rich-text#command-line-rich-text .lineContent=richTextContent:
                 $elif mode == "dialoguebox":
-                  - rvn-command-line-dialogue-box#command-line-dialogue-box:
+                  - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts:
                 $elif mode == "choices":
                   - rvn-command-line-choices#command-line-choices:
                 $elif mode == "background":
