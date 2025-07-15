@@ -75,7 +75,7 @@ template:
                                   - $if group.hasChildren:
                                       - $for item in group.children:
                                           - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" br=md bw=xs p=md':
-                                              - rvn-placement-thumbnail x=${item.x} y=${item.y} scale=${item.scale} rotation=${item.rotation} anchor=${item.anchor} zIndex=${item.zIndex}:
+                                              - rvn-placement-thumbnail x=${item.x} y=${item.y} scale=${item.scale} rotation=${item.rotation} anchor=${item.anchor} z-index=${item.zIndex}:
                                               - rtgl-view mt=md:
                                                 - rtgl-text: ${item.name}
                                   - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:

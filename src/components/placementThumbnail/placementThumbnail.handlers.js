@@ -1,4 +1,4 @@
-export const handleOnMount = async (deps) => {
+export const handleOnMount = (deps) => {
   const { attrs, render, getRefIds } = deps;
   
   render();
@@ -15,19 +15,6 @@ export const handleOnMount = async (deps) => {
   const canvas = getRefIds().canvas?.elm;
   if (canvas) {
     renderPlacement(config, canvas);
-  }
-
-  render();
-};
-
-export const handleOnUpdate = async (changes, deps) => {
-  const { attrs, render, getRefIds } = deps;
-  
-  render();
-  
-  const canvas = getRefIds().canvas?.elm;
-  if (canvas) {
-    renderPlacement(attrs.placementConfig, canvas);
   }
 
   render();
@@ -56,6 +43,7 @@ function renderPlacement(config, canvas) {
   ctx.fillRect(0, 0, width, height);
   
   // Convert coordinates from 1920x1080 reference to canvas dimensions
+  // TODO: get it from acutal config.
   const scaleX = width / 1920;
   const scaleY = height / 1080;
   const canvasX = config.x * scaleX;
