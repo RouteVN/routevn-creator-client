@@ -1,7 +1,5 @@
 export const handleOnMount = async (deps) => {
   const { attrs, render, getRefIds } = deps;
-
-  console.log(attrs.x)
   
   render();
 
