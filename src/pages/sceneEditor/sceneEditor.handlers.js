@@ -17,7 +17,8 @@ async function createAssetsFromFileIds(fileIds, httpClient) {
       });
       assets[`file:${fileId}`] = {
         url,
-        type: "image/png", // Default type, could be enhanced to detect actual type
+        // type: "image/png", // Default type, could be enhanced to detect actual type
+        type: "audio/mpeg",
       };
     } catch (error) {
       console.error(`Failed to load file ${fileId}:`, error);
@@ -39,8 +40,10 @@ async function renderSceneState(store, drenderer, httpClient) {
 export const handleOnMount = async (deps) => {
   const { store, router, render, repository, getRefIds, drenderer } = deps;
   const { sceneId } = router.getPayload();
-  const { scenes, images, characters, placements, layouts } =
+  const { scenes, images, characters, placements, layouts, audio } =
     repository.getState();
+
+  console.log("111111111", repository.getState());
 
   // Convert characters to the required format
   const processedCharacters = {};
@@ -106,6 +109,7 @@ export const handleOnMount = async (deps) => {
   setTimeout(() => {
     // const { canvas } = getRefIds()
     store.setImages(images.items);
+    store.setAudios(audio.items);
   }, 10);
 
   const scene = toFlatItems(scenes)

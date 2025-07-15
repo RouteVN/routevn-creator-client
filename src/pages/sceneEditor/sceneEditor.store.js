@@ -7,6 +7,7 @@ import { toFlatItems } from "../../deps/repository";
 export const INITIAL_STATE = Object.freeze({
   images: {},
   characters: {},
+  audios: {},
   placements: {},
   layouts: {},
   sceneId: undefined,
@@ -42,6 +43,10 @@ export const setImages = (state, images) => {
 
 export const setCharacters = (state, characters) => {
   state.characters = characters;
+};
+
+export const setAudios = (state, audios) => {
+  state.audios = audios;
 };
 
 export const setPlacements = (state, placements) => {
@@ -177,6 +182,7 @@ export const selectRenderState = ({ state }) => {
       JSON.parse(JSON.stringify(line.presentation)),
     ),
   );
+  console.log("audios", state.audios);
   console.log("presentationState", presentationState);
   const renderState = constructRenderState({
     presentationState,
@@ -190,6 +196,7 @@ export const selectRenderState = ({ state }) => {
       images: state.images,
       placements: state.placements,
       characters: state.characters,
+      audios: state.audios,
     },
     ui: {
       layouts: state.layouts,

@@ -5,7 +5,7 @@ import RouteGraphics, {
   ContainerRendererPlugin,
   TextRevealingRendererPlugin,
   GraphicsRendererPlugin,
-  SoundPlugin,
+  AudioPlugin,
   SliderRendererPlugin,
   KeyframeTransitionPlugin,
 } from "route-graphics";
@@ -31,7 +31,7 @@ export const create2dRenderer = async () => {
           new ContainerRendererPlugin(),
           new TextRevealingRendererPlugin(),
           new GraphicsRendererPlugin(),
-          new SoundPlugin(),
+          new AudioPlugin(),
           new SliderRendererPlugin(),
           new KeyframeTransitionPlugin(),
         ],
