@@ -1,7 +1,9 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
-import { extractFileIdsFromRenderState } from "../../utils/index.js";
-
+import { toFlatItems, toTreeStructure } from "../../deps/repository";
+import {
+  extractFileIdsFromRenderState,
+  layoutTreeStructureToRenderState,
+} from "../../utils/index.js";
 
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(fileIds, httpClient) {
@@ -28,7 +30,8 @@ async function createAssetsFromFileIds(fileIds, httpClient) {
 export const handleOnMount = async (deps) => {
   const { store, router, render, repository, getRefIds, drenderer } = deps;
   const { sceneId } = router.getPayload();
-  const { scenes, images, characters, placements } = repository.getState();
+  const { scenes, images, characters, placements, layouts } =
+    repository.getState();
 
   // Convert characters to the required format
   const processedCharacters = {};
@@ -75,6 +78,21 @@ export const handleOnMount = async (deps) => {
     });
   }
 
+  const processedLayouts = {};
+  if (layouts && layouts.items) {
+    Object.keys(layouts.items).forEach((layoutId) => {
+      const layout = layouts.items[layoutId];
+      if (layout.type === "layout") {
+        processedLayouts[layoutId] = {
+          elements: layoutTreeStructureToRenderState(
+            toTreeStructure(layout.elements),
+            images.items,
+          ),
+        };
+      }
+    });
+  }
+
   setTimeout(() => {
     // const { canvas } = getRefIds()
     store.setImages(images.items);
@@ -93,14 +111,16 @@ export const handleOnMount = async (deps) => {
     id: scene.id,
     scene,
   });
+
   store.setSelectedSectionId(scene.sections[0].id);
   store.setRepository(repository.getState());
   store.setCharacters(processedCharacters);
   store.setPlacements(processedPlacements);
-  
+  store.setLayouts(processedLayouts);
+
   // Render first to make canvas ref available
   render();
-  
+
   // Initialize drenderer with canvas
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
@@ -329,7 +349,6 @@ export const handleSplitLine = (e, deps) => {
 
   // Use requestAnimationFrame for faster execution than setTimeout
   requestAnimationFrame(() => {
-
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine(newLineId);
 
@@ -574,6 +593,23 @@ export const handleBackgroundActionContextMenu = (e, deps) => {
   store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
     presentationType: "background",
+  });
+  render();
+};
+
+export const handleLayoutActionClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("layouts");
+  render();
+};
+
+export const handleLayoutActionContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+
+  store.showPresentationDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    presentationType: "layout",
   });
   render();
 };

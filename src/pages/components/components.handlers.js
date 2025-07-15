@@ -1,4 +1,3 @@
-
 import { nanoid } from "nanoid";
 
 export const handleOnMount = (deps) => {
@@ -6,9 +5,8 @@ export const handleOnMount = (deps) => {
   const { components } = repository.getState();
   store.setItems(components);
 
-  return () => {}
+  return () => {};
 };
-
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -16,7 +14,6 @@ export const handleDataChanged = (e, deps) => {
   store.setItems(components);
   render();
 };
-
 
 export const handleImageItemClick = (e, deps) => {
   const { store, render } = deps;
@@ -39,10 +36,10 @@ export const handleComponentCreated = (e, deps) => {
         id: nanoid(),
         type: "component",
         name: name,
-        layout: {
+        elements: {
           items: {},
-          tree: []
-        }
+          tree: [],
+        },
       },
     },
   });
@@ -119,10 +116,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
           name: result.file.name,
           fileType: result.file.type,
           fileSize: result.file.size,
-          layout: {
+          elements: {
             items: {},
-            tree: []
-          }
+            tree: [],
+          },
         },
       },
     });

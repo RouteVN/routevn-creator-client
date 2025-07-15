@@ -1,43 +1,63 @@
+import { toFlatItems } from "../../deps/repository";
+
 export const handleOnMount = (deps) => {
   const { repository, store, render } = deps;
   const { layouts } = repository.getState();
   store.setItems({
-    'items': layouts
-  })
-}
+    items: layouts,
+  });
+};
 
 export const handleLayoutItemClick = (payload, deps) => {
   const { store, render } = deps;
 
-  store.setMode({
-    'mode': 'current'
-  })
+  // Extract layout ID from the element ID (format: layout-item-{id})
+  const elementId =
+    payload.target.id || payload.target.closest('[id^="layout-item-"]')?.id;
+  const layoutId = elementId?.replace("layout-item-", "");
+
+  store.setTempSelectedLayoutId({
+    layoutId: layoutId,
+  });
 
   render();
-}
+};
 
 export const handleSubmitClick = (payload, deps) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, store } = deps;
+
+  const selectedLayoutId = store.selectSelectedLayoutId();
+
+  if (!selectedLayoutId) {
+    return;
+  }
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         layout: {
-          layoutId: payload?.layoutId,
-        }
+          layoutId: selectedLayoutId,
+        },
       },
     }),
   );
-}
+};
 
 export const handleLayoutSelectorClick = (payload, deps) => {
   const { store, render } = deps;
+
+  const selectedLayoutId = store.selectSelectedLayoutId();
+
+  store.setTempSelectedLayoutId({
+    layoutId: selectedLayoutId,
+  });
 
   store.setMode({
     mode: "gallery",
   });
 
   render();
-}
+};
 
 export const handleBreadcumbActionsClick = (payload, deps) => {
   const { dispatchEvent } = deps;
@@ -51,6 +71,21 @@ export const handleBreadcumbActionsClick = (payload, deps) => {
 
 export const handleBreadcumbLayoutsClick = (payload, deps) => {
   const { store, render } = deps;
+  store.setMode({
+    mode: "current",
+  });
+  render();
+};
+
+export const handleButtonSelectClickLayout = (payload, deps) => {
+  const { store, render, repository } = deps;
+
+  const tempSelectedLayoutId = store.selectTempSelectedLayoutId();
+
+  store.setSelectedLayoutId({
+    layoutId: tempSelectedLayoutId,
+  });
+
   store.setMode({
     mode: "current",
   });

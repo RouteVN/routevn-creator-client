@@ -37,7 +37,7 @@ export const INITIAL_STATE = Object.freeze({
         name: "New Text",
         x: 0,
         y: 0,
-        textContent: "text",
+        text: "text",
       },
     },
     { label: "Rename", type: "item", value: "rename-item" },
@@ -75,7 +75,7 @@ export const INITIAL_STATE = Object.freeze({
         name: "New Text",
         x: 0,
         y: 0,
-        textContent: "text",
+        text: "text",
       },
     },
   ],
@@ -104,7 +104,7 @@ export const selectLayoutId = ({ state }) => {
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.layoutData);
-  return flatItems.find(item => item.id === state.selectedItemId);
+  return flatItems.find((item) => item.id === state.selectedItemId);
 };
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
@@ -112,44 +112,75 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
-  
-  const selectedItem = state.selectedItemId ? 
-    flatItems.find(item => item.id === state.selectedItemId) : null;
+
+  const selectedItem = state.selectedItemId
+    ? flatItems.find((item) => item.id === state.selectedItemId)
+    : null;
 
   // Helper to transform images data into groups
   const imageGroups = toFlatGroups(state.images);
-  
-  const detailTitle = selectedItem ? 'Layout Item Details' : '';
-  const detailFields = selectedItem ? [
-    { type: 'text', label: 'Name', value: selectedItem.name, id: 'name', editable: true },
-    { type: 'text', label: 'Type', value: selectedItem.type },
-    { type: 'text', label: 'X Position', value: selectedItem.x, id: 'x', editable: true },
-    { type: 'text', label: 'Y Position', value: selectedItem.y, id: 'y', editable: true },
-    ...(selectedItem.type === 'text' ? [
-      { type: 'text', label: 'Text Content', value: selectedItem.textContent, id: 'textContent', editable: true }
-    ] : []),
-    ...(selectedItem.type === 'sprite' ? [
-      { 
-        type: 'image-selector', 
-        label: 'Image', 
-        value: selectedItem.imageId || '', 
-        id: 'imageId', 
-        editable: true
-      }
-    ] : [])
-  ] : [];
-  const detailEmptyMessage = 'Select a layout item to view details';
-  
+
+  const detailTitle = selectedItem ? "Layout Item Details" : "";
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "text",
+          label: "Name",
+          value: selectedItem.name,
+          id: "name",
+          editable: true,
+        },
+        { type: "text", label: "Type", value: selectedItem.type },
+        {
+          type: "text",
+          label: "X Position",
+          value: selectedItem.x,
+          id: "x",
+          editable: true,
+        },
+        {
+          type: "text",
+          label: "Y Position",
+          value: selectedItem.y,
+          id: "y",
+          editable: true,
+        },
+        ...(selectedItem.type === "text"
+          ? [
+              {
+                type: "text",
+                label: "Text Content",
+                value: selectedItem.text,
+                id: "text",
+                editable: true,
+              },
+            ]
+          : []),
+        ...(selectedItem.type === "sprite"
+          ? [
+              {
+                type: "image-selector",
+                label: "Image",
+                value: selectedItem.imageId || "",
+                id: "imageId",
+                editable: true,
+              },
+            ]
+          : []),
+      ]
+    : [];
+  const detailEmptyMessage = "Select a layout item to view details";
+
   return {
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
-    repositoryTarget: `layouts.items.${state.layoutId}.layout`,
+    repositoryTarget: `layouts.items.${state.layoutId}.elements`,
     detailTitle,
     detailFields,
     detailEmptyMessage,
-    resourceCategory: 'userInterface',
-    selectedResourceId: 'layout-editor',
+    resourceCategory: "userInterface",
+    selectedResourceId: "layout-editor",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     images: state.images,

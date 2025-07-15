@@ -34,6 +34,12 @@ refs:
         handler: handleBackgroundActionClick
       contextmenu:
         handler: handleBackgroundActionContextMenu
+  layout-action:
+    eventListeners:
+      click:
+        handler: handleLayoutActionClick
+      contextmenu:
+        handler: handleLayoutActionContextMenu
   bgm-action:
     eventListeners:
       click:
@@ -124,6 +130,8 @@ refs:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
+      submit:
+        handler: handleCommandLineSubmit
   command-line-characters:
     eventListeners:
       back-to-actions:
@@ -202,6 +210,10 @@ template:
                               - rtgl-svg svg=text wh=24:
                               - rvn-file-image fileId=${backgroundImage.fileId} w=50 h=35:
                               - rtgl-text s=sm: ${backgroundImage.name}
+                      - $if layout:
+                          - rtgl-view#layout-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-svg svg=text wh=24:
+                              - rtgl-text s=sm: ${layoutData.name}
                       - $if bgm:
                           - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=text wh=24:

@@ -14,7 +14,7 @@ const componentLayoutTreeStructureToRenderState = (layout, imageItems) => {
     if (node.type === "text") {
       element = {
         ...element,
-        text: node.textContent,
+        text: node.text,
         style: {
           fontSize: 24,
           fill: "white",
@@ -49,13 +49,13 @@ const renderComponentPreview = async (deps) => {
   } = repository.getState();
   const component = components.items[componentId];
 
-  const componentLayoutTreeStructure = toTreeStructure(component.layout);
+  const componentLayoutTreeStructure = toTreeStructure(component.elements);
   const renderStateElements = componentLayoutTreeStructureToRenderState(
     componentLayoutTreeStructure,
     imageItems,
   );
 
-  store.setItems(component?.layout || { items: {}, tree: [] });
+  store.setItems(component?.elements || { items: {}, tree: [] });
   render();
 
   const selectedItem = store.selectSelectedItem();
@@ -104,7 +104,7 @@ export const handleOnMount = async (deps) => {
   const { components, images } = repository.getState();
   const component = components.items[componentId];
   store.setComponentId(componentId);
-  store.setItems(component?.layout || { items: {}, tree: [] });
+  store.setItems(component?.elements || { items: {}, tree: [] });
   store.setImages({ images });
 
   render();
@@ -139,7 +139,7 @@ export const handleDataChanged = (e, deps) => {
   const { componentId } = router.getPayload();
   const { components } = repository.getState();
   const component = components.items[componentId];
-  store.setItems(component?.layout || { items: {}, tree: [] });
+  store.setItems(component?.elements || { items: {}, tree: [] });
   render();
 };
 
@@ -149,7 +149,7 @@ export const handleDetailPanelItemUpdate = async (e, deps) => {
 
   repository.addAction({
     actionType: "treeUpdate",
-    target: `components.items.${componentId}.layout`,
+    target: `components.items.${componentId}.elements`,
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
@@ -167,7 +167,6 @@ export const handleRequestImageGroups = (e, deps) => {
   // Get groups from transformed repository data
   const viewData = store.toViewData();
   const groups = viewData.imageGroups;
-
 
   // Show dialog with groups using correct ref access pattern
   const refIds = getRefIds();
@@ -191,7 +190,7 @@ export const handleImageSelectorUpdated = (e, deps) => {
   // Update the selected item with the new imageId
   repository.addAction({
     actionType: "treeUpdate",
-    target: `components.items.${componentId}.layout`,
+    target: `components.items.${componentId}.elements`,
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
@@ -201,6 +200,6 @@ export const handleImageSelectorUpdated = (e, deps) => {
 
   const { components } = repository.getState();
   const component = components.items[componentId];
-  store.setItems(component?.layout || { items: {}, tree: [] });
+  store.setItems(component?.elements || { items: {}, tree: [] });
   render();
 };

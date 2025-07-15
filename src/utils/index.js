@@ -1,10 +1,9 @@
-
 export const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 };
 
 export const extractFileIdsFromRenderState = (obj) => {
@@ -47,3 +46,41 @@ export const extractFileIdsFromRenderState = (obj) => {
   return Array.from(fileIds);
 };
 
+export const layoutTreeStructureToRenderState = (layout, imageItems) => {
+  const mapNode = (node) => {
+    let element = {
+      id: node.id,
+      type: node.type,
+      x: parseInt(node.x),
+      y: parseInt(node.y),
+    };
+
+    if (node.type === "text") {
+      element = {
+        ...element,
+        text: node.text,
+        style: {
+          fontSize: 24,
+          fill: "white",
+          wordWrapWidth: 300,
+        },
+      };
+    }
+
+    if (node.type === "sprite" && node.imageId) {
+      const imageItem = imageItems[node.imageId];
+      if (imageItem && imageItem.fileId) {
+        element.url = `file:${imageItem.fileId}`;
+      }
+    }
+
+    // Map children recursively while maintaining tree structure
+    if (node.children && node.children.length > 0) {
+      element.children = node.children.map(mapNode);
+    }
+
+    return element;
+  };
+
+  return layout.map(mapNode);
+};
