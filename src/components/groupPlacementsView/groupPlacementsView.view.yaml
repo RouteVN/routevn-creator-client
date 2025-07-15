@@ -74,23 +74,18 @@ template:
                               - rtgl-view d=h fw=w w=f:
                                   - $if group.hasChildren:
                                       - $for item in group.children:
-                                          - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" w=f h=150 br=md bw=xs p=md':
-                                              - rtgl-text: ${item.name}
-                                              - rtgl-text s=sm: "X: ${item.x}"
-                                              - rtgl-text s=sm: "Y: ${item.y}"
-                                              - rtgl-text s=sm: "Scale: ${item.scale}"
-                                              - rtgl-text s=sm: "Rotation: ${item.rotation}"
-                                              - rtgl-text s=sm: "Anchor: ${item.anchor}"
-                                              - rtgl-text s=sm: "Z-Index: ${item.zIndex}"
-                                    $else:
-                                      - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
-                                          - rtgl-text: Add Placement
+                                          - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" br=md bw=xs p=md':
+                                              - rvn-placement-thumbnail x=${item.x} y=${item.y} scale=${item.scale} rotation=${item.rotation} anchor=${item.anchor} z-index=${item.zIndex}:
+                                              - rtgl-view mt=md:
+                                                - rtgl-text: ${item.name}
+                                  - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
+                                      - rtgl-text: Add Placement
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No placements found matching "${searchQuery}"
       - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-placement-dialog w=800 .isOpen=isDialogOpen:
+  - rtgl-dialog#add-placement-dialog .isOpen=isDialogOpen:
       - rtgl-view slot=content d=h g=md w=f:
           - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
           - rtgl-view:

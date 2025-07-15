@@ -1,0 +1,38 @@
+elementName: rvn-placement-thumbnail
+
+attrsSchema:
+  type: object
+  properties:
+    x:
+      type: string
+      description: Width of the placement thumbnail
+      default: 0
+    y:
+      type: string
+      description: Height of the placement thumbnail  
+      default: 0
+    scale:
+      type: string
+      description: Scale factor for the placement thumbnail
+      default: 1
+    rotation:
+      type: string
+      description: Rotation angle in degrees for the placement thumbnail
+      default: 0
+    anchor:
+      type: string
+      description: Anchor point type for the placement thumbnail
+      default: 'center'
+    z-index:
+      type: string
+      description: Z-index for the placement thumbnail
+      default: 0
+
+
+refs:
+  canvas:
+    selector: canvas
+
+template:
+  - rtgl-view w=320 h=180:
+    - 'canvas#canvas style="width:100%; height:100%;"':
