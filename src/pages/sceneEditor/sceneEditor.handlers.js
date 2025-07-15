@@ -27,6 +27,15 @@ async function createAssetsFromFileIds(fileIds, httpClient) {
   return assets;
 }
 
+// Helper function to render the scene state
+async function renderSceneState(store, drenderer, httpClient) {
+  const renderState = store.selectRenderState();
+  const fileIds = extractFileIdsFromRenderState(renderState);
+  const assets = await createAssetsFromFileIds(fileIds, httpClient);
+  await drenderer.loadAssets(assets);
+  drenderer.render(renderState);
+}
+
 export const handleOnMount = async (deps) => {
   const { store, router, render, repository, getRefIds, drenderer } = deps;
   const { sceneId } = router.getPayload();
@@ -84,6 +93,7 @@ export const handleOnMount = async (deps) => {
       const layout = layouts.items[layoutId];
       if (layout.type === "layout") {
         processedLayouts[layoutId] = {
+          name: layout.name,
           elements: layoutTreeStructureToRenderState(
             toTreeStructure(layout.elements),
             images.items,
@@ -205,11 +215,7 @@ export const handleEditorDataChanged = (e, deps) => {
   store.setLineTextContent({ lineId, text: e.detail.content });
 
   setTimeout(async () => {
-    const renderState = store.selectRenderState();
-    const fileIds = extractFileIdsFromRenderState(renderState);
-    const assets = await createAssetsFromFileIds(fileIds, httpClient);
-    await drenderer.loadAssets(assets);
-    drenderer.render(renderState);
+    await renderSceneState(store, drenderer, httpClient);
   }, 10);
 };
 
@@ -436,11 +442,7 @@ export const handleMoveUp = (e, deps) => {
       linesEditorRef.elm.render();
 
       setTimeout(async () => {
-        const renderState = store.selectRenderState();
-        const fileIds = extractFileIdsFromRenderState(renderState);
-        const assets = await createAssetsFromFileIds(fileIds, httpClient);
-        await drenderer.loadAssets(assets);
-        drenderer.render(renderState);
+        await renderSceneState(store, drenderer, httpClient);
       }, 10);
     }, 0);
   }
@@ -485,11 +487,7 @@ export const handleMoveDown = (e, deps) => {
       linesEditorRef.elm.render();
 
       setTimeout(async () => {
-        const renderState = store.selectRenderState();
-        const fileIds = extractFileIdsFromRenderState(renderState);
-        const assets = await createAssetsFromFileIds(fileIds, httpClient);
-        await drenderer.loadAssets(assets);
-        drenderer.render(renderState);
+        await renderSceneState(store, drenderer, httpClient);
       }, 10);
     }, 0);
   }

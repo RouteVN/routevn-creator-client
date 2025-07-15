@@ -164,17 +164,17 @@ template:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
                               - $if field.fileId:
-                                  - 'rtgl-view#image-selector-field-${i} cur=p br=md':
+                                  - "rtgl-view#image-selector-field-${i} cur=p br=md":
                                       - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
                                 $else:
-                                  - 'rtgl-view#image-selector-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p':
+                                  - "rtgl-view#image-selector-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p":
                                       - rtgl-text c=mu-fg: Select Image
                             $else:
                               - $if field.fileId:
-                                  - 'rtgl-view br=md':
+                                  - "rtgl-view br=md":
                                       - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
                                 $else:
-                                  - 'rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md':
+                                  - "rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md":
                                       - rtgl-text c=mu-fg: No Image
                     $elif field.type == 'audio':
                       - $if field.editable:
@@ -205,4 +205,3 @@ template:
           - rtgl-view d=f jc=fe g=sm:
               - rtgl-button#cancel-image-selection variant=se: Cancel
               - rtgl-button#confirm-image-selection variant=pr: OK
-
