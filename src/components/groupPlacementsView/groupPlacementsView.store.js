@@ -8,8 +8,8 @@ export const INITIAL_STATE = Object.freeze({
 
   defaultValues: {
     name: '',
-    positionX: '0',
-    positionY: '0',
+    x: '0',
+    y: '0',
     scale: '1',
     anchor: 'center',
     rotation: '0',
@@ -106,8 +106,8 @@ export const setEditMode = (state, editMode, itemId = null, itemData = null) => 
     // Update default values with current item data
     state.defaultValues = {
       name: itemData.name || '',
-      positionX: itemData.positionX || '0',
-      positionY: itemData.positionY || '0',
+      x: itemData.x || '0',
+      y: itemData.y || '0',
       scale: itemData.scale || '1',
       anchor: itemData.anchor || 'center',
       rotation: itemData.rotation || '0',
@@ -121,8 +121,8 @@ export const setEditMode = (state, editMode, itemId = null, itemData = null) => 
     // Reset default values
     state.defaultValues = {
       name: '',
-      positionX: '0',
-      positionY: '0',
+      x: '0',
+      y: '0',
       scale: '1',
       anchor: 'center',
       rotation: '0',
