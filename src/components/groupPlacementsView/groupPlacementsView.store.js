@@ -11,56 +11,75 @@ export const INITIAL_STATE = Object.freeze({
     x: '0',
     y: '0',
     scale: '1',
-    anchor: 'center',
+    anchor: 'center-center',
     rotation: '0',
   },
 
   form: {
     title: 'Add Placement',
     description: 'Create a new placement configuration',
-    fields: [{
-      id: 'name',
-      fieldName: 'name',
-      inputType: 'inputText',
-      label: 'Name',
-      description: 'Enter the placement name',
-      required: true,
-    }, {
-      id: 'x',
-      fieldName: 'x',
-      inputType: 'inputText',
-      label: 'Position X',
-      description: 'Enter the X coordinate (e.g., 100, 50%)',
-      required: true,
-    }, {
-      id: 'y',
-      fieldName: 'y',
-      inputType: 'inputText',
-      label: 'Position Y',
-      description: 'Enter the Y coordinate (e.g., 200, 25%)',
-      required: true,
-    }, {
-      id: 'scale',
-      fieldName: 'scale',
-      inputType: 'inputText',
-      label: 'Scale',
-      description: 'Enter the scale factor (e.g., 1, 0.5, 2)',
-      required: true,
-    }, {
-      id: 'anchor',
-      fieldName: 'anchor',
-      inputType: 'inputText',
-      label: 'Anchor',
-      description: 'Enter the anchor point (e.g., center, top-left, bottom-right)',
-      required: true,
-    }, {
-      id: 'rotation',
-      fieldName: 'rotation',
-      inputType: 'inputText',
-      label: 'Rotation',
-      description: 'Enter the rotation in degrees (e.g., 0, 45, 180)',
-      required: true,
-    }],
+    fields: [
+      {
+        name: 'name',
+        fieldName: 'name',
+        inputType: 'inputText',
+        label: 'Name',
+        description: 'Enter the placement name',
+        required: true,
+      },
+      {
+        name: 'x',
+        fieldName: 'x',
+        inputType: 'inputText',
+        label: 'Position X',
+        description: 'Enter the X coordinate (e.g., 100, 50%)',
+        required: true,
+      },
+      {
+        name: 'y',
+        fieldName: 'y',
+        inputType: 'inputText',
+        label: 'Position Y',
+        description: 'Enter the Y coordinate (e.g., 200, 25%)',
+        required: true,
+      },
+      {
+        name: 'scale',
+        fieldName: 'scale',
+        inputType: 'inputText',
+        label: 'Scale',
+        description: 'Enter the scale factor (e.g., 1, 0.5, 2)',
+        required: true,
+      },
+      {
+        name: 'anchor',
+        fieldName: 'anchor',
+        inputType: 'select',
+        label: 'Anchor',
+        description: 'Enter the anchor point (e.g., center, top-left, bottom-right)',
+        placeholder: 'Choose a anchor',
+        options: [
+          { id: 'tl', label: 'Top Left', value: 'top-left' },
+          { id: 'tc', label: 'Top Center', value: 'top-center' },
+          { id: 'tr', label: 'Top Right', value: 'top-right' },
+          { id: 'cl', label: 'Center Left', value: 'center-left' },
+          { id: 'cc', label: 'Center Center', value: 'center-center' },
+          { id: 'cr', label: 'Center Right', value: 'center-right' },
+          { id: 'bl', label: 'Bottom Left', value: 'bottom-left' },
+          { id: 'bc', label: 'Bottom Center', value: 'bottom-center' },
+          { id: 'br', label: 'Bottom Right', value: 'bottom-right' },
+        ],
+        required: true,
+      },
+      {
+        name: 'rotation',
+        fieldName: 'rotation',
+        inputType: 'inputText',
+        label: 'Rotation',
+        description: 'Enter the rotation in degrees (e.g., 0, 45, 180)',
+        required: true,
+      }
+    ],
     actions: {
       layout: '',
       buttons: [{
@@ -93,9 +112,10 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
-export const setEditMode = (state, editMode, itemId = null, itemData = null) => {
-  console.log('[setEditMode] Called with:', { editMode, itemId, itemData });
-  
+export const setEditMode = (state, config) => {
+  console.log('[setEditMode] Called with:', config);
+  const { editMode, itemId, itemData } = config;
+
   state.editMode = editMode;
   state.editItemId = itemId;
 
@@ -111,10 +131,10 @@ export const setEditMode = (state, editMode, itemId = null, itemData = null) => 
       x: String(itemData.x || '0'),
       y: String(itemData.y || '0'),
       scale: String(itemData.scale || '1'),
-      anchor: itemData.anchor || 'center',
+      anchor: itemData.anchor || 'center-center',
       rotation: String(itemData.rotation || '0'),
     };
-    
+
     console.log('[setEditMode] Set edit mode defaultValues:', state.defaultValues);
   } else {
     // Reset form for add mode
@@ -128,10 +148,10 @@ export const setEditMode = (state, editMode, itemId = null, itemData = null) => 
       x: '0',
       y: '0',
       scale: '1',
-      anchor: 'center',
+      anchor: 'center-center',
       rotation: '0',
     };
-    
+
     console.log('[setEditMode] Reset to add mode defaultValues:', state.defaultValues);
   }
 }
@@ -200,7 +220,7 @@ export const toViewData = ({ state, props }) => {
     form: state.form,
     formKey,
   };
-  
+
   // Log when dialog is open to debug form data
   if (state.isDialogOpen) {
     console.log('[toViewData] Dialog open with:', {
@@ -212,6 +232,6 @@ export const toViewData = ({ state, props }) => {
       formButtonText: viewData.form.actions.buttons[0].content
     });
   }
-  
+
   return viewData;
 };

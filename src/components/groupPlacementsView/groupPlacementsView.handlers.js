@@ -30,6 +30,7 @@ export const handlePlacementItemClick = (e, deps) => {
 export const handlePlacementItemDoubleClick = (e, deps) => {
   const { store, render, props } = deps;
   const itemId = e.currentTarget.id.replace("placement-item-", "");
+  console.log('Double clicked itemId:', itemId);
 
   // Find the item data from props
   const flatGroups = props.flatGroups || [];
@@ -43,16 +44,13 @@ export const handlePlacementItemDoubleClick = (e, deps) => {
     }
   }
 
+  console.log(itemData)
+
   if (itemData) {
     // Set edit mode with item data using proper store function
-    store.setEditMode(true, itemId, itemData);
-
-    // Open dialog if not already open
-    const state = store.getState();
-    if (!state.isDialogOpen) {
-      store.toggleDialog();
-    }
-
+    store.setEditMode({ editMode: true, itemId, itemData });
+    // Open dialog
+    store.toggleDialog();
     render();
   }
 };
@@ -155,22 +153,40 @@ export const handleFormChange = async (e, deps) => {
   const y = parseInt(formValues.y || 0);
 
   const renderState = {
-    elements: [{
-      id: 'srprite1',
-      type: 'sprite',
-      x,
-      y,
-      // TODO replace with fileId of image selected
-      url: 'file:project_logo',
-    }, {
-      id: 'id1',
-      type: 'graphics',
-      x1: x - 5,
-      y1: y - 5,
-      x2: 11,
-      y2: 11,
-      fill: 'red'
-    },],
+    elements: [
+      {
+        id: 'background',
+        type: 'graphics',
+        x1: 0,
+        y1: 0,
+        x2: 1920,
+        y2: 1080,
+        fill: '#4a4a4a'
+      },
+      {
+        id: 'srprite',
+        // type: 'sprite',
+        // x,
+        // y,
+        // // TODO replace with fileId of image selected
+        // url: 'file:project_logo',
+        type: 'graphics',
+        x1: x,
+        y1: y,
+        x2: 100,
+        y2: 100,
+        fill: 'white'
+      },
+      {
+        id: 'anchor',
+        type: 'graphics',
+        x1: x - 5,
+        y1: y - 5,
+        x2: 11,
+        y2: 11,
+        fill: 'red'
+      },
+    ],
     transitions: []
   }
 

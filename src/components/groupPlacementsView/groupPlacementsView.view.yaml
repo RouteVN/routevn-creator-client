@@ -104,6 +104,6 @@ template:
           - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f key=${formKey}:
           - rtgl-view:
               - rtgl-text: Preview
-              - rtgl-view w=586 h=330 bgc=fg:
-                  - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
+              - rtgl-view w=1280 h=720 bgc=fg:
+                  - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: #4A4A4A;"':
               - rtgl-button#preview-button: Select Preview Image

@@ -73,7 +73,7 @@ function renderPlacement(config, canvas) {
       anchorX = canvasX;
       anchorY = canvasY - placementHeight / 2;
       break;
-    case 'center':
+    case 'center-center':
       anchorX = canvasX - placementWidth / 2;
       anchorY = canvasY - placementHeight / 2;
       break;
