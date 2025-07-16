@@ -6,19 +6,31 @@ import {
 } from "../../utils/index.js";
 
 // Helper function to create assets object from fileIds
-async function createAssetsFromFileIds(fileIds, httpClient) {
+async function createAssetsFromFileIds(
+  fileIds,
+  httpClient,
+  { audios, images },
+) {
   const assets = {};
-
   for (const fileId of fileIds) {
     try {
       const { url } = await httpClient.creator.getFileContent({
         fileId,
         projectId: "someprojectId",
       });
+      let type;
+
+      Object.entries(audios)
+        .concat(Object.entries(images))
+        .forEach(([key, item]) => {
+          if (item.fileId === fileId) {
+            type = item.fileType;
+          }
+        });
+
       assets[`file:${fileId}`] = {
         url,
-        // type: "image/png", // Default type, could be enhanced to detect actual type
-        type: "audio/mpeg",
+        type,
       };
     } catch (error) {
       console.error(`Failed to load file ${fileId}:`, error);
@@ -32,7 +44,10 @@ async function createAssetsFromFileIds(fileIds, httpClient) {
 async function renderSceneState(store, drenderer, httpClient) {
   const renderState = store.selectRenderState();
   const fileIds = extractFileIdsFromRenderState(renderState);
-  const assets = await createAssetsFromFileIds(fileIds, httpClient);
+  const assets = await createAssetsFromFileIds(fileIds, httpClient, {
+    audios: store.selectAudios(),
+    images: store.selectImages(),
+  });
   await drenderer.loadAssets(assets);
   drenderer.render(renderState);
 }
@@ -42,8 +57,6 @@ export const handleOnMount = async (deps) => {
   const { sceneId } = router.getPayload();
   const { scenes, images, characters, placements, layouts, audio } =
     repository.getState();
-
-  console.log("111111111", repository.getState());
 
   // Convert characters to the required format
   const processedCharacters = {};

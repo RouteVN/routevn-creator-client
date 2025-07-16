@@ -49,6 +49,14 @@ export const setAudios = (state, audios) => {
   state.audios = audios;
 };
 
+export const selectAudios = ({ state }) => {
+  return state.audios;
+};
+
+export const selectImages = ({ state }) => {
+  return state.images;
+};
+
 export const setPlacements = (state, placements) => {
   state.placements = placements;
 };
@@ -182,7 +190,6 @@ export const selectRenderState = ({ state }) => {
       JSON.parse(JSON.stringify(line.presentation)),
     ),
   );
-  console.log("audios", state.audios);
   console.log("presentationState", presentationState);
   const renderState = constructRenderState({
     presentationState,
