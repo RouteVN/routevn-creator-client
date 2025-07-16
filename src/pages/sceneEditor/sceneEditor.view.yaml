@@ -259,7 +259,7 @@ template:
                 $elif mode == "bgm":
                   - rvn-command-line-bgm#command-line-bgm:
                 $elif mode == "soundeffects":
-                  - rvn-command-line-sound-effects#command-line-sound-effects:
+                  - rvn-command-line-sound-effects#command-line-sound-effects .existingSfx=soundEffects:
                 $elif mode == "characters":
                   - rvn-command-line-characters#command-line-characters:
                 $elif mode == "layouts":

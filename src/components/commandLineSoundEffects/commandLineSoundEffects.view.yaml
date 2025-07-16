@@ -4,6 +4,23 @@ viewDataSchema:
   type: object
   properties: {}
 
+propsSchema:
+  type: object
+  properties:
+    existingSfx:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          audioId:
+            type: string
+          trigger:
+            type: string
+          name:
+            type: string
+
 refs:
   add-new-button:
     eventListeners:

@@ -44,7 +44,7 @@ export const toViewData = ({ state, props }, payload) => {
     { type: 'color', value: selectedItemDetails.displayHex, width: 240, height: 60, show: !!selectedItemDetails.displayHex },
     { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
     { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
-    { type: 'text', label: 'Hex Value', value: selectedItemDetails.displayHex, show: !!selectedItemDetails.displayHex },
+    { type: 'text', label: 'Hex Value', value: selectedItemDetails.displayHex, editable: true },
     { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
   ] : [];
   const detailEmptyMessage = 'Select a color to view details';

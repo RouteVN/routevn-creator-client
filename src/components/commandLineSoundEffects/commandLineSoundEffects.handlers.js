@@ -1,11 +1,30 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
-  const { repository, store, render } = deps;
+  const { repository, store, render, props } = deps;
   const { audio } = repository.getState();
   store.setItems({
     items: audio,
   });
+  
+  // Initialize with existing SFX data if available
+  if (props?.existingSfx && Array.isArray(props.existingSfx)) {
+    const flatAudioItems = toFlatItems(audio);
+    const existingSfxData = props.existingSfx.map(sfx => {
+      const audioItem = flatAudioItems.find(item => item.id === sfx.audioId);
+      return {
+        id: sfx.id,
+        audioId: sfx.audioId,
+        fileId: audioItem?.fileId || null,
+        trigger: sfx.trigger || 'click',
+        name: audioItem?.name || 'Sound Effect'
+      };
+    });
+    
+    store.setExistingSoundEffects({
+      soundEffects: existingSfxData
+    });
+  }
 };
 
 export const handleOnUpdate = () => {
@@ -69,15 +88,15 @@ export const handleSubmitClick = (e, deps) => {
   
   const { dispatchEvent, store } = deps;
   const soundEffects = store.getState().soundEffects;
-  console.log('Sound Effects Submit - soundEffects:', soundEffects);
-  
   const filteredEffects = soundEffects.filter(se => se.audioId);
-  console.log('Sound Effects Submit - filtered effects:', filteredEffects);
   
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        soundEffects: filteredEffects,
+        soundEffects: filteredEffects.map(se => ({
+          id: se.id,
+          audioId: se.audioId
+        }))
       },
       bubbles: true,
       composed: true
