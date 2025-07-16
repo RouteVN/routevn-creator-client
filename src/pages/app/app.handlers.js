@@ -35,8 +35,9 @@ export const handleUpdatePlacement = (payload, deps) => {
     actionType: "treeUpdate",
     target: "placements",
     value: {
-      itemId: itemId,
-      updates: updates
+      id: itemId,
+      replace: false,
+      item: updates
     }
   });
 }

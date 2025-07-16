@@ -44,15 +44,68 @@ export const handlePlacementItemDoubleClick = (e, deps) => {
   }
 
   if (itemData) {
-    // Set edit mode with item data
-    store.setEditMode(true, itemId, itemData);
+    console.log('=== DOUBLE CLICK DEBUG ===');
+    console.log('1. Double-clicked placement item:', itemId);
+    console.log('2. Item data found:', JSON.stringify(itemData, null, 2));
+    
+    // Log parameters before calling setEditMode
+    console.log('2.5. Parameters before setEditMode call:', {
+      editMode: true,
+      itemId: itemId,
+      itemData: itemData
+    });
+    
+    // Set edit mode with item data - try direct state modification
+    const state = store.getState();
+    state.editMode = true;
+    state.editItemId = itemId;
+    
+    // Update form for edit mode
+    state.form.title = 'Edit Placement';
+    state.form.description = 'Edit the placement configuration';
+    state.form.actions.buttons[0].content = 'Update Placement';
+
+    // Update default values with current item data
+    state.defaultValues = {
+      name: itemData.name || '',
+      x: String(itemData.x || '0'),
+      y: String(itemData.y || '0'),
+      scale: String(itemData.scale || '1'),
+      anchor: itemData.anchor || 'center',
+      rotation: String(itemData.rotation || '0'),
+    };
+    
+    console.log('2.8. Direct state modification result:', {
+      editMode: state.editMode,
+      editItemId: state.editItemId,
+      defaultValues: state.defaultValues,
+      formTitle: state.form.title,
+      formButton: state.form.actions.buttons[0].content
+    });
+    
+    console.log('3. State after direct modification:', {
+      editMode: state.editMode,
+      editItemId: state.editItemId,
+      defaultValues: JSON.stringify(state.defaultValues, null, 2),
+      formTitle: state.form.title,
+      formButtonText: state.form.actions.buttons[0].content
+    });
 
     // Open dialog
-    if (!store.getState().isDialogOpen) {
+    if (!state.isDialogOpen) {
       store.toggleDialog();
     }
 
+    // Log final state before render
+    console.log('4. Final state before render:', {
+      isDialogOpen: state.isDialogOpen,
+      editMode: state.editMode,
+      formKey: state.editMode ? `edit_${state.editItemId}` : 'add'
+    });
+
     render();
+  } else {
+    console.log('No item data found for ID:', itemId);
   }
 };
 

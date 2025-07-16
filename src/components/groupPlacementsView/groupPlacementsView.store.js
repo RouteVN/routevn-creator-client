@@ -94,6 +94,8 @@ export const setTargetGroupId = (state, groupId) => {
 }
 
 export const setEditMode = (state, editMode, itemId = null, itemData = null) => {
+  console.log('[setEditMode] Called with:', { editMode, itemId, itemData });
+  
   state.editMode = editMode;
   state.editItemId = itemId;
 
@@ -106,12 +108,14 @@ export const setEditMode = (state, editMode, itemId = null, itemData = null) => 
     // Update default values with current item data
     state.defaultValues = {
       name: itemData.name || '',
-      x: itemData.x || '0',
-      y: itemData.y || '0',
-      scale: itemData.scale || '1',
+      x: String(itemData.x || '0'),
+      y: String(itemData.y || '0'),
+      scale: String(itemData.scale || '1'),
       anchor: itemData.anchor || 'center',
-      rotation: itemData.rotation || '0',
+      rotation: String(itemData.rotation || '0'),
     };
+    
+    console.log('[setEditMode] Set edit mode defaultValues:', state.defaultValues);
   } else {
     // Reset form for add mode
     state.form.title = 'Add Placement';
@@ -127,6 +131,8 @@ export const setEditMode = (state, editMode, itemId = null, itemData = null) => 
       anchor: 'center',
       rotation: '0',
     };
+    
+    console.log('[setEditMode] Reset to add mode defaultValues:', state.defaultValues);
   }
 }
 
@@ -168,7 +174,10 @@ export const toViewData = ({ state, props }) => {
     })
     .filter(group => group.shouldDisplay);
 
-  return {
+  // Generate a form key that changes when switching between add/edit mode
+  const formKey = state.editMode ? `edit_${state.editItemId}` : 'add';
+
+  const viewData = {
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
@@ -177,5 +186,20 @@ export const toViewData = ({ state, props }) => {
     editItemId: state.editItemId,
     defaultValues: state.defaultValues,
     form: state.form,
+    formKey,
   };
+  
+  // Log when dialog is open to debug form data
+  if (state.isDialogOpen) {
+    console.log('[toViewData] Dialog open with:', {
+      editMode: viewData.editMode,
+      editItemId: viewData.editItemId,
+      formKey: viewData.formKey,
+      defaultValues: viewData.defaultValues,
+      formTitle: viewData.form.title,
+      formButtonText: viewData.form.actions.buttons[0].content
+    });
+  }
+  
+  return viewData;
 };

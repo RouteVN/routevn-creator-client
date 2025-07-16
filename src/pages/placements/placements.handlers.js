@@ -77,6 +77,8 @@ export const handlePlacementEdited = (e, deps) => {
   const { store, render, repository, subject } = deps;
   const { itemId, name, x, y, scale, anchor, rotation } = e.detail;
 
+  console.log('[handlePlacementEdited] Called with:', { itemId, name, x, y, scale, anchor, rotation });
+
   // Dispatch to app handlers for repository update
   subject.dispatch('update-placement', {
     itemId,
