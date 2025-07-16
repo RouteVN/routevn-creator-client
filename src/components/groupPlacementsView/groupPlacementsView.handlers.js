@@ -44,68 +44,16 @@ export const handlePlacementItemDoubleClick = (e, deps) => {
   }
 
   if (itemData) {
-    console.log('=== DOUBLE CLICK DEBUG ===');
-    console.log('1. Double-clicked placement item:', itemId);
-    console.log('2. Item data found:', JSON.stringify(itemData, null, 2));
-    
-    // Log parameters before calling setEditMode
-    console.log('2.5. Parameters before setEditMode call:', {
-      editMode: true,
-      itemId: itemId,
-      itemData: itemData
-    });
-    
-    // Set edit mode with item data - try direct state modification
+    // Set edit mode with item data using proper store function
+    store.setEditMode(true, itemId, itemData);
+
+    // Open dialog if not already open
     const state = store.getState();
-    state.editMode = true;
-    state.editItemId = itemId;
-    
-    // Update form for edit mode
-    state.form.title = 'Edit Placement';
-    state.form.description = 'Edit the placement configuration';
-    state.form.actions.buttons[0].content = 'Update Placement';
-
-    // Update default values with current item data
-    state.defaultValues = {
-      name: itemData.name || '',
-      x: String(itemData.x || '0'),
-      y: String(itemData.y || '0'),
-      scale: String(itemData.scale || '1'),
-      anchor: itemData.anchor || 'center',
-      rotation: String(itemData.rotation || '0'),
-    };
-    
-    console.log('2.8. Direct state modification result:', {
-      editMode: state.editMode,
-      editItemId: state.editItemId,
-      defaultValues: state.defaultValues,
-      formTitle: state.form.title,
-      formButton: state.form.actions.buttons[0].content
-    });
-    
-    console.log('3. State after direct modification:', {
-      editMode: state.editMode,
-      editItemId: state.editItemId,
-      defaultValues: JSON.stringify(state.defaultValues, null, 2),
-      formTitle: state.form.title,
-      formButtonText: state.form.actions.buttons[0].content
-    });
-
-    // Open dialog
     if (!state.isDialogOpen) {
       store.toggleDialog();
     }
 
-    // Log final state before render
-    console.log('4. Final state before render:', {
-      isDialogOpen: state.isDialogOpen,
-      editMode: state.editMode,
-      formKey: state.editMode ? `edit_${state.editItemId}` : 'add'
-    });
-
     render();
-  } else {
-    console.log('No item data found for ID:', itemId);
   }
 };
 
@@ -146,9 +94,10 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get the store state - access the internal state properly
-    const storeState = store.getState ? store.getState() : store._state || store.state;
-    const { targetGroupId, editMode, editItemId } = storeState;
+    // Get state values using getter functions
+    const targetGroupId = store.getTargetGroupId();
+    const editMode = store.getEditMode();
+    const editItemId = store.getEditItemId();
 
     if (editMode && editItemId) {
       // Forward placement edit to parent
@@ -189,8 +138,8 @@ export const handleFormActionClick = (e, deps) => {
   }
 };
 
-export const handlePreviewButtonClick = (e, deps) => {
-  //
+export const handlePreviewButtonClick = () => {
+  // TODO: Implement preview functionality
 }
 
 export const handleFormChange = async (e, deps) => {

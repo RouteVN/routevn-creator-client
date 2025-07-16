@@ -136,6 +136,18 @@ export const setEditMode = (state, editMode, itemId = null, itemData = null) => 
   }
 }
 
+export const getTargetGroupId = (state) => {
+  return state.targetGroupId;
+}
+
+export const getEditMode = (state) => {
+  return state.editMode;
+}
+
+export const getEditItemId = (state) => {
+  return state.editItemId;
+}
+
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
