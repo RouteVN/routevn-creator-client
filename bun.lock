@@ -9,8 +9,8 @@
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
         "nanoid": "^5.1.5",
-        "route-engine-js": "^0.0.2-rc3",
-        "route-graphics": "^0.0.2-rc1",
+        "route-engine-js": "^0.0.2-rc4",
+        "route-graphics": "^0.0.2-rc2",
         "rxjs": "^7.8.2",
         "slate": "^0.114.0",
         "snabbdom": "^3.6.2",
@@ -228,9 +228,9 @@
 
     "rollup": ["rollup@4.41.0", "", { "dependencies": { "@types/estree": "1.0.7" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.41.0", "@rollup/rollup-android-arm64": "4.41.0", "@rollup/rollup-darwin-arm64": "4.41.0", "@rollup/rollup-darwin-x64": "4.41.0", "@rollup/rollup-freebsd-arm64": "4.41.0", "@rollup/rollup-freebsd-x64": "4.41.0", "@rollup/rollup-linux-arm-gnueabihf": "4.41.0", "@rollup/rollup-linux-arm-musleabihf": "4.41.0", "@rollup/rollup-linux-arm64-gnu": "4.41.0", "@rollup/rollup-linux-arm64-musl": "4.41.0", "@rollup/rollup-linux-loongarch64-gnu": "4.41.0", "@rollup/rollup-linux-powerpc64le-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-musl": "4.41.0", "@rollup/rollup-linux-s390x-gnu": "4.41.0", "@rollup/rollup-linux-x64-gnu": "4.41.0", "@rollup/rollup-linux-x64-musl": "4.41.0", "@rollup/rollup-win32-arm64-msvc": "4.41.0", "@rollup/rollup-win32-ia32-msvc": "4.41.0", "@rollup/rollup-win32-x64-msvc": "4.41.0", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-HqMFpUbWlf/tvcxBFNKnJyzc7Lk+XO3FGc3pbNBLqEbOz0gPLRgcrlS3UF4MfUrVlstOaP/q0kM6GVvi+LrLRg=="],
 
-    "route-engine-js": ["route-engine-js@0.0.2-rc3", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.1.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2", "route-graphics": "^0.0.1" } }, "sha512-GHE9w7YLiH0rp0q3WdXGYe8LbICkDrWXPpgcA/8W7Z1sCxOm+mkxN75T0osX8EoRXkCtUWhA+sQyibZMbIH09A=="],
+    "route-engine-js": ["route-engine-js@0.0.2-rc4", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.1.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-T+Ltv9jFwDuuJEh12ph5/4tOS2f79w9I4osFSAfEhHlUGRclwP4suBMCREVGL/+o4d3Lg+YWYi2XO0wlMIfJow=="],
 
-    "route-graphics": ["route-graphics@0.0.2-rc1", "", { "dependencies": { "pixi.js": "^8.7.1", "rxjs": "^7.8.2" } }, "sha512-Fkr8uAVnpUCYxbiSNxqD5rtwbbp+h225PekJvAx6ZMPRSkPbJJ+xD/aezAn0o1iSZkZkxC6rLGZBtmWEB7peiA=="],
+    "route-graphics": ["route-graphics@0.0.2-rc2", "", { "dependencies": { "pixi.js": "^8.7.1", "rxjs": "^7.8.2" } }, "sha512-im7N07L6z4XbCnf2wQ+0GAQNRUK7CZr8qKLrteziuktDBqvHQW6hTcMDFbBcPUCVUzCrF6plH7zu1aZxLAs0Xg=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
@@ -285,8 +285,6 @@
     "postcss/nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
 
     "route-engine-js/jempl": ["jempl@0.1.0", "", {}, "sha512-KVnndQm931bEl3V3xTU1JubxbyIR4HPJSefkpwloX6goixh7zMaSrHYWyDeLqTw+J5sY4p4AcKhGMvIl9kIYgw=="],
-
-    "route-engine-js/route-graphics": ["route-graphics@0.0.1", "", { "dependencies": { "pixi.js": "^8.7.1", "rxjs": "^7.8.2" } }, "sha512-7jqDgXk2+sEfDVJIHXcSzu9Pom8nDBbwWvgbWcEwHEBrzpIOXtGgOP1We51m25J/6pCzrU9gr+DF0yUL9GH/eA=="],
 
     "vite/esbuild": ["esbuild@0.25.4", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.25.4", "@esbuild/android-arm": "0.25.4", "@esbuild/android-arm64": "0.25.4", "@esbuild/android-x64": "0.25.4", "@esbuild/darwin-arm64": "0.25.4", "@esbuild/darwin-x64": "0.25.4", "@esbuild/freebsd-arm64": "0.25.4", "@esbuild/freebsd-x64": "0.25.4", "@esbuild/linux-arm": "0.25.4", "@esbuild/linux-arm64": "0.25.4", "@esbuild/linux-ia32": "0.25.4", "@esbuild/linux-loong64": "0.25.4", "@esbuild/linux-mips64el": "0.25.4", "@esbuild/linux-ppc64": "0.25.4", "@esbuild/linux-riscv64": "0.25.4", "@esbuild/linux-s390x": "0.25.4", "@esbuild/linux-x64": "0.25.4", "@esbuild/netbsd-arm64": "0.25.4", "@esbuild/netbsd-x64": "0.25.4", "@esbuild/openbsd-arm64": "0.25.4", "@esbuild/openbsd-x64": "0.25.4", "@esbuild/sunos-x64": "0.25.4", "@esbuild/win32-arm64": "0.25.4", "@esbuild/win32-ia32": "0.25.4", "@esbuild/win32-x64": "0.25.4" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-8pgjLUcUjcgDg+2Q4NYXnPbo/vncAY4UmyaCm0jZevERqCHZIaWwdJHkf8XQtu4AxSKCdvrUbT0XUr1IdZzI8Q=="],
 
