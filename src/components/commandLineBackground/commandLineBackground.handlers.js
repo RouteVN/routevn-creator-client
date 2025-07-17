@@ -1,16 +1,29 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
-  const { repository, store, render } = deps;
+  const { repository, store, render, props } = deps;
   const { images } = repository.getState();
   store.setItems({
     items: images,
   });
+
+  // Initialize with existing background data if available
+  if (props?.existingBackground?.imageId) {
+    const flatImageItems = toFlatItems(images);
+    const existingImage = flatImageItems.find(
+      (item) => item.id === props.existingBackground.imageId,
+    );
+
+    if (existingImage) {
+      store.setSelectedImageAndFileId({
+        imageId: props.existingBackground.imageId,
+        fileId: existingImage.fileId,
+      });
+    }
+  }
 };
 
-export const handleOnUpdate = () => {
-  
-}
+export const handleOnUpdate = () => {};
 
 export const handleImageSelected = (e, deps) => {
   const { store, render } = deps;
@@ -26,19 +39,19 @@ export const handleImageSelected = (e, deps) => {
 
 export const handleSubmitClick = (e, deps) => {
   const { dispatchEvent, store } = deps;
-  
+
   const selectedImageId = store.selectSelectedImageId();
-  
+
   if (!selectedImageId) {
     return;
   }
-  
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         background: {
           imageId: selectedImageId,
-        }
+        },
       },
     }),
   );
@@ -84,14 +97,15 @@ export const handleButtonSelectClickImage = (payload, deps) => {
   const { images } = repository.getState();
 
   const tempSelectedImageId = store.selectTempSelectedImageId();
-  const tempSelectedImage = toFlatItems(images).find(image => image.id === tempSelectedImageId);
+  const tempSelectedImage = toFlatItems(images).find(
+    (image) => image.id === tempSelectedImageId,
+  );
   store.setSelectedImageAndFileId({
     imageId: tempSelectedImageId,
     fileId: tempSelectedImage.fileId,
   });
   store.setMode({
     mode: "current",
-  });  
+  });
   render();
 };
-

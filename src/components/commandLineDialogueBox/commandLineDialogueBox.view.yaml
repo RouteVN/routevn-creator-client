@@ -27,6 +27,11 @@ propsSchema:
             type: string
           name:
             type: string
+    existingDialogue:
+      type: object
+      properties:
+        layoutId:
+          type: string
 
 refs:
   layout-select:
@@ -51,7 +56,7 @@ template:
 
       - rtgl-text: Select Layout for Dialogue Box
 
-      - rtgl-select#layout-select .options=layouts .value=selectedLayoutId placeholder="Choose a layout...":
+      - rtgl-select#layout-select .options=layouts .selectedValue=selectedLayoutId placeholder="Choose a layout...":
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:

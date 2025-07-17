@@ -56,6 +56,11 @@ export const toViewData = ({ state, props }, payload) => {
     { label: 'Fade In/Out', value: 'fade' }
   ];
 
+  // Get selected audio name
+  const selectedAudioName = state.selectedAudioId ? 
+    toFlatItems(state.items).find(item => item.id === state.selectedAudioId)?.name : 
+    undefined;
+
   return {
     mode: state.mode,
     items: flatItems,
@@ -63,5 +68,6 @@ export const toViewData = ({ state, props }, payload) => {
     loopOptions,
     selectedAudioId: state.selectedAudioId,
     selectedFileId: state.selectedFileId,
+    selectedAudioName,
   };
 };
