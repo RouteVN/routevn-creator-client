@@ -7,6 +7,7 @@ import { toFlatItems } from "../../deps/repository";
 export const INITIAL_STATE = Object.freeze({
   images: {},
   characters: {},
+  audios: {},
   placements: {},
   layouts: {},
   sceneId: undefined,
@@ -42,6 +43,18 @@ export const setImages = (state, images) => {
 
 export const setCharacters = (state, characters) => {
   state.characters = characters;
+};
+
+export const setAudios = (state, audios) => {
+  state.audios = audios;
+};
+
+export const selectAudios = ({ state }) => {
+  return state.audios;
+};
+
+export const selectImages = ({ state }) => {
+  return state.images;
 };
 
 export const setPlacements = (state, placements) => {
@@ -190,6 +203,7 @@ export const selectRenderState = ({ state }) => {
       images: state.images,
       placements: state.placements,
       characters: state.characters,
+      audios: state.audios,
     },
     ui: {
       layouts: state.layouts,

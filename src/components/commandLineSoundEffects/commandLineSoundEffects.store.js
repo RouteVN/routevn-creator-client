@@ -59,6 +59,10 @@ export const selectCurrentEditingSoundEffect = ({ state }) => {
   return state.soundEffects.find(se => se.id === state.currentEditingId);
 };
 
+export const setExistingSoundEffects = (state, payload) => {
+  state.soundEffects = payload.soundEffects;
+};
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
   const flatGroups = toFlatGroups(state.items)
