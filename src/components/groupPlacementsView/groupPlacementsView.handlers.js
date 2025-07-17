@@ -141,12 +141,12 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
   }
 
   if (itemData) {
-    // Set edit mode with item data using separate store functions
-    store.setEditMode(true);
-    store.setEditItemId(itemId);
-    store.setDefaultValues(itemData);
-    // Open dialog
-    store.toggleDialog();
+    // Open dialog in edit mode with item data
+    store.openPlacementFormDialog({
+      editMode: true,
+      itemId: itemId,
+      itemData: itemData
+    });
     render();
 
     // Initialize drenderer after dialog is opened and canvas is in DOM
@@ -175,15 +175,14 @@ export const handleAddPlacementClick = async (e, deps) => {
 
   // Extract group ID from the clicked button
   const groupId = e.currentTarget.id.replace("add-placement-button-", "");
-  store.setTargetGroupId(groupId);
 
-  // Set add mode (not edit mode)
-  store.setEditMode(false);
-  store.setEditItemId(null);
-  store.setDefaultValues(null);
-
-  // Toggle dialog open
-  store.toggleDialog();
+  // Open dialog in add mode
+  store.openPlacementFormDialog({
+    editMode: false,
+    itemId: null,
+    itemData: null,
+    targetGroupId: groupId
+  });
   render();
 
   const { canvas } = getRefIds();
@@ -203,15 +202,8 @@ export const handleAddPlacementClick = async (e, deps) => {
 export const handleCloseDialog = (_, deps) => {
   const { store, render } = deps;
 
-  // Close dialog first
-  store.toggleDialog();
-
-  // Reset edit mode and clear all form state after closing
-  store.setEditMode(false);
-  store.setEditItemId(null);
-  store.setDefaultValues(null);
-  store.setTargetGroupId(null);
-
+  // Close dialog and reset all state
+  store.closePlacementFormDialog();
   render();
 };
 
@@ -267,12 +259,8 @@ export const handleFormActionClick = (e, deps) => {
       );
     }
 
-    // Close dialog first, then reset all state
-    store.toggleDialog();
-    store.setEditMode(false);
-    store.setEditItemId(null);
-    store.setDefaultValues(null);
-    store.setTargetGroupId(null);
+    // Close dialog and reset all state
+    store.closePlacementFormDialog();
 
     // Force a render after the event dispatch completes
     render();

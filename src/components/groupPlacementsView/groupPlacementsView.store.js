@@ -94,41 +94,31 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 }
 
-export const toggleDialog = (state) => {
-  state.isDialogOpen = !state.isDialogOpen;
-}
-
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 }
 
-export const setTargetGroupId = (state, groupId) => {
-  state.targetGroupId = groupId;
-}
-
-export const setEditMode = (state, editMode) => {
+export const openPlacementFormDialog = (state, options = {}) => {
+  const { editMode = false, itemId = null, itemData = null, targetGroupId = null } = options;
+  
+  // Set edit mode and update form accordingly
   state.editMode = editMode;
-
+  state.editItemId = itemId;
+  state.targetGroupId = targetGroupId;
+  
+  // Update form based on edit mode
   if (editMode) {
-    // Update form for edit mode
     state.form.title = 'Edit Placement';
     state.form.description = 'Edit the placement configuration';
     state.form.actions.buttons[0].content = 'Update Placement';
   } else {
-    // Reset form for add mode
     state.form.title = 'Add Placement';
     state.form.description = 'Create a new placement configuration';
     state.form.actions.buttons[0].content = 'Add Placement';
   }
-}
-
-export const setEditItemId = (state, itemId) => {
-  state.editItemId = itemId;
-}
-
-export const setDefaultValues = (state, itemData) => {
+  
+  // Set default values based on item data
   if (itemData) {
-    // Update default values with current item data
     state.defaultValues = {
       name: itemData.name || '',
       x: String(itemData.x || '0'),
@@ -138,7 +128,6 @@ export const setDefaultValues = (state, itemData) => {
       rotation: String(itemData.rotation || '0'),
     };
   } else {
-    // Reset default values
     state.defaultValues = {
       name: '',
       x: '0',
@@ -148,6 +137,34 @@ export const setDefaultValues = (state, itemData) => {
       rotation: '0',
     };
   }
+  
+  // Open dialog
+  state.isDialogOpen = true;
+}
+
+export const closePlacementFormDialog = (state) => {
+  // Close dialog
+  state.isDialogOpen = false;
+  
+  // Reset all form state
+  state.editMode = false;
+  state.editItemId = null;
+  state.targetGroupId = null;
+  
+  // Reset default values
+  state.defaultValues = {
+    name: '',
+    x: '0',
+    y: '0',
+    scale: '1',
+    anchor: 'center-center',
+    rotation: '0',
+  };
+  
+  // Reset form to add mode
+  state.form.title = 'Add Placement';
+  state.form.description = 'Create a new placement configuration';
+  state.form.actions.buttons[0].content = 'Add Placement';
 }
 
 export const selectTargetGroupId = ({ state }) => {
