@@ -132,7 +132,6 @@ export const handlePlacementItemClick = (e, deps) => {
 export const handlePlacementItemDoubleClick = async (e, deps) => {
   const { store, render, props, drenderer, getRefIds } = deps;
   const itemId = e.currentTarget.id.replace("placement-item-", "");
-  console.log('Double clicked itemId:', itemId);
 
   // Find the item data from props
   const flatGroups = props.flatGroups || [];
@@ -300,8 +299,6 @@ export const handleFormChange = async (e, deps) => {
 
   const formValues = e.detail.formValues;
 
-  console.log("Form values changed:", formValues);
-
   const x = parseInt(formValues.x || 0);
   const y = parseInt(formValues.y || 0);
   const r = parseInt(formValues.rotation || 0);
@@ -310,10 +307,7 @@ export const handleFormChange = async (e, deps) => {
 
   const renderState = createRenderState(x, y, r, scale, anchor);
 
-  console.log("Render state:", renderState);
-
   drenderer.render(renderState);
 
-  // Render the view
   render();
 };

@@ -107,7 +107,6 @@ export const setTargetGroupId = (state, groupId) => {
 }
 
 export const setEditMode = (state, editMode) => {
-  console.log('[setEditMode] Called with:', editMode);
   state.editMode = editMode;
 
   if (editMode) {
@@ -124,13 +123,10 @@ export const setEditMode = (state, editMode) => {
 }
 
 export const setEditItemId = (state, itemId) => {
-  console.log('[setEditItemId] Called with:', itemId);
   state.editItemId = itemId;
 }
 
 export const setDefaultValues = (state, itemData) => {
-  console.log('[setDefaultValues] Called with:', itemData);
-  
   if (itemData) {
     // Update default values with current item data
     state.defaultValues = {
@@ -141,8 +137,6 @@ export const setDefaultValues = (state, itemData) => {
       anchor: itemData.anchor || 'center-center',
       rotation: String(itemData.rotation || '0'),
     };
-
-    console.log('[setDefaultValues] Set defaultValues:', state.defaultValues);
   } else {
     // Reset default values
     state.defaultValues = {
@@ -153,8 +147,6 @@ export const setDefaultValues = (state, itemData) => {
       anchor: 'center-center',
       rotation: '0',
     };
-
-    console.log('[setDefaultValues] Reset defaultValues:', state.defaultValues);
   }
 }
 
@@ -208,7 +200,7 @@ export const toViewData = ({ state, props }) => {
     })
     .filter(group => group.shouldDisplay);
 
-  const viewData = {
+  return {
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
@@ -218,17 +210,4 @@ export const toViewData = ({ state, props }) => {
     defaultValues: state.defaultValues,
     form: state.form,
   };
-
-  // Log when dialog is open to debug form data
-  if (state.isDialogOpen) {
-    console.log('[toViewData] Dialog open with:', {
-      editMode: viewData.editMode,
-      editItemId: viewData.editItemId,
-      defaultValues: viewData.defaultValues,
-      formTitle: viewData.form.title,
-      formButtonText: viewData.form.actions.buttons[0].content
-    });
-  }
-
-  return viewData;
 };
