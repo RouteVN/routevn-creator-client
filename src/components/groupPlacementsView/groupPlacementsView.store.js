@@ -21,7 +21,6 @@ export const INITIAL_STATE = Object.freeze({
     fields: [
       {
         name: 'name',
-        fieldName: 'name',
         inputType: 'inputText',
         label: 'Name',
         description: 'Enter the placement name',
@@ -29,7 +28,6 @@ export const INITIAL_STATE = Object.freeze({
       },
       {
         name: 'x',
-        fieldName: 'x',
         inputType: 'inputText',
         label: 'Position X',
         description: 'Enter the X coordinate (e.g., 100, 50%)',
@@ -37,7 +35,6 @@ export const INITIAL_STATE = Object.freeze({
       },
       {
         name: 'y',
-        fieldName: 'y',
         inputType: 'inputText',
         label: 'Position Y',
         description: 'Enter the Y coordinate (e.g., 200, 25%)',
@@ -45,7 +42,6 @@ export const INITIAL_STATE = Object.freeze({
       },
       {
         name: 'scale',
-        fieldName: 'scale',
         inputType: 'inputText',
         label: 'Scale',
         description: 'Enter the scale factor (e.g., 1, 0.5, 2)',
@@ -53,7 +49,6 @@ export const INITIAL_STATE = Object.freeze({
       },
       {
         name: 'anchor',
-        fieldName: 'anchor',
         inputType: 'select',
         label: 'Anchor',
         description: 'Enter the anchor point (e.g., center, top-left, bottom-right)',
@@ -73,7 +68,6 @@ export const INITIAL_STATE = Object.freeze({
       },
       {
         name: 'rotation',
-        fieldName: 'rotation',
         inputType: 'inputText',
         label: 'Rotation',
         description: 'Enter the rotation in degrees (e.g., 0, 45, 180)',
@@ -112,19 +106,32 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 }
 
-export const setEditMode = (state, config) => {
-  console.log('[setEditMode] Called with:', config);
-  const { editMode, itemId, itemData } = config;
-
+export const setEditMode = (state, editMode) => {
+  console.log('[setEditMode] Called with:', editMode);
   state.editMode = editMode;
-  state.editItemId = itemId;
 
-  if (editMode && itemData) {
+  if (editMode) {
     // Update form for edit mode
     state.form.title = 'Edit Placement';
     state.form.description = 'Edit the placement configuration';
     state.form.actions.buttons[0].content = 'Update Placement';
+  } else {
+    // Reset form for add mode
+    state.form.title = 'Add Placement';
+    state.form.description = 'Create a new placement configuration';
+    state.form.actions.buttons[0].content = 'Add Placement';
+  }
+}
 
+export const setEditItemId = (state, itemId) => {
+  console.log('[setEditItemId] Called with:', itemId);
+  state.editItemId = itemId;
+}
+
+export const setDefaultValues = (state, itemData) => {
+  console.log('[setDefaultValues] Called with:', itemData);
+  
+  if (itemData) {
     // Update default values with current item data
     state.defaultValues = {
       name: itemData.name || '',
@@ -135,13 +142,8 @@ export const setEditMode = (state, config) => {
       rotation: String(itemData.rotation || '0'),
     };
 
-    console.log('[setEditMode] Set edit mode defaultValues:', state.defaultValues);
+    console.log('[setDefaultValues] Set defaultValues:', state.defaultValues);
   } else {
-    // Reset form for add mode
-    state.form.title = 'Add Placement';
-    state.form.description = 'Create a new placement configuration';
-    state.form.actions.buttons[0].content = 'Add Placement';
-
     // Reset default values
     state.defaultValues = {
       name: '',
@@ -152,7 +154,7 @@ export const setEditMode = (state, config) => {
       rotation: '0',
     };
 
-    console.log('[setEditMode] Reset to add mode defaultValues:', state.defaultValues);
+    console.log('[setDefaultValues] Reset defaultValues:', state.defaultValues);
   }
 }
 
@@ -206,9 +208,6 @@ export const toViewData = ({ state, props }) => {
     })
     .filter(group => group.shouldDisplay);
 
-  // Generate a form key that changes when switching between add/edit mode
-  const formKey = state.editMode ? `edit_${state.editItemId}` : 'add';
-
   const viewData = {
     flatGroups,
     selectedItemId: props.selectedItemId,
@@ -218,7 +217,6 @@ export const toViewData = ({ state, props }) => {
     editItemId: state.editItemId,
     defaultValues: state.defaultValues,
     form: state.form,
-    formKey,
   };
 
   // Log when dialog is open to debug form data
@@ -226,7 +224,6 @@ export const toViewData = ({ state, props }) => {
     console.log('[toViewData] Dialog open with:', {
       editMode: viewData.editMode,
       editItemId: viewData.editItemId,
-      formKey: viewData.formKey,
       defaultValues: viewData.defaultValues,
       formTitle: viewData.form.title,
       formButtonText: viewData.form.actions.buttons[0].content

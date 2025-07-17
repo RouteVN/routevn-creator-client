@@ -44,11 +44,11 @@ export const handlePlacementItemDoubleClick = (e, deps) => {
     }
   }
 
-  console.log(itemData)
-
   if (itemData) {
-    // Set edit mode with item data using proper store function
-    store.setEditMode({ editMode: true, itemId, itemData });
+    // Set edit mode with item data using separate store functions
+    store.setEditMode(true);
+    store.setEditItemId(itemId);
+    store.setDefaultValues(itemData);
     // Open dialog
     store.toggleDialog();
     render();
@@ -65,6 +65,8 @@ export const handleAddPlacementClick = (e, deps) => {
 
   // Set add mode (not edit mode)
   store.setEditMode(false);
+  store.setEditItemId(null);
+  store.setDefaultValues(null);
 
   // Toggle dialog open
   store.toggleDialog();
@@ -74,11 +76,15 @@ export const handleAddPlacementClick = (e, deps) => {
 export const handleCloseDialog = (e, deps) => {
   const { store, render } = deps;
 
-  // Reset edit mode when closing
-  store.setEditMode(false);
-
-  // Close dialog
+  // Close dialog first
   store.toggleDialog();
+  
+  // Reset edit mode and clear all form state after closing
+  store.setEditMode(false);
+  store.setEditItemId(null);
+  store.setDefaultValues(null);
+  store.setTargetGroupId(null);
+
   render();
 };
 
@@ -132,9 +138,12 @@ export const handleFormActionClick = (e, deps) => {
       }));
     }
 
-    // Reset edit mode and close dialog
-    store.setEditMode(false);
+    // Close dialog first, then reset all state
     store.toggleDialog();
+    store.setEditMode(false);
+    store.setEditItemId(null);
+    store.setDefaultValues(null);
+    store.setTargetGroupId(null);
     
     // Force a render after the event dispatch completes
     setTimeout(() => {
@@ -148,7 +157,7 @@ export const handlePreviewButtonClick = () => {
 }
 
 export const handleFormChange = async (e, deps) => {
-  const { store, render, getRefIds, drenderer } = deps;
+  const { render, getRefIds, drenderer } = deps;
 
   const formValues = e.detail.formValues;
 
