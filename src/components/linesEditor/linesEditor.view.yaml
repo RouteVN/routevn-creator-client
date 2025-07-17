@@ -57,6 +57,8 @@ template:
               - rtgl-view h=f av=c w=32 ah=e mr=md:
                   - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
               - rtgl-view wh=16 br=f mr=md:
+                  - $if line.characterFileId:
+                      - rvn-file-image fileId=${line.characterFileId} w=16 h=16 br=f:
               - rtgl-view d=h w=f av=c:
                   - 'div#line-${line.id} style="width: 100%;" contenteditable=true':
                       - 'span style="font-size: 18px;"': ${line.presentation.dialogue.text}

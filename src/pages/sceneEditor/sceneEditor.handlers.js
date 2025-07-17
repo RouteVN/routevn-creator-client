@@ -179,12 +179,40 @@ export const handleCommandLineSubmit = (e, deps) => {
   if (!lineId) {
     return;
   }
+
+  let submissionData = e.detail;
+
+  // If this is a dialogue submission, preserve the existing text
+  if (submissionData.dialogue) {
+    const { scenes } = repository.getState();
+    const scene = toFlatItems(scenes)
+      .filter((item) => item.type === "scene")
+      .find((item) => item.id === sceneId);
+    
+    if (scene) {
+      const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
+      if (section) {
+        const line = toFlatItems(section.lines).find((l) => l.id === lineId);
+        if (line && line.presentation?.dialogue?.text) {
+          // Preserve existing text
+          submissionData = {
+            ...submissionData,
+            dialogue: {
+              ...submissionData.dialogue,
+              text: line.presentation.dialogue.text,
+            },
+          };
+        }
+      }
+    }
+  }
+
   repository.addAction({
     actionType: "set",
     target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
     value: {
       replace: false,
-      item: e.detail,
+      item: submissionData,
     },
   });
 
@@ -216,6 +244,23 @@ export const handleEditorDataChanged = (e, deps) => {
   const sectionId = store.selectSelectedSectionId();
   const lineId = e.detail.lineId;
 
+  // Get existing dialogue data to preserve layoutId and characterId
+  const { scenes } = repository.getState();
+  const scene = toFlatItems(scenes)
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === sceneId);
+  
+  let existingDialogue = {};
+  if (scene) {
+    const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
+    if (section) {
+      const line = toFlatItems(section.lines).find((l) => l.id === lineId);
+      if (line && line.presentation?.dialogue) {
+        existingDialogue = line.presentation.dialogue;
+      }
+    }
+  }
+
   repository.addAction({
     actionType: "set",
     target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
@@ -223,6 +268,7 @@ export const handleEditorDataChanged = (e, deps) => {
       replace: false,
       item: {
         dialogue: {
+          ...existingDialogue,
           text: e.detail.content,
         },
       },

@@ -201,7 +201,7 @@ export const selectRenderState = ({ state }) => {
     resolveFile: (f) => `file:${f}`,
     assets: {
       images: state.images,
-      placements: state.placements,
+      transforms: state.placements,
       characters: state.characters,
       audios: state.audios,
     },
@@ -289,13 +289,23 @@ export const toViewData = ({ state, props }, payload) => {
   }
 
   if (selectedLine?.presentation?.character?.items) {
-    charactersData = selectedLine.presentation.character.items.map((char) => ({
-      ...char,
-      character: state.repositoryState.characters.items[char.id],
-      sprite: char.spriteParts?.[0]?.spritePartId
-        ? state.repositoryState.images.items[char.spriteParts[0].spritePartId]
-        : null,
-    }));
+    charactersData = selectedLine.presentation.character.items.map((char) => {
+      const character = state.repositoryState.characters.items[char.id];
+      let sprite = null;
+      
+      if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
+        // Look up sprite from character's sprites
+        const spriteId = char.spriteParts[0].spritePartId;
+        const flatSprites = toFlatItems(character.sprites);
+        sprite = flatSprites.find(s => s.id === spriteId);
+      }
+      
+      return {
+        ...char,
+        character,
+        sprite,
+      };
+    });
   }
 
   let sceneTransitionData = null;
@@ -360,6 +370,9 @@ export const toViewData = ({ state, props }, payload) => {
           (l) => l.id === selectedLine?.presentation?.dialogue?.layoutId,
         )
       : null,
+    dialogueCharacterData: selectedLine?.presentation?.dialogue?.characterId
+      ? state.repositoryState.characters?.items?.[selectedLine.presentation.dialogue.characterId]
+      : null,
     richText: selectedLine?.presentation?.richText,
     richTextContent,
     mode: state.mode,
@@ -369,6 +382,10 @@ export const toViewData = ({ state, props }, payload) => {
     selectedLineId: state.selectedLineId,
     sectionsGraphView: state.sectionsGraphView,
     layouts: Object.entries(state.layouts).map(([id, item]) => ({
+      id,
+      ...item,
+    })),
+    allCharacters: Object.entries(state.repositoryState.characters?.items || {}).map(([id, item]) => ({
       id,
       ...item,
     })),
