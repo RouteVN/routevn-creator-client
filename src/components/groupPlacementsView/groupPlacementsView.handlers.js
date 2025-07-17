@@ -73,6 +73,56 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
       const x = parseInt(itemData.x || 0);
       const y = parseInt(itemData.y || 0);
       const r = parseInt(itemData.rotation || 0);
+      const scale = parseFloat(itemData.scale || 1);
+      const anchor = itemData.anchor || "center-center";
+
+      // Calculate anchor offsets
+      const baseWidth = 300;
+      const baseHeight = 300;
+      const scaledWidth = baseWidth * scale;
+      const scaledHeight = baseHeight * scale;
+      
+      let anchorOffsetX = 0;
+      let anchorOffsetY = 0;
+      
+      switch(anchor) {
+        case "top-left":
+          anchorOffsetX = 0;
+          anchorOffsetY = 0;
+          break;
+        case "top-center":
+          anchorOffsetX = -scaledWidth / 2;
+          anchorOffsetY = 0;
+          break;
+        case "top-right":
+          anchorOffsetX = -scaledWidth;
+          anchorOffsetY = 0;
+          break;
+        case "center-left":
+          anchorOffsetX = 0;
+          anchorOffsetY = -scaledHeight / 2;
+          break;
+        case "center-center":
+          anchorOffsetX = -scaledWidth / 2;
+          anchorOffsetY = -scaledHeight / 2;
+          break;
+        case "center-right":
+          anchorOffsetX = -scaledWidth;
+          anchorOffsetY = -scaledHeight / 2;
+          break;
+        case "bottom-left":
+          anchorOffsetX = 0;
+          anchorOffsetY = -scaledHeight;
+          break;
+        case "bottom-center":
+          anchorOffsetX = -scaledWidth / 2;
+          anchorOffsetY = -scaledHeight;
+          break;
+        case "bottom-right":
+          anchorOffsetX = -scaledWidth;
+          anchorOffsetY = -scaledHeight;
+          break;
+      }
       
       const renderState = {
         elements: [
@@ -88,20 +138,20 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
           {
             id: "id0",
             type: "rect",
-            x,
-            y,
+            x: x + anchorOffsetX,
+            y: y + anchorOffsetY,
             r,
-            width: 200,
-            height: 200,
+            width: scaledWidth,
+            height: scaledHeight,
             fill: "white",
           },
           {
             id: "id1",
             type: "rect",
-            x: x - 5,
-            y: y - 5,
-            width: 11,
-            height: 11,
+            x: x - 25,
+            y: y - 25,
+            width: 50,
+            height: 50,
             fill: "red",
           },
         ],
@@ -138,7 +188,8 @@ export const handleAddPlacementClick = async (e, deps) => {
       });
       drenderer.initialized = true;
       
-      // Render initial state
+      // Render initial state with default values (scale=1, anchor=center)
+      // When anchor is center, a 200x200 rect at (0,0) will be centered at origin
       const renderState = {
         elements: [
           {
@@ -153,8 +204,8 @@ export const handleAddPlacementClick = async (e, deps) => {
           {
             id: "id0",
             type: "rect",
-            x: 0,
-            y: 0,
+            x: -150,  // Center anchor: -width/2
+            y: -150,  // Center anchor: -height/2
             r: 0,
             width: 200,
             height: 200,
@@ -163,10 +214,10 @@ export const handleAddPlacementClick = async (e, deps) => {
           {
             id: "id1",
             type: "rect",
-            x: -5,
-            y: -5,
-            width: 11,
-            height: 11,
+            x: -25,
+            y: -25,
+            width: 50,
+            height: 50,
             fill: "red",
           },
         ],
@@ -177,7 +228,7 @@ export const handleAddPlacementClick = async (e, deps) => {
   }, 0);
 };
 
-export const handleCloseDialog = (e, deps) => {
+export const handleCloseDialog = (_, deps) => {
   const { store, render } = deps;
 
   // Close dialog first
@@ -258,12 +309,12 @@ export const handleFormActionClick = (e, deps) => {
   }
 };
 
-export const handlePreviewButtonClick = (e, deps) => {
+export const handlePreviewButtonClick = () => {
   //
 };
 
 export const handleFormChange = async (e, deps) => {
-  const { render, getRefIds, drenderer } = deps;
+  const { render, drenderer } = deps;
 
   const formValues = e.detail.formValues;
 
@@ -272,14 +323,64 @@ export const handleFormChange = async (e, deps) => {
   const x = parseInt(formValues.x || 0);
   const y = parseInt(formValues.y || 0);
   const r = parseInt(formValues.rotation || 0);
+  const scale = parseFloat(formValues.scale || 1);
+  const anchor = formValues.anchor || "center-center";
+
+  // Calculate anchor offsets
+  const baseWidth = 300;
+  const baseHeight = 300;
+  const scaledWidth = baseWidth * scale;
+  const scaledHeight = baseHeight * scale;
+  
+  let anchorOffsetX = 0;
+  let anchorOffsetY = 0;
+  
+  switch(anchor) {
+    case "top-left":
+      anchorOffsetX = 0;
+      anchorOffsetY = 0;
+      break;
+    case "top-center":
+      anchorOffsetX = -scaledWidth / 2;
+      anchorOffsetY = 0;
+      break;
+    case "top-right":
+      anchorOffsetX = -scaledWidth;
+      anchorOffsetY = 0;
+      break;
+    case "center-left":
+      anchorOffsetX = 0;
+      anchorOffsetY = -scaledHeight / 2;
+      break;
+    case "center-center":
+      anchorOffsetX = -scaledWidth / 2;
+      anchorOffsetY = -scaledHeight / 2;
+      break;
+    case "center-right":
+      anchorOffsetX = -scaledWidth;
+      anchorOffsetY = -scaledHeight / 2;
+      break;
+    case "bottom-left":
+      anchorOffsetX = 0;
+      anchorOffsetY = -scaledHeight;
+      break;
+    case "bottom-center":
+      anchorOffsetX = -scaledWidth / 2;
+      anchorOffsetY = -scaledHeight;
+      break;
+    case "bottom-right":
+      anchorOffsetX = -scaledWidth;
+      anchorOffsetY = -scaledHeight;
+      break;
+  }
 
   const renderState = {
     elements: [
       {
         id: "bg",
         type: "rect",
-        x:0,
-        y:0,
+        x: 0,
+        y: 0,
         width: 1920,
         height: 1080,
         fill: "#4a4a4a",
@@ -287,20 +388,20 @@ export const handleFormChange = async (e, deps) => {
       {
         id: "id0",
         type: "rect",
-        x,
-        y,
+        x: x + anchorOffsetX,
+        y: y + anchorOffsetY,
         r,
-        width: 200,
-        height: 200,
+        width: scaledWidth,
+        height: scaledHeight,
         fill: "white",
       },
       {
         id: "id1",
         type: "rect",
-        x: x - 5,
-        y: y - 5,
-        width: 11,
-        height: 11,
+        x: x - 25,
+        y: y - 25,
+        width: 50,
+        height: 50,
         fill: "red",
       },
     ],
