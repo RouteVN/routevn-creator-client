@@ -2,6 +2,18 @@ import { fromEvent, tap } from "rxjs";
 
 let dragOffset = { x: 0, y: 0 };
 
+export const handleContainerMouseDown = (event, deps) => {
+  const { store } = deps;
+  
+  if (store.selectIsPanMode()) {
+    // Start panning
+    store.startPanning({
+      mouseX: event.clientX,
+      mouseY: event.clientY
+    });
+  }
+};
+
 export const handleCanvasMouseDown = (event, deps) => {
   const { store } = deps;
   
@@ -17,13 +29,13 @@ export const handleCanvasMouseDown = (event, deps) => {
   }
 };
 
-export const handleCanvasWheel = (event, deps) => {
+export const handleContainerWheel = (event, deps) => {
   event.preventDefault();
-  const { store, getRefIds, render } = deps;
+  const { store, getRefIds, render, dispatchEvent } = deps;
   
-  // Calculate mouse position relative to canvas
-  const canvas = getRefIds().canvas.elm;
-  const rect = canvas.getBoundingClientRect();
+  // Calculate mouse position relative to container
+  const container = getRefIds().container.elm;
+  const rect = container.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
   
@@ -31,10 +43,59 @@ export const handleCanvasWheel = (event, deps) => {
   const zoomIntensity = 0.1;
   const scaleFactor = event.deltaY < 0 ? 1 + zoomIntensity : 1 - zoomIntensity;
   
-  console.log('Zoom:', event.deltaY < 0 ? 'in' : 'out', 'at', mouseX, mouseY);
-  
   store.zoomAt({ mouseX, mouseY, scaleFactor });
   render();
+  
+  // Dispatch zoom change event to parent
+  dispatchEvent(new CustomEvent('zoom-changed', {
+    detail: { zoomLevel: store.selectZoomLevel() },
+    bubbles: true,
+    composed: true
+  }));
+};
+
+export const handleZoomInClick = (event, deps) => {
+  const { store, getRefIds, render, dispatchEvent } = deps;
+  
+  const container = getRefIds().container.elm;
+  const rect = container.getBoundingClientRect();
+  
+  store.zoomFromCenter({
+    direction: 1,
+    containerWidth: rect.width,
+    containerHeight: rect.height
+  });
+  
+  render();
+  
+  // Dispatch zoom change event to parent
+  dispatchEvent(new CustomEvent('zoom-changed', {
+    detail: { zoomLevel: store.selectZoomLevel() },
+    bubbles: true,
+    composed: true
+  }));
+};
+
+export const handleZoomOutClick = (event, deps) => {
+  const { store, getRefIds, render, dispatchEvent } = deps;
+  
+  const container = getRefIds().container.elm;
+  const rect = container.getBoundingClientRect();
+  
+  store.zoomFromCenter({
+    direction: -1,
+    containerWidth: rect.width,
+    containerHeight: rect.height
+  });
+  
+  render();
+  
+  // Dispatch zoom change event to parent
+  dispatchEvent(new CustomEvent('zoom-changed', {
+    detail: { zoomLevel: store.selectZoomLevel() },
+    bubbles: true,
+    composed: true
+  }));
 };
 
 export const handleItemMouseDown = (event, deps) => {
@@ -122,9 +183,27 @@ export const handleWindowMouseMove = (event, deps) => {
     const newX = mouseInCanvasX - dragOffset.x;
     const newY = mouseInCanvasY - dragOffset.y;
     
-    // Keep within canvas bounds (relative to unpanned, unzoomed canvas)
-    const constrainedX = Math.max(0, Math.min(newX, 1000 - 120)); // Larger canvas area
-    const constrainedY = Math.max(0, Math.min(newY, 1000 - 60));
+    // Get the container's visible area
+    const container = getRefIds().container.elm;
+    const containerRect = container.getBoundingClientRect();
+    const panState = store.selectPan();
+    
+    // Calculate visible area in canvas coordinates based on actual container size
+    const viewportLeft = (-panState.x) / zoomLevel;
+    const viewportTop = (-panState.y) / zoomLevel;
+    const viewportRight = viewportLeft + (containerRect.width / zoomLevel);
+    const viewportBottom = viewportTop + (containerRect.height / zoomLevel);
+    
+    // Item dimensions
+    const itemWidth = 120;
+    const itemHeight = 60;
+    
+    // Keep item fully within viewport bounds (no edge overlap)
+    const maxX = viewportRight - itemWidth;
+    const maxY = viewportBottom - itemHeight;
+    
+    const constrainedX = Math.max(viewportLeft, Math.min(newX, maxX));
+    const constrainedY = Math.max(viewportTop, Math.min(newY, maxY));
     
     const snappedX = Math.round(constrainedX / 5) * 5;
     const snappedY = Math.round(constrainedY / 5) * 5;
