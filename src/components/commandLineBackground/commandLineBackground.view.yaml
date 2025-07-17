@@ -4,6 +4,15 @@ viewDataSchema:
   type: object
   properties: {}
 
+propsSchema:
+  type: object
+  properties:
+    existingBackground:
+      type: object
+      properties:
+        imageId:
+          type: string
+
 refs:
   image-selector:
     eventListeners:

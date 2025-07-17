@@ -697,6 +697,23 @@ export const handleSceneTransitionActionContextMenu = (e, deps) => {
   render();
 };
 
+export const handleDialogueActionClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("dialoguebox");
+  render();
+};
+
+export const handleDialogueActionContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+
+  store.showPresentationDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    presentationType: "dialogue",
+  });
+  render();
+};
+
 export const handleActionsOverlayClick = (e, deps) => {
   const { store, render } = deps;
   store.setMode("lines-editor");
