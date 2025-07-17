@@ -30,6 +30,11 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+/* Firefox */
+* {
+  scrollbar-color: var(--input) transparent;
+}
+
 body {
   -ms-overflow-style: none;
   scrollbar-width: none;

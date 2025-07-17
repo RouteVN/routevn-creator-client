@@ -11,56 +11,69 @@ export const INITIAL_STATE = Object.freeze({
     x: '0',
     y: '0',
     scale: '1',
-    anchor: 'center',
+    anchor: 'center-center',
     rotation: '0',
   },
 
   form: {
     title: 'Add Placement',
     description: 'Create a new placement configuration',
-    fields: [{
-      id: 'name',
-      fieldName: 'name',
-      inputType: 'inputText',
-      label: 'Name',
-      description: 'Enter the placement name',
-      required: true,
-    }, {
-      id: 'x',
-      fieldName: 'x',
-      inputType: 'inputText',
-      label: 'Position X',
-      description: 'Enter the X coordinate (e.g., 100, 50%)',
-      required: true,
-    }, {
-      id: 'y',
-      fieldName: 'y',
-      inputType: 'inputText',
-      label: 'Position Y',
-      description: 'Enter the Y coordinate (e.g., 200, 25%)',
-      required: true,
-    }, {
-      id: 'scale',
-      fieldName: 'scale',
-      inputType: 'inputText',
-      label: 'Scale',
-      description: 'Enter the scale factor (e.g., 1, 0.5, 2)',
-      required: true,
-    }, {
-      id: 'anchor',
-      fieldName: 'anchor',
-      inputType: 'inputText',
-      label: 'Anchor',
-      description: 'Enter the anchor point (e.g., center, top-left, bottom-right)',
-      required: true,
-    }, {
-      id: 'rotation',
-      fieldName: 'rotation',
-      inputType: 'inputText',
-      label: 'Rotation',
-      description: 'Enter the rotation in degrees (e.g., 0, 45, 180)',
-      required: true,
-    }],
+    fields: [
+      {
+        name: 'name',
+        inputType: 'inputText',
+        label: 'Name',
+        description: 'Enter the placement name',
+        required: true,
+      },
+      {
+        name: 'x',
+        inputType: 'inputText',
+        label: 'Position X',
+        description: 'Enter the X coordinate (e.g., 100, 50%)',
+        required: true,
+      },
+      {
+        name: 'y',
+        inputType: 'inputText',
+        label: 'Position Y',
+        description: 'Enter the Y coordinate (e.g., 200, 25%)',
+        required: true,
+      },
+      {
+        name: 'scale',
+        inputType: 'inputText',
+        label: 'Scale',
+        description: 'Enter the scale factor (e.g., 1, 0.5, 2)',
+        required: true,
+      },
+      {
+        name: 'anchor',
+        inputType: 'select',
+        label: 'Anchor',
+        description: 'Enter the anchor point (e.g., center, top-left, bottom-right)',
+        placeholder: 'Choose a anchor',
+        options: [
+          { id: 'tl', label: 'Top Left', value: 'top-left' },
+          { id: 'tc', label: 'Top Center', value: 'top-center' },
+          { id: 'tr', label: 'Top Right', value: 'top-right' },
+          { id: 'cl', label: 'Center Left', value: 'center-left' },
+          { id: 'cc', label: 'Center Center', value: 'center-center' },
+          { id: 'cr', label: 'Center Right', value: 'center-right' },
+          { id: 'bl', label: 'Bottom Left', value: 'bottom-left' },
+          { id: 'bc', label: 'Bottom Center', value: 'bottom-center' },
+          { id: 'br', label: 'Bottom Right', value: 'bottom-right' },
+        ],
+        required: true,
+      },
+      {
+        name: 'rotation',
+        inputType: 'inputText',
+        label: 'Rotation',
+        description: 'Enter the rotation in degrees (e.g., 0, 45, 180)',
+        required: true,
+      }
+    ],
     actions: {
       layout: '',
       buttons: [{
@@ -81,53 +94,89 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 }
 
-export const toggleDialog = (state) => {
-  state.isDialogOpen = !state.isDialogOpen;
-}
-
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 }
 
-export const setTargetGroupId = (state, groupId) => {
-  state.targetGroupId = groupId;
-}
-
-export const setEditMode = (state, editMode, itemId = null, itemData = null) => {
+export const openPlacementFormDialog = (state, options = {}) => {
+  const { editMode = false, itemId = null, itemData = null, targetGroupId = null } = options;
+  
+  // Set edit mode and update form accordingly
   state.editMode = editMode;
   state.editItemId = itemId;
-
-  if (editMode && itemData) {
-    // Update form for edit mode
+  state.targetGroupId = targetGroupId;
+  
+  // Update form based on edit mode
+  if (editMode) {
     state.form.title = 'Edit Placement';
     state.form.description = 'Edit the placement configuration';
     state.form.actions.buttons[0].content = 'Update Placement';
-
-    // Update default values with current item data
-    state.defaultValues = {
-      name: itemData.name || '',
-      x: itemData.x || '0',
-      y: itemData.y || '0',
-      scale: itemData.scale || '1',
-      anchor: itemData.anchor || 'center',
-      rotation: itemData.rotation || '0',
-    };
   } else {
-    // Reset form for add mode
     state.form.title = 'Add Placement';
     state.form.description = 'Create a new placement configuration';
     state.form.actions.buttons[0].content = 'Add Placement';
-
-    // Reset default values
+  }
+  
+  // Set default values based on item data
+  if (itemData) {
+    state.defaultValues = {
+      name: itemData.name || '',
+      x: String(itemData.x || '0'),
+      y: String(itemData.y || '0'),
+      scale: String(itemData.scale || '1'),
+      anchor: itemData.anchor || 'center-center',
+      rotation: String(itemData.rotation || '0'),
+    };
+  } else {
     state.defaultValues = {
       name: '',
       x: '0',
       y: '0',
       scale: '1',
-      anchor: 'center',
+      anchor: 'center-center',
       rotation: '0',
     };
   }
+  
+  // Open dialog
+  state.isDialogOpen = true;
+}
+
+export const closePlacementFormDialog = (state) => {
+  // Close dialog
+  state.isDialogOpen = false;
+  
+  // Reset all form state
+  state.editMode = false;
+  state.editItemId = null;
+  state.targetGroupId = null;
+  
+  // Reset default values
+  state.defaultValues = {
+    name: '',
+    x: '0',
+    y: '0',
+    scale: '1',
+    anchor: 'center-center',
+    rotation: '0',
+  };
+  
+  // Reset form to add mode
+  state.form.title = 'Add Placement';
+  state.form.description = 'Create a new placement configuration';
+  state.form.actions.buttons[0].content = 'Add Placement';
+}
+
+export const selectTargetGroupId = ({ state }) => {
+  return state.targetGroupId;
+}
+
+export const selectEditMode = ({ state }) => {
+  return state.editMode;
+}
+
+export const selectEditItemId = ({ state }) => {
+  return state.editItemId;
 }
 
 export const toViewData = ({ state, props }) => {
