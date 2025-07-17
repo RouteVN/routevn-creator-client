@@ -7,6 +7,12 @@ export const handleOnMount = (deps) => {
       layoutId: props.existingDialogue.layoutId,
     });
   }
+  
+  if (props?.existingDialogue?.characterId) {
+    store.setSelectedCharacterId({
+      characterId: props.existingDialogue.characterId,
+    });
+  }
 };
 
 export const handleOnUpdate = () => {
@@ -21,20 +27,31 @@ export const handleLayoutSelectChange = (e, deps) => {
   render();
 };
 
+export const handleCharacterSelectChange = (e, deps) => {
+  const { store, render } = deps;
+  const characterId = e.detail.value;
+
+  store.setSelectedCharacterId({ characterId });
+  render();
+};
+
 export const handleSubmitClick = (e, deps) => {
   const { store, dispatchEvent } = deps;
-  const { selectedLayoutId } = store.getState();
+  const { selectedLayoutId, selectedCharacterId } = store.getState();
 
-  if (!selectedLayoutId || selectedLayoutId === "") {
-    return;
+  // Create dialogue object with only non-empty values
+  const dialogue = {};
+  if (selectedLayoutId && selectedLayoutId !== "") {
+    dialogue.layoutId = selectedLayoutId;
+  }
+  if (selectedCharacterId && selectedCharacterId !== "") {
+    dialogue.characterId = selectedCharacterId;
   }
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        dialogue: {
-          layoutId: selectedLayoutId,
-        },
+        dialogue,
       },
     }),
   );

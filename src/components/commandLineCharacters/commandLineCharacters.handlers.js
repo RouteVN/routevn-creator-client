@@ -1,23 +1,25 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
-  const { repository, store, render } = deps;
-  const { characters, placements } = repository.getState();
+  const { repository, store } = deps;
+  const { characters, placements: transforms } = repository.getState();
   store.setItems({
-    items: characters || { tree: [], items: {} }
+    items: characters || { tree: [], items: {} },
   });
-  store.setPlacements({
-    placements: placements || { tree: [], items: {} }
+  store.setTransforms({
+    transforms: transforms || { tree: [], items: {} },
   });
 };
 
 export const handleCharacterItemClick = (e, deps) => {
   const { store, render, repository } = deps;
-  const characterId = e.currentTarget.id.replace('character-item-', '');
+  const characterId = e.currentTarget.id.replace("character-item-", "");
 
   // Find the character data from the repository
   const { characters } = repository.getState();
-  const tempSelectedCharacter = toFlatItems(characters || { tree: [], items: {} }).find(char => char.id === characterId);
+  const tempSelectedCharacter = toFlatItems(
+    characters || { tree: [], items: {} },
+  ).find((char) => char.id === characterId);
 
   if (tempSelectedCharacter) {
     // Add character to selected characters
@@ -30,7 +32,7 @@ export const handleCharacterItemClick = (e, deps) => {
 
     // Jump directly to sprite selection mode
     store.setMode({
-      mode: 'sprite-select'
+      mode: "sprite-select",
     });
   }
 
@@ -43,32 +45,29 @@ export const handleSubmitClick = (payload, deps) => {
 
   // Only dispatch if there are characters to submit
   if (selectedCharacters.length === 0) {
-    console.warn('No characters selected to submit');
+    console.warn("No characters selected to submit");
     return;
   }
 
   const characterData = {
     character: {
-      items: selectedCharacters.map(char => ({
+      items: selectedCharacters.map((char) => ({
         id: char.id,
-        placementId: char.placement,
+        transformId: char.transform,
         spriteParts: [
           {
             id: "base",
-            spritePartId: char.spriteId
-          }
-        ]
-      }))
-    }
+            spritePartId: char.spriteId,
+          },
+        ],
+      })),
+    },
   };
-  
-  console.log('Submitting character data:', characterData);
-  
   dispatchEvent(
     new CustomEvent("submit", {
       detail: characterData,
       bubbles: true,
-      composed: true
+      composed: true,
     }),
   );
 };
@@ -103,18 +102,18 @@ export const handleBreadcumbCharactersClick = (payload, deps) => {
 
 export const handleRemoveCharacterClick = (e, deps) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace('remove-character-', ''));
+  const index = parseInt(e.currentTarget.id.replace("remove-character-", ""));
 
   store.removeCharacter(index);
   render();
 };
 
-export const handlePlacementChange = (e, deps) => {
+export const handleTransformChange = (e, deps) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace('placement-select-', ''));
-  const placement = e.currentTarget.value;
+  const index = parseInt(e.currentTarget.id.replace("transform-select-", ""));
+  const transform = e.currentTarget.value;
 
-  store.updateCharacterPlacement({ index, placement });
+  store.updateCharacterTransform({ index, transform });
   render();
 };
 
@@ -138,7 +137,7 @@ export const handleBreadcumbCharacterSelectClick = (payload, deps) => {
 
 export const handleCharacterSpriteClick = (e, deps) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace('character-sprite-', ''));
+  const index = parseInt(e.currentTarget.id.replace("character-sprite-", ""));
 
   store.setSelectedCharacterIndex({ index });
   store.setMode({
@@ -150,7 +149,7 @@ export const handleCharacterSpriteClick = (e, deps) => {
 
 export const handleSpriteItemClick = (e, deps) => {
   const { store, render } = deps;
-  const spriteId = e.currentTarget.id.replace('sprite-item-', '');
+  const spriteId = e.currentTarget.id.replace("sprite-item-", "");
 
   store.setTempSelectedSpriteId({
     spriteId: spriteId,
@@ -163,24 +162,26 @@ export const handleButtonSelectClick = (payload, deps) => {
   const { store, render, repository } = deps;
   const state = store.getState();
 
-  if (state.mode === 'sprite-select') {
+  if (state.mode === "sprite-select") {
     const tempSelectedSpriteId = store.selectTempSelectedSpriteId();
     const selectedCharIndex = state.selectedCharacterIndex;
     const selectedChar = state.selectedCharacters[selectedCharIndex];
 
     if (selectedChar && selectedChar.sprites) {
-      const tempSelectedSprite = toFlatItems(selectedChar.sprites).find(sprite => sprite.id === tempSelectedSpriteId);
+      const tempSelectedSprite = toFlatItems(selectedChar.sprites).find(
+        (sprite) => sprite.id === tempSelectedSpriteId,
+      );
       if (tempSelectedSprite) {
         store.updateCharacterSprite({
           index: selectedCharIndex,
           spriteId: tempSelectedSpriteId,
-          spriteFileId: tempSelectedSprite.fileId
+          spriteFileId: tempSelectedSprite.fileId,
         });
       }
     }
 
     store.setMode({
-      mode: 'current'
+      mode: "current",
     });
   }
 

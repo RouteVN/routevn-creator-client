@@ -64,12 +64,19 @@ export const toViewData = ({ state, props }) => {
       backgroundFileId = state.repositoryState.images.items[imageId]?.fileId;
     }
 
+    let characterFileId;
+    if (line.presentation?.dialogue?.characterId) {
+      const characterId = line.presentation.dialogue.characterId;
+      characterFileId = state.repositoryState.characters?.items?.[characterId]?.fileId;
+    }
+
     return {
       ...line,
       lineNumber: i + 1,
       lineColor: isSelected ? 'fg' : 'mu-fg',
       backgroundColor: (isSelected && isBlockMode) ? 'var(--muted)' : 'transparent',
       backgroundFileId,
+      characterFileId,
     }
   });
   return {
