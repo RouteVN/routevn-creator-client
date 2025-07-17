@@ -79,7 +79,30 @@ export const handlePlacementEdited = (e, deps) => {
 
   console.log('[handlePlacementEdited] Called with:', { itemId, name, x, y, scale, anchor, rotation });
 
-  // Dispatch to app handlers for repository update
+  // Update repository directly
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "placements",
+    value: {
+      id: itemId,
+      replace: false,
+      item: {
+        name,
+        x,
+        y,
+        scale,
+        anchor,
+        rotation
+      }
+    }
+  });
+
+  // Update local state and render immediately
+  const { placements } = repository.getState();
+  store.setItems(placements);
+  render();
+
+  // Also dispatch to app handlers for any global handling
   subject.dispatch('update-placement', {
     itemId,
     updates: {
