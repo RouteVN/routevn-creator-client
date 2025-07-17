@@ -355,7 +355,7 @@ export const toViewData = ({ state, props }, payload) => {
     sceneTransition: selectedLine?.presentation?.sceneTransition,
     sceneTransitionData,
     dialogue: selectedLine?.presentation?.dialogue,
-    dialogueData: selectedLine?.presentation?.dialogue?.dialogueBoxId
+    dialogueData: selectedLine?.presentation?.dialogue
       ? toFlatItems(state.repositoryState.layouts).find(
           (l) => l.id === selectedLine?.presentation?.dialogue?.layoutId,
         )

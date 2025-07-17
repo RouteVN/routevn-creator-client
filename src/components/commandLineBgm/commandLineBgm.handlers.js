@@ -1,11 +1,24 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
-  const { repository, store, render } = deps;
+  const { repository, store, render, props } = deps;
   const { audio } = repository.getState();
   store.setItems({
     items: audio,
   });
+  
+  // Initialize with existing BGM data if available
+  if (props?.existingBgm?.audioId) {
+    const flatAudioItems = toFlatItems(audio);
+    const existingAudio = flatAudioItems.find(item => item.id === props.existingBgm.audioId);
+    
+    if (existingAudio) {
+      store.setSelectedAudioAndFileId({
+        audioId: props.existingBgm.audioId,
+        fileId: existingAudio.fileId,
+      });
+    }
+  }
 };
 
 export const handleOnUpdate = () => {
