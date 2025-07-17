@@ -20,6 +20,28 @@ export const handleOnMount = (deps) => {
   render();
 };
 
+export const handleOnUpdate = (changes, deps) => {
+  const { attrs, render, getRefIds } = deps;
+  
+  render();
+
+  const config = {
+    x: attrs.x || 0,
+    y: attrs.y || 0,
+    scale: attrs.scale || 1,
+    rotation: attrs.rotation || 0,
+    anchor: attrs.anchor || 'top-left',
+    zIndex: attrs.zIndex || 0,
+  }
+  
+  const canvas = getRefIds().canvas?.elm;
+  if (canvas) {
+    renderPlacement(config, canvas);
+  }
+
+  render();
+};
+
 function renderPlacement(config, canvas) {
   const ctx = canvas.getContext('2d');
   

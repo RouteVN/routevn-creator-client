@@ -112,6 +112,9 @@ export const handleFormActionClick = (e, deps) => {
         bubbles: true,
         composed: true
       }));
+      
+      // Force immediate render to update thumbnails
+      render();
     } else {
       // Forward placement creation to parent
       dispatchEvent(new CustomEvent("placement-created", {
@@ -132,7 +135,11 @@ export const handleFormActionClick = (e, deps) => {
     // Reset edit mode and close dialog
     store.setEditMode(false);
     store.toggleDialog();
-    render();
+    
+    // Force a render after the event dispatch completes
+    setTimeout(() => {
+      render();
+    }, 0);
   }
 };
 
