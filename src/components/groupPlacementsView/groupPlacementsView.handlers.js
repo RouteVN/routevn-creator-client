@@ -10,8 +10,8 @@ const BG_COLOR = "#4a4a4a";
 const calculateAnchorOffset = (anchor, scaledWidth, scaledHeight) => {
   let anchorOffsetX = 0;
   let anchorOffsetY = 0;
-  
-  switch(anchor) {
+
+  switch (anchor) {
     case "top-left":
       anchorOffsetX = 0;
       anchorOffsetY = 0;
@@ -49,7 +49,7 @@ const calculateAnchorOffset = (anchor, scaledWidth, scaledHeight) => {
       anchorOffsetY = -scaledHeight;
       break;
   }
-  
+
   return { anchorOffsetX, anchorOffsetY };
 };
 
@@ -57,7 +57,7 @@ const createRenderState = (x, y, r, scale, anchor) => {
   const scaledWidth = BASE_WIDTH * scale;
   const scaledHeight = BASE_HEIGHT * scale;
   const { anchorOffsetX, anchorOffsetY } = calculateAnchorOffset(anchor, scaledWidth, scaledHeight);
-  
+
   return {
     elements: [
       {
@@ -91,11 +91,6 @@ const createRenderState = (x, y, r, scale, anchor) => {
     ],
     transitions: [],
   };
-};
-
-export const handleOnMount = async (deps) => {
-  const { render } = deps;
-  render();
 };
 
 export const handleSearchInput = (e, deps) => {
@@ -155,24 +150,22 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
     render();
 
     // Initialize drenderer after dialog is opened and canvas is in DOM
-    setTimeout(async () => {
-      const { canvas } = getRefIds();
-      if (canvas && canvas.elm) {
-        await drenderer.init({
-          canvas: canvas.elm,
-        });
-      }
-      
-      // Render initial state with item's current position
-      const x = parseInt(itemData.x || 0);
-      const y = parseInt(itemData.y || 0);
-      const r = parseInt(itemData.rotation || 0);
-      const scale = parseFloat(itemData.scale || 1);
-      const anchor = itemData.anchor || "center-center";
+    const { canvas } = getRefIds();
+    if (canvas && canvas.elm) {
+      await drenderer.init({
+        canvas: canvas.elm,
+      });
+    }
 
-      const renderState = createRenderState(x, y, r, scale, anchor);
-      drenderer.render(renderState);
-    }, 0);
+    // Render initial state with item's current position
+    const x = parseInt(itemData.x || 0);
+    const y = parseInt(itemData.y || 0);
+    const r = parseInt(itemData.rotation || 0);
+    const scale = parseFloat(itemData.scale || 1);
+    const anchor = itemData.anchor || "center-center";
+
+    const renderState = createRenderState(x, y, r, scale, anchor);
+    drenderer.render(renderState);
   }
 };
 
@@ -193,20 +186,18 @@ export const handleAddPlacementClick = async (e, deps) => {
   store.toggleDialog();
   render();
 
-  // Initialize drenderer after dialog is opened and canvas is in DOM
-  setTimeout(async () => {
-    const { canvas } = getRefIds();
-    if (canvas && canvas.elm && !drenderer.initialized) {
-      await drenderer.init({
-        canvas: canvas.elm,
-      });
-      drenderer.initialized = true;
-      
-      // Render initial state with default values (scale=1, anchor=center-center)
-      const renderState = createRenderState(0, 0, 0, 1, "center-center");
-      drenderer.render(renderState);
-    }
-  }, 0);
+  const { canvas } = getRefIds();
+  if (!canvas?.elm || drenderer.initialized) {
+    return;
+  }
+  await drenderer.init({
+    canvas: canvas.elm,
+  });
+  drenderer.initialized = true;
+
+  // Render initial state with default values (scale=1, anchor=center-center)
+  const renderState = createRenderState(0, 0, 0, 1, "center-center");
+  drenderer.render(renderState);
 };
 
 export const handleCloseDialog = (_, deps) => {
@@ -214,7 +205,7 @@ export const handleCloseDialog = (_, deps) => {
 
   // Close dialog first
   store.toggleDialog();
-  
+
   // Reset edit mode and clear all form state after closing
   store.setEditMode(false);
   store.setEditItemId(null);
@@ -254,7 +245,7 @@ export const handleFormActionClick = (e, deps) => {
         bubbles: true,
         composed: true
       }));
-      
+
       // Force immediate render to update thumbnails
       render();
     } else {
@@ -282,11 +273,9 @@ export const handleFormActionClick = (e, deps) => {
     store.setEditItemId(null);
     store.setDefaultValues(null);
     store.setTargetGroupId(null);
-    
+
     // Force a render after the event dispatch completes
-    setTimeout(() => {
-      render();
-    }, 0);
+    render();
   }
 };
 
