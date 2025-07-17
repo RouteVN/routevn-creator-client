@@ -1,12 +1,6 @@
 export const handleOnMount = async (deps) => {
-  const { render, drenderer, getRefIds } = deps;
+  const { render } = deps;
   render();
-
-  const { canvas } = getRefIds();
-
-  await drenderer.init({
-    canvas: canvas.elm,
-  });
 };
 
 export const handleSearchInput = (e, deps) => {
@@ -40,8 +34,8 @@ export const handlePlacementItemClick = (e, deps) => {
   );
 };
 
-export const handlePlacementItemDoubleClick = (e, deps) => {
-  const { store, render, props } = deps;
+export const handlePlacementItemDoubleClick = async (e, deps) => {
+  const { store, render, props, drenderer, getRefIds } = deps;
   const itemId = e.currentTarget.id.replace("placement-item-", "");
   console.log('Double clicked itemId:', itemId);
 
@@ -65,11 +59,61 @@ export const handlePlacementItemDoubleClick = (e, deps) => {
     // Open dialog
     store.toggleDialog();
     render();
+
+    // Initialize drenderer after dialog is opened and canvas is in DOM
+    setTimeout(async () => {
+      const { canvas } = getRefIds();
+      if (canvas && canvas.elm) {
+        await drenderer.init({
+          canvas: canvas.elm,
+        });
+      }
+      
+      // Render initial state with item's current position
+      const x = parseInt(itemData.x || 0);
+      const y = parseInt(itemData.y || 0);
+      const r = parseInt(itemData.rotation || 0);
+      
+      const renderState = {
+        elements: [
+          {
+            id: "bg",
+            type: "rect",
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+            fill: "#4a4a4a",
+          },
+          {
+            id: "id0",
+            type: "rect",
+            x,
+            y,
+            r,
+            width: 200,
+            height: 200,
+            fill: "white",
+          },
+          {
+            id: "id1",
+            type: "rect",
+            x: x - 5,
+            y: y - 5,
+            width: 11,
+            height: 11,
+            fill: "red",
+          },
+        ],
+        transitions: [],
+      };
+      drenderer.render(renderState);
+    }, 0);
   }
 };
 
-export const handleAddPlacementClick = (e, deps) => {
-  const { store, render } = deps;
+export const handleAddPlacementClick = async (e, deps) => {
+  const { store, render, drenderer, getRefIds } = deps;
   e.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
@@ -84,6 +128,53 @@ export const handleAddPlacementClick = (e, deps) => {
   // Toggle dialog open
   store.toggleDialog();
   render();
+
+  // Initialize drenderer after dialog is opened and canvas is in DOM
+  setTimeout(async () => {
+    const { canvas } = getRefIds();
+    if (canvas && canvas.elm && !drenderer.initialized) {
+      await drenderer.init({
+        canvas: canvas.elm,
+      });
+      drenderer.initialized = true;
+      
+      // Render initial state
+      const renderState = {
+        elements: [
+          {
+            id: "bg",
+            type: "rect",
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+            fill: "#4a4a4a",
+          },
+          {
+            id: "id0",
+            type: "rect",
+            x: 0,
+            y: 0,
+            r: 0,
+            width: 200,
+            height: 200,
+            fill: "white",
+          },
+          {
+            id: "id1",
+            type: "rect",
+            x: -5,
+            y: -5,
+            width: 11,
+            height: 11,
+            fill: "red",
+          },
+        ],
+        transitions: [],
+      };
+      drenderer.render(renderState);
+    }
+  }, 0);
 };
 
 export const handleCloseDialog = (e, deps) => {
