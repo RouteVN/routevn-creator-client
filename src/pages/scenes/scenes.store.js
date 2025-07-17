@@ -30,6 +30,7 @@ export const setWhiteboardItems = (state, items) => {
   state.whiteboardItems = items;
 };
 
+
 // Track if we've initialized from repository yet
 let hasInitialized = false;
 

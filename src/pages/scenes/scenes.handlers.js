@@ -21,7 +21,9 @@ export const handleOnMount = (deps) => {
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems(sceneItems);
 
-  return () => {};
+  return () => {
+    render();
+  };
 };
 
 export const handleDataChanged = (e, deps) => {
@@ -105,6 +107,7 @@ export const handleWhiteboardItemDoubleClick = (e, deps) => {
   });
 };
 
+
 export const handleAddSceneClick = (e, deps) => {
   const { store, render, repository } = deps;
 
@@ -186,3 +189,5 @@ export const handleAddSceneClick = (e, deps) => {
   );
   render();
 };
+
+
