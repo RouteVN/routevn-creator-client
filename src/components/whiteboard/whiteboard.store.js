@@ -1,3 +1,39 @@
+// Natural zoom levels
+const ZOOM_LEVELS = [0.05, 0.10, 0.15, 0.20, 0.30, 0.50, 0.75, 1.0, 1.25, 1.50, 2.0, 2.50, 3.0];
+
+const findNearestZoomLevel = (currentZoom) => {
+  let closest = ZOOM_LEVELS[0];
+  let minDiff = Math.abs(currentZoom - closest);
+  
+  for (const level of ZOOM_LEVELS) {
+    const diff = Math.abs(currentZoom - level);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = level;
+    }
+  }
+  return closest;
+};
+
+const getNextZoomLevel = (currentZoom, direction) => {
+  const currentIndex = ZOOM_LEVELS.findIndex(level => Math.abs(level - currentZoom) < 0.01);
+  
+  if (currentIndex === -1) {
+    // If current zoom is not exactly on a preset level, find nearest
+    const nearest = findNearestZoomLevel(currentZoom);
+    const nearestIndex = ZOOM_LEVELS.indexOf(nearest);
+    return direction > 0 ? 
+      ZOOM_LEVELS[Math.min(nearestIndex + 1, ZOOM_LEVELS.length - 1)] :
+      ZOOM_LEVELS[Math.max(nearestIndex - 1, 0)];
+  }
+  
+  if (direction > 0) {
+    return ZOOM_LEVELS[Math.min(currentIndex + 1, ZOOM_LEVELS.length - 1)];
+  } else {
+    return ZOOM_LEVELS[Math.max(currentIndex - 1, 0)];
+  }
+};
+
 export const INITIAL_STATE = Object.freeze({
   isDragging: false,
   dragItemId: null,
@@ -66,11 +102,11 @@ export const zoomAt = (state, { mouseX, mouseY, scaleFactor }) => {
   state.panY = mouseY - canvasY * newZoom;
 };
 
-export const zoomFromCenter = (state, { scaleFactor, containerWidth, containerHeight }) => {
-  const newZoom = state.zoomLevel * scaleFactor;
+export const zoomFromCenter = (state, { direction, containerWidth, containerHeight }) => {
+  const newZoom = getNextZoomLevel(state.zoomLevel, direction);
   
-  // Clamp zoom level between 0.1x and 3x
-  if (newZoom < 0.1 || newZoom > 3) return;
+  // No change if already at min/max
+  if (newZoom === state.zoomLevel) return;
   
   // Calculate center point
   const centerX = containerWidth / 2;

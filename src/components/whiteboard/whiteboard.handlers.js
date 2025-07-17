@@ -2,6 +2,18 @@ import { fromEvent, tap } from "rxjs";
 
 let dragOffset = { x: 0, y: 0 };
 
+export const handleContainerMouseDown = (event, deps) => {
+  const { store } = deps;
+  
+  if (store.selectIsPanMode()) {
+    // Start panning
+    store.startPanning({
+      mouseX: event.clientX,
+      mouseY: event.clientY
+    });
+  }
+};
+
 export const handleCanvasMouseDown = (event, deps) => {
   const { store } = deps;
   
@@ -127,13 +139,27 @@ export const handleWindowMouseMove = (event, deps) => {
     const newX = mouseInCanvasX - dragOffset.x;
     const newY = mouseInCanvasY - dragOffset.y;
     
-    // Calculate actual viewport dimensions for dynamic bounds
-    const viewportWidth = window.innerWidth / zoomLevel;
-    const viewportHeight = window.innerHeight / zoomLevel;
+    // Get the container's visible area
+    const container = getRefIds().container.elm;
+    const containerRect = container.getBoundingClientRect();
+    const panState = store.selectPan();
     
-    // Keep within expanded canvas bounds to allow dragging in zoomed out view
-    const constrainedX = Math.max(-viewportWidth, Math.min(newX, viewportWidth * 2 - 120));
-    const constrainedY = Math.max(-viewportHeight, Math.min(newY, viewportHeight * 2 - 60));
+    // Calculate visible area in canvas coordinates based on actual container size
+    const viewportLeft = (-panState.x) / zoomLevel;
+    const viewportTop = (-panState.y) / zoomLevel;
+    const viewportRight = viewportLeft + (containerRect.width / zoomLevel);
+    const viewportBottom = viewportTop + (containerRect.height / zoomLevel);
+    
+    // Item dimensions
+    const itemWidth = 120;
+    const itemHeight = 60;
+    
+    // Keep item fully within viewport bounds (no edge overlap)
+    const maxX = viewportRight - itemWidth;
+    const maxY = viewportBottom - itemHeight;
+    
+    const constrainedX = Math.max(viewportLeft, Math.min(newX, maxX));
+    const constrainedY = Math.max(viewportTop, Math.min(newY, maxY));
     
     const snappedX = Math.round(constrainedX / 5) * 5;
     const snappedY = Math.round(constrainedY / 5) * 5;

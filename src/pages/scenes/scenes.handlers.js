@@ -21,17 +21,15 @@ export const handleOnMount = (deps) => {
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems(sceneItems);
 
-  // Initialize whiteboard zoom level after a brief delay to ensure whiteboard is mounted
-  setTimeout(() => {
+  return () => {
+    render();
     const { getRefIds } = deps;
     const whiteboardRef = getRefIds().whiteboard;
     if (whiteboardRef && whiteboardRef.elm && whiteboardRef.elm.store) {
       const initialZoomLevel = whiteboardRef.elm.store.selectZoomLevel();
       store.setWhiteboardZoomLevel(initialZoomLevel);
     }
-  }, 100);
-
-  return () => {};
+  };
 };
 
 export const handleDataChanged = (e, deps) => {
@@ -218,7 +216,7 @@ export const handleZoomInClick = (e, deps) => {
     const rect = container.getBoundingClientRect();
     
     whiteboardRef.elm.store.zoomFromCenter({
-      scaleFactor: 1.1,
+      direction: 1,
       containerWidth: rect.width,
       containerHeight: rect.height
     });
@@ -244,7 +242,7 @@ export const handleZoomOutClick = (e, deps) => {
     const rect = container.getBoundingClientRect();
     
     whiteboardRef.elm.store.zoomFromCenter({
-      scaleFactor: 0.9,
+      direction: -1,
       containerWidth: rect.width,
       containerHeight: rect.height
     });
@@ -257,3 +255,4 @@ export const handleZoomOutClick = (e, deps) => {
 
   }
 };
+
