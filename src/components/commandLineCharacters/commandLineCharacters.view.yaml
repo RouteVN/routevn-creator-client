@@ -41,10 +41,10 @@ refs:
     eventListeners:
       click:
         handler: handleRemoveCharacterClick
-  placement-select-*:
+  transform-select-*:
     eventListeners:
       change:
-        handler: handlePlacementChange
+        handler: handleTransformChange
   character-sprite-*:
     eventListeners:
       click:
@@ -74,10 +74,10 @@ template:
               - rtgl-view flex=1 g=sm:
                 - rtgl-text fw=b: ${character.displayName}
                 - rtgl-view d=h av=c g=md:
-                  - rtgl-text s=sm: 'Placement:'
-                  - rtgl-select#placement-select-${i} .options=placementOptions .value=character.placement:
+                  - rtgl-text s=sm: 'Transform:'
+                  - rtgl-select#transform-select-${i} .options=transformOptions .value=character.transform:
               - rtgl-button#remove-character-${i} v=ol s=sm: Remove
-        - rtgl-view#add-character-button d=h av=c ah=c w=345 h=120 bgc=ac cur=p mb=lg: 
+        - rtgl-view#add-character-button d=h av=c ah=c w=345 h=120 bgc=ac cur=p mb=lg:
           - rtgl-text: Add Character
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
@@ -101,7 +101,12 @@ template:
               - rtgl-view d=h w=f fw=w g=lg:
                 - $for item, j in group.children:
                   - rtgl-view#character-item-${item.id} w=200 h=150 p=sm bgc=mu br=md cur=p key=${item.bw} bw=${item.bw}:
-                    - rtgl-view w=f h=f av=c ah=c:
+                    - rtgl-view w=f h=f av=c ah=c g=sm:
+                      - $if item.fileId:
+                          - rvn-file-image fileId=${item.fileId} w=80 h=80 br=f:
+                        $else:
+                          - rtgl-view w=80 h=80 bgc=ac av=c ah=c br=f:
+                            - rtgl-text s=sm: No Avatar
                       - rtgl-text: ${item.name}
 
     - $if mode == 'sprite-select':

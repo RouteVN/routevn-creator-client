@@ -1,10 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
-  mode: 'current',
+  mode: "current",
   items: [],
-  placements: { tree: [], items: {} },
-  selectedCharacters: [], // Array of selected characters with their placements
+  transforms: { tree: [], items: {} },
+  selectedCharacters: [], // Array of selected characters with their transforms
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
@@ -18,20 +18,23 @@ export const setItems = (state, payload) => {
   state.items = payload.items;
 };
 
-export const setPlacements = (state, payload) => {
-  state.placements = payload.placements;
+export const setTransforms = (state, payload) => {
+  state.transforms = payload.transforms;
 };
 
 export const addCharacter = (state, character) => {
-  // Get the first available placement as default
-  const placementItems = toFlatItems(state.placements).filter(item => item.type === 'placement');
-  const defaultPlacement = placementItems.length > 0 ? placementItems[0].id : undefined;
-  
+  // Get the first available transform as default
+  const transformItems = toFlatItems(state.transforms).filter(
+    (item) => item.type === "placement",
+  );
+  const defaultTransform =
+    transformItems.length > 0 ? transformItems[0].id : undefined;
+
   state.selectedCharacters.push({
     ...character,
-    placement: defaultPlacement,
+    transform: defaultTransform,
     spriteId: undefined,
-    spriteFileId: undefined
+    spriteFileId: undefined,
   });
 };
 
@@ -39,13 +42,16 @@ export const removeCharacter = (state, index) => {
   state.selectedCharacters.splice(index, 1);
 };
 
-export const updateCharacterPlacement = (state, { index, placement }) => {
+export const updateCharacterTransform = (state, { index, transform }) => {
   if (state.selectedCharacters[index]) {
-    state.selectedCharacters[index].placement = placement;
+    state.selectedCharacters[index].transform = transform;
   }
 };
 
-export const updateCharacterSprite = (state, { index, spriteId, spriteFileId }) => {
+export const updateCharacterSprite = (
+  state,
+  { index, spriteId, spriteFileId },
+) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].spriteId = spriteId;
     state.selectedCharacters[index].spriteFileId = spriteFileId;
@@ -77,66 +83,75 @@ export const selectTempSelectedSpriteId = ({ state }) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
-  const flatGroups = toFlatGroups(state.items)
-    .map((group) => {
-      return {
-        ...group,
-        children: group.children.map((child) => {
-          const isSelected = child.id === state.tempSelectedCharacterId;
-          return {
-            ...child,
-            bw: isSelected ? 'md' : '',
-          }
-        }),
-      }
-    });
+  const flatItems = toFlatItems(state.items).filter(
+    (item) => item.type === "folder",
+  );
+  const flatGroups = toFlatGroups(state.items).map((group) => {
+    return {
+      ...group,
+      children: group.children.map((child) => {
+        const isSelected = child.id === state.tempSelectedCharacterId;
+        return {
+          ...child,
+          bw: isSelected ? "md" : "",
+        };
+      }),
+    };
+  });
 
   // Get sprite data for the selected character
   let spriteItems = [];
   let spriteGroups = [];
-  let selectedCharacterName = '';
-  
-  if (state.mode === 'sprite-select' && state.selectedCharacterIndex !== undefined) {
+  let selectedCharacterName = "";
+
+  if (
+    state.mode === "sprite-select" &&
+    state.selectedCharacterIndex !== undefined
+  ) {
     const selectedChar = state.selectedCharacters[state.selectedCharacterIndex];
     if (selectedChar && selectedChar.sprites) {
-      selectedCharacterName = selectedChar.name || 'Character';
-      spriteItems = toFlatItems(selectedChar.sprites).filter(item => item.type === 'folder');
-      spriteGroups = toFlatGroups(selectedChar.sprites)
-        .map((group) => {
-          return {
-            ...group,
-            children: group.children.map((child) => {
-              const isSelected = child.id === state.tempSelectedSpriteId;
-              return {
-                ...child,
-                bw: isSelected ? 'md' : '',
-              }
-            }),
-          }
-        });
+      selectedCharacterName = selectedChar.name || "Character";
+      spriteItems = toFlatItems(selectedChar.sprites).filter(
+        (item) => item.type === "folder",
+      );
+      spriteGroups = toFlatGroups(selectedChar.sprites).map((group) => {
+        return {
+          ...group,
+          children: group.children.map((child) => {
+            const isSelected = child.id === state.tempSelectedSpriteId;
+            return {
+              ...child,
+              bw: isSelected ? "md" : "",
+            };
+          }),
+        };
+      });
     }
   }
 
-  // Get placement options from repository instead of hardcoded values
-  const placementItems = toFlatItems(state.placements).filter(item => item.type === 'placement');
-  const placementOptions = placementItems.map(placement => ({
-    label: placement.name,
-    value: placement.id
+  // Get transform options from repository instead of hardcoded values
+  const transformItems = toFlatItems(state.transforms).filter(
+    (item) => item.type === "placement",
+  );
+  const transformOptions = transformItems.map((transform) => ({
+    label: transform.name,
+    value: transform.id,
   }));
 
   // Precompute character display data
-  const processedSelectedCharacters = state.selectedCharacters.map(character => ({
-    ...character,
-    displayName: character.name || 'Unnamed Character'
-  }));
+  const processedSelectedCharacters = state.selectedCharacters.map(
+    (character) => ({
+      ...character,
+      displayName: character.name || "Unnamed Character",
+    }),
+  );
 
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
     selectedCharacters: processedSelectedCharacters,
-    placementOptions,
+    transformOptions,
     spriteItems,
     spriteGroups,
     selectedCharacterName,

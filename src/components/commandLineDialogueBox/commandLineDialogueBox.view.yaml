@@ -12,6 +12,15 @@ viewDataSchema:
             type: string
           name:
             type: string
+    characters:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
     submitDisabled:
       type: boolean
 
@@ -27,10 +36,21 @@ propsSchema:
             type: string
           name:
             type: string
+    characters:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
     existingDialogue:
       type: object
       properties:
         layoutId:
+          type: string
+        characterId:
           type: string
 
 refs:
@@ -38,6 +58,10 @@ refs:
     eventListeners:
       option-selected:
         handler: handleLayoutSelectChange
+  character-select:
+    eventListeners:
+      option-selected:
+        handler: handleCharacterSelectChange
   submit-button:
     eventListeners:
       click:
@@ -57,6 +81,10 @@ template:
       - rtgl-text: Select Layout for Dialogue Box
 
       - rtgl-select#layout-select .options=layouts .selectedValue=selectedLayoutId placeholder="Choose a layout...":
+
+      - rtgl-text: Select Character for Dialogue Box
+
+      - rtgl-select#character-select .options=characters .selectedValue=selectedCharacterId placeholder="Choose a character...":
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:

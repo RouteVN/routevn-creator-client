@@ -1,11 +1,18 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleOnMount = (deps) => {
-  const { repository, store, render } = deps;
+  const { repository, store, render, props } = deps;
   const { layouts } = repository.getState();
   store.setItems({
     items: layouts,
   });
+  
+  // Initialize with existing layout if available
+  if (props?.existingLayout?.layoutId) {
+    store.setSelectedLayoutId({
+      layoutId: props.existingLayout.layoutId,
+    });
+  }
 };
 
 export const handleLayoutItemClick = (payload, deps) => {

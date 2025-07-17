@@ -4,6 +4,15 @@ viewDataSchema:
   type: object
   properties: {}
 
+propsSchema:
+  type: object
+  properties:
+    existingLayout:
+      type: object
+      properties:
+        layoutId:
+          type: string
+
 refs:
   layout-selector:
     eventListeners:
@@ -68,11 +77,12 @@ template:
               - rtgl-text: ${group.name}
               - rtgl-view d=h w=f fw=w g=lg:
                 - $for item in group.children:
-                  - rtgl-view w=200 h=150 cur=p:
+                  - rtgl-view w=200 h=150 cur=p g=sm:
                     - $if item.filePath:
-                        - rvn-file-image#layout-item-${item.id} w=200 h=150 fileId=${item.fileId}:
+                        - rvn-file-image#layout-item-${item.id} w=200 h=120 fileId=${item.fileId}:
                       $else:
-                        - rtgl-view#layout-item-${item.id} w=200 h=150 av=c ah=c bgc=ac:
-                          - rtgl-text s=sm c=mu-fg: Layout Template
+                        - rtgl-view#layout-item-${item.id} w=200 h=120 av=c ah=c bgc=ac:
+                          - rtgl-text s=sm c=mu-fg: Preview
+                    - rtgl-text s=sm ah=c: ${item.name}
       - rtgl-view d=h av=c ah=e w=f g=lg:
         - rtgl-button#button-select: Select
