@@ -3,7 +3,8 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 export const INITIAL_STATE = Object.freeze({
   scenesData: { tree: [], items: {} },
   selectedItemId: null,
-  whiteboardItems: []
+  whiteboardItems: [],
+  whiteboardZoomLevel: 1
 });
 
 export const setItems = (state, scenesData) => {
@@ -28,6 +29,10 @@ export const addWhiteboardItem = (state, newItem) => {
 
 export const setWhiteboardItems = (state, items) => {
   state.whiteboardItems = items;
+};
+
+export const setWhiteboardZoomLevel = (state, zoomLevel) => {
+  state.whiteboardZoomLevel = zoomLevel;
 };
 
 // Track if we've initialized from repository yet
@@ -91,6 +96,7 @@ export const toViewData = ({ state, props }, payload) => {
     repositoryTarget: 'scenes',
     selectedItemId: state.selectedItemId,
     whiteboardItems: state.whiteboardItems,
+    whiteboardZoomLevel: Math.round(state.whiteboardZoomLevel * 100),
     detailTitle,
     detailFields,
     detailEmptyMessage,

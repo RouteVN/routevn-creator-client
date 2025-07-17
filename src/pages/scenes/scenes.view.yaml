@@ -17,10 +17,20 @@ refs:
         handler: handleWhiteboardItemSelected
       item-double-click:
         handler: handleWhiteboardItemDoubleClick
+      zoom-changed:
+        handler: handleWhiteboardZoomChanged
   add-scene-btn:
     eventListeners:
       click:
         handler: handleAddSceneClick
+  zoom-in-btn:
+    eventListeners:
+      click:
+        handler: handleZoomInClick
+  zoom-out-btn:
+    eventListeners:
+      click:
+        handler: handleZoomOutClick
 
 template:
   - rtgl-view d=h w=f h=f: 
@@ -31,5 +41,11 @@ template:
     - rtgl-view w=f h=f pos=rel:
       - rvn-whiteboard#whiteboard .items=whiteboardItems:
     - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
-    - 'rtgl-view pos=fix z=100 ah=c p=md w=300 bgc=mu br=md style="left: calc((100vw  - 300px) / 2); bottom: 20px;"':
+    - 'rtgl-view pos=fix z=100 ah=c p=md w=240 bgc=mu br=md style="left: calc((100vw - 240px) / 2); bottom: 20px;"':
       - 'rtgl-button#add-scene-btn bgc=pr p=md br=full': Add Scene
+    - 'rtgl-view pos=fix z=100 ah=c p=md w=140 bgc=mu br=md style="right: 20px; bottom: 20px;"':
+      - rtgl-view d=h av=c gap=xs:
+        - 'rtgl-button#zoom-out-btn bgc=se p=md br=full w=40 h=40 ah=c av=c': "-"
+        - 'rtgl-view bgc=co p=md br=full w=60 h=40 ah=c av=c':
+          - rtgl-text s=xs: "${whiteboardZoomLevel}%"
+        - 'rtgl-button#zoom-in-btn bgc=se p=md br=full w=40 h=40 ah=c av=c': "+"

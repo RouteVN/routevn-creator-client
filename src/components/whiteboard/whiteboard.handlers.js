@@ -17,13 +17,13 @@ export const handleCanvasMouseDown = (event, deps) => {
   }
 };
 
-export const handleCanvasWheel = (event, deps) => {
+export const handleContainerWheel = (event, deps) => {
   event.preventDefault();
-  const { store, getRefIds, render } = deps;
+  const { store, getRefIds, render, dispatchEvent } = deps;
   
-  // Calculate mouse position relative to canvas
-  const canvas = getRefIds().canvas.elm;
-  const rect = canvas.getBoundingClientRect();
+  // Calculate mouse position relative to container
+  const container = getRefIds().container.elm;
+  const rect = container.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
   
@@ -31,10 +31,15 @@ export const handleCanvasWheel = (event, deps) => {
   const zoomIntensity = 0.1;
   const scaleFactor = event.deltaY < 0 ? 1 + zoomIntensity : 1 - zoomIntensity;
   
-  console.log('Zoom:', event.deltaY < 0 ? 'in' : 'out', 'at', mouseX, mouseY);
-  
   store.zoomAt({ mouseX, mouseY, scaleFactor });
   render();
+  
+  // Dispatch zoom change event to parent
+  dispatchEvent(new CustomEvent('zoom-changed', {
+    detail: { zoomLevel: store.selectZoomLevel() },
+    bubbles: true,
+    composed: true
+  }));
 };
 
 export const handleItemMouseDown = (event, deps) => {
@@ -122,9 +127,13 @@ export const handleWindowMouseMove = (event, deps) => {
     const newX = mouseInCanvasX - dragOffset.x;
     const newY = mouseInCanvasY - dragOffset.y;
     
-    // Keep within canvas bounds (relative to unpanned, unzoomed canvas)
-    const constrainedX = Math.max(0, Math.min(newX, 1000 - 120)); // Larger canvas area
-    const constrainedY = Math.max(0, Math.min(newY, 1000 - 60));
+    // Calculate actual viewport dimensions for dynamic bounds
+    const viewportWidth = window.innerWidth / zoomLevel;
+    const viewportHeight = window.innerHeight / zoomLevel;
+    
+    // Keep within expanded canvas bounds to allow dragging in zoomed out view
+    const constrainedX = Math.max(-viewportWidth, Math.min(newX, viewportWidth * 2 - 120));
+    const constrainedY = Math.max(-viewportHeight, Math.min(newY, viewportHeight * 2 - 60));
     
     const snappedX = Math.round(constrainedX / 5) * 5;
     const snappedY = Math.round(constrainedY / 5) * 5;

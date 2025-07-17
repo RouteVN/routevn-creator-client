@@ -54,15 +54,40 @@ export const zoomAt = (state, { mouseX, mouseY, scaleFactor }) => {
   // Clamp zoom level between 0.1x and 3x
   if (newZoom < 0.1 || newZoom > 3) return;
   
-  // Calculate the zoom offset to keep the mouse position fixed
-  const dx = mouseX * (1 - scaleFactor);
-  const dy = mouseY * (1 - scaleFactor);
+  // Calculate the point in canvas coordinates before zoom
+  const canvasX = (mouseX - state.panX) / state.zoomLevel;
+  const canvasY = (mouseY - state.panY) / state.zoomLevel;
   
-  // Update pan to maintain mouse position
-  state.panX += dx;
-  state.panY += dy;
+  // Update zoom level
   state.zoomLevel = newZoom;
+  
+  // Calculate new pan to keep the canvas point under the mouse
+  state.panX = mouseX - canvasX * newZoom;
+  state.panY = mouseY - canvasY * newZoom;
 };
+
+export const zoomFromCenter = (state, { scaleFactor, containerWidth, containerHeight }) => {
+  const newZoom = state.zoomLevel * scaleFactor;
+  
+  // Clamp zoom level between 0.1x and 3x
+  if (newZoom < 0.1 || newZoom > 3) return;
+  
+  // Calculate center point
+  const centerX = containerWidth / 2;
+  const centerY = containerHeight / 2;
+  
+  // Calculate the point in canvas coordinates before zoom
+  const canvasX = (centerX - state.panX) / state.zoomLevel;
+  const canvasY = (centerY - state.panY) / state.zoomLevel;
+  
+  // Update zoom level
+  state.zoomLevel = newZoom;
+  
+  // Calculate new pan to keep the canvas point at center
+  state.panX = centerX - canvasX * newZoom;
+  state.panY = centerY - canvasY * newZoom;
+};
+
 
 export const selectIsDragging = ({ state, props }, payload) => {
   return state.isDragging;
