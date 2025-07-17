@@ -139,12 +139,18 @@ export const selectZoomLevel = ({ state, props }, payload) => state.zoomLevel;
 export const toViewData = ({ state, props }) => {
   const items = props.items || [];
   
+  // Initialize zoom level from props if provided and not already set
+  if (props.initialZoomLevel && state.zoomLevel === 1) {
+    state.zoomLevel = props.initialZoomLevel;
+  }
+  
   return {
     items,
     isPanMode: state.isPanMode,
     panX: state.panX,
     panY: state.panY,
     zoomLevel: state.zoomLevel,
+    zoomLevelPercent: Math.round(state.zoomLevel * 100),
     containerCursor: state.isPanMode ? 'grab' : 'default',
     itemCursor: state.isPanMode ? 'default' : 'move',
   };

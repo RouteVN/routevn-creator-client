@@ -23,12 +23,6 @@ export const handleOnMount = (deps) => {
 
   return () => {
     render();
-    const { getRefIds } = deps;
-    const whiteboardRef = getRefIds().whiteboard;
-    if (whiteboardRef && whiteboardRef.elm && whiteboardRef.elm.store) {
-      const initialZoomLevel = whiteboardRef.elm.store.selectZoomLevel();
-      store.setWhiteboardZoomLevel(initialZoomLevel);
-    }
   };
 };
 
@@ -113,13 +107,6 @@ export const handleWhiteboardItemDoubleClick = (e, deps) => {
   });
 };
 
-export const handleWhiteboardZoomChanged = (e, deps) => {
-  const { store, render } = deps;
-  const { zoomLevel } = e.detail;
-  
-  store.setWhiteboardZoomLevel(zoomLevel);
-  render();
-};
 
 export const handleAddSceneClick = (e, deps) => {
   const { store, render, repository } = deps;
@@ -203,56 +190,4 @@ export const handleAddSceneClick = (e, deps) => {
   render();
 };
 
-export const handleZoomInClick = (e, deps) => {
-  const { getRefIds, store, render } = deps;
-  const whiteboardRef = getRefIds().whiteboard;
-  
-  if (whiteboardRef && whiteboardRef.elm && whiteboardRef.elm.store) {
-    let container = whiteboardRef.elm.querySelector('#container');
-    if (!container && whiteboardRef.elm.shadowRoot) {
-      container = whiteboardRef.elm.shadowRoot.querySelector('#container');
-    }
-
-    const rect = container.getBoundingClientRect();
-    
-    whiteboardRef.elm.store.zoomFromCenter({
-      direction: 1,
-      containerWidth: rect.width,
-      containerHeight: rect.height
-    });
-  
-    whiteboardRef.elm.render();
-  
-    const newZoomLevel = whiteboardRef.elm.store.selectZoomLevel();
-    store.setWhiteboardZoomLevel(newZoomLevel);
-    render();
-  }
-};
-
-export const handleZoomOutClick = (e, deps) => {
-  const { getRefIds, store, render } = deps;
-  const whiteboardRef = getRefIds().whiteboard;
-  
-  if (whiteboardRef && whiteboardRef.elm && whiteboardRef.elm.store) {
-    let container = whiteboardRef.elm.querySelector('#container');
-    if (!container && whiteboardRef.elm.shadowRoot) {
-      container = whiteboardRef.elm.shadowRoot.querySelector('#container');
-    }
-
-    const rect = container.getBoundingClientRect();
-    
-    whiteboardRef.elm.store.zoomFromCenter({
-      direction: -1,
-      containerWidth: rect.width,
-      containerHeight: rect.height
-    });
-
-    whiteboardRef.elm.render();
-    
-    const newZoomLevel = whiteboardRef.elm.store.selectZoomLevel();
-    store.setWhiteboardZoomLevel(newZoomLevel);
-    render();
-
-  }
-};
 

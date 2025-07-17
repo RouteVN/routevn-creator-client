@@ -54,6 +54,50 @@ export const handleContainerWheel = (event, deps) => {
   }));
 };
 
+export const handleZoomInClick = (event, deps) => {
+  const { store, getRefIds, render, dispatchEvent } = deps;
+  
+  const container = getRefIds().container.elm;
+  const rect = container.getBoundingClientRect();
+  
+  store.zoomFromCenter({
+    direction: 1,
+    containerWidth: rect.width,
+    containerHeight: rect.height
+  });
+  
+  render();
+  
+  // Dispatch zoom change event to parent
+  dispatchEvent(new CustomEvent('zoom-changed', {
+    detail: { zoomLevel: store.selectZoomLevel() },
+    bubbles: true,
+    composed: true
+  }));
+};
+
+export const handleZoomOutClick = (event, deps) => {
+  const { store, getRefIds, render, dispatchEvent } = deps;
+  
+  const container = getRefIds().container.elm;
+  const rect = container.getBoundingClientRect();
+  
+  store.zoomFromCenter({
+    direction: -1,
+    containerWidth: rect.width,
+    containerHeight: rect.height
+  });
+  
+  render();
+  
+  // Dispatch zoom change event to parent
+  dispatchEvent(new CustomEvent('zoom-changed', {
+    detail: { zoomLevel: store.selectZoomLevel() },
+    bubbles: true,
+    composed: true
+  }));
+};
+
 export const handleItemMouseDown = (event, deps) => {
   event.stopPropagation();
   const { store, getRefIds } = deps;

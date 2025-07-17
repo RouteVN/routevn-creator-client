@@ -24,6 +24,8 @@ viewDataSchema:
       type: number
     zoomLevel:
       type: number
+    zoomLevelPercent:
+      type: number
     containerCursor:
       type: string
     itemCursor:
@@ -45,6 +47,8 @@ propsSchema:
             type: number
           y:
             type: number
+    initialZoomLevel:
+      type: number
 
 refs:
   container:
@@ -64,6 +68,14 @@ refs:
         handler: handleItemMouseDown
       dblclick:
         handler: handleItemDoubleClick
+  zoom-in-btn:
+    eventListeners:
+      click:
+        handler: handleZoomInClick
+  zoom-out-btn:
+    eventListeners:
+      click:
+        handler: handleZoomOutClick
 
 template:
   - 'rtgl-view#container w=f h=f pos=rel bgc=bg style="overflow: hidden; min-height: 400px; cursor: ${containerCursor};"':
@@ -72,3 +84,9 @@ template:
         - 'rtgl-view#item-${item.id} pos=abs w=120 h=60 bgc=mu bw=sm bc=ac br=md style="left: ${item.x}px; top: ${item.y}px; cursor: ${itemCursor}; z-index: 10; user-select: none;"':
           - rtgl-view w=f h=f av=c ah=c p=md:
             - rtgl-text s=sm: "${item.name}"
+    - 'rtgl-view pos=fix z=100 ah=c p=md w=140 bgc=mu br=md style="right: 20px; bottom: 20px;"':
+      - rtgl-view d=h av=c gap=xs:
+        - 'rtgl-button#zoom-out-btn bgc=se p=md br=full w=40 h=40 ah=c av=c': "-"
+        - 'rtgl-view bgc=co p=md br=full w=60 h=40 ah=c av=c':
+          - rtgl-text s=xs: "${zoomLevelPercent}%"
+        - 'rtgl-button#zoom-in-btn bgc=se p=md br=full w=40 h=40 ah=c av=c': "+"
