@@ -92,10 +92,10 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get state values using getter functions
-    const targetGroupId = store.getTargetGroupId();
-    const editMode = store.getEditMode();
-    const editItemId = store.getEditItemId();
+    // Get state values using selector functions
+    const targetGroupId = store.selectTargetGroupId();
+    const editMode = store.selectEditMode();
+    const editItemId = store.selectEditItemId();
 
     if (editMode && editItemId) {
       // Forward placement edit to parent

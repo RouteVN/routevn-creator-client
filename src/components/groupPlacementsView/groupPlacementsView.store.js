@@ -156,15 +156,15 @@ export const setEditMode = (state, config) => {
   }
 }
 
-export const getTargetGroupId = (state) => {
+export const selectTargetGroupId = ({ state }) => {
   return state.targetGroupId;
 }
 
-export const getEditMode = (state) => {
+export const selectEditMode = ({ state }) => {
   return state.editMode;
 }
 
-export const getEditItemId = (state) => {
+export const selectEditItemId = ({ state }) => {
   return state.editItemId;
 }
 
