@@ -1,3 +1,98 @@
+// Constants
+const BASE_WIDTH = 300;
+const BASE_HEIGHT = 300;
+const MARKER_SIZE = 50;
+const CANVAS_WIDTH = 1920;
+const CANVAS_HEIGHT = 1080;
+const BG_COLOR = "#4a4a4a";
+
+// Helper functions
+const calculateAnchorOffset = (anchor, scaledWidth, scaledHeight) => {
+  let anchorOffsetX = 0;
+  let anchorOffsetY = 0;
+  
+  switch(anchor) {
+    case "top-left":
+      anchorOffsetX = 0;
+      anchorOffsetY = 0;
+      break;
+    case "top-center":
+      anchorOffsetX = -scaledWidth / 2;
+      anchorOffsetY = 0;
+      break;
+    case "top-right":
+      anchorOffsetX = -scaledWidth;
+      anchorOffsetY = 0;
+      break;
+    case "center-left":
+      anchorOffsetX = 0;
+      anchorOffsetY = -scaledHeight / 2;
+      break;
+    case "center-center":
+      anchorOffsetX = -scaledWidth / 2;
+      anchorOffsetY = -scaledHeight / 2;
+      break;
+    case "center-right":
+      anchorOffsetX = -scaledWidth;
+      anchorOffsetY = -scaledHeight / 2;
+      break;
+    case "bottom-left":
+      anchorOffsetX = 0;
+      anchorOffsetY = -scaledHeight;
+      break;
+    case "bottom-center":
+      anchorOffsetX = -scaledWidth / 2;
+      anchorOffsetY = -scaledHeight;
+      break;
+    case "bottom-right":
+      anchorOffsetX = -scaledWidth;
+      anchorOffsetY = -scaledHeight;
+      break;
+  }
+  
+  return { anchorOffsetX, anchorOffsetY };
+};
+
+const createRenderState = (x, y, r, scale, anchor) => {
+  const scaledWidth = BASE_WIDTH * scale;
+  const scaledHeight = BASE_HEIGHT * scale;
+  const { anchorOffsetX, anchorOffsetY } = calculateAnchorOffset(anchor, scaledWidth, scaledHeight);
+  
+  return {
+    elements: [
+      {
+        id: "bg",
+        type: "rect",
+        x: 0,
+        y: 0,
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        fill: BG_COLOR,
+      },
+      {
+        id: "id0",
+        type: "rect",
+        x: x + anchorOffsetX,
+        y: y + anchorOffsetY,
+        r,
+        width: scaledWidth,
+        height: scaledHeight,
+        fill: "white",
+      },
+      {
+        id: "id1",
+        type: "rect",
+        x: x - MARKER_SIZE / 2,
+        y: y - MARKER_SIZE / 2,
+        width: MARKER_SIZE,
+        height: MARKER_SIZE,
+        fill: "red",
+      },
+    ],
+    transitions: [],
+  };
+};
+
 export const handleOnMount = async (deps) => {
   const { render } = deps;
   render();
@@ -76,87 +171,7 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
       const scale = parseFloat(itemData.scale || 1);
       const anchor = itemData.anchor || "center-center";
 
-      // Calculate anchor offsets
-      const baseWidth = 300;
-      const baseHeight = 300;
-      const scaledWidth = baseWidth * scale;
-      const scaledHeight = baseHeight * scale;
-      
-      let anchorOffsetX = 0;
-      let anchorOffsetY = 0;
-      
-      switch(anchor) {
-        case "top-left":
-          anchorOffsetX = 0;
-          anchorOffsetY = 0;
-          break;
-        case "top-center":
-          anchorOffsetX = -scaledWidth / 2;
-          anchorOffsetY = 0;
-          break;
-        case "top-right":
-          anchorOffsetX = -scaledWidth;
-          anchorOffsetY = 0;
-          break;
-        case "center-left":
-          anchorOffsetX = 0;
-          anchorOffsetY = -scaledHeight / 2;
-          break;
-        case "center-center":
-          anchorOffsetX = -scaledWidth / 2;
-          anchorOffsetY = -scaledHeight / 2;
-          break;
-        case "center-right":
-          anchorOffsetX = -scaledWidth;
-          anchorOffsetY = -scaledHeight / 2;
-          break;
-        case "bottom-left":
-          anchorOffsetX = 0;
-          anchorOffsetY = -scaledHeight;
-          break;
-        case "bottom-center":
-          anchorOffsetX = -scaledWidth / 2;
-          anchorOffsetY = -scaledHeight;
-          break;
-        case "bottom-right":
-          anchorOffsetX = -scaledWidth;
-          anchorOffsetY = -scaledHeight;
-          break;
-      }
-      
-      const renderState = {
-        elements: [
-          {
-            id: "bg",
-            type: "rect",
-            x: 0,
-            y: 0,
-            width: 1920,
-            height: 1080,
-            fill: "#4a4a4a",
-          },
-          {
-            id: "id0",
-            type: "rect",
-            x: x + anchorOffsetX,
-            y: y + anchorOffsetY,
-            r,
-            width: scaledWidth,
-            height: scaledHeight,
-            fill: "white",
-          },
-          {
-            id: "id1",
-            type: "rect",
-            x: x - 25,
-            y: y - 25,
-            width: 50,
-            height: 50,
-            fill: "red",
-          },
-        ],
-        transitions: [],
-      };
+      const renderState = createRenderState(x, y, r, scale, anchor);
       drenderer.render(renderState);
     }, 0);
   }
@@ -188,41 +203,8 @@ export const handleAddPlacementClick = async (e, deps) => {
       });
       drenderer.initialized = true;
       
-      // Render initial state with default values (scale=1, anchor=center)
-      // When anchor is center, a 200x200 rect at (0,0) will be centered at origin
-      const renderState = {
-        elements: [
-          {
-            id: "bg",
-            type: "rect",
-            x: 0,
-            y: 0,
-            width: 1920,
-            height: 1080,
-            fill: "#4a4a4a",
-          },
-          {
-            id: "id0",
-            type: "rect",
-            x: -150,  // Center anchor: -width/2
-            y: -150,  // Center anchor: -height/2
-            r: 0,
-            width: 200,
-            height: 200,
-            fill: "white",
-          },
-          {
-            id: "id1",
-            type: "rect",
-            x: -25,
-            y: -25,
-            width: 50,
-            height: 50,
-            fill: "red",
-          },
-        ],
-        transitions: [],
-      };
+      // Render initial state with default values (scale=1, anchor=center-center)
+      const renderState = createRenderState(0, 0, 0, 1, "center-center");
       drenderer.render(renderState);
     }
   }, 0);
@@ -326,87 +308,7 @@ export const handleFormChange = async (e, deps) => {
   const scale = parseFloat(formValues.scale || 1);
   const anchor = formValues.anchor || "center-center";
 
-  // Calculate anchor offsets
-  const baseWidth = 300;
-  const baseHeight = 300;
-  const scaledWidth = baseWidth * scale;
-  const scaledHeight = baseHeight * scale;
-  
-  let anchorOffsetX = 0;
-  let anchorOffsetY = 0;
-  
-  switch(anchor) {
-    case "top-left":
-      anchorOffsetX = 0;
-      anchorOffsetY = 0;
-      break;
-    case "top-center":
-      anchorOffsetX = -scaledWidth / 2;
-      anchorOffsetY = 0;
-      break;
-    case "top-right":
-      anchorOffsetX = -scaledWidth;
-      anchorOffsetY = 0;
-      break;
-    case "center-left":
-      anchorOffsetX = 0;
-      anchorOffsetY = -scaledHeight / 2;
-      break;
-    case "center-center":
-      anchorOffsetX = -scaledWidth / 2;
-      anchorOffsetY = -scaledHeight / 2;
-      break;
-    case "center-right":
-      anchorOffsetX = -scaledWidth;
-      anchorOffsetY = -scaledHeight / 2;
-      break;
-    case "bottom-left":
-      anchorOffsetX = 0;
-      anchorOffsetY = -scaledHeight;
-      break;
-    case "bottom-center":
-      anchorOffsetX = -scaledWidth / 2;
-      anchorOffsetY = -scaledHeight;
-      break;
-    case "bottom-right":
-      anchorOffsetX = -scaledWidth;
-      anchorOffsetY = -scaledHeight;
-      break;
-  }
-
-  const renderState = {
-    elements: [
-      {
-        id: "bg",
-        type: "rect",
-        x: 0,
-        y: 0,
-        width: 1920,
-        height: 1080,
-        fill: "#4a4a4a",
-      },
-      {
-        id: "id0",
-        type: "rect",
-        x: x + anchorOffsetX,
-        y: y + anchorOffsetY,
-        r,
-        width: scaledWidth,
-        height: scaledHeight,
-        fill: "white",
-      },
-      {
-        id: "id1",
-        type: "rect",
-        x: x - 25,
-        y: y - 25,
-        width: 50,
-        height: 50,
-        fill: "red",
-      },
-    ],
-    transitions: [],
-  };
+  const renderState = createRenderState(x, y, r, scale, anchor);
 
   console.log("Render state:", renderState);
 
