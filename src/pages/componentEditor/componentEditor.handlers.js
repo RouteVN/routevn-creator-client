@@ -81,11 +81,11 @@ const renderComponentPreview = async (deps) => {
     ? renderStateElements.concat([
         {
           id: "id1",
-          type: "graphics",
-          x1: selectedItem.x - 5,
-          y1: selectedItem.y - 5,
-          x2: 11,
-          y2: 11,
+          type: "rect",
+          x: selectedItem.x - 5,
+          y: selectedItem.y - 5,
+          width: 11,
+          height: 11,
           fill: "red",
         },
       ])
