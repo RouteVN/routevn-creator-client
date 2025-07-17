@@ -1,9 +1,12 @@
-import { calculations } from './audioPlayer.store.js';
+const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
+  const percentage = Math.max(0, Math.min(1, clickX / progressBarWidth));
+  return percentage * duration;
+};
 
 const getAudioUrl = async (fileId, httpClient) => {
   const { url } = await httpClient.creator.getFileContent({
     fileId,
-    projectId: 'someprojectId'
+    projectId: "someprojectId",
   });
   return url;
 };
@@ -12,93 +15,96 @@ export const handleOnMount = async (deps) => {
   const { store, attrs, httpClient, render, audioManager } = deps;
   const { fileId, autoPlay } = attrs;
 
+  if (!attrs) {
+    alert("Missing fileId");
+    return;
+  }
+
   audioManager.init();
 
   const handleTimeUpdate = (currentTime) => {
     store.setCurrentTime(currentTime);
     render();
   };
-  audioManager.on('timeupdate', handleTimeUpdate);
+  audioManager.on("timeupdate", handleTimeUpdate);
 
   const handlePlay = () => {
     store.setPlaying(true);
     render();
   };
-  audioManager.on('play', handlePlay);
+  audioManager.on("play", handlePlay);
 
   const handlePause = () => {
     store.setPlaying(false);
     render();
   };
-  audioManager.on('pause', handlePause);
+  audioManager.on("pause", handlePause);
 
   const handleEnded = () => {
     store.setPlaying(false);
     store.setCurrentTime(0);
     render();
   };
-  audioManager.on('ended', handleEnded);
+  audioManager.on("ended", handleEnded);
 
   const handleLoaded = ({ duration }) => {
     store.setDuration(duration);
     store.setLoading(false);
     render();
   };
-  audioManager.on('loaded', handleLoaded);
+  audioManager.on("loaded", handleLoaded);
 
   const handleError = (error) => {
-    console.error('Audio error:', error);
+    console.error("Audio error:", error);
     store.setLoading(false);
     render();
   };
-  audioManager.on('error', handleError);
+  audioManager.on("error", handleError);
 
-  if (fileId) {
-    try {
-      store.setLoading(true);
-      render();
+  try {
+    store.setLoading(true);
+    render();
 
-      const url = await getAudioUrl(fileId, httpClient);
-      await audioManager.loadAudio(url);
+    const url = await getAudioUrl(fileId, httpClient);
+    await audioManager.loadAudio(url);
 
-      if (autoPlay) {
-        await audioManager.play();
-      }
-    } catch (error) {
-      console.error('Error loading audio:', error);
-      store.setLoading(false);
-      render();
+    if (autoPlay) {
+      await audioManager.play();
     }
+  } catch (error) {
+    console.error("Error loading audio:", error);
+    store.setLoading(false);
+    render();
   }
 
-  return () => {
-    audioManager.cleanup();
-    store.resetState();
-  };
+  return audioManager.cleanup;
 };
 
-export const handleOnUpdate = async (prevProps, deps) => {
+export const handleOnUpdate = async (changes, deps) => {
+  const { oldProps } = changes;
   const { store, attrs, httpClient, render, audioManager } = deps;
   const { fileId, autoPlay } = attrs;
 
-  if (prevProps.fileId !== fileId && fileId) {
-    try {
-      store.setLoading(true);
-      render();
+  if (oldProps.fileId === fileId) {
+    return;
+  }
 
-      audioManager.stop();
+  try {
+    store.setLoading(true);
+    render();
 
-      const url = await getAudioUrl(fileId, httpClient);
-      await audioManager.loadAudio(url);
+    audioManager.stop();
 
-      if (autoPlay) {
-        await audioManager.play();
-      }
-    } catch (error) {
-      console.error('Error loading audio:', error);
-      store.setLoading(false);
-      render();
+    const url = await getAudioUrl(fileId, httpClient);
+    await audioManager.loadAudio(url);
+
+    if (autoPlay) {
+      await audioManager.play();
     }
+  } catch (error) {
+    console.error("Error loading audio:", error);
+    store.setLoading(false);
+    render();
   }
 };
 
@@ -108,20 +114,20 @@ export const handlePlayPause = async (e, deps) => {
 
   if (audioManager.isPlaying()) {
     audioManager.pause();
-  } else {
-    await audioManager.play();
+    return;
   }
+  await audioManager.play();
 };
 
 export const handleProgressBarClick = async (e, deps) => {
   const { store, audioManager } = deps;
-  const state = store.getState();
+  const duration = store.selectDuration();
 
-  if (!state.duration) return;
+  if (!duration) return;
 
   const rect = e.currentTarget.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
-  const seekTime = calculations.calculateSeekPosition(clickX, rect.width, state.duration);
+  const seekTime = calculateSeekPosition(clickX, rect.width, duration);
 
   await audioManager.seek(seekTime);
 };
@@ -132,8 +138,10 @@ export const handleClose = (e, deps) => {
 
   audioManager.stop();
 
-  dispatchEvent(new CustomEvent("audio-player-close", {
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("audio-player-close", {
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
