@@ -1,6 +1,6 @@
 export const handleAddChoiceClick = (e, deps) => {
   const { store, render } = deps;
-  
+
   store.addChoice();
   render();
 };
@@ -12,13 +12,13 @@ export const handleChoiceItemClick = (e, deps) => {
 };
 
 export const handleSubmitClick = (e, deps) => {
-  const { dispatchEvent } = deps;  
+  const { dispatchEvent } = deps;
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         choices: {
           choices: e?.choices,
-        }
+        },
       },
     }),
   );

@@ -13,7 +13,7 @@ export const setSelectedImageId = (state, payload) => {
 export const toViewData = ({ state, props }, payload) => {
   const groups = props.groups || [];
   const selectedImageId = props.selectedImageId;
-  
+
   const processedGroups = groups.map((group) => {
     return {
       ...group,
@@ -21,10 +21,10 @@ export const toViewData = ({ state, props }, payload) => {
         const isSelected = child.id === selectedImageId;
         return {
           ...child,
-          bw: isSelected ? 'md' : '',
-        }
+          bw: isSelected ? "md" : "",
+        };
       }),
-    }
+    };
   });
 
   return {

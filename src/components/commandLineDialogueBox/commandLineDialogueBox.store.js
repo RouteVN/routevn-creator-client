@@ -1,8 +1,8 @@
 export const INITIAL_STATE = Object.freeze({
   layouts: [],
-  selectedLayoutId: '',
+  selectedLayoutId: "",
   characters: [],
-  selectedCharacterId: '',
+  selectedCharacterId: "",
 });
 
 export const setLayouts = (state, layouts) => {
@@ -20,14 +20,14 @@ export const setSelectedCharacterId = (state, { characterId }) => {
 export const toViewData = ({ state, props }, payload) => {
   const layouts = props.layouts || [];
   const characters = props.characters || [];
-  
+
   const layoutOptions = layouts.map((layout) => ({
     value: layout.id,
     label: layout.name,
   }));
 
   const characterOptions = characters
-    .filter((character) => character.type === 'character')
+    .filter((character) => character.type === "character")
     .map((character) => ({
       value: character.id,
       label: character.name,

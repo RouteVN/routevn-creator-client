@@ -1,7 +1,7 @@
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
-  const searchQuery = e.detail.value || '';
-  
+  const searchQuery = e.detail.value || "";
+
   store.setSearchQuery(searchQuery);
   render();
 };
@@ -9,7 +9,7 @@ export const handleSearchInput = (e, deps) => {
 export const handleGroupClick = (e, deps) => {
   const { store, render } = deps;
   const groupId = e.currentTarget.id.replace("group-", "");
-  
+
   // Handle group collapse internally
   store.toggleGroupCollapse(groupId);
   render();
@@ -18,47 +18,52 @@ export const handleGroupClick = (e, deps) => {
 export const handleVideoItemClick = (e, deps) => {
   const { dispatchEvent } = deps;
   const itemId = e.currentTarget.id.replace("video-item-", "");
-  
+
   // Forward video item selection to parent
-  dispatchEvent(new CustomEvent("video-item-click", {
-    detail: { itemId },
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("video-item-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleVideoThumbnailDoubleClick = async (e, deps) => {
   const { store, render, httpClient, props = {} } = deps;
   const itemId = e.currentTarget.id.replace("video-item-", "");
-  
+
   const flatGroups = props.flatGroups || [];
   let selectedVideo = null;
-  
+
   for (const group of flatGroups) {
     if (group.children) {
-      selectedVideo = group.children.find(item => item.id === itemId);
+      selectedVideo = group.children.find((item) => item.id === itemId);
       if (selectedVideo) break;
     }
   }
 
   // initial render for the loading screen
   store.setVideoVisible(selectedVideo);
-  render()
+  render();
 
-  const { url } = await httpClient.creator.getFileContent({ fileId: selectedVideo.fileId, projectId: 'someprojectId' });
+  const { url } = await httpClient.creator.getFileContent({
+    fileId: selectedVideo.fileId,
+    projectId: "someprojectId",
+  });
 
   // add updated url to object and render again
   const updatedVideo = { ...selectedVideo, url };
-  
+
   store.setVideoVisible(updatedVideo);
   render();
-} 
+};
 
 export const handleOutsideVideoClick = (e, deps) => {
   const { store, render } = deps;
   store.setVideoNotVisible();
   render();
-}
+};
 
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent } = deps;
@@ -66,15 +71,17 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const targetGroupId = e.currentTarget.id
     .replace("drag-drop-bar-", "")
     .replace("drag-drop-item-", "");
-  
+
   // Forward file uploads to parent (parent will handle the actual upload logic)
-  dispatchEvent(new CustomEvent("files-uploaded", {
-    detail: { 
-      files, 
-      targetGroupId,
-      originalEvent: e
-    },
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("files-uploaded", {
+      detail: {
+        files,
+        targetGroupId,
+        originalEvent: e,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };

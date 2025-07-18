@@ -1,4 +1,3 @@
-
 const getImageDimensions = (file) => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -74,43 +73,44 @@ export const createImageFileUploader = ({ httpClient }) => {
     const successfulUploads = uploadResults.filter((result) => result.success);
 
     return successfulUploads;
-  }
-}
+  };
+};
 
 // Audio waveform extraction and processing utilities
 const extractWaveformData = async (audioFile, samples = 1000) => {
   try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
     const arrayBuffer = await audioFile.arrayBuffer();
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    
+
     const channelData = audioBuffer.getChannelData(0);
     const blockSize = Math.floor(channelData.length / samples);
     const waveformData = [];
-    
+
     for (let i = 0; i < samples; i++) {
       const start = i * blockSize;
       const end = start + blockSize;
       let sum = 0;
-      
+
       for (let j = start; j < end && j < channelData.length; j++) {
         sum += Math.abs(channelData[j]);
       }
-      
+
       const average = sum / blockSize;
       waveformData.push(average);
     }
-    
+
     const maxAmplitude = Math.max(...waveformData);
-    const normalizedData = waveformData.map(value => value / maxAmplitude);
-    
+    const normalizedData = waveformData.map((value) => value / maxAmplitude);
+
     audioContext.close();
-    
+
     return {
       data: normalizedData,
       duration: audioBuffer.duration,
       sampleRate: audioBuffer.sampleRate,
-      channels: audioBuffer.numberOfChannels
+      channels: audioBuffer.numberOfChannels,
     };
   } catch (error) {
     return null;
@@ -120,8 +120,8 @@ const extractWaveformData = async (audioFile, samples = 1000) => {
 const uploadWaveformData = async (waveformData, httpClient, projectId) => {
   try {
     const waveformJson = JSON.stringify(waveformData);
-    const blob = new Blob([waveformJson], { type: 'application/json' });
-    
+    const blob = new Blob([waveformJson], { type: "application/json" });
+
     const { uploadUrl, fileId } = await httpClient.creator.uploadFile({
       projectId: projectId,
     });
@@ -146,12 +146,12 @@ const uploadWaveformData = async (waveformData, httpClient, projectId) => {
 
 export const downloadWaveformData = async (fileId, httpClient) => {
   try {
-    const { url } = await httpClient.creator.getFileContent({ 
-      fileId: fileId, 
-      projectId: 'someprojectId' 
+    const { url } = await httpClient.creator.getFileContent({
+      fileId: fileId,
+      projectId: "someprojectId",
     });
     const response = await fetch(url);
-    
+
     if (response.ok) {
       const waveformData = await response.json();
       return waveformData;
@@ -170,7 +170,7 @@ export const createAudioFileUploader = ({ httpClient }) => {
       try {
         // Extract waveform data
         const waveformData = await extractWaveformData(file);
-        
+
         // Upload audio file
         const { downloadUrl, uploadUrl, fileId } =
           await httpClient.creator.uploadFile({
@@ -196,18 +196,18 @@ export const createAudioFileUploader = ({ httpClient }) => {
         // Upload waveform data if extraction was successful
         let waveformDataFileId = null;
         let duration = null;
-        
+
         if (waveformData) {
           const waveformUploadResult = await uploadWaveformData(
-            waveformData, 
-            httpClient, 
-            projectId
+            waveformData,
+            httpClient,
+            projectId,
           );
-          
+
           if (waveformUploadResult.success) {
             waveformDataFileId = waveformUploadResult.fileId;
           }
-          
+
           duration = waveformData.duration;
         }
 
@@ -235,46 +235,51 @@ export const createAudioFileUploader = ({ httpClient }) => {
     const successfulUploads = uploadResults.filter((result) => result.success);
 
     return successfulUploads;
-  }
-}
+  };
+};
 
 const extractVideoThumbnail = async (videoFile, options = {}) => {
   const {
     timeOffset = 2,
     width = 320,
     height = 240,
-    format = 'image/jpeg',
-    quality = 0.8
+    format = "image/jpeg",
+    quality = 0.8,
   } = options;
 
   return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.preload = 'metadata';
+    const video = document.createElement("video");
+    video.preload = "metadata";
     video.muted = true;
     video.playsInline = true;
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
     canvas.width = width;
     canvas.height = height;
-    
+
     video.onerror = (error) => {
-      reject(new Error(`Video load error: ${error.message || 'Unknown error'}`));
+      reject(
+        new Error(`Video load error: ${error.message || "Unknown error"}`),
+      );
     };
-    
+
     video.onloadedmetadata = () => {
       const seekTime = Math.min(timeOffset, video.duration - 0.1);
       video.currentTime = seekTime;
     };
-    
+
     video.onseeked = () => {
       try {
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const canvasAspectRatio = width / height;
-        
-        let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
-        
+
+        let drawWidth,
+          drawHeight,
+          offsetX = 0,
+          offsetY = 0;
+
         if (videoAspectRatio > canvasAspectRatio) {
           drawHeight = height;
           drawWidth = height * videoAspectRatio;
@@ -284,34 +289,37 @@ const extractVideoThumbnail = async (videoFile, options = {}) => {
           drawHeight = width / videoAspectRatio;
           offsetY = (height - drawHeight) / 2;
         }
-        
+
         ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const dataUrl = canvas.toDataURL(format, quality);
-            
-            video.remove();
-            canvas.remove();
-            URL.revokeObjectURL(video.src);
-            
-            resolve({
-              blob,
-              dataUrl,
-              width,
-              height,
-              format
-            });
-          } else {
-            reject(new Error('Failed to create thumbnail blob'));
-          }
-        }, format, quality);
-        
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const dataUrl = canvas.toDataURL(format, quality);
+
+              video.remove();
+              canvas.remove();
+              URL.revokeObjectURL(video.src);
+
+              resolve({
+                blob,
+                dataUrl,
+                width,
+                height,
+                format,
+              });
+            } else {
+              reject(new Error("Failed to create thumbnail blob"));
+            }
+          },
+          format,
+          quality,
+        );
       } catch (error) {
         reject(new Error(`Thumbnail extraction error: ${error.message}`));
       }
     };
-    
+
     video.src = URL.createObjectURL(videoFile);
   });
 };
@@ -323,15 +331,15 @@ export const createVideoFileUploader = ({ httpClient }) => {
       try {
         // Extract thumbnail for video files
         let thumbnailData = null;
-        if (file.type.startsWith('video/')) {
+        if (file.type.startsWith("video/")) {
           try {
             console.log(`Extracting thumbnail for video: ${file.name}`);
             thumbnailData = await extractVideoThumbnail(file, {
               timeOffset: 1,
               width: 240,
               height: 135,
-              format: 'image/jpeg',
-              quality: 0.8
+              format: "image/jpeg",
+              quality: 0.8,
             });
             console.log(`Thumbnail extracted successfully for: ${file.name}`);
           } catch (error) {
@@ -350,7 +358,7 @@ export const createVideoFileUploader = ({ httpClient }) => {
           }),
           httpClient.creator.uploadFile({
             projectId,
-          })
+          }),
         ]);
 
         // Upload both files in parallel
@@ -368,22 +376,26 @@ export const createVideoFileUploader = ({ httpClient }) => {
             headers: {
               "Content-Type": thumbnailData.format,
             },
-          })
+          }),
         ]);
 
         if (videoResponse.ok && thumbnailResponse.ok) {
           console.log("File uploaded successfully:", file.name);
-          
+
           return {
             success: true,
             file,
             downloadUrl: videoUpload.downloadUrl,
             fileId: videoUpload.fileId,
             thumbnailFileId: thumbnailUpload.fileId,
-            thumbnailData
+            thumbnailData,
           };
         } else {
-          console.error("File upload failed:", file.name, videoResponse.statusText);
+          console.error(
+            "File upload failed:",
+            file.name,
+            videoResponse.statusText,
+          );
           return {
             success: false,
             file,
@@ -408,8 +420,8 @@ export const createVideoFileUploader = ({ httpClient }) => {
     const successfulUploads = uploadResults.filter((result) => result.success);
 
     return successfulUploads;
-  }
-}
+  };
+};
 
 export const createFontFileUploader = ({ httpClient, fontManager }) => {
   return async (files, projectId) => {
@@ -417,13 +429,13 @@ export const createFontFileUploader = ({ httpClient, fontManager }) => {
     const uploadPromises = Array.from(files).map(async (file) => {
       try {
         // Load font file for preview using fontManager
-        const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+        const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
         const fontUrl = URL.createObjectURL(file);
-        
+
         try {
           await fontManager.load(fontName, fontUrl);
         } catch (loadError) {
-          console.error('Font loading error:', file.name, loadError);
+          console.error("Font loading error:", file.name, loadError);
           return {
             success: false,
             file,
@@ -455,7 +467,11 @@ export const createFontFileUploader = ({ httpClient, fontManager }) => {
             fontUrl,
           };
         } else {
-          console.error("Font file upload failed:", file.name, response.statusText);
+          console.error(
+            "Font file upload failed:",
+            file.name,
+            response.statusText,
+          );
           return {
             success: false,
             file,
@@ -479,5 +495,5 @@ export const createFontFileUploader = ({ httpClient, fontManager }) => {
     const successfulUploads = uploadResults.filter((result) => result.success);
 
     return successfulUploads;
-  }
-}
+  };
+};

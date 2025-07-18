@@ -83,7 +83,7 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
     });
   };
   const routePattern = routePatterms.find((pattern) =>
-    matchPaths(currentRoute, pattern)
+    matchPaths(currentRoute, pattern),
   );
   return routePattern;
 };
@@ -99,4 +99,3 @@ export const toViewData = ({ state, props }, payload) => {
     showSidebar: selectShowSidebar(state, props, payload),
   };
 };
-
