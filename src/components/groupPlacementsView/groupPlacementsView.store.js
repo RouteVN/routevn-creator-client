@@ -28,29 +28,41 @@ export const INITIAL_STATE = Object.freeze({
         required: true,
       },
       {
-        name: "x",
-        inputType: "inputText",
-        label: "Position X",
-        description: "Enter the X coordinate (e.g., 100, 50%)",
+        name: 'x',
+        inputType: 'slider-input',
+        min: 0,
+        max: 1920,
+        step: 1,
+        label: 'Position X',
+        description: 'Enter the X coordinate (e.g., 100, 50%)',
         required: true,
       },
       {
-        name: "y",
-        inputType: "inputText",
-        label: "Position Y",
-        description: "Enter the Y coordinate (e.g., 200, 25%)",
+        name: 'y',
+        inputType: 'slider-input',
+        min: 0,
+        max: 1080,
+        step: 1,
+        label: 'Position Y',
+        description: 'Enter the Y coordinate (e.g., 200, 25%)',
         required: true,
       },
       {
-        name: "scaleX",
-        inputType: "inputText",
-        label: "Scale X",
-        description: "Enter the scale factor (e.g., 1, 0.5, 2)",
+        name: 'scaleX',
+        inputType: 'slider-input',
+        min: 0.1,
+        max: 3,
+        step: 0.1,
+        label: 'Scale X',
+        description: 'Enter the scale factor (e.g., 1, 0.5, 2)',
         required: true,
       },
       {
         name: "scaleY",
-        inputType: "inputText",
+        inputType: 'slider-input',
+        min: 0.1,
+        max: 3,
+        step: 0.1,
         label: "Scale Y",
         description: "Enter the scale factor (e.g., 1, 0.5, 2)",
         required: true,
@@ -100,10 +112,13 @@ export const INITIAL_STATE = Object.freeze({
         required: true,
       },
       {
-        name: "rotation",
-        inputType: "inputText",
-        label: "Rotation",
-        description: "Enter the rotation in degrees (e.g., 0, 45, 180)",
+        name: 'rotation',
+        inputType: 'slider-input',
+        min: -360,
+        max: 360,
+        step: 1,
+        label: 'Rotation',
+        description: 'Enter the rotation in degrees (e.g., 0, 45, 180)',
         required: true,
       },
     ],
@@ -252,12 +267,12 @@ export const toViewData = ({ state, props }) => {
         children: state.collapsedIds.includes(group.id)
           ? []
           : filteredChildren.map((item) => ({
-              ...item,
-              selectedStyle:
-                item.id === selectedItemId
-                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                  : "",
-            })),
+            ...item,
+            selectedStyle:
+              item.id === selectedItemId
+                ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                : "",
+          })),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };
