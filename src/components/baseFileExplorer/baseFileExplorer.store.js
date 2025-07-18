@@ -180,7 +180,6 @@ export const selectPopoverItemId = ({ state }) => {
   return state.popover.itemId;
 };
 
-
 export const toViewData = ({ state, props }, payload) => {
   let items = props.items || [];
 
