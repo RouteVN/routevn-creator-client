@@ -97,12 +97,13 @@ template:
                   - rtgl-text s=lg c=mu-fg: No placements found matching "${searchQuery}"
       - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-placement-dialog .isOpen=isDialogOpen w=960:
+  - rtgl-dialog#add-placement-dialog .isOpen=isDialogOpen w=90%:
       - rtgl-view slot=content d=h g=md w=f:
         - $if isDialogOpen:
           - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
-          - rtgl-view:
+          - rtgl-view w=75%:
               - rtgl-text: Preview
-              - rtgl-view w=640 h=360 bgc=fg:
+              - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                - rtgl-view pos=abs cor=full:
                   - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"':
-              - rtgl-button#preview-button: Select Preview Image
+              - rtgl-button#preview-button mt=md: Select Preview Image
