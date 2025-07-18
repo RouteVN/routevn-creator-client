@@ -1,44 +1,42 @@
 elementName: rvn-resizable-panel
 
-propsSchema:
+onMount:
+  handler: handleOnMount
+
+attrsSchema:
   type: object
   properties:
-    resourceCategory:
+    w:
       type: string
-    selectedResourceId:
+      default: "280"
+      description: "Initial width of the panel"
+    minW:
       type: string
-    flatItems:
-      type: array
-    repositoryTarget:
+      default: "200"
+      description: "Minimum width of the panel"
+    maxW:
       type: string
-    initialWidth:
-      type: number
-      default: 280
-    minWidth:
-      type: number
-      default: 200
-    maxWidth:
-      type: number
-      default: 600
+      default: "600"
+      description: "Maximum width of the panel"
+    resizeFrom:
+      type: string
+      default: "right"
+      enum: ["left", "right"]
+      description: "Which side to show the resize handle"
+    panelType:
+      type: string
+      default: "file-explorer"
+      enum: ["file-explorer", "detail-panel"]
+      description: "Type of panel for localStorage key differentiation"
 
 refs:
-  fileexplorer:
-    eventListeners:
-      data-changed:
-        handler: handleDataChanged
   resize-handle:
     eventListeners:
       mousedown:
         handler: handleResizeStart
 
-styles:
-  '.resize-handle:hover':
-    background-color: 'var(--rtgl-primary, #007acc) !important'
-  '.resize-handle.resizing':
-    background-color: 'var(--rtgl-primary, #007acc) !important'
-
 template:
-  - 'rtgl-view h=f bwr=xs z=1 pos=rel style="width: ${panelWidth}px"':
-    - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-    - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-    - 'rtgl-view#resize-handle style="position: absolute; top: 0; right: 0; width: 4px; height: 100%; cursor: col-resize; background-color: var(--rtgl-border, #e0e0e0); z-index: 1000; transition: background-color 0.2s ease;" class="${resizeHandleClass}"':
+  - 'rtgl-view h=f w=$(panelWidth) z=1 pos=rel style="width: ${panelWidth}px;"':
+    - rtgl-view h=f w=f:
+      - slot name="content":
+    - 'rtgl-view#resize-handle pos=abs w=4 h=f z=1000 cor="${resizeFrom}" bgc=fg style="cursor: col-resize;"':

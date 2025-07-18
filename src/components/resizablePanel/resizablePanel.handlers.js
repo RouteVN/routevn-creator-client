@@ -1,16 +1,10 @@
-export const handleDataChanged = (e, deps) => {
-  const { dispatchEvent } = deps;
-  
-  // Forward data-changed event to parent
-  dispatchEvent(new CustomEvent('data-changed', {
-    detail: e.detail,
-    bubbles: true,
-    composed: true
-  }));
+export const handleOnMount = async (deps) => {
+  const { store, attrs } = deps;
+  store.initializePanelWidth(attrs);
 };
 
 export const handleResizeStart = (e, deps) => {
-  const { store, render, props } = deps;
+  const { store, render, attrs } = deps;
   
   e.preventDefault();
   console.log('🔧 Resizable panel resize start triggered');
@@ -31,24 +25,21 @@ export const handleResizeStart = (e, deps) => {
 };
 
 const handleResizeMove = (e, deps) => {
-  const { store, render, dispatchEvent, props } = deps;
+  const { store, render, dispatchEvent, attrs } = deps;
   const state = store.getState();
   
   if (!state.isResizing) return;
   
   const deltaX = e.clientX - state.startX;
-  const newWidth = state.startWidth + deltaX;
   
-  console.log('🔧 Resizable panel resizing to:', newWidth);
+  // Determine resize direction based on resizeFrom attr
+  const isResizeFromLeft = attrs.resizeFrom === 'left';
+  const newWidth = isResizeFromLeft 
+    ? state.startWidth - deltaX  // For left resize, movement is inverted
+    : state.startWidth + deltaX; // For right resize, movement is normal
+    
+  store.setPanelWidth(newWidth, attrs);
   
-  store.setPanelWidth(newWidth);
-  
-  // Emit resize event for any parent components that need to know
-  dispatchEvent(new CustomEvent('panel-width-changed', {
-    detail: { width: newWidth },
-    bubbles: true,
-    composed: true
-  }));
   
   render();
 };

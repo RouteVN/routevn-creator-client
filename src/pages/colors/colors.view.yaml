@@ -5,7 +5,7 @@ viewDataSchema:
   properties: {}
 
 refs:
-  left-panel:
+  file-explorer:
     eventListeners:
       data-changed:
         handler: handleDataChanged
@@ -29,7 +29,12 @@ refs:
 template: 
   - rtgl-view d=h w=f h=f: 
     - rtgl-view d=h h=f:
-      - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
+      - rvn-resizable-panel#file-explorer w=300 minW=200 maxW=500 resizeFrom="right":
+        - rtgl-view slot="content" w=f:
+          - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+          - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-group-colors-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+        - rvn-resizable-panel#detail-panel panelType=detail-panel w=270 minW=200 maxW=500 resizeFrom="left":
+          - rtgl-view slot="content" w=f:
+            - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
