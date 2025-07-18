@@ -35,6 +35,6 @@ template:
           - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-group-colors-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-        - rvn-resizable-panel#detail-panel panelType=detail-panel w=270 minW=200 maxW=500 resizeFrom="left":
-          - rtgl-view slot="content" w=f:
-            - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+    - rvn-resizable-panel#detail-panel panelType=detail-panel w=270 minW=200 maxW=500 resizeFrom="left":
+      - rtgl-view slot="content" w=f:
+        - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

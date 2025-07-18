@@ -1,11 +1,12 @@
-// Load panel width from localStorage, fallback to default (only for file-explorer)
+import { createUserConfig } from '../../deps/userConfig.js';
+
+const userConfig = createUserConfig();
+
+// Load panel width from localStorage using userConfig pattern
 const getStoredPanelWidth = (defaultWidth = 280, panelType = 'file-explorer') => {
-  if (panelType === 'detail-panel') {
-    return defaultWidth; // Don't store detail panel width
-  }
-  
   try {
-    const stored = localStorage.getItem('resizablePanelWidth');
+    const configKey = `resizablePanel.${panelType}Width`;
+    const stored = userConfig.get(configKey);
     return stored ? parseInt(stored, 10) : defaultWidth;
   } catch (e) {
     return defaultWidth;
@@ -26,13 +27,13 @@ export const setPanelWidth = (state, width, attrs = {}) => {
   const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, width));
   state.panelWidth = constrainedWidth;
   
-  // Only save file-explorer panels to localStorage
-  if (attrs.panelType !== 'detail-panel') {
-    try {
-      localStorage.setItem('resizablePanelWidth', constrainedWidth.toString());
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+  // Save both file-explorer and detail-panel widths to localStorage using userConfig
+  const panelType = attrs.panelType || 'file-explorer';
+  try {
+    const configKey = `resizablePanel.${panelType}Width`;
+    userConfig.set(configKey, constrainedWidth.toString());
+  } catch (e) {
+    // Ignore localStorage errors
   }
 }
 
@@ -46,18 +47,19 @@ export const setResizeStart = (state, { startX, startWidth }) => {
 }
 
 export const initializePanelWidth = (state, attrs) => {
-  const defaultWidth = parseInt(attrs.w) || 280;
+  const panelType = attrs.panelType || 'file-explorer';
   
-  if (attrs.panelType === 'detail-panel') {
-    // Detail panels always use the attr width, no localStorage
-    state.panelWidth = defaultWidth;
-    state.startWidth = defaultWidth;
+  // Set different default widths based on panel type
+  let defaultWidth;
+  if (panelType === 'detail-panel') {
+    defaultWidth = parseInt(attrs.w) || 270; // Default width for detail panels
   } else {
-    // File explorer panels use localStorage
-    const storedWidth = getStoredPanelWidth(defaultWidth, attrs.panelType);
-    state.panelWidth = storedWidth;
-    state.startWidth = storedWidth;
+    defaultWidth = parseInt(attrs.w) || 280; // Normal width for file explorer
   }
+  
+  const storedWidth = getStoredPanelWidth(defaultWidth, panelType);
+  state.panelWidth = storedWidth;
+  state.startWidth = storedWidth;
 }
 
 export const toViewData = ({ state, attrs }) => {
