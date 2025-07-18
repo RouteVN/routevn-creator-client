@@ -1,8 +1,7 @@
-
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
-  mode: 'current',
+  mode: "current",
   items: [],
   selectedImageId: undefined,
   selectedFileId: undefined,
@@ -16,7 +15,6 @@ export const selectSelectedImageId = ({ state }) => {
 export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
 };
-
 
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
@@ -36,19 +34,20 @@ export const setTempSelectedImageId = (state, payload) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
-  const flatGroups = toFlatGroups(state.items)
-  .map((group) => {
+  const flatItems = toFlatItems(state.items).filter(
+    (item) => item.type === "folder",
+  );
+  const flatGroups = toFlatGroups(state.items).map((group) => {
     return {
       ...group,
       children: group.children.map((child) => {
         const isSelected = child.id === state.tempSelectedImageId;
         return {
           ...child,
-          bw: isSelected ? 'md' : '',
-        }
+          bw: isSelected ? "md" : "",
+        };
       }),
-    }
+    };
   });
 
   return {

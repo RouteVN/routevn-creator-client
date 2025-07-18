@@ -1,14 +1,14 @@
 export const INITIAL_STATE = Object.freeze({
   choices: [
-    { text: 'Choice 1', target: '' },
-    { text: 'Choice 2', target: '' }
-  ]
+    { text: "Choice 1", target: "" },
+    { text: "Choice 2", target: "" },
+  ],
 });
 
 export const addChoice = (state) => {
-  state.choices.push({ 
-    text: `Choice ${state.choices.length + 1}`, 
-    target: '' 
+  state.choices.push({
+    text: `Choice ${state.choices.length + 1}`,
+    target: "",
   });
 };
 

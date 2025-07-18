@@ -7,16 +7,16 @@ export const INITIAL_STATE = Object.freeze({
 });
 
 export const setItems = (state, placementData) => {
-  state.placementData = placementData
-}
+  state.placementData = placementData;
+};
 
 export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
-}
+};
 
 export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
-}
+};
 
 export const toViewData = ({ state, props }, payload) => {
   console.log("🎯 Placements toViewData called with state:", state);
@@ -27,44 +27,99 @@ export const toViewData = ({ state, props }, payload) => {
   console.log("🎯 Placements processed data:", {
     placementData: state.placementData,
     flatItems,
-    flatGroups
+    flatGroups,
   });
 
   // Get selected item details
-  const selectedItem = state.selectedItemId ?
-    flatItems.find(item => item.id === state.selectedItemId) : null;
+  const selectedItem = state.selectedItemId
+    ? flatItems.find((item) => item.id === state.selectedItemId)
+    : null;
 
   // Compute display values for selected item
-  const selectedItemDetails = selectedItem ? {
-    ...selectedItem,
-    typeDisplay: selectedItem.type === 'placement' ? 'Placement' : 'Folder',
-    displayFileType: selectedItem.fileType || (selectedItem.type === 'placement' ? 'JSON' : null),
-    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
-    fullPath: selectedItem.fullLabel || selectedItem.name || '',
-  } : null;
+  const selectedItemDetails = selectedItem
+    ? {
+        ...selectedItem,
+        typeDisplay: selectedItem.type === "placement" ? "Placement" : "Folder",
+        displayFileType:
+          selectedItem.fileType ||
+          (selectedItem.type === "placement" ? "JSON" : null),
+        displayFileSize: selectedItem.fileSize
+          ? formatFileSize(selectedItem.fileSize)
+          : null,
+        fullPath: selectedItem.fullLabel || selectedItem.name || "",
+      }
+    : null;
 
   // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? 'Placement Details' : null;
-  const detailFields = selectedItemDetails ? [
-    { id: 'name', type: 'text', label: 'Name', value: selectedItemDetails.name, editable: true },
-    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
-    { type: 'text', label: 'Position X', value: selectedItemDetails.x, show: !!selectedItemDetails.x },
-    { type: 'text', label: 'Position Y', value: selectedItemDetails.y, show: !!selectedItemDetails.y },
-    { type: 'text', label: 'Scale', value: selectedItemDetails.scale, show: !!selectedItemDetails.scale },
-    { type: 'text', label: 'Anchor', value: selectedItemDetails.anchor, show: !!selectedItemDetails.anchor },
-    { type: 'text', label: 'Rotation', value: selectedItemDetails.rotation, show: !!selectedItemDetails.rotation },
-    { type: 'text', label: 'File Type', value: selectedItemDetails.displayFileType, show: !!selectedItemDetails.displayFileType },
-    { type: 'text', label: 'File Size', value: selectedItemDetails.displayFileSize, show: !!selectedItemDetails.displayFileSize },
-    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
-  ] : [];
-  const detailEmptyMessage = 'Select a placement to view details';
+  const detailTitle = selectedItemDetails ? "Placement Details" : null;
+  const detailFields = selectedItemDetails
+    ? [
+        {
+          id: "name",
+          type: "text",
+          label: "Name",
+          value: selectedItemDetails.name,
+          editable: true,
+        },
+        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
+        {
+          type: "text",
+          label: "Position X",
+          value: selectedItemDetails.x,
+          show: !!selectedItemDetails.x,
+        },
+        {
+          type: "text",
+          label: "Position Y",
+          value: selectedItemDetails.y,
+          show: !!selectedItemDetails.y,
+        },
+        {
+          type: "text",
+          label: "Scale",
+          value: selectedItemDetails.scale,
+          show: !!selectedItemDetails.scale,
+        },
+        {
+          type: "text",
+          label: "Anchor",
+          value: selectedItemDetails.anchor,
+          show: !!selectedItemDetails.anchor,
+        },
+        {
+          type: "text",
+          label: "Rotation",
+          value: selectedItemDetails.rotation,
+          show: !!selectedItemDetails.rotation,
+        },
+        {
+          type: "text",
+          label: "File Type",
+          value: selectedItemDetails.displayFileType,
+          show: !!selectedItemDetails.displayFileType,
+        },
+        {
+          type: "text",
+          label: "File Size",
+          value: selectedItemDetails.displayFileSize,
+          show: !!selectedItemDetails.displayFileSize,
+        },
+        {
+          type: "text",
+          label: "Path",
+          value: selectedItemDetails.fullPath,
+          size: "sm",
+        },
+      ]
+    : [];
+  const detailEmptyMessage = "Select a placement to view details";
 
   const viewData = {
     flatItems,
     flatGroups,
-    resourceCategory: 'assets',
-    selectedResourceId: 'placements',
-    repositoryTarget: 'placements',
+    resourceCategory: "assets",
+    selectedResourceId: "placements",
+    repositoryTarget: "placements",
     selectedItemId: state.selectedItemId,
     selectedItem: selectedItemDetails,
     detailTitle,
@@ -75,4 +130,4 @@ export const toViewData = ({ state, props }, payload) => {
   console.log("🎯 Placements returning viewData:", viewData);
 
   return viewData;
-}
+};

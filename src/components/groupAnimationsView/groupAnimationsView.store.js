@@ -2,32 +2,36 @@ export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
   targetGroupId: null,
-  searchQuery: '',
-  
+  searchQuery: "",
+
   defaultValues: {
-    name: '',
+    name: "",
   },
 
   form: {
-    title: 'Add Animation',
-    description: 'Create a new animation',
-    fields: [{
-      id: 'name',
-      fieldName: 'name',
-      inputType: 'inputText',
-      label: 'Name',
-      description: 'Enter the animation name',
-      required: true,
-    }],
+    title: "Add Animation",
+    description: "Create a new animation",
+    fields: [
+      {
+        id: "name",
+        fieldName: "name",
+        inputType: "inputText",
+        label: "Name",
+        description: "Enter the animation name",
+        required: true,
+      },
+    ],
     actions: {
-      layout: '',
-      buttons: [{
-        id: 'submit',
-        variant: 'pr',
-        content: 'Add Animation',
-      }],
-    }
-  }
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Add Animation",
+        },
+      ],
+    },
+  },
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -37,28 +41,32 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
-}
+};
 
 export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;
-}
+};
 
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
-}
+};
 
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
-  
+
   // Apply collapsed state to flatGroups
-  const flatGroups = (props.flatGroups || []).map(group => ({
+  const flatGroups = (props.flatGroups || []).map((group) => ({
     ...group,
     isCollapsed: state.collapsedIds.includes(group.id),
-    children: state.collapsedIds.includes(group.id) ? [] : (group.children || []).map(item => ({
-      ...item,
-      selectedStyle: item.id === selectedItemId ? 
-        "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
-    }))
+    children: state.collapsedIds.includes(group.id)
+      ? []
+      : (group.children || []).map((item) => ({
+          ...item,
+          selectedStyle:
+            item.id === selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
   }));
 
   return {

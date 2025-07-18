@@ -8,76 +8,76 @@ export const INITIAL_STATE = Object.freeze({
     {
       id: "character",
       label: "Character",
-      route: "/project/resources/characters"
+      route: "/project/resources/characters",
     },
     {
       id: "audio",
       label: "Audio",
-      route: '/project/resources/audio'
+      route: "/project/resources/audio",
     },
     {
       id: "animation-effects",
       label: "Animation Effects",
-      route: '/project/resources/animations'
+      route: "/project/resources/animations",
     },
     {
       id: "placements",
       label: "Placements",
-      route: '/project/resources/placements'
+      route: "/project/resources/placements",
     },
     {
       id: "videos",
       label: "Videos",
-      route: '/project/resources/videos'
+      route: "/project/resources/videos",
     },
   ],
   ui: [
     {
-      id: 'colors',
-      label: 'Colors',
-      route: '/project/resources/colors'
+      id: "colors",
+      label: "Colors",
+      route: "/project/resources/colors",
     },
     {
-      id: 'Fonts',
-      label: 'fonts',
-      route: '/project/resources/fonts'
+      id: "Fonts",
+      label: "fonts",
+      route: "/project/resources/fonts",
     },
     {
       id: "typography",
       label: "Typography",
-      route: '/project/resources/typography'
+      route: "/project/resources/typography",
     },
     {
       id: "components",
       label: "Components",
-      route: '/project/resources/components'
+      route: "/project/resources/components",
     },
     {
       id: "screens",
       label: "Screens",
-      route: '/project/resources/screens'
+      route: "/project/resources/screens",
     },
     {
       id: "choices",
       label: "Choices",
-      route: '/project/resources/choices'
+      route: "/project/resources/choices",
     },
     {
       id: "dialogue",
       label: "Dialogue",
-      route: '/project/resources/dialogue'
+      route: "/project/resources/dialogue",
     },
   ],
   system: [
     {
       id: "variables",
       label: "Variables",
-      route: '/project/resources/variables'
+      route: "/project/resources/variables",
     },
     {
       id: "presets",
       label: "Presets",
-      route: '/project/resources/presets'
+      route: "/project/resources/presets",
     },
   ],
 });
@@ -96,4 +96,3 @@ export const selectResourceRoute = ({ state, props }, id) => {
 export const toViewData = ({ state, props }, payload) => {
   return state;
 };
-

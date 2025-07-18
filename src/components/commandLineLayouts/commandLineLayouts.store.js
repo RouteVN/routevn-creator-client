@@ -1,7 +1,7 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
-  mode: 'current',
+  mode: "current",
   items: [],
   selectedLayoutId: undefined,
   tempSelectedLayoutId: undefined,
@@ -32,34 +32,39 @@ export const setTempSelectedLayoutId = (state, payload) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
-  const flatGroups = toFlatGroups(state.items)
-  .map((group) => {
+  const flatItems = toFlatItems(state.items).filter(
+    (item) => item.type === "folder",
+  );
+  const flatGroups = toFlatGroups(state.items).map((group) => {
     return {
       ...group,
       children: group.children.map((child) => {
         const isSelected = child.id === state.tempSelectedLayoutId;
         return {
           ...child,
-          bw: isSelected ? 'md' : '',
-        }
+          bw: isSelected ? "md" : "",
+        };
       }),
-    }
+    };
   });
 
   const positionOptions = [
-    { label: 'Top Left', value: 'top-left' },
-    { label: 'Top Center', value: 'top-center' },
-    { label: 'Top Right', value: 'top-right' },
-    { label: 'Center Left', value: 'center-left' },
-    { label: 'Center', value: 'center' },
-    { label: 'Center Right', value: 'center-right' },
-    { label: 'Bottom Left', value: 'bottom-left' },
-    { label: 'Bottom Center', value: 'bottom-center' },
-    { label: 'Bottom Right', value: 'bottom-right' }
+    { label: "Top Left", value: "top-left" },
+    { label: "Top Center", value: "top-center" },
+    { label: "Top Right", value: "top-right" },
+    { label: "Center Left", value: "center-left" },
+    { label: "Center", value: "center" },
+    { label: "Center Right", value: "center-right" },
+    { label: "Bottom Left", value: "bottom-left" },
+    { label: "Bottom Center", value: "bottom-center" },
+    { label: "Bottom Right", value: "bottom-right" },
   ];
 
-  const selectedLayout = state.selectedLayoutId ? toFlatItems(state.items).find(layout => layout.id === state.selectedLayoutId) : null;
+  const selectedLayout = state.selectedLayoutId
+    ? toFlatItems(state.items).find(
+        (layout) => layout.id === state.selectedLayoutId,
+      )
+    : null;
   const selectedLayoutName = selectedLayout ? selectedLayout.name : null;
 
   return {

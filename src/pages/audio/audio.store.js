@@ -7,55 +7,75 @@ export const INITIAL_STATE = Object.freeze({
 });
 
 export const setItems = (state, audioData) => {
-  state.audioData = audioData
-}
+  state.audioData = audioData;
+};
 
 export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
-}
+};
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.audioData);
-  return flatItems.find(item => item.id === state.selectedItemId);
-}
+  return flatItems.find((item) => item.id === state.selectedItemId);
+};
 
 export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
-}
+};
 
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.audioData);
   const flatGroups = toFlatGroups(state.audioData);
 
   // Get selected item details
-  const selectedItem = state.selectedItemId ?
-    flatItems.find(item => item.id === state.selectedItemId) : null;
+  const selectedItem = state.selectedItemId
+    ? flatItems.find((item) => item.id === state.selectedItemId)
+    : null;
 
   // Transform selectedItem into detailPanel props
-  let detailFields
+  let detailFields;
   if (selectedItem) {
     detailFields = [
-      { type: 'audio', waveformDataFileId: selectedItem.waveformDataFileId, editable: true, accept: 'audio/*' },
-      { id: 'name', type: 'text', value: selectedItem.name, editable: true },
-      { type: 'text', label: 'File Type', value: selectedItem.fileType },
-      { type: 'text', label: 'File Size', value: formatFileSize(selectedItem.fileSize) },
-      { type: 'text', label: 'Duration', value: selectedItem.duration ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(selectedItem.duration % 60).toString().padStart(2, '0')}` : 'Unknown', show: !!selectedItem.duration },
+      {
+        type: "audio",
+        waveformDataFileId: selectedItem.waveformDataFileId,
+        editable: true,
+        accept: "audio/*",
+      },
+      { id: "name", type: "text", value: selectedItem.name, editable: true },
+      { type: "text", label: "File Type", value: selectedItem.fileType },
+      {
+        type: "text",
+        label: "File Size",
+        value: formatFileSize(selectedItem.fileSize),
+      },
+      {
+        type: "text",
+        label: "Duration",
+        value: selectedItem.duration
+          ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(
+              selectedItem.duration % 60,
+            )
+              .toString()
+              .padStart(2, "0")}`
+          : "Unknown",
+        show: !!selectedItem.duration,
+      },
     ];
   }
 
-  const detailEmptyMessage = 'No selection';
+  const detailEmptyMessage = "No selection";
 
   return {
     flatItems,
     flatGroups,
-    resourceCategory: 'assets',
-    selectedResourceId: 'audio',
+    resourceCategory: "assets",
+    selectedResourceId: "audio",
     selectedItemId: state.selectedItemId,
     detailTitle: undefined,
     detailFields,
     detailEmptyMessage,
-    repositoryTarget: 'audio',
+    repositoryTarget: "audio",
   };
-}
-
+};
