@@ -71,7 +71,7 @@ template:
               - rtgl-input#search-input s=sm placeholder="Search placements..." value=${searchQuery}:
             # TODO implement zoom controls (increase/decrease placement size)
           - $if flatGroups.length > 0:
-              - $for group in flatGroups:
+              - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md:
                       - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
                           - $if group.isCollapsed:
@@ -85,9 +85,9 @@ template:
                           - rtgl-view w=f mb=md p=sm:
                               - rtgl-view d=h fw=w w=f g=md:
                                   - $if group.hasChildren:
-                                      - $for item in group.children:
+                                      - $for item, j in group.children:
                                           - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" br=md bw=xs p=md':
-                                              - rvn-placement-thumbnail x=${item.x} y=${item.y} scale=${item.scale} rotation=${item.rotation} anchor=${item.anchor} zIndex=${item.zIndex}:
+                                              - rvn-placement-thumbnail .item=items["${item.id}"]:
                                               - rtgl-view mt=md:
                                                 - rtgl-text: ${item.name}
                                   - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:

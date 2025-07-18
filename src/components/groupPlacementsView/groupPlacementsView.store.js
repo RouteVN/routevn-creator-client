@@ -165,7 +165,7 @@ export const openPlacementFormDialog = (state, options = {}) => {
       y: String(itemData.y || "0"),
       scaleX: String(itemData.scaleX || "1"),
       scaleY: String(itemData.scaleY || "1"),
-      anchor: itemData.anchor || { anchorX: 0, anchorY: 0 },
+      anchor: { anchorX: itemData.anchorX, anchorY: itemData.anchorY },
       rotation: String(itemData.rotation || "0"),
     };
   } else {
@@ -264,8 +264,17 @@ export const toViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
+  // TODO this is hacky way to work around limitation of passing props
+  const items = {};
+  flatGroups.forEach((group) => {
+    group.children.forEach((child) => {
+      items[child.id] = child;
+    });
+  });
+
   return {
     flatGroups,
+    items,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
     isDialogOpen: state.isDialogOpen,
