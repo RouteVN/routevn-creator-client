@@ -18,6 +18,16 @@
     "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && bunx rtgl fe build",
     "watch": "rtgl fe watch",
     "lint": "bunx prettier --check src",
-    "lint:fix": "bunx prettier --check --write src"
+    "lint:fix": "bunx prettier --check --write src",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2"
+  },
+  "lint-staged": {
+    "src/**/*.{js}": [
+      "bunx prettier --write"
+    ]
   }
 }
