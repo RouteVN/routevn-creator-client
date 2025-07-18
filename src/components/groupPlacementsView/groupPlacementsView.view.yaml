@@ -98,10 +98,12 @@ template:
       - rtgl-view h=33vh:
 
   - rtgl-dialog#add-placement-dialog .isOpen=isDialogOpen w=90%:
-      - rtgl-view slot=content d=h g=md w=f:
+      - rtgl-view slot=content d=h ah=c g=lg w=f:
         - $if isDialogOpen:
-          - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
-          - rtgl-view w=75%:
+          - rtgl-view w=24%:
+            - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
+          - rtgl-view w=1%:
+          - rtgl-view w=74%:
               - rtgl-text: Preview
               - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                 - rtgl-view pos=abs cor=full:
