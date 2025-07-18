@@ -122,7 +122,7 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
     const rotation = parseInt(itemData.rotation || 0);
     const scaleX = parseFloat(itemData.scaleX || 1);
     const scaleY = parseFloat(itemData.scaleY || 1);
-    const anchor = itemData.anchor || { anchorX: 0, anchorY: 0 };
+    const anchor = { anchorX: itemData.anchorX, anchorY: itemData.anchorY };
 
     const renderState = createRenderState({
       x,
@@ -207,6 +207,7 @@ export const handleFormActionClick = (e, deps) => {
             name: formData.name,
             x: formData.x,
             y: formData.y,
+            scaleY: formData.scaleY,
             scaleX: formData.scaleX,
             anchorY: formData.anchor.anchorY,
             anchorX: formData.anchor.anchorX,
@@ -228,8 +229,10 @@ export const handleFormActionClick = (e, deps) => {
             name: formData.name,
             x: formData.x,
             y: formData.y,
-            scale: formData.scale,
-            anchor: formData.anchor,
+            scaleX: formData.scaleX,
+            scaleY: formData.scaleY,
+            anchorX: formData.anchor.anchorX,
+            anchorY: formData.anchor.anchorY,
             rotation: formData.rotation,
           },
           bubbles: true,

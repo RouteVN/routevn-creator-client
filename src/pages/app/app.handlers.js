@@ -65,18 +65,6 @@ export const subscriptions = (deps) => {
         deps.handlers.handleRedirect(payload, deps);
       }),
     ),
-    subject.pipe(
-      filter(({ action, payload }) => action === "update-placement"),
-      tap(({ action, payload }) => {
-        deps.handlers.handleUpdatePlacement(payload, deps);
-      }),
-    ),
-    subject.pipe(
-      filter(({ action, payload }) => action === "update-color"),
-      tap(({ action, payload }) => {
-        deps.handlers.handleUpdateColor(payload, deps);
-      }),
-    ),
     fromEvent(window, "popstate").pipe(
       filter((e) => {
         console.log("popstate", e.target.location);
@@ -87,10 +75,5 @@ export const subscriptions = (deps) => {
         deps.handlers.handleWindowPop(e, deps);
       }),
     ),
-    // windowPop$(window, deps.handleWindowPop),
-    // filter$(subject, [Actions.router.redirect, Actions.router.replace], deps._redirect),
-    // filter$(subject, Actions.router.back, deps._handleBack),
-    // filter$(subject, Actions.notification.notify, deps._toastNotify),
-    // windowResize$(window, deps._handleWindowResize),
   ];
 };
