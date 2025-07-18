@@ -28,21 +28,30 @@ export const INITIAL_STATE = Object.freeze({
       },
       {
         name: 'x',
-        inputType: 'inputText',
+        inputType: 'slider-input',
+        min: 0,
+        max: 1920,
+        step: 1,
         label: 'Position X',
         description: 'Enter the X coordinate (e.g., 100, 50%)',
         required: true,
       },
       {
         name: 'y',
-        inputType: 'inputText',
+        inputType: 'slider-input',
+        min: 0,
+        max: 1080,
+        step: 1,
         label: 'Position Y',
         description: 'Enter the Y coordinate (e.g., 200, 25%)',
         required: true,
       },
       {
         name: 'scale',
-        inputType: 'inputText',
+        inputType: 'slider-input',
+        min: 0.1,
+        max: 3,
+        step: 0.1,
         label: 'Scale',
         description: 'Enter the scale factor (e.g., 1, 0.5, 2)',
         required: true,
@@ -68,7 +77,10 @@ export const INITIAL_STATE = Object.freeze({
       },
       {
         name: 'rotation',
-        inputType: 'inputText',
+        inputType: 'slider-input',
+        min: -360,
+        max: 360,
+        step: 1,
         label: 'Rotation',
         description: 'Enter the rotation in degrees (e.g., 0, 45, 180)',
         required: true,
@@ -100,12 +112,12 @@ export const setSearchQuery = (state, query) => {
 
 export const openPlacementFormDialog = (state, options = {}) => {
   const { editMode = false, itemId = null, itemData = null, targetGroupId = null } = options;
-  
+
   // Set edit mode and update form accordingly
   state.editMode = editMode;
   state.editItemId = itemId;
   state.targetGroupId = targetGroupId;
-  
+
   // Update form based on edit mode
   if (editMode) {
     state.form.title = 'Edit Placement';
@@ -116,7 +128,7 @@ export const openPlacementFormDialog = (state, options = {}) => {
     state.form.description = 'Create a new placement configuration';
     state.form.actions.buttons[0].content = 'Add Placement';
   }
-  
+
   // Set default values based on item data
   if (itemData) {
     state.defaultValues = {
@@ -137,7 +149,7 @@ export const openPlacementFormDialog = (state, options = {}) => {
       rotation: '0',
     };
   }
-  
+
   // Open dialog
   state.isDialogOpen = true;
 }
@@ -145,12 +157,12 @@ export const openPlacementFormDialog = (state, options = {}) => {
 export const closePlacementFormDialog = (state) => {
   // Close dialog
   state.isDialogOpen = false;
-  
+
   // Reset all form state
   state.editMode = false;
   state.editItemId = null;
   state.targetGroupId = null;
-  
+
   // Reset default values
   state.defaultValues = {
     name: '',
@@ -160,7 +172,7 @@ export const closePlacementFormDialog = (state) => {
     anchor: 'center-center',
     rotation: '0',
   };
-  
+
   // Reset form to add mode
   state.form.title = 'Add Placement';
   state.form.description = 'Create a new placement configuration';
