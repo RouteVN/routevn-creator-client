@@ -1,14 +1,12 @@
-
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { colors } = repository.getState();
   store.setItems(colors);
 
-  return () => {}
+  return () => {};
 };
-
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -17,14 +15,12 @@ export const handleDataChanged = (e, deps) => {
   render();
 };
 
-
 export const handleColorItemClick = (e, deps) => {
   const { store, render } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
   render();
 };
-
 
 export const handleColorCreated = (e, deps) => {
   const { store, render, repository } = deps;
@@ -55,24 +51,24 @@ export const handleColorEdited = (e, deps) => {
   const { itemId, name, hex } = e.detail;
 
   // Dispatch to app handlers for repository update
-  subject.dispatch('update-color', {
+  subject.dispatch("update-color", {
     itemId,
     updates: {
       name,
-      hex
-    }
+      hex,
+    },
   });
 };
 
 export const handleColorUpdated = (e, deps) => {
   const { store, render, repository } = deps;
-  
+
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
   }
-  
+
   // Update the color in the repository
   repository.addAction({
     actionType: "treeUpdate",
@@ -85,7 +81,7 @@ export const handleColorUpdated = (e, deps) => {
       },
     },
   });
-  
+
   // Update the store with the new repository state
   const { colors } = repository.getState();
   store.setItems(colors);
@@ -95,14 +91,14 @@ export const handleColorUpdated = (e, deps) => {
 export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const { value, newName } = e.detail;
-  
-  if (value === 'rename-item-confirmed') {
+
+  if (value === "rename-item-confirmed") {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
       return;
     }
-    
+
     // Update the item name in the repository
     repository.addAction({
       actionType: "treeUpdate",
@@ -115,7 +111,7 @@ export const handleFileAction = (e, deps) => {
         },
       },
     });
-    
+
     // Update the store with the new repository state
     const { colors } = repository.getState();
     store.setItems(colors);

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { router, store, repository } = deps;
   const { characterId } = router.getPayload();
   const { characters } = repository.getState();

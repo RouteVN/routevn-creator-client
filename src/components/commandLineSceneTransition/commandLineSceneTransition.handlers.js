@@ -1,4 +1,4 @@
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { repository, store, render } = deps;
   const { scenes } = repository.getState();
   store.setItems({
@@ -8,10 +8,10 @@ export const handleOnMount = (deps) => {
 
 export const handleSceneItemClick = (e, deps) => {
   const { store, render } = deps;
-  const sceneId = e.currentTarget.id.replace('scene-item-', '');
+  const sceneId = e.currentTarget.id.replace("scene-item-", "");
 
   store.setSelectedSceneId({
-    sceneId: sceneId
+    sceneId: sceneId,
   });
 
   store.setMode({
@@ -24,17 +24,17 @@ export const handleSceneItemClick = (e, deps) => {
 export const handleSubmitClick = (payload, deps) => {
   const { dispatchEvent, store } = deps;
   const { selectedSceneId, selectedAnimation } = store.getState();
-  
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         sceneTransition: {
           sceneId: selectedSceneId,
           animation: selectedAnimation,
-        }
+        },
       },
       bubbles: true,
-      composed: true
+      composed: true,
     }),
   );
 };
@@ -70,7 +70,7 @@ export const handleBreadcumbSceneTransitionClick = (payload, deps) => {
 export const handleAnimationSelectChange = (e, deps) => {
   const { store, render } = deps;
   store.setSelectedAnimation({
-    animation: e.currentTarget.value
+    animation: e.currentTarget.value,
   });
   render();
 };

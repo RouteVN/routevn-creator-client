@@ -1,14 +1,14 @@
 {
   "type": "module",
   "dependencies": {
-    "@rettangoli/fe": "^0.0.7-rc5",
+    "@rettangoli/fe": "^0.0.7-rc6",
     "esbuild": "^0.25.5",
     "immer": "^10.1.1",
     "js-yaml": "^4.1.0",
     "jsdom": "^26.1.0",
     "nanoid": "^5.1.5",
     "route-engine-js": "^0.0.2-rc9",
-    "route-graphics": "^0.0.2-rc5",
+    "route-graphics": "^0.0.2-rc7",
     "rxjs": "^7.8.2",
     "snabbdom": "^3.6.2",
     "snabbdom-to-html": "^7.1.0",

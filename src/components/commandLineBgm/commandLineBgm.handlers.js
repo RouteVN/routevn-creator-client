@@ -1,17 +1,19 @@
 import { toFlatItems } from "../../deps/repository";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { repository, store, render, props } = deps;
   const { audio } = repository.getState();
   store.setItems({
     items: audio,
   });
-  
+
   // Initialize with existing BGM data if available
   if (props?.existingBgm?.audioId) {
     const flatAudioItems = toFlatItems(audio);
-    const existingAudio = flatAudioItems.find(item => item.id === props.existingBgm.audioId);
-    
+    const existingAudio = flatAudioItems.find(
+      (item) => item.id === props.existingBgm.audioId,
+    );
+
     if (existingAudio) {
       store.setSelectedAudioAndFileId({
         audioId: props.existingBgm.audioId,
@@ -21,14 +23,12 @@ export const handleOnMount = (deps) => {
   }
 };
 
-export const handleOnUpdate = () => {
-  
-}
+export const handleOnUpdate = () => {};
 
 export const handleAudioItemClick = (e, deps) => {
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace('audio-item-', '');
+  const id = e.currentTarget.id.replace("audio-item-", "");
 
   store.setTempSelectedAudioId({
     audioId: id,
@@ -39,20 +39,20 @@ export const handleAudioItemClick = (e, deps) => {
 
 export const handleSubmitClick = (e, deps) => {
   e.stopPropagation(); // Prevent double firing
-  
+
   const { dispatchEvent, store } = deps;
   const selectedAudioId = store.selectSelectedAudioId();
-  
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         bgm: {
           audioId: selectedAudioId,
-        }
+        },
       },
       bubbles: true,
-      composed: true
-    })
+      composed: true,
+    }),
   );
 };
 
@@ -96,8 +96,10 @@ export const handleButtonSelectClickAudio = (payload, deps) => {
   const { audio } = repository.getState();
 
   const tempSelectedAudioId = store.selectTempSelectedAudioId();
-  const tempSelectedAudio = toFlatItems(audio).find(audio => audio.id === tempSelectedAudioId);
-  
+  const tempSelectedAudio = toFlatItems(audio).find(
+    (audio) => audio.id === tempSelectedAudioId,
+  );
+
   if (tempSelectedAudio) {
     store.setSelectedAudioAndFileId({
       audioId: tempSelectedAudioId,
@@ -105,7 +107,7 @@ export const handleButtonSelectClickAudio = (payload, deps) => {
     });
     store.setMode({
       mode: "current",
-    });  
+    });
     render();
   }
 };

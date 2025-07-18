@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { placements } = repository.getState();
   store.setItems(placements || { tree: [], items: {} });
@@ -31,6 +31,8 @@ export const handlePlacementCreated = (e, deps) => {
   const { store, render, repository } = deps;
   const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     e.detail;
+
+  console.log("22222222222222 created", e.detail);
 
   repository.addAction({
     actionType: "treePush",
@@ -81,6 +83,7 @@ export const handlePlacementEdited = (e, deps) => {
   const { itemId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     e.detail;
 
+  console.log("111111111111 edited", e.detail);
   // Update repository directly
   repository.addAction({
     actionType: "treeUpdate",

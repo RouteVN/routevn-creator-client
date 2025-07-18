@@ -62,23 +62,22 @@ const renderLayoutPreview = async (deps) => {
   });
 };
 
-export const handleOnMount = async (deps) => {
-  const { render, router, store, repository, getRefIds, drenderer } = deps;
+export const handleBeforeMount = (deps) => {
+  const { router, store, repository } = deps;
   const { layoutId } = router.getPayload();
-
   const { layouts, images } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setLayoutId(layoutId);
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
+};
 
-  render();
+export const handleAfterMount = async (deps) => {
+  const { render, getRefIds, drenderer } = deps;
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
-
   await renderLayoutPreview(deps);
-
-  return () => {};
+  render();
 };
 
 export const handleTargetChanged = (payload, deps) => {

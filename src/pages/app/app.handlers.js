@@ -1,7 +1,7 @@
 import { filter, fromEvent, tap } from "rxjs";
 
-export const handleOnMount = (deps) => {
-  console.log("handleOnMount", deps.router.getPathName());
+export const handleBeforeMount = (deps) => {
+  console.log("handleBeforeMount", deps.router.getPathName());
   const currentPath = deps.router.getPathName();
 
   if (currentPath === "/") {

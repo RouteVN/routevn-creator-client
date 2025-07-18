@@ -1,13 +1,10 @@
 import { nanoid } from "nanoid";
 
-export const handleOnMount = async (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { fonts } = repository.getState();
   store.setItems(fonts);
-
-  return () => {}
 };
-
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -15,7 +12,6 @@ export const handleDataChanged = (e, deps) => {
   store.setItems(fonts);
   render();
 };
-
 
 export const handleFontItemClick = (e, deps) => {
   const { store, render } = deps;
@@ -27,19 +23,21 @@ export const handleFontItemClick = (e, deps) => {
 export const handleReplaceItem = async (e, deps) => {
   const { store, render, uploadFontFiles, repository } = deps;
   const { file } = e.detail;
-  
+
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem || !file) {
     return;
   }
-  
+
   // Validate file format
   if (!file.name.match(/\.(ttf|otf|woff|woff2)$/i)) {
-    alert('Invalid file format. Please upload a font file (.ttf, .otf, .woff, or .woff2)');
+    alert(
+      "Invalid file format. Please upload a font file (.ttf, .otf, .woff, or .woff2)",
+    );
     return;
   }
-  
+
   // Upload the font - this already loads it for preview
   const successfulUploads = await uploadFontFiles([file], "someprojectId");
 
@@ -66,21 +64,21 @@ export const handleReplaceItem = async (e, deps) => {
     const { fonts } = repository.getState();
     store.setItems(fonts);
   }
-  
+
   render();
 };
 
 export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
-  
-  if (detail.value === 'rename-item-confirmed') {
+
+  if (detail.value === "rename-item-confirmed") {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
       return;
     }
-    
+
     // Update the item name in the repository
     repository.addAction({
       actionType: "treeUpdate",
@@ -93,7 +91,7 @@ export const handleFileAction = (e, deps) => {
         },
       },
     });
-    
+
     // Update the store with the new repository state
     const { fonts } = repository.getState();
     store.setItems(fonts);
@@ -102,14 +100,26 @@ export const handleFileAction = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, uploadFontFiles, repository, httpClient, fontManager, loadFontFile } = deps;
+  const {
+    store,
+    render,
+    uploadFontFiles,
+    repository,
+    httpClient,
+    fontManager,
+    loadFontFile,
+  } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   // Validate all files first
-  const invalidFiles = Array.from(files).filter(file => !file.name.match(/\.(ttf|otf|woff|woff2)$/i));
+  const invalidFiles = Array.from(files).filter(
+    (file) => !file.name.match(/\.(ttf|otf|woff|woff2)$/i),
+  );
   if (invalidFiles.length > 0) {
-    alert('Invalid file format. Please upload only font files (.ttf, .otf, .woff, or .woff2)');
+    alert(
+      "Invalid file format. Please upload only font files (.ttf, .otf, .woff, or .woff2)",
+    );
     return;
   }
 
@@ -128,7 +138,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
       fileType: result.file.type,
       fileSize: result.file.size,
     };
-    
+
     repository.addAction({
       actionType: "treePush",
       target: "fonts",
@@ -138,16 +148,16 @@ export const handleDragDropFileSelected = async (e, deps) => {
         item: fontItem,
       },
     });
-    
+
     newFontItems.push(fontItem);
   });
 
   if (successfulUploads.length > 0) {
     const { fonts } = repository.getState();
     store.setItems(fonts);
-    
+
     // Load the newly uploaded fonts to ensure they're available
-    const loadPromises = newFontItems.map(item => loadFontFile(item));
+    const loadPromises = newFontItems.map((item) => loadFontFile(item));
     await Promise.all(loadPromises);
   }
 

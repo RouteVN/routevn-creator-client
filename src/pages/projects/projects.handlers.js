@@ -1,5 +1,4 @@
-
-// const handleOnMount = (deps) => {
+// const handleBeforeMount = (deps) => {
 //   deps.store.increment()
 //   deps.httpClient.get('...').then(response => {})
 //   deps.setSubscriptions([])
@@ -20,18 +19,17 @@ export const handleCreateButtonClick = async (payload, deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
-}
+};
 
 export const handleCloseDialogue = (payload, deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
-}
+};
 
 export const handleProjectsClick = (e, deps) => {
-  const id = e.currentTarget.id
-  deps.subject.dispatch('redirect', {
+  const id = e.currentTarget.id;
+  deps.subject.dispatch("redirect", {
     path: `/project`,
   });
-}
-
+};

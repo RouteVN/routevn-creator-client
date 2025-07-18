@@ -1,22 +1,18 @@
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, render, props } = deps;
-  
+
   // Initialize with existing dialogue data if available
   if (props?.existingDialogue?.layoutId) {
     store.setSelectedLayoutId({
       layoutId: props.existingDialogue.layoutId,
     });
   }
-  
+
   if (props?.existingDialogue?.characterId) {
     store.setSelectedCharacterId({
       characterId: props.existingDialogue.characterId,
     });
   }
-};
-
-export const handleOnUpdate = () => {
-  
 };
 
 export const handleLayoutSelectChange = (e, deps) => {

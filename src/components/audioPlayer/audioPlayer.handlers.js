@@ -11,9 +11,8 @@ const getAudioUrl = async (fileId, httpClient) => {
   return url;
 };
 
-export const handleOnMount = async (deps) => {
-  const { store, attrs, httpClient, render, audioManager } = deps;
-  const { fileId, autoPlay } = attrs;
+export const handleBeforeMount = (deps) => {
+  const { store, attrs, render, audioManager } = deps;
 
   if (!attrs) {
     alert("Missing fileId");
@@ -60,7 +59,12 @@ export const handleOnMount = async (deps) => {
     render();
   };
   audioManager.on("error", handleError);
+  return audioManager.cleanup;
+};
 
+export const handleAfterMount = async (deps) => {
+  const { store, attrs, httpClient, render, audioManager } = deps;
+  const { fileId, autoPlay } = attrs;
   try {
     store.setLoading(true);
     render();
@@ -76,8 +80,6 @@ export const handleOnMount = async (deps) => {
     store.setLoading(false);
     render();
   }
-
-  return audioManager.cleanup;
 };
 
 export const handleOnUpdate = async (changes, deps) => {

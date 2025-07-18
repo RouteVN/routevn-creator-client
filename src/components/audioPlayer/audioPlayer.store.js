@@ -1,5 +1,5 @@
 export const INITIAL_STATE = Object.freeze({
-  isLoading: false,
+  isLoading: true,
   isPlaying: false,
   currentTime: 0,
   duration: 0,

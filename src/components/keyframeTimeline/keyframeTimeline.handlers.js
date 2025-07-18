@@ -1,4 +1,4 @@
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   // Component mounted
 };
 

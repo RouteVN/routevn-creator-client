@@ -1,13 +1,12 @@
-
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { audio } = repository.getState();
-  store.setItems(audio || { tree: [], items: {} })
+  store.setItems(audio || { tree: [], items: {} });
 
-  return () => { }
-}
+  return () => {};
+};
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -124,7 +123,7 @@ export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
 
-  if (detail.value === 'rename-item-confirmed') {
+  if (detail.value === "rename-item-confirmed") {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {

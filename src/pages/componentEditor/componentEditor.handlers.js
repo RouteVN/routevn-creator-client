@@ -97,8 +97,8 @@ const renderComponentPreview = async (deps) => {
   });
 };
 
-export const handleOnMount = async (deps) => {
-  const { render, router, store, repository, getRefIds, drenderer } = deps;
+export const handleBeforeMount = (deps) => {
+  const { router, store, repository } = deps;
   const { componentId } = router.getPayload();
 
   const { components, images } = repository.getState();
@@ -106,14 +106,14 @@ export const handleOnMount = async (deps) => {
   store.setComponentId(componentId);
   store.setItems(component?.elements || { items: {}, tree: [] });
   store.setImages({ images });
+};
 
-  render();
+export const handleAfterMount = async (deps) => {
+  const { render, getRefIds, drenderer } = deps;
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
-
   await renderComponentPreview(deps);
-
-  return () => {};
+  render();
 };
 
 export const handleTargetChanged = (payload, deps) => {
