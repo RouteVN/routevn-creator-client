@@ -209,6 +209,7 @@ export const selectRenderState = ({ state }) => {
       layouts: state.layouts,
     },
   });
+  console.log("renderState", renderState);
   return renderState;
 };
 
@@ -292,14 +293,14 @@ export const toViewData = ({ state, props }, payload) => {
     charactersData = selectedLine.presentation.character.items.map((char) => {
       const character = state.repositoryState.characters.items[char.id];
       let sprite = null;
-      
+
       if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
         // Look up sprite from character's sprites
         const spriteId = char.spriteParts[0].spritePartId;
         const flatSprites = toFlatItems(character.sprites);
-        sprite = flatSprites.find(s => s.id === spriteId);
+        sprite = flatSprites.find((s) => s.id === spriteId);
       }
-      
+
       return {
         ...char,
         character,
@@ -371,7 +372,9 @@ export const toViewData = ({ state, props }, payload) => {
         )
       : null,
     dialogueCharacterData: selectedLine?.presentation?.dialogue?.characterId
-      ? state.repositoryState.characters?.items?.[selectedLine.presentation.dialogue.characterId]
+      ? state.repositoryState.characters?.items?.[
+          selectedLine.presentation.dialogue.characterId
+        ]
       : null,
     richText: selectedLine?.presentation?.richText,
     richTextContent,
@@ -385,7 +388,9 @@ export const toViewData = ({ state, props }, payload) => {
       id,
       ...item,
     })),
-    allCharacters: Object.entries(state.repositoryState.characters?.items || {}).map(([id, item]) => ({
+    allCharacters: Object.entries(
+      state.repositoryState.characters?.items || {},
+    ).map(([id, item]) => ({
       id,
       ...item,
     })),
