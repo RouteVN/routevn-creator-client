@@ -1,12 +1,8 @@
-export const handleOnMount = async (deps) => {
-  // Component mounted
-};
-
 export const handleEditableImageClick = (e, deps) => {
   const { getRefIds } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = e.currentTarget.id.replace('editable-image-', '');
+  const fieldIndex = e.currentTarget.id.replace("editable-image-", "");
 
   // Get the corresponding file input and trigger click
   const refIds = getRefIds();
@@ -19,40 +15,43 @@ export const handleEditableImageClick = (e, deps) => {
 
 export const handleSelectChange = (e, deps) => {
   const { dispatchEvent } = deps;
-  const id = e.currentTarget.id.replace('select-', '');
+  const id = e.currentTarget.id.replace("select-", "");
 
-  dispatchEvent(new CustomEvent('item-update', {
-    detail: {
-      formValues: {
-        [id]: e.detail.value
-      }
-    },
-  }));
-
-}
+  dispatchEvent(
+    new CustomEvent("item-update", {
+      detail: {
+        formValues: {
+          [id]: e.detail.value,
+        },
+      },
+    }),
+  );
+};
 
 export const handleFileInputChange = (e, deps) => {
   const { dispatchEvent, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace('file-input-', ''));
+  const fieldIndex = parseInt(e.currentTarget.id.replace("file-input-", ""));
   const field = props.fields[fieldIndex];
   const file = e.target.files[0];
 
   if (file && field) {
     // Emit event to parent component with file and field information
-    dispatchEvent(new CustomEvent('replace-item', {
-      detail: {
-        file,
-        field,
-        fieldIndex
-      },
-      bubbles: true,
-      composed: true
-    }));
+    dispatchEvent(
+      new CustomEvent("replace-item", {
+        detail: {
+          file,
+          field,
+          fieldIndex,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
 
     // Reset the file input for future uploads
-    e.target.value = '';
+    e.target.value = "";
   }
 };
 
@@ -60,7 +59,7 @@ export const handleEditableAudioClick = (e, deps) => {
   const { getRefIds } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = e.currentTarget.id.replace('editable-audio-', '');
+  const fieldIndex = e.currentTarget.id.replace("editable-audio-", "");
 
   // Get the corresponding audio file input and trigger click
   const refIds = getRefIds();
@@ -79,7 +78,7 @@ export const handleTitleClick = (e, deps) => {
   // Offset to the left and slightly down from the cursor
   const position = {
     x: e.clientX - 200, // Move 200px to the left of cursor
-    y: e.clientY + 10   // Move 10px down from cursor
+    y: e.clientY + 10, // Move 10px down from cursor
   };
 
   // Ensure popover doesn't go off-screen to the left
@@ -105,28 +104,30 @@ export const handleFormActionClick = (e, deps) => {
   const action = detail.actionId;
   const values = detail.formValues;
 
-  if (action === 'cancel') {
+  if (action === "cancel") {
     store.hidePopover();
     render();
     return;
   }
 
-  if (action === 'submit') {
-    console.log('Form submit clicked - dispatching item-update event');
-    console.log('Form values:', values);
-    
+  if (action === "submit") {
+    console.log("Form submit clicked - dispatching item-update event");
+    console.log("Form values:", values);
+
     // Hide popover
     store.hidePopover();
     render();
 
     // Emit file-action event for rename confirmation
-    dispatchEvent(new CustomEvent("item-update", {
-      detail: {
-        formValues: values,
-      },
-    }));
-    
-    console.log('item-update event dispatched');
+    dispatchEvent(
+      new CustomEvent("item-update", {
+        detail: {
+          formValues: values,
+        },
+      }),
+    );
+
+    console.log("item-update event dispatched");
   }
 };
 
@@ -134,17 +135,17 @@ export const handleColorFieldClick = (e, deps) => {
   const { store, render, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace('color-field-', ''));
+  const fieldIndex = parseInt(e.currentTarget.id.replace("color-field-", ""));
   const field = props.fields[fieldIndex];
 
-  if (field && field.type === 'color' && field.editable) {
+  if (field && field.type === "color" && field.editable) {
     // Open color dialog with current color data
     store.showColorDialog({
       fieldIndex,
       itemData: {
-        name: field.name || '',
-        value: field.value || '#000000'
-      }
+        name: field.name || "",
+        value: field.value || "#000000",
+      },
     });
     render();
   }
@@ -172,21 +173,23 @@ export const handleColorFormActionClick = (e, deps) => {
   render();
 
   // Emit color-updated event for editing existing color
-  dispatchEvent(new CustomEvent("color-updated", {
-    detail: {
-      fieldIndex,
-      hex: values.hex
-    },
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("color-updated", {
+      detail: {
+        fieldIndex,
+        hex: values.hex,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleFontFieldClick = (e, deps) => {
   const { getRefIds, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace('font-field-', ''));
+  const fieldIndex = parseInt(e.currentTarget.id.replace("font-field-", ""));
   const field = props.fields[fieldIndex];
 
   if (field && field.editable) {
@@ -204,33 +207,35 @@ export const handleTypographyFieldClick = (e, deps) => {
   const { store, render, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace('typography-field-', ''));
+  const fieldIndex = parseInt(
+    e.currentTarget.id.replace("typography-field-", ""),
+  );
   const field = props.fields[fieldIndex];
 
-  if (field && field.type === 'typography' && field.editable) {
+  if (field && field.type === "typography" && field.editable) {
     // Open typography dialog with current typography data
     store.showTypographyDialog({
       fieldIndex,
       itemData: {
-        fontSize: field.fontSize || '16',
-        fontColor: field.colorId || '',
-        fontStyle: field.fontId || '',
-        fontWeight: field.fontWeight || 'normal',
-        previewText: field.previewText || ''
+        fontSize: field.fontSize || "16",
+        fontColor: field.colorId || "",
+        fontStyle: field.fontId || "",
+        fontWeight: field.fontWeight || "normal",
+        previewText: field.previewText || "",
       },
       colorOptions: field.colorOptions || [],
-      fontOptions: field.fontOptions || []
+      fontOptions: field.fontOptions || [],
     });
     render();
   }
 };
 
 export const handleEditableTextClick = (e, deps) => {
-  console.log('@##################')
+  console.log("@##################");
   const { store, render } = deps;
   e.preventDefault();
 
-  const fieldId = e.currentTarget.id.replace('editable-text-', '');
+  const fieldId = e.currentTarget.id.replace("editable-text-", "");
 
   const field = store.selectField(fieldId);
 
@@ -238,7 +243,7 @@ export const handleEditableTextClick = (e, deps) => {
   // Offset to the left and slightly down from the cursor
   const position = {
     x: e.clientX - 200, // Move 200px to the left of cursor
-    y: e.clientY + 10   // Move 10px down from cursor
+    y: e.clientY + 10, // Move 10px down from cursor
   };
 
   // Ensure popover doesn't go off-screen to the left
@@ -248,25 +253,29 @@ export const handleEditableTextClick = (e, deps) => {
 
   store.showPopover({
     position,
-    fields: [{
-      id: field.id,
-      fieldName: field.id,
-      inputType: 'inputText',
-      label: field.label,
-      // value: '', // Always start with empty value
-      required: true,
-    }],
+    fields: [
+      {
+        id: field.id,
+        fieldName: field.id,
+        inputType: "inputText",
+        label: field.label,
+        // value: '', // Always start with empty value
+        required: true,
+      },
+    ],
     actions: {
-      layout: '',
-      buttons: [{
-        id: 'submit',
-        variant: 'pr',
-        content: 'Submit',
-      }],
-    }
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Submit",
+        },
+      ],
+    },
   });
   render();
-}
+};
 
 export const handleCloseTypographyDialog = (e, deps) => {
   const { store, render } = deps;
@@ -290,76 +299,84 @@ export const handleTypographyFormActionClick = (e, deps) => {
   render();
 
   // Emit typography-updated event for editing existing typography
-  dispatchEvent(new CustomEvent("typography-updated", {
-    detail: {
-      fieldIndex,
-      fontSize: values.fontSize,
-      fontColor: values.fontColor,
-      fontStyle: values.fontStyle,
-      fontWeight: values.fontWeight,
-      previewText: values.previewText
-    },
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("typography-updated", {
+      detail: {
+        fieldIndex,
+        fontSize: values.fontSize,
+        fontColor: values.fontColor,
+        fontStyle: values.fontStyle,
+        fontWeight: values.fontWeight,
+        previewText: values.previewText,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleImageSelectorFieldClick = (e, deps) => {
   const { store, render, props, dispatchEvent } = deps;
-  
-  console.log('handleImageSelectorFieldClick called');
-  console.log('event target:', e.currentTarget);
-  console.log('event target id:', e.currentTarget.id);
-  
+
+  console.log("handleImageSelectorFieldClick called");
+  console.log("event target:", e.currentTarget);
+  console.log("event target id:", e.currentTarget.id);
+
   // Extract field index from element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace('image-selector-field-', ''));
+  const fieldIndex = parseInt(
+    e.currentTarget.id.replace("image-selector-field-", ""),
+  );
   const field = props.fields[fieldIndex];
-  
-  console.log('fieldIndex:', fieldIndex);
-  console.log('field:', field);
-  console.log('props.fields:', props.fields);
-  
-  if (field && field.type === 'image-selector' && field.editable) {
-    console.log('dispatching request-image-groups event');
+
+  console.log("fieldIndex:", fieldIndex);
+  console.log("field:", field);
+  console.log("props.fields:", props.fields);
+
+  if (field && field.type === "image-selector" && field.editable) {
+    console.log("dispatching request-image-groups event");
     // Request groups data from parent component
-    dispatchEvent(new CustomEvent('request-image-groups', {
-      detail: { fieldIndex, currentValue: field.value },
-      bubbles: true,
-      composed: true
-    }));
+    dispatchEvent(
+      new CustomEvent("request-image-groups", {
+        detail: { fieldIndex, currentValue: field.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   } else {
-    console.log('field not found, not image-selector type, or not editable');
+    console.log("field not found, not image-selector type, or not editable");
   }
 };
 
 export const handleImageSelectorSelection = (e, deps) => {
   const { store, render } = deps;
   const { imageId } = e.detail;
-  
+
   store.setTempSelectedImageId({ imageId });
   render();
 };
 
 export const handleConfirmImageSelection = (e, deps) => {
   const { store, render, dispatchEvent } = deps;
-  
+
   const state = store.getState ? store.getState() : store._state || store.state;
   const fieldIndex = state.imageSelectorDialog.fieldIndex;
   const selectedImageId = state.imageSelectorDialog.selectedImageId;
-  
+
   // Hide dialog
   store.hideImageSelectorDialog();
   render();
-  
+
   // Emit update event
-  dispatchEvent(new CustomEvent('image-selector-updated', {
-    detail: {
-      fieldIndex,
-      imageId: selectedImageId
-    },
-    bubbles: true,
-    composed: true
-  }));
+  dispatchEvent(
+    new CustomEvent("image-selector-updated", {
+      detail: {
+        fieldIndex,
+        imageId: selectedImageId,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleCancelImageSelection = (e, deps) => {
@@ -377,17 +394,11 @@ export const handleCloseImageSelectorDialog = (e, deps) => {
 export const handleShowImageSelectorDialog = (e, deps) => {
   const { store, render } = deps;
   const { fieldIndex, groups, currentValue } = e.detail;
-  
-  console.log('handleShowImageSelectorDialog called');
-  console.log('fieldIndex:', fieldIndex);
-  console.log('groups:', groups);
-  console.log('currentValue:', currentValue);
-  
+
   store.showImageSelectorDialog({
     fieldIndex,
     groups,
-    currentValue
+    currentValue,
   });
   render();
 };
-

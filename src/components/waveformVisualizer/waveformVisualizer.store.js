@@ -1,5 +1,5 @@
 export const INITIAL_STATE = Object.freeze({
-  isLoading: false,
+  isLoading: true,
   hasError: false,
   waveformData: null,
 });
@@ -19,7 +19,7 @@ export const setWaveformData = (state, data) => {
 export const toViewData = ({ state, props }) => {
   const width = props.width || 600;
   const height = props.height || 400;
-  
+
   return {
     isLoading: state.isLoading,
     hasError: state.hasError,

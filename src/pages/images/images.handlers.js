@@ -1,13 +1,12 @@
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { images } = repository.getState();
   store.setItems(images);
 
-  return () => { }
+  return () => {};
 };
-
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -15,7 +14,6 @@ export const handleDataChanged = (e, deps) => {
   store.setItems(images);
   render();
 };
-
 
 export const handleImageItemClick = (e, deps) => {
   const { store, render } = deps;
@@ -29,7 +27,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await uploadImageFiles(files, "someprojectId")
+  const successfulUploads = await uploadImageFiles(files, "someprojectId");
   successfulUploads.forEach((result) => {
     repository.addAction({
       actionType: "treePush",
@@ -66,14 +64,14 @@ export const handleReplaceItem = async (e, deps) => {
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn('No item selected for image replacement');
+    console.warn("No item selected for image replacement");
     return;
   }
 
   const uploadedFiles = await uploadImageFiles([file], "someprojectId");
 
   if (uploadedFiles.length === 0) {
-    console.error('File upload failed, no files uploaded');
+    console.error("File upload failed, no files uploaded");
     return;
   }
 
@@ -99,7 +97,6 @@ export const handleReplaceItem = async (e, deps) => {
   const { images } = repository.getState();
   store.setItems(images);
   render();
-
 };
 
 export const handleDetailPanelItemUpdate = (e, deps) => {
@@ -124,11 +121,11 @@ export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
 
-  if (detail.value === 'rename-item-confirmed') {
+  if (detail.value === "rename-item-confirmed") {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
-      console.warn('No item selected for rename');
+      console.warn("No item selected for rename");
       return;
     }
 
@@ -151,4 +148,3 @@ export const handleFileAction = (e, deps) => {
     render();
   }
 };
-

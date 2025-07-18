@@ -1,4 +1,4 @@
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { props, render, getRefIds } = deps;
   const { item } = props;
   render();

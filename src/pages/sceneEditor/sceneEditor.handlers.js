@@ -52,8 +52,8 @@ async function renderSceneState(store, drenderer, httpClient) {
   drenderer.render(renderState);
 }
 
-export const handleOnMount = async (deps) => {
-  const { store, router, render, repository, getRefIds, drenderer } = deps;
+export const handleBeforeMount = (deps) => {
+  const { store, router, repository } = deps;
   const { sceneId } = router.getPayload();
   const { scenes, images, characters, placements, layouts, audio } =
     repository.getState();
@@ -113,11 +113,8 @@ export const handleOnMount = async (deps) => {
     });
   }
 
-  setTimeout(() => {
-    // const { canvas } = getRefIds()
-    store.setImages(images.items);
-    store.setAudios(audio.items);
-  }, 10);
+  store.setImages(images.items);
+  store.setAudios(audio.items);
 
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
@@ -138,10 +135,10 @@ export const handleOnMount = async (deps) => {
   store.setCharacters(processedCharacters);
   store.setPlacements(processedPlacements);
   store.setLayouts(processedLayouts);
+};
 
-  // Render first to make canvas ref available
-  render();
-
+export const handleAfterMount = async (deps) => {
+  const { getRefIds, drenderer } = deps;
   // Initialize drenderer with canvas
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });

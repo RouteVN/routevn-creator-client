@@ -1,9 +1,6 @@
 elementName: rvn-font-preview
 
-onMount:
-  handler: handleOnMount
-
-viewDataSchema:
+handleBeforeMountviewDataSchema:
   type: object
   properties:
     previewText:

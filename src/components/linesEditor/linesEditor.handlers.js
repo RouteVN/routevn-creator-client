@@ -1,10 +1,7 @@
-
-
 // Helper function to find the position on the last line closest to goal column
 const findLastLinePosition = (element, goalColumn) => {
   const text = element.textContent;
   const textLength = text.length;
-
 
   // If no text or goal column is at end, return end position
   if (textLength === 0 || goalColumn >= textLength) {
@@ -224,14 +221,14 @@ const isCursorOnLastLine = (element) => {
   return isOnLastLine;
 };
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, getRefIds, repository } = deps;
 
   store.setRepositoryState(repository.getState());
 
   // Focus container on mount to enable keyboard navigation
   setTimeout(() => {
-    const container = getRefIds()['container']?.elm;
+    const container = getRefIds()["container"]?.elm;
     if (container) {
       container.focus();
     }
@@ -244,11 +241,11 @@ export const handleContainerKeyDown = (e, deps) => {
 
   // Only handle container keydown if the target is the container itself
   // If it's a contenteditable, let the line handler handle it
-  if (e.target.id !== 'container') {
+  if (e.target.id !== "container") {
     return;
   }
 
-  if (mode === 'block') {
+  if (mode === "block") {
     const currentLineId = props.selectedLineId;
     const lines = props.lines || [];
 
@@ -258,16 +255,22 @@ export const handleContainerKeyDown = (e, deps) => {
         e.stopPropagation();
         if (!currentLineId && lines.length > 0) {
           // No selection, select the first line
-          dispatchEvent(new CustomEvent("lineSelectionChanged", {
-            detail: { lineId: lines[0].id }
-          }));
+          dispatchEvent(
+            new CustomEvent("lineSelectionChanged", {
+              detail: { lineId: lines[0].id },
+            }),
+          );
         } else if (currentLineId) {
-          const currentIndex = lines.findIndex(line => line.id === currentLineId);
+          const currentIndex = lines.findIndex(
+            (line) => line.id === currentLineId,
+          );
           if (currentIndex > 0) {
             const prevLineId = lines[currentIndex - 1].id;
-            dispatchEvent(new CustomEvent("lineSelectionChanged", {
-              detail: { lineId: prevLineId }
-            }));
+            dispatchEvent(
+              new CustomEvent("lineSelectionChanged", {
+                detail: { lineId: prevLineId },
+              }),
+            );
           }
         }
         break;
@@ -276,16 +279,22 @@ export const handleContainerKeyDown = (e, deps) => {
         e.stopPropagation();
         if (!currentLineId && lines.length > 0) {
           // No selection, select the first line
-          dispatchEvent(new CustomEvent("lineSelectionChanged", {
-            detail: { lineId: lines[0].id }
-          }));
+          dispatchEvent(
+            new CustomEvent("lineSelectionChanged", {
+              detail: { lineId: lines[0].id },
+            }),
+          );
         } else if (currentLineId) {
-          const currentIndex = lines.findIndex(line => line.id === currentLineId);
+          const currentIndex = lines.findIndex(
+            (line) => line.id === currentLineId,
+          );
           if (currentIndex < lines.length - 1) {
             const nextLineId = lines[currentIndex + 1].id;
-            dispatchEvent(new CustomEvent("lineSelectionChanged", {
-              detail: { lineId: nextLineId }
-            }));
+            dispatchEvent(
+              new CustomEvent("lineSelectionChanged", {
+                detail: { lineId: nextLineId },
+              }),
+            );
           }
         }
         break;
@@ -299,7 +308,7 @@ export const handleContainerKeyDown = (e, deps) => {
             const textLength = lineElement.textContent.length;
             store.setCursorPosition(textLength);
             store.setGoalColumn(textLength);
-            store.setNavigationDirection('end');
+            store.setNavigationDirection("end");
 
             // Use updateSelectedLine to properly position cursor at end
             deps.handlers.updateSelectedLine(currentLineId, deps);
@@ -317,14 +326,19 @@ export const handleLineKeyDown = (e, deps) => {
   const mode = store.selectMode();
 
   // Capture cursor position immediately before any key handling
-  if (mode === 'text-editor') {
+  if (mode === "text-editor") {
     const cursorPos = getCursorPosition(e.currentTarget);
     store.setCursorPosition(cursorPos);
 
     // Update goal column for horizontal movement or when setting new vertical position
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
+    if (
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowRight" ||
+      e.key === "Home" ||
+      e.key === "End"
+    ) {
       store.setGoalColumn(cursorPos);
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       // For vertical movement, ensure we have the current position as goal column if not set
       const currentGoalColumn = store.selectGoalColumn();
       if (currentGoalColumn === 0) {
@@ -335,7 +349,7 @@ export const handleLineKeyDown = (e, deps) => {
 
   switch (e.key) {
     case "Backspace":
-      if (mode === 'text-editor') {
+      if (mode === "text-editor") {
         // Check if cursor is at position 0
         const currentPos = getCursorPosition(e.currentTarget);
 
@@ -348,7 +362,9 @@ export const handleLineKeyDown = (e, deps) => {
           const currentLineId = e.currentTarget.id.replace(/^line-/, "");
 
           // Find the previous line
-          const currentIndex = props.lines.findIndex(line => line.id === currentLineId);
+          const currentIndex = props.lines.findIndex(
+            (line) => line.id === currentLineId,
+          );
 
           if (currentIndex > 0) {
             const prevLine = props.lines[currentIndex - 1];
@@ -361,7 +377,7 @@ export const handleLineKeyDown = (e, deps) => {
                   currentLineId: currentLineId,
                   contentToAppend: currentContent,
                 },
-              })
+              }),
             );
           }
         }
@@ -370,17 +386,17 @@ export const handleLineKeyDown = (e, deps) => {
     case "Escape":
       e.preventDefault();
       // Switch to block mode and blur the current element
-      store.setMode('block');
+      store.setMode("block");
       e.currentTarget.blur();
       // Focus the container to enable block mode navigation
-      const container = deps.getRefIds()['container']?.elm;
+      const container = deps.getRefIds()["container"]?.elm;
       if (container) {
         container.focus();
       }
       render();
       break;
     case "Enter":
-      if (mode === 'text-editor') {
+      if (mode === "text-editor") {
         e.preventDefault();
 
         // Get current cursor position and text content
@@ -399,21 +415,23 @@ export const handleLineKeyDown = (e, deps) => {
                 leftContent: leftContent,
                 rightContent: rightContent,
               },
-            })
+            }),
           );
         });
       }
       break;
     case "ArrowUp":
-      if (mode === 'block') {
+      if (mode === "block") {
         e.preventDefault();
         // In block mode, just update selectedLineId without focusing
-        const currentIndex = props.lines.findIndex(line => line.id === id);
+        const currentIndex = props.lines.findIndex((line) => line.id === id);
         if (currentIndex > 0) {
           const prevLine = props.lines[currentIndex - 1];
-          dispatchEvent(new CustomEvent("lineSelectionChanged", {
-            detail: { lineId: prevLine.id }
-          }));
+          dispatchEvent(
+            new CustomEvent("lineSelectionChanged", {
+              detail: { lineId: prevLine.id },
+            }),
+          );
         }
       } else {
         // In text-editor mode, check if cursor is on first line
@@ -434,22 +452,24 @@ export const handleLineKeyDown = (e, deps) => {
                 lineId: e.currentTarget.id.replace(/^line-/, ""),
                 cursorPosition: goalColumn,
               },
-            })
+            }),
           );
         }
         // If not on first line, let native behavior handle it (don't preventDefault)
       }
       break;
     case "ArrowDown":
-      if (mode === 'block') {
+      if (mode === "block") {
         e.preventDefault();
         // In block mode, just update selectedLineId without focusing
-        const currentIndex = props.lines.findIndex(line => line.id === id);
+        const currentIndex = props.lines.findIndex((line) => line.id === id);
         if (currentIndex < props.lines.length - 1) {
           const nextLine = props.lines[currentIndex + 1];
-          dispatchEvent(new CustomEvent("lineSelectionChanged", {
-            detail: { lineId: nextLine.id }
-          }));
+          dispatchEvent(
+            new CustomEvent("lineSelectionChanged", {
+              detail: { lineId: nextLine.id },
+            }),
+          );
         }
       } else {
         // In text-editor mode, check if cursor is on last line
@@ -470,14 +490,14 @@ export const handleLineKeyDown = (e, deps) => {
                 lineId: e.currentTarget.id.replace(/^line-/, ""),
                 cursorPosition: goalColumn,
               },
-            })
+            }),
           );
         }
         // If not on last line, let native behavior handle it (don't preventDefault)
       }
       break;
     case "ArrowRight":
-      if (mode === 'text-editor') {
+      if (mode === "text-editor") {
         // Check if cursor is at the end of the text
         const currentPos = getCursorPosition(e.currentTarget);
         const textLength = e.currentTarget.textContent.length;
@@ -496,14 +516,14 @@ export const handleLineKeyDown = (e, deps) => {
                 lineId: e.currentTarget.id.replace(/^line-/, ""),
                 cursorPosition: 0, // Go to beginning of next line
               },
-            })
+            }),
           );
         }
         // If not at end, let native behavior handle it
       }
       break;
     case "ArrowLeft":
-      if (mode === 'text-editor') {
+      if (mode === "text-editor") {
         // Check if cursor is at the beginning of the text
         const currentPos = getCursorPosition(e.currentTarget);
 
@@ -521,14 +541,12 @@ export const handleLineKeyDown = (e, deps) => {
                 lineId: e.currentTarget.id.replace(/^line-/, ""),
                 cursorPosition: -1, // Special value to indicate "go to end"
               },
-            })
+            }),
           );
         }
       }
       break;
-
   }
-
 };
 
 export const handleLineMouseUp = (e, deps) => {
@@ -565,15 +583,14 @@ export const handleOnInput = (e, deps) => {
   const detail = {
     lineId,
     content,
-  }
+  };
 
   dispatchEvent(
     new CustomEvent("editor-data-changed", {
       detail,
-    })
+    }),
   );
 };
-
 
 export const updateSelectedLine = (lineId, deps) => {
   const { store, getRefIds } = deps;
@@ -587,10 +604,10 @@ export const updateSelectedLine = (lineId, deps) => {
 
   // Choose positioning strategy based on direction
   let targetPosition;
-  if (direction === 'up') {
+  if (direction === "up") {
     // For upward navigation, find position on last line
     targetPosition = findLastLinePosition(lineRef.elm, goalColumn);
-  } else if (direction === 'end') {
+  } else if (direction === "end") {
     // For end positioning (ArrowLeft navigation), position at absolute end
     targetPosition = textLength;
   } else {
@@ -667,10 +684,12 @@ export const handleOnFocus = (e, deps) => {
   const lineId = e.currentTarget.id.replace(/^line-/, "");
 
   // Always update the selected line ID
-  dispatchEvent(new CustomEvent("lineSelectionChanged", {
-    detail: { lineId }
-  }));
-  store.setMode('text-editor'); // Switch to text-editor mode on focus
+  dispatchEvent(
+    new CustomEvent("lineSelectionChanged", {
+      detail: { lineId },
+    }),
+  );
+  store.setMode("text-editor"); // Switch to text-editor mode on focus
 
   // Check if we're navigating - if so, don't reset cursor or re-render
   if (store.selectIsNavigating()) {
@@ -689,4 +708,3 @@ export const handleOnFocus = (e, deps) => {
 
   render();
 };
-

@@ -1,6 +1,6 @@
 import { toFlatItems } from "../../deps/repository";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { repository, store, render, props } = deps;
   const { images } = repository.getState();
   store.setItems({
