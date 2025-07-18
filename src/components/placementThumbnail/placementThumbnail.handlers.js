@@ -6,9 +6,11 @@ export const handleOnMount = (deps) => {
   const config = {
     x: attrs.x || 0,
     y: attrs.y || 0,
-    scale: attrs.scale || 1,
+    scaleX: attrs.scaleX || 1,
+    scaleY: attrs.scaleY || 1,
     rotation: attrs.rotation || 0,
-    anchor: attrs.anchor || 'top-left',
+    anchorX: attrs.anchorX || 0,
+    anchorY: attrs.anchorY || 0,
     zIndex: attrs.zIndex || 0,
   }
   
@@ -28,9 +30,11 @@ export const handleOnUpdate = (changes, deps) => {
   const config = {
     x: attrs.x || 0,
     y: attrs.y || 0,
-    scale: attrs.scale || 1,
+    scaleX: attrs.scaleX || 1,
+    scaleY: attrs.scaleY || 1,
     rotation: attrs.rotation || 0,
-    anchor: attrs.anchor || 'top-left',
+    anchorX: attrs.anchorX || 0,
+    anchorY: attrs.anchorY || 0,
     zIndex: attrs.zIndex || 0,
   }
   
@@ -72,53 +76,17 @@ function renderPlacement(config, canvas) {
   const canvasY = config.y * scaleY;
   
   // Calculate placement dimensions and position (scaled to canvas)
-  const placementWidth = 300 * config.scale * scaleX;
-  const placementHeight = 300 * config.scale * scaleY;
+  const placementWidth = 300 * config.scaleX * scaleX;
+  const placementHeight = 300 * config.scaleY * scaleY;
   const anchorSize = 50 * Math.min(scaleX, scaleY);
   
-  // Calculate anchor position based on anchor type
-  let anchorX, anchorY;
-  switch (config.anchor) {
-    case 'top-left':
-      anchorX = canvasX;
-      anchorY = canvasY;
-      break;
-    case 'top-center':
-      anchorX = canvasX - placementWidth / 2;
-      anchorY = canvasY;
-      break;
-    case 'top-right':
-      anchorX = canvasX - placementWidth;
-      anchorY = canvasY;
-      break;
-    case 'center-left':
-      anchorX = canvasX;
-      anchorY = canvasY - placementHeight / 2;
-      break;
-    case 'center-center':
-      anchorX = canvasX - placementWidth / 2;
-      anchorY = canvasY - placementHeight / 2;
-      break;
-    case 'center-right':
-      anchorX = canvasX - placementWidth;
-      anchorY = canvasY - placementHeight / 2;
-      break;
-    case 'bottom-left':
-      anchorX = canvasX;
-      anchorY = canvasY - placementHeight;
-      break;
-    case 'bottom-center':
-      anchorX = canvasX - placementWidth / 2;
-      anchorY = canvasY - placementHeight;
-      break;
-    case 'bottom-right':
-      anchorX = canvasX - placementWidth;
-      anchorY = canvasY - placementHeight;
-      break;
-    default:
-      anchorX = canvasX;
-      anchorY = canvasY;
-  }
+  // Calculate actual anchor position using anchorX and anchorY (0-1 normalized values)
+  const anchorOffsetX = placementWidth * config.anchorX;
+  const anchorOffsetY = placementHeight * config.anchorY;
+  
+  // Position where the placement should be drawn (top-left corner)
+  const anchorX = canvasX - anchorOffsetX;
+  const anchorY = canvasY - anchorOffsetY;
   
   // Save context for rotation
   ctx.save();
