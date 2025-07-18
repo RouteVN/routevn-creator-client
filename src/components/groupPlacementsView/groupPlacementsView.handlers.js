@@ -1,63 +1,18 @@
 // Constants
-const BASE_WIDTH = 300;
-const BASE_HEIGHT = 300;
-const MARKER_SIZE = 50;
+const MARKER_SIZE = 30;
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
 const BG_COLOR = "#4a4a4a";
 
-// Helper functions
-const calculateAnchorOffset = (anchor, scaledWidth, scaledHeight) => {
-  let anchorOffsetX = 0;
-  let anchorOffsetY = 0;
-
-  switch (anchor) {
-    case "top-left":
-      anchorOffsetX = 0;
-      anchorOffsetY = 0;
-      break;
-    case "top-center":
-      anchorOffsetX = -scaledWidth / 2;
-      anchorOffsetY = 0;
-      break;
-    case "top-right":
-      anchorOffsetX = -scaledWidth;
-      anchorOffsetY = 0;
-      break;
-    case "center-left":
-      anchorOffsetX = 0;
-      anchorOffsetY = -scaledHeight / 2;
-      break;
-    case "center-center":
-      anchorOffsetX = -scaledWidth / 2;
-      anchorOffsetY = -scaledHeight / 2;
-      break;
-    case "center-right":
-      anchorOffsetX = -scaledWidth;
-      anchorOffsetY = -scaledHeight / 2;
-      break;
-    case "bottom-left":
-      anchorOffsetX = 0;
-      anchorOffsetY = -scaledHeight;
-      break;
-    case "bottom-center":
-      anchorOffsetX = -scaledWidth / 2;
-      anchorOffsetY = -scaledHeight;
-      break;
-    case "bottom-right":
-      anchorOffsetX = -scaledWidth;
-      anchorOffsetY = -scaledHeight;
-      break;
-  }
-
-  return { anchorOffsetX, anchorOffsetY };
-};
-
-const createRenderState = (x, y, r, scale, anchor) => {
-  const scaledWidth = BASE_WIDTH * scale;
-  const scaledHeight = BASE_HEIGHT * scale;
-  const { anchorOffsetX, anchorOffsetY } = calculateAnchorOffset(anchor, scaledWidth, scaledHeight);
-
+const createRenderState = ({
+  x,
+  y,
+  rotation,
+  scaleX,
+  scaleY,
+  anchorX,
+  anchorY,
+}) => {
   return {
     elements: [
       {
@@ -72,11 +27,15 @@ const createRenderState = (x, y, r, scale, anchor) => {
       {
         id: "id0",
         type: "rect",
-        x: x + anchorOffsetX,
-        y: y + anchorOffsetY,
-        r,
-        width: scaledWidth,
-        height: scaledHeight,
+        x,
+        y,
+        rotation,
+        width: 200,
+        height: 200,
+        scaleX,
+        scaleY,
+        anchorX,
+        anchorY,
         fill: "white",
       },
       {
@@ -84,8 +43,8 @@ const createRenderState = (x, y, r, scale, anchor) => {
         type: "rect",
         x: x - MARKER_SIZE / 2,
         y: y - MARKER_SIZE / 2,
-        width: MARKER_SIZE,
-        height: MARKER_SIZE,
+        width: MARKER_SIZE + 1,
+        height: MARKER_SIZE + 1,
         fill: "red",
       },
     ],
@@ -145,7 +104,7 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
     store.openPlacementFormDialog({
       editMode: true,
       itemId: itemId,
-      itemData: itemData
+      itemData: itemData,
     });
     render();
 
@@ -160,11 +119,20 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
     // Render initial state with item's current position
     const x = parseInt(itemData.x || 0);
     const y = parseInt(itemData.y || 0);
-    const r = parseInt(itemData.rotation || 0);
-    const scale = parseFloat(itemData.scale || 1);
-    const anchor = itemData.anchor || "center-center";
+    const rotation = parseInt(itemData.rotation || 0);
+    const scaleX = parseFloat(itemData.scaleX || 1);
+    const scaleY = parseFloat(itemData.scaleY || 1);
+    const anchor = itemData.anchor || { anchorX: 0, anchorY: 0 };
 
-    const renderState = createRenderState(x, y, r, scale, anchor);
+    const renderState = createRenderState({
+      x,
+      y,
+      rotation,
+      scaleY,
+      scaleX,
+      anchorX: anchor.anchorX,
+      anchorY: anchor.anchorY,
+    });
     drenderer.render(renderState);
   }
 };
@@ -181,7 +149,7 @@ export const handleAddPlacementClick = async (e, deps) => {
     editMode: false,
     itemId: null,
     itemData: null,
-    targetGroupId: groupId
+    targetGroupId: groupId,
   });
   render();
 
@@ -195,7 +163,15 @@ export const handleAddPlacementClick = async (e, deps) => {
   drenderer.initialized = true;
 
   // Render initial state with default values (scale=1, anchor=center-center)
-  const renderState = createRenderState(0, 0, 0, 1, "center-center");
+  const renderState = createRenderState({
+    x: 0,
+    y: 0,
+    rotation: 0,
+    scaleY: 1,
+    scaleX: 1,
+    anchorX: 0,
+    anchorY: 0,
+  });
   drenderer.render(renderState);
 };
 
@@ -224,19 +200,22 @@ export const handleFormActionClick = (e, deps) => {
 
     if (editMode && editItemId) {
       // Forward placement edit to parent
-      dispatchEvent(new CustomEvent("placement-edited", {
-        detail: {
-          itemId: editItemId,
-          name: formData.name,
-          x: formData.x,
-          y: formData.y,
-          scale: formData.scale,
-          anchor: formData.anchor,
-          rotation: formData.rotation
-        },
-        bubbles: true,
-        composed: true
-      }));
+      dispatchEvent(
+        new CustomEvent("placement-edited", {
+          detail: {
+            itemId: editItemId,
+            name: formData.name,
+            x: formData.x,
+            y: formData.y,
+            scaleX: formData.scaleX,
+            anchorY: formData.anchor.anchorY,
+            anchorX: formData.anchor.anchorX,
+            rotation: formData.rotation,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
 
       // Force immediate render to update thumbnails
       render();
@@ -278,11 +257,25 @@ export const handleFormChange = async (e, deps) => {
 
   const x = parseInt(formValues.x || 0);
   const y = parseInt(formValues.y || 0);
-  const r = parseInt(formValues.rotation || 0);
-  const scale = parseFloat(formValues.scale || 1);
-  const anchor = formValues.anchor || "center-center";
+  const rotation = parseInt(formValues.rotation || 0);
+  const scaleX = parseFloat(
+    formValues.scaleX === undefined ? 1 : formValues.scaleX,
+  );
+  const scaleY = parseFloat(
+    formValues.scaleY === undefined ? 1 : formValues.scaleY,
+  );
+  const anchorX = formValues.anchor.anchorX;
+  const anchorY = formValues.anchor.anchorY;
 
-  const renderState = createRenderState(x, y, r, scale, anchor);
+  const renderState = createRenderState({
+    x,
+    y,
+    rotation,
+    scaleX,
+    scaleY,
+    anchorX,
+    anchorY,
+  });
 
   drenderer.render(renderState);
 
