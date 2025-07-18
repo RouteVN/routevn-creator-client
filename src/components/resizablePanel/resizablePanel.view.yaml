@@ -1,8 +1,5 @@
 elementName: rvn-resizable-panel
 
-onMount:
-  handler: handleOnMount
-
 attrsSchema:
   type: object
   properties:

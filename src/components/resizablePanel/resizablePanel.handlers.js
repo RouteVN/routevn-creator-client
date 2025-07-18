@@ -1,4 +1,4 @@
-export const handleOnMount = async (deps) => {
+export const handleAfterMount = async (deps) => {
   const { store, attrs } = deps;
   store.initializePanelWidth(attrs);
 };
