@@ -1,21 +1,21 @@
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { preset } = repository.getState();
-  store.setItems(preset || { tree: [], items: {} })
+  store.setItems(preset || { tree: [], items: {} });
 
-  return () => {}
-}
+  return () => {};
+};
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
-  
+
   const repositoryState = repository.getState();
   const { preset } = repositoryState;
-  
+
   const presetData = preset || { tree: [], items: {} };
-  
+
   store.setItems(presetData);
   render();
 };

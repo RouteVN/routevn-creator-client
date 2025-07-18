@@ -1,28 +1,28 @@
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { animations } = repository.getState();
-  store.setItems(animations || { tree: [], items: {} })
+  store.setItems(animations || { tree: [], items: {} });
 
-  return () => {}
-}
+  return () => {};
+};
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
   console.log("🎬 Animations handleDataChanged received event:", e.detail);
-  
+
   const repositoryState = repository.getState();
   const { animations } = repositoryState;
-  
+
   console.log("🎬 Repository state:", {
     animations,
-    fullState: repositoryState
+    fullState: repositoryState,
   });
-  
+
   const animationData = animations || { tree: [], items: {} };
   console.log("🎬 Setting animation data:", animationData);
-  
+
   store.setItems(animationData);
   console.log("🎬 Animation store updated, triggering render");
   render();
@@ -60,7 +60,7 @@ export const handleAnimationCreated = (e, deps) => {
   // Update store with new animations data
   const { animations } = repository.getState();
   store.setItems(animations);
-  
+
   console.log(`Animation "${name}" created successfully in group ${groupId}`);
   render();
 };

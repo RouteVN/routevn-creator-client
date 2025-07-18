@@ -1,16 +1,14 @@
-
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { typography, colors, fonts } = repository.getState();
   store.setItems(typography);
   store.setColorsData(colors);
   store.setFontsData(fonts);
 
-  return () => {}
+  return () => {};
 };
-
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -20,7 +18,6 @@ export const handleDataChanged = (e, deps) => {
   store.setFontsData(fonts);
   render();
 };
-
 
 export const handleTypographyItemClick = (e, deps) => {
   const { store, render } = deps;
@@ -114,7 +111,15 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
 export const handleTypographyCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name, fontSize, fontColor, fontStyle, fontWeight, previewText } = e.detail;
+  const {
+    groupId,
+    name,
+    fontSize,
+    fontColor,
+    fontStyle,
+    fontWeight,
+    previewText,
+  } = e.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -128,9 +133,10 @@ export const handleTypographyCreated = (e, deps) => {
         name: name,
         fontSize: fontSize,
         colorId: fontColor, // Store color ID
-        fontId: fontStyle,  // Store font ID
+        fontId: fontStyle, // Store font ID
         fontWeight: fontWeight,
-        previewText: previewText || 'The quick brown fox jumps over the lazy dog',
+        previewText:
+          previewText || "The quick brown fox jumps over the lazy dog",
       },
     },
   });
@@ -140,18 +146,17 @@ export const handleTypographyCreated = (e, deps) => {
   render();
 };
 
-
 export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const { value, newName } = e.detail;
-  
-  if (value === 'rename-item-confirmed') {
+
+  if (value === "rename-item-confirmed") {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
       return;
     }
-    
+
     // Update the typography item name
     repository.addAction({
       actionType: "treeUpdate",
@@ -164,7 +169,7 @@ export const handleFileAction = (e, deps) => {
         },
       },
     });
-    
+
     // Update the store with the new repository state
     const { typography } = repository.getState();
     store.setItems(typography);
@@ -174,49 +179,50 @@ export const handleFileAction = (e, deps) => {
 
 export const handleReplaceItem = (e, deps) => {
   const { store, render, repository } = deps;
-  
+
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
   }
-  
+
   const { fontSize, fontColor, fontStyle, fontWeight, previewText } = e.detail;
-  
+
   // Create update object with only the fields that are provided
   // This preserves existing values for fields that aren't being updated
   const updateItem = {};
-  
-  if (fontSize !== undefined && fontSize !== null && fontSize !== '') {
+
+  if (fontSize !== undefined && fontSize !== null && fontSize !== "") {
     // Validate font size is a number
     if (isNaN(fontSize) || parseInt(fontSize) <= 0) {
-      alert('Please enter a valid font size (positive number)');
+      alert("Please enter a valid font size (positive number)");
       return;
     }
     updateItem.fontSize = fontSize;
   }
-  
-  if (fontColor !== undefined && fontColor !== null && fontColor !== '') {
+
+  if (fontColor !== undefined && fontColor !== null && fontColor !== "") {
     updateItem.colorId = fontColor; // Store color ID
   }
-  
-  if (fontStyle !== undefined && fontStyle !== null && fontStyle !== '') {
+
+  if (fontStyle !== undefined && fontStyle !== null && fontStyle !== "") {
     updateItem.fontId = fontStyle; // Store font ID
   }
-  
-  if (fontWeight !== undefined && fontWeight !== null && fontWeight !== '') {
+
+  if (fontWeight !== undefined && fontWeight !== null && fontWeight !== "") {
     updateItem.fontWeight = fontWeight;
   }
-  
+
   if (previewText !== undefined && previewText !== null) {
-    updateItem.previewText = previewText || 'The quick brown fox jumps over the lazy dog';
+    updateItem.previewText =
+      previewText || "The quick brown fox jumps over the lazy dog";
   }
-  
+
   // Only update if there are changes to make
   if (Object.keys(updateItem).length === 0) {
     return;
   }
-  
+
   // Update the typography in the repository
   repository.addAction({
     actionType: "treeUpdate",
@@ -227,7 +233,7 @@ export const handleReplaceItem = (e, deps) => {
       item: updateItem,
     },
   });
-  
+
   // Update the store with the new repository state
   const { typography } = repository.getState();
   store.setItems(typography);

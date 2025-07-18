@@ -1,9 +1,6 @@
 elementName: rvn-placement-thumbnail
 
-onMount:
-  handler: handleOnMount
-
-onUpdate:
+handleBeforeMountonUpdate:
   handler: handleOnUpdate
 
 propsSchema:

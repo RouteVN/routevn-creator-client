@@ -1,12 +1,15 @@
-const blacklistedAttrs = ['fileId'];
+const blacklistedAttrs = ["fileId"];
 
 const stringifyAttrs = (attrs) => {
-  return Object.entries(attrs).filter(([key]) => !blacklistedAttrs.includes(key)).map(([key, value]) => `${key}=${value}`).join(' ');
+  return Object.entries(attrs)
+    .filter(([key]) => !blacklistedAttrs.includes(key))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(" ");
 };
 
 export const INITIAL_STATE = Object.freeze({
-  src: '/public/project_logo_placeholder.png',
-  isLoading: false,
+  src: "/public/project_logo_placeholder.png",
+  isLoading: true,
 });
 
 export const setSrc = (state, src) => {

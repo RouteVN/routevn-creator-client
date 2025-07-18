@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { components } = repository.getState();
   store.setItems(components);

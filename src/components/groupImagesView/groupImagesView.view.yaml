@@ -1,9 +1,6 @@
 elementName: rvn-group-images-view
 
-onMount:
-  handler: handleOnMount
-
-viewDataSchema:
+handleBeforeMountviewDataSchema:
   type: object
   properties:
     searchQuery:
@@ -76,10 +73,10 @@ template:
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
         - rtgl-view d=h av=c g=xl w=f:
-          - 'rtgl-input#search-input s=sm pl=xl placeholder="Search images..." value=${searchQuery} style="border:none;"': 
+          - 'rtgl-input#search-input s=sm pl=xl placeholder="Search images..." value=${searchQuery} style="border:none;"':
           - rtgl-view d=h av=c g=sm:
             - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
-            - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}": 
+            - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
             - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
@@ -111,4 +108,3 @@ template:
         - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
         - $if fullImagePreviewFileId:
             - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
-      

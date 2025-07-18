@@ -1,9 +1,6 @@
 elementName: rvn-lines-editor
 
-onMount:
-  handler: handleOnMount
-
-viewDataSchema:
+handleBeforeMountviewDataSchema:
   type: object
   properties:
     selectedLineId:

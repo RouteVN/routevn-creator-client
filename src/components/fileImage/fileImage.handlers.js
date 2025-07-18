@@ -1,24 +1,23 @@
-export const handleOnMount = async (deps) => {
+export const handleAfterMount = async (deps) => {
   const { store, attrs, httpClient, render } = deps;
+
   if (!attrs.fileId) {
     return;
   }
 
-  store.setIsLoading(true);
-
   try {
     // TODO batch file requests
-    const { url } = await httpClient.creator.getFileContent({ fileId: attrs.fileId, projectId: 'someprojectId' });
+    const { url } = await httpClient.creator.getFileContent({
+      fileId: attrs.fileId,
+      projectId: "someprojectId",
+    });
     store.setSrc(url);
     render();
   } catch (error) {
-    console.error('Failed to load image:', error);
+    console.error("Failed to load image:", error);
   } finally {
     store.setIsLoading(false);
-  }
-
-  return () => {
-
+    render();
   }
 };
 
@@ -27,12 +26,15 @@ export const handleOnUpdate = async (changes, deps) => {
 
   try {
     // TODO batch file requests
-    const { url } = await httpClient.creator.getFileContent({ fileId: attrs.fileId, projectId: 'someprojectId' });
+    const { url } = await httpClient.creator.getFileContent({
+      fileId: attrs.fileId,
+      projectId: "someprojectId",
+    });
     store.setSrc(url);
     render();
   } catch (error) {
-    console.error('Failed to load image:', error);
+    console.error("Failed to load image:", error);
   } finally {
     store.setIsLoading(false);
   }
-}
+};

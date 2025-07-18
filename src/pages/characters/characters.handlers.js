@@ -1,12 +1,11 @@
-
 import { nanoid } from "nanoid";
 
-export const handleOnMount = (deps) => {
+export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { characters } = repository.getState();
   store.setItems(characters);
 
-  return () => {}
+  return () => {};
 };
 
 export const handleDataChanged = (e, deps) => {
@@ -113,7 +112,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 export const handleCharacterCreated = (e, deps) => {
   const { store, render, repository } = deps;
   const { groupId, name, description } = e.detail;
-  
+
   // Add character to repository
   repository.addAction({
     actionType: "treePush",
@@ -146,32 +145,33 @@ export const handleSpritesButtonClick = (e, deps) => {
   const { itemId } = e.detail;
 
   // Dispatch redirect with path and payload for query params
-  subject.dispatch('redirect', {
-    path: '/project/resources/character-sprites',
+  subject.dispatch("redirect", {
+    path: "/project/resources/character-sprites",
     payload: {
-      characterId: itemId
-    }
+      characterId: itemId,
+    },
   });
 
   render();
-}
+};
 
 export const handleReplaceItem = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { file } = e.detail;
-  
+
   // Get the currently selected character
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn('No character selected for avatar upload');
+    console.warn("No character selected for avatar upload");
     return;
   }
-  
+
   try {
     // Upload the new avatar file
-    const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
-      projectId: "someprojectId",
-    });
+    const { downloadUrl, uploadUrl, fileId } =
+      await httpClient.creator.uploadFile({
+        projectId: "someprojectId",
+      });
 
     const response = await fetch(uploadUrl, {
       method: "PUT",
@@ -183,15 +183,18 @@ export const handleReplaceItem = async (e, deps) => {
 
     if (response.ok) {
       console.log("Character avatar uploaded successfully:", file.name);
-      
+
       const updateData = {
         fileId: fileId,
         fileType: file.type,
         fileSize: file.size,
         // Update name only if character doesn't have one or if it's the generic filename
-        ...((!selectedItem.name || selectedItem.name === 'Untitled Character') && { name: file.name.replace(/\.[^/.]+$/, "") })
+        ...((!selectedItem.name ||
+          selectedItem.name === "Untitled Character") && {
+          name: file.name.replace(/\.[^/.]+$/, ""),
+        }),
       };
-      
+
       // Update the selected character in the repository with the new avatar
       repository.addAction({
         actionType: "treeUpdate",
@@ -202,12 +205,11 @@ export const handleReplaceItem = async (e, deps) => {
           item: updateData,
         },
       });
-      
+
       // Update the store with the new repository state
       const { characters } = repository.getState();
       store.setItems(characters);
       render();
-      
     } else {
       console.error("Avatar upload failed:", file.name, response.statusText);
     }
@@ -219,19 +221,20 @@ export const handleReplaceItem = async (e, deps) => {
 export const handleDetailPanelImageSelected = async (e, deps) => {
   const { store, render, httpClient, repository } = deps;
   const { file, field } = e.detail;
-  
+
   // Get the currently selected character
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn('No character selected for avatar upload');
+    console.warn("No character selected for avatar upload");
     return;
   }
-  
+
   try {
     // Upload the new avatar file
-    const { downloadUrl, uploadUrl, fileId } = await httpClient.creator.uploadFile({
-      projectId: "someprojectId",
-    });
+    const { downloadUrl, uploadUrl, fileId } =
+      await httpClient.creator.uploadFile({
+        projectId: "someprojectId",
+      });
 
     const response = await fetch(uploadUrl, {
       method: "PUT",
@@ -243,15 +246,18 @@ export const handleDetailPanelImageSelected = async (e, deps) => {
 
     if (response.ok) {
       console.log("Character avatar uploaded successfully:", file.name);
-      
+
       const updateData = {
         fileId: fileId,
         fileType: file.type,
         fileSize: file.size,
         // Update name only if character doesn't have one or if it's the generic filename
-        ...((!selectedItem.name || selectedItem.name === 'Untitled Character') && { name: file.name.replace(/\.[^/.]+$/, "") })
+        ...((!selectedItem.name ||
+          selectedItem.name === "Untitled Character") && {
+          name: file.name.replace(/\.[^/.]+$/, ""),
+        }),
       };
-      
+
       // Update the selected character in the repository with the new avatar
       repository.addAction({
         actionType: "treeUpdate",
@@ -262,12 +268,11 @@ export const handleDetailPanelImageSelected = async (e, deps) => {
           item: updateData,
         },
       });
-      
+
       // Update the store with the new repository state
       const { characters } = repository.getState();
       store.setItems(characters);
       render();
-      
     } else {
       console.error("Avatar upload failed:", file.name, response.statusText);
     }
@@ -297,15 +302,15 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
 export const handleFileAction = (e, deps) => {
   const { store, render, repository } = deps;
   const detail = e.detail;
-  
-  if (detail.value === 'rename-item-confirmed') {
+
+  if (detail.value === "rename-item-confirmed") {
     // Get the currently selected item
     const selectedItem = store.selectSelectedItem();
     if (!selectedItem) {
-      console.warn('No item selected for rename');
+      console.warn("No item selected for rename");
       return;
     }
-    
+
     // Update the item name in the repository
     repository.addAction({
       actionType: "treeUpdate",
@@ -318,7 +323,7 @@ export const handleFileAction = (e, deps) => {
         },
       },
     });
-    
+
     // Update the store with the new repository state
     const { characters } = repository.getState();
     store.setItems(characters);
