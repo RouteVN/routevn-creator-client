@@ -59,11 +59,21 @@ Install `rtgl` cli
 npm i -g rtgl
 ```
 
-
 Install dependencies:
 ```shell
 bun install
 ```
+
+**Setup Git Hooks (Required for new developers):**
+
+After installing dependencies, Husky will automatically set up git hooks. The pre-push hook will run `bun run lint` to ensure code quality before pushing changes.
+
+If you're setting up the project for the first time, make sure to run:
+```shell
+bun run prepare
+```
+
+This ensures all git hooks are properly configured.
 
 Run the project in watch mode:
 ```shell
