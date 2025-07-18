@@ -1,7 +1,7 @@
 export const handleConditionTypeChange = (e, deps) => {
   const { store, render } = deps;
   const type = e.target.value;
-  
+
   store.setConditionType(type);
   render();
 };
@@ -9,7 +9,7 @@ export const handleConditionTypeChange = (e, deps) => {
 export const handleVariableSelect = (e, deps) => {
   const { store, render } = deps;
   const variable = e.target.value;
-  
+
   store.setSelectedVariable(variable);
   render();
 };
@@ -17,7 +17,7 @@ export const handleVariableSelect = (e, deps) => {
 export const handleOperatorSelect = (e, deps) => {
   const { store, render } = deps;
   const operator = e.target.value;
-  
+
   store.setOperator(operator);
   render();
 };
@@ -25,7 +25,7 @@ export const handleOperatorSelect = (e, deps) => {
 export const handleValueInput = (e, deps) => {
   const { store, render } = deps;
   const value = e.target.value;
-  
+
   store.setComparisonValue(value);
   render();
 };
@@ -40,7 +40,7 @@ export const handleSubmitClick = (e, deps) => {
           selectedVariable: e?.selectedVariable,
           operator: e?.operator,
           comparisonValue: e?.comparisonValue,
-        }
+        },
       },
     }),
   );

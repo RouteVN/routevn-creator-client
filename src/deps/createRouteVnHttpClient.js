@@ -1,4 +1,3 @@
-
 class Request {
   _authToken;
 
@@ -79,7 +78,6 @@ export function createHttpClient(config) {
 
   return httpClient;
 }
-
 
 /**
  * @typedef {Object} HttpClient

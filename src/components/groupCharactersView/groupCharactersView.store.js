@@ -2,40 +2,45 @@ export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
   targetGroupId: null,
-  searchQuery: '',
-  
+  searchQuery: "",
+
   defaultValues: {
-    name: '',
-    description: '',
+    name: "",
+    description: "",
   },
 
   form: {
-    title: 'Add Character',
-    description: 'Create a new character',
-    fields: [{
-      id: 'name',
-      fieldName: 'name',
-      inputType: 'inputText',
-      label: 'Name',
-      description: 'Enter the character name',
-      required: true,
-    }, {
-      id: 'description',
-      fieldName: 'description',
-      inputType: 'inputText',
-      label: 'Description',
-      description: 'Enter the character description',
-      required: false,
-    }],
+    title: "Add Character",
+    description: "Create a new character",
+    fields: [
+      {
+        id: "name",
+        fieldName: "name",
+        inputType: "inputText",
+        label: "Name",
+        description: "Enter the character name",
+        required: true,
+      },
+      {
+        id: "description",
+        fieldName: "description",
+        inputType: "inputText",
+        label: "Description",
+        description: "Enter the character description",
+        required: false,
+      },
+    ],
     actions: {
-      layout: '',
-      buttons: [{
-        id: 'submit',
-        variant: 'pr',
-        content: 'Add Character',
-      }],
-    }
-  }
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Add Character",
+        },
+      ],
+    },
+  },
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -45,57 +50,68 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
-}
+};
 
 export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;
-}
+};
 
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
-}
+};
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
-}
+};
 
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase().trim();
-  
+
   // Filter groups based on search query
   let filteredGroups = props.flatGroups || [];
-  
+
   if (searchQuery) {
-    filteredGroups = filteredGroups.map(group => {
-      // Filter children based on search query
-      const filteredChildren = (group.children || []).filter(item => {
-        const name = (item.name || '').toLowerCase();
-        const description = (item.description || '').toLowerCase();
-        return name.includes(searchQuery) || description.includes(searchQuery);
-      });
-      
-      // Only include groups that have matching children or if the group name itself matches
-      const groupName = (group.name || '').toLowerCase();
-      const shouldIncludeGroup = filteredChildren.length > 0 || groupName.includes(searchQuery);
-      
-      return shouldIncludeGroup ? {
-        ...group,
-        children: filteredChildren,
-        hasChildren: filteredChildren.length > 0
-      } : null;
-    }).filter(Boolean); // Remove null groups
+    filteredGroups = filteredGroups
+      .map((group) => {
+        // Filter children based on search query
+        const filteredChildren = (group.children || []).filter((item) => {
+          const name = (item.name || "").toLowerCase();
+          const description = (item.description || "").toLowerCase();
+          return (
+            name.includes(searchQuery) || description.includes(searchQuery)
+          );
+        });
+
+        // Only include groups that have matching children or if the group name itself matches
+        const groupName = (group.name || "").toLowerCase();
+        const shouldIncludeGroup =
+          filteredChildren.length > 0 || groupName.includes(searchQuery);
+
+        return shouldIncludeGroup
+          ? {
+              ...group,
+              children: filteredChildren,
+              hasChildren: filteredChildren.length > 0,
+            }
+          : null;
+      })
+      .filter(Boolean); // Remove null groups
   }
-  
+
   // Apply collapsed state to filtered groups
-  const flatGroups = filteredGroups.map(group => ({
+  const flatGroups = filteredGroups.map((group) => ({
     ...group,
     isCollapsed: state.collapsedIds.includes(group.id),
-    children: state.collapsedIds.includes(group.id) ? [] : (group.children || []).map(item => ({
-      ...item,
-      selectedStyle: item.id === selectedItemId ? 
-        "outline: 2px solid var(--color-pr); outline-offset: 2px;" : ""
-    }))
+    children: state.collapsedIds.includes(group.id)
+      ? []
+      : (group.children || []).map((item) => ({
+          ...item,
+          selectedStyle:
+            item.id === selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
   }));
 
   return {

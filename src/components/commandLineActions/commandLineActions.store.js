@@ -72,4 +72,3 @@ export const toViewData = ({ state, props }, payload) => {
 export const selectItems = ({ state, props }) => {
   return state.items;
 };
-

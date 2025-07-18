@@ -1,7 +1,7 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
-  mode: 'current',
+  mode: "current",
   items: [],
   selectedAudioId: undefined,
   selectedFileId: undefined,
@@ -34,32 +34,34 @@ export const setTempSelectedAudioId = (state, payload) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
-  const flatGroups = toFlatGroups(state.items)
-  .map((group) => {
+  const flatItems = toFlatItems(state.items).filter(
+    (item) => item.type === "folder",
+  );
+  const flatGroups = toFlatGroups(state.items).map((group) => {
     return {
       ...group,
       children: group.children.map((child) => {
         const isSelected = child.id === state.tempSelectedAudioId;
         return {
           ...child,
-          bw: isSelected ? 'md' : '',
-        }
+          bw: isSelected ? "md" : "",
+        };
       }),
-    }
+    };
   });
 
   const loopOptions = [
-    { label: 'No Loop', value: 'none' },
-    { label: 'Loop Once', value: 'once' },
-    { label: 'Loop Forever', value: 'forever' },
-    { label: 'Fade In/Out', value: 'fade' }
+    { label: "No Loop", value: "none" },
+    { label: "Loop Once", value: "once" },
+    { label: "Loop Forever", value: "forever" },
+    { label: "Fade In/Out", value: "fade" },
   ];
 
   // Get selected audio name
-  const selectedAudioName = state.selectedAudioId ? 
-    toFlatItems(state.items).find(item => item.id === state.selectedAudioId)?.name : 
-    undefined;
+  const selectedAudioName = state.selectedAudioId
+    ? toFlatItems(state.items).find((item) => item.id === state.selectedAudioId)
+        ?.name
+    : undefined;
 
   return {
     mode: state.mode,

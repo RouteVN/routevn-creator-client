@@ -1,3 +1,1 @@
-export const toViewData = ({}) => {
-
-};
+export const toViewData = ({}) => {};

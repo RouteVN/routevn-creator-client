@@ -1,5 +1,5 @@
 export const INITIAL_STATE = Object.freeze({
-  isDragging: false
+  isDragging: false,
 });
 
 export const startDragging = (state, isDragging) => {
@@ -13,5 +13,5 @@ export const stopDragging = (state, isDragging) => {
 export const toViewData = ({ state, props }) => ({
   ...state,
   ...props,
-  bgc: state.isDragging ? 'mu' : ''
+  bgc: state.isDragging ? "mu" : "",
 });

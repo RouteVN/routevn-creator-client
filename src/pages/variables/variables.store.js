@@ -7,66 +7,101 @@ export const INITIAL_STATE = Object.freeze({
 });
 
 export const setItems = (state, variablesData) => {
-  state.variablesData = variablesData
-}
+  state.variablesData = variablesData;
+};
 
 export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
-}
+};
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const toViewData = ({ state, props }, payload) => {
   console.log("🔧 Variables toViewData called with state:", state);
-  
+
   const flatItems = toFlatItems(state.variablesData);
   const flatGroups = toFlatGroups(state.variablesData);
 
   console.log("🔧 Variables processed data:", {
     variablesData: state.variablesData,
     flatItems,
-    flatGroups
+    flatGroups,
   });
 
   // Get selected item details
-  const selectedItem = state.selectedItemId ? 
-    flatItems.find(item => item.id === state.selectedItemId) : null;
+  const selectedItem = state.selectedItemId
+    ? flatItems.find((item) => item.id === state.selectedItemId)
+    : null;
 
   // Compute display values for selected item
-  const selectedItemDetails = selectedItem ? {
-    ...selectedItem,
-    typeDisplay: selectedItem.type === 'variable' ? 'Variable' : 'Folder',
-    displayFileType: selectedItem.fileType || (selectedItem.type === 'variable' ? 'Variable' : null),
-    displayFileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : null,
-    fullPath: selectedItem.fullLabel || selectedItem.name || '',
-  } : null;
+  const selectedItemDetails = selectedItem
+    ? {
+        ...selectedItem,
+        typeDisplay: selectedItem.type === "variable" ? "Variable" : "Folder",
+        displayFileType:
+          selectedItem.fileType ||
+          (selectedItem.type === "variable" ? "Variable" : null),
+        displayFileSize: selectedItem.fileSize
+          ? formatFileSize(selectedItem.fileSize)
+          : null,
+        fullPath: selectedItem.fullLabel || selectedItem.name || "",
+      }
+    : null;
 
   // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? 'Details' : null;
-  const detailFields = selectedItemDetails ? [
-    { type: 'text', label: 'Name', value: selectedItemDetails.name, id: 'name', editable: true },
-    { type: 'text', label: 'Type', value: selectedItemDetails.typeDisplay },
-    { type: 'text', label: 'Variable Type', value: selectedItemDetails.variableType, show: !!selectedItemDetails.variableType },
-    { type: 'text', label: 'Default Value', value: selectedItemDetails.defaultValue, show: !!selectedItemDetails.defaultValue },
-    { type: 'text', label: 'Read Only', value: selectedItemDetails.readonly ? 'Yes' : 'No', show: selectedItemDetails.readonly !== undefined },
-    { type: 'text', label: 'Path', value: selectedItemDetails.fullPath, size: 'sm' }
-  ] : [];
-  const detailEmptyMessage = 'No selection';
-  
+  const detailTitle = selectedItemDetails ? "Details" : null;
+  const detailFields = selectedItemDetails
+    ? [
+        {
+          type: "text",
+          label: "Name",
+          value: selectedItemDetails.name,
+          id: "name",
+          editable: true,
+        },
+        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
+        {
+          type: "text",
+          label: "Variable Type",
+          value: selectedItemDetails.variableType,
+          show: !!selectedItemDetails.variableType,
+        },
+        {
+          type: "text",
+          label: "Default Value",
+          value: selectedItemDetails.defaultValue,
+          show: !!selectedItemDetails.defaultValue,
+        },
+        {
+          type: "text",
+          label: "Read Only",
+          value: selectedItemDetails.readonly ? "Yes" : "No",
+          show: selectedItemDetails.readonly !== undefined,
+        },
+        {
+          type: "text",
+          label: "Path",
+          value: selectedItemDetails.fullPath,
+          size: "sm",
+        },
+      ]
+    : [];
+  const detailEmptyMessage = "No selection";
+
   const viewData = {
     flatItems,
     flatGroups,
-    resourceCategory: 'systemConfig',
-    selectedResourceId: 'variables',
-    repositoryTarget: 'variables',
+    resourceCategory: "systemConfig",
+    selectedResourceId: "variables",
+    repositoryTarget: "variables",
     selectedItemId: state.selectedItemId,
     selectedItem: selectedItemDetails,
     detailTitle,
     detailFields,
     detailEmptyMessage,
   };
-  
+
   console.log("🔧 Variables returning viewData:", viewData);
-  
+
   return viewData;
-}
+};

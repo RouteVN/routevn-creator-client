@@ -15,7 +15,7 @@ export const handleDragLeave = (event, deps) => {
   const { store, render } = deps;
   event.preventDefault();
   event.stopPropagation();
-  
+
   // Only set isDragging to false if we're leaving the drop zone entirely
   if (event.currentTarget === event.target) {
     store.stopDragging();
@@ -27,16 +27,20 @@ export const handleDrop = (event, deps) => {
   const { dispatchEvent, store, render } = deps;
   event.preventDefault();
   event.stopPropagation();
-  
+
   store.stopDragging();
   render();
-  
+
   const files = event.dataTransfer.files;
-  
+
   // Filter for image files only
-  const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-  
+  const imageFiles = Array.from(files).filter((file) =>
+    file.type.startsWith("image/"),
+  );
+
   if (imageFiles.length > 0) {
-    dispatchEvent(new CustomEvent('file-selected', { detail: { files: imageFiles } }));
+    dispatchEvent(
+      new CustomEvent("file-selected", { detail: { files: imageFiles } }),
+    );
   }
 };

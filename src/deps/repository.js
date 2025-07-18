@@ -8,15 +8,26 @@ const set = (state, path, value) => {
     current[key] = { ...current[key] };
     current = current[key];
   }
-  
+
   const targetKey = keys[keys.length - 1];
-  
+
   // Check if value is an object with replace and item properties
-  if (value && typeof value === 'object' && 'replace' in value && 'item' in value) {
+  if (
+    value &&
+    typeof value === "object" &&
+    "replace" in value &&
+    "item" in value
+  ) {
     const { replace, item } = value;
-    
+
     // Only apply merge logic if item is an object and target exists
-    if (!replace && item && typeof item === 'object' && current[targetKey] && typeof current[targetKey] === 'object') {
+    if (
+      !replace &&
+      item &&
+      typeof item === "object" &&
+      current[targetKey] &&
+      typeof current[targetKey] === "object"
+    ) {
       // Merge new properties with existing object
       current[targetKey] = { ...current[targetKey], ...item };
     } else {
@@ -27,7 +38,7 @@ const set = (state, path, value) => {
     // Original behavior - replace the whole thing
     current[targetKey] = value;
   }
-  
+
   return newState;
 };
 
@@ -45,10 +56,10 @@ const unset = (state, path) => {
   }
 
   const targetKey = keys[keys.length - 1];
-  if (current && typeof current === 'object' && targetKey in current) {
+  if (current && typeof current === "object" && targetKey in current) {
     delete current[targetKey];
   }
-  
+
   return newState;
 };
 
@@ -61,7 +72,7 @@ const get = (state, path) => {
 // Helper function to find a node in the tree
 const findNodeInTree = (tree, nodeId) => {
   if (!tree || !Array.isArray(tree)) return null;
-  
+
   for (let node of tree) {
     if (node && node.id === nodeId) {
       return { node, parent: null, parentArray: tree };
@@ -79,13 +90,17 @@ const findNodeInTree = (tree, nodeId) => {
 // Helper function to remove a node from tree
 const removeNodeFromTree = (tree, nodeId) => {
   if (!tree || !Array.isArray(tree)) return false;
-  
+
   for (let i = 0; i < tree.length; i++) {
     if (tree[i] && tree[i].id === nodeId) {
       tree.splice(i, 1);
       return true;
     }
-    if (tree[i] && tree[i].children && removeNodeFromTree(tree[i].children, nodeId)) {
+    if (
+      tree[i] &&
+      tree[i].children &&
+      removeNodeFromTree(tree[i].children, nodeId)
+    ) {
       return true;
     }
   }
@@ -97,7 +112,7 @@ const treePush = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
   const { parent, item, position } = value;
-  
+
   // Ensure tree and items exist
   if (!targetData.tree) {
     targetData.tree = [];
@@ -105,33 +120,33 @@ const treePush = (state, target, value) => {
   if (!targetData.items) {
     targetData.items = {};
   }
-  
+
   // Add item to items object
   targetData.items[item.id] = { ...item };
   delete targetData.items[item.id].id; // Remove id from item data
-  
+
   // Create tree node
   const newNode = {
     id: item.id,
-    children: []
+    children: [],
   };
-  
+
   // Helper function to insert node at the specified position
   const insertAtPosition = (array, node, position) => {
-    if (position === 'first') {
+    if (position === "first") {
       array.unshift(node);
-    } else if (position === 'last') {
+    } else if (position === "last") {
       array.push(node);
-    } else if (position && typeof position === 'object') {
+    } else if (position && typeof position === "object") {
       if (position.after) {
-        const index = array.findIndex(n => n.id === position.after);
+        const index = array.findIndex((n) => n.id === position.after);
         if (index !== -1) {
           array.splice(index + 1, 0, node);
         } else {
           array.push(node); // Fallback to end if not found
         }
       } else if (position.before) {
-        const index = array.findIndex(n => n.id === position.before);
+        const index = array.findIndex((n) => n.id === position.before);
         if (index !== -1) {
           array.splice(index, 0, node);
         } else {
@@ -144,7 +159,7 @@ const treePush = (state, target, value) => {
     }
   };
 
-  if (parent === '_root') {
+  if (parent === "_root") {
     // Add to root level
     insertAtPosition(targetData.tree, newNode, position);
   } else {
@@ -157,7 +172,7 @@ const treePush = (state, target, value) => {
       insertAtPosition(parentInfo.node.children, newNode, position);
     }
   }
-  
+
   return newState;
 };
 
@@ -165,7 +180,7 @@ const treeDelete = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
   const { id } = value;
-  
+
   // Ensure tree and items exist
   if (!targetData.tree) {
     targetData.tree = [];
@@ -173,13 +188,13 @@ const treeDelete = (state, target, value) => {
   if (!targetData.items) {
     targetData.items = {};
   }
-  
+
   // Remove from tree
   removeNodeFromTree(targetData.tree, id);
-  
+
   // Remove from items
   delete targetData.items[id];
-  
+
   return newState;
 };
 
@@ -187,7 +202,7 @@ const treeUpdate = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
   const { id, replace, item } = value;
-  
+
   if (replace) {
     // Full replace
     targetData.items[id] = { ...item };
@@ -197,13 +212,13 @@ const treeUpdate = (state, target, value) => {
     targetData.items[id] = { ...targetData.items[id], ...item };
     delete targetData.items[id].id;
   }
-  
+
   return newState;
 };
 
 /**
  * Moves a node from one position to another in the tree structure
- * 
+ *
  * @param {Object} state - The current state object
  * @param {string} target - Path to the target data (e.g., 'fileExplorer')
  * @param {Object} value - Move operation parameters
@@ -216,7 +231,7 @@ const treeUpdate = (state, target, value) => {
  *   - { before: 'nodeId' }: Insert before the specified node
  *   - undefined: Default to 'first'
  * @returns {Object} New state with the node moved to its new position
- * 
+ *
  * @example
  * // Move node 'file1' to root level at the beginning
  * const newState = treeMove(state, 'fileExplorer', {
@@ -224,7 +239,7 @@ const treeUpdate = (state, target, value) => {
  *   parent: '_root',
  *   position: 'first'
  * });
- * 
+ *
  * @example
  * // Move node 'file2' to root level at the end
  * const newState = treeMove(state, 'fileExplorer', {
@@ -232,7 +247,7 @@ const treeUpdate = (state, target, value) => {
  *   parent: '_root',
  *   position: 'last'
  * });
- * 
+ *
  * @example
  * // Move node 'file3' after 'folder1'
  * const newState = treeMove(state, 'fileExplorer', {
@@ -240,7 +255,7 @@ const treeUpdate = (state, target, value) => {
  *   parent: '_root',
  *   position: { after: 'folder1' }
  * });
- * 
+ *
  * @example
  * // Move node 'file4' before 'file5' in 'folder2'
  * const newState = treeMove(state, 'fileExplorer', {
@@ -253,30 +268,30 @@ const treeMove = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
   const { id, parent, position } = value;
-  
+
   // Find and remove node from current position
   const nodeInfo = findNodeInTree(targetData.tree, id);
   if (!nodeInfo) return state;
-  
+
   const nodeToMove = structuredClone(nodeInfo.node);
   removeNodeFromTree(targetData.tree, id);
-  
+
   // Helper function to insert node at the specified position
   const insertAtPosition = (array, node, position) => {
-    if (position === 'first') {
+    if (position === "first") {
       array.unshift(node);
-    } else if (position === 'last') {
+    } else if (position === "last") {
       array.push(node);
-    } else if (position && typeof position === 'object') {
+    } else if (position && typeof position === "object") {
       if (position.after) {
-        const index = array.findIndex(n => n.id === position.after);
+        const index = array.findIndex((n) => n.id === position.after);
         if (index !== -1) {
           array.splice(index + 1, 0, node);
         } else {
           array.push(node); // Fallback to end if not found
         }
       } else if (position.before) {
-        const index = array.findIndex(n => n.id === position.before);
+        const index = array.findIndex((n) => n.id === position.before);
         if (index !== -1) {
           array.splice(index, 0, node);
         } else {
@@ -290,7 +305,7 @@ const treeMove = (state, target, value) => {
   };
 
   // Insert at new position
-  if (parent === '_root') {
+  if (parent === "_root") {
     insertAtPosition(targetData.tree, nodeToMove, position);
   } else {
     const parentInfo = findNodeInTree(targetData.tree, parent);
@@ -301,26 +316,29 @@ const treeMove = (state, target, value) => {
       insertAtPosition(parentInfo.node.children, nodeToMove, position);
     }
   }
-  
+
   return newState;
 };
 
 export const createRepository = (initialState, localStorageKey) => {
   // If localStorageKey is provided, handle localStorage integration
-  if (localStorageKey && typeof localStorageKey === 'string') {
+  if (localStorageKey && typeof localStorageKey === "string") {
     const storedEventStream = localStorage.getItem(localStorageKey);
     const actionStream = storedEventStream ? JSON.parse(storedEventStream) : [];
-    
+
     const repository = createRepositoryInternal(initialState, actionStream);
-    
+
     // Auto-save to localStorage every 5 seconds
     setInterval(() => {
-      localStorage.setItem(localStorageKey, JSON.stringify(repository.getActionStream()));
+      localStorage.setItem(
+        localStorageKey,
+        JSON.stringify(repository.getActionStream()),
+      );
     }, 5000);
-    
+
     return repository;
   }
-  
+
   // Original behavior for backward compatibility
   return createRepositoryInternal(initialState, []);
 };
@@ -354,7 +372,7 @@ const createRepositoryInternal = (initialState, initialActionSteams) => {
 
   const getActionStream = () => {
     return actionStream;
-  }
+  };
 
   return {
     addAction,
@@ -373,10 +391,13 @@ export const toFlatItems = (data) => {
     visited.add(node.id);
 
     // Build full label from parent chain
-    const parentLabels = parentChain.map(parentId => items[parentId]?.name).filter(Boolean);
-    const fullLabel = parentLabels.length > 0 
-      ? `${parentLabels.join(' > ')} > ${items[node.id]?.name || ''}`
-      : items[node.id]?.name || '';
+    const parentLabels = parentChain
+      .map((parentId) => items[parentId]?.name)
+      .filter(Boolean);
+    const fullLabel =
+      parentLabels.length > 0
+        ? `${parentLabels.join(" > ")} > ${items[node.id]?.name || ""}`
+        : items[node.id]?.name || "";
 
     const item = {
       ...items[node.id],
@@ -390,7 +411,9 @@ export const toFlatItems = (data) => {
 
     if (node.children) {
       const newParentChain = [...parentChain, node.id];
-      node.children.forEach((child) => traverse(child, level + 1, newParentChain));
+      node.children.forEach((child) =>
+        traverse(child, level + 1, newParentChain),
+      );
     }
   };
 
@@ -399,10 +422,10 @@ export const toFlatItems = (data) => {
 };
 
 /**
- * 
+ *
  * children will always be list of items
  * example result:
- * 
+ *
  * [{
  *   id: '..',
  *   fullLabel: '...',
@@ -425,22 +448,25 @@ export const toFlatGroups = (data) => {
     visited.add(node.id);
 
     // Create groups for nodes that are folders (including empty folders)
-    if (node.children !== undefined && items[node.id]?.type === 'folder') {
+    if (node.children !== undefined && items[node.id]?.type === "folder") {
       // Build full label from parent chain
-      const parentLabels = parentChain.map(parentId => items[parentId]?.name).filter(Boolean);
-      const fullLabel = parentLabels.length > 0 
-        ? `${parentLabels.join(' > ')} > ${items[node.id]?.name || ''}`
-        : items[node.id]?.name || '';
+      const parentLabels = parentChain
+        .map((parentId) => items[parentId]?.name)
+        .filter(Boolean);
+      const fullLabel =
+        parentLabels.length > 0
+          ? `${parentLabels.join(" > ")} > ${items[node.id]?.name || ""}`
+          : items[node.id]?.name || "";
 
       // Create children items with full data (only non-folder items)
       const children = node.children
-        .filter(child => items[child.id]?.type !== 'folder')
-        .map(child => ({
+        .filter((child) => items[child.id]?.type !== "folder")
+        .map((child) => ({
           ...items[child.id],
           id: child.id,
           _level: level + 1,
           parentId: node.id,
-          hasChildren: child.children && child.children.length > 0
+          hasChildren: child.children && child.children.length > 0,
         }));
 
       // Create the group
@@ -448,18 +474,20 @@ export const toFlatGroups = (data) => {
         ...items[node.id],
         id: node.id,
         fullLabel,
-        type: 'folder',
+        type: "folder",
         _level: level,
         parentId: parentChain[parentChain.length - 1] || null,
         hasChildren: node.children && node.children.length > 0,
-        children
+        children,
       };
 
       flatGroups.push(group);
 
       // Continue traversing children
       const newParentChain = [...parentChain, node.id];
-      node.children.forEach((child) => traverse(child, level + 1, newParentChain));
+      node.children.forEach((child) =>
+        traverse(child, level + 1, newParentChain),
+      );
     }
   };
 
@@ -470,12 +498,12 @@ export const toFlatGroups = (data) => {
 /**
  * Converts the tree structure to a hierarchical format where each node contains
  * its full item data and children are nested with their data
- * 
+ *
  * @param {Object} data - Object containing items and tree
  * @param {Object} data.items - Map of item IDs to item data
  * @param {Array} data.tree - Tree structure with nodes containing id and children
  * @returns {Array} Hierarchical tree with full item data at each node
- * 
+ *
  * @example
  * // Input: { items: { 'f1': { name: 'Folder' }, 'f2': { name: 'File' } }, tree: [{ id: 'f1', children: [{ id: 'f2', children: [] }] }] }
  * // Output: [{ id: 'f1', name: 'Folder', children: [{ id: 'f2', name: 'File', children: [] }] }]
@@ -485,10 +513,13 @@ export const toTreeStructure = (data) => {
 
   const traverse = (node, level = 0, parentChain = []) => {
     // Build full label from parent chain
-    const parentLabels = parentChain.map(parentId => items[parentId]?.name).filter(Boolean);
-    const fullLabel = parentLabels.length > 0 
-      ? `${parentLabels.join(' > ')} > ${items[node.id]?.name || ''}`
-      : items[node.id]?.name || '';
+    const parentLabels = parentChain
+      .map((parentId) => items[parentId]?.name)
+      .filter(Boolean);
+    const fullLabel =
+      parentLabels.length > 0
+        ? `${parentLabels.join(" > ")} > ${items[node.id]?.name || ""}`
+        : items[node.id]?.name || "";
 
     // Create the node with full item data
     const result = {
@@ -498,13 +529,15 @@ export const toTreeStructure = (data) => {
       fullLabel,
       parentId: parentChain[parentChain.length - 1] || null,
       hasChildren: node.children && node.children.length > 0,
-      children: node.children ? node.children.map(child => 
-        traverse(child, level + 1, [...parentChain, node.id])
-      ) : []
+      children: node.children
+        ? node.children.map((child) =>
+            traverse(child, level + 1, [...parentChain, node.id]),
+          )
+        : [],
     };
 
     return result;
   };
 
-  return tree.map(node => traverse(node));
+  return tree.map((node) => traverse(node));
 };

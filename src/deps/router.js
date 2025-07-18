@@ -1,6 +1,3 @@
-
-
-
 export default class WebRouter {
   // _routes;
   routerType = "web";
@@ -28,7 +25,7 @@ export default class WebRouter {
       window.history.replaceState(
         {},
         "",
-        `${window.location.pathname}?${newQueryParams.toString()}`
+        `${window.location.pathname}?${newQueryParams.toString()}`,
       );
     } else {
       window.history.replaceState({}, "", window.location.pathname);

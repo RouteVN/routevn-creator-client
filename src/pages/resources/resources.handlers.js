@@ -1,4 +1,3 @@
-
 export const lstrip = (prefix) => {
   return (str) => {
     if (str.startsWith(prefix)) {
@@ -9,17 +8,16 @@ export const lstrip = (prefix) => {
 };
 
 export const handleResourcesClick = (e, deps) => {
-  console.log('iiiiiiiiiiiiiiii')
+  console.log("iiiiiiiiiiiiiiii");
   const { selectResourceRoute } = deps.store;
-  const resourceId = lstrip('resource-')(e.currentTarget.id);
+  const resourceId = lstrip("resource-")(e.currentTarget.id);
   const route = selectResourceRoute(resourceId);
   console.log({
     resourceId,
-    route
-  })
-  deps.subject.dispatch('redirect', {
+    route,
+  });
+  deps.subject.dispatch("redirect", {
     path: route,
-  })
+  });
   // deps.router.redirect(route);
-}
-
+};

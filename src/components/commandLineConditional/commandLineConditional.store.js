@@ -1,8 +1,8 @@
 export const INITIAL_STATE = Object.freeze({
-  conditionType: 'variable',
-  selectedVariable: '',
-  operator: '==',
-  comparisonValue: ''
+  conditionType: "variable",
+  selectedVariable: "",
+  operator: "==",
+  comparisonValue: "",
 });
 
 export const setConditionType = (state, type) => {

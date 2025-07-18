@@ -1,10 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
-  mode: 'current',
+  mode: "current",
   items: [],
   selectedSceneId: undefined,
-  selectedAnimation: 'fade',
+  selectedAnimation: "fade",
 });
 
 export const setMode = (state, payload) => {
@@ -25,37 +25,39 @@ export const setSelectedAnimation = (state, payload) => {
 
 export const toViewData = ({ state, props }, payload) => {
   const allItems = toFlatItems(state.items);
-  const flatItems = allItems.filter(item => item.type === 'folder');
+  const flatItems = allItems.filter((item) => item.type === "folder");
   const flatGroups = toFlatGroups(state.items);
-  
+
   // Find root-level scenes (scenes with no parent folder)
-  const rootScenes = allItems.filter(item => item.type === 'scene' && !item.parentId);
-  
+  const rootScenes = allItems.filter(
+    (item) => item.type === "scene" && !item.parentId,
+  );
+
   // Create a virtual "Root Scenes" group if there are root-level scenes
   const enhancedGroups = [...flatGroups];
   if (rootScenes.length > 0) {
     enhancedGroups.unshift({
-      type: 'virtual-group',
-      name: 'Root Scenes',
-      id: 'root-scenes',
-      fullLabel: 'Root Scenes',
+      type: "virtual-group",
+      name: "Root Scenes",
+      id: "root-scenes",
+      fullLabel: "Root Scenes",
       _level: 0,
-      children: rootScenes
+      children: rootScenes,
     });
   }
 
   const animationOptions = [
-    { value: 'fade', label: 'Fade' },
-    { value: 'slide', label: 'Slide' },
-    { value: 'dissolve', label: 'Dissolve' },
-    { value: 'wipe', label: 'Wipe' },
-    { value: 'none', label: 'None' }
+    { value: "fade", label: "Fade" },
+    { value: "slide", label: "Slide" },
+    { value: "dissolve", label: "Dissolve" },
+    { value: "wipe", label: "Wipe" },
+    { value: "none", label: "None" },
   ];
 
-
   // Get selected scene data
-  const selectedScene = state.selectedSceneId ? 
-    allItems.find(item => item.id === state.selectedSceneId) : null;
+  const selectedScene = state.selectedSceneId
+    ? allItems.find((item) => item.id === state.selectedSceneId)
+    : null;
 
   return {
     mode: state.mode,

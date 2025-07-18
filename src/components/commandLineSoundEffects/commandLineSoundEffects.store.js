@@ -2,7 +2,7 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { nanoid } from "nanoid";
 
 export const INITIAL_STATE = Object.freeze({
-  mode: 'current',
+  mode: "current",
   items: [],
   soundEffects: [], // List of selected sound effects
   currentEditingId: null, // ID of sound effect being edited
@@ -30,22 +30,22 @@ export const addSoundEffect = (state) => {
     id: nanoid(),
     audioId: null,
     fileId: null,
-    trigger: 'click',
-    name: 'New Sound Effect'
+    trigger: "click",
+    name: "New Sound Effect",
   };
   state.soundEffects.push(newSoundEffect);
   state.currentEditingId = newSoundEffect.id;
 };
 
 export const updateSoundEffect = (state, payload) => {
-  const index = state.soundEffects.findIndex(se => se.id === payload.id);
+  const index = state.soundEffects.findIndex((se) => se.id === payload.id);
   if (index !== -1) {
     state.soundEffects[index] = { ...state.soundEffects[index], ...payload };
   }
 };
 
 export const deleteSoundEffect = (state, payload) => {
-  state.soundEffects = state.soundEffects.filter(se => se.id !== payload.id);
+  state.soundEffects = state.soundEffects.filter((se) => se.id !== payload.id);
   if (state.currentEditingId === payload.id) {
     state.currentEditingId = null;
   }
@@ -56,7 +56,7 @@ export const setCurrentEditingId = (state, payload) => {
 };
 
 export const selectCurrentEditingSoundEffect = ({ state }) => {
-  return state.soundEffects.find(se => se.id === state.currentEditingId);
+  return state.soundEffects.find((se) => se.id === state.currentEditingId);
 };
 
 export const setExistingSoundEffects = (state, payload) => {
@@ -64,27 +64,28 @@ export const setExistingSoundEffects = (state, payload) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.items).filter(item => item.type === 'folder');
-  const flatGroups = toFlatGroups(state.items)
-  .map((group) => {
+  const flatItems = toFlatItems(state.items).filter(
+    (item) => item.type === "folder",
+  );
+  const flatGroups = toFlatGroups(state.items).map((group) => {
     return {
       ...group,
       children: group.children.map((child) => {
         const isSelected = child.id === state.tempSelectedAudioId;
         return {
           ...child,
-          bw: isSelected ? 'md' : '',
-        }
+          bw: isSelected ? "md" : "",
+        };
       }),
-    }
+    };
   });
 
   const triggerOptions = [
-    { label: 'On Click', value: 'click' },
-    { label: 'On Hover', value: 'hover' },
-    { label: 'On Enter', value: 'enter' },
-    { label: 'On Exit', value: 'exit' },
-    { label: 'Manual', value: 'manual' }
+    { label: "On Click", value: "click" },
+    { label: "On Hover", value: "hover" },
+    { label: "On Enter", value: "enter" },
+    { label: "On Exit", value: "exit" },
+    { label: "Manual", value: "manual" },
   ];
 
   return {
