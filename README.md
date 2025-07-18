@@ -75,6 +75,13 @@ bun run prepare
 
 This ensures all git hooks are properly configured.
 
+**Note:** If you encounter errors when pushing due to linting issues, run:
+```shell
+bun run lint:fix
+```
+
+This will automatically fix most linting errors. After fixing, you can commit the changes and push again.
+
 Run the project in watch mode:
 ```shell
 bun run watch
