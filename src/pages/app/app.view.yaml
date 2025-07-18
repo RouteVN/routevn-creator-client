@@ -11,6 +11,10 @@ viewDataSchema:
       default: true
 refs: {}
 
+subscriptions:
+  - from: routePop
+    handler: handleWindowPop
+
 template:
   - rtgl-view d=h w=f h=f:
     - $if showSidebar:

@@ -92,13 +92,7 @@ export const handleOnMount = async (deps) => {
     Object.keys(placements.items).forEach((placementId) => {
       const placement = placements.items[placementId];
       if (placement.type === "placement") {
-        processedPlacements[placementId] = {
-          x: placement.x || placement.positionX || 0,
-          y: placement.y || placement.positionY || 0,
-          xa: placement.xa || 0,
-          ya: placement.ya || 0,
-          anchor: placement.anchor || "BottomCenter",
-        };
+        processedPlacements[placementId] = placement;
       }
     });
   }
@@ -188,9 +182,11 @@ export const handleCommandLineSubmit = (e, deps) => {
     const scene = toFlatItems(scenes)
       .filter((item) => item.type === "scene")
       .find((item) => item.id === sceneId);
-    
+
     if (scene) {
-      const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
+      const section = toFlatItems(scene.sections).find(
+        (s) => s.id === sectionId,
+      );
       if (section) {
         const line = toFlatItems(section.lines).find((l) => l.id === lineId);
         if (line && line.presentation?.dialogue?.text) {
@@ -249,7 +245,7 @@ export const handleEditorDataChanged = (e, deps) => {
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
     .find((item) => item.id === sceneId);
-  
+
   let existingDialogue = {};
   if (scene) {
     const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
