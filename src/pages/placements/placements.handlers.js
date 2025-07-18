@@ -3,10 +3,10 @@ import { nanoid } from "nanoid";
 export const handleOnMount = (deps) => {
   const { store, repository } = deps;
   const { placements } = repository.getState();
-  store.setItems(placements || { tree: [], items: {} })
+  store.setItems(placements || { tree: [], items: {} });
 
-  return () => { }
-}
+  return () => {};
+};
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
@@ -29,7 +29,8 @@ export const handlePlacementItemClick = (e, deps) => {
 
 export const handlePlacementCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name, x, y, scale, anchor, rotation } = e.detail;
+  const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
+    e.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -43,8 +44,10 @@ export const handlePlacementCreated = (e, deps) => {
         name: name,
         x,
         y,
-        scale: scale,
-        anchor: anchor,
+        scaleX: scaleX,
+        scaleY: scaleY,
+        anchorX: anchorX,
+        anchorY: anchorY,
         rotation: rotation,
       },
     },
@@ -77,7 +80,15 @@ export const handlePlacementEdited = (e, deps) => {
   const { store, render, repository, subject } = deps;
   const { itemId, name, x, y, scale, anchor, rotation } = e.detail;
 
-  console.log('[handlePlacementEdited] Called with:', { itemId, name, x, y, scale, anchor, rotation });
+  console.log("[handlePlacementEdited] Called with:", {
+    itemId,
+    name,
+    x,
+    y,
+    scale,
+    anchor,
+    rotation,
+  });
 
   // Update repository directly
   repository.addAction({
@@ -92,9 +103,9 @@ export const handlePlacementEdited = (e, deps) => {
         y,
         scale,
         anchor,
-        rotation
-      }
-    }
+        rotation,
+      },
+    },
   });
 
   // Update local state and render immediately
@@ -103,7 +114,7 @@ export const handlePlacementEdited = (e, deps) => {
   render();
 
   // Also dispatch to app handlers for any global handling
-  subject.dispatch('update-placement', {
+  subject.dispatch("update-placement", {
     itemId,
     updates: {
       name,
@@ -111,7 +122,7 @@ export const handlePlacementEdited = (e, deps) => {
       y,
       scale,
       anchor,
-      rotation
-    }
+      rotation,
+    },
   });
 };
