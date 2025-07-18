@@ -1,18 +1,24 @@
-import { createWebPatch } from '@rettangoli/fe';
-import { h } from 'snabbdom/build/h';
+import { createWebPatch } from "@rettangoli/fe";
+import { h } from "snabbdom/build/h";
 
-import { createRepository } from './deps/repository';
-import { createUserConfig } from './deps/userConfig';
-import Subject from './deps/subject';
-import createRouteVnHttpClient from './deps/createRouteVnHttpClient';
-import Router from './deps/router';
-import AudioManager from './deps/audioManager';
-import { createImageFileUploader, createAudioFileUploader, createVideoFileUploader, createFontFileUploader, downloadWaveformData } from './deps/createFileUploader';
-import { createFontManager, loadFontFile } from './deps/fontManager';
-import { create2dRenderer } from './deps/2drenderer';
+import { createRepository } from "./deps/repository";
+import { createUserConfig } from "./deps/userConfig";
+import Subject from "./deps/subject";
+import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
+import Router from "./deps/router";
+import AudioManager from "./deps/audioManager";
+import {
+  createImageFileUploader,
+  createAudioFileUploader,
+  createVideoFileUploader,
+  createFontFileUploader,
+  downloadWaveformData,
+} from "./deps/createFileUploader";
+import { createFontManager, loadFontFile } from "./deps/fontManager";
+import { create2dRenderer } from "./deps/2drenderer";
 
 const httpClient = createRouteVnHttpClient({
-  baseUrl: 'http://localhost:8788',
+  baseUrl: "http://localhost:8788",
   headers: {
     "X-Platform": "web",
   },
@@ -20,68 +26,68 @@ const httpClient = createRouteVnHttpClient({
 
 const initialData = {
   project: {
-    name: 'Project 1',
-    description: 'Project 1 description'
+    name: "Project 1",
+    description: "Project 1 description",
   },
   images: {
     items: {},
-    tree: []
+    tree: [],
   },
   animations: {
     items: {},
-    tree: []
+    tree: [],
   },
   audio: {
     items: {},
-    tree: []
+    tree: [],
   },
   videos: {
     items: {},
-    tree: []
+    tree: [],
   },
   characters: {
     items: {},
-    tree: []
+    tree: [],
   },
   fonts: {
     items: {},
-    tree: []
+    tree: [],
   },
   placements: {
     items: {},
-    tree: []
+    tree: [],
   },
   colors: {
     items: {},
-    tree: []
+    tree: [],
   },
   typography: {
     items: {},
-    tree: []
+    tree: [],
   },
   variables: {
     items: {},
-    tree: []
+    tree: [],
   },
   components: {
     items: {},
-    tree: []
+    tree: [],
   },
   layouts: {
     items: {},
-    tree: []
+    tree: [],
   },
   preset: {
     items: {},
-    tree: []
+    tree: [],
   },
   scenes: {
     items: {},
-    tree: []
-  }
-}
+    tree: [],
+  },
+};
 
-const repository = createRepository(initialData, 'repositoryEventStream');
+const repository = createRepository(initialData, "repositoryEventStream");
 const userConfig = createUserConfig();
 
 const subject = new Subject();
@@ -118,8 +124,8 @@ const componentDependencies = {
   fontManager,
   loadFontFile: loadFontFileFunc,
   downloadWaveformData,
-  drenderer
-}
+  drenderer,
+};
 
 const pageDependencies = {
   httpClient,
@@ -135,18 +141,14 @@ const pageDependencies = {
   fontManager,
   loadFontFile: loadFontFileFunc,
   downloadWaveformData,
-  drenderer
-}
+  drenderer,
+};
 
 const deps = {
   components: componentDependencies,
   pages: pageDependencies,
-}
+};
 
 const patch = createWebPatch();
 
-export {
-  h,
-  patch,
-  deps,
-}
+export { h, patch, deps };
