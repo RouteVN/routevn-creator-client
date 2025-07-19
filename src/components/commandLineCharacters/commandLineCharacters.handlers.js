@@ -1,7 +1,7 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleBeforeMount = (deps) => {
-  const { repository, store } = deps;
+  const { repository, store, props } = deps;
   const { characters, placements: transforms } = repository.getState();
   store.setItems({
     items: characters || { tree: [], items: {} },
@@ -9,6 +9,39 @@ export const handleBeforeMount = (deps) => {
   store.setTransforms({
     transforms: transforms || { tree: [], items: {} },
   });
+
+  // Initialize with existing character data if available
+  if (props?.existingCharacters && Array.isArray(props.existingCharacters)) {
+    props.existingCharacters.forEach((existingChar) => {
+      // Find the character data from repository
+      const characterData = toFlatItems(
+        characters || { tree: [], items: {} },
+      ).find((char) => char.id === existingChar.id);
+
+      if (characterData) {
+        // Find sprite data if available
+        let spriteFileId = undefined;
+        if (
+          existingChar.spriteParts?.[0]?.spritePartId &&
+          characterData.sprites
+        ) {
+          const sprite = toFlatItems(characterData.sprites).find(
+            (s) => s.id === existingChar.spriteParts[0].spritePartId,
+          );
+          if (sprite) {
+            spriteFileId = sprite.fileId;
+          }
+        }
+
+        store.addCharacter({
+          ...characterData,
+          transform: existingChar.transformId,
+          spriteId: existingChar.spriteParts?.[0]?.spritePartId,
+          spriteFileId: spriteFileId,
+        });
+      }
+    });
+  }
 };
 
 export const handleCharacterItemClick = (e, deps) => {
@@ -111,7 +144,7 @@ export const handleRemoveCharacterClick = (e, deps) => {
 export const handleTransformChange = (e, deps) => {
   const { store, render } = deps;
   const index = parseInt(e.currentTarget.id.replace("transform-select-", ""));
-  const transform = e.currentTarget.value;
+  const transform = e.detail.value;
 
   store.updateCharacterTransform({ index, transform });
   render();
@@ -185,5 +218,12 @@ export const handleButtonSelectClick = (payload, deps) => {
     });
   }
 
+  render();
+};
+
+export const handleResetClick = (payload, deps) => {
+  const { store, render } = deps;
+
+  store.clearCharacters();
   render();
 };
