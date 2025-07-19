@@ -1,3 +1,11 @@
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail.value || "";
+
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
 export const handleGroupClick = (e, deps) => {
   const { store, render } = deps;
   const groupId = e.currentTarget.id.replace("group-", "");

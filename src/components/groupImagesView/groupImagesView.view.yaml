@@ -29,13 +29,13 @@ propsSchema:
 refs:
   search-input:
     eventListeners:
-      input-keydown:
+      input-change:
         handler: handleSearchInput
   zoom-slider:
     eventListeners:
       change:
         handler: handleZoomChange
-      input:
+      input-change:
         handler: handleZoomChange
   zoom-out:
     eventListeners:
