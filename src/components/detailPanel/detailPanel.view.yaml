@@ -107,7 +107,7 @@ refs:
         handler: handleCloseImageSelectorDialog
 
 template:
-  - rtgl-view w=f h=f p=md w=270 bwl=xs bc=bo:
+  - 'rtgl-view w=f h=f p=md':
       - $if hasContent:
           - $if title:
               - rtgl-text s=lg: ${title}
