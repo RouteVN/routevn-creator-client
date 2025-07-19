@@ -94,10 +94,9 @@ export const handleFormActionClick = (e, deps) => {
 
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
-  const query = e.target.value;
+  const searchQuery = e.target.value || "";
 
-  // Update search query in store
-  store.setSearchQuery(query);
+  store.setSearchQuery(searchQuery);
   render();
 };
 

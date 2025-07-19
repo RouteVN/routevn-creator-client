@@ -19,7 +19,7 @@ propsSchema:
 refs:
   search-input:
     eventListeners:
-      input-keydown:
+      input:
         handler: handleSearchInput
   group-*:
     eventListeners:

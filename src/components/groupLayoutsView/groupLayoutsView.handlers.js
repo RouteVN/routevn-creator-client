@@ -36,7 +36,7 @@ export const handleLayoutItemDoubleClick = (e, deps) => {
 
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
-  const searchQuery = e.detail.value || "";
+  const searchQuery = e.target.value || "";
 
   store.setSearchQuery(searchQuery);
   render();
