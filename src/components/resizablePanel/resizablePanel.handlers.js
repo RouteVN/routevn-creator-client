@@ -1,23 +1,23 @@
 export const handleBeforeMount = (deps) => {
   const { store, attrs, userConfig } = deps;
 
-  const panelType = attrs.panelType || "file-explorer";
+  const panelType = attrs["panel-type"] || "file-explorer";
 
-  // Set different default widths based on panel type
-  let defaultWidth;
-  if (panelType === "detail-panel") {
-    defaultWidth = parseInt(attrs.w) || 270; // Default width for detail panels
-  } else {
-    defaultWidth = parseInt(attrs.w) || 280; // Normal width for file explorer
-  }
+  // Use the template's w attribute as the default width
+  const defaultWidth = parseInt(attrs.w) || 280;
+  const minWidth = parseInt(attrs["min-w"]) || 200;
+  const maxWidth = parseInt(attrs["max-w"]) || 600;
 
   // Load from localStorage using userConfig pattern
   const configKey = `resizablePanel.${panelType}Width`;
   const storedWidth = userConfig.get(configKey);
   const width = storedWidth ? parseInt(storedWidth, 10) : defaultWidth;
 
-  store.initializePanelWidth(attrs);
-  store.setPanelWidth(width, attrs);
+  store.initializePanelWidth({
+    width,
+    minWidth,
+    maxWidth,
+  });
 };
 
 export const handleResizeStart = (e, deps) => {
@@ -27,10 +27,9 @@ export const handleResizeStart = (e, deps) => {
   console.log("🔧 Resizable panel resize start triggered");
 
   const startX = e.clientX;
-  const startWidth = store.getState().panelWidth;
+  const startWidth = store.selectPanelWidth();
 
-  store.setIsResizing(true);
-  store.setResizeStart({ startX, startWidth });
+  store.startResize({ startX, startWidth });
   render();
 
   // Add global event listeners
@@ -44,17 +43,16 @@ export const handleResizeStart = (e, deps) => {
 
 const handleResizeMove = (e, deps) => {
   const { store, render, dispatchEvent, attrs } = deps;
-  const state = store.getState();
 
-  if (!state.isResizing) return;
+  if (!store.selectIsResizing()) return;
 
-  const deltaX = e.clientX - state.startX;
+  const deltaX = e.clientX - store.selectStartX();
 
   // Determine resize direction based on resize-side attr
   const isResizeFromLeft = attrs["resize-side"] === "left";
   const newWidth = isResizeFromLeft
-    ? state.startWidth - deltaX // For left resize, movement is inverted
-    : state.startWidth + deltaX; // For right resize, movement is normal
+    ? store.selectStartWidth() - deltaX // For left resize, movement is inverted
+    : store.selectStartWidth() + deltaX; // For right resize, movement is normal
 
   store.setPanelWidth(newWidth, attrs);
 
@@ -68,9 +66,9 @@ const handleResizeEnd = (e, deps, listeners) => {
   console.log("🔧 Resizable panel resize end");
 
   // Save final width to localStorage using userConfig pattern
-  const panelType = attrs.panelType || "file-explorer";
+  const panelType = attrs["panel-type"] || "file-explorer";
   const configKey = `resizablePanel.${panelType}Width`;
-  const currentWidth = store.getState().panelWidth;
+  const currentWidth = store.selectPanelWidth();
   userConfig.set(configKey, currentWidth.toString());
 
   store.setIsResizing(false);

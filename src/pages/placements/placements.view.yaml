@@ -31,6 +31,6 @@ template:
           - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-group-placements-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-      - rvn-resizable-panel#detail-panel panelType=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+      - rvn-resizable-panel#detail-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - rtgl-view slot="content" w=f h=f:
           - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

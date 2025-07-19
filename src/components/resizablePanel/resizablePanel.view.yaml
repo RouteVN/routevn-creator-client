@@ -23,7 +23,7 @@ attrsSchema:
       default: "right"
       enum: ["left", "right"]
       description: "Which side to show the resize handle"
-    panelType:
+    panel-type:
       type: string
       default: "file-explorer"
       enum: ["file-explorer", "detail-panel"]
