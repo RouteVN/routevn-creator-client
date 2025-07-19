@@ -1,21 +1,3 @@
-import { createUserConfig } from "../../deps/userConfig.js";
-
-const userConfig = createUserConfig();
-
-// Load panel width from localStorage using userConfig pattern
-const getStoredPanelWidth = (
-  defaultWidth = 280,
-  panelType = "file-explorer",
-) => {
-  try {
-    const configKey = `resizablePanel.${panelType}Width`;
-    const stored = userConfig.get(configKey);
-    return stored ? parseInt(stored, 10) : defaultWidth;
-  } catch (e) {
-    return defaultWidth;
-  }
-};
-
 export const INITIAL_STATE = Object.freeze({
   panelWidth: 280, // Will be updated based on attrs
   isResizing: false,
@@ -25,19 +7,10 @@ export const INITIAL_STATE = Object.freeze({
 
 export const setPanelWidth = (state, width, attrs = {}) => {
   // Use attrs for min/max if available, otherwise use defaults
-  const minWidth = parseInt(attrs.minW) || 200;
-  const maxWidth = parseInt(attrs.maxW) || 600;
+  const minWidth = parseInt(attrs["min-w"]) || 200;
+  const maxWidth = parseInt(attrs["max-w"]) || 600;
   const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, width));
   state.panelWidth = constrainedWidth;
-
-  // Save both file-explorer and detail-panel widths to localStorage using userConfig
-  const panelType = attrs.panelType || "file-explorer";
-  try {
-    const configKey = `resizablePanel.${panelType}Width`;
-    userConfig.set(configKey, constrainedWidth.toString());
-  } catch (e) {
-    // Ignore localStorage errors
-  }
 };
 
 export const setIsResizing = (state, isResizing) => {
@@ -60,17 +33,16 @@ export const initializePanelWidth = (state, attrs) => {
     defaultWidth = parseInt(attrs.w) || 280; // Normal width for file explorer
   }
 
-  const storedWidth = getStoredPanelWidth(defaultWidth, panelType);
-  state.panelWidth = storedWidth;
-  state.startWidth = storedWidth;
+  state.panelWidth = defaultWidth;
+  state.startWidth = defaultWidth;
 };
 
 export const toViewData = ({ state, attrs }) => {
   return {
     w: parseInt(attrs.w) || 280,
-    minW: parseInt(attrs.minW) || 200,
-    maxW: parseInt(attrs.maxW) || 600,
-    resizeFrom: attrs.resizeFrom || "right",
+    minW: parseInt(attrs["min-w"]) || 200,
+    maxW: parseInt(attrs["max-w"]) || 600,
+    resizeSide: attrs["resize-side"] || "right",
     panelType: attrs.panelType || "file-explorer",
     panelWidth: state.panelWidth,
     isResizing: state.isResizing,

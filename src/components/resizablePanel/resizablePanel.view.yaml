@@ -1,5 +1,8 @@
 elementName: rvn-resizable-panel
 
+onMount:
+  handler: handleBeforeMount
+
 attrsSchema:
   type: object
   properties:
@@ -7,15 +10,15 @@ attrsSchema:
       type: string
       default: "280"
       description: "Initial width of the panel"
-    minW:
+    min-w:
       type: string
       default: "200"
       description: "Minimum width of the panel"
-    maxW:
+    max-w:
       type: string
       default: "600"
       description: "Maximum width of the panel"
-    resizeFrom:
+    resize-side:
       type: string
       default: "right"
       enum: ["left", "right"]
@@ -33,7 +36,12 @@ refs:
         handler: handleResizeStart
 
 template:
-  - 'rtgl-view h=f w=$(panelWidth) z=1 pos=rel style="width: ${panelWidth}px;"':
+  - 'rtgl-view h=f w=${panelWidth} d=h z=1 pos=rel':
+    - $if resizeSide=="left":
+      - 'rtgl-view#resize-handle h=f z=1000 ph=md style="cursor: col-resize; background: transparent; margin-left: calc(var(--spacing-md) * -1); margin-right: calc(var(--spacing-md) * -1);"':
+        - 'rtgl-view w=1 h=f bgc=mu':
     - rtgl-view h=f w=f:
       - slot name="content":
-    - 'rtgl-view#resize-handle pos=abs w=4 h=f z=1000 cor="${resizeFrom}" bgc=fg style="cursor: col-resize;"':
+    - $if resizeSide=="right":
+      - 'rtgl-view#resize-handle h=f z=1000 ph=md style="cursor: col-resize; background: transparent; margin-left: calc(var(--spacing-md) * -1); margin-right: calc(var(--spacing-md) * -1);"':
+        - 'rtgl-view w=1 h=f bgc=mu':

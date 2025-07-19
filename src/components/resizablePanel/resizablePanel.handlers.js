@@ -1,6 +1,23 @@
-export const handleAfterMount = async (deps) => {
-  const { store, attrs } = deps;
+export const handleBeforeMount = (deps) => {
+  const { store, attrs, userConfig } = deps;
+
+  const panelType = attrs.panelType || "file-explorer";
+
+  // Set different default widths based on panel type
+  let defaultWidth;
+  if (panelType === "detail-panel") {
+    defaultWidth = parseInt(attrs.w) || 270; // Default width for detail panels
+  } else {
+    defaultWidth = parseInt(attrs.w) || 280; // Normal width for file explorer
+  }
+
+  // Load from localStorage using userConfig pattern
+  const configKey = `resizablePanel.${panelType}Width`;
+  const storedWidth = userConfig.get(configKey);
+  const width = storedWidth ? parseInt(storedWidth, 10) : defaultWidth;
+
   store.initializePanelWidth(attrs);
+  store.setPanelWidth(width, attrs);
 };
 
 export const handleResizeStart = (e, deps) => {
@@ -33,8 +50,8 @@ const handleResizeMove = (e, deps) => {
 
   const deltaX = e.clientX - state.startX;
 
-  // Determine resize direction based on resizeFrom attr
-  const isResizeFromLeft = attrs.resizeFrom === "left";
+  // Determine resize direction based on resize-side attr
+  const isResizeFromLeft = attrs["resize-side"] === "left";
   const newWidth = isResizeFromLeft
     ? state.startWidth - deltaX // For left resize, movement is inverted
     : state.startWidth + deltaX; // For right resize, movement is normal
@@ -45,10 +62,16 @@ const handleResizeMove = (e, deps) => {
 };
 
 const handleResizeEnd = (e, deps, listeners) => {
-  const { store, render } = deps;
+  const { store, render, attrs, userConfig } = deps;
   const { handleMouseMove, handleMouseUp } = listeners;
 
   console.log("🔧 Resizable panel resize end");
+
+  // Save final width to localStorage using userConfig pattern
+  const panelType = attrs.panelType || "file-explorer";
+  const configKey = `resizablePanel.${panelType}Width`;
+  const currentWidth = store.getState().panelWidth;
+  userConfig.set(configKey, currentWidth.toString());
 
   store.setIsResizing(false);
   render();

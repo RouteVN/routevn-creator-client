@@ -30,13 +30,13 @@ refs:
 
 template: 
   - rtgl-view d=h w=f h=f: 
-    - rtgl-view d=h h=f:
-      - rvn-resizable-panel#file-explorer w=300 minW=200 maxW=500 resizeFrom="right":
-        - rtgl-view slot="content" w=f:
+    - rtgl-view d=h h=f w=f:
+      - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+        - rtgl-view slot="content" w=f h=f:
           - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
           - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-group-images-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-resizable-panel#detail-panel panelType=detail-panel w=270 minW=200 maxW=500 resizeFrom="left":
-      - rtgl-view slot="content" w=f:
-        - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+      - rvn-resizable-panel#detail-panel panelType=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+        - rtgl-view slot="content" w=f h=f:
+          - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
