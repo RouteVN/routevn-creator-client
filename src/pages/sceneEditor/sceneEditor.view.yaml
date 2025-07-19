@@ -269,7 +269,7 @@ template:
                 $elif mode == "soundeffects":
                   - rvn-command-line-sound-effects#command-line-sound-effects .existingSfx=soundEffects:
                 $elif mode == "characters":
-                  - rvn-command-line-characters#command-line-characters:
+                  - rvn-command-line-characters#command-line-characters .existingCharacters=characters:
                 $elif mode == "layouts":
                   - rvn-command-line-layouts#command-line-layouts .existingLayout=layout:
                 $elif mode == "scenetransition":

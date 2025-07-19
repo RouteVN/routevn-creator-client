@@ -32,9 +32,9 @@ export const addCharacter = (state, character) => {
 
   state.selectedCharacters.push({
     ...character,
-    transform: defaultTransform,
-    spriteId: undefined,
-    spriteFileId: undefined,
+    transform: character.transform || defaultTransform,
+    spriteId: character.spriteId || undefined,
+    spriteFileId: character.spriteFileId || undefined,
   });
 };
 
