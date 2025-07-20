@@ -1,5 +1,12 @@
 elementName: rvn-keyframe-timeline
 
+attrsSchema:
+  type: object
+  properties:
+    editable:
+      type: string
+      description: Whether the timeline is editable or not
+
 propsSchema:
   type: object
   properties:
@@ -59,7 +66,8 @@ template:
               - rtgl-view d=h w=f av=c:
                   - rtgl-view w=48 av=c d=h:
                       - rtgl-text s=xs: ${property.name}
-                      - rtgl-button#add-keyframe-${property.name} s=xs wh=16 v=gh cur=p ml=xs: +
+                      - $if editable:
+                        - rtgl-button#add-keyframe-${property.name} s=sm wh=16 v=gh cur=p ml=xs: +
                   - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
                       - rtgl-text s=xs: ${property.initialValue}
                   - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
@@ -73,7 +81,7 @@ template:
         $else:
           - rtgl-view w=f av=c ah=c p=lg:
               - rtgl-text s=sm c=mu-fg: "Click Add Properties to add animation properties"
-      - $if showHoverLine:
-          - 'rtgl-view pos=abs ah=c style="top: 0; bottom: 0; left: ${mouseX}px"':
-              - rtgl-text: ${timeDisplay}
-              - rtgl-view h=f w=2 bgc=de:
+      # - $if showHoverLine:
+      #     - 'rtgl-view pos=abs ah=c style="top: 0; bottom: 0; left: ${mouseX}px"':
+      #         - rtgl-text: ${timeDisplay}
+      #         - rtgl-view h=f w=2 bgc=de:

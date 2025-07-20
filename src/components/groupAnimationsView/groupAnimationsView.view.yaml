@@ -59,12 +59,28 @@ refs:
     eventListeners:
       add-keyframe:
         handler: handleAddKeyframeInDialog
+  add-property-popover:
+    eventListeners:
+      click-overlay:
+        handler: handleAddPropertyPopoverClickOverlay
+  add-property-form:
+    eventListeners:
+      action-click:
+        handler: handleAddPropertyFormSubmit
+  add-keyframe-form:
+    eventListeners:
+      action-click:
+        handler: handleAddKeyframeFormSubmit
+  add-keyframe-popover:
+    eventListeners:
+      click-overlay:
+        handler: handleAddKeyframePopoverClickOverlay
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search animations..." value=${searchQuery}: 
+        - rtgl-input#search-input s=sm placeholder="Search animations..." value=${searchQuery}:
         # TODO implment zoom controls (increase/decrease animation size)
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
@@ -98,22 +114,24 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No animations found matching "${searchQuery}"
     - rtgl-view h=33vh:
-  
-  - rtgl-dialog#add-animation-dialog .isOpen=isDialogOpen:
-    - rtgl-view slot=content d=h g=md:
-      - rtgl-view:
+
+  - rtgl-dialog#add-animation-dialog w=80% .isOpen=isDialogOpen:
+    - rtgl-view slot=content d=h g=md w=f:
+      - rtgl-view flex=5:
         - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
         - rtgl-view d=h g=md av=c mb=md:
           - $if propertyVisible:
-            - rtgl-input#initial-value-input s=sm placeholder="Initial value" value=${initialValue} w=100:
             - rtgl-button#add-properties-button v=se s=sm: Add Properties
-          - $if propertySelector.isOpen:
-            - rtgl-view pos=rel:
-              - 'rtgl-view pos=abs z=1000 bgc=bg bw=xs br=md p=sm w=200':
-                - $for property in propertySelector.availableProperties:
 
-                  - rtgl-button#property-${property} data-property=${property} v=gh s=sm w=f mb=xs: ${property}
-        - rvn-keyframe-timeline#dialog-timeline .selectedProperties=selectedProperties:
-      - rtgl-view:
+          - rtgl-popover#add-property-popover .isOpen=propertySelector.isOpen .position=propertySelector.position:
+            - rtgl-form#add-property-form slot=content .form=addPropertyForm:
+
+          - rtgl-popover#add-keyframe-popover .isOpen=addKeyframeFormIsOpen .position=propertySelector.position:
+            - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
+
+        - rtgl-view h=128:
+        - rvn-keyframe-timeline#dialog-timeline editable=true .selectedProperties=selectedProperties:
+
+      - rtgl-view flex=5:
         - rtgl-text: Preview
         - rtgl-view w=300 h=300 bgc=fg:

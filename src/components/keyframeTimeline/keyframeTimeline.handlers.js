@@ -19,13 +19,13 @@ export const handleMouseLeave = (e, deps) => {
 
 export const handleAddKeyframe = (e, deps) => {
   const { dispatchEvent } = deps;
-  const propertyName = e.currentTarget.id.replace("add-keyframe-", "");
+  const property = e.currentTarget.id.replace("add-keyframe-", "");
 
   // Dispatch event to parent to add keyframe - let the parent get the context
   dispatchEvent(
     new CustomEvent("add-keyframe", {
       detail: {
-        propertyName,
+        property,
       },
       bubbles: true,
       composed: true,

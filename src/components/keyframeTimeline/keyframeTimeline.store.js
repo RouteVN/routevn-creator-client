@@ -24,7 +24,7 @@ const getInitialValue = (property) => {
   return defaultValues[property] || 0;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state, props, attrs }) => {
   let selectedProperties = [];
 
   if (props.animationProperties) {
@@ -82,6 +82,7 @@ export const toViewData = ({ state, props }, payload) => {
     mouseX: state.mouseX,
     timeDisplay,
     showHoverLine: state.showHoverLine,
+    editable: attrs.editable,
   };
 
   return result;

@@ -29,6 +29,12 @@ export const handleAnimationItemClick = (e, deps) => {
   );
 };
 
+export const handleAddPropertyPopoverClickOverlay = (_, deps) => {
+  const { store, render } = deps;
+  store.togglePropertySelector();
+  render();
+};
+
 export const handleAddAnimationClick = (e, deps) => {
   const { store, render } = deps;
   e.stopPropagation(); // Prevent group click
@@ -101,12 +107,18 @@ export const handleAddPropertiesClick = (e, deps) => {
   render();
 };
 
-export const handlePropertySelect = (e, deps) => {
+export const handleAddKeyframePopoverClickOverlay = (e, deps) => {
   const { store, render } = deps;
-  const property = e.currentTarget.dataset.property;
 
-  store.addProperty(property);
+  store.hideAddKeyframeForm();
+  render();
+};
+
+export const handleAddPropertyFormSubmit = (e, deps) => {
+  const { store, render } = deps;
+  console.log("handleAddPropertyFormSubmit");
   store.togglePropertySelector();
+  store.addProperty(e.detail.formValues.property);
   render();
 };
 
@@ -121,16 +133,18 @@ export const handleInitialValueChange = (e, deps) => {
 export const handleAddKeyframeInDialog = (e, deps) => {
   const { store, render } = deps;
 
-  // Get property name from either custom event detail or button data attribute
-  const propertyName =
-    e.detail?.propertyName || e.currentTarget.dataset.property;
+  store.showAddKeyframeForm();
 
-  if (!propertyName) {
-    return;
-  }
+  render();
+};
 
-  // Add a keyframe to the property using the store function
-  store.addKeyframeToProperty(propertyName);
-
+export const handleAddKeyframeFormSubmit = (e, deps) => {
+  console.log("handleAddKeyframeFormSubmit", e.detail.formValues);
+  const { store, render } = deps;
+  store.addKeyframe({
+    ...e.detail.formValues,
+    // TODOD don't hardcode. need someone to pass a payload to the form
+    property: "x",
+  });
   render();
 };

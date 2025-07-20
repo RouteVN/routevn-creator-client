@@ -1,3 +1,84 @@
+const addKeyframeForm = {
+  title: "Add Keyframe",
+  fields: [
+    {
+      name: "duration",
+      inputType: "inputText",
+      label: "Duration",
+      required: true,
+    },
+    {
+      name: "value",
+      inputType: "inputText",
+      label: "Value",
+      required: true,
+    },
+    {
+      name: "easing",
+      inputType: "select",
+      label: "Easing",
+      options: [
+        { label: "Linear", value: "linear" },
+        { label: "Ease In", value: "easein" },
+      ],
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Keyframe",
+      },
+    ],
+  },
+};
+
+const addPropertyForm = {
+  title: "Add Property",
+  fields: [
+    {
+      name: "property",
+      inputType: "select",
+      label: "Property",
+      options: [
+        { label: "X", value: "x" },
+        { label: "Y", value: "y" },
+        { label: "Rotation", value: "rotation" },
+      ],
+      required: true,
+    },
+    {
+      name: "initialValue",
+      inputType: "inputText",
+      label: "Initial Value",
+      required: true,
+    },
+    {
+      name: "easing",
+      inputType: "select",
+      label: "Easing",
+      options: [
+        { label: "Linear", value: "linear" },
+        { label: "Ease In", value: "easein" },
+      ],
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Property",
+      },
+    ],
+  },
+};
+
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
@@ -6,6 +87,8 @@ export const INITIAL_STATE = Object.freeze({
   selectedProperties: [],
   initialValue: 0,
   propertyKeyframes: {}, // Store keyframes for each property
+
+  addKeyframeFormIsOpen: false,
 
   defaultValues: {
     name: "",
@@ -55,6 +138,14 @@ export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;
 };
 
+export const showAddKeyframeForm = (state) => {
+  state.addKeyframeFormIsOpen = true;
+};
+
+export const hideAddKeyframeForm = (state) => {
+  state.addKeyframeFormIsOpen = false;
+};
+
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
@@ -81,17 +172,19 @@ export const setInitialValue = (state, value) => {
   state.initialValue = parseFloat(value) || 0;
 };
 
-export const addKeyframeToProperty = (state, propertyName) => {
-  if (!state.propertyKeyframes[propertyName]) {
-    state.propertyKeyframes[propertyName] = [];
+export const addKeyframe = (state, keyframe) => {
+  if (!state.propertyKeyframes[keyframe.property]) {
+    state.propertyKeyframes[keyframe.property] = [];
   }
 
   // Add a new keyframe with 1 second duration
-  state.propertyKeyframes[propertyName].push({
-    duration: 1000,
-    value: state.initialValue,
-    easing: "linear",
+  state.propertyKeyframes[keyframe.property].push({
+    duration: keyframe.duration,
+    value: keyframe.initialValue,
+    easing: keyframe.easing,
   });
+
+  state.addKeyframeFormIsOpen = false;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -168,5 +261,8 @@ export const toViewData = ({ state, props }) => {
     selectedProperties: selectedProperties,
     initialValue: state.initialValue,
     propertyVisible: propertySelector.availableProperties.length !== 0,
+    addPropertyForm,
+    addKeyframeForm,
+    addKeyframeFormIsOpen: state.addKeyframeFormIsOpen,
   };
 };
