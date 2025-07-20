@@ -13,7 +13,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       title: "User Interface",
       path: "/project/resources/colors",
-      icon: "palette",
+      icon: "color",
     },
     // {
     //   title: "System Config",
@@ -23,7 +23,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       title: "Scenes",
       path: "/project/scenes",
-      icon: "film",
+      icon: "script",
     },
     // {
     //   title: "Settings",
