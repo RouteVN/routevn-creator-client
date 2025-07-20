@@ -9,7 +9,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       id: "2",
       label: "Dialogue Box",
-      icon: "message",
+      icon: "dialogue",
       mode: "dialoguebox",
     },
     // {
@@ -21,7 +21,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       id: "4",
       label: "Background",
-      icon: "background",
+      icon: "image",
       mode: "background",
     },
     {
@@ -39,7 +39,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       id: "7",
       label: "Characters",
-      icon: "user",
+      icon: "character",
       mode: "characters",
     },
     {
