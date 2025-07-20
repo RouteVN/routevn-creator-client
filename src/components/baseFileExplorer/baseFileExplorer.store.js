@@ -213,7 +213,7 @@ export const toViewData = ({ state, props }, payload) => {
         : "folderArrowDown"
       : null;
 
-    let bc = "";
+    let bc = "tr";
     let hBgc = "mu";
     let bgc = "";
     if (
