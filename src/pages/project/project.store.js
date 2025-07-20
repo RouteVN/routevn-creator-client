@@ -16,8 +16,7 @@ export const INITIAL_STATE = Object.freeze({
     name: {
       fields: [
         {
-          id: "name",
-          fieldName: "name",
+          name: "name",
           inputType: "inputText",
           label: "Name",
           // description: 'Enter your name',
@@ -42,8 +41,7 @@ export const INITIAL_STATE = Object.freeze({
     description: {
       fields: [
         {
-          id: "description",
-          fieldName: "description",
+          name: "description",
           inputType: "inputText",
           label: "Description",
           // description: 'Enter your name',
