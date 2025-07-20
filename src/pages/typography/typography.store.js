@@ -112,6 +112,7 @@ export const toViewData = ({ state, props }, payload) => {
           colorOptions: colorOptions,
           fontOptions: fontOptions,
           show: !!selectedItemDetails.displayFontSize,
+          editable: true,
         },
         {
           type: "text",

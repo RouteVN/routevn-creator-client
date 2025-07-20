@@ -24,6 +24,8 @@ export const handleSelectChange = (e, deps) => {
           [id]: e.detail.value,
         },
       },
+      bubbles: true,
+      composed: true,
     }),
   );
 };
@@ -124,6 +126,8 @@ export const handleFormActionClick = (e, deps) => {
         detail: {
           formValues: values,
         },
+        bubbles: true,
+        composed: true,
       }),
     );
 
@@ -255,12 +259,11 @@ export const handleEditableTextClick = (e, deps) => {
     position,
     fields: [
       {
-        id: field.id,
-        fieldName: field.id,
+        name: field.id,
         inputType: "inputText",
         label: field.label,
-        // value: '', // Always start with empty value
-        required: true,
+        description: "Enter new name",
+        placeholder: field.value || "",
       },
     ],
     actions: {
