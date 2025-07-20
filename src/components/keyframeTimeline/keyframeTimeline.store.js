@@ -12,36 +12,73 @@ export const hideTimelineLine = (state) => {
   state.showHoverLine = false;
 };
 
+const getInitialValue = (property) => {
+  const defaultValues = {
+    x: 0,
+    y: 0,
+    alpha: 1,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+  };
+  return defaultValues[property] || 0;
+};
+
 export const toViewData = ({ state, props }, payload) => {
-  // For now, hardcode the data - we'll add props later
-  const totalDuration = props.totalDuration || "4s";
+  let selectedProperties = [];
+
+  if (props.animationProperties) {
+    // Main page usage: convert animationProperties object to array
+    selectedProperties = Object.keys(props.animationProperties).map(
+      (propertyName) => ({
+        name: propertyName,
+        initialValue: props.animationProperties[propertyName].initialValue,
+        keyframes: props.animationProperties[propertyName].keyframes,
+      }),
+    );
+  } else if (props.selectedProperties) {
+    // Dialog usage: handle selectedProperties array
+    const selectedPropertiesInput = props.selectedProperties || [];
+    selectedProperties = selectedPropertiesInput.map((item) => {
+      if (typeof item === "string") {
+        // Convert string to object (for dialog usage)
+        return {
+          name: item,
+          initialValue: getInitialValue(item),
+        };
+      } else {
+        // Already an object
+        return item;
+      }
+    });
+  }
+
+  // Calculate total duration based on keyframe durations
+  let maxDuration = 0;
+  if (selectedProperties.length > 0) {
+    selectedProperties.forEach((property) => {
+      if (property.keyframes && property.keyframes.length > 0) {
+        const propertyDuration = property.keyframes.reduce(
+          (sum, keyframe) => sum + (keyframe.duration || 1000),
+          0,
+        );
+        maxDuration = Math.max(maxDuration, propertyDuration);
+      }
+    });
+  }
+  const totalDuration = maxDuration > 0 ? `${maxDuration / 1000}s` : "0s";
 
   // Parse duration to calculate time at mouse position
-  const durationValue = parseFloat(totalDuration.replace("s", ""));
+  const durationValue = maxDuration / 1000;
 
   // Calculate time based on mouse position (assuming timeline width is around 400px)
   const timelineWidth = 400; // approximate width
   const timeAtMouse = (state.mouseX / timelineWidth) * durationValue;
   const timeDisplay = Math.round(timeAtMouse * 10) / 10; // round to 1 decimal
 
-  // Hardcoded tracks data for now
-  const tracks = props.tracks || [
-    {
-      name: "Alpha",
-      keyframes: [
-        { start: 0, duration: 1 },
-        { start: 2, duration: 1 },
-      ],
-    },
-    {
-      name: "Scale",
-      keyframes: [{ start: 1, duration: 2 }],
-    },
-  ];
-
   const result = {
     totalDuration,
-    tracks,
+    selectedProperties,
     mouseX: state.mouseX,
     timeDisplay,
     showHoverLine: state.showHoverLine,

@@ -6,6 +6,19 @@ propsSchema:
     totalDuration:
       type: string
       description: Total duration of the animation (e.g., "4s")
+    selectedProperties:
+      type: array
+      description: Array of selected animation properties (for dialog usage)
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          initialValue:
+            type: number
+    animationProperties:
+      type: object
+      description: Animation properties object with initialValue and keyframes
     tracks:
       type: array
       description: Array of animation tracks
@@ -31,37 +44,35 @@ refs:
         handler: handleMouseMove
       mouseleave:
         handler: handleMouseLeave
+  add-keyframe-*:
+    eventListeners:
+      click:
+        handler: handleAddKeyframe
 
 template:
   - rtgl-view#timeline-container g=md w=f pos=rel:
-      - rtgl-view d=h w=f:
+      - rtgl-view d=h w=f mb=sm:
           - rtgl-view w=f ah=e:
               - rtgl-text s=sm: "Total: ${totalDuration}"
-      - rtgl-view d=h w=f:
-          - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
-          - rtgl-view w=48 av=c:
-          - 'rtgl-view h=16 w=f bgc=mu br=sm pos=rel style="cursor: pointer;"':
-      - rtgl-view h=8:
-      - rtgl-view d=h w=f av=c:
-          - rtgl-view w=48 av=c:
-              - rtgl-text s=xs: Alpha
-          - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
-              - rtgl-text s=xs: 0
-          - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
-              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
-                  - rtgl-text s=xs: 0.2
-              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
-                  - rtgl-text s=xs: 1
-      - rtgl-view d=h w=f av=c:
-          - rtgl-view w=48 av=c:
-              - rtgl-text s=xs: Scale
-          - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
-              - rtgl-text s=xs: 1
-          - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
-              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
-                  - rtgl-text s=xs: 0.5
-              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
-                  - rtgl-text s=xs: 1
+      - $if selectedProperties.length > 0:
+          - $for property in selectedProperties:
+              - rtgl-view d=h w=f av=c:
+                  - rtgl-view w=48 av=c d=h:
+                      - rtgl-text s=xs: ${property.name}
+                      - rtgl-button#add-keyframe-${property.name} s=xs wh=16 v=gh cur=p ml=xs: +
+                  - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
+                      - rtgl-text s=xs: ${property.initialValue}
+                  - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
+                      - $if property.keyframes:
+                          - $for keyframe in property.keyframes:
+                              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e mr=xs:
+                                  - rtgl-text s=xs: ${keyframe.duration}ms
+                        $else:
+                          - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
+                              - rtgl-text s=xs: 1s
+        $else:
+          - rtgl-view w=f av=c ah=c p=lg:
+              - rtgl-text s=sm c=mu-fg: "Click Add Properties to add animation properties"
       - $if showHoverLine:
           - 'rtgl-view pos=abs ah=c style="top: 0; bottom: 0; left: ${mouseX}px"':
               - rtgl-text: ${timeDisplay}

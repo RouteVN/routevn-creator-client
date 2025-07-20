@@ -17,16 +17,11 @@ export const setSelectedItemId = (state, itemId) => {
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const toViewData = ({ state, props }, payload) => {
-  console.log("🎬 Animations toViewData called with state:", state);
-
   const flatItems = toFlatItems(state.animationsData);
-  const flatGroups = toFlatGroups(state.animationsData);
+  const rawFlatGroups = toFlatGroups(state.animationsData);
 
-  console.log("🎬 Animations processed data:", {
-    animationsData: state.animationsData,
-    flatItems,
-    flatGroups,
-  });
+  // Use raw flat groups directly since we're now passing animationProperties object
+  const flatGroups = rawFlatGroups;
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -94,8 +89,6 @@ export const toViewData = ({ state, props }, payload) => {
     detailFields,
     detailEmptyMessage,
   };
-
-  console.log("🎬 Animations returning viewData:", viewData);
 
   return viewData;
 };

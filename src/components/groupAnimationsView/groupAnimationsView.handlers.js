@@ -66,20 +66,71 @@ export const handleFormActionClick = (e, deps) => {
       : store._state || store.state;
     const targetGroupId = storeState.targetGroupId;
 
-    // Forward animation creation to parent
+    // Forward animation creation to parent with selected properties and keyframes
     dispatchEvent(
       new CustomEvent("animation-created", {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
+          properties: storeState.selectedProperties,
+          initialValue: storeState.initialValue,
+          propertyKeyframes: storeState.propertyKeyframes,
         },
         bubbles: true,
         composed: true,
       }),
     );
 
-    // Close dialog
+    // Close dialog and reset everything
     store.toggleDialog();
+    store.setSelectedProperties([]);
+    store.setInitialValue(0);
+    // Reset property keyframes
+    const storeState2 = store.getState
+      ? store.getState()
+      : store._state || store.state;
+    storeState2.propertyKeyframes = {};
     render();
   }
+};
+
+export const handleAddPropertiesClick = (e, deps) => {
+  const { store, render } = deps;
+
+  store.togglePropertySelector();
+  render();
+};
+
+export const handlePropertySelect = (e, deps) => {
+  const { store, render } = deps;
+  const property = e.currentTarget.dataset.property;
+
+  store.addProperty(property);
+  store.togglePropertySelector();
+  render();
+};
+
+export const handleInitialValueChange = (e, deps) => {
+  const { store, render } = deps;
+  const value = e.detail.value;
+
+  store.setInitialValue(value);
+  render();
+};
+
+export const handleAddKeyframeInDialog = (e, deps) => {
+  const { store, render } = deps;
+
+  // Get property name from either custom event detail or button data attribute
+  const propertyName =
+    e.detail?.propertyName || e.currentTarget.dataset.property;
+
+  if (!propertyName) {
+    return;
+  }
+
+  // Add a keyframe to the property using the store function
+  store.addKeyframeToProperty(propertyName);
+
+  render();
 };

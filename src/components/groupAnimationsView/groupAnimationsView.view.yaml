@@ -43,6 +43,22 @@ refs:
     eventListeners:
       action-click:
         handler: handleFormActionClick
+  add-properties-button:
+    eventListeners:
+      click:
+        handler: handleAddPropertiesClick
+  property-*:
+    eventListeners:
+      click:
+        handler: handlePropertySelect
+  initial-value-input:
+    eventListeners:
+      input-change:
+        handler: handleInitialValueChange
+  dialog-timeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeInDialog
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -70,7 +86,7 @@ template:
                                 - rtgl-view flex=1 h=f w=f bw=xs br=md p=md bgc=bg:
                                   - rtgl-text s=h4: ${item.name}
                                   - rtgl-view h=12:
-                                  - rvn-keyframe-timeline:
+                                  - rvn-keyframe-timeline .animationProperties=item.animationProperties totalDuration=${item.duration}:
                         $else:
                           - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
                             - rtgl-text: Add Animation
@@ -87,7 +103,17 @@ template:
     - rtgl-view slot=content d=h g=md:
       - rtgl-view:
         - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
-        - rvn-keyframe-timeline:
+        - rtgl-view d=h g=md av=c mb=md:
+          - $if propertyVisible:
+            - rtgl-input#initial-value-input s=sm placeholder="Initial value" value=${initialValue} w=100:
+            - rtgl-button#add-properties-button v=se s=sm: Add Properties
+          - $if propertySelector.isOpen:
+            - rtgl-view pos=rel:
+              - 'rtgl-view pos=abs z=1000 bgc=bg bw=xs br=md p=sm w=200':
+                - $for property in propertySelector.availableProperties:
+
+                  - rtgl-button#property-${property} data-property=${property} v=gh s=sm w=f mb=xs: ${property}
+        - rvn-keyframe-timeline#dialog-timeline .selectedProperties=selectedProperties:
       - rtgl-view:
         - rtgl-text: Preview
         - rtgl-view w=300 h=300 bgc=fg:

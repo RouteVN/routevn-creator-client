@@ -3,6 +3,9 @@ export const INITIAL_STATE = Object.freeze({
   isDialogOpen: false,
   targetGroupId: null,
   searchQuery: "",
+  selectedProperties: [],
+  initialValue: 0,
+  propertyKeyframes: {}, // Store keyframes for each property
 
   defaultValues: {
     name: "",
@@ -32,6 +35,11 @@ export const INITIAL_STATE = Object.freeze({
       ],
     },
   },
+
+  propertySelector: {
+    isOpen: false,
+    availableProperties: ["x", "y", "alpha", "scaleX", "scaleY", "rotation"],
+  },
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -53,6 +61,37 @@ export const setTargetGroupId = (state, groupId) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
+};
+
+export const togglePropertySelector = (state) => {
+  state.propertySelector.isOpen = !state.propertySelector.isOpen;
+};
+
+export const addProperty = (state, property) => {
+  if (!state.selectedProperties.includes(property)) {
+    state.selectedProperties.push(property);
+  }
+};
+
+export const setSelectedProperties = (state, properties) => {
+  state.selectedProperties = properties;
+};
+
+export const setInitialValue = (state, value) => {
+  state.initialValue = parseFloat(value) || 0;
+};
+
+export const addKeyframeToProperty = (state, propertyName) => {
+  if (!state.propertyKeyframes[propertyName]) {
+    state.propertyKeyframes[propertyName] = [];
+  }
+
+  // Add a new keyframe with 1 second duration
+  state.propertyKeyframes[propertyName].push({
+    duration: 1000,
+    value: state.initialValue,
+    easing: "linear",
+  });
 };
 
 export const toViewData = ({ state, props }) => {
@@ -97,6 +136,27 @@ export const toViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
+  const selectedProperties = state.selectedProperties.map((property) => ({
+    name: property,
+    initialValue: state.initialValue,
+    keyframes: state.propertyKeyframes[property] || [
+      {
+        duration: 1000,
+        value: state.initialValue,
+        easing: "linear",
+      },
+    ],
+  }));
+
+  const propertySelector = {
+    isOpen: state.propertySelector.isOpen,
+    availableProperties: state.propertySelector.availableProperties.filter(
+      (property) => {
+        return !selectedProperties.map((item) => item.name).includes(property);
+      },
+    ),
+  };
+
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
@@ -104,5 +164,9 @@ export const toViewData = ({ state, props }) => {
     isDialogOpen: state.isDialogOpen,
     defaultValues: state.defaultValues,
     form: state.form,
+    propertySelector: propertySelector,
+    selectedProperties: selectedProperties,
+    initialValue: state.initialValue,
+    propertyVisible: propertySelector.availableProperties.length !== 0,
   };
 };
