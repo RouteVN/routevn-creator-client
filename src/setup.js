@@ -16,6 +16,7 @@ import {
 } from "./deps/createFileUploader";
 import { createFontManager, loadFontFile } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
+import { createZoomHandlers } from "./deps/zoomManager";
 
 const httpClient = createRouteVnHttpClient({
   baseUrl: "http://localhost:8788",
@@ -126,6 +127,9 @@ const componentDependencies = {
   downloadWaveformData,
   drenderer,
 };
+
+// Add zoom handlers factory - will be created at runtime with proper deps
+componentDependencies.createZoomHandlers = createZoomHandlers;
 
 const pageDependencies = {
   httpClient,

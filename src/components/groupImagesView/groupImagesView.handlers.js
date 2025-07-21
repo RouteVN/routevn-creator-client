@@ -7,59 +7,27 @@ export const handleSearchInput = (e, deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, render, userConfig } = deps;
-
-  const zoomLevel = userConfig.get("groupImagesView.zoomLevel");
-  store.setZoomLevel(zoomLevel || 1.0);
-
-  render();
+  const { createZoomHandlers } = deps;
+  const zoomHandlers = createZoomHandlers("groupImagesView", deps);
+  return zoomHandlers.handleBeforeMount();
 };
 
 export const handleZoomChange = (e, deps) => {
-  const { store, render, userConfig } = deps;
-  const value = (e.currentTarget && e.currentTarget.value) || 1.0;
-  const zoomLevel = parseFloat(value);
-
-  userConfig.set("groupImagesView.zoomLevel", zoomLevel.toFixed(1));
-
-  store.setZoomLevel(zoomLevel);
-  render();
+  const { createZoomHandlers } = deps;
+  const zoomHandlers = createZoomHandlers("groupImagesView", deps);
+  return zoomHandlers.handleZoomChange(e);
 };
 
-export const handleZoomOut = (e, deps) => {
-  const { store, render, userConfig, getRefIds } = deps;
-  const currentZoom = store.selectCurrentZoomLevel();
-  const newZoom = Math.max(0.5, currentZoom - 0.1);
-
-  store.setZoomLevel(newZoom);
-
-  // Update slider DOM element directly
-  const sliderElement = getRefIds()["zoom-slider"]?.elm;
-  if (sliderElement) {
-    sliderElement.value = newZoom;
-  }
-
-  userConfig.set("groupImagesView.zoomLevel", newZoom.toFixed(1));
-
-  render();
+export const handleZoomOut = (_, deps) => {
+  const { createZoomHandlers } = deps;
+  const zoomHandlers = createZoomHandlers("groupImagesView", deps);
+  return zoomHandlers.handleZoomOut();
 };
 
-export const handleZoomIn = (e, deps) => {
-  const { store, render, userConfig, getRefIds } = deps;
-  const currentZoom = store.selectCurrentZoomLevel();
-  const newZoom = Math.min(4.0, currentZoom + 0.1);
-
-  store.setZoomLevel(newZoom);
-
-  // Update slider DOM element directly
-  const sliderElement = getRefIds()["zoom-slider"]?.elm;
-  if (sliderElement) {
-    sliderElement.value = newZoom;
-  }
-
-  userConfig.set("groupImagesView.zoomLevel", newZoom.toFixed(1));
-
-  render();
+export const handleZoomIn = (_, deps) => {
+  const { createZoomHandlers } = deps;
+  const zoomHandlers = createZoomHandlers("groupImagesView", deps);
+  return zoomHandlers.handleZoomIn();
 };
 
 export const handleGroupClick = (e, deps) => {
