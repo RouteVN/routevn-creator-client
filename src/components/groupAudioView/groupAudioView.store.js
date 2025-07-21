@@ -1,6 +1,7 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: "",
+  zoomLevel: 1.0,
   playingAudio: {
     title: "",
     fileId: undefined,
@@ -19,6 +20,17 @@ export const toggleGroupCollapse = (state, groupId) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
+};
+
+export const setZoomLevel = (state, zoomLevel) => {
+  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+
+  // Only update if the value actually changed (avoid infinite loops)
+  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) {
+    return; // No change needed
+  }
+
+  state.zoomLevel = newZoomLevel;
 };
 
 export const openAudioPlayer = (state, { fileId, fileName }) => {
@@ -77,13 +89,26 @@ export const toViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
+  const baseWidth = 225;
+  const baseHeight = 150;
+  const audioWidth = Math.round(baseWidth * state.zoomLevel);
+  const audioHeight = Math.round(baseHeight * state.zoomLevel);
+  console.log(audioHeight,audioWidth)
+
   return {
     flatGroups,
     playingAudio: state.playingAudio,
     showAudioPlayer: state.showAudioPlayer,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
+    zoomLevel: state.zoomLevel,
+    audioWidth,
+    audioHeight,
     uploadText: "Upload Audio",
     acceptedFileTypes: [".mp3", ".wav", ".ogg", ".aac", ".flac", ".m4a"],
   };
+};
+
+export const selectCurrentZoomLevel = ({ state }) => {
+  return state.zoomLevel || 1.0;
 };

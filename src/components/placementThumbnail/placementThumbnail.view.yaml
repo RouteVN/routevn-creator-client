@@ -3,6 +3,18 @@ elementName: rvn-placement-thumbnail
 handleBeforeMountonUpdate:
   handler: handleOnUpdate
 
+attrsSchema:
+  type: object
+  properties:
+    w: 
+      type: string
+      description: Width of the placement thumbnail
+      default: '320'
+    h:
+      type: string
+      description: Height of the placement thumbnail
+      default: '180'
+
 propsSchema:
   type: object
   properties:
@@ -44,5 +56,5 @@ refs:
     selector: canvas
 
 template:
-  - rtgl-view w=320 h=180:
+  - rtgl-view w=${w} h=${h}:
     - 'canvas#canvas style="width:100%; height:100%;"':

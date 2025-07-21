@@ -1,10 +1,16 @@
 elementName: rvn-group-audio-view
 
-viewDataSchema:
+handleBeforeMountviewDataSchema:
   type: object
   properties:
     searchQuery:
       type: string
+    zoomLevel:
+      type: number
+    audioWidth:
+      type: number
+    audioHeight:
+      type: number
 
 propsSchema:
   type: object
@@ -21,6 +27,18 @@ refs:
     eventListeners:
       input-change:
         handler: handleSearchInput
+  zoom-slider:
+    eventListeners:
+      slider-change:
+        handler: handleZoomChange
+  zoom-out:
+    eventListeners:
+      click:
+        handler: handleZoomOut
+  zoom-in:
+    eventListeners:
+      click:
+        handler: handleZoomIn
   drag-drop-item-*:
     eventListeners:
       file-selected:
@@ -52,8 +70,12 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search audios..." value=${searchQuery}: 
-        # TODO implment zoom controls (increase/decrease audio size)
+        - rtgl-view d=h av=c g=xl w=f:
+          - rtgl-input#search-input s=sm pl=xl placeholder="Search audios..." value=${searchQuery} style="border:none;":
+          - rtgl-view d=h av=c g=sm:
+            - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
+            - rtgl-slider#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
+            - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
             - rtgl-view w=f ph=md:
@@ -73,10 +95,10 @@ template:
                               - 'rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}"':
                                 - $if item.waveformDataFileId:
                                     - rtgl-view:
-                                      - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
-                                      - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
+                                      - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${audioWidth} h=${audioHeight}:
+                                      - rtgl-text w=${audioWidth} ellipsis=true mt=sm: ${item.name}
                                   $else:
-                                    - rtgl-image br=md w=225 h=150 src=/public/project_logo_placeholder.png:
+                                    - rtgl-image br=md w=${audioWidth} h=${audioHeight} src=/public/project_logo_placeholder.png:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:

@@ -1,6 +1,7 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: "",
+  zoomLevel: 1.0,
   isDialogOpen: false,
   targetGroupId: null,
   editMode: false,
@@ -148,6 +149,17 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
+export const setZoomLevel = (state, zoomLevel) => {
+  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+
+  // Only update if the value actually changed (avoid infinite loops)
+  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) {
+    return; // No change needed
+  }
+
+  state.zoomLevel = newZoomLevel;
+};
+
 export const openPlacementFormDialog = (state, options = {}) => {
   const {
     editMode = false,
@@ -287,15 +299,27 @@ export const toViewData = ({ state, props }) => {
     });
   });
 
+  const baseWidth = 320;
+  const baseHeight = 180;
+  const placementWidth = Math.round(baseWidth * state.zoomLevel);
+  const placementHeight = Math.round(baseHeight * state.zoomLevel);
+
   return {
     flatGroups,
     items,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
+    zoomLevel: state.zoomLevel,
+    placementWidth,
+    placementHeight,
     isDialogOpen: state.isDialogOpen,
     editMode: state.editMode,
     editItemId: state.editItemId,
     defaultValues: state.defaultValues,
     form: state.form,
   };
+};
+
+export const selectCurrentZoomLevel = ({ state }) => {
+  return state.zoomLevel || 1.0;
 };

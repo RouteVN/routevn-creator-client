@@ -1,6 +1,7 @@
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: "",
+  zoomLevel: 1.0,
   videoVisible: false,
   selectedVideo: undefined,
 });
@@ -26,6 +27,17 @@ export const setVideoNotVisible = (state) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
+};
+
+export const setZoomLevel = (state, zoomLevel) => {
+  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+
+  // Only update if the value actually changed (avoid infinite loops)
+  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) {
+    return; // No change needed
+  }
+
+  state.zoomLevel = newZoomLevel;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -70,6 +82,11 @@ export const toViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
+  const baseWidth = 200;
+  const baseHeight = 150;
+  const videoWidth = Math.round(baseWidth * state.zoomLevel);
+  const videoHeight = Math.round(baseHeight * state.zoomLevel);
+
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
@@ -84,7 +101,14 @@ export const toViewData = ({ state, props }) => {
       ".mkv",
     ],
     searchQuery: state.searchQuery,
+    zoomLevel: state.zoomLevel,
+    videoWidth,
+    videoHeight,
     videoVisible: state.videoVisible,
     selectedVideo: state.selectedVideo,
   };
+};
+
+export const selectCurrentZoomLevel = ({ state }) => {
+  return state.zoomLevel || 1.0;
 };
