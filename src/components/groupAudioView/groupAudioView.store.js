@@ -93,7 +93,7 @@ export const toViewData = ({ state, props }) => {
   const baseHeight = 150;
   const audioWidth = Math.round(baseWidth * state.zoomLevel);
   const audioHeight = Math.round(baseHeight * state.zoomLevel);
-  console.log(audioHeight,audioWidth)
+  console.log(audioHeight, audioWidth);
 
   return {
     flatGroups,

@@ -20,8 +20,8 @@ export const toViewData = ({ state, attrs, props }) => {
   return {
     isLoading: state.isLoading,
     hasError: state.hasError,
-    w: attrs.w || '250',
-    h: attrs.h || '150',
+    w: attrs.w || "250",
+    h: attrs.h || "150",
     waveformDataFileId: props.waveformDataFileId,
   };
 };
