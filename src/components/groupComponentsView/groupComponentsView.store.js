@@ -84,8 +84,7 @@ export const toViewData = ({ state, props }) => {
       title: "Add Component",
       fields: [
         {
-          id: "name",
-          fieldName: "name",
+          name: "name",
           inputType: "inputText",
           label: "Component Name",
           description: "Enter the component name",

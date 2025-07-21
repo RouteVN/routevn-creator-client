@@ -25,8 +25,7 @@ export const INITIAL_STATE = Object.freeze({
     description: "Create a new project",
     fields: [
       {
-        id: "name",
-        fieldName: "name",
+        name: "name",
         inputType: "inputText",
         label: "Name",
         description: "Enter the name of the project",
@@ -39,8 +38,7 @@ export const INITIAL_STATE = Object.freeze({
         ],
       },
       {
-        id: "description",
-        fieldName: "description",
+        name: "description",
         inputType: "inputText",
         label: "Description",
         description: "Enter the description of the project",

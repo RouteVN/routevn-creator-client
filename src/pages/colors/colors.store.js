@@ -50,6 +50,7 @@ export const toViewData = ({ state, props }, payload) => {
           width: 240,
           height: 60,
           show: !!selectedItemDetails.displayHex,
+          editable: true,
         },
         {
           type: "text",
