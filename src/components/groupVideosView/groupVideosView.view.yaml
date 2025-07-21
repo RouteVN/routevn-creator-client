@@ -1,6 +1,6 @@
 elementName: rvn-group-videos-view
 
-handleBeforeMountviewDataSchema:
+viewDataSchema:
   type: object
   properties:
     searchQuery:

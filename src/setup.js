@@ -126,10 +126,8 @@ const componentDependencies = {
   loadFontFile: loadFontFileFunc,
   downloadWaveformData,
   drenderer,
+  createZoomHandlers,
 };
-
-// Add zoom handlers factory - will be created at runtime with proper deps
-componentDependencies.createZoomHandlers = createZoomHandlers;
 
 const pageDependencies = {
   httpClient,
