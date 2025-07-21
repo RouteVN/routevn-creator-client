@@ -33,9 +33,7 @@ refs:
         handler: handleSearchInput
   zoom-slider:
     eventListeners:
-      change:
-        handler: handleZoomChange
-      input-change:
+      slider-change:
         handler: handleZoomChange
   zoom-out:
     eventListeners:
@@ -76,7 +74,7 @@ template:
           - 'rtgl-input#search-input s=sm pl=xl placeholder="Search images..." value=${searchQuery} style="border:none;"':
           - rtgl-view d=h av=c g=sm:
             - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
-            - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
+            - rtgl-slider#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
             - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
