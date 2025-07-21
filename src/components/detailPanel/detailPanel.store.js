@@ -21,8 +21,7 @@ export const INITIAL_STATE = Object.freeze({
       description: "Edit the text value",
       fields: [
         {
-          id: "text",
-          fieldName: "text",
+          name: "text",
           inputType: "inputTextArea",
           label: "Text",
           description: "Enter the text",
@@ -53,8 +52,7 @@ export const INITIAL_STATE = Object.freeze({
       description: "Edit the color",
       fields: [
         {
-          id: "hex",
-          fieldName: "hex",
+          name: "hex",
           inputType: "colorPicker",
           label: "Hex Value",
           description: "Enter the hex color value (e.g., #ff0000)",
@@ -89,8 +87,7 @@ export const INITIAL_STATE = Object.freeze({
       description: "Edit the typography style",
       fields: [
         {
-          id: "fontColor",
-          fieldName: "fontColor",
+          name: "fontColor",
           inputType: "select",
           label: "Font Color",
           description: "Select a font color",
@@ -99,8 +96,7 @@ export const INITIAL_STATE = Object.freeze({
           required: true,
         },
         {
-          id: "fontStyle",
-          fieldName: "fontStyle",
+          name: "fontStyle",
           inputType: "select",
           label: "Font Style",
           description: "Select a font style",
@@ -109,24 +105,21 @@ export const INITIAL_STATE = Object.freeze({
           required: true,
         },
         {
-          id: "fontSize",
-          fieldName: "fontSize",
+          name: "fontSize",
           inputType: "inputText",
           label: "Font Size",
           description: "Enter the font size (e.g., 16, 18, 24)",
           required: true,
         },
         {
-          id: "fontWeight",
-          fieldName: "fontWeight",
+          name: "fontWeight",
           inputType: "inputText",
           label: "Font Weight",
           description: "Enter the font weight (e.g., normal, bold, 400, 700)",
           required: true,
         },
         {
-          id: "previewText",
-          fieldName: "previewText",
+          name: "previewText",
           inputType: "inputText",
           label: "Preview Text",
           description: "Text to display in the typography preview",
@@ -213,12 +206,12 @@ export const showTypographyDialog = (
   // Update dropdown options dynamically
   if (colorOptions) {
     state.typographyDialog.form.fields.find(
-      (field) => field.id === "fontColor",
+      (field) => field.name === "fontColor",
     ).options = colorOptions;
   }
   if (fontOptions) {
     state.typographyDialog.form.fields.find(
-      (field) => field.id === "fontStyle",
+      (field) => field.name === "fontStyle",
     ).options = fontOptions;
   }
 };
@@ -293,8 +286,7 @@ export const toViewData = ({ state, props }) => {
     ? {
         fields: [
           {
-            id: "name",
-            fieldName: "name",
+            name: "name",
             inputType: "inputText",
             label: "Name",
             value: "", // Always start with empty value

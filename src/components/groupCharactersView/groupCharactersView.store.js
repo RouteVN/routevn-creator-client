@@ -14,16 +14,14 @@ export const INITIAL_STATE = Object.freeze({
     description: "Create a new character",
     fields: [
       {
-        id: "name",
-        fieldName: "name",
+        name: "name",
         inputType: "inputText",
         label: "Name",
         description: "Enter the character name",
         required: true,
       },
       {
-        id: "description",
-        fieldName: "description",
+        name: "description",
         inputType: "inputText",
         label: "Description",
         description: "Enter the character description",

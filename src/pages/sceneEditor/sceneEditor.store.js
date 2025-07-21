@@ -235,8 +235,7 @@ export const toViewData = ({ state, props }, payload) => {
     ? {
         fields: [
           {
-            id: "name",
-            fieldName: "name",
+            name: "name",
             inputType: "inputText",
             label: "Section Name",
             value: currentSection.name || "",

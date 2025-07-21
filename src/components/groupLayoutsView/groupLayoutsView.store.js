@@ -89,8 +89,7 @@ export const toViewData = ({ state, props }) => {
       title: "Add Layout",
       fields: [
         {
-          id: "name",
-          fieldName: "name",
+          name: "name",
           inputType: "inputText",
           label: "Layout Name",
           description: "Enter the layout name",

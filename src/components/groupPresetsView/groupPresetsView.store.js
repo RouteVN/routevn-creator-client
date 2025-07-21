@@ -14,16 +14,14 @@ export const INITIAL_STATE = Object.freeze({
     description: "Create a new preset configuration",
     fields: [
       {
-        id: "name",
-        fieldName: "name",
+        name: "name",
         inputType: "inputText",
         label: "Name",
         description: "Enter the preset name",
         required: true,
       },
       {
-        id: "description",
-        fieldName: "description",
+        name: "description",
         inputType: "inputText",
         label: "Description",
         description: "Enter a description for the preset",
