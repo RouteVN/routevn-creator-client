@@ -55,6 +55,10 @@ refs:
     eventListeners:
       click:
         handler: handleAddKeyframe
+  keyframe-*:
+    eventListeners:
+      contextmenu:
+        handler: handleKeyframeRightClick
 
 template:
   - rtgl-view#timeline-container g=md w=f pos=rel:
@@ -73,7 +77,7 @@ template:
                   - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
                       - $if property.keyframes:
                           - $for keyframe in property.keyframes:
-                              - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e mr=xs:
+                              - rtgl-view#keyframe-${keyframe.id} d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e mr=xs:
                                   - rtgl-text s=xs: ${keyframe.duration}ms
                         $else:
                           - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:

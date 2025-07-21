@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
   const searchQuery = e.detail.value || "";
@@ -116,7 +118,6 @@ export const handleAddKeyframePopoverClickOverlay = (e, deps) => {
 
 export const handleAddPropertyFormSubmit = (e, deps) => {
   const { store, render } = deps;
-  console.log("handleAddPropertyFormSubmit");
   store.togglePropertySelector();
   store.addProperty(e.detail.formValues.property);
   render();
@@ -139,12 +140,30 @@ export const handleAddKeyframeInDialog = (e, deps) => {
 };
 
 export const handleAddKeyframeFormSubmit = (e, deps) => {
-  console.log("handleAddKeyframeFormSubmit", e.detail.formValues);
   const { store, render } = deps;
   store.addKeyframe({
     ...e.detail.formValues,
     // TODOD don't hardcode. need someone to pass a payload to the form
     property: "x",
+    id: nanoid(),
   });
+  render();
+};
+
+export const handleKeyframeRightClick = (e, deps) => {
+  const { render, store } = deps;
+  store.openKeyframeDropdown();
+  render();
+};
+
+export const handleKeyframeDropdownOverlayClick = (e, deps) => {
+  const { render, store } = deps;
+  store.closeKeyframeDropdown();
+  render();
+};
+
+export const handleKeyframeDropdownItemClick = (e, deps) => {
+  const { render, store } = deps;
+  store.closeKeyframeDropdown();
   render();
 };

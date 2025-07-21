@@ -123,6 +123,42 @@ export const INITIAL_STATE = Object.freeze({
     isOpen: false,
     availableProperties: ["x", "y", "alpha", "scaleX", "scaleY", "rotation"],
   },
+
+  keyframeDropdown: {
+    isOpen: false,
+    items: [
+      {
+        label: "edit",
+        type: "item",
+        value: "edit",
+      },
+      {
+        label: "Add to right",
+        type: "item",
+        value: "add-right",
+      },
+      {
+        label: "Add to left",
+        type: "item",
+        value: "add-left",
+      },
+      {
+        label: "Move to right",
+        type: "item",
+        value: "move-right",
+      },
+      {
+        label: "Move to left",
+        type: "item",
+        value: "move-left",
+      },
+      {
+        label: "Delete",
+        type: "item",
+        value: "delete",
+      },
+    ],
+  },
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -148,6 +184,14 @@ export const hideAddKeyframeForm = (state) => {
 
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
+};
+
+export const openKeyframeDropdown = (state) => {
+  state.keyframeDropdown.isOpen = true;
+};
+
+export const closeKeyframeDropdown = (state) => {
+  state.keyframeDropdown.isOpen = false;
 };
 
 export const setSearchQuery = (state, query) => {
@@ -264,5 +308,6 @@ export const toViewData = ({ state, props }) => {
     addPropertyForm,
     addKeyframeForm,
     addKeyframeFormIsOpen: state.addKeyframeFormIsOpen,
+    keyframeDropdown: state.keyframeDropdown,
   };
 };

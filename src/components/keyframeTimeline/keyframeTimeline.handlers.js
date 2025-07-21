@@ -32,3 +32,21 @@ export const handleAddKeyframe = (e, deps) => {
     }),
   );
 };
+
+export const handleKeyframeRightClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  const id = e.currentTarget.id.replace("keyframe-", "");
+
+  e.preventDefault();
+
+  // Dispatch event to parent to add keyframe - let the parent get the context
+  dispatchEvent(
+    new CustomEvent("keyframe-right-click", {
+      detail: {
+        id,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};

@@ -59,6 +59,9 @@ refs:
     eventListeners:
       add-keyframe:
         handler: handleAddKeyframeInDialog
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+
   add-property-popover:
     eventListeners:
       click-overlay:
@@ -75,6 +78,13 @@ refs:
     eventListeners:
       click-overlay:
         handler: handleAddKeyframePopoverClickOverlay
+
+  keyframe-dropdown-menu:
+    eventListeners:
+      click-overlay:
+        handler: handleKeyframeDropdownOverlayClick
+      click-item:
+        handler: handleKeyframeDropdownItemClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -128,6 +138,8 @@ template:
 
           - rtgl-popover#add-keyframe-popover .isOpen=addKeyframeFormIsOpen .position=propertySelector.position:
             - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
+
+          - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdown.items .isOpen=keyframeDropdown.isOpen:
 
         - rtgl-view h=128:
         - rvn-keyframe-timeline#dialog-timeline editable=true .selectedProperties=selectedProperties:
