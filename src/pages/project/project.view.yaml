@@ -29,6 +29,10 @@ refs:
     eventListeners:
       action-click:
         handler: handleFormActionClick
+  project-image:
+    eventListeners:
+      click:
+        handler: handleProjectImageClick
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -42,6 +46,6 @@ template:
           - rtgl-text#form-value-description s=sm: ${project.description}
       - rtgl-view g=sm:
           - rtgl-text s=sm c=mu-fg: Image
-          - rtgl-image w=64 h=64 br=m src=${project.imageUrl}:
+          - rtgl-image#project-image w=64 h=64 br=m src=${project.imageUrl}:
     - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:

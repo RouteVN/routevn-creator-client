@@ -16,6 +16,7 @@ import {
 } from "./deps/createFileUploader";
 import { createFontManager, loadFontFile } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
+import { createFilePicker } from "./deps/filePicker";
 
 const httpClient = createRouteVnHttpClient({
   baseUrl: "http://localhost:8788",
@@ -109,6 +110,7 @@ const uploadFontFiles = createFontFileUploader({
   fontManager,
 });
 const loadFontFileFunc = loadFontFile({ httpClient, fontManager });
+const filePicker = createFilePicker();
 
 const componentDependencies = {
   httpClient,
@@ -125,6 +127,7 @@ const componentDependencies = {
   loadFontFile: loadFontFileFunc,
   downloadWaveformData,
   drenderer,
+  filePicker,
 };
 
 const pageDependencies = {
@@ -142,6 +145,7 @@ const pageDependencies = {
   loadFontFile: loadFontFileFunc,
   downloadWaveformData,
   drenderer,
+  filePicker,
 };
 
 const deps = {

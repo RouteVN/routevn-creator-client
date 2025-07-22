@@ -16,15 +16,12 @@ export const setWaveformData = (state, data) => {
   state.waveformData = data;
 };
 
-export const toViewData = ({ state, props }) => {
-  const width = props.width || 600;
-  const height = props.height || 400;
-
+export const toViewData = ({ state, attrs, props }) => {
   return {
     isLoading: state.isLoading,
     hasError: state.hasError,
-    canvasWidth: width,
-    canvasHeight: height,
+    w: attrs.w || "250",
+    h: attrs.h || "150",
     waveformDataFileId: props.waveformDataFileId,
   };
 };

@@ -9,6 +9,7 @@ export const handleBeforeMount = (deps) => {
 
   store.setProjectName(project.name);
   store.setProjectDescription(project.description);
+  store.setProjectImageUrl(project.imageUrl);
 };
 
 export const handleClickOverlay = (payload, deps) => {
@@ -59,4 +60,40 @@ export const handleFormActionClick = (e, deps) => {
   }
 
   render();
+};
+
+export const handleProjectImageClick = async (e, deps) => {
+  const { store, render, repository, uploadImageFiles, subject, filePicker } =
+    deps;
+
+  try {
+    const files = await filePicker.open({
+      accept: "image/*",
+      multiple: false,
+    });
+
+    if (files.length === 0) {
+      return; // User cancelled
+    }
+
+    const file = files[0];
+    const successfulUploads = await uploadImageFiles([file], "someprojectId");
+
+    if (successfulUploads.length > 0) {
+      const result = successfulUploads[0];
+      const imageUrl = result.downloadUrl;
+
+      store.setProjectImageUrl(imageUrl);
+      repository.addAction({
+        actionType: "set",
+        target: "project.imageUrl",
+        value: imageUrl,
+      });
+
+      subject.dispatch("project-image-update");
+      render();
+    }
+  } catch (error) {
+    console.error("Project image upload failed:", error);
+  }
 };
