@@ -95,7 +95,7 @@ template:
                       - $if group.hasChildren:
                           - $for item in group.children:
                               - 'rtgl-view#image-item-${item.id} cur=p style="${item.selectedStyle}"':
-                                - rvn-file-image br=md w=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
