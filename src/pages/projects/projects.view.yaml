@@ -36,7 +36,7 @@ refs:
         handler: handleProjectsClick
   create-project-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseDialogue
 
 template:
@@ -51,7 +51,7 @@ template:
             - rtgl-view#project-${project.id} h=64 w=f bw=xs p=md cur=p:
               - rtgl-text s=lg: "${project.name}"
               - rtgl-text s=sm: "${project.description}"
-  
-  - rtgl-dialog#create-project-dialog .isOpen=isOpen:
+
+  - rtgl-dialog#create-project-dialog ?open=${isOpen}:
     - rtgl-view slot=content g=md:
       - rtgl-form#form .defaultValues=defaultValues .form=form w=f:

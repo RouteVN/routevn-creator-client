@@ -58,13 +58,13 @@ refs:
         handler: handleContainerContextMenu
   dropdown-menu:
     eventListeners:
-      click-overlay:
+      close:
         handler: handleDropdownMenuClickOverlay
       click-item:
         handler: handleDropdownMenuClickItem
   popover:
     eventListeners:
-      click-overlay:
+      close:
         handler: handlePopoverClickOverlay
   form:
     eventListeners:
@@ -79,7 +79,7 @@ styles:
     'user-select': 'none'
 
 template:
-  - rtgl-view w=f h=f: 
+  - rtgl-view w=f h=f:
     - 'rtgl-view w=f g=sm pos=rel':
       - rtgl-view w=f h=f:
         - $for item, i in items:
@@ -94,6 +94,6 @@ template:
       - $if targetDragIndex != -2 && targetDropPosition != 'inside':
           - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"':
     - rtgl-view#container w=f h=f:
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
-  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
     - rtgl-form#form slot=content .form=form:

@@ -47,7 +47,7 @@ refs:
         handler: handleAddCharacterClick
   add-character-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseDialog
       submit-form:
         handler: handleSubmitForm
@@ -60,7 +60,7 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search characters..." value=${searchQuery}: 
+        - rtgl-input#search-input s=sm placeholder="Search characters..." value=${searchQuery}:
         # TODO implment zoom controls (increase/decrease character size)
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
@@ -93,7 +93,7 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No characters found matching "${searchQuery}"
     - rtgl-view h=33vh:
-  
-  - rtgl-dialog#add-character-dialog .isOpen=isDialogOpen:
+
+  - rtgl-dialog#add-character-dialog ?open=${isDialogOpen}:
     - rtgl-view slot=content g=md:
       - rtgl-form#character-form .defaultValues=defaultValues .form=form w=f:

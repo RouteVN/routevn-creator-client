@@ -56,21 +56,16 @@ export const toViewData = ({ state, props }, payload) => {
           type: "text",
           label: "Name",
           value: selectedItemDetails.name,
-          id: "name",
+          name: "name",
           editable: true,
         },
         { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
         {
+          name: "color",
           type: "text",
           label: "Hex Value",
           value: selectedItemDetails.displayHex,
           editable: true,
-        },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
         },
       ]
     : [];

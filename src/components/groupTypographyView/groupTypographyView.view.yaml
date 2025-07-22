@@ -41,7 +41,7 @@ refs:
         handler: handleAddTypographyClick
   add-typography-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseDialog
   typography-form:
     eventListeners:
@@ -77,7 +77,7 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No typography found matching "${searchQuery}"
     - rtgl-view h=33vh:
-  
-  - rtgl-dialog#add-typography-dialog .isOpen=isDialogOpen:
+
+  - rtgl-dialog#add-typography-dialog ?open=${isDialogOpen}:
     - rtgl-view slot=content g=md:
       - rtgl-form#typography-form .defaultValues=defaultValues .form=form w=f:

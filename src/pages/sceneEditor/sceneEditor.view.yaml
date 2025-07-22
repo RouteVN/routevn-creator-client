@@ -98,13 +98,13 @@ refs:
         handler: handleSectionAddClick
   dropdown-menu:
     eventListeners:
-      click-overlay:
+      close:
         handler: handleDropdownMenuClickOverlay
       click-item:
         handler: handleDropdownMenuClickItem
   popover:
     eventListeners:
-      click-overlay:
+      close:
         handler: handlePopoverClickOverlay
   form:
     eventListeners:
@@ -199,7 +199,7 @@ template:
                       - rtgl-view flex=1:
                       - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
                           - rtgl-text s=sm: "<>"
-                  - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
+                  - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv':
                       - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId:
                       - rtgl-view h=30vh:
           - rtgl-view w=1 h=f bgc=mu:
@@ -276,6 +276,6 @@ template:
                   - rvn-command-line-scene-transition#command-line-scene-transition:
                 $elif mode == "conditional":
                   - rvn-command-line-conditional#command-line-conditional:
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
-  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:

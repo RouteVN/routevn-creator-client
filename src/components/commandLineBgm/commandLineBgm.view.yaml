@@ -69,9 +69,9 @@ template:
               - rtgl-text s=sm c=mu-fg mb=lg: ">"
               - rtgl-text s=sm c=mu-fg mb=lg: Audio Selection
           - 'rtgl-view d=h w=f g=lg style="min-height: 0;"':
-              - rtgl-view h=f flex=1 sv=true:
+              - rtgl-view h=f flex=1 sv:
                   - rvn-base-file-explorer#base-file-explorer .items=items:
-              - rtgl-view h=f flex=2 sv=true g=lg:
+              - rtgl-view h=f flex=2 sv g=lg:
                   - $for group in groups:
                       - rtgl-view g=md:
                           - rtgl-text: ${group.name}

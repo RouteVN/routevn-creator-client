@@ -35,7 +35,7 @@ refs:
         handler: handleAddAnimationClick
   add-animation-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseDialog
       submit-form:
         handler: handleSubmitForm
@@ -48,7 +48,7 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search animations..." value=${searchQuery}: 
+        - rtgl-input#search-input s=sm placeholder="Search animations..." value=${searchQuery}:
         # TODO implment zoom controls (increase/decrease animation size)
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
@@ -82,8 +82,8 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No animations found matching "${searchQuery}"
     - rtgl-view h=33vh:
-  
-  - rtgl-dialog#add-animation-dialog .isOpen=isDialogOpen:
+
+  - rtgl-dialog#add-animation-dialog ?open=${isDialogOpen}:
     - rtgl-view slot=content d=h g=md:
       - rtgl-view:
         - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
