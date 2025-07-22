@@ -25,5 +25,5 @@ refs:
 
 
 template:
-  - rtgl-sidebar#sidebar mode=shrunk-lg header=${header} items=${itemsEncoded}: []
+  - rtgl-sidebar#sidebar mode=shrunk-lg .header=header .items=items: []
   

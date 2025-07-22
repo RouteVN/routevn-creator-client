@@ -45,7 +45,7 @@ export const setProjectImageUrl = (state, imageUrl) => {
 export const toViewData = ({ state, props }, payload) => {
   return {
     ...state,
-    header: encodeURIComponent(JSON.stringify(state.header)),
-    itemsEncoded: encodeURIComponent(JSON.stringify(state.items)),
+    header: state.header,
+    itemsEncoded: state.items,
   };
 };
