@@ -1,8 +1,134 @@
+const addKeyframeForm = {
+  title: "Add Keyframe",
+  fields: [
+    {
+      name: "duration",
+      inputType: "inputText",
+      label: "Duration",
+      required: true,
+    },
+    {
+      name: "value",
+      inputType: "inputText",
+      label: "Value",
+      required: true,
+    },
+    {
+      name: "easing",
+      inputType: "select",
+      label: "Easing",
+      options: [
+        { label: "Linear", value: "linear" },
+        { label: "Ease In", value: "easein" },
+      ],
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Keyframe",
+      },
+    ],
+  },
+};
+
+const updateKeyframeForm = {
+  ...addKeyframeForm,
+  title: "Edit Keyframe",
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Update Keyframe",
+      },
+    ],
+  },
+};
+
+const propertyOptions = [
+  { label: "X", value: "x" },
+  { label: "Y", value: "y" },
+  { label: "Rotation", value: "rotation" },
+];
+
+const createAddPropertyForm = (propertyOptions) => {
+  return {
+    title: "Add Property",
+    fields: [
+      {
+        name: "property",
+        inputType: "select",
+        label: "Property",
+        options: propertyOptions,
+        required: true,
+      },
+      {
+        name: "initialValue",
+        inputType: "inputText",
+        label: "Initial Value",
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Add Property",
+        },
+      ],
+    },
+  };
+};
+
+const keyframeDropdownItems = [
+  {
+    label: "edit",
+    type: "item",
+    value: "edit",
+  },
+  {
+    label: "Add to right",
+    type: "item",
+    value: "add-right",
+  },
+  {
+    label: "Add to left",
+    type: "item",
+    value: "add-left",
+  },
+  {
+    label: "Move to right",
+    type: "item",
+    value: "move-right",
+  },
+  {
+    label: "Move to left",
+    type: "item",
+    value: "move-left",
+  },
+  {
+    label: "Delete",
+    type: "item",
+    value: "delete",
+  },
+];
+
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
   targetGroupId: null,
   searchQuery: "",
+  selectedProperties: [],
+  initialValue: 0,
+  animationProperties: {}, // Store keyframes for each property
 
   defaultValues: {
     name: "",
@@ -31,6 +157,13 @@ export const INITIAL_STATE = Object.freeze({
       ],
     },
   },
+
+  popover: {
+    mode: "none",
+    x: undefined,
+    y: undefined,
+    payload: {},
+  },
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -40,6 +173,24 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
+};
+
+export const selectPopover = ({ state }) => {
+  return state.popover;
+};
+
+export const setPopover = (state, { mode, x, y, payload }) => {
+  state.popover.mode = mode;
+  state.popover.x = x;
+  state.popover.y = y;
+  state.popover.payload = payload;
+};
+
+export const closePopover = (state) => {
+  state.popover.mode = "none";
+  state.popover.x = undefined;
+  state.popover.y = undefined;
+  state.popover.payload = {};
 };
 
 export const toggleDialog = (state) => {
@@ -52,6 +203,37 @@ export const setTargetGroupId = (state, groupId) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
+};
+
+export const addProperty = (state, payload) => {
+  const { property, initialValue } = payload;
+  if (state.animationProperties[property]) {
+    return;
+  }
+  state.animationProperties[property] = {
+    initialValue,
+    keyframes: [],
+  };
+};
+
+export const addKeyframe = (state, keyframe) => {
+  if (!state.animationProperties[keyframe.property]) {
+    state.animationProperties[keyframe.property] = [];
+  }
+
+  state.animationProperties[keyframe.property].keyframes.push({
+    duration: keyframe.duration,
+    easing: keyframe.easing,
+    value: keyframe.value,
+  });
+};
+
+export const updateKeyframe = (state, payload) => {
+  console.log("payload", payload);
+  console.log("state.animationProperties", state.animationProperties);
+  const { property, index, keyframe } = payload;
+  const keyframes = state.animationProperties[property].keyframes;
+  keyframes[index] = keyframe;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -96,12 +278,34 @@ export const toViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
+  const toAddProperties = propertyOptions.filter(
+    (item) => !Object.keys(state.animationProperties).includes(item.value),
+  );
+
+  const addPropertyForm = createAddPropertyForm(toAddProperties);
+
+  console.log("state.animationProperties", state.animationProperties);
+
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
-    isDialogOpen: state.isDialogOpen,
     defaultValues: state.defaultValues,
     form: state.form,
+    isDialogOpen: state.isDialogOpen,
+    animationProperties: state.animationProperties,
+    initialValue: state.initialValue,
+    addPropertyForm,
+    addKeyframeForm,
+    updateKeyframeForm,
+    keyframeDropdownItems,
+    addPropertyButtonVisible: toAddProperties.length !== 0,
+    popover: {
+      ...state.popover,
+      popoverIsOpen: ["addProperty", "addKeyframe", "editKeyframe"].includes(
+        state.popover.mode,
+      ),
+      dropdownMenuIsOpen: ["keyframeMenu"].includes(state.popover.mode),
+    },
   };
 };

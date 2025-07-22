@@ -1,7 +1,3 @@
-export const handleBeforeMount = (deps) => {
-  // Component mounted
-};
-
 export const handleMouseMove = (e, deps) => {
   const { store, render } = deps;
   const rect = e.currentTarget.getBoundingClientRect();
@@ -15,4 +11,45 @@ export const handleMouseLeave = (e, deps) => {
   const { store, render } = deps;
   store.hideTimelineLine(e.clientX);
   render();
+};
+
+export const handleAddKeyframe = (e, deps) => {
+  const { dispatchEvent } = deps;
+  const property = e.currentTarget.id.replace("add-keyframe-", "");
+
+  // Dispatch event to parent to add keyframe - let the parent get the context
+  dispatchEvent(
+    new CustomEvent("add-keyframe", {
+      detail: {
+        property,
+        x: e.clientX,
+        y: e.clientY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleKeyframeRightClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  const [property, index] = e.currentTarget.id
+    .replace("keyframe-", "")
+    .split("-");
+
+  e.preventDefault();
+
+  // Dispatch event to parent to add keyframe - let the parent get the context
+  dispatchEvent(
+    new CustomEvent("keyframe-right-click", {
+      detail: {
+        property,
+        index,
+        x: e.clientX,
+        y: e.clientY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
