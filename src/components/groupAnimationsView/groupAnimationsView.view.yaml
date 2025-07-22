@@ -35,7 +35,7 @@ refs:
         handler: handleAddAnimationClick
   add-animation-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseDialog
       submit-form:
         handler: handleSubmitForm
@@ -125,18 +125,18 @@ template:
             - rtgl-text s=lg c=mu-fg: No animations found matching "${searchQuery}"
     - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-animation-dialog w=80% .isOpen=isDialogOpen:
-    - rtgl-view slot=content d=h g=md w=f:
+  - rtgl-dialog#add-animation-dialog ?open=${isDialogOpen} s=lg:
+    - rtgl-view slot=content d=h g=md:
       - rtgl-view flex=5:
         - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
         - rtgl-view d=h g=md av=c mb=md:
           - $if propertyVisible:
             - rtgl-button#add-properties-button v=se s=sm: Add Properties
 
-          - rtgl-popover#add-property-popover .isOpen=propertySelector.isOpen .position=propertySelector.position:
+          - rtgl-popover#add-property-popover ?open=${propertySelector.isOpen} x=${propertySelector.position.x} y=${propertySelector.position.y}:
             - rtgl-form#add-property-form slot=content .form=addPropertyForm:
 
-          - rtgl-popover#add-keyframe-popover .isOpen=addKeyframeFormIsOpen .position=propertySelector.position:
+          - rtgl-popover#add-keyframe-popover ?open=${addKeyframeFormIsOpen} x=${propertySelector.position.x} y=${propertySelector.position.y}:
             - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
 
           - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdown.items .isOpen=keyframeDropdown.isOpen:

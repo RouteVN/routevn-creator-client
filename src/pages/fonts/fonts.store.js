@@ -73,7 +73,7 @@ export const toViewData = ({ state, props }, payload) => {
           type: "text",
           label: "Name",
           value: selectedItemDetails.name,
-          id: "name",
+          name: "name",
           editable: true,
         },
         { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
@@ -88,12 +88,6 @@ export const toViewData = ({ state, props }, payload) => {
           label: "File Size",
           value: selectedItemDetails.displayFileSize,
           show: !!selectedItemDetails.displayFileSize,
-        },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
         },
       ]
     : [];

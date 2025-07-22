@@ -16,16 +16,14 @@ export const INITIAL_STATE = Object.freeze({
     description: "Create a new color",
     fields: [
       {
-        id: "name",
-        fieldName: "name",
+        name: "name",
         inputType: "inputText",
         label: "Name",
         description: "Enter the color name",
         required: true,
       },
       {
-        id: "hex",
-        fieldName: "hex",
+        name: "hex",
         inputType: "colorPicker",
         label: "Hex Value",
         description: "Enter the hex color value (e.g., #ff0000)",

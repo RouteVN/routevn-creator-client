@@ -2,7 +2,7 @@ export const INITIAL_STATE = Object.freeze({
   project: {
     name: "",
     description: "",
-    // imageUrl: "/public/project_logo_placeholder.png",
+    imageUrl: "/public/project_logo_placeholder.png",
   },
   popover: {
     isOpen: false,
@@ -16,8 +16,7 @@ export const INITIAL_STATE = Object.freeze({
     name: {
       fields: [
         {
-          id: "name",
-          fieldName: "name",
+          name: "name",
           inputType: "inputText",
           label: "Name",
           // description: 'Enter your name',
@@ -42,8 +41,7 @@ export const INITIAL_STATE = Object.freeze({
     description: {
       fields: [
         {
-          id: "description",
-          fieldName: "description",
+          name: "description",
           inputType: "inputText",
           label: "Description",
           // description: 'Enter your name',
@@ -93,6 +91,10 @@ export const setProjectName = (state, name) => {
 
 export const setProjectDescription = (state, description) => {
   state.project.description = description;
+};
+
+export const setProjectImageUrl = (state, imageUrl) => {
+  state.project.imageUrl = imageUrl;
 };
 
 export const toViewData = ({ state, props }, payload) => {

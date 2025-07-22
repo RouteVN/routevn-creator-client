@@ -1,10 +1,15 @@
 export const INITIAL_STATE = Object.freeze({
-  items: [
-    {
-      title: "Project",
-      path: "/project",
-      icon: "home",
+  header: {
+    label: "Sidebar",
+    path: "/project",
+    image: {
+      src: "/public/project_logo_placeholder.png",
+      width: 48,
+      height: 48,
+      alt: "Sidebar",
     },
+  },
+  items: [
     {
       title: "Assets",
       path: "/project/resources/images",
@@ -13,7 +18,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       title: "User Interface",
       path: "/project/resources/colors",
-      icon: "palette",
+      icon: "color",
     },
     // {
     //   title: "System Config",
@@ -23,7 +28,7 @@ export const INITIAL_STATE = Object.freeze({
     {
       title: "Scenes",
       path: "/project/scenes",
-      icon: "film",
+      icon: "script",
     },
     // {
     //   title: "Settings",
@@ -33,9 +38,14 @@ export const INITIAL_STATE = Object.freeze({
   ],
 });
 
+export const setProjectImageUrl = (state, imageUrl) => {
+  state.header.image.src = imageUrl;
+};
+
 export const toViewData = ({ state, props }, payload) => {
   return {
     ...state,
-    itemsEncoded: encodeURIComponent(JSON.stringify(state.items)),
+    header: state.header,
+    itemsEncoded: state.items,
   };
 };

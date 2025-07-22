@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@rettangoli/fe": "^0.0.7-rc6",
+    "@rettangoli/fe": "^0.0.7-rc8",
     "esbuild": "^0.25.5",
     "immer": "^10.1.1",
     "js-yaml": "^4.1.0",
@@ -15,7 +15,7 @@
     "vite": "^6.3.5"
   },
   "scripts": {
-    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && bunx rtgl fe build",
+    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl fe build && rtgl ui build-svg",
     "watch": "rtgl fe watch",
     "lint": "bunx prettier --check src",
     "lint:fix": "bunx prettier --check --write src",

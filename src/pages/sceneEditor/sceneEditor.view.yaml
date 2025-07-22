@@ -98,13 +98,13 @@ refs:
         handler: handleSectionAddClick
   dropdown-menu:
     eventListeners:
-      click-overlay:
+      close:
         handler: handleDropdownMenuClickOverlay
       click-item:
         handler: handleDropdownMenuClickItem
   popover:
     eventListeners:
-      click-overlay:
+      close:
         handler: handlePopoverClickOverlay
   form:
     eventListeners:
@@ -199,7 +199,7 @@ template:
                       - rtgl-view flex=1:
                       - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
                           - rtgl-text s=sm: "<>"
-                  - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv=true':
+                  - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv':
                       - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId:
                       - rtgl-view h=30vh:
           - rtgl-view w=1 h=f bgc=mu:
@@ -215,24 +215,24 @@ template:
                   - rtgl-view g=md w=f:
                       - $if background:
                           - rtgl-view#background-action g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
-                              - rtgl-svg svg=text wh=24:
+                              - rtgl-svg svg=image wh=24:
                               - rvn-file-image fileId=${backgroundImage.fileId} w=50 h=35:
                               - rtgl-text s=sm: ${backgroundImage.name}
                       - $if layout:
                           - rtgl-view#layout-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=text wh=24:
+                              - rtgl-svg svg=layout wh=24:
                               - rtgl-text s=sm: ${layoutData.name}
                       - $if bgm:
                           - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=text wh=24:
+                              - rtgl-svg svg=audio wh=24:
                               - rtgl-text s=sm: ${bgmAudio.name}
                       - $if soundEffects:
                           - rtgl-view#sound-effects-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=text wh=24:
+                              - rtgl-svg svg=audio wh=24:
                               - rtgl-text s=sm: ${soundEffectsNames}
                       - $if characters:
                           - rtgl-view#characters-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=text wh=24:
+                              - rtgl-svg svg=character wh=24:
                               - rtgl-view d=h g=sm av=c:
                                   - $for charData, i in charactersData:
                                       - $if charData.sprite && charData.sprite.fileId:
@@ -242,12 +242,12 @@ template:
                                               - rtgl-text s=xs: No Sprite
                               - rtgl-text s=sm: ${charactersNames}
                       - $if sceneTransition:
-                          - rtgl-view#scene-transition-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                          - rtgl-view#scene g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=text wh=24:
                               - rtgl-text s=sm: "Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})"
                       - $if dialogue:
                           - rtgl-view#dialogue-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=text wh=24:
+                              - rtgl-svg svg=dialogue wh=24:
                               - $if dialogueCharacterData:
                                   - rvn-file-image fileId=${dialogueCharacterData.fileId} w=32 h=32 br=f:
                               - rtgl-text s=sm: "Dialogue Box: ${dialogueData.name}"
@@ -276,6 +276,6 @@ template:
                   - rvn-command-line-scene-transition#command-line-scene-transition:
                 $elif mode == "conditional":
                   - rvn-command-line-conditional#command-line-conditional:
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
-  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:

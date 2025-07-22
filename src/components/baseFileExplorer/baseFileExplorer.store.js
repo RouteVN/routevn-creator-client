@@ -213,7 +213,7 @@ export const toViewData = ({ state, props }, payload) => {
         : "folderArrowDown"
       : null;
 
-    let bc = "";
+    let bc = "tr";
     let hBgc = "mu";
     let bgc = "";
     if (
@@ -257,8 +257,7 @@ export const toViewData = ({ state, props }, payload) => {
     ? {
         fields: [
           {
-            id: "name",
-            fieldName: "name",
+            name: "name",
             inputType: "inputText",
             label: "Name",
             value: currentItem.name || "",

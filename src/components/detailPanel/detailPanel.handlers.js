@@ -24,6 +24,8 @@ export const handleSelectChange = (e, deps) => {
           [id]: e.detail.value,
         },
       },
+      bubbles: true,
+      composed: true,
     }),
   );
 };
@@ -124,10 +126,12 @@ export const handleFormActionClick = (e, deps) => {
         detail: {
           formValues: values,
         },
+        bubbles: true,
+        composed: true,
       }),
     );
 
-    console.log("item-update event dispatched");
+    console.log("item-update event dispatched", values);
   }
 };
 
@@ -235,9 +239,9 @@ export const handleEditableTextClick = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
 
-  const fieldId = e.currentTarget.id.replace("editable-text-", "");
+  const fieldName = e.currentTarget.id.replace("editable-text-", "");
 
-  const field = store.selectField(fieldId);
+  const field = store.selectField(fieldName);
 
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
@@ -255,12 +259,11 @@ export const handleEditableTextClick = (e, deps) => {
     position,
     fields: [
       {
-        id: field.id,
-        fieldName: field.id,
+        name: field.name,
         inputType: "inputText",
         label: field.label,
-        // value: '', // Always start with empty value
-        required: true,
+        description: "Enter new name",
+        placeholder: field.value || "",
       },
     ],
     actions: {

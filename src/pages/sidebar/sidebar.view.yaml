@@ -5,6 +5,8 @@ description: okok
 viewDataSchema:
   type: object
   properties:
+    header:
+      type: object
     items:
       type: array
       items:
@@ -18,8 +20,10 @@ refs:
     eventListeners:
       itemClick:
         handler: handleItemClick
+      headerClick:
+        handler: handleHeaderClick
 
 
 template:
-  - rtgl-sidebar#sidebar mode=shrunk-lg items=${itemsEncoded}: []
+  - rtgl-sidebar#sidebar mode=shrunk-lg .header=header .items=items: []
   

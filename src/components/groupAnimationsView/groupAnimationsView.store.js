@@ -99,8 +99,7 @@ export const INITIAL_STATE = Object.freeze({
     description: "Create a new animation",
     fields: [
       {
-        id: "name",
-        fieldName: "name",
+        name: "name",
         inputType: "inputText",
         label: "Name",
         description: "Enter the animation name",
