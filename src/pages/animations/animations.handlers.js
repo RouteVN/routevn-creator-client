@@ -38,7 +38,34 @@ export const handleAnimationItemClick = (e, deps) => {
 
 export const handleAnimationCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name } = e.detail;
+  const { groupId, name, properties, initialValue, propertyKeyframes } =
+    e.detail;
+
+  // Create animation properties object based on selected properties
+  const animationProperties = {};
+  if (properties && properties.length > 0) {
+    properties.forEach((property) => {
+      const propInitialValue =
+        initialValue !== undefined ? initialValue : getInitialValue(property);
+
+      // Use the keyframes from the dialog if available, otherwise create default keyframe
+      const keyframes =
+        propertyKeyframes && propertyKeyframes[property]
+          ? propertyKeyframes[property]
+          : [
+              {
+                duration: 1000,
+                value: propInitialValue,
+                easing: "linear",
+              },
+            ];
+
+      animationProperties[property] = {
+        initialValue: propInitialValue,
+        keyframes: keyframes,
+      };
+    });
+  }
 
   // Add new animation to repository
   repository.addAction({
@@ -53,6 +80,7 @@ export const handleAnimationCreated = (e, deps) => {
         name: name,
         duration: "4s",
         keyframes: 3,
+        animationProperties,
       },
     },
   });
@@ -61,8 +89,23 @@ export const handleAnimationCreated = (e, deps) => {
   const { animations } = repository.getState();
   store.setItems(animations);
 
-  console.log(`Animation "${name}" created successfully in group ${groupId}`);
+  console.log(
+    `Animation "${name}" created successfully in group ${groupId} with properties:`,
+    properties,
+  );
   render();
+};
+
+const getInitialValue = (property) => {
+  const defaultValues = {
+    x: 0,
+    y: 0,
+    alpha: 1,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+  };
+  return defaultValues[property] || 0;
 };
 
 export const handleDetailPanelItemUpdate = (e, deps) => {

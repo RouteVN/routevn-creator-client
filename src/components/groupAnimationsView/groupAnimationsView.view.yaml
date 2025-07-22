@@ -37,12 +37,59 @@ refs:
     eventListeners:
       close:
         handler: handleCloseDialog
-      submit-form:
-        handler: handleSubmitForm
+      # submit-form:
+      #   handler: handleSubmitForm
   animation-form:
     eventListeners:
       action-click:
         handler: handleFormActionClick
+  add-properties-button:
+    eventListeners:
+      click:
+        handler: handleAddPropertiesClick
+  property-*:
+    eventListeners:
+      click:
+        handler: handlePropertySelect
+  initial-value-input:
+    eventListeners:
+      input-change:
+        handler: handleInitialValueChange
+  dialog-timeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeInDialog
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+
+  add-property-popover:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+  add-property-form:
+    eventListeners:
+      action-click:
+        handler: handleAddPropertyFormSubmit
+  add-keyframe-form:
+    eventListeners:
+      action-click:
+        handler: handleAddKeyframeFormSubmit
+  add-keyframe-popover:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+  edit-keyframe-form:
+    eventListeners:
+      action-click:
+        handler: handleEditKeyframeFormSubmit
+  keyframe-dropdown-menu:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+      click-item:
+        handler: handleKeyframeDropdownItemClick
+
+
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -70,7 +117,7 @@ template:
                                 - rtgl-view flex=1 h=f w=f bw=xs br=md p=md bgc=bg:
                                   - rtgl-text s=h4: ${item.name}
                                   - rtgl-view h=12:
-                                  - rvn-keyframe-timeline:
+                                  - rvn-keyframe-timeline .animationProperties=item.animationProperties totalDuration=${item.duration}:
                         $else:
                           - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
                             - rtgl-text: Add Animation
@@ -83,11 +130,25 @@ template:
             - rtgl-text s=lg c=mu-fg: No animations found matching "${searchQuery}"
     - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-animation-dialog ?open=${isDialogOpen}:
+  - rtgl-dialog#add-animation-dialog ?open=${isDialogOpen} s=lg:
     - rtgl-view slot=content d=h g=md:
-      - rtgl-view:
+      - rtgl-view flex=5:
         - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
-        - rvn-keyframe-timeline:
-      - rtgl-view:
+        - rtgl-view d=h g=md av=c mb=md:
+          - $if addPropertyButtonVisible:
+            - rtgl-button#add-properties-button v=se s=sm: Add Properties
+        - rtgl-view h=128:
+        - rvn-keyframe-timeline#dialog-timeline editable=true .animationProperties=animationProperties:
+
+      - rtgl-view flex=5:
         - rtgl-text: Preview
-        - rtgl-view w=300 h=300 bgc=fg:
+        - rtgl-view w=f h=300 bgc=fg:
+
+      - rtgl-popover#add-property-popover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
+        - $if popover.mode == 'addProperty':
+          - rtgl-form#add-property-form slot=content .form=addPropertyForm:
+        - $if popover.mode == 'addKeyframe':
+          - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
+        - $if popover.mode == 'editKeyframe':
+          - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm:
+      - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}:
