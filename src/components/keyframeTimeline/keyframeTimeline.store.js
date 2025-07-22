@@ -27,6 +27,8 @@ const getInitialValue = (property) => {
 export const toViewData = ({ state, props, attrs }) => {
   let selectedProperties = [];
 
+  console.log("props.animationProperties", props.animationProperties);
+
   if (props.animationProperties) {
     // Main page usage: convert animationProperties object to array
     selectedProperties = Object.keys(props.animationProperties).map(
@@ -36,21 +38,6 @@ export const toViewData = ({ state, props, attrs }) => {
         keyframes: props.animationProperties[propertyName].keyframes,
       }),
     );
-  } else if (props.selectedProperties) {
-    // Dialog usage: handle selectedProperties array
-    const selectedPropertiesInput = props.selectedProperties || [];
-    selectedProperties = selectedPropertiesInput.map((item) => {
-      if (typeof item === "string") {
-        // Convert string to object (for dialog usage)
-        return {
-          name: item,
-          initialValue: getInitialValue(item),
-        };
-      } else {
-        // Already an object
-        return item;
-      }
-    });
   }
 
   // Calculate total duration based on keyframe durations

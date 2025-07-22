@@ -31,12 +31,6 @@ export const handleAnimationItemClick = (e, deps) => {
   );
 };
 
-export const handleAddPropertyPopoverClickOverlay = (_, deps) => {
-  const { store, render } = deps;
-  store.togglePropertySelector();
-  render();
-};
-
 export const handleAddAnimationClick = (e, deps) => {
   const { store, render } = deps;
   e.stopPropagation(); // Prevent group click
@@ -55,6 +49,12 @@ export const handleCloseDialog = (e, deps) => {
 
   // Close dialog
   store.toggleDialog();
+  render();
+};
+
+export const handleClosePopover = (e, deps) => {
+  const { store, render } = deps;
+  store.closePopover();
   render();
 };
 
@@ -105,21 +105,20 @@ export const handleFormActionClick = (e, deps) => {
 export const handleAddPropertiesClick = (e, deps) => {
   const { store, render } = deps;
 
-  store.togglePropertySelector();
-  render();
-};
+  store.setPopover({
+    mode: "addProperty",
+    x: e.clientX,
+    y: e.clientY,
+  });
 
-export const handleAddKeyframePopoverClickOverlay = (e, deps) => {
-  const { store, render } = deps;
-
-  store.hideAddKeyframeForm();
   render();
 };
 
 export const handleAddPropertyFormSubmit = (e, deps) => {
   const { store, render } = deps;
-  store.togglePropertySelector();
-  store.addProperty(e.detail.formValues.property);
+  const { property, initialValue } = e.detail.formValues;
+  store.addProperty({ property, initialValue });
+  store.closePopover();
   render();
 };
 
@@ -134,36 +133,69 @@ export const handleInitialValueChange = (e, deps) => {
 export const handleAddKeyframeInDialog = (e, deps) => {
   const { store, render } = deps;
 
-  store.showAddKeyframeForm();
+  console.log("e.detail", e.detail);
+  // store.showAddKeyframeForm();
+  store.setPopover({
+    mode: "addKeyframe",
+    x: e.detail.x,
+    y: e.detail.y,
+    payload: {
+      property: e.detail.property,
+    },
+  });
 
   render();
 };
 
 export const handleAddKeyframeFormSubmit = (e, deps) => {
   const { store, render } = deps;
+  const {
+    payload: { property },
+  } = store.selectPopover();
+
+  console.log("e.detail.formValues", e.detail.formValues);
   store.addKeyframe({
     ...e.detail.formValues,
-    // TODOD don't hardcode. need someone to pass a payload to the form
-    property: "x",
-    id: nanoid(),
+    property,
   });
+  store.closePopover();
   render();
 };
 
 export const handleKeyframeRightClick = (e, deps) => {
+  console.log("xxxxxxxxxxxxxxxxxxx", e.detail);
   const { render, store } = deps;
-  store.openKeyframeDropdown();
-  render();
-};
-
-export const handleKeyframeDropdownOverlayClick = (e, deps) => {
-  const { render, store } = deps;
-  store.closeKeyframeDropdown();
+  store.setPopover({
+    mode: "keyframeMenu",
+    x: e.detail.x,
+    y: e.detail.y,
+    payload: {},
+  });
   render();
 };
 
 export const handleKeyframeDropdownItemClick = (e, deps) => {
   const { render, store } = deps;
-  store.closeKeyframeDropdown();
+
+  console.log("e.detail", e.detail);
+  // e.detail.index
+  if (e.detail.item.value === "edit") {
+  }
+
+  render();
+};
+
+export const handleEditKeyframeFormSubmit = (e, deps) => {
+  const { store, render } = deps;
+  const {
+    payload: { property },
+  } = store.selectPopover();
+
+  // store.editKeyframe({
+  //   ...e.detail.formValues,
+  //   // TODOD don't hardcode. need someone to pass a payload to the form
+  //   property,
+  // });
+  store.closePopover();
   render();
 };

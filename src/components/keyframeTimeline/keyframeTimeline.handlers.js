@@ -1,7 +1,3 @@
-export const handleBeforeMount = (deps) => {
-  // Component mounted
-};
-
 export const handleMouseMove = (e, deps) => {
   const { store, render } = deps;
   const rect = e.currentTarget.getBoundingClientRect();
@@ -26,6 +22,8 @@ export const handleAddKeyframe = (e, deps) => {
     new CustomEvent("add-keyframe", {
       detail: {
         property,
+        x: e.clientX,
+        y: e.clientY,
       },
       bubbles: true,
       composed: true,
@@ -44,6 +42,8 @@ export const handleKeyframeRightClick = (e, deps) => {
     new CustomEvent("keyframe-right-click", {
       detail: {
         id,
+        x: e.clientX,
+        y: e.clientY,
       },
       bubbles: true,
       composed: true,

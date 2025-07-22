@@ -36,48 +36,89 @@ const addKeyframeForm = {
   },
 };
 
-const addPropertyForm = {
-  title: "Add Property",
-  fields: [
-    {
-      name: "property",
-      inputType: "select",
-      label: "Property",
-      options: [
-        { label: "X", value: "x" },
-        { label: "Y", value: "y" },
-        { label: "Rotation", value: "rotation" },
-      ],
-      required: true,
-    },
-    {
-      name: "initialValue",
-      inputType: "inputText",
-      label: "Initial Value",
-      required: true,
-    },
-    {
-      name: "easing",
-      inputType: "select",
-      label: "Easing",
-      options: [
-        { label: "Linear", value: "linear" },
-        { label: "Ease In", value: "easein" },
-      ],
-      required: true,
-    },
-  ],
+const updateKeyframeForm = {
+  ...addKeyframeForm,
   actions: {
     layout: "",
     buttons: [
       {
         id: "submit",
         variant: "pr",
-        content: "Add Property",
+        content: "Update Keyframe",
       },
     ],
   },
 };
+
+const propertyOptions = [
+  { label: "X", value: "x" },
+  { label: "Y", value: "y" },
+  { label: "Rotation", value: "rotation" },
+];
+
+const createAddPropertyForm = (propertyOptions) => {
+  return {
+    title: "Add Property",
+    fields: [
+      {
+        name: "property",
+        inputType: "select",
+        label: "Property",
+        options: propertyOptions,
+        required: true,
+      },
+      {
+        name: "initialValue",
+        inputType: "inputText",
+        label: "Initial Value",
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Add Property",
+        },
+      ],
+    },
+  };
+};
+
+const keyframeDropdownItems = [
+  {
+    label: "edit",
+    type: "item",
+    value: "edit",
+  },
+  {
+    label: "Add to right",
+    type: "item",
+    value: "add-right",
+  },
+  {
+    label: "Add to left",
+    type: "item",
+    value: "add-left",
+  },
+  {
+    label: "Move to right",
+    type: "item",
+    value: "move-right",
+  },
+  {
+    label: "Move to left",
+    type: "item",
+    value: "move-left",
+  },
+  {
+    label: "Delete",
+    type: "item",
+    value: "delete",
+  },
+];
 
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
@@ -86,9 +127,7 @@ export const INITIAL_STATE = Object.freeze({
   searchQuery: "",
   selectedProperties: [],
   initialValue: 0,
-  propertyKeyframes: {}, // Store keyframes for each property
-
-  addKeyframeFormIsOpen: false,
+  animationProperties: {}, // Store keyframes for each property
 
   defaultValues: {
     name: "",
@@ -118,45 +157,11 @@ export const INITIAL_STATE = Object.freeze({
     },
   },
 
-  propertySelector: {
-    isOpen: false,
-    availableProperties: ["x", "y", "alpha", "scaleX", "scaleY", "rotation"],
-  },
-
-  keyframeDropdown: {
-    isOpen: false,
-    items: [
-      {
-        label: "edit",
-        type: "item",
-        value: "edit",
-      },
-      {
-        label: "Add to right",
-        type: "item",
-        value: "add-right",
-      },
-      {
-        label: "Add to left",
-        type: "item",
-        value: "add-left",
-      },
-      {
-        label: "Move to right",
-        type: "item",
-        value: "move-right",
-      },
-      {
-        label: "Move to left",
-        type: "item",
-        value: "move-left",
-      },
-      {
-        label: "Delete",
-        type: "item",
-        value: "delete",
-      },
-    ],
+  popover: {
+    mode: "none",
+    x: undefined,
+    y: undefined,
+    payload: {},
   },
 });
 
@@ -169,65 +174,69 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
+export const selectPopover = ({ state }) => {
+  return state.popover;
+};
+
+export const setPopover = (state, { mode, x, y, payload }) => {
+  state.popover.mode = mode;
+  state.popover.x = x;
+  state.popover.y = y;
+  state.popover.payload = payload;
+};
+
+export const closePopover = (state) => {
+  state.popover.mode = "none";
+  state.popover.x = undefined;
+  state.popover.y = undefined;
+  state.popover.payload = {};
+};
+
 export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;
-};
-
-export const showAddKeyframeForm = (state) => {
-  state.addKeyframeFormIsOpen = true;
-};
-
-export const hideAddKeyframeForm = (state) => {
-  state.addKeyframeFormIsOpen = false;
 };
 
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
 
-export const openKeyframeDropdown = (state) => {
-  state.keyframeDropdown.isOpen = true;
-};
-
-export const closeKeyframeDropdown = (state) => {
-  state.keyframeDropdown.isOpen = false;
-};
-
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-export const togglePropertySelector = (state) => {
-  state.propertySelector.isOpen = !state.propertySelector.isOpen;
-};
-
-export const addProperty = (state, property) => {
-  if (!state.selectedProperties.includes(property)) {
-    state.selectedProperties.push(property);
+export const addProperty = (state, payload) => {
+  const { property, initialValue } = payload;
+  if (state.animationProperties[property]) {
+    return;
   }
-};
-
-export const setSelectedProperties = (state, properties) => {
-  state.selectedProperties = properties;
-};
-
-export const setInitialValue = (state, value) => {
-  state.initialValue = parseFloat(value) || 0;
+  state.animationProperties[property] = {
+    initialValue,
+    keyframes: [],
+  };
 };
 
 export const addKeyframe = (state, keyframe) => {
-  if (!state.propertyKeyframes[keyframe.property]) {
-    state.propertyKeyframes[keyframe.property] = [];
+  if (!state.animationProperties[keyframe.property]) {
+    state.animationProperties[keyframe.property] = [];
   }
 
-  // Add a new keyframe with 1 second duration
-  state.propertyKeyframes[keyframe.property].push({
+  state.animationProperties[keyframe.property].keyframes.push({
     duration: keyframe.duration,
     value: keyframe.initialValue,
     easing: keyframe.easing,
+    value: keyframe.value,
   });
+};
 
-  state.addKeyframeFormIsOpen = false;
+export const updateKeyframe = (state, payload) => {
+  const keyframes = state.animationProperties[property];
+
+  if (!keyframes) return;
+
+  const index = keyframes.findIndex((kf) => kf.duration === duration);
+  if (index === -1) return;
+
+  keyframes[index] = { duration, value, easing };
 };
 
 export const toViewData = ({ state, props }) => {
@@ -272,41 +281,34 @@ export const toViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
-  const selectedProperties = state.selectedProperties.map((property) => ({
-    name: property,
-    initialValue: state.initialValue,
-    keyframes: state.propertyKeyframes[property] || [
-      {
-        duration: 1000,
-        value: state.initialValue,
-        easing: "linear",
-      },
-    ],
-  }));
+  const toAddProperties = propertyOptions.filter(
+    (item) => !Object.keys(state.animationProperties).includes(item.value),
+  );
 
-  const propertySelector = {
-    isOpen: state.propertySelector.isOpen,
-    availableProperties: state.propertySelector.availableProperties.filter(
-      (property) => {
-        return !selectedProperties.map((item) => item.name).includes(property);
-      },
-    ),
-  };
+  const addPropertyForm = createAddPropertyForm(toAddProperties);
+
+  console.log("state.animationProperties", state.animationProperties);
 
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
-    isDialogOpen: state.isDialogOpen,
     defaultValues: state.defaultValues,
     form: state.form,
-    propertySelector: propertySelector,
-    selectedProperties: selectedProperties,
+    isDialogOpen: state.isDialogOpen,
+    animationProperties: state.animationProperties,
     initialValue: state.initialValue,
-    propertyVisible: propertySelector.availableProperties.length !== 0,
     addPropertyForm,
     addKeyframeForm,
-    addKeyframeFormIsOpen: state.addKeyframeFormIsOpen,
-    keyframeDropdown: state.keyframeDropdown,
+    updateKeyframeForm,
+    keyframeDropdownItems,
+    addPropertyButtonVisible: toAddProperties.length !== 0,
+    popover: {
+      ...state.popover,
+      popoverIsOpen: ["addProperty", "addKeyframe"].includes(
+        state.popover.mode,
+      ),
+      dropdownMenuIsOpen: ["keyframeMenu"].includes(state.popover.mode),
+    },
   };
 };
