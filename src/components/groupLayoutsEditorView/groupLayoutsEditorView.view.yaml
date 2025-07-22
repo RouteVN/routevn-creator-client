@@ -43,7 +43,7 @@ refs:
         handler: handleAddLayoutClick
   dropdown-menu:
     eventListeners:
-      click-overlay:
+      close:
         handler: handleDropdownMenuClickOverlay
       click-item:
         handler: handleDropdownMenuClickItem
@@ -83,4 +83,4 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No layouts found matching "${searchQuery}"
     - rtgl-view h=33vh:
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items .position=dropdownMenu.position .isOpen=dropdownMenu.isOpen:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

@@ -20,6 +20,24 @@ export const handleFontItemClick = (e, deps) => {
   render();
 };
 
+export const handleItemUpdate = (e, deps) => {
+  const { repository, render, store } = deps;
+  const { formValues } = e.detail; // Extract from forwarded event
+  const selectedItem = store.selectSelectedItem();
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "fonts",
+    value: {
+      id: selectedItem.id,
+      replace: false,
+      item: formValues,
+    },
+  });
+  const { fonts } = repository.getState();
+  store.setItems(fonts);
+  render();
+};
+
 export const handleReplaceItem = async (e, deps) => {
   const { store, render, uploadFontFiles, repository } = deps;
   const { file } = e.detail;

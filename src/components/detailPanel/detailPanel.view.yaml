@@ -55,7 +55,7 @@ refs:
         handler: handleTypographyFieldClick
   popover:
     eventListeners:
-      click-overlay:
+      close:
         handler: handlePopoverClickOverlay
   form:
     eventListeners:
@@ -63,7 +63,7 @@ refs:
         handler: handleFormActionClick
   color-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseColorDialog
   color-form:
     eventListeners:
@@ -71,7 +71,7 @@ refs:
         handler: handleColorFormActionClick
   typography-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseTypographyDialog
   typography-form:
     eventListeners:
@@ -103,7 +103,7 @@ refs:
         handler: handleConfirmImageSelection
   image-selector-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseImageSelectorDialog
 
 template:
@@ -125,7 +125,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - "rtgl-view#editable-text-${field.id} cur=p":
+                              - "rtgl-view#editable-text-${field.name} cur=p":
                                   - rtgl-text s=${field.size}: ${field.value}
                             $else:
                               - rtgl-text s=${field.size}: ${field.value}
@@ -187,19 +187,19 @@ template:
         $else:
           - rtgl-view w=f h=f av=c ah=c:
               - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}
-  - rtgl-popover#popover .isOpen=popover.isOpen .position=popover.position:
+  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - $if form:
           - rtgl-form#form slot=content .form=form:
 
-  - rtgl-dialog#color-dialog .isOpen=colorDialog.isOpen:
+  - rtgl-dialog#color-dialog ?open=${colorDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rtgl-form#color-form .defaultValues=colorDialog.defaultValues .form=colorDialog.form w=f:
 
-  - rtgl-dialog#typography-dialog .isOpen=typographyDialog.isOpen:
+  - rtgl-dialog#typography-dialog ?open=${typographyDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rtgl-form#typography-form .defaultValues=typographyDialog.defaultValues .form=typographyDialog.form w=f:
 
-  - rtgl-dialog#image-selector-dialog .isOpen=imageSelectorDialog.isOpen:
+  - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:
           - rtgl-view d=f jc=fe g=sm:

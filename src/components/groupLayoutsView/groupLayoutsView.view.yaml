@@ -27,7 +27,7 @@ refs:
         handler: handleAddLayoutClick
   add-layout-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseDialog
   layout-form:
     eventListeners:
@@ -48,7 +48,7 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search layouts..." value=${searchQuery}: 
+        - rtgl-input#search-input s=sm placeholder="Search layouts..." value=${searchQuery}:
         # TODO implment zoom controls (increase/decrease layout size)
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
@@ -76,7 +76,7 @@ template:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No layouts found matching "${searchQuery}"
     - rtgl-view h=33vh:
-  
-  - rtgl-dialog#add-layout-dialog .isOpen=isDialogOpen:
+
+  - rtgl-dialog#add-layout-dialog ?open=${isDialogOpen}:
     - rtgl-view slot=content g=md:
       - rtgl-form#layout-form .defaultValues=defaultValues .form=form w=f:
