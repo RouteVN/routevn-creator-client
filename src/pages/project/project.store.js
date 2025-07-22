@@ -2,7 +2,7 @@ export const INITIAL_STATE = Object.freeze({
   project: {
     name: "",
     description: "",
-    // imageUrl: "/public/project_logo_placeholder.png",
+    imageUrl: "/public/project_logo_placeholder.png",
   },
   popover: {
     isOpen: false,
@@ -91,6 +91,10 @@ export const setProjectName = (state, name) => {
 
 export const setProjectDescription = (state, description) => {
   state.project.description = description;
+};
+
+export const setProjectImageUrl = (state, imageUrl) => {
+  state.project.imageUrl = imageUrl;
 };
 
 export const toViewData = ({ state, props }, payload) => {

@@ -3,6 +3,18 @@ elementName: rvn-waveform-visualizer
 onMount:
   handler: handleBeforeMount
 
+attrsSchema:
+  type: object
+  properties:
+    w:
+      type: string
+      description: Width of the waveform visualizer
+      default: '250'
+    h:
+      type: string
+      description: Height of the waveform visualizer
+      default: '150'
+
 propsSchema:
   type: object
   properties:
@@ -26,7 +38,7 @@ refs:
     selector: canvas
 
 template:
-  - rtgl-view w=f h=f pos=rel w=250 h=150:
+  - rtgl-view w=f h=f pos=rel w=${w} h=${h}:
     - $if isLoading:
         - rtgl-view w=f h=f av=c ah=c:
           - rtgl-text c=mu-fg: Loading waveform...
