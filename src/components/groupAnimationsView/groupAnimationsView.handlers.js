@@ -169,7 +169,10 @@ export const handleKeyframeRightClick = (e, deps) => {
     mode: "keyframeMenu",
     x: e.detail.x,
     y: e.detail.y,
-    payload: {},
+    payload: {
+      property: e.detail.property,
+      index: e.detail.index,
+    },
   });
   render();
 };
@@ -178,9 +181,23 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   const { render, store } = deps;
 
   console.log("e.detail", e.detail);
+  const {
+    payload: { property, index },
+  } = store.selectPopover();
+
   // e.detail.index
   if (e.detail.item.value === "edit") {
+    store.setPopover({
+      mode: "editKeyframe",
+      x: e.detail.x,
+      y: e.detail.y,
+      payload: {
+        property,
+        index,
+      },
+    });
   }
+  // todo implment delete, move, add etc...
 
   render();
 };
@@ -188,14 +205,13 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
 export const handleEditKeyframeFormSubmit = (e, deps) => {
   const { store, render } = deps;
   const {
-    payload: { property },
+    payload: { property, index },
   } = store.selectPopover();
-
-  // store.editKeyframe({
-  //   ...e.detail.formValues,
-  //   // TODOD don't hardcode. need someone to pass a payload to the form
-  //   property,
-  // });
+  store.updateKeyframe({
+    keyframe: e.detail.formValues,
+    index,
+    property,
+  });
   store.closePopover();
   render();
 };

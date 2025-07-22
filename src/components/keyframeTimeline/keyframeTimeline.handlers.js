@@ -33,7 +33,9 @@ export const handleAddKeyframe = (e, deps) => {
 
 export const handleKeyframeRightClick = (e, deps) => {
   const { dispatchEvent } = deps;
-  const id = e.currentTarget.id.replace("keyframe-", "");
+  const [property, index] = e.currentTarget.id
+    .replace("keyframe-", "")
+    .split("-");
 
   e.preventDefault();
 
@@ -41,7 +43,8 @@ export const handleKeyframeRightClick = (e, deps) => {
   dispatchEvent(
     new CustomEvent("keyframe-right-click", {
       detail: {
-        id,
+        property,
+        index,
         x: e.clientX,
         y: e.clientY,
       },

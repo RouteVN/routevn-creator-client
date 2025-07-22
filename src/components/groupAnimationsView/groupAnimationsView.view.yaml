@@ -78,13 +78,18 @@ refs:
     eventListeners:
       close:
         handler: handleClosePopover
-
+  edit-keyframe-form:
+    eventListeners:
+      action-click:
+        handler: handleEditKeyframeFormSubmit
   keyframe-dropdown-menu:
     eventListeners:
       close:
         handler: handleClosePopover
       click-item:
         handler: handleKeyframeDropdownItemClick
+
+
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':

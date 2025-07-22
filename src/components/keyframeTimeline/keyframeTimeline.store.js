@@ -63,6 +63,8 @@ export const toViewData = ({ state, props, attrs }) => {
   const timeAtMouse = (state.mouseX / timelineWidth) * durationValue;
   const timeDisplay = Math.round(timeAtMouse * 10) / 10; // round to 1 decimal
 
+  console.log("selectedProperties", selectedProperties);
+
   const result = {
     totalDuration,
     selectedProperties,

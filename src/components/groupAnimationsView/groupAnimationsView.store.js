@@ -38,6 +38,7 @@ const addKeyframeForm = {
 
 const updateKeyframeForm = {
   ...addKeyframeForm,
+  title: "Edit Keyframe",
   actions: {
     layout: "",
     buttons: [
@@ -222,21 +223,17 @@ export const addKeyframe = (state, keyframe) => {
 
   state.animationProperties[keyframe.property].keyframes.push({
     duration: keyframe.duration,
-    value: keyframe.initialValue,
     easing: keyframe.easing,
     value: keyframe.value,
   });
 };
 
 export const updateKeyframe = (state, payload) => {
-  const keyframes = state.animationProperties[property];
-
-  if (!keyframes) return;
-
-  const index = keyframes.findIndex((kf) => kf.duration === duration);
-  if (index === -1) return;
-
-  keyframes[index] = { duration, value, easing };
+  console.log("payload", payload);
+  console.log("state.animationProperties", state.animationProperties);
+  const { property, index, keyframe } = payload;
+  const keyframes = state.animationProperties[property].keyframes;
+  keyframes[index] = keyframe;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -305,7 +302,7 @@ export const toViewData = ({ state, props }) => {
     addPropertyButtonVisible: toAddProperties.length !== 0,
     popover: {
       ...state.popover,
-      popoverIsOpen: ["addProperty", "addKeyframe"].includes(
+      popoverIsOpen: ["addProperty", "addKeyframe", "editKeyframe"].includes(
         state.popover.mode,
       ),
       dropdownMenuIsOpen: ["keyframeMenu"].includes(state.popover.mode),
