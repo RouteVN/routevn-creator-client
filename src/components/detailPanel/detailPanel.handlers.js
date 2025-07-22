@@ -131,7 +131,7 @@ export const handleFormActionClick = (e, deps) => {
       }),
     );
 
-    console.log("item-update event dispatched");
+    console.log("item-update event dispatched", values);
   }
 };
 
@@ -239,9 +239,9 @@ export const handleEditableTextClick = (e, deps) => {
   const { store, render } = deps;
   e.preventDefault();
 
-  const fieldId = e.currentTarget.id.replace("editable-text-", "");
+  const fieldName = e.currentTarget.id.replace("editable-text-", "");
 
-  const field = store.selectField(fieldId);
+  const field = store.selectField(fieldName);
 
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
@@ -259,7 +259,7 @@ export const handleEditableTextClick = (e, deps) => {
     position,
     fields: [
       {
-        name: field.id,
+        name: field.name,
         inputType: "inputText",
         label: field.label,
         description: "Enter new name",

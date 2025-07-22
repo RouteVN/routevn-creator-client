@@ -49,7 +49,7 @@ refs:
         handler: handleAddPlacementClick
   add-placement-dialog:
     eventListeners:
-      close-dialogue:
+      close:
         handler: handleCloseDialog
       submit-form:
         handler: handleSubmitForm
@@ -97,13 +97,12 @@ template:
                   - rtgl-text s=lg c=mu-fg: No placements found matching "${searchQuery}"
       - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-placement-dialog .isOpen=isDialogOpen w=90%:
+  - rtgl-dialog#add-placement-dialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h ah=c g=lg w=f:
         - $if isDialogOpen:
-          - rtgl-view w=24%:
+          - rtgl-view flex=4:
             - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
-          - rtgl-view w=1%:
-          - rtgl-view w=74%:
+          - rtgl-view flex=6:
               - rtgl-text: Preview
               - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                 - rtgl-view pos=abs cor=full:

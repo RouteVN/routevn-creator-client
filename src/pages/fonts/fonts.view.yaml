@@ -19,9 +19,11 @@ refs:
     eventListeners:
       replace-item:
         handler: handleReplaceItem
+      item-update:
+        handler: handleItemUpdate
 
-template: 
-  - rtgl-view d=h w=f h=f: 
+template:
+  - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f w=f:
       - rvn-resizable-panel#file-explorer w=320 min-w=250 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
@@ -29,6 +31,6 @@ template:
           - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-group-fonts-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-      - rvn-resizable-panel#detail-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+      - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - rtgl-view slot="content" w=f h=f:
-          - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+          - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

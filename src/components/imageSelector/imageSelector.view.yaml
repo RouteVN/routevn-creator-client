@@ -23,7 +23,7 @@ refs:
         handler: handleImageItemClick
 
 template:
-  - rtgl-view h=400 sv=true g=lg oy=a:
+  - rtgl-view h=400 sv g=lg oy=a:
     - $for group, i in groups:
       - rtgl-view g=md:
         - rtgl-text: ${group.name}
