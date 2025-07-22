@@ -146,4 +146,4 @@ template:
 
       - rtgl-view flex=5:
         - rtgl-text: Preview
-        - rtgl-view w=300 h=300 bgc=fg:
+        - rtgl-view w=f h=300 bgc=fg:
