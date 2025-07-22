@@ -4,8 +4,8 @@ export const INITIAL_STATE = Object.freeze({
     path: "/project",
     image: {
       src: "/public/project_logo_placeholder.png",
-      width: 32,
-      height: 32,
+      width: 48,
+      height: 48,
       alt: "Sidebar",
     },
   },
@@ -37,6 +37,10 @@ export const INITIAL_STATE = Object.freeze({
     // },
   ],
 });
+
+export const setProjectImageUrl = (state, imageUrl) => {
+  state.header.image.src = imageUrl;
+};
 
 export const toViewData = ({ state, props }, payload) => {
   return {

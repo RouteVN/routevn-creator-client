@@ -81,7 +81,7 @@ export const handleProjectImageClick = (e, deps) => {
 };
 
 export const handleProjectImageUpload = async (file, deps) => {
-  const { store, render, repository, uploadImageFiles } = deps;
+  const { store, render, repository, uploadImageFiles, subject } = deps;
 
   try {
     const successfulUploads = await uploadImageFiles([file], "someprojectId");
@@ -97,6 +97,7 @@ export const handleProjectImageUpload = async (file, deps) => {
         value: imageUrl,
       });
 
+      subject.dispatch("project-image-update");
       render();
     }
   } catch (error) {
