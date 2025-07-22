@@ -62,28 +62,21 @@ export const handleFormActionClick = (e, deps) => {
   render();
 };
 
-export const handleProjectImageClick = (e, deps) => {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.style.display = "none";
-
-  input.onchange = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      await handleProjectImageUpload(file, deps);
-    }
-    document.body.removeChild(input);
-  };
-
-  document.body.appendChild(input);
-  input.click();
-};
-
-export const handleProjectImageUpload = async (file, deps) => {
-  const { store, render, repository, uploadImageFiles, subject } = deps;
+export const handleProjectImageClick = async (e, deps) => {
+  const { store, render, repository, uploadImageFiles, subject, filePicker } =
+    deps;
 
   try {
+    const files = await filePicker.open({
+      accept: "image/*",
+      multiple: false,
+    });
+
+    if (files.length === 0) {
+      return; // User cancelled
+    }
+
+    const file = files[0];
     const successfulUploads = await uploadImageFiles([file], "someprojectId");
 
     if (successfulUploads.length > 0) {
