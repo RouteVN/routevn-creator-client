@@ -147,8 +147,9 @@ export const INITIAL_STATE = Object.freeze({
   },
 });
 
-export const selectField = ({ props }, id) => {
-  return props.fields.find((field) => field.id === id);
+export const selectField = ({ props }, name) => {
+  console.log("props.fields", props.fields);
+  return props.fields.find((field) => field.name === name);
 };
 
 export const showPopover = (state, { position, fields, actions }) => {

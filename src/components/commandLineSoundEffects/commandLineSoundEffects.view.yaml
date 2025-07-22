@@ -67,9 +67,9 @@ template:
           - rtgl-text s=sm c=mu-fg mb=lg: '>'
           - rtgl-text s=sm c=mu-fg mb=lg: Sound Effects
         - rtgl-text: Sound Effects
-        
+
         # List of sound effects
-        - rtgl-view w=f sv=true h=300:
+        - rtgl-view w=f sv h=300:
           - $for effect in soundEffects:
             - rtgl-view d=h w=f p=md bgc=mu br=md mb=md:
               - rtgl-view#sound-effect-item-${effect.id} flex=1 cur=p h-bgc=ac:
@@ -78,10 +78,10 @@ template:
                   - rtgl-text s=sm c=mu-fg: 'Trigger:'
                   - rtgl-select#trigger-select-${effect.id} .options=triggerOptions .value=${effect.trigger} s=sm:
               - rtgl-button#delete-button-${effect.id} v=ol s=sm: Delete
-          
+
           # Add new button
           - rtgl-button#add-new-button w=f: + Add New Sound Effect
-        
+
         - rtgl-view flex=1:
         - rtgl-view d=h av=c ah=e w=f g=lg:
           - rtgl-button#submit-button: Submit
@@ -93,9 +93,9 @@ template:
           - rtgl-text s=sm c=mu-fg mb=lg: '>'
           - rtgl-text s=sm c=mu-fg mb=lg: Audio Selection
         - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-          - rtgl-view h=f flex=1 sv=true:
+          - rtgl-view h=f flex=1 sv:
             - rvn-base-file-explorer#base-file-explorer .items=items:
-          - rtgl-view h=f flex=2 sv=true g=lg:
+          - rtgl-view h=f flex=2 sv g=lg:
             - $for group in groups:
               - rtgl-view g=md:
                 - rtgl-text: ${group.name}

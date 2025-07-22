@@ -1,5 +1,15 @@
 elementName: rvn-file-image
 
+attrsSchema:
+  type: object
+  properties:
+    br:
+      type: string
+    w:
+      type: string
+    h:
+      type: string
+
 viewDataSchema:
   type: object
   properties:

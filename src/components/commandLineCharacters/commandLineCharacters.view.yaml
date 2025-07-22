@@ -102,9 +102,9 @@ template:
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
         - rtgl-text s=sm c=mu-fg mb=lg: Character Selection
       - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-        - rtgl-view h=f flex=1 sv=true:
+        - rtgl-view h=f flex=1 sv:
           - rvn-base-file-explorer#base-file-explorer .items=items:
-        - rtgl-view h=f flex=2 sv=true g=lg:
+        - rtgl-view h=f flex=2 sv g=lg:
           - $for group, i in groups:
             - rtgl-view g=md:
               - rtgl-text: ${group.name}
@@ -129,9 +129,9 @@ template:
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
         - rtgl-text s=sm c=mu-fg mb=lg: Sprite Selection
       - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-        - rtgl-view h=f flex=1 sv=true:
+        - rtgl-view h=f flex=1 sv:
           - rvn-base-file-explorer#base-file-explorer .items=spriteItems:
-        - rtgl-view h=f flex=2 sv=true g=lg:
+        - rtgl-view h=f flex=2 sv g=lg:
           - $for group, i in spriteGroups:
             - rtgl-view g=md:
               - rtgl-text: ${group.name}
