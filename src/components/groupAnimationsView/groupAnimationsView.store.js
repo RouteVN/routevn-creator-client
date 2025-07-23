@@ -51,6 +51,28 @@ const updateKeyframeForm = {
   },
 };
 
+const editInitialValueForm = {
+  title: "Edit Initial Value",
+  fields: [
+    {
+      name: "initialValue",
+      inputType: "inputText",
+      label: "Initial Value",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Update Value",
+      },
+    ],
+  },
+};
+
 const propertyOptions = [
   { label: "X", value: "x" },
   { label: "Y", value: "y" },
@@ -117,7 +139,15 @@ const keyframeDropdownItems = [
   {
     label: "Delete",
     type: "item",
-    value: "delete",
+    value: "delete-keyframe",
+  },
+];
+
+const propertyNameDropdownItems = [
+  {
+    label: "Delete",
+    type: "item",
+    value: "delete-property",
   },
 ];
 
@@ -221,11 +251,58 @@ export const addKeyframe = (state, keyframe) => {
     state.animationProperties[keyframe.property] = [];
   }
 
-  state.animationProperties[keyframe.property].keyframes.push({
+  const keyframes = state.animationProperties[keyframe.property].keyframes;
+  let index = keyframe.index;
+  console.log(index);
+  if (keyframe.index === undefined) {
+    index = keyframes.length;
+  }
+
+  keyframes.splice(index, 0, {
     duration: keyframe.duration,
     easing: keyframe.easing,
     value: keyframe.value,
   });
+};
+
+export const deleteKeyframe = (state, payload) => {
+  const { property, index } = payload;
+  const keyframes = state.animationProperties[property].keyframes;
+  keyframes.splice(index, 1);
+};
+
+export const deleteProperty = (state, payload) => {
+  const { property } = payload;
+
+  state.selectedProperties = state.selectedProperties.filter(
+    (p) => p.name !== property,
+  );
+
+  delete state.animationProperties[property];
+};
+
+export const moveKeyframeRight = (state, payload) => {
+  const { property, index } = payload;
+  const numIndex = Number(index);
+  const keyframes = state.animationProperties[property].keyframes;
+
+  if (numIndex < keyframes.length - 1) {
+    const temp = keyframes[numIndex];
+    keyframes[numIndex] = keyframes[numIndex + 1];
+    keyframes[numIndex + 1] = temp;
+  }
+};
+
+export const moveKeyframeLeft = (state, payload) => {
+  const { property, index } = payload;
+  const numIndex = Number(index);
+  const keyframes = state.animationProperties[property].keyframes;
+
+  if (numIndex > 0) {
+    const temp = keyframes[numIndex];
+    keyframes[numIndex] = keyframes[numIndex - 1];
+    keyframes[numIndex - 1] = temp;
+  }
 };
 
 export const updateKeyframe = (state, payload) => {
@@ -234,6 +311,12 @@ export const updateKeyframe = (state, payload) => {
   const { property, index, keyframe } = payload;
   const keyframes = state.animationProperties[property].keyframes;
   keyframes[index] = keyframe;
+};
+
+export const updateInitialValue = (state, payload) => {
+  const { property, initialValue } = payload;
+
+  state.animationProperties[property].initialValue = initialValue;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -298,14 +381,23 @@ export const toViewData = ({ state, props }) => {
     addPropertyForm,
     addKeyframeForm,
     updateKeyframeForm,
-    keyframeDropdownItems,
+    editInitialValueForm,
+    keyframeDropdownItems:
+      state.popover.mode === "keyframeMenu"
+        ? keyframeDropdownItems
+        : propertyNameDropdownItems,
     addPropertyButtonVisible: toAddProperties.length !== 0,
     popover: {
       ...state.popover,
-      popoverIsOpen: ["addProperty", "addKeyframe", "editKeyframe"].includes(
+      popoverIsOpen: [
+        "addProperty",
+        "addKeyframe",
+        "editKeyframe",
+        "editInitialValue",
+      ].includes(state.popover.mode),
+      dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
       ),
-      dropdownMenuIsOpen: ["keyframeMenu"].includes(state.popover.mode),
     },
   };
 };
