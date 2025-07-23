@@ -8,15 +8,15 @@ export const handleBeforeMount = (deps) => {
   });
 
   // Initialize with existing background data if available
-  if (props?.line?.imageId) {
+  if (props?.line?.presentation?.background?.imageId) {
     const flatImageItems = toFlatItems(images);
     const existingImage = flatImageItems.find(
-      (item) => item.id === props.line.imageId,
+      (item) => item.id === props.line.presentation.background.imageId,
     );
 
     if (existingImage) {
       store.setSelectedImageAndFileId({
-        imageId: props.line.imageId,
+        imageId: props.line.presentation.background.imageId,
         fileId: existingImage.fileId,
       });
     }

@@ -2,16 +2,11 @@ import {
   constructPresentationState,
   constructRenderState,
 } from "route-engine-js";
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems, toTreeStructure } from "../../deps/repository";
+import { layoutTreeStructureToRenderState } from "../../utils/index.js";
 
 export const INITIAL_STATE = Object.freeze({
-  images: {},
-  characters: {},
-  audios: {},
-  placements: {},
-  layouts: {},
   sceneId: undefined,
-  scene: undefined,
   selectedLineId: undefined,
   sectionsGraphView: false,
   mode: "lines-editor",
@@ -31,46 +26,116 @@ export const INITIAL_STATE = Object.freeze({
   repositoryState: {},
 });
 
-export const setScene = (state, payload) => {
-  const { id, scene } = payload;
-  state.scene = scene;
-  state.sceneId = id;
+export const setSceneId = (state, sceneId) => {
+  state.sceneId = sceneId;
 };
 
-export const setImages = (state, images) => {
-  state.images = images;
-};
-
-export const setCharacters = (state, characters) => {
-  state.characters = characters;
-};
-
-export const setAudios = (state, audios) => {
-  state.audios = audios;
-};
-
-export const selectAudios = ({ state }) => {
-  return state.audios;
-};
-
-export const selectImages = ({ state }) => {
-  return state.images;
-};
-
-export const setPlacements = (state, placements) => {
-  state.placements = placements;
-};
-
-export const setRepository = (state, repository) => {
+export const setRepositoryState = (state, repository) => {
   state.repositoryState = repository;
 };
 
-export const setLayouts = (state, layouts) => {
-  state.layouts = layouts;
+// Repository selectors
+export const selectRepositoryState = ({ state }) => {
+  return state.repositoryState;
 };
 
-export const selectScene = ({ state, props }, payload) => {
-  return state.scene;
+export const selectImages = ({ state }) => {
+  return state.repositoryState.images?.items || {};
+};
+
+export const selectAudios = ({ state }) => {
+  return state.repositoryState.audio?.items || {};
+};
+
+export const selectCharacters = ({ state }) => {
+  const characters = state.repositoryState.characters?.items || {};
+  const processedCharacters = {};
+
+  Object.keys(characters).forEach((characterId) => {
+    const character = characters[characterId];
+    if (character.type === "character") {
+      processedCharacters[characterId] = {
+        variables: {
+          name: character.name || "Unnamed Character",
+        },
+        spriteParts: {},
+      };
+
+      // Process sprite parts if they exist
+      if (character.sprites && character.sprites.items) {
+        Object.keys(character.sprites.items).forEach((spriteId) => {
+          const sprite = character.sprites.items[spriteId];
+          if (sprite.fileId) {
+            processedCharacters[characterId].spriteParts[spriteId] = {
+              fileId: sprite.fileId,
+            };
+          }
+        });
+      }
+    }
+  });
+
+  return processedCharacters;
+};
+
+export const selectPlacements = ({ state }) => {
+  const placements = state.repositoryState.placements?.items || {};
+  const processedPlacements = {};
+
+  Object.keys(placements).forEach((placementId) => {
+    const placement = placements[placementId];
+    if (placement.type === "placement") {
+      processedPlacements[placementId] = placement;
+    }
+  });
+
+  return processedPlacements;
+};
+
+export const selectLayouts = ({ state }) => {
+  const layouts = state.repositoryState.layouts?.items || {};
+  const images = selectImages({ state });
+  const processedLayouts = {};
+
+  Object.keys(layouts).forEach((layoutId) => {
+    const layout = layouts[layoutId];
+    if (layout.type === "layout") {
+      processedLayouts[layoutId] = {
+        name: layout.name,
+        elements: layoutTreeStructureToRenderState(
+          toTreeStructure(layout.elements),
+          images,
+        ),
+      };
+    }
+  });
+
+  return processedLayouts;
+};
+
+export const selectScene = ({ state }) => {
+  if (!state.sceneId || !state.repositoryState.scenes) {
+    return null;
+  }
+  
+  const scene = toFlatItems(state.repositoryState.scenes)
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === state.sceneId);
+    
+  if (!scene) {
+    return null;
+  }
+  
+  // Process sections and lines to flat structure
+  const processedScene = {
+    ...scene,
+    sections: toFlatItems(scene.sections).map((section) => ({
+      ...section,
+      lines: toFlatItems(section.lines),
+    })),
+  };
+  
+  return processedScene;
 };
 
 export const selectSceneId = ({ state, props }, payload) => {
@@ -150,7 +215,10 @@ export const hidePopover = (state) => {
 };
 
 export const setLineTextContent = (state, { lineId, text }) => {
-  const currentSection = state.scene.sections.find(
+  const scene = selectScene({ state });
+  if (!scene) return;
+  
+  const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
   if (!currentSection) {
@@ -174,7 +242,10 @@ export const setLineTextContent = (state, { lineId, text }) => {
 };
 
 export const selectRenderState = ({ state }) => {
-  const currentSection = state.scene.sections.find(
+  const scene = selectScene({ state });
+  if (!scene) return null;
+  
+  const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
 
@@ -200,13 +271,13 @@ export const selectRenderState = ({ state }) => {
     },
     resolveFile: (f) => `file:${f}`,
     assets: {
-      images: state.images,
-      transforms: state.placements,
-      characters: state.characters,
-      audios: state.audios,
+      images: selectImages({ state }),
+      transforms: selectPlacements({ state }),
+      characters: selectCharacters({ state }),
+      audios: selectAudios({ state }),
     },
     ui: {
-      layouts: state.layouts,
+      layouts: selectLayouts({ state }),
     },
   });
   console.log("renderState", renderState);
@@ -215,8 +286,22 @@ export const selectRenderState = ({ state }) => {
 
 export const toViewData = ({ state, props }, payload) => {
   // const currentLine = selectSelectedLine(state, props, payload)
+  const scene = selectScene({ state });
+  if (!scene) {
+    return {
+      scene: null,
+      sections: [],
+      currentLines: [],
+      currentLine: null,
+      mode: state.mode,
+      dropdownMenu: state.dropdownMenu,
+      popover: state.popover,
+      selectedLineId: state.selectedLineId,
+      sectionsGraphView: state.sectionsGraphView,
+    };
+  }
 
-  const sections = state.scene.sections.map((section) => {
+  const sections = scene.sections.map((section) => {
     return {
       ...section,
       bgc: section.id === state.selectedSectionId ? "mu" : "",
@@ -226,7 +311,7 @@ export const toViewData = ({ state, props }, payload) => {
   // const currentLines = state.sections.find(section => section.id === state.selectedSectionId).lines;
 
   // Get current section for rename form
-  const currentSection = state.scene.sections.find(
+  const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
 
@@ -269,28 +354,28 @@ export const toViewData = ({ state, props }, payload) => {
   let soundEffectsAudio = [];
   let charactersData = [];
 
+  const repositoryState = selectRepositoryState({ state });
+  const images = selectImages({ state });
+  const audios = selectAudios({ state });
+
   if (selectedLine?.presentation?.background) {
-    backgroundImage =
-      state.repositoryState.images.items[
-        selectedLine.presentation.background.imageId
-      ];
+    backgroundImage = images[selectedLine.presentation.background.imageId];
   }
 
   if (selectedLine?.presentation?.bgm) {
-    bgmAudio =
-      state.repositoryState.audio.items[selectedLine.presentation.bgm.audioId];
+    bgmAudio = audios[selectedLine.presentation.bgm.audioId];
   }
 
   if (selectedLine?.presentation?.soundEffects) {
     soundEffectsAudio = selectedLine.presentation.soundEffects.map((se) => ({
       ...se,
-      audio: state.repositoryState.audio.items[se.audioId],
+      audio: audios[se.audioId],
     }));
   }
 
   if (selectedLine?.presentation?.character?.items) {
     charactersData = selectedLine.presentation.character.items.map((char) => {
-      const character = state.repositoryState.characters.items[char.id];
+      const character = repositoryState.characters?.items?.[char.id];
       let sprite = null;
 
       if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
@@ -313,7 +398,7 @@ export const toViewData = ({ state, props }, payload) => {
     const sceneTransition = selectedLine.presentation.sceneTransition;
     sceneTransitionData = {
       ...sceneTransition,
-      scene: state.repositoryState.scenes.items[sceneTransition.sceneId],
+      scene: repositoryState.scenes?.items?.[sceneTransition.sceneId],
     };
   }
 
@@ -339,7 +424,7 @@ export const toViewData = ({ state, props }, payload) => {
   console.log("selectedLine", selectedLine);
 
   return {
-    scene: state.scene,
+    scene: scene,
     sections,
     currentLines: Array.isArray(currentSection?.lines)
       ? currentSection.lines
@@ -350,7 +435,7 @@ export const toViewData = ({ state, props }, payload) => {
     backgroundImage,
     layout: selectedLine?.presentation?.layout,
     layoutData: selectedLine?.presentation?.layout
-      ? toFlatItems(state.repositoryState.layouts).find(
+      ? toFlatItems(repositoryState.layouts).find(
           (l) => l.id === selectedLine?.presentation?.layout?.layoutId,
         )
       : null,
@@ -366,12 +451,12 @@ export const toViewData = ({ state, props }, payload) => {
     sceneTransitionData,
     dialogue: selectedLine?.presentation?.dialogue,
     dialogueData: selectedLine?.presentation?.dialogue
-      ? toFlatItems(state.repositoryState.layouts).find(
+      ? toFlatItems(repositoryState.layouts).find(
           (l) => l.id === selectedLine?.presentation?.dialogue?.layoutId,
         )
       : null,
     dialogueCharacterData: selectedLine?.presentation?.dialogue?.characterId
-      ? state.repositoryState.characters?.items?.[
+      ? repositoryState.characters?.items?.[
           selectedLine.presentation.dialogue.characterId
         ]
       : null,
@@ -382,17 +467,18 @@ export const toViewData = ({ state, props }, payload) => {
     popover: state.popover,
     form: renameForm,
     selectedLineId: state.selectedLineId,
+    selectedLine,
     sectionsGraphView: state.sectionsGraphView,
-    layouts: Object.entries(state.layouts).map(([id, item]) => ({
+    layouts: Object.entries(selectLayouts({ state })).map(([id, item]) => ({
       id,
       ...item,
     })),
-    allCharacters: Object.entries(
-      state.repositoryState.characters?.items || {},
-    ).map(([id, item]) => ({
-      id,
-      ...item,
-    })),
+    allCharacters: Object.entries(repositoryState.characters?.items || {}).map(
+      ([id, item]) => ({
+        id,
+        ...item,
+      }),
+    ),
   };
 };
 
@@ -403,7 +489,10 @@ export const selectLineIdIndex = (state, props, payload) => {
 
 export const selectPreviousLineId = ({ state, props }, payload) => {
   const { lineId } = payload;
-  const currentSection = state.scene.sections.find(
+  const scene = selectScene({ state });
+  if (!scene) return lineId;
+  
+  const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
   const currentLines = Array.isArray(currentSection?.lines)
@@ -418,7 +507,10 @@ export const selectPreviousLineId = ({ state, props }, payload) => {
 
 export const selectNextLineId = ({ state, props }, payload) => {
   const { lineId } = payload;
-  const currentSection = state.scene.sections.find(
+  const scene = selectScene({ state });
+  if (!scene) return lineId;
+  
+  const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
   const currentLines = Array.isArray(currentSection?.lines)
@@ -432,9 +524,12 @@ export const selectNextLineId = ({ state, props }, payload) => {
 };
 
 export const selectSelectedLine = (state, props, payload) => {
-  return state.sections
+  const scene = selectScene({ state });
+  if (!scene) return null;
+  
+  return scene.sections
     .find((section) => section.id === state.selectedSectionId)
-    .lines.find((line) => line.id === state.selectedLineId);
+    ?.lines.find((line) => line.id === state.selectedLineId);
 };
 
 export const toggleSectionsGraphView = (state) => {

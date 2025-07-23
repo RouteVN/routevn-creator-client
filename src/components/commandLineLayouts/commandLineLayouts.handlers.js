@@ -8,9 +8,9 @@ export const handleBeforeMount = (deps) => {
   });
 
   // Initialize with existing layout if available
-  if (props?.line?.layoutId) {
+  if (props?.line?.presentation?.layout?.layoutId) {
     store.setSelectedLayoutId({
-      layoutId: props.line.layoutId,
+      layoutId: props.line.presentation.layout.layoutId,
     });
   }
 };

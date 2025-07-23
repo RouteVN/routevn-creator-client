@@ -2,15 +2,15 @@ export const handleBeforeMount = (deps) => {
   const { store, render, props } = deps;
 
   // Initialize with existing dialogue data if available
-  if (props?.line?.layoutId) {
+  if (props?.line?.presentation?.dialogue?.layoutId) {
     store.setSelectedLayoutId({
-      layoutId: props.line.layoutId,
+      layoutId: props.line.presentation.dialogue.layoutId,
     });
   }
 
-  if (props?.line?.characterId) {
+  if (props?.line?.presentation?.dialogue?.characterId) {
     store.setSelectedCharacterId({
-      characterId: props.line.characterId,
+      characterId: props.line.presentation.dialogue.characterId,
     });
   }
 };
