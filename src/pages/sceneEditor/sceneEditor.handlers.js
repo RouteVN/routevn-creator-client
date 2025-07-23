@@ -222,6 +222,9 @@ export const handleSectionAddClick = (e, deps) => {
     },
   });
 
+  // Update store with new repository state
+  store.setRepositoryState(repository.getState());
+  
   store.setSelectedSectionId(newSectionId);
   render();
 };
@@ -570,6 +573,9 @@ export const handleDropdownMenuClickItem = (e, deps) => {
       },
     });
 
+    // Update store with new repository state
+    store.setRepositoryState(repository.getState());
+
     // Update scene data and select first remaining section
     const newScene = store.selectScene();
     if (newScene && newScene.sections.length > 0) {
@@ -647,7 +653,8 @@ export const handleFormActionClick = (e, deps) => {
         },
       });
 
-      // Update scene data
+      // Update store with new repository state
+      store.setRepositoryState(repository.getState());
     }
 
     render();
