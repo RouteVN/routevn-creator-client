@@ -93,6 +93,50 @@ export const handleCommandLineSubmit = (e, deps) => {
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
 
+  // Handle scene transitions specially - they don't require a lineId
+  if (e.detail.sceneTransition) {
+    if (!lineId) {
+      console.warn("Scene transition requires a selected line");
+      return;
+    }
+
+    repository.addAction({
+      actionType: "set",
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+      value: {
+        replace: false,
+        item: e.detail,
+      },
+    });
+
+    store.setRepositoryState(repository.getState());
+    store.setMode("lines-editor");
+    render();
+    return;
+  }
+
+  // Handle section transitions
+  if (e.detail.sectionTransition) {
+    if (!lineId) {
+      console.warn("Section transition requires a selected line");
+      return;
+    }
+
+    repository.addAction({
+      actionType: "set",
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+      value: {
+        replace: false,
+        item: e.detail,
+      },
+    });
+
+    store.setRepositoryState(repository.getState());
+    store.setMode("lines-editor");
+    render();
+    return;
+  }
+
   if (!lineId) {
     return;
   }
@@ -222,6 +266,9 @@ export const handleSectionAddClick = (e, deps) => {
     },
   });
 
+  // Update store with new repository state
+  store.setRepositoryState(repository.getState());
+
   store.setSelectedSectionId(newSectionId);
   render();
 };
@@ -284,14 +331,16 @@ export const handleSplitLine = (e, deps) => {
     linesEditorRef.elm.store.setIsNavigating(true);
   }
 
+  // Update store with new repository state (this is the key missing step!)
+  store.setRepositoryState(repository.getState());
+
   // Update selectedLineId through the store (not directly in linesEditor)
   store.setSelectedLineId(newLineId);
 
-  // Render and then focus immediately
-
+  // Render after setting the selected line ID
   render();
 
-  // Use requestAnimationFrame for faster execution than setTimeout
+  // Use requestAnimationFrame for focus operations
   requestAnimationFrame(() => {
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine(newLineId);
@@ -496,7 +545,6 @@ export const handleOpenCommandLine = (e, deps) => {
 export const handlePresentationActionRightClick = (e, deps) => {
   const { store, render } = deps;
   const mode = e.currentTarget.getAttribute("data-mode");
-  console.log("mode", mode);
   e.preventDefault();
   store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
@@ -532,6 +580,12 @@ export const handleSectionTabRightClick = (e, deps) => {
   render();
 };
 
+export const handleActionsOverlayClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("lines-editor");
+  render();
+};
+
 export const handleDropdownMenuClickOverlay = (e, deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
@@ -561,6 +615,9 @@ export const handleDropdownMenuClickItem = (e, deps) => {
         id: sectionId,
       },
     });
+
+    // Update store with new repository state
+    store.setRepositoryState(repository.getState());
 
     // Update scene data and select first remaining section
     const newScene = store.selectScene();
@@ -639,7 +696,8 @@ export const handleFormActionClick = (e, deps) => {
         },
       });
 
-      // Update scene data
+      // Update store with new repository state
+      store.setRepositoryState(repository.getState());
     }
 
     render();
