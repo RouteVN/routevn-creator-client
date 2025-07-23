@@ -259,3 +259,29 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
   store.closePopover();
   render();
 };
+
+export const handleInitialValueClick = (e, deps) => {
+  const { render, store } = deps;
+  store.setPopover({
+    mode: "editInitialValue",
+    x: e.detail.x,
+    y: e.detail.y,
+    payload: {
+      property: e.detail.property,
+    },
+  });
+  render();
+};
+
+export const handleEditInitialValueFormSubmit = (e, deps) => {
+  const { store, render } = deps;
+  const {
+    payload: { property },
+  } = store.selectPopover();
+  store.updateInitialValue({
+    property,
+    initialValue: e.detail.formValues.initialValue,
+  });
+  store.closePopover();
+  render();
+};

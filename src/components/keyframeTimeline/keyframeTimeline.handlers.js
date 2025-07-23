@@ -73,3 +73,20 @@ export const handlePropertyNameRightClick = (e, deps) => {
     }),
   );
 };
+
+export const handleInitialValueClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  const property = e.currentTarget.id.replace("initial-value-", "");
+
+  dispatchEvent(
+    new CustomEvent("initial-value-click", {
+      detail: {
+        property,
+        x: e.clientX,
+        y: e.clientY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};

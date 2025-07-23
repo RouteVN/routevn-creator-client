@@ -51,6 +51,28 @@ const updateKeyframeForm = {
   },
 };
 
+const editInitialValueForm = {
+  title: "Edit Initial Value",
+  fields: [
+    {
+      name: "initialValue",
+      inputType: "inputText",
+      label: "Initial Value",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Update Value",
+      },
+    ],
+  },
+};
+
 const propertyOptions = [
   { label: "X", value: "x" },
   { label: "Y", value: "y" },
@@ -251,11 +273,11 @@ export const deleteKeyframe = (state, payload) => {
 
 export const deleteProperty = (state, payload) => {
   const { property } = payload;
-  
+
   state.selectedProperties = state.selectedProperties.filter(
-    (p) => p.name !== property
+    (p) => p.name !== property,
   );
-  
+
   delete state.animationProperties[property];
 };
 
@@ -289,6 +311,12 @@ export const updateKeyframe = (state, payload) => {
   const { property, index, keyframe } = payload;
   const keyframes = state.animationProperties[property].keyframes;
   keyframes[index] = keyframe;
+};
+
+export const updateInitialValue = (state, payload) => {
+  const { property, initialValue } = payload;
+
+  state.animationProperties[property].initialValue = initialValue;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -353,6 +381,7 @@ export const toViewData = ({ state, props }) => {
     addPropertyForm,
     addKeyframeForm,
     updateKeyframeForm,
+    editInitialValueForm,
     keyframeDropdownItems:
       state.popover.mode === "keyframeMenu"
         ? keyframeDropdownItems
@@ -360,9 +389,12 @@ export const toViewData = ({ state, props }) => {
     addPropertyButtonVisible: toAddProperties.length !== 0,
     popover: {
       ...state.popover,
-      popoverIsOpen: ["addProperty", "addKeyframe", "editKeyframe"].includes(
-        state.popover.mode,
-      ),
+      popoverIsOpen: [
+        "addProperty",
+        "addKeyframe",
+        "editKeyframe",
+        "editInitialValue",
+      ].includes(state.popover.mode),
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
       ),
