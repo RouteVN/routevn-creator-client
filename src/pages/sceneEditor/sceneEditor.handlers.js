@@ -1,9 +1,6 @@
 import { nanoid } from "nanoid";
-import { toFlatItems, toTreeStructure } from "../../deps/repository";
-import {
-  extractFileIdsFromRenderState,
-  layoutTreeStructureToRenderState,
-} from "../../utils/index.js";
+import { toFlatItems } from "../../deps/repository";
+import { extractFileIdsFromRenderState } from "../../utils/index.js";
 
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(
@@ -55,86 +52,15 @@ async function renderSceneState(store, drenderer, httpClient) {
 export const handleBeforeMount = (deps) => {
   const { store, router, repository } = deps;
   const { sceneId } = router.getPayload();
-  const { scenes, images, characters, placements, layouts, audio } =
-    repository.getState();
 
-  // Convert characters to the required format
-  const processedCharacters = {};
-  if (characters && characters.items) {
-    Object.keys(characters.items).forEach((characterId) => {
-      const character = characters.items[characterId];
-      if (character.type === "character") {
-        processedCharacters[characterId] = {
-          variables: {
-            name: character.name || "Unnamed Character",
-          },
-          spriteParts: {},
-        };
+  store.setSceneId(sceneId);
+  store.setRepositoryState(repository.getState());
 
-        // Process sprite parts if they exist
-        if (character.sprites && character.sprites.items) {
-          Object.keys(character.sprites.items).forEach((spriteId) => {
-            const sprite = character.sprites.items[spriteId];
-            if (sprite.fileId) {
-              processedCharacters[characterId].spriteParts[spriteId] = {
-                fileId: sprite.fileId,
-              };
-            }
-          });
-        }
-      }
-    });
+  // Get scene to set first section
+  const scene = store.selectScene();
+  if (scene && scene.sections && scene.sections.length > 0) {
+    store.setSelectedSectionId(scene.sections[0].id);
   }
-
-  // Convert placements to the required format
-  const processedPlacements = {};
-  if (placements && placements.items) {
-    Object.keys(placements.items).forEach((placementId) => {
-      const placement = placements.items[placementId];
-      if (placement.type === "placement") {
-        processedPlacements[placementId] = placement;
-      }
-    });
-  }
-
-  const processedLayouts = {};
-  if (layouts && layouts.items) {
-    Object.keys(layouts.items).forEach((layoutId) => {
-      const layout = layouts.items[layoutId];
-      if (layout.type === "layout") {
-        processedLayouts[layoutId] = {
-          name: layout.name,
-          elements: layoutTreeStructureToRenderState(
-            toTreeStructure(layout.elements),
-            images.items,
-          ),
-        };
-      }
-    });
-  }
-
-  store.setImages(images.items);
-  store.setAudios(audio.items);
-
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-  scene.sections = toFlatItems(scene.sections).map((section) => {
-    return {
-      ...section,
-      lines: toFlatItems(section.lines),
-    };
-  });
-  store.setScene({
-    id: scene.id,
-    scene,
-  });
-
-  store.setSelectedSectionId(scene.sections[0].id);
-  store.setRepository(repository.getState());
-  store.setCharacters(processedCharacters);
-  store.setPlacements(processedPlacements);
-  store.setLayouts(processedLayouts);
 };
 
 export const handleAfterMount = async (deps) => {
@@ -209,22 +135,7 @@ export const handleCommandLineSubmit = (e, deps) => {
     },
   });
 
-  const { scenes } = repository.getState();
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-  scene.sections = toFlatItems(scene.sections).map((section) => {
-    return {
-      ...section,
-      lines: toFlatItems(section.lines),
-    };
-  });
-
-  store.setScene({
-    id: scene.id,
-    scene,
-  });
-  store.setRepository(repository.getState());
+  store.setRepositoryState(repository.getState());
   store.setMode("lines-editor");
 
   render();
@@ -311,20 +222,6 @@ export const handleSectionAddClick = (e, deps) => {
     },
   });
 
-  const { scenes } = repository.getState();
-  const newScene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-  newScene.sections = toFlatItems(newScene.sections).map((section) => {
-    return {
-      ...section,
-      lines: toFlatItems(section.lines),
-    };
-  });
-  store.setScene({
-    id: sceneId,
-    scene: newScene,
-  });
   store.setSelectedSectionId(newSectionId);
   render();
 };
@@ -373,21 +270,6 @@ export const handleSplitLine = (e, deps) => {
   });
 
   // Update the scene data
-
-  const { scenes } = repository.getState();
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-  scene.sections = toFlatItems(scene.sections).map((section) => {
-    return {
-      ...section,
-      lines: toFlatItems(section.lines),
-    };
-  });
-  store.setScene({
-    id: scene.id,
-    scene,
-  });
 
   // Pre-configure the linesEditor before rendering
 
@@ -438,21 +320,6 @@ export const handleNewLine = (e, deps) => {
         presentation: {},
       },
     },
-  });
-
-  const { scenes } = repository.getState();
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-  scene.sections = toFlatItems(scene.sections).map((section) => {
-    return {
-      ...section,
-      lines: toFlatItems(section.lines),
-    };
-  });
-  store.setScene({
-    id: scene.id,
-    scene,
   });
 
   render();
@@ -593,21 +460,6 @@ export const handleMergeLines = (e, deps) => {
   });
 
   // Update the scene data
-  const { scenes } = repository.getState();
-  const updatedScene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-  updatedScene.sections = toFlatItems(updatedScene.sections).map((section) => {
-    return {
-      ...section,
-      lines: toFlatItems(section.lines),
-    };
-  });
-
-  store.setScene({
-    id: updatedScene.id,
-    scene: updatedScene,
-  });
 
   // Update selected line to the previous one
   store.setSelectedLineId(prevLineId);
@@ -634,128 +486,22 @@ export const handleMergeLines = (e, deps) => {
   });
 };
 
-export const handleBackgroundActionClick = (e, deps) => {
+export const handleOpenCommandLine = (e, deps) => {
   const { store, render } = deps;
-  store.setMode("background");
+  const mode = e.currentTarget.getAttribute("data-mode");
+  store.setMode(mode);
   render();
 };
 
-export const handleBackgroundActionContextMenu = (e, deps) => {
+export const handlePresentationActionRightClick = (e, deps) => {
   const { store, render } = deps;
+  const mode = e.currentTarget.getAttribute("data-mode");
+  console.log("mode", mode);
   e.preventDefault();
-
   store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    presentationType: "background",
+    presentationType: mode,
   });
-  render();
-};
-
-export const handleLayoutActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("layouts");
-  render();
-};
-
-export const handleLayoutActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "layout",
-  });
-  render();
-};
-
-export const handleBgmActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("bgm");
-  render();
-};
-
-export const handleBgmActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "bgm",
-  });
-  render();
-};
-
-export const handleSoundEffectActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("soundeffects");
-  render();
-};
-
-export const handleSoundEffectActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "soundEffects",
-  });
-  render();
-};
-
-export const handleCharactersActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("characters");
-  render();
-};
-
-export const handleCharactersActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "characters",
-  });
-  render();
-};
-
-export const handleSceneTransitionActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("scenetransition");
-  render();
-};
-
-export const handleSceneTransitionActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "sceneTransition",
-  });
-  render();
-};
-
-export const handleDialogueActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("dialoguebox");
-  render();
-};
-
-export const handleDialogueActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "dialogue",
-  });
-  render();
-};
-
-export const handleActionsOverlayClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("lines-editor");
   render();
 };
 
@@ -817,22 +563,8 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     });
 
     // Update scene data and select first remaining section
-    const { scenes } = repository.getState();
-    const newScene = toFlatItems(scenes)
-      .filter((item) => item.type === "scene")
-      .find((item) => item.id === sceneId);
-    newScene.sections = toFlatItems(newScene.sections).map((section) => {
-      return {
-        ...section,
-        lines: toFlatItems(section.lines),
-      };
-    });
-    store.setScene({
-      id: sceneId,
-      scene: newScene,
-    });
-
-    if (newScene.sections.length > 0) {
+    const newScene = store.selectScene();
+    if (newScene && newScene.sections.length > 0) {
       store.setSelectedSectionId(newScene.sections[0].id);
     }
   } else if (action === "rename-section") {
@@ -842,7 +574,6 @@ export const handleDropdownMenuClickItem = (e, deps) => {
       sectionId,
     });
   } else if (action === "delete-presentation") {
-    // Delete presentation using unset action
     const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
 
@@ -851,22 +582,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
         actionType: "unset",
         target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
       });
-
-      // Update scene data
-      const { scenes } = repository.getState();
-      const scene = toFlatItems(scenes)
-        .filter((item) => item.type === "scene")
-        .find((item) => item.id === sceneId);
-      scene.sections = toFlatItems(scene.sections).map((section) => {
-        return {
-          ...section,
-          lines: toFlatItems(section.lines),
-        };
-      });
-      store.setScene({
-        id: scene.id,
-        scene,
-      });
+      store.setRepositoryState(repository.getState());
     }
   }
 
@@ -924,20 +640,6 @@ export const handleFormActionClick = (e, deps) => {
       });
 
       // Update scene data
-      const { scenes } = repository.getState();
-      const newScene = toFlatItems(scenes)
-        .filter((item) => item.type === "scene")
-        .find((item) => item.id === sceneId);
-      newScene.sections = toFlatItems(newScene.sections).map((section) => {
-        return {
-          ...section,
-          lines: toFlatItems(section.lines),
-        };
-      });
-      store.setScene({
-        id: sceneId,
-        scene: newScene,
-      });
     }
 
     render();
