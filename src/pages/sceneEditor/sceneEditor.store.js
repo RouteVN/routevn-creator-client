@@ -249,13 +249,16 @@ export const selectRenderState = ({ state }) => {
     (section) => section.id === state.selectedSectionId,
   );
 
-  const linesUpToSelectedLine = currentSection?.lines?.slice(
-    0,
-    currentSection?.lines?.findIndex(
-      (line) => line.id === state.selectedLineId,
-    ) + 1,
+  const selectedLineIndex = currentSection?.lines?.findIndex(
+    (line) => line.id === state.selectedLineId,
   );
+  
+  // If selected line not found, default to all lines
+  const endIndex = selectedLineIndex !== -1 ? selectedLineIndex + 1 : currentSection?.lines?.length || 0;
+  const linesUpToSelectedLine = currentSection?.lines?.slice(0, endIndex) || [];
+  
   console.log("linesUpToSelectedLine", linesUpToSelectedLine);
+  console.log("selectedLineIndex", selectedLineIndex, "for lineId", state.selectedLineId);
   const presentationState = constructPresentationState(
     linesUpToSelectedLine.map((line) =>
       JSON.parse(JSON.stringify(line.presentation)),
@@ -349,58 +352,16 @@ export const toViewData = ({ state, props }, payload) => {
     (line) => line.id === state.selectedLineId,
   );
 
-  let backgroundImage;
-  let bgmAudio;
-  let soundEffectsAudio = [];
-  let charactersData = [];
-
-  const repositoryState = selectRepositoryState({ state });
-  const images = selectImages({ state });
-  const audios = selectAudios({ state });
-
-  if (selectedLine?.presentation?.background) {
-    backgroundImage = images[selectedLine.presentation.background.imageId];
-  }
-
-  if (selectedLine?.presentation?.bgm) {
-    bgmAudio = audios[selectedLine.presentation.bgm.audioId];
-  }
-
-  if (selectedLine?.presentation?.soundEffects) {
-    soundEffectsAudio = selectedLine.presentation.soundEffects.map((se) => ({
-      ...se,
-      audio: audios[se.audioId],
-    }));
-  }
-
-  if (selectedLine?.presentation?.character?.items) {
-    charactersData = selectedLine.presentation.character.items.map((char) => {
-      const character = repositoryState.characters?.items?.[char.id];
-      let sprite = null;
-
-      if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
-        // Look up sprite from character's sprites
-        const spriteId = char.spriteParts[0].spritePartId;
-        const flatSprites = toFlatItems(character.sprites);
-        sprite = flatSprites.find((s) => s.id === spriteId);
-      }
-
-      return {
-        ...char,
-        character,
-        sprite,
-      };
+  // Debug logging
+  if (!selectedLine && state.selectedLineId) {
+    console.warn("Selected line not found:", {
+      selectedLineId: state.selectedLineId,
+      availableLineIds: currentSection?.lines?.map(line => line.id) || [],
+      currentSectionId: state.selectedSectionId
     });
   }
 
-  let sceneTransitionData = null;
-  if (selectedLine?.presentation?.sceneTransition) {
-    const sceneTransition = selectedLine.presentation.sceneTransition;
-    sceneTransitionData = {
-      ...sceneTransition,
-      scene: repositoryState.scenes?.items?.[sceneTransition.sceneId],
-    };
-  }
+  const repositoryState = selectRepositoryState({ state });
 
   let richTextContent = "";
   if (selectedLine?.presentation?.richText) {
@@ -414,13 +375,6 @@ export const toViewData = ({ state, props }, payload) => {
     richTextContent = selectedLine.presentation.dialogue.text || "";
   }
 
-  const soundEffectsNames = soundEffectsAudio
-    .map((se) => se.audio.name)
-    .join(", ");
-  const charactersNames = charactersData
-    .map((char) => char.character?.name || "Unknown")
-    .join(", ");
-
   console.log("selectedLine", selectedLine);
 
   return {
@@ -429,38 +383,7 @@ export const toViewData = ({ state, props }, payload) => {
     currentLines: Array.isArray(currentSection?.lines)
       ? currentSection.lines
       : [],
-    currentLine: selectedLine,
-    // currentLine: currentLines.find(line => line.id === state.selectedLineId),
-    background: selectedLine?.presentation?.background,
-    backgroundImage,
-    layout: selectedLine?.presentation?.layout,
-    layoutData: selectedLine?.presentation?.layout
-      ? toFlatItems(repositoryState.layouts).find(
-          (l) => l.id === selectedLine?.presentation?.layout?.layoutId,
-        )
-      : null,
-    bgm: selectedLine?.presentation?.bgm,
-    bgmAudio,
-    soundEffects: selectedLine?.presentation?.soundEffects,
-    soundEffectsAudio,
-    soundEffectsNames,
-    characters: selectedLine?.presentation?.character?.items,
-    charactersData,
-    charactersNames,
-    sceneTransition: selectedLine?.presentation?.sceneTransition,
-    sceneTransitionData,
-    dialogue: selectedLine?.presentation?.dialogue,
-    dialogueData: selectedLine?.presentation?.dialogue
-      ? toFlatItems(repositoryState.layouts).find(
-          (l) => l.id === selectedLine?.presentation?.dialogue?.layoutId,
-        )
-      : null,
-    dialogueCharacterData: selectedLine?.presentation?.dialogue?.characterId
-      ? repositoryState.characters?.items?.[
-          selectedLine.presentation.dialogue.characterId
-        ]
-      : null,
-    richText: selectedLine?.presentation?.richText,
+    presentationData: selectPresentationData({ state }),
     richTextContent,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
@@ -530,6 +453,178 @@ export const selectSelectedLine = (state, props, payload) => {
   return scene.sections
     .find((section) => section.id === state.selectedSectionId)
     ?.lines.find((line) => line.id === state.selectedLineId);
+};
+
+export const selectPresentationData = ({ state }) => {
+  const scene = selectScene({ state });
+  if (!scene) return [];
+
+  const currentSection = scene.sections.find(
+    (section) => section.id === state.selectedSectionId,
+  );
+
+  const selectedLine = currentSection?.lines?.find(
+    (line) => line.id === state.selectedLineId,
+  );
+
+  if (!selectedLine?.presentation) return [];
+
+  const repositoryState = selectRepositoryState({ state });
+  const images = selectImages({ state });
+  const audios = selectAudios({ state });
+
+  const presentationItems = [];
+
+  // Background
+  if (selectedLine.presentation.background) {
+    const backgroundImage = images[selectedLine.presentation.background.imageId];
+    if (backgroundImage) {
+      presentationItems.push({
+        type: 'background',
+        id: 'presentation-action-background',
+        dataMode: 'background',
+        icon: 'image',
+        data: {
+          backgroundImage,
+        },
+      });
+    }
+  }
+
+  // Layout
+  if (selectedLine.presentation.layout) {
+    const layoutData = toFlatItems(repositoryState.layouts).find(
+      (l) => l.id === selectedLine.presentation.layout.layoutId,
+    );
+    if (layoutData) {
+      presentationItems.push({
+        type: 'layout',
+        id: 'presentation-action-layout',
+        dataMode: 'layout',
+        icon: 'layout',
+        data: {
+          layoutData,
+        },
+      });
+    }
+  }
+
+  // BGM
+  if (selectedLine.presentation.bgm) {
+    const bgmAudio = audios[selectedLine.presentation.bgm.audioId];
+    if (bgmAudio) {
+      presentationItems.push({
+        type: 'bgm',
+        id: 'presentation-action-bgm',
+        dataMode: 'bgm',
+        icon: 'audio',
+        data: {
+          bgmAudio,
+        },
+      });
+    }
+  }
+
+  // Sound Effects
+  if (selectedLine.presentation.soundEffects) {
+    const soundEffectsAudio = selectedLine.presentation.soundEffects.map((se) => ({
+      ...se,
+      audio: audios[se.audioId],
+    }));
+    const soundEffectsNames = soundEffectsAudio
+      .map((se) => se.audio.name)
+      .join(", ");
+
+    presentationItems.push({
+      type: 'soundEffects',
+      id: 'presentation-action-sfx',
+      dataMode: 'soundEffects',
+      icon: 'audio',
+      data: {
+        soundEffectsAudio,
+        soundEffectsNames,
+      },
+    });
+  }
+
+  // Characters
+  if (selectedLine.presentation.character?.items) {
+    const charactersData = selectedLine.presentation.character.items.map((char) => {
+      const character = repositoryState.characters?.items?.[char.id];
+      let sprite = null;
+
+      if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
+        const spriteId = char.spriteParts[0].spritePartId;
+        const flatSprites = toFlatItems(character.sprites);
+        sprite = flatSprites.find((s) => s.id === spriteId);
+      }
+
+      return {
+        ...char,
+        character,
+        sprite,
+      };
+    });
+
+    const charactersNames = charactersData
+      .map((char) => char.character?.name || "Unknown")
+      .join(", ");
+
+    presentationItems.push({
+      type: 'characters',
+      id: 'presentation-action-characters',
+      dataMode: 'characters',
+      icon: 'character',
+      data: {
+        charactersData,
+        charactersNames,
+      },
+    });
+  }
+
+  // Scene Transition
+  if (selectedLine.presentation.sceneTransition) {
+    const sceneTransition = selectedLine.presentation.sceneTransition;
+    const sceneTransitionData = {
+      ...sceneTransition,
+      scene: repositoryState.scenes?.items?.[sceneTransition.sceneId],
+    };
+
+    presentationItems.push({
+      type: 'sceneTransition',
+      id: 'presentation-action-scene',
+      dataMode: 'scene',
+      icon: 'text',
+      data: {
+        sceneTransitionData,
+      },
+    });
+  }
+
+  // Dialogue
+  if (selectedLine.presentation.dialogue) {
+    const dialogueData = toFlatItems(repositoryState.layouts).find(
+      (l) => l.id === selectedLine.presentation.dialogue.layoutId,
+    );
+    const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
+      ? repositoryState.characters?.items?.[
+          selectedLine.presentation.dialogue.characterId
+        ]
+      : null;
+
+    presentationItems.push({
+      type: 'dialogue',
+      id: 'presentation-action-dialogue',
+      dataMode: 'dialoguebox',
+      icon: 'dialogue',
+      data: {
+        dialogueData,
+        dialogueCharacterData,
+      },
+    });
+  }
+
+  return presentationItems;
 };
 
 export const toggleSectionsGraphView = (state) => {

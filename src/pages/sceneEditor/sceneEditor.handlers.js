@@ -284,14 +284,16 @@ export const handleSplitLine = (e, deps) => {
     linesEditorRef.elm.store.setIsNavigating(true);
   }
 
+  // Update store with new repository state (this is the key missing step!)
+  store.setRepositoryState(repository.getState());
+
   // Update selectedLineId through the store (not directly in linesEditor)
   store.setSelectedLineId(newLineId);
 
-  // Render and then focus immediately
-
+  // Render after setting the selected line ID
   render();
 
-  // Use requestAnimationFrame for faster execution than setTimeout
+  // Use requestAnimationFrame for focus operations
   requestAnimationFrame(() => {
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine(newLineId);
@@ -529,6 +531,12 @@ export const handleSectionTabRightClick = (e, deps) => {
     sectionId,
   });
 
+  render();
+};
+
+export const handleActionsOverlayClick = (e, deps) => {
+  const { store, render } = deps;
+  store.setMode("lines-editor");
   render();
 };
 

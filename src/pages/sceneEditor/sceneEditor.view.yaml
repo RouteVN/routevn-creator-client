@@ -34,10 +34,6 @@ refs:
         handler: handleOpenCommandLine
       contextmenu:
         handler: handlePresentationActionRightClick
-  command-line-*:
-    eventListeners:
-      submit:
-        handler: handleCommandLineSubmit
   actions-overlay:
     eventListeners:
       click:
@@ -46,10 +42,6 @@ refs:
     eventListeners:
       click:
         handler: handleActionsContainerClick
-  command-line-actions:
-    eventListeners:
-      actionClicked:
-        handler: handleActionClicked
   section-tab-*:
     eventListeners:
       click:
@@ -78,60 +70,12 @@ refs:
     eventListeners:
       click:
         handler: handleAddPresentationButtonClick
-  command-line-background:
+  command-line-*:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
-      submit:
-        handler: handleCommandLineSubmit
-  command-line-bgm:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      submit:
-        handler: handleCommandLineSubmit
-  command-line-sound-effects:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      submit:
-        handler: handleCommandLineSubmit
-  command-line-layouts:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      submit:
-        handler: handleCommandLineSubmit
-  command-line-characters:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      submit:
-        handler: handleCommandLineSubmit
-  command-line-scene-transition:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      submit:
-        handler: handleCommandLineSubmit
-  command-line-dialogue-box:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      submit:
-        handler: handleCommandLineSubmit
-  command-line-choices:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-  command-line-conditional:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-  command-line-rich-text:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
+      actionClicked:
+        handler: handleActionClicked
       submit:
         handler: handleCommandLineSubmit
   toggle-sections-graph-view:
@@ -177,44 +121,45 @@ template:
                       - rtgl-text s=sm c=mu-fg: Presentation section
                       - rtgl-button#add-presentation-button s=sm: Add
                   - rtgl-view g=md w=f:
-                      - $if background:
-                          - rtgl-view#presentation-action-background data-mode="background" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
-                              - rtgl-svg svg=image wh=24:
-                              - rvn-file-image fileId=${backgroundImage.fileId} w=50 h=35:
-                              - rtgl-text s=sm: ${backgroundImage.name}
-                      - $if layout:
-                          - rtgl-view#presentation-action-layout data-mode="layout" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=layout wh=24:
-                              - rtgl-text s=sm: ${layoutData.name}
-                      - $if bgm:
-                          - rtgl-view#presentation-action-bgm data-mode="bgm" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=audio wh=24:
-                              - rtgl-text s=sm: ${bgmAudio.name}
-                      - $if soundEffects:
-                          - rtgl-view#presentation-action-sfx data-mode="soundEffects" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=audio wh=24:
-                              - rtgl-text s=sm: ${soundEffectsNames}
-                      - $if characters:
-                          - rtgl-view#presentation-action-characters data-mode="characters" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=character wh=24:
-                              - rtgl-view d=h g=sm av=c:
-                                  - $for charData, i in charactersData:
-                                      - $if charData.sprite && charData.sprite.fileId:
-                                          - rvn-file-image fileId=${charData.sprite.fileId} w=35 h=35:
-                                        $else:
-                                          - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
-                                              - rtgl-text s=xs: No Sprite
-                              - rtgl-text s=sm: ${charactersNames}
-                      - $if sceneTransition:
-                          - rtgl-view#presentation-action-scene data-mode="scene" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=text wh=24:
-                              - rtgl-text s=sm: "Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})"
-                      - $if dialogue:
-                          - rtgl-view#presentation-action-dialogue data-mode="dialoguebox" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                              - rtgl-svg svg=dialogue wh=24:
-                              - $if dialogueCharacterData:
-                                  - rvn-file-image fileId=${dialogueCharacterData.fileId} w=32 h=32 br=f:
-                              - rtgl-text s=sm: "Dialogue Box: ${dialogueData.name}"
+                      - $for item in presentationData:
+                          - $if item.type == "background":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rvn-file-image fileId=${item.data.backgroundImage.fileId} w=50 h=35:
+                                  - rtgl-text s=sm: ${item.data.backgroundImage.name}
+                            $elif item.type == "layout":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rtgl-text s=sm: ${item.data.layoutData.name}
+                            $elif item.type == "bgm":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rtgl-text s=sm: ${item.data.bgmAudio.name}
+                            $elif item.type == "soundEffects":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rtgl-text s=sm: ${item.data.soundEffectsNames}
+                            $elif item.type == "characters":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rtgl-view d=h g=sm av=c:
+                                      - $for charData, i in item.data.charactersData:
+                                          - $if charData.sprite && charData.sprite.fileId:
+                                              - rvn-file-image fileId=${charData.sprite.fileId} w=35 h=35:
+                                            $else:
+                                              - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
+                                                  - rtgl-text s=xs: No Sprite
+                                  - rtgl-text s=sm: ${item.data.charactersNames}
+                            $elif item.type == "sceneTransition":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rtgl-text s=sm: "Transition to: ${item.data.sceneTransitionData.scene.name} (${item.data.sceneTransitionData.animation})"
+                            $elif item.type == "dialogue":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - $if item.data.dialogueCharacterData:
+                                      - rvn-file-image fileId=${item.data.dialogueCharacterData.fileId} w=32 h=32 br=f:
+                                  - rtgl-text s=sm: "Dialogue Box: ${item.data.dialogueData.name}"
   - $if mode != "lines-editor":
       - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
           - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
