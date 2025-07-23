@@ -20,9 +20,6 @@ const renderLayoutPreview = async (deps) => {
     imageItems,
   );
 
-  store.setItems(layout?.elements || { items: {}, tree: [] });
-  render();
-
   const selectedItem = store.selectSelectedItem();
 
   const fileIds = extractFileIdsFromRenderState(renderStateElements);
@@ -48,24 +45,32 @@ const renderLayoutPreview = async (deps) => {
 
   await drenderer.loadAssets(assets);
 
-  const elements = selectedItem
-    ? renderStateElements.concat([
-        {
-          id: "id1",
-          type: "rect",
-          x: selectedItem.x - 5,
-          y: selectedItem.y - 5,
-          width: 11,
-          height: 11,
-          fill: "red",
-        },
-      ])
-    : renderStateElements;
-
+  // First render all layout elements
   drenderer.render({
-    elements,
+    elements: renderStateElements,
     transitions: [],
   });
+
+  // Then render the red dot on top if item is selected
+  if (selectedItem) {
+    const redDot = {
+      id: "selected-anchor",
+      type: "rect",
+      x: selectedItem.x - 12,
+      y: selectedItem.y - 12,
+      width: 25,
+      height: 25,
+      fill: "red",
+    };
+
+    // Add red dot to existing rendered elements
+    const elementsWithRedDot = renderStateElements.concat([redDot]);
+
+    drenderer.render({
+      elements: elementsWithRedDot,
+      transitions: [],
+    });
+  }
 };
 
 export const handleBeforeMount = (deps) => {
@@ -183,8 +188,15 @@ export const handleImageSelectorUpdated = async (e, deps) => {
   const { layouts, images } = repository.getState();
   const layout = layouts.items[layoutId];
 
+  // Preserve selectedItemId before updating store
+  const currentSelectedItemId = store.selectSelectedItemId();
+
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
+
+  // Restore selectedItemId after store update
+  store.setSelectedItemId(currentSelectedItemId);
+
   render();
   await renderLayoutPreview(deps);
 };
