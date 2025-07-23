@@ -98,13 +98,14 @@ export const handleAddLayoutClick = (e, deps) => {
   render();
 };
 
-export const handleDataChanged = (e, deps) => {
+export const handleDataChanged = async (e, deps) => {
   const { router, store, repository, render } = deps;
   const { layoutId } = router.getPayload();
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setItems(layout?.elements || { items: {}, tree: [] });
   render();
+  await renderLayoutPreview(deps);
 };
 
 export const handleDetailPanelItemUpdate = async (e, deps) => {
