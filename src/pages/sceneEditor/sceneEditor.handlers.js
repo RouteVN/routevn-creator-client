@@ -493,129 +493,15 @@ export const handleOpenCommandLine = (e, deps) => {
   render();
 };
 
-export const handleBackgroundActionClick = (e, deps) => {
+export const handlePresentationActionRightClick = (e, deps) => {
   const { store, render } = deps;
-  console.log("e", e.currentTarget);
-  store.setMode("background");
-  render();
-};
-
-export const handleBackgroundActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
+  const mode = e.currentTarget.getAttribute("data-mode");
+  console.log("mode", mode);
   e.preventDefault();
-
   store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    presentationType: "background",
+    presentationType: mode,
   });
-  render();
-};
-
-export const handleLayoutActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("layouts");
-  render();
-};
-
-export const handleLayoutActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "layout",
-  });
-  render();
-};
-
-export const handleBgmActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("bgm");
-  render();
-};
-
-export const handleBgmActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "bgm",
-  });
-  render();
-};
-
-export const handleSoundEffectActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("soundeffects");
-  render();
-};
-
-export const handleSoundEffectActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "soundEffects",
-  });
-  render();
-};
-
-export const handleCharactersActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("characters");
-  render();
-};
-
-export const handleCharactersActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "characters",
-  });
-  render();
-};
-
-export const handleSceneTransitionActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("scenetransition");
-  render();
-};
-
-export const handleSceneTransitionActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "sceneTransition",
-  });
-  render();
-};
-
-export const handleDialogueActionClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("dialoguebox");
-  render();
-};
-
-export const handleDialogueActionContextMenu = (e, deps) => {
-  const { store, render } = deps;
-  e.preventDefault();
-
-  store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
-    presentationType: "dialogue",
-  });
-  render();
-};
-
-export const handleActionsOverlayClick = (e, deps) => {
-  const { store, render } = deps;
-  store.setMode("lines-editor");
   render();
 };
 
@@ -688,7 +574,6 @@ export const handleDropdownMenuClickItem = (e, deps) => {
       sectionId,
     });
   } else if (action === "delete-presentation") {
-    // Delete presentation using unset action
     const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
 
@@ -697,8 +582,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
         actionType: "unset",
         target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
       });
-
-      // Update scene data
+      store.setRepositoryState(repository.getState());
     }
   }
 
