@@ -150,13 +150,14 @@ export const handleAddKeyframeInDialog = (e, deps) => {
 export const handleAddKeyframeFormSubmit = (e, deps) => {
   const { store, render } = deps;
   const {
-    payload: { property },
+    payload: { property, index },
   } = store.selectPopover();
 
   console.log("e.detail.formValues", e.detail.formValues);
   store.addKeyframe({
     ...e.detail.formValues,
     property,
+    index,
   });
   store.closePopover();
   render();
@@ -177,13 +178,25 @@ export const handleKeyframeRightClick = (e, deps) => {
   render();
 };
 
+export const handlePropertyNameRightClick = (e, deps) => {
+  const { render, store } = deps;
+  store.setPopover({
+    mode: "propertyNameMenu",
+    x: e.detail.x,
+    y: e.detail.y,
+    payload: {
+      property: e.detail.property,
+    },
+  });
+  render();
+};
+
 export const handleKeyframeDropdownItemClick = (e, deps) => {
   const { render, store } = deps;
 
   console.log("e.detail", e.detail);
-  const {
-    payload: { property, index },
-  } = store.selectPopover();
+  const popover = store.selectPopover();
+  const { property, index } = popover.payload;
 
   // e.detail.index
   if (e.detail.item.value === "edit") {
@@ -196,8 +209,39 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
         index,
       },
     });
+  } else if (e.detail.item.value === "delete-property") {
+    store.deleteProperty({ property });
+    store.closePopover();
+  } else if (e.detail.item.value === "delete-keyframe") {
+    store.deleteKeyframe({ property, index });
+    store.closePopover();
+  } else if (e.detail.item.value === "add-right") {
+    store.setPopover({
+      mode: "addKeyframe",
+      x: e.detail.x,
+      y: e.detail.y,
+      payload: {
+        property,
+        index: index + 1,
+      },
+    });
+  } else if (e.detail.item.value === "add-left") {
+    store.setPopover({
+      mode: "addKeyframe",
+      x: e.detail.x,
+      y: e.detail.y,
+      payload: {
+        property,
+        index,
+      },
+    });
+  } else if (e.detail.item.value === "move-right") {
+    store.moveKeyframeRight({ property, index });
+    store.closePopover();
+  } else if (e.detail.item.value === "move-left") {
+    store.moveKeyframeLeft({ property, index });
+    store.closePopover();
   }
-  // todo implment delete, move, add etc...
 
   render();
 };
@@ -211,6 +255,32 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
     keyframe: e.detail.formValues,
     index,
     property,
+  });
+  store.closePopover();
+  render();
+};
+
+export const handleInitialValueClick = (e, deps) => {
+  const { render, store } = deps;
+  store.setPopover({
+    mode: "editInitialValue",
+    x: e.detail.x,
+    y: e.detail.y,
+    payload: {
+      property: e.detail.property,
+    },
+  });
+  render();
+};
+
+export const handleEditInitialValueFormSubmit = (e, deps) => {
+  const { store, render } = deps;
+  const {
+    payload: { property },
+  } = store.selectPopover();
+  store.updateInitialValue({
+    property,
+    initialValue: e.detail.formValues.initialValue,
   });
   store.closePopover();
   render();
