@@ -93,10 +93,8 @@ export const handleCommandLineSubmit = (e, deps) => {
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
 
-
   // Handle scene transitions specially - they don't require a lineId
   if (e.detail.sceneTransition) {
-    
     if (!lineId) {
       console.warn("Scene transition requires a selected line");
       return;
@@ -119,7 +117,6 @@ export const handleCommandLineSubmit = (e, deps) => {
 
   // Handle section transitions
   if (e.detail.sectionTransition) {
-    
     if (!lineId) {
       console.warn("Section transition requires a selected line");
       return;
@@ -271,7 +268,7 @@ export const handleSectionAddClick = (e, deps) => {
 
   // Update store with new repository state
   store.setRepositoryState(repository.getState());
-  
+
   store.setSelectedSectionId(newSectionId);
   render();
 };

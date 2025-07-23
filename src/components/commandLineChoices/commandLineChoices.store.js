@@ -32,12 +32,12 @@ export const setSelectedLayoutId = (state, payload) => {
 
 export const toViewData = ({ state, props }, payload) => {
   const layouts = props?.layouts || [];
-  
+
   const layoutOptions = layouts.map((layout) => ({
     value: layout.id,
     label: layout.name,
   }));
-  
+
   return {
     choices: state.choices,
     layouts: layoutOptions,

@@ -1,12 +1,18 @@
 export const handleBeforeMount = (deps) => {
   const { repository, store, render, props } = deps;
   const { scenes } = repository.getState();
-  
-  console.log("commandLineSceneTransition handleBeforeMount called with props:", props);
+
+  console.log(
+    "commandLineSceneTransition handleBeforeMount called with props:",
+    props,
+  );
   console.log("props.line:", props?.line);
   console.log("props.line?.presentation:", props?.line?.presentation);
-  console.log("props.line?.presentation?.sceneTransition:", props?.line?.presentation?.sceneTransition);
-  
+  console.log(
+    "props.line?.presentation?.sceneTransition:",
+    props?.line?.presentation?.sceneTransition,
+  );
+
   store.setItems({
     items: scenes,
   });
@@ -14,19 +20,29 @@ export const handleBeforeMount = (deps) => {
   // Initialize from existing line data if available
   if (props?.line?.presentation?.sceneTransition) {
     const sceneTransition = props.line.presentation.sceneTransition;
-    console.log("Initializing scene transition with existing data:", sceneTransition);
-    
+    console.log(
+      "Initializing scene transition with existing data:",
+      sceneTransition,
+    );
+
     store.setSelectedSceneId({
       sceneId: sceneTransition.sceneId,
     });
-    
+
     store.setSelectedAnimation({
       animation: sceneTransition.animation || "fade",
     });
-    
-    console.log("Scene transition initialized - selectedSceneId:", sceneTransition.sceneId, "animation:", sceneTransition.animation);
+
+    console.log(
+      "Scene transition initialized - selectedSceneId:",
+      sceneTransition.sceneId,
+      "animation:",
+      sceneTransition.animation,
+    );
   } else {
-    console.log("No existing scene transition data found, starting with defaults");
+    console.log(
+      "No existing scene transition data found, starting with defaults",
+    );
   }
 };
 
@@ -49,7 +65,10 @@ export const handleSubmitClick = (payload, deps) => {
   const { dispatchEvent, store } = deps;
   const { selectedSceneId, selectedAnimation } = store.getState();
 
-  console.log("Scene transition submit clicked:", { selectedSceneId, selectedAnimation });
+  console.log("Scene transition submit clicked:", {
+    selectedSceneId,
+    selectedAnimation,
+  });
 
   if (!selectedSceneId) {
     console.warn("No scene selected for transition");

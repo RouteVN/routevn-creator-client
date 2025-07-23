@@ -35,17 +35,17 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Find all scenes
   const allScenes = allItems.filter((item) => item.type === "scene");
-  
+
   // Filter scenes by search query
   const filteredScenes = state.searchQuery
     ? allScenes.filter((scene) =>
-        scene.name.toLowerCase().includes(state.searchQuery.toLowerCase())
+        scene.name.toLowerCase().includes(state.searchQuery.toLowerCase()),
       )
     : allScenes;
 
   // Group filtered scenes by their parent folder
   const scenesByFolder = {};
-  
+
   filteredScenes.forEach((scene) => {
     const folderId = scene.parentId || "root";
     if (!scenesByFolder[folderId]) {
@@ -56,7 +56,7 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Create groups with filtered scenes
   const enhancedGroups = [];
-  
+
   // Add root scenes if any
   if (scenesByFolder.root && scenesByFolder.root.length > 0) {
     enhancedGroups.push({
@@ -68,7 +68,7 @@ export const toViewData = ({ state, props }, payload) => {
       children: scenesByFolder.root,
     });
   }
-  
+
   // Add folder groups with scenes
   flatGroups.forEach((group) => {
     if (scenesByFolder[group.id] && scenesByFolder[group.id].length > 0) {
@@ -96,7 +96,7 @@ export const toViewData = ({ state, props }, payload) => {
     selectedSceneId: state.selectedSceneId,
     selectedAnimation: state.selectedAnimation,
     selectedScene: selectedScene?.name,
-    mode: state.mode
+    mode: state.mode,
   });
 
   return {

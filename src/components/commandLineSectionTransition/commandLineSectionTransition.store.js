@@ -31,17 +31,17 @@ export const setSearchQuery = (state, payload) => {
 export const toViewData = ({ state, props }, payload) => {
   // Get all sections from the current scene
   const allSections = state.sections || [];
-  
+
   // Filter sections by search query
   const filteredSections = state.searchQuery
     ? allSections.filter((section) =>
-        section.name.toLowerCase().includes(state.searchQuery.toLowerCase())
+        section.name.toLowerCase().includes(state.searchQuery.toLowerCase()),
       )
     : allSections;
 
   // Create a single group containing all sections (no folder structure for sections)
   const enhancedGroups = [];
-  
+
   if (filteredSections.length > 0) {
     enhancedGroups.push({
       type: "virtual-group",

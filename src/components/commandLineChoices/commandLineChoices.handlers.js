@@ -14,7 +14,7 @@ export const handleChoiceItemClick = (e, deps) => {
 export const handleSubmitClick = (e, deps) => {
   const { dispatchEvent, store } = deps;
   const { choices, selectedLayoutId } = store.getState();
-  
+
   // Create choices object with only non-empty values
   const choicesData = {
     choices: choices,
@@ -22,7 +22,7 @@ export const handleSubmitClick = (e, deps) => {
   if (selectedLayoutId && selectedLayoutId !== "") {
     choicesData.layoutId = selectedLayoutId;
   }
-  
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
@@ -35,7 +35,7 @@ export const handleSubmitClick = (e, deps) => {
 export const handleRemoveChoiceClick = (e, deps) => {
   const { store, render } = deps;
   const index = parseInt(e.currentTarget.id.replace("remove-choice-", ""));
-  
+
   store.removeChoice(index);
   render();
 };
@@ -43,7 +43,7 @@ export const handleRemoveChoiceClick = (e, deps) => {
 export const handleChoiceTextInput = (e, deps) => {
   const { store, render } = deps;
   const index = parseInt(e.currentTarget.id.replace("choice-text-", ""));
-  
+
   store.updateChoice({
     index: index,
     text: e.currentTarget.value,
@@ -54,18 +54,18 @@ export const handleChoiceTextInput = (e, deps) => {
 export const handleLayoutSelectChange = (e, deps) => {
   const { store, render } = deps;
   const layoutId = e.detail.value;
-  
+
   store.setSelectedLayoutId({ layoutId });
   render();
 };
 
 export const handleBeforeMount = (deps) => {
   const { store, render, props } = deps;
-  
+
   // Initialize from existing line data if available
   if (props?.line?.presentation?.choices) {
     const choicesData = props.line.presentation.choices;
-    
+
     // Set existing choices
     if (choicesData.choices && choicesData.choices.length > 0) {
       choicesData.choices.forEach((choice, index) => {
@@ -94,7 +94,7 @@ export const handleBeforeMount = (deps) => {
         }
       });
     }
-    
+
     // Set selected layout
     if (choicesData.layoutId && choicesData.layoutId !== "") {
       store.setSelectedLayoutId({
@@ -102,24 +102,24 @@ export const handleBeforeMount = (deps) => {
       });
     }
   }
-  
+
   render();
 };
 
 export const handlePropsChanged = (deps) => {
   const { store, render, props } = deps;
-  
+
   // Re-initialize when props change
   if (props?.line?.presentation?.choices) {
     const choicesData = props.line.presentation.choices;
-    
+
     // Reset choices to initial state first
     const currentState = store.getState();
     currentState.choices = [
       { text: "Choice 1", target: "" },
       { text: "Choice 2", target: "" },
     ];
-    
+
     // Set existing choices
     if (choicesData.choices && choicesData.choices.length > 0) {
       choicesData.choices.forEach((choice, index) => {
@@ -141,13 +141,13 @@ export const handlePropsChanged = (deps) => {
         }
       });
     }
-    
+
     // Set selected layout
     store.setSelectedLayoutId({
       layoutId: choicesData.layoutId || "",
     });
   }
-  
+
   render();
 };
 

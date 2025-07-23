@@ -362,7 +362,6 @@ export const toViewData = ({ state, props }, payload) => {
 
   const repositoryState = selectRepositoryState({ state });
 
-
   return {
     scene: scene,
     sections,
@@ -642,7 +641,7 @@ export const selectPresentationData = ({ state }) => {
   // Choices
   if (selectedLine.presentation.choices) {
     const choicesData = selectedLine.presentation.choices;
-    const layoutData = choicesData.layoutId 
+    const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
           (l) => l.id === choicesData.layoutId,
         )
