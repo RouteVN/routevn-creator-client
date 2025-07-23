@@ -93,6 +93,53 @@ export const handleCommandLineSubmit = (e, deps) => {
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
 
+
+  // Handle scene transitions specially - they don't require a lineId
+  if (e.detail.sceneTransition) {
+    
+    if (!lineId) {
+      console.warn("Scene transition requires a selected line");
+      return;
+    }
+
+    repository.addAction({
+      actionType: "set",
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+      value: {
+        replace: false,
+        item: e.detail,
+      },
+    });
+
+    store.setRepositoryState(repository.getState());
+    store.setMode("lines-editor");
+    render();
+    return;
+  }
+
+  // Handle section transitions
+  if (e.detail.sectionTransition) {
+    
+    if (!lineId) {
+      console.warn("Section transition requires a selected line");
+      return;
+    }
+
+    repository.addAction({
+      actionType: "set",
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+      value: {
+        replace: false,
+        item: e.detail,
+      },
+    });
+
+    store.setRepositoryState(repository.getState());
+    store.setMode("lines-editor");
+    render();
+    return;
+  }
+
   if (!lineId) {
     return;
   }
@@ -501,7 +548,6 @@ export const handleOpenCommandLine = (e, deps) => {
 export const handlePresentationActionRightClick = (e, deps) => {
   const { store, render } = deps;
   const mode = e.currentTarget.getAttribute("data-mode");
-  console.log("mode", mode);
   e.preventDefault();
   store.showPresentationDropdownMenu({
     position: { x: e.clientX, y: e.clientY },

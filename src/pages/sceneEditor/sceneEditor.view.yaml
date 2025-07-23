@@ -154,23 +154,29 @@ template:
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-text s=sm: "Transition to: ${item.data.sceneTransitionData.scene.name} (${item.data.sceneTransitionData.animation})"
+                            $elif item.type == "sectionTransition":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rtgl-text s=sm: "Section to: ${item.data.sectionTransitionData.section.name} (${item.data.sectionTransitionData.animation})"
                             $elif item.type == "dialogue":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - $if item.data.dialogueCharacterData:
                                       - rvn-file-image fileId=${item.data.dialogueCharacterData.fileId} w=32 h=32 br=f:
                                   - rtgl-text s=sm: "Dialogue Box: ${item.data.dialogueData.name}"
+                            $elif item.type == "choices":
+                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg=${item.icon} wh=24:
+                                  - rtgl-text s=sm: "Choices (${item.data.choicesData.choices.length} options)"
   - $if mode != "lines-editor":
       - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
           - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
               - $if mode == "actions":
                   - rvn-command-line-actions#command-line-actions:
-                $elif mode == "richtext":
-                  - rvn-command-line-rich-text#command-line-rich-text .lineContent=richTextContent:
                 $elif mode == "dialoguebox":
                   - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .line=selectedLine:
                 $elif mode == "choices":
-                  - rvn-command-line-choices#command-line-choices:
+                  - rvn-command-line-choices#command-line-choices .layouts=layouts .line=selectedLine:
                 $elif mode == "background":
                   - rvn-command-line-background#command-line-background data-mode="background" .line=selectedLine:
                 $elif mode == "bgm":
@@ -182,7 +188,9 @@ template:
                 $elif mode == "layouts":
                   - rvn-command-line-layouts#command-line-layouts .line=selectedLine:
                 $elif mode == "scenetransition":
-                  - rvn-command-line-scene-transition#command-line-scene-transition:
+                  - rvn-command-line-scene-transition#command-line-scene-transition .line=selectedLine:
+                $elif mode == "sectiontransition":
+                  - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections:
                 $elif mode == "conditional":
                   - rvn-command-line-conditional#command-line-conditional:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

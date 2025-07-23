@@ -1,4 +1,4 @@
-elementName: rvn-command-line-scene-transition
+elementName: rvn-command-line-section-transition
 
 propsSchema:
   type: object
@@ -8,20 +8,29 @@ propsSchema:
       properties:
         presentation:
           type: object
+    sections:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
 
 viewDataSchema:
   type: object
   properties: {}
 
 refs:
-  scene-selector:
+  section-selector:
     eventListeners:
       click:
-        handler: handleSceneSelectorClick
-  scene-item-*:
+        handler: handleSectionSelectorClick
+  section-item-*:
     eventListeners:
       click:
-        handler: handleSceneItemClick
+        handler: handleSectionItemClick
   submit-button:
     eventListeners:
       click:
@@ -34,10 +43,10 @@ refs:
     eventListeners:
       click:
         handler: handleBreadcumbActionsClick
-  breadcumb-scene-transition:
+  breadcumb-section-transition:
     eventListeners:
       click:
-        handler: handleBreadcumbSceneTransitionClick
+        handler: handleBreadcumbSectionTransitionClick
   animation-select:
     eventListeners:
       change:
@@ -49,20 +58,20 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
-    # Mode 1: Current scene and animation selector
+    # Mode 1: Current section and animation selector
     - $if mode == 'current':
       - rtgl-view d=h g=md:
         - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Scene Transition
+        - rtgl-text s=sm c=mu-fg mb=lg: Section Transition
       
-      - rtgl-text mb=md: Target Scene
-      - rtgl-view#scene-selector g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p mb=lg:
+      - rtgl-text mb=md: Target Section
+      - rtgl-view#section-selector g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p mb=lg:
         - rtgl-svg svg=text wh=24:
-        - $if selectedScene:
-            - rtgl-text s=sm: ${selectedScene.name}
+        - $if selectedSection:
+            - rtgl-text s=sm: ${selectedSection.name}
           $else:
-            - rtgl-text s=sm: Select Scene
+            - rtgl-text s=sm: Select Section
       
       - rtgl-text mb=md: Transition Animation
       - rtgl-select#animation-select .options=animationOptions .value=selectedAnimation mb=lg:
@@ -72,26 +81,26 @@ template:
         - rtgl-button#reset-button v=ol: Reset
         - rtgl-button#submit-button: Submit
 
-    # Mode 2: Scene list with search
+    # Mode 2: Section list with search
     - $if mode == 'gallery':
       - rtgl-view d=h g=md:
         - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text#breadcumb-scene-transition s=sm c=mu-fg mb=lg cur=p: Scene Transition
+        - rtgl-text#breadcumb-section-transition s=sm c=mu-fg mb=lg cur=p: Section Transition
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Scene Selection
+        - rtgl-text s=sm c=mu-fg mb=lg: Section Selection
       
       # Search bar
-      - rtgl-text mb=md: Search Scenes
-      - rtgl-input#search-input .value=searchQuery placeholder="Type to search scenes..." mb=lg:
+      - rtgl-text mb=md: Search Sections
+      - rtgl-input#search-input .value=searchQuery placeholder="Type to search sections..." mb=lg:
       
-      # Scene list grouped by folders (like commandLineActions style)
+      # Section list grouped by folders (like commandLineActions style)
       - rtgl-view h=f w=f g=sm sv:
         - $for group in groups:
           - rtgl-view g=md:
             - rtgl-text s=sm c=mu-fg mb=sm: ${group.name}
             - rtgl-view g=sm:
-              - $for scene in group.children:
-                - rtgl-view#scene-item-${scene.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+              - $for section in group.children:
+                - rtgl-view#section-item-${section.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                   - rtgl-svg svg=text wh=24:
-                  - rtgl-text s=sm: ${scene.name}
+                  - rtgl-text s=sm: ${section.name}

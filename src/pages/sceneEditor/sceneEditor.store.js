@@ -252,19 +252,19 @@ export const selectRenderState = ({ state }) => {
   const selectedLineIndex = currentSection?.lines?.findIndex(
     (line) => line.id === state.selectedLineId,
   );
-  
+
   // If selected line not found, default to all lines
-  const endIndex = selectedLineIndex !== -1 ? selectedLineIndex + 1 : currentSection?.lines?.length || 0;
+  const endIndex =
+    selectedLineIndex !== -1
+      ? selectedLineIndex + 1
+      : currentSection?.lines?.length || 0;
   const linesUpToSelectedLine = currentSection?.lines?.slice(0, endIndex) || [];
-  
-  console.log("linesUpToSelectedLine", linesUpToSelectedLine);
-  console.log("selectedLineIndex", selectedLineIndex, "for lineId", state.selectedLineId);
+
   const presentationState = constructPresentationState(
     linesUpToSelectedLine.map((line) =>
       JSON.parse(JSON.stringify(line.presentation)),
     ),
   );
-  console.log("presentationState", presentationState);
   const renderState = constructRenderState({
     presentationState,
     screen: {
@@ -283,7 +283,6 @@ export const selectRenderState = ({ state }) => {
       layouts: selectLayouts({ state }),
     },
   });
-  console.log("renderState", renderState);
   return renderState;
 };
 
@@ -356,26 +355,13 @@ export const toViewData = ({ state, props }, payload) => {
   if (!selectedLine && state.selectedLineId) {
     console.warn("Selected line not found:", {
       selectedLineId: state.selectedLineId,
-      availableLineIds: currentSection?.lines?.map(line => line.id) || [],
-      currentSectionId: state.selectedSectionId
+      availableLineIds: currentSection?.lines?.map((line) => line.id) || [],
+      currentSectionId: state.selectedSectionId,
     });
   }
 
   const repositoryState = selectRepositoryState({ state });
 
-  let richTextContent = "";
-  if (selectedLine?.presentation?.richText) {
-    // Check both possible text fields
-    richTextContent =
-      selectedLine.presentation.richText.content ||
-      selectedLine.presentation.richText.text ||
-      "";
-  } else if (selectedLine?.presentation?.dialogue) {
-    // Fall back to dialogue text if rich text doesn't exist
-    richTextContent = selectedLine.presentation.dialogue.text || "";
-  }
-
-  console.log("selectedLine", selectedLine);
 
   return {
     scene: scene,
@@ -384,7 +370,6 @@ export const toViewData = ({ state, props }, payload) => {
       ? currentSection.lines
       : [],
     presentationData: selectPresentationData({ state }),
-    richTextContent,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
@@ -477,13 +462,14 @@ export const selectPresentationData = ({ state }) => {
 
   // Background
   if (selectedLine.presentation.background) {
-    const backgroundImage = images[selectedLine.presentation.background.imageId];
+    const backgroundImage =
+      images[selectedLine.presentation.background.imageId];
     if (backgroundImage) {
       presentationItems.push({
-        type: 'background',
-        id: 'presentation-action-background',
-        dataMode: 'background',
-        icon: 'image',
+        type: "background",
+        id: "presentation-action-background",
+        dataMode: "background",
+        icon: "image",
         data: {
           backgroundImage,
         },
@@ -498,10 +484,10 @@ export const selectPresentationData = ({ state }) => {
     );
     if (layoutData) {
       presentationItems.push({
-        type: 'layout',
-        id: 'presentation-action-layout',
-        dataMode: 'layout',
-        icon: 'layout',
+        type: "layout",
+        id: "presentation-action-layout",
+        dataMode: "layout",
+        icon: "layout",
         data: {
           layoutData,
         },
@@ -514,10 +500,10 @@ export const selectPresentationData = ({ state }) => {
     const bgmAudio = audios[selectedLine.presentation.bgm.audioId];
     if (bgmAudio) {
       presentationItems.push({
-        type: 'bgm',
-        id: 'presentation-action-bgm',
-        dataMode: 'bgm',
-        icon: 'audio',
+        type: "bgm",
+        id: "presentation-action-bgm",
+        dataMode: "bgm",
+        icon: "audio",
         data: {
           bgmAudio,
         },
@@ -527,19 +513,21 @@ export const selectPresentationData = ({ state }) => {
 
   // Sound Effects
   if (selectedLine.presentation.soundEffects) {
-    const soundEffectsAudio = selectedLine.presentation.soundEffects.map((se) => ({
-      ...se,
-      audio: audios[se.audioId],
-    }));
+    const soundEffectsAudio = selectedLine.presentation.soundEffects.map(
+      (se) => ({
+        ...se,
+        audio: audios[se.audioId],
+      }),
+    );
     const soundEffectsNames = soundEffectsAudio
       .map((se) => se.audio.name)
       .join(", ");
 
     presentationItems.push({
-      type: 'soundEffects',
-      id: 'presentation-action-sfx',
-      dataMode: 'soundEffects',
-      icon: 'audio',
+      type: "soundEffects",
+      id: "presentation-action-sfx",
+      dataMode: "soundEffects",
+      icon: "audio",
       data: {
         soundEffectsAudio,
         soundEffectsNames,
@@ -549,32 +537,34 @@ export const selectPresentationData = ({ state }) => {
 
   // Characters
   if (selectedLine.presentation.character?.items) {
-    const charactersData = selectedLine.presentation.character.items.map((char) => {
-      const character = repositoryState.characters?.items?.[char.id];
-      let sprite = null;
+    const charactersData = selectedLine.presentation.character.items.map(
+      (char) => {
+        const character = repositoryState.characters?.items?.[char.id];
+        let sprite = null;
 
-      if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
-        const spriteId = char.spriteParts[0].spritePartId;
-        const flatSprites = toFlatItems(character.sprites);
-        sprite = flatSprites.find((s) => s.id === spriteId);
-      }
+        if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
+          const spriteId = char.spriteParts[0].spritePartId;
+          const flatSprites = toFlatItems(character.sprites);
+          sprite = flatSprites.find((s) => s.id === spriteId);
+        }
 
-      return {
-        ...char,
-        character,
-        sprite,
-      };
-    });
+        return {
+          ...char,
+          character,
+          sprite,
+        };
+      },
+    );
 
     const charactersNames = charactersData
       .map((char) => char.character?.name || "Unknown")
       .join(", ");
 
     presentationItems.push({
-      type: 'characters',
-      id: 'presentation-action-characters',
-      dataMode: 'characters',
-      icon: 'character',
+      type: "characters",
+      id: "presentation-action-characters",
+      dataMode: "characters",
+      icon: "character",
       data: {
         charactersData,
         charactersNames,
@@ -591,12 +581,37 @@ export const selectPresentationData = ({ state }) => {
     };
 
     presentationItems.push({
-      type: 'sceneTransition',
-      id: 'presentation-action-scene',
-      dataMode: 'scene',
-      icon: 'text',
+      type: "sceneTransition",
+      id: "presentation-action-scene",
+      dataMode: "scenetransition",
+      icon: "text",
       data: {
         sceneTransitionData,
+      },
+    });
+  }
+
+  // Section Transition
+  if (selectedLine.presentation.sectionTransition) {
+    const sectionTransition = selectedLine.presentation.sectionTransition;
+    // Find the target section in the current scene
+    const scene = selectScene({ state });
+    const targetSection = scene?.sections?.find(
+      (section) => section.id === sectionTransition.sectionId,
+    );
+
+    const sectionTransitionData = {
+      ...sectionTransition,
+      section: targetSection,
+    };
+
+    presentationItems.push({
+      type: "sectionTransition",
+      id: "presentation-action-section",
+      dataMode: "sectiontransition",
+      icon: "arrow-down",
+      data: {
+        sectionTransitionData,
       },
     });
   }
@@ -613,13 +628,34 @@ export const selectPresentationData = ({ state }) => {
       : null;
 
     presentationItems.push({
-      type: 'dialogue',
-      id: 'presentation-action-dialogue',
-      dataMode: 'dialoguebox',
-      icon: 'dialogue',
+      type: "dialogue",
+      id: "presentation-action-dialogue",
+      dataMode: "dialoguebox",
+      icon: "dialogue",
       data: {
         dialogueData,
         dialogueCharacterData,
+      },
+    });
+  }
+
+  // Choices
+  if (selectedLine.presentation.choices) {
+    const choicesData = selectedLine.presentation.choices;
+    const layoutData = choicesData.layoutId 
+      ? toFlatItems(repositoryState.layouts).find(
+          (l) => l.id === choicesData.layoutId,
+        )
+      : null;
+
+    presentationItems.push({
+      type: "choices",
+      id: "presentation-action-choices",
+      dataMode: "choices",
+      icon: "list",
+      data: {
+        choicesData,
+        layoutData,
       },
     });
   }
