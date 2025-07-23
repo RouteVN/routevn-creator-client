@@ -150,13 +150,14 @@ export const handleAddKeyframeInDialog = (e, deps) => {
 export const handleAddKeyframeFormSubmit = (e, deps) => {
   const { store, render } = deps;
   const {
-    payload: { property },
+    payload: { property, index },
   } = store.selectPopover();
 
   console.log("e.detail.formValues", e.detail.formValues);
   store.addKeyframe({
     ...e.detail.formValues,
     property,
+    index,
   });
   store.closePopover();
   render();
@@ -197,7 +198,43 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
       },
     });
   }
-  // todo implment delete, move, add etc...
+  else if (e.detail.item.value === "delete") {
+    store.deleteKeyframe( {property, index} );
+    store.closePopover();
+  }
+  else if (e.detail.item.value === "add-right") {
+    store.setPopover({
+      mode: "addKeyframe",
+      x: e.detail.x,
+      y: e.detail.y,
+      payload: {
+        property,
+        index: index+1,
+      },
+    });
+  }
+
+  else if (e.detail.item.value === "add-left") {
+    store.setPopover({
+      mode: "addKeyframe",
+      x: e.detail.x,
+      y: e.detail.y,
+      payload: {
+        property,
+        index,
+      },
+    });
+  }
+
+  else if (e.detail.item.value === "move-right") {
+    store.moveKeyframeRight( {property, index} );
+    store.closePopover();
+  }
+
+  else if (e.detail.item.value === "move-left") {
+    store.moveKeyframeLeft( {property, index} );
+    store.closePopover();
+  }
 
   render();
 };
