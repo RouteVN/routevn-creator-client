@@ -8,9 +8,9 @@ export const handleBeforeMount = (deps) => {
   });
 
   // Initialize with existing SFX data if available
-  if (props?.existingSfx && Array.isArray(props.existingSfx)) {
+  if (props?.line && Array.isArray(props.line)) {
     const flatAudioItems = toFlatItems(audio);
-    const existingSfxData = props.existingSfx.map((sfx) => {
+    const existingSfxData = props.line.map((sfx) => {
       const audioItem = flatAudioItems.find((item) => item.id === sfx.audioId);
       return {
         id: sfx.id,

@@ -259,19 +259,19 @@ template:
                 $elif mode == "richtext":
                   - rvn-command-line-rich-text#command-line-rich-text .lineContent=richTextContent:
                 $elif mode == "dialoguebox":
-                  - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .existingDialogue=dialogue:
+                  - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .line=dialogue:
                 $elif mode == "choices":
                   - rvn-command-line-choices#command-line-choices:
                 $elif mode == "background":
-                  - rvn-command-line-background#command-line-background .existingBackground=background:
+                  - rvn-command-line-background#command-line-background .line=background:
                 $elif mode == "bgm":
-                  - rvn-command-line-bgm#command-line-bgm .existingBgm=bgm:
+                  - rvn-command-line-bgm#command-line-bgm .line=bgm:
                 $elif mode == "soundeffects":
-                  - rvn-command-line-sound-effects#command-line-sound-effects .existingSfx=soundEffects:
+                  - rvn-command-line-sound-effects#command-line-sound-effects .line=soundEffects:
                 $elif mode == "characters":
-                  - rvn-command-line-characters#command-line-characters .existingCharacters=characters:
+                  - rvn-command-line-characters#command-line-characters .line=characters:
                 $elif mode == "layouts":
-                  - rvn-command-line-layouts#command-line-layouts .existingLayout=layout:
+                  - rvn-command-line-layouts#command-line-layouts .line=layout:
                 $elif mode == "scenetransition":
                   - rvn-command-line-scene-transition#command-line-scene-transition:
                 $elif mode == "conditional":

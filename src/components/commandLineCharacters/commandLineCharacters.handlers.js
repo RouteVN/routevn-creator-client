@@ -11,8 +11,8 @@ export const handleBeforeMount = (deps) => {
   });
 
   // Initialize with existing character data if available
-  if (props?.existingCharacters && Array.isArray(props.existingCharacters)) {
-    props.existingCharacters.forEach((existingChar) => {
+  if (props?.line && Array.isArray(props.line)) {
+    props.line.forEach((existingChar) => {
       // Find the character data from repository
       const characterData = toFlatItems(
         characters || { tree: [], items: {} },

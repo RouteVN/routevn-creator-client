@@ -7,7 +7,7 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    existingBackground:
+    line:
       type: object
       properties:
         imageId:
@@ -48,7 +48,7 @@ template:
         - rtgl-text s=sm c=mu-fg mb=lg: Background
       - rtgl-text: Incoming
       - $if selectedImageId:
-          - rvn-file-image#image-selector fileId=${selectedFileId} w=345 h=200:
+          - rvn-file-image#image-selector imageId=${selectedImageId} w=345 h=200:
         $else:
           - rtgl-view#image-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
             - rtgl-text: Select Image

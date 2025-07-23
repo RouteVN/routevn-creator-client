@@ -8,15 +8,15 @@ export const handleBeforeMount = (deps) => {
   });
 
   // Initialize with existing BGM data if available
-  if (props?.existingBgm?.audioId) {
+  if (props?.line?.audioId) {
     const flatAudioItems = toFlatItems(audio);
     const existingAudio = flatAudioItems.find(
-      (item) => item.id === props.existingBgm.audioId,
+      (item) => item.id === props.line.audioId,
     );
 
     if (existingAudio) {
       store.setSelectedAudioAndFileId({
-        audioId: props.existingBgm.audioId,
+        audioId: props.line.audioId,
         fileId: existingAudio.fileId,
       });
     }

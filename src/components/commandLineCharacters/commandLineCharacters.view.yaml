@@ -7,7 +7,7 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    existingCharacters:
+    line:
       type: array
 
 refs:
