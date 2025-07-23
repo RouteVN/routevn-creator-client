@@ -61,6 +61,8 @@ refs:
         handler: handleAddKeyframeInDialog
       keyframe-right-click:
         handler: handleKeyframeRightClick
+      property-name-right-click:
+        handler: handlePropertyNameRightClick
 
   add-property-popover:
     eventListeners:

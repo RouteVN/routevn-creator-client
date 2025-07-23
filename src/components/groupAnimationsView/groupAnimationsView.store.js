@@ -117,7 +117,15 @@ const keyframeDropdownItems = [
   {
     label: "Delete",
     type: "item",
-    value: "delete",
+    value: "delete-keyframe",
+  },
+];
+
+const propertyNameDropdownItems = [
+  {
+    label: "Delete",
+    type: "item",
+    value: "delete-property",
   },
 ];
 
@@ -228,21 +236,27 @@ export const addKeyframe = (state, keyframe) => {
     index = keyframes.length;
   }
 
-  keyframes.splice( 
-    index,
-    0,
-    {
+  keyframes.splice(index, 0, {
     duration: keyframe.duration,
     easing: keyframe.easing,
     value: keyframe.value,
-    }
-);
+  });
 };
 
 export const deleteKeyframe = (state, payload) => {
   const { property, index } = payload;
   const keyframes = state.animationProperties[property].keyframes;
   keyframes.splice(index, 1);
+};
+
+export const deleteProperty = (state, payload) => {
+  const { property } = payload;
+  
+  state.selectedProperties = state.selectedProperties.filter(
+    (p) => p.name !== property
+  );
+  
+  delete state.animationProperties[property];
 };
 
 export const moveKeyframeRight = (state, payload) => {
@@ -339,14 +353,19 @@ export const toViewData = ({ state, props }) => {
     addPropertyForm,
     addKeyframeForm,
     updateKeyframeForm,
-    keyframeDropdownItems,
+    keyframeDropdownItems:
+      state.popover.mode === "keyframeMenu"
+        ? keyframeDropdownItems
+        : propertyNameDropdownItems,
     addPropertyButtonVisible: toAddProperties.length !== 0,
     popover: {
       ...state.popover,
       popoverIsOpen: ["addProperty", "addKeyframe", "editKeyframe"].includes(
         state.popover.mode,
       ),
-      dropdownMenuIsOpen: ["keyframeMenu"].includes(state.popover.mode),
+      dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
+        state.popover.mode,
+      ),
     },
   };
 };

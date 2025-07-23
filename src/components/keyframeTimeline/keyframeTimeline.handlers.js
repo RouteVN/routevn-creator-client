@@ -53,3 +53,23 @@ export const handleKeyframeRightClick = (e, deps) => {
     }),
   );
 };
+
+export const handlePropertyNameRightClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  const property = e.currentTarget.id.replace("property-name-", "");
+
+  e.preventDefault();
+
+  // Dispatch event to parent to handle property right-click
+  dispatchEvent(
+    new CustomEvent("property-name-right-click", {
+      detail: {
+        property,
+        x: e.clientX,
+        y: e.clientY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
