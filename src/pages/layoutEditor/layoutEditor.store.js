@@ -127,7 +127,7 @@ export const toViewData = ({ state, props }, payload) => {
           type: "text",
           label: "Name",
           value: selectedItem.name,
-          id: "name",
+          name: "name",
           editable: true,
         },
         { type: "text", label: "Type", value: selectedItem.type },
@@ -135,14 +135,14 @@ export const toViewData = ({ state, props }, payload) => {
           type: "text",
           label: "X Position",
           value: selectedItem.x,
-          id: "x",
+          name: "x",
           editable: true,
         },
         {
           type: "text",
           label: "Y Position",
           value: selectedItem.y,
-          id: "y",
+          name: "y",
           editable: true,
         },
         ...(selectedItem.type === "text"
@@ -151,7 +151,7 @@ export const toViewData = ({ state, props }, payload) => {
                 type: "text",
                 label: "Text Content",
                 value: selectedItem.text,
-                id: "text",
+                name: "text",
                 editable: true,
               },
             ]
@@ -162,7 +162,7 @@ export const toViewData = ({ state, props }, payload) => {
                 type: "image-selector",
                 label: "Image",
                 value: selectedItem.imageId || "",
-                id: "imageId",
+                name: "imageId",
                 editable: true,
               },
             ]

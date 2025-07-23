@@ -19,7 +19,7 @@ viewDataSchema:
       type: string
 
 refs:
-  left-panel:
+  file-explorer:
     eventListeners:
       targetchanged:
         required: true
@@ -44,10 +44,10 @@ refs:
 template:
   - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f:
-      - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+      - rvn-resizable-panel w=300 min-w=200 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
           - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-          - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
+          - rvn-file-explorer#file-explorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
     - rtgl-view flex=1:
         - rtgl-view w=f h=500 bgc=mu:
             - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
