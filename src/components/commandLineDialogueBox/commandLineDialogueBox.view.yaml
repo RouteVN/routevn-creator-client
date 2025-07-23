@@ -45,7 +45,7 @@ propsSchema:
             type: string
           name:
             type: string
-    existingDialogue:
+    line:
       type: object
       properties:
         layoutId:

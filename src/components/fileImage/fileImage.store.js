@@ -1,4 +1,4 @@
-const blacklistedAttrs = ["fileId"];
+const blacklistedAttrs = ["fileId", "imageId"];
 
 const stringifyAttrs = (attrs) => {
   return Object.entries(attrs)

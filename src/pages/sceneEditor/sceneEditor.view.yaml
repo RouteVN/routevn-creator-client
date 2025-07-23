@@ -28,48 +28,12 @@ refs:
         handler: handleMergeLines
       lineSelectionChanged:
         handler: handleLineSelectionChanged
-  background-action:
+  presentation-action-*:
     eventListeners:
       click:
-        handler: handleBackgroundActionClick
+        handler: handleOpenCommandLine
       contextmenu:
-        handler: handleBackgroundActionContextMenu
-  layout-action:
-    eventListeners:
-      click:
-        handler: handleLayoutActionClick
-      contextmenu:
-        handler: handleLayoutActionContextMenu
-  bgm-action:
-    eventListeners:
-      click:
-        handler: handleBgmActionClick
-      contextmenu:
-        handler: handleBgmActionContextMenu
-  sound-effects-action:
-    eventListeners:
-      click:
-        handler: handleSoundEffectActionClick
-      contextmenu:
-        handler: handleSoundEffectActionContextMenu
-  characters-action:
-    eventListeners:
-      click:
-        handler: handleCharactersActionClick
-      contextmenu:
-        handler: handleCharactersActionContextMenu
-  scene-transition-action:
-    eventListeners:
-      click:
-        handler: handleSceneTransitionActionClick
-      contextmenu:
-        handler: handleSceneTransitionActionContextMenu
-  dialogue-action:
-    eventListeners:
-      click:
-        handler: handleDialogueActionClick
-      contextmenu:
-        handler: handleDialogueActionContextMenu
+        handler: handlePresentationActionRightClick
   command-line-*:
     eventListeners:
       submit:
@@ -214,24 +178,24 @@ template:
                       - rtgl-button#add-presentation-button s=sm: Add
                   - rtgl-view g=md w=f:
                       - $if background:
-                          - rtgl-view#background-action g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                          - rtgl-view#presentation-action-background data-mode="background" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
                               - rtgl-svg svg=image wh=24:
                               - rvn-file-image fileId=${backgroundImage.fileId} w=50 h=35:
                               - rtgl-text s=sm: ${backgroundImage.name}
                       - $if layout:
-                          - rtgl-view#layout-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                          - rtgl-view#presentation-action-layout data-mode="layout" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=layout wh=24:
                               - rtgl-text s=sm: ${layoutData.name}
                       - $if bgm:
-                          - rtgl-view#bgm-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                          - rtgl-view#presentation-action-bgm data-mode="bgm" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=audio wh=24:
                               - rtgl-text s=sm: ${bgmAudio.name}
                       - $if soundEffects:
-                          - rtgl-view#sound-effects-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                          - rtgl-view#presentation-action-sfx data-mode="soundEffects" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=audio wh=24:
                               - rtgl-text s=sm: ${soundEffectsNames}
                       - $if characters:
-                          - rtgl-view#characters-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                          - rtgl-view#presentation-action-characters data-mode="characters" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=character wh=24:
                               - rtgl-view d=h g=sm av=c:
                                   - $for charData, i in charactersData:
@@ -242,11 +206,11 @@ template:
                                               - rtgl-text s=xs: No Sprite
                               - rtgl-text s=sm: ${charactersNames}
                       - $if sceneTransition:
-                          - rtgl-view#scene g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                          - rtgl-view#presentation-action-scene data-mode="scene" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=text wh=24:
                               - rtgl-text s=sm: "Transition to: ${sceneTransitionData.scene.name} (${sceneTransitionData.animation})"
                       - $if dialogue:
-                          - rtgl-view#dialogue-action g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                          - rtgl-view#presentation-action-dialogue data-mode="dialoguebox" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                               - rtgl-svg svg=dialogue wh=24:
                               - $if dialogueCharacterData:
                                   - rvn-file-image fileId=${dialogueCharacterData.fileId} w=32 h=32 br=f:
@@ -259,19 +223,19 @@ template:
                 $elif mode == "richtext":
                   - rvn-command-line-rich-text#command-line-rich-text .lineContent=richTextContent:
                 $elif mode == "dialoguebox":
-                  - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .existingDialogue=dialogue:
+                  - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .line=selectedLine:
                 $elif mode == "choices":
                   - rvn-command-line-choices#command-line-choices:
                 $elif mode == "background":
-                  - rvn-command-line-background#command-line-background .existingBackground=background:
+                  - rvn-command-line-background#command-line-background data-mode="background" .line=selectedLine:
                 $elif mode == "bgm":
-                  - rvn-command-line-bgm#command-line-bgm .existingBgm=bgm:
+                  - rvn-command-line-bgm#command-line-bgm .line=selectedLine:
                 $elif mode == "soundeffects":
-                  - rvn-command-line-sound-effects#command-line-sound-effects .existingSfx=soundEffects:
+                  - rvn-command-line-sound-effects#command-line-sound-effects .line=selectedLine:
                 $elif mode == "characters":
-                  - rvn-command-line-characters#command-line-characters .existingCharacters=characters:
+                  - rvn-command-line-characters#command-line-characters .line=selectedLine:
                 $elif mode == "layouts":
-                  - rvn-command-line-layouts#command-line-layouts .existingLayout=layout:
+                  - rvn-command-line-layouts#command-line-layouts .line=selectedLine:
                 $elif mode == "scenetransition":
                   - rvn-command-line-scene-transition#command-line-scene-transition:
                 $elif mode == "conditional":
