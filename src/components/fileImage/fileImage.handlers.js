@@ -3,7 +3,9 @@ import { toFlatItems } from "../../deps/repository";
 const getFileIdFromProps = (attrs, repository) => {
   // Validate that both fileId and imageId are not passed
   if (attrs.fileId && attrs.imageId) {
-    throw new Error("Cannot pass both fileId and imageId props to fileImage component");
+    throw new Error(
+      "Cannot pass both fileId and imageId props to fileImage component",
+    );
   }
 
   // If fileId is provided, use it directly
@@ -22,7 +24,7 @@ const getFileIdFromProps = (attrs, repository) => {
     if (existingImage) {
       return existingImage.fileId;
     }
-    
+
     throw new Error(`Image with imageId "${attrs.imageId}" not found`);
   }
 
@@ -33,7 +35,7 @@ export const handleAfterMount = async (deps) => {
   const { store, attrs, httpClient, render, repository } = deps;
 
   const fileId = getFileIdFromProps(attrs, repository);
-  
+
   if (!fileId) {
     return;
   }
@@ -58,7 +60,7 @@ export const handleOnUpdate = async (changes, deps) => {
   const { store, attrs, httpClient, render, repository } = deps;
 
   const fileId = getFileIdFromProps(attrs, repository);
-  
+
   if (!fileId) {
     store.setIsLoading(false);
     return;

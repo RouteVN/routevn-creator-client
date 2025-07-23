@@ -11,7 +11,10 @@ export const handleBeforeMount = (deps) => {
   });
 
   // Initialize with existing character data if available
-  if (props?.line?.presentation?.character?.items && Array.isArray(props.line.presentation.character.items)) {
+  if (
+    props?.line?.presentation?.character?.items &&
+    Array.isArray(props.line.presentation.character.items)
+  ) {
     props.line.presentation.character.items.forEach((existingChar) => {
       // Find the character data from repository
       const characterData = toFlatItems(

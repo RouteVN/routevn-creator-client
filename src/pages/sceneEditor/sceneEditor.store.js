@@ -117,15 +117,15 @@ export const selectScene = ({ state }) => {
   if (!state.sceneId || !state.repositoryState.scenes) {
     return null;
   }
-  
+
   const scene = toFlatItems(state.repositoryState.scenes)
     .filter((item) => item.type === "scene")
     .find((item) => item.id === state.sceneId);
-    
+
   if (!scene) {
     return null;
   }
-  
+
   // Process sections and lines to flat structure
   const processedScene = {
     ...scene,
@@ -134,7 +134,7 @@ export const selectScene = ({ state }) => {
       lines: toFlatItems(section.lines),
     })),
   };
-  
+
   return processedScene;
 };
 
@@ -217,7 +217,7 @@ export const hidePopover = (state) => {
 export const setLineTextContent = (state, { lineId, text }) => {
   const scene = selectScene({ state });
   if (!scene) return;
-  
+
   const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
@@ -244,7 +244,7 @@ export const setLineTextContent = (state, { lineId, text }) => {
 export const selectRenderState = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) return null;
-  
+
   const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
@@ -491,7 +491,7 @@ export const selectPreviousLineId = ({ state, props }, payload) => {
   const { lineId } = payload;
   const scene = selectScene({ state });
   if (!scene) return lineId;
-  
+
   const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
@@ -509,7 +509,7 @@ export const selectNextLineId = ({ state, props }, payload) => {
   const { lineId } = payload;
   const scene = selectScene({ state });
   if (!scene) return lineId;
-  
+
   const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
@@ -526,7 +526,7 @@ export const selectNextLineId = ({ state, props }, payload) => {
 export const selectSelectedLine = (state, props, payload) => {
   const scene = selectScene({ state });
   if (!scene) return null;
-  
+
   return scene.sections
     .find((section) => section.id === state.selectedSectionId)
     ?.lines.find((line) => line.id === state.selectedLineId);
