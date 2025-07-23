@@ -133,7 +133,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-select#select-${field.id} av=c .selectedValue=visibleFields[${i}].value .options=visibleFields[${i}].options:
+                              - rtgl-select#select-${field.name} av=c .selectedValue=field.value .options=field.options:
                             $else:
                               - rtgl-text: ${field.value}
                     $elif field.type == 'color':

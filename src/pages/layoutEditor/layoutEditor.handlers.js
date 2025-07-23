@@ -115,18 +115,27 @@ export const handleDataChanged = async (e, deps) => {
 };
 
 export const handleDetailPanelItemUpdate = async (e, deps) => {
-  const { repository, store } = deps;
+  const { repository, store, render } = deps;
   const layoutId = store.selectLayoutId();
+  const selectedItemId = store.selectSelectedItemId();
 
   repository.addAction({
     actionType: "treeUpdate",
     target: `layouts.items.${layoutId}.elements`,
     value: {
-      id: store.selectSelectedItemId(),
+      id: selectedItemId,
       replace: false,
       item: e.detail.formValues,
     },
   });
+
+  // Sync store with updated repository data
+  const { layouts, images } = repository.getState();
+  const layout = layouts.items[layoutId];
+
+  store.setItems(layout?.elements || { items: {}, tree: [] });
+  store.setImages(images);
+  render();
 
   await renderLayoutPreview(deps);
 };
@@ -141,7 +150,8 @@ export const handleRequestImageGroups = (e, deps) => {
 
   // Show dialog with groups using correct ref access pattern
   const refIds = getRefIds();
-  const detailPanelRef = refIds["detail-panel"];
+  const selectedItemId = store.selectSelectedItemId();
+  const detailPanelRef = refIds[`detail-panel-${selectedItemId}`];
 
   if (detailPanelRef && detailPanelRef.elm && detailPanelRef.elm.store) {
     detailPanelRef.elm.store.showImageSelectorDialog({
@@ -172,6 +182,7 @@ export const handleImageSelectorUpdated = async (e, deps) => {
 
   const { layouts, images } = repository.getState();
   const layout = layouts.items[layoutId];
+
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
   render();

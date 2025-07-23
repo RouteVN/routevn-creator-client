@@ -32,7 +32,7 @@ refs:
     eventListeners:
       layout-add-click:
         handler: handleAddLayoutClick
-  detail-panel:
+  detail-panel-*:
     eventListeners:
       item-update:
         handler: handleDetailPanelItemUpdate
@@ -54,4 +54,4 @@ template:
               - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
     - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
       - rtgl-view slot="content" w=f h=f:
-        - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+        - rvn-detail-panel#detail-panel-${selectedItemId} .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
