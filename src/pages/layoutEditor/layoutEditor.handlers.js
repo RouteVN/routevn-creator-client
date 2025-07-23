@@ -40,6 +40,12 @@ const renderLayoutPreview = async (deps) => {
     };
   }
 
+  // Clear the canvas before loading new assets
+  drenderer.render({
+    elements: [],
+    transitions: [],
+  });
+
   await drenderer.loadAssets(assets);
 
   const elements = selectedItem
@@ -151,21 +157,23 @@ export const handleImageSelectorUpdated = async (e, deps) => {
   const { repository, store, render } = deps;
   const { imageId } = e.detail;
   const layoutId = store.selectLayoutId();
+  const selectedItemId = store.selectSelectedItemId();
 
   // Update the selected item with the new imageId
   repository.addAction({
     actionType: "treeUpdate",
     target: `layouts.items.${layoutId}.elements`,
     value: {
-      id: store.selectSelectedItemId(),
+      id: selectedItemId,
       replace: false,
       item: { imageId },
     },
   });
 
-  const { layouts } = repository.getState();
+  const { layouts, images } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setItems(layout?.elements || { items: {}, tree: [] });
+  store.setImages(images);
   render();
   await renderLayoutPreview(deps);
 };
