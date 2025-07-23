@@ -3,6 +3,7 @@ export const INITIAL_STATE = Object.freeze({
     { text: "Choice 1", target: "" },
     { text: "Choice 2", target: "" },
   ],
+  selectedLayoutId: "",
 });
 
 export const addChoice = (state) => {
@@ -25,8 +26,21 @@ export const updateChoice = (state, { index, text, target }) => {
   }
 };
 
+export const setSelectedLayoutId = (state, payload) => {
+  state.selectedLayoutId = payload.layoutId;
+};
+
 export const toViewData = ({ state, props }, payload) => {
+  const layouts = props?.layouts || [];
+
+  const layoutOptions = layouts.map((layout) => ({
+    value: layout.id,
+    label: layout.name,
+  }));
+
   return {
     choices: state.choices,
+    layouts: layoutOptions,
+    selectedLayoutId: state.selectedLayoutId,
   };
 };

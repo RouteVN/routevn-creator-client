@@ -597,6 +597,12 @@ export const updateSelectedLine = (lineId, deps) => {
   const refIds = getRefIds();
   const lineRef = refIds[`line-${lineId}`];
 
+  // Check if lineRef exists and has the elm property
+  if (!lineRef || !lineRef.elm) {
+    console.warn(`Line reference not found for lineId: ${lineId}`);
+    return;
+  }
+
   // Get goal column (desired position) instead of current position
   const goalColumn = store.selectGoalColumn() || 0;
   const textLength = lineRef.elm.textContent.length;
