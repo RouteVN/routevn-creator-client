@@ -65,7 +65,6 @@ export const toViewData = ({ state, props }, payload) => {
           type: "text",
           label: "Hex Value",
           value: selectedItemDetails.displayHex,
-          editable: true,
         },
       ]
     : [];
