@@ -110,7 +110,7 @@ const createAddPropertyForm = (propertyOptions) => {
   };
 };
 
-const keyframeDropdownItems = [
+const baseKeyframeDropdownItems = [
   {
     label: "edit",
     type: "item",
@@ -365,6 +365,24 @@ export const toViewData = ({ state, props }) => {
     (item) => !Object.keys(state.animationProperties).includes(item.value),
   );
 
+  const keyframeDropdownItems = (() => {
+    if (state.popover.mode !== "keyframeMenu") {
+      return propertyNameDropdownItems;
+    }
+
+    const { property, index } = state.popover.payload;
+    const keyframes = state.animationProperties[property].keyframes;
+    const currentIndex = Number(index);
+    const isFirstKeyframe = currentIndex === 0;
+    const isLastKeyframe = currentIndex === keyframes.length - 1;
+
+    return baseKeyframeDropdownItems.filter(item => {
+      if (item.value === "move-left" && isFirstKeyframe) return false;
+      if (item.value === "move-right" && isLastKeyframe) return false;
+      return true;
+    });
+  })()
+
   const addPropertyForm = createAddPropertyForm(toAddProperties);
 
   console.log("state.animationProperties", state.animationProperties);
@@ -382,10 +400,7 @@ export const toViewData = ({ state, props }) => {
     addKeyframeForm,
     updateKeyframeForm,
     editInitialValueForm,
-    keyframeDropdownItems:
-      state.popover.mode === "keyframeMenu"
-        ? keyframeDropdownItems
-        : propertyNameDropdownItems,
+    keyframeDropdownItems,
     addPropertyButtonVisible: toAddProperties.length !== 0,
     popover: {
       ...state.popover,
