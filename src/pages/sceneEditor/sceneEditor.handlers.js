@@ -560,7 +560,9 @@ export const handleActionsContainerClick = (e, deps) => {
 export const handleActionClicked = (e, deps) => {
   const { store, render } = deps;
   store.setMode(e.detail.item.mode);
+  console.log("zzzzzzzzzzzzz");
   render();
+  console.log("yyyyyyyyyyyy");
 };
 
 export const handleSectionTabRightClick = (e, deps) => {

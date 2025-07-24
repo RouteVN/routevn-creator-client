@@ -1,7 +1,7 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleBeforeMount = (deps) => {
-  const { repository, store, render, props } = deps;
+  const { repository, store, props } = deps;
   const { images, layouts, videos } = repository.getState();
 
   store.setImageItems({
@@ -95,22 +95,22 @@ export const handleVideoItemClick = (payload, deps) => {
   render();
 };
 
-export const handleTabClick = (payload, deps) => {
+export const handleTabClick = (e, deps) => {
   const { store, render } = deps;
 
   // Handle clicks on both the tab container and its children
-  const element = payload.target.id
-    ? payload.target
-    : payload.target.closest('[id^="tab-"]');
-  const tabValue = element?.id?.replace("tab-", "");
+  // const element = payload.target.id
+  //   ? payload.target
+  //   : payload.target.closest('[id^="tab-"]');
+  // const tabValue = element?.id?.replace("tab-", "");
 
-  if (tabValue) {
-    store.setTab({
-      tab: tabValue,
-    });
+  // if (tabValue) {
+  store.setTab({
+    tab: e.detail.id,
+  });
 
-    render();
-  }
+  render();
+  // }
 };
 
 export const handleSubmitClick = (e, deps) => {
@@ -182,22 +182,21 @@ export const handleBackgroundSelectorClick = (payload, deps) => {
   render();
 };
 
-export const handleBreadcumbActionsClick = (payload, deps) => {
-  const { dispatchEvent } = deps;
+export const handleBreadcumbActionsClick = (e, deps) => {
+  const { dispatchEvent, store, render } = deps;
 
-  dispatchEvent(
-    new CustomEvent("back-to-actions", {
-      detail: {},
-    }),
-  );
-};
-
-export const handleBreadcumbBackgroundClick = (payload, deps) => {
-  const { store, render } = deps;
-  store.setMode({
-    mode: "current",
-  });
-  render();
+  if (e.detail.id === "actions") {
+    dispatchEvent(
+      new CustomEvent("back-to-actions", {
+        detail: {},
+      }),
+    );
+  } else {
+    store.setMode({
+      mode: e.detail.id,
+    });
+    render();
+  }
 };
 
 export const handleButtonSelectClick = (payload, deps) => {

@@ -83,7 +83,6 @@ export const handlePlacementEdited = (e, deps) => {
   const { itemId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     e.detail;
 
-  console.log("111111111111 edited", e.detail);
   // Update repository directly
   repository.addAction({
     actionType: "treeUpdate",
