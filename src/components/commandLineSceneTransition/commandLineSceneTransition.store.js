@@ -2,8 +2,11 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
-  items: [],
+  tab: "section", // "section" or "scene"
+  items: [], // scenes
+  sections: [], // sections
   selectedSceneId: undefined,
+  selectedSectionId: undefined,
   selectedAnimation: "fade",
   searchQuery: "",
 });
@@ -16,8 +19,24 @@ export const setItems = (state, payload) => {
   state.items = payload.items;
 };
 
+export const setSections = (state, payload) => {
+  state.sections = payload.sections;
+};
+
+export const setTab = (state, payload) => {
+  state.tab = payload.tab;
+};
+
 export const setSelectedSceneId = (state, payload) => {
   state.selectedSceneId = payload.sceneId;
+};
+
+export const setSelectedSectionId = (state, payload) => {
+  state.selectedSectionId = payload.sectionId;
+};
+
+export const selectTab = ({ state }) => {
+  return state.tab;
 };
 
 export const setSelectedAnimation = (state, payload) => {
@@ -29,55 +48,92 @@ export const setSearchQuery = (state, payload) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const allItems = toFlatItems(state.items);
-  const flatItems = allItems.filter((item) => item.type === "folder");
-  const flatGroups = toFlatGroups(state.items);
+  let enhancedGroups = [];
+  let selectedItem = null;
+  let selectedName = null;
 
-  // Find all scenes
-  const allScenes = allItems.filter((item) => item.type === "scene");
+  if (state.tab === "scene") {
+    const allItems = toFlatItems(state.items);
+    const flatItems = allItems.filter((item) => item.type === "folder");
+    const flatGroups = toFlatGroups(state.items);
 
-  // Filter scenes by search query
-  const filteredScenes = state.searchQuery
-    ? allScenes.filter((scene) =>
-        scene.name.toLowerCase().includes(state.searchQuery.toLowerCase()),
-      )
-    : allScenes;
+    // Find all scenes
+    const allScenes = allItems.filter((item) => item.type === "scene");
 
-  // Group filtered scenes by their parent folder
-  const scenesByFolder = {};
+    // Filter scenes by search query
+    const filteredScenes = state.searchQuery
+      ? allScenes.filter((scene) =>
+          scene.name.toLowerCase().includes(state.searchQuery.toLowerCase()),
+        )
+      : allScenes;
 
-  filteredScenes.forEach((scene) => {
-    const folderId = scene.parentId || "root";
-    if (!scenesByFolder[folderId]) {
-      scenesByFolder[folderId] = [];
-    }
-    scenesByFolder[folderId].push(scene);
-  });
+    // Group filtered scenes by their parent folder
+    const scenesByFolder = {};
 
-  // Create groups with filtered scenes
-  const enhancedGroups = [];
-
-  // Add root scenes if any
-  if (scenesByFolder.root && scenesByFolder.root.length > 0) {
-    enhancedGroups.push({
-      type: "virtual-group",
-      name: "Root Scenes",
-      id: "root-scenes",
-      fullLabel: "Root Scenes",
-      _level: 0,
-      children: scenesByFolder.root,
+    filteredScenes.forEach((scene) => {
+      const folderId = scene.parentId || "root";
+      if (!scenesByFolder[folderId]) {
+        scenesByFolder[folderId] = [];
+      }
+      scenesByFolder[folderId].push(scene);
     });
-  }
 
-  // Add folder groups with scenes
-  flatGroups.forEach((group) => {
-    if (scenesByFolder[group.id] && scenesByFolder[group.id].length > 0) {
+    // Add root scenes if any
+    if (scenesByFolder.root && scenesByFolder.root.length > 0) {
       enhancedGroups.push({
-        ...group,
-        children: scenesByFolder[group.id],
+        type: "virtual-group",
+        name: "Root Scenes",
+        id: "root-scenes",
+        fullLabel: "Root Scenes",
+        _level: 0,
+        children: scenesByFolder.root,
       });
     }
-  });
+
+    // Add folder groups with scenes
+    flatGroups.forEach((group) => {
+      if (scenesByFolder[group.id] && scenesByFolder[group.id].length > 0) {
+        enhancedGroups.push({
+          ...group,
+          children: scenesByFolder[group.id],
+        });
+      }
+    });
+
+    // Get selected scene data
+    selectedItem = state.selectedSceneId
+      ? allItems.find((item) => item.id === state.selectedSceneId)
+      : null;
+    selectedName = selectedItem?.name;
+  } else if (state.tab === "section") {
+    // Get all sections from the current scene
+    const allSections = state.sections || [];
+
+    // Filter sections by search query
+    const filteredSections = state.searchQuery
+      ? allSections.filter((section) =>
+          section.name.toLowerCase().includes(state.searchQuery.toLowerCase()),
+        )
+      : allSections;
+
+    // Create a single group containing all sections
+    if (filteredSections.length > 0) {
+      enhancedGroups.push({
+        type: "virtual-group",
+        name: "Sections",
+        id: "sections",
+        fullLabel: "Sections",
+        _level: 0,
+        children: filteredSections,
+      });
+    }
+
+    // Get selected section data
+    selectedItem = state.selectedSectionId
+      ? allSections.find((section) => section.id === state.selectedSectionId)
+      : null;
+    selectedName = selectedItem?.name;
+  }
 
   const animationOptions = [
     { value: "fade", label: "Fade" },
@@ -87,26 +143,16 @@ export const toViewData = ({ state, props }, payload) => {
     { value: "none", label: "None" },
   ];
 
-  // Get selected scene data
-  const selectedScene = state.selectedSceneId
-    ? allItems.find((item) => item.id === state.selectedSceneId)
-    : null;
-
-  console.log("commandLineSceneTransition toViewData:", {
-    selectedSceneId: state.selectedSceneId,
-    selectedAnimation: state.selectedAnimation,
-    selectedScene: selectedScene?.name,
-    mode: state.mode,
-  });
-
   return {
     mode: state.mode,
-    items: flatItems,
+    tab: state.tab,
     groups: enhancedGroups,
     animationOptions,
     selectedSceneId: state.selectedSceneId,
+    selectedSectionId: state.selectedSectionId,
     selectedAnimation: state.selectedAnimation,
-    selectedScene,
+    selectedItem,
+    selectedName,
     searchQuery: state.searchQuery,
   };
 };

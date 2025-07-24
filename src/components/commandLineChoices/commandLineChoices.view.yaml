@@ -36,14 +36,30 @@ refs:
     eventListeners:
       click:
         handler: handleAddChoiceClick
+  edit-choice-*:
+    eventListeners:
+      click:
+        handler: handleEditChoiceClick
   remove-choice-*:
     eventListeners:
       click:
         handler: handleRemoveChoiceClick
-  choice-text-*:
+  cancel-edit-button:
+    eventListeners:
+      click:
+        handler: handleCancelEditClick
+  save-choice-button:
+    eventListeners:
+      click:
+        handler: handleSaveChoiceClick
+  edit-form-*:
     eventListeners:
       input:
-        handler: handleChoiceTextInput
+        handler: handleEditFormInput
+  action-type-select:
+    eventListeners:
+      option-selected:
+        handler: handleActionTypeChange
   layout-select:
     eventListeners:
       option-selected:
@@ -56,30 +72,71 @@ refs:
     eventListeners:
       click:
         handler: handleBreadcumbActionsClick
+  breadcumb-choices:
+    eventListeners:
+      click:
+        handler: handleBreadcumbChoicesClick
 
 template:
   - rtgl-view w=f h=f p=lg:
-    - rtgl-view d=h g=md:
-      - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-      - rtgl-text s=sm c=mu-fg mb=lg: '>'
-      - rtgl-text s=sm c=mu-fg mb=lg: Choices
+    - $if mode == "list":
+      - rtgl-view:
+        - rtgl-view d=h g=md:
+          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+          - rtgl-text s=sm c=mu-fg mb=lg: '>'
+          - rtgl-text s=sm c=mu-fg mb=lg: Choices
 
-    - rtgl-text mb=md: Player Choices Configuration
+        - rtgl-text mb=md: Player Choices Configuration
 
-    - rtgl-text mb=md: Layout Selection
-    - rtgl-select#layout-select .options=layouts .selectedValue=selectedLayoutId placeholder="Choose a layout..." mb=lg:
+        - rtgl-text mb=md: Layout Selection
+        - rtgl-select#layout-select .options=layouts .selectedValue=selectedLayoutId mb=lg:
 
-    - rtgl-text mb=md: Configure Choices
-    - rtgl-view g=md:
-      - $for choice, index in choices:
-        - rtgl-view d=h av=c jc=s-b g=md p=sm bgc=bg br=sm:
+        - rtgl-text mb=md: Configure Choices
+        - rtgl-view g=md:
+          - $for choice, index in choices:
+            - rtgl-view d=h av=c jc=s-b g=md p=sm bgc=bg br=sm:
+              - rtgl-view flex=1:
+                - rtgl-text: ${choice.text}
+                - rtgl-text s=xs c=mu-fg: ${choice.actionLabel}
+              - rtgl-view d=h g=sm:
+                - rtgl-button#edit-choice-${index} data-index=${index} v=ol s=sm: Edit
+                - rtgl-button#remove-choice-${index} v=ol s=sm: Remove
+
+          - rtgl-button#add-choice-button: Add Choice
+
+        - rtgl-view flex=1:
+        - rtgl-view d=h av=c ah=e w=f g=lg:
+          - rtgl-button#reset-button v=ol: Reset
+          - rtgl-button#submit-button: Submit
+      $elif mode == "editChoice":
+        - rtgl-view:
+          - rtgl-view d=h g=md:
+            - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
+            - rtgl-text s=sm c=mu-fg mb=lg: '>'
+            - rtgl-text#breadcumb-choices s=sm c=mu-fg mb=lg cur=p: Choices
+            - rtgl-text s=sm c=mu-fg mb=lg: '>'
+            - rtgl-text s=sm c=mu-fg mb=lg: ${editModeTitle}
+
+          - rtgl-text mb=md: ${editModeTitle}
+
+          - rtgl-text mb=sm: Choice Text
+          - rtgl-input#edit-form-text data-field="text" .value=editForm.text mb=md:
+
+          - rtgl-text mb=sm: Update Variables
+          - rtgl-input#edit-form-variables data-field="variables" .value=editForm.variables mb=md:
+
+          # TODO: weird bug this will throw error if uncommented
+          # - rtgl-text mb=sm: Action dfae
+          - rtgl-select#action-type-select .options=actionTypeOptions .selectedValue=editForm.actionType mb=md:
+
+          - $if editForm.actionType == "moveToScene":
+              - rtgl-text mb=sm: Target Scene ID
+              - rtgl-input#edit-form-sceneId data-field="sceneId" .value=editForm.sceneId mb=md:
+          - $if editForm.actionType == "moveToSection":
+              - rtgl-text mb=sm: Target Section ID
+              - rtgl-input#edit-form-sectionId data-field="sectionId" .value=editForm.sectionId mb=md:
+
           - rtgl-view flex=1:
-            - rtgl-input#choice-text-${index} .value=choices[${index}].text placeholder="Enter choice text...":
-          - rtgl-button#remove-choice-${index} v=ol s=sm: Remove
-
-      - rtgl-button#add-choice-button: Add Choice
-
-    - rtgl-view flex=1:
-    - rtgl-view d=h av=c ah=e w=f g=lg:
-      - rtgl-button#reset-button v=ol: Reset
-      - rtgl-button#submit-button: Submit
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+            - rtgl-button#cancel-edit-button v=ol: Cancel
+            - rtgl-button#save-choice-button: Save Choice

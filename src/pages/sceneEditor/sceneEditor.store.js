@@ -362,6 +362,8 @@ export const toViewData = ({ state, props }, payload) => {
 
   const repositoryState = selectRepositoryState({ state });
 
+  console.log("selectedLine", selectedLine);
+
   return {
     scene: scene,
     sections,
@@ -451,7 +453,18 @@ export const selectPresentationData = ({ state }) => {
     (line) => line.id === state.selectedLineId,
   );
 
-  if (!selectedLine?.presentation) return [];
+  if (!selectedLine?.presentation) {
+    console.log(
+      "[sceneEditor] No presentation data found for selected line:",
+      selectedLine,
+    );
+    return [];
+  }
+
+  console.log(
+    "[sceneEditor] Processing presentation data:",
+    selectedLine.presentation,
+  );
 
   const repositoryState = selectRepositoryState({ state });
   const images = selectImages({ state });
@@ -502,7 +515,7 @@ export const selectPresentationData = ({ state }) => {
         type: "bgm",
         id: "presentation-action-bgm",
         dataMode: "bgm",
-        icon: "audio",
+        icon: "music",
         data: {
           bgmAudio,
         },
@@ -523,9 +536,9 @@ export const selectPresentationData = ({ state }) => {
       .join(", ");
 
     presentationItems.push({
-      type: "soundEffects",
+      type: "sfx",
       id: "presentation-action-sfx",
-      dataMode: "soundEffects",
+      dataMode: "sfx",
       icon: "audio",
       data: {
         soundEffectsAudio,
@@ -571,48 +584,68 @@ export const selectPresentationData = ({ state }) => {
     });
   }
 
-  // Scene Transition
-  if (selectedLine.presentation.sceneTransition) {
-    const sceneTransition = selectedLine.presentation.sceneTransition;
-    const sceneTransitionData = {
-      ...sceneTransition,
-      scene: repositoryState.scenes?.items?.[sceneTransition.sceneId],
-    };
+  // Transition (Scene or Section)
+  // Handle both nested and non-nested structures
+  const sectionTransitionData =
+    selectedLine.presentation.sectionTransition ||
+    selectedLine.presentation.presentation?.sectionTransition;
+  if (sectionTransitionData) {
+    const transition = sectionTransitionData;
+    console.log("[sceneEditor] Found sectionTransition:", transition);
 
-    presentationItems.push({
-      type: "sceneTransition",
-      id: "presentation-action-scene",
-      dataMode: "scenetransition",
-      icon: "text",
-      data: {
-        sceneTransitionData,
-      },
-    });
-  }
+    if (transition.sceneId) {
+      // Scene Transition
+      console.log(
+        "[sceneEditor] Processing scene transition with sceneId:",
+        transition.sceneId,
+      );
+      console.log(
+        "[sceneEditor] Available scenes:",
+        repositoryState.scenes?.items,
+      );
 
-  // Section Transition
-  if (selectedLine.presentation.sectionTransition) {
-    const sectionTransition = selectedLine.presentation.sectionTransition;
-    // Find the target section in the current scene
-    const scene = selectScene({ state });
-    const targetSection = scene?.sections?.find(
-      (section) => section.id === sectionTransition.sectionId,
-    );
+      const targetScene = toFlatItems(repositoryState.scenes || []).find(
+        (scene) => scene.id === transition.sceneId,
+      );
+      console.log("[sceneEditor] Found target scene:", targetScene);
 
-    const sectionTransitionData = {
-      ...sectionTransition,
-      section: targetSection,
-    };
+      const sceneTransitionData = {
+        ...transition,
+        scene: targetScene,
+      };
 
-    presentationItems.push({
-      type: "sectionTransition",
-      id: "presentation-action-section",
-      dataMode: "sectiontransition",
-      icon: "arrow-down",
-      data: {
-        sectionTransitionData,
-      },
-    });
+      presentationItems.push({
+        type: "sceneTransition",
+        id: "presentation-action-scene",
+        dataMode: "sceneTransition",
+        icon: "scene",
+        data: {
+          sceneTransitionData,
+        },
+      });
+      console.log("[sceneEditor] Added scene transition to presentationItems");
+    } else if (transition.sectionId) {
+      // Section Transition
+      const scene = selectScene({ state });
+      const targetSection = scene?.sections?.find(
+        (section) => section.id === transition.sectionId,
+      );
+
+      const sectionTransitionData = {
+        ...transition,
+        section: targetSection,
+      };
+
+      presentationItems.push({
+        type: "sectionTransition",
+        id: "presentation-action-section",
+        dataMode: "sectiontransition",
+        icon: "section",
+        data: {
+          sectionTransitionData,
+        },
+      });
+    }
   }
 
   // Dialogue
@@ -639,8 +672,9 @@ export const selectPresentationData = ({ state }) => {
   }
 
   // Choices
-  if (selectedLine.presentation.choices) {
-    const choicesData = selectedLine.presentation.choices;
+  // Handle both nested and non-nested structures
+  const choicesData = selectedLine.presentation.choices || selectedLine.presentation.presentation?.choices;
+  if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
           (l) => l.id === choicesData.layoutId,
@@ -651,7 +685,7 @@ export const selectPresentationData = ({ state }) => {
       type: "choices",
       id: "presentation-action-choices",
       dataMode: "choices",
-      icon: "list",
+      icon: "choices",
       data: {
         choicesData,
         layoutData,
@@ -659,6 +693,7 @@ export const selectPresentationData = ({ state }) => {
     });
   }
 
+  console.log("[sceneEditor] Final presentationItems:", presentationItems);
   return presentationItems;
 };
 

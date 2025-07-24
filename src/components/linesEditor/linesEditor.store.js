@@ -1,3 +1,5 @@
+import { toFlatItems } from "../../deps/repository";
+
 export const INITIAL_STATE = Object.freeze({
   mode: "block", // 'block' or 'text-editor'
   cursorPosition: 0, // Track cursor position for navigation
@@ -53,6 +55,7 @@ export const selectNavigationDirection = ({ state }) => {
 
 export const toViewData = ({ state, props }) => {
   const lines = (props.lines || []).map((line, i) => {
+    
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";
 
@@ -69,6 +72,39 @@ export const toViewData = ({ state, props }) => {
         state.repositoryState.characters?.items?.[characterId]?.fileId;
     }
 
+    let sceneTransition;
+    let sectionTransition;
+    let transitionTarget;
+    let hasChoices;
+    let choices;
+
+    // Handle both nested and non-nested structures
+    const sectionTransitionData = line.presentation?.sectionTransition || line.presentation?.presentation?.sectionTransition;
+
+    if (sectionTransitionData) {
+      if (sectionTransitionData.sceneId) {
+        sceneTransition = true;
+        // Get scene name from repository
+        const allScenes = toFlatItems(state.repositoryState.scenes || []);
+        const targetScene = allScenes.find(
+          (scene) => scene.id === sectionTransitionData.sceneId
+        );
+        transitionTarget = targetScene?.name || "Unknown Scene";
+      } else if (sectionTransitionData.sectionId) {
+        sectionTransition = true;
+        // For sections, we would need section data from props/context
+        // For now, just use the section ID
+        transitionTarget = sectionTransitionData.sectionId;
+      }
+    }
+
+    // Handle choices
+    const choicesData = line.presentation?.choices || line.presentation?.presentation?.choices;
+    if (choicesData && choicesData.choices && choicesData.choices.length > 0) {
+      hasChoices = true;
+      choices = choicesData.choices;
+    }
+
     return {
       ...line,
       lineNumber: i + 1,
@@ -77,8 +113,14 @@ export const toViewData = ({ state, props }) => {
         isSelected && isBlockMode ? "var(--muted)" : "transparent",
       backgroundFileId,
       characterFileId,
+      sceneTransition,
+      sectionTransition,
+      transitionTarget,
+      hasChoices,
+      choices,
     };
   });
+  
   return {
     lines,
     selectedLineId: props.selectedLineId,

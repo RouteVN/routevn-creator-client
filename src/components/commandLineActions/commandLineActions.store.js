@@ -7,12 +7,6 @@ export const INITIAL_STATE = Object.freeze({
       mode: "dialoguebox",
     },
     {
-      id: "3",
-      label: "Choices",
-      icon: "list",
-      mode: "choices",
-    },
-    {
       id: "4",
       label: "Background",
       icon: "image",
@@ -21,14 +15,14 @@ export const INITIAL_STATE = Object.freeze({
     {
       id: "5",
       label: "BGM",
-      icon: "audio",
+      icon: "music",
       mode: "bgm",
     },
     {
       id: "6",
       label: "Sound Effects",
       icon: "audio",
-      mode: "soundeffects",
+      mode: "sfx",
     },
     {
       id: "7",
@@ -37,22 +31,16 @@ export const INITIAL_STATE = Object.freeze({
       mode: "characters",
     },
     {
-      id: "8",
-      label: "Layouts",
-      icon: "layout",
-      mode: "layouts",
-    },
-    {
-      id: "9",
-      label: "Scene Transition",
-      icon: "arrow-right",
-      mode: "scenetransition",
+      id: "3",
+      label: "Choices",
+      icon: "choices",
+      mode: "choices",
     },
     {
       id: "10",
-      label: "Section Transition",
-      icon: "arrow-down",
-      mode: "sectiontransition",
+      label: "Transition",
+      icon: "transition",
+      mode: "sceneTransition",
     },
     // {
     //   id: "11",

@@ -1,7 +1,70 @@
 export const handleAddChoiceClick = (e, deps) => {
   const { store, render } = deps;
+  
+  store.setMode("editChoice");
+  store.setEditingIndex(-1); // -1 means new choice
+  render();
+};
 
-  store.addChoice();
+export const handleEditChoiceClick = (e, deps) => {
+  const { store, render } = deps;
+  
+  try {
+    const index = parseInt(e.currentTarget.getAttribute('data-index'));
+    console.log('[handleEditChoiceClick] Switching to editChoice mode, index:', index);
+    
+    store.setMode("editChoice");
+    store.setEditingIndex(index);
+    
+    // Validate state using selectors before rendering
+    const mode = store.selectMode();
+    const editForm = store.selectEditForm();
+    console.log('[handleEditChoiceClick] Mode:', mode, 'EditForm:', editForm);
+    
+    if (mode === "editChoice" && editForm) {
+      render();
+    } else {
+      console.error('[handleEditChoiceClick] Invalid state for rendering - mode:', mode, 'editForm:', editForm);
+    }
+  } catch (error) {
+    console.error('[handleEditChoiceClick] Error:', error);
+  }
+};
+
+export const handleCancelEditClick = (e, deps) => {
+  const { store, render } = deps;
+  
+  store.setMode("list");
+  store.setEditingIndex(-1);
+  
+  // Ensure we have a clean state before rendering using selectors
+  const mode = store.selectMode();
+  if (mode === "list") {
+    render();
+  }
+};
+
+export const handleSaveChoiceClick = (e, deps) => {
+  const { store, render } = deps;
+  
+  store.saveChoice();
+  render();
+};
+
+export const handleEditFormInput = (e, deps) => {
+  const { store, render } = deps;
+  const field = e.currentTarget.getAttribute('data-field');
+  const value = e.currentTarget.value;
+  
+  store.updateEditForm({ field, value });
+  render();
+};
+
+export const handleActionTypeChange = (e, deps) => {
+  const { store, render } = deps;
+  const value = e.detail.value;
+  
+  store.updateEditForm({ field: 'actionType', value });
   render();
 };
 
@@ -13,7 +76,8 @@ export const handleChoiceItemClick = (e, deps) => {
 
 export const handleSubmitClick = (e, deps) => {
   const { dispatchEvent, store } = deps;
-  const { choices, selectedLayoutId } = store.getState();
+  const choices = store.selectChoices();
+  const selectedLayoutId = store.selectSelectedLayoutId();
 
   // Create choices object with only non-empty values
   const choicesData = {
@@ -63,35 +127,19 @@ export const handleBeforeMount = (deps) => {
   const { store, render, props } = deps;
 
   // Initialize from existing line data if available
-  if (props?.line?.presentation?.choices) {
-    const choicesData = props.line.presentation.choices;
-
-    // Set existing choices
+  const choicesData = props?.line?.presentation?.choices || props?.line?.presentation?.presentation?.choices;
+  if (choicesData) {
+    // Set existing choices by directly modifying choices array
     if (choicesData.choices && choicesData.choices.length > 0) {
-      choicesData.choices.forEach((choice, index) => {
-        if (index === 0) {
-          // Replace first choice
-          store.updateChoice({
-            index: 0,
-            text: choice.text,
-            target: choice.target || "",
-          });
-        } else if (index === 1) {
-          // Replace second choice
-          store.updateChoice({
-            index: 1,
-            text: choice.text,
-            target: choice.target || "",
-          });
-        } else {
-          // Add additional choices
-          store.addChoice();
-          store.updateChoice({
-            index: index,
-            text: choice.text,
-            target: choice.target || "",
-          });
-        }
+      // Note: We need to update the state directly here during initialization
+      // This is acceptable during mount phase
+      const currentChoices = store.selectChoices();
+      currentChoices.length = 0; // Clear existing
+      choicesData.choices.forEach(choice => {
+        currentChoices.push({
+          text: choice.text,
+          action: choice.action || { type: "continue" },
+        });
       });
     }
 
@@ -110,35 +158,25 @@ export const handlePropsChanged = (deps) => {
   const { store, render, props } = deps;
 
   // Re-initialize when props change
-  if (props?.line?.presentation?.choices) {
-    const choicesData = props.line.presentation.choices;
-
+  const choicesData = props?.line?.presentation?.choices || props?.line?.presentation?.presentation?.choices;
+  if (choicesData) {
+    const currentChoices = store.selectChoices();
+    
     // Reset choices to initial state first
-    const currentState = store.getState();
-    currentState.choices = [
-      { text: "Choice 1", target: "" },
-      { text: "Choice 2", target: "" },
-    ];
+    currentChoices.length = 0;
+    currentChoices.push(
+      { text: "Choice 1", action: { type: "continue" } },
+      { text: "Choice 2", action: { type: "continue" } }
+    );
 
     // Set existing choices
     if (choicesData.choices && choicesData.choices.length > 0) {
-      choicesData.choices.forEach((choice, index) => {
-        if (index < 2) {
-          // Update existing choices
-          store.updateChoice({
-            index: index,
-            text: choice.text,
-            target: choice.target || "",
-          });
-        } else {
-          // Add additional choices
-          store.addChoice();
-          store.updateChoice({
-            index: index,
-            text: choice.text,
-            target: choice.target || "",
-          });
-        }
+      currentChoices.length = 0; // Clear again
+      choicesData.choices.forEach(choice => {
+        currentChoices.push({
+          text: choice.text,
+          action: choice.action || { type: "continue" },
+        });
       });
     }
 
@@ -159,4 +197,17 @@ export const handleBreadcumbActionsClick = (payload, deps) => {
       detail: {},
     }),
   );
+};
+
+export const handleBreadcumbChoicesClick = (payload, deps) => {
+  const { store, render } = deps;
+  
+  store.setMode("list");
+  store.setEditingIndex(-1);
+  
+  // Ensure we have a clean state before rendering using selectors
+  const mode = store.selectMode();
+  if (mode === "list") {
+    render();
+  }
 };

@@ -8,20 +8,33 @@ propsSchema:
       properties:
         presentation:
           type: object
+    sections:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
 
 viewDataSchema:
   type: object
   properties: {}
 
 refs:
-  scene-selector:
+  transition-selector:
     eventListeners:
       click:
-        handler: handleSceneSelectorClick
+        handler: handleTransitionSelectorClick
   scene-item-*:
     eventListeners:
       click:
         handler: handleSceneItemClick
+  section-item-*:
+    eventListeners:
+      click:
+        handler: handleSectionItemClick
   submit-button:
     eventListeners:
       click:
@@ -34,10 +47,10 @@ refs:
     eventListeners:
       click:
         handler: handleBreadcumbActionsClick
-  breadcumb-scene-transition:
+  breadcumb-transition:
     eventListeners:
       click:
-        handler: handleBreadcumbSceneTransitionClick
+        handler: handleBreadcumbTransitionClick
   animation-select:
     eventListeners:
       change:
@@ -46,23 +59,42 @@ refs:
     eventListeners:
       input:
         handler: handleSearchInput
+  tab-section:
+    eventListeners:
+      click:
+        handler: handleTabClick
+  tab-scene:
+    eventListeners:
+      click:
+        handler: handleTabClick
 
 template:
   - rtgl-view w=f h=f p=lg:
-    # Mode 1: Current scene and animation selector
+    # Mode 1: Current transition selector
     - $if mode == 'current':
       - rtgl-view d=h g=md:
         - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Scene Transition
+        - rtgl-text s=sm c=mu-fg mb=lg: Transition
       
-      - rtgl-text mb=md: Target Scene
-      - rtgl-view#scene-selector g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p mb=lg:
-        - rtgl-svg svg=text wh=24:
-        - $if selectedScene:
-            - rtgl-text s=sm: ${selectedScene.name}
+      - rtgl-text mb=md: 
+          $if tab == 'section':
+            Target Section
           $else:
-            - rtgl-text s=sm: Select Scene
+            Target Scene
+      - rtgl-view#transition-selector g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p mb=lg:
+        - $if tab == 'section':
+            - rtgl-svg svg=section wh=24:
+          $else:
+            - rtgl-svg svg=scene wh=24:
+        - $if selectedName:
+            - rtgl-text s=sm: ${selectedName}
+          $else:
+            - rtgl-text s=sm: 
+                $if tab == 'section':
+                  Select Section
+                $else:
+                  Select Scene
       
       - rtgl-text mb=md: Transition Animation
       - rtgl-select#animation-select .options=animationOptions .value=selectedAnimation mb=lg:
@@ -72,26 +104,45 @@ template:
         - rtgl-button#reset-button v=ol: Reset
         - rtgl-button#submit-button: Submit
 
-    # Mode 2: Scene list with search
+    # Mode 2: Transition list with search and tabs
     - $if mode == 'gallery':
       - rtgl-view d=h g=md:
         - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text#breadcumb-scene-transition s=sm c=mu-fg mb=lg cur=p: Scene Transition
+        - rtgl-text#breadcumb-transition s=sm c=mu-fg mb=lg cur=p: Transition
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Scene Selection
+        - $if tab == 'section':
+            - rtgl-text s=sm c=mu-fg mb=lg: Section Selection
+          $else:
+            - rtgl-text s=sm c=mu-fg mb=lg: Scene Selection
+      
+      # Tab selector
+      - rtgl-view d=h g=lg mb=lg:
+        - 'rtgl-view#tab-section d=h av=c ah=c px=lg py=sm bgc=${tab == "section" ? "ac" : "mu-bg"} cur=p':
+          - 'rtgl-text c=${tab == "section" ? "primary" : "mu-fg"}': Sections
+        - 'rtgl-view#tab-scene d=h av=c ah=c px=lg py=sm bgc=${tab == "scene" ? "ac" : "mu-bg"} cur=p':
+          - 'rtgl-text c=${tab == "scene" ? "primary" : "mu-fg"}': Scenes
       
       # Search bar
-      - rtgl-text mb=md: Search Scenes
-      - rtgl-input#search-input .value=searchQuery placeholder="Type to search scenes..." mb=lg:
+      - rtgl-text mb=md: 
+          $if tab == 'section':
+            Search Sections
+          $else:
+            Search Scenes
+      - rtgl-input#search-input .value=searchQuery placeholder="Type to search..." mb=lg:
       
-      # Scene list grouped by folders (like commandLineActions style)
+      # List grouped by folders
       - rtgl-view h=f w=f g=sm sv:
         - $for group in groups:
           - rtgl-view g=md:
             - rtgl-text s=sm c=mu-fg mb=sm: ${group.name}
             - rtgl-view g=sm:
-              - $for scene in group.children:
-                - rtgl-view#scene-item-${scene.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=text wh=24:
-                  - rtgl-text s=sm: ${scene.name}
+              - $for item in group.children:
+                - $if tab == 'section':
+                    - rtgl-view#section-item-${item.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=section wh=24:
+                      - rtgl-text s=sm: ${item.name}
+                  $else:
+                    - rtgl-view#scene-item-${item.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=scene wh=24:
+                      - rtgl-text s=sm: ${item.name}

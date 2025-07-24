@@ -17,6 +17,7 @@
   "scripts": {
     "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl fe build && rtgl ui build-svg",
     "watch": "rtgl fe watch",
+    "serve": "bunx serve _site -p 3001",
     "lint": "bunx prettier --check src",
     "lint:fix": "bunx prettier --check --write src",
     "prepare": "husky"
