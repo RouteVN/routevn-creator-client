@@ -81,7 +81,6 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
       }
     }
 
-    // Map children recursively while maintaining tree structure
     if (node.children && node.children.length > 0) {
       element.children = node.children.map(mapNode);
     }
