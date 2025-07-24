@@ -59,7 +59,7 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
       anchorY: parseFloat(node.anchorY || 0.5),
       scaleX: parseFloat(node.scaleX || 1),
       scaleY: parseFloat(node.scaleY || 1),
-      zIndex: parseInt(node.zIndex || 0),
+      rotation: parseInt(node.rotation || 0),
     };
 
     if (node.type === "text") {

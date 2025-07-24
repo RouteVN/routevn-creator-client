@@ -30,6 +30,52 @@ export const handleSelectChange = (e, deps) => {
   );
 };
 
+export const handleEditableNumberClick = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+
+  const fieldName = e.currentTarget.id.replace("editable-number-", "");
+  const field = store.selectField(fieldName);
+
+  // Calculate position for left-bottom placement relative to mouse cursor
+  const position = {
+    x: e.clientX - 200, // Move 200px to the left of cursor
+    y: e.clientY + 10, // Move 10px down from cursor
+  };
+
+  // Ensure popover doesn't go off-screen to the left
+  if (position.x < 10) {
+    position.x = 10;
+  }
+
+  store.showPopover({
+    position,
+    fields: [
+      {
+        name: field.name,
+        inputType: "slider-input",
+        label: field.label,
+        description: field.description || "Adjust the value",
+        min: field.min || 0,
+        max: field.max || 100,
+        step: field.step || 1,
+        value: field.value || 0,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Submit",
+        },
+      ],
+    },
+  });
+  render();
+};
+
 export const handleFileInputChange = (e, deps) => {
   const { dispatchEvent, props } = deps;
 

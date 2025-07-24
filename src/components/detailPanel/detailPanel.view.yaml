@@ -85,6 +85,10 @@ refs:
     eventListeners:
       option-selected:
         handler: handleSelectChange
+  editable-number-*:
+    eventListeners:
+      click:
+        handler: handleEditableNumberClick
   image-selector-field-*:
     eventListeners:
       click:
@@ -176,6 +180,14 @@ template:
                                 $else:
                                   - "rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md":
                                       - rtgl-text c=mu-fg: No Image
+                    $elif field.type == 'number':
+                      - rtgl-view:
+                          - rtgl-text c=mu-fg: ${field.label}
+                          - $if field.editable:
+                              - "rtgl-view#editable-number-${field.name} cur=p":
+                                  - rtgl-text s=${field.size}: ${field.value}
+                            $else:
+                              - rtgl-text s=${field.size}: ${field.value}
                     $elif field.type == 'audio':
                       - $if field.editable:
                           - rtgl-view pos=rel:
