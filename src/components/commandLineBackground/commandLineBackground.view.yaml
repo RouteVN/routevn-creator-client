@@ -46,18 +46,6 @@ refs:
     eventListeners:
       item-click:
         handler: handleTabClick
-  # tab-images:
-  #   eventListeners:
-  #     click:
-  #       handler: handleTabClick
-  # tab-layouts:
-  #   eventListeners:
-  #     click:
-  #       handler: handleTabClick
-  # tab-videos:
-  #   eventListeners:
-  #     click:
-  #       handler: handleTabClick
   video-item-*:
     eventListeners:
       click:
