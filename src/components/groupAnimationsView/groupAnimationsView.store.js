@@ -348,13 +348,15 @@ export const toViewData = ({ state, props }) => {
         isCollapsed: state.collapsedIds.includes(group.id),
         children: state.collapsedIds.includes(group.id)
           ? []
-          : filteredChildren.map((item) => ({
-              ...item,
-              selectedStyle:
-                item.id === selectedItemId
-                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                  : "",
-            })),
+          : filteredChildren.map((item) => {
+              return {
+                ...item,
+                selectedStyle:
+                  item.id === selectedItemId
+                    ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                    : "",
+              };
+            }),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };
@@ -376,12 +378,12 @@ export const toViewData = ({ state, props }) => {
     const isFirstKeyframe = currentIndex === 0;
     const isLastKeyframe = currentIndex === keyframes.length - 1;
 
-    return baseKeyframeDropdownItems.filter(item => {
+    return baseKeyframeDropdownItems.filter((item) => {
       if (item.value === "move-left" && isFirstKeyframe) return false;
       if (item.value === "move-right" && isLastKeyframe) return false;
       return true;
     });
-  })()
+  })();
 
   const addPropertyForm = createAddPropertyForm(toAddProperties);
 
@@ -391,8 +393,9 @@ export const toViewData = ({ state, props }) => {
 
   if (state.popover.mode === "editKeyframe") {
     const { property, index } = state.popover.payload;
-    const currentKeyframe = state.animationProperties[property].keyframes[index];
-    
+    const currentKeyframe =
+      state.animationProperties[property].keyframes[index];
+
     editKeyframeDefaultValues = {
       duration: currentKeyframe.duration,
       value: currentKeyframe.value,
@@ -402,14 +405,21 @@ export const toViewData = ({ state, props }) => {
 
   if (state.popover.mode === "editInitialValue") {
     const { property } = state.popover.payload;
-    const currentInitialValue = state.animationProperties[property].initialValue;
-    
+    const currentInitialValue =
+      state.animationProperties[property].initialValue;
+
     editInitialValueDefaultValues = {
       initialValue: currentInitialValue,
     };
   }
 
-  console.log("state.animationProperties", state.animationProperties);
+  // TODO this is hacky way to work around limitation of passing props
+  const itemAnimationProperties = {};
+  flatGroups.forEach((group) => {
+    group.children.forEach((child) => {
+      itemAnimationProperties[child.id] = child.animationProperties;
+    });
+  });
 
   return {
     flatGroups,
@@ -419,6 +429,7 @@ export const toViewData = ({ state, props }) => {
     form: state.form,
     isDialogOpen: state.isDialogOpen,
     animationProperties: state.animationProperties,
+    itemAnimationProperties,
     initialValue: state.initialValue,
     addPropertyForm,
     addKeyframeForm,

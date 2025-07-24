@@ -80,9 +80,7 @@ export const handleFormActionClick = (e, deps) => {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
-          properties: storeState.selectedProperties,
-          initialValue: storeState.initialValue,
-          propertyKeyframes: storeState.propertyKeyframes,
+          animationProperties: storeState.animationProperties,
         },
         bubbles: true,
         composed: true,
@@ -91,13 +89,11 @@ export const handleFormActionClick = (e, deps) => {
 
     // Close dialog and reset everything
     store.toggleDialog();
-    store.setSelectedProperties([]);
-    store.setInitialValue(0);
-    // Reset property keyframes
+    // Reset animation properties
     const storeState2 = store.getState
       ? store.getState()
       : store._state || store.state;
-    storeState2.propertyKeyframes = {};
+    storeState2.animationProperties = {};
     render();
   }
 };

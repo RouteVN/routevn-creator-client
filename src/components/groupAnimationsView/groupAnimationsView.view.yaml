@@ -125,7 +125,7 @@ template:
                                 - rtgl-view flex=1 h=f w=f bw=xs br=md p=md bgc=bg:
                                   - rtgl-text s=h4: ${item.name}
                                   - rtgl-view h=12:
-                                  - rvn-keyframe-timeline .animationProperties=item.animationProperties totalDuration=${item.duration}:
+                                  - rvn-keyframe-timeline .animationProperties=itemAnimationProperties[${item.id}]:
                         $else:
                           - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
                             - rtgl-text: Add Animation
