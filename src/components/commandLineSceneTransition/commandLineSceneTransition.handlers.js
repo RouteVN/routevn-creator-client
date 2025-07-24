@@ -2,47 +2,37 @@ export const handleBeforeMount = (deps) => {
   const { repository, store, render, props } = deps;
   const { scenes } = repository.getState();
 
-  console.log(
-    "commandLineSceneTransition handleBeforeMount called with props:",
-    props,
-  );
-  console.log("props.line:", props?.line);
-  console.log("props.line?.presentation:", props?.line?.presentation);
-  console.log(
-    "props.line?.presentation?.sceneTransition:",
-    props?.line?.presentation?.sceneTransition,
-  );
-
   store.setItems({
     items: scenes,
   });
 
-  // Initialize from existing line data if available
-  if (props?.line?.presentation?.sceneTransition) {
-    const sceneTransition = props.line.presentation.sceneTransition;
-    console.log(
-      "Initializing scene transition with existing data:",
-      sceneTransition,
-    );
+  // Use sections from props (current scene's sections only)
+  const sections = props?.sections || [];
+  store.setSections({
+    sections: sections,
+  });
 
-    store.setSelectedSceneId({
-      sceneId: sceneTransition.sceneId,
-    });
+  // Initialize from existing line data if available
+  if (props?.line?.presentation?.sectionTransition) {
+    const transition = props.line.presentation.sectionTransition;
+
+    if (transition.sceneId) {
+      // Scene transition
+      store.setSelectedSceneId({
+        sceneId: transition.sceneId,
+      });
+      store.setTab({ tab: "scene" });
+    } else if (transition.sectionId) {
+      // Section transition
+      store.setSelectedSectionId({
+        sectionId: transition.sectionId,
+      });
+      store.setTab({ tab: "section" });
+    }
 
     store.setSelectedAnimation({
-      animation: sceneTransition.animation || "fade",
+      animation: transition.animation || "fade",
     });
-
-    console.log(
-      "Scene transition initialized - selectedSceneId:",
-      sceneTransition.sceneId,
-      "animation:",
-      sceneTransition.animation,
-    );
-  } else {
-    console.log(
-      "No existing scene transition data found, starting with defaults",
-    );
   }
 };
 
@@ -61,35 +51,84 @@ export const handleSceneItemClick = (e, deps) => {
   render();
 };
 
-export const handleSubmitClick = (payload, deps) => {
-  const { dispatchEvent, store } = deps;
-  const { selectedSceneId, selectedAnimation } = store.getState();
+export const handleSectionItemClick = (e, deps) => {
+  const { store, render } = deps;
+  const sectionId = e.currentTarget.id.replace("section-item-", "");
 
-  console.log("Scene transition submit clicked:", {
-    selectedSceneId,
-    selectedAnimation,
+  store.setSelectedSectionId({
+    sectionId: sectionId,
   });
 
-  if (!selectedSceneId) {
-    console.warn("No scene selected for transition");
-    return;
-  }
+  store.setMode({
+    mode: "current",
+  });
 
-  dispatchEvent(
-    new CustomEvent("submit", {
-      detail: {
-        sceneTransition: {
-          sceneId: selectedSceneId,
-          animation: selectedAnimation,
-        },
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  render();
 };
 
-export const handleSceneSelectorClick = (payload, deps) => {
+export const handleTabClick = (payload, deps) => {
+  const { store, render } = deps;
+
+  // Handle clicks on both the tab container and its children
+  const element = payload.target.id
+    ? payload.target
+    : payload.target.closest('[id^="tab-"]');
+  const tabValue = element?.id?.replace("tab-", "");
+
+  if (tabValue) {
+    store.setTab({
+      tab: tabValue,
+    });
+
+    render();
+  }
+};
+
+export const handleSubmitClick = (payload, deps) => {
+  const { dispatchEvent, store } = deps;
+  const { selectedSceneId, selectedSectionId, selectedAnimation, tab } =
+    store.getState();
+
+  if (tab === "scene") {
+    if (!selectedSceneId) {
+      return;
+    }
+
+    dispatchEvent(
+      new CustomEvent("submit", {
+        detail: {
+          presentation: {
+            sectionTransition: {
+              sceneId: selectedSceneId,
+            },
+          },
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  } else if (tab === "section") {
+    if (!selectedSectionId) {
+      return;
+    }
+
+    dispatchEvent(
+      new CustomEvent("submit", {
+        detail: {
+          presentation: {
+            sectionTransition: {
+              sectionId: selectedSectionId,
+            },
+          },
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+};
+
+export const handleTransitionSelectorClick = (payload, deps) => {
   const { store, render } = deps;
 
   store.setMode({
@@ -109,7 +148,7 @@ export const handleBreadcumbActionsClick = (payload, deps) => {
   );
 };
 
-export const handleBreadcumbSceneTransitionClick = (payload, deps) => {
+export const handleBreadcumbTransitionClick = (payload, deps) => {
   const { store, render } = deps;
   store.setMode({
     mode: "current",
@@ -135,9 +174,18 @@ export const handleSearchInput = (e, deps) => {
 
 export const handleResetClick = (e, deps) => {
   const { store, render } = deps;
-  store.setSelectedSceneId({
-    sceneId: undefined,
-  });
+  const tab = store.selectTab();
+
+  if (tab === "scene") {
+    store.setSelectedSceneId({
+      sceneId: undefined,
+    });
+  } else if (tab === "section") {
+    store.setSelectedSectionId({
+      sectionId: undefined,
+    });
+  }
+
   store.setSelectedAnimation({
     animation: "fade",
   });

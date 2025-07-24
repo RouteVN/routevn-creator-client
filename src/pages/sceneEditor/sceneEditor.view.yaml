@@ -127,15 +127,11 @@ template:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rvn-file-image fileId=${item.data.backgroundImage.fileId} w=50 h=35:
                                   - rtgl-text s=sm: ${item.data.backgroundImage.name}
-                            $elif item.type == "layout":
-                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                                  - rtgl-svg svg=${item.icon} wh=24:
-                                  - rtgl-text s=sm: ${item.data.layoutData.name}
                             $elif item.type == "bgm":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-text s=sm: ${item.data.bgmAudio.name}
-                            $elif item.type == "soundEffects":
+                            $elif item.type == "sfx":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-text s=sm: ${item.data.soundEffectsNames}
@@ -152,10 +148,12 @@ template:
                                   - rtgl-text s=sm: ${item.data.charactersNames}
                             $elif item.type == "sceneTransition":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg="transition" wh=24:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-text s=sm: "Transition to: ${item.data.sceneTransitionData.scene.name} (${item.data.sceneTransitionData.animation})"
                             $elif item.type == "sectionTransition":
-                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-view#${item.id} data-mode="sceneTransition" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                  - rtgl-svg svg="transition" wh=24:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-text s=sm: "Section to: ${item.data.sectionTransitionData.section.name} (${item.data.sectionTransitionData.animation})"
                             $elif item.type == "dialogue":
@@ -167,7 +165,10 @@ template:
                             $elif item.type == "choices":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg=${item.icon} wh=24:
-                                  - rtgl-text s=sm: "Choices (${item.data.choicesData.choices.length} options)"
+                                  - rtgl-view d=v:
+                                      - rtgl-text s=sm: "Choices (${item.data.choicesData.choices.length} options)"
+                                      - $for choice in item.data.choicesData.choices:
+                                          - rtgl-text s=xs c=mu-fg: "• ${choice.text}"
   - $if mode != "lines-editor":
       - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
           - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
@@ -181,16 +182,12 @@ template:
                   - rvn-command-line-background#command-line-background data-mode="background" .line=selectedLine:
                 $elif mode == "bgm":
                   - rvn-command-line-bgm#command-line-bgm .line=selectedLine:
-                $elif mode == "soundeffects":
+                $elif mode == "sfx":
                   - rvn-command-line-sound-effects#command-line-sound-effects .line=selectedLine:
                 $elif mode == "characters":
                   - rvn-command-line-characters#command-line-characters .line=selectedLine:
-                $elif mode == "layouts":
-                  - rvn-command-line-layouts#command-line-layouts .line=selectedLine:
-                $elif mode == "scenetransition":
-                  - rvn-command-line-scene-transition#command-line-scene-transition .line=selectedLine:
-                $elif mode == "sectiontransition":
-                  - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections:
+                $elif mode == "sceneTransition":
+                  - rvn-command-line-scene-transition#command-line-scene-transition .line=selectedLine .sections=sections:
                 $elif mode == "conditional":
                   - rvn-command-line-conditional#command-line-conditional:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

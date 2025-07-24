@@ -50,15 +50,35 @@ styles:
 template:
   - 'rtgl-view#container w=f h=f tabindex=0 style="outline: none;"':
       - $for line, i in lines:
-          - 'rtgl-view d=h w=f av=c style="background-color: ${line.backgroundColor};"':
-              - rtgl-view h=f av=c w=32 ah=e mr=md:
+          - 'rtgl-view d=h w=f style="background-color: ${line.backgroundColor};"':
+              - rtgl-view h=f w=32 ah=e mr=md:
                   - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
               - rtgl-view wh=16 br=f mr=md:
                   - $if line.characterFileId:
                       - rvn-file-image fileId=${line.characterFileId} w=16 h=16 br=f:
-              - rtgl-view d=h w=f av=c:
-                  - 'div#line-${line.id} style="width: 100%;" contenteditable=true':
-                      - 'span style="font-size: 18px;"': ${line.presentation.dialogue.text}
+              - rtgl-view d=h w=f:
+                  - rtgl-view w=f:
+                    - 'div#line-${line.id} style="width: 100%;" contenteditable=true':
+                        - 'span style="font-size: 12px;"': ${line.presentation.dialogue.text}
+                    - $if line.sceneTransition:
+                        - rtgl-view d=h:
+                          - rtgl-svg svg="transition" wh=16:
+                          - rtgl-svg svg="scene" wh=16:
+                          - rtgl-text s=sm: "Transition to scene: ${line.transitionTarget}"
+                    - $if line.sectionTransition:
+                        - rtgl-view d=h:
+                          - rtgl-svg svg="transition" wh=16:
+                          - rtgl-svg svg="section" wh=16:
+                          - rtgl-text s=sm: "Transition to section: ${line.transitionTarget}"
+                    - $if line.hasChoices:
+                        - rtgl-view d=v:
+                          - rtgl-view d=h:
+                            - rtgl-svg svg="choices" wh=16:
+                            - rtgl-text s=sm: "Choices:"
+                          - $for choice in line.choices:
+                            - rtgl-view d=h ml=sm:
+                              - rtgl-text s=sm: "• ${choice.text}"
+
                   - rtgl-view d=h:
                       - $if line.backgroundFileId:
                           - rvn-file-image w=36 h=24 fileId=${line.backgroundFileId}:
