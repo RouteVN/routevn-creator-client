@@ -385,6 +385,30 @@ export const toViewData = ({ state, props }) => {
 
   const addPropertyForm = createAddPropertyForm(toAddProperties);
 
+  // Create default values for edit forms
+  let editKeyframeDefaultValues = {};
+  let editInitialValueDefaultValues = {};
+
+  if (state.popover.mode === "editKeyframe") {
+    const { property, index } = state.popover.payload;
+    const currentKeyframe = state.animationProperties[property].keyframes[index];
+    
+    editKeyframeDefaultValues = {
+      duration: currentKeyframe.duration,
+      value: currentKeyframe.value,
+      easing: currentKeyframe.easing,
+    };
+  }
+
+  if (state.popover.mode === "editInitialValue") {
+    const { property } = state.popover.payload;
+    const currentInitialValue = state.animationProperties[property].initialValue;
+    
+    editInitialValueDefaultValues = {
+      initialValue: currentInitialValue,
+    };
+  }
+
   console.log("state.animationProperties", state.animationProperties);
 
   return {
@@ -400,6 +424,8 @@ export const toViewData = ({ state, props }) => {
     addKeyframeForm,
     updateKeyframeForm,
     editInitialValueForm,
+    editKeyframeDefaultValues,
+    editInitialValueDefaultValues,
     keyframeDropdownItems,
     addPropertyButtonVisible: toAddProperties.length !== 0,
     popover: {

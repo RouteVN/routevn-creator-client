@@ -158,7 +158,7 @@ template:
         - $if popover.mode == 'addKeyframe':
           - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
         - $if popover.mode == 'editKeyframe':
-          - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm:
+          - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm .defaultValues=editKeyframeDefaultValues:
         - $if popover.mode == 'editInitialValue':
-          - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm:
+          - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm .defaultValues=editInitialValueDefaultValues:
       - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}:
