@@ -69,6 +69,35 @@ export const handleAnimationCreated = (e, deps) => {
   render();
 };
 
+export const handleAnimationUpdated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { itemId, name, animationProperties } = e.detail;
+
+  // Update existing animation in repository
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "animations",
+    value: {
+      id: itemId,
+      replace: false,
+      item: {
+        name: name,
+        animationProperties,
+      },
+    },
+  });
+
+  // Update store with updated animations data
+  const { animations } = repository.getState();
+  store.setItems(animations);
+
+  console.log(
+    `Animation "${name}" updated successfully with animationProperties:`,
+    animationProperties,
+  );
+  render();
+};
+
 const getInitialValue = (property) => {
   const defaultValues = {
     x: 0,

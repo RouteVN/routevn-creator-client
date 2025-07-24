@@ -40,6 +40,7 @@ export const handleAddAnimationClick = (e, deps) => {
   store.setTargetGroupId(groupId);
 
   // Toggle dialog open
+  store.setEditMode(false);
   store.toggleDialog();
   render();
 };
@@ -47,7 +48,8 @@ export const handleAddAnimationClick = (e, deps) => {
 export const handleCloseDialog = (e, deps) => {
   const { store, render } = deps;
 
-  // Close dialog
+  // Close dialog and reset to add mode
+  store.setEditMode(false);
   store.toggleDialog();
   render();
 };
@@ -56,6 +58,28 @@ export const handleClosePopover = (e, deps) => {
   const { store, render } = deps;
   store.closePopover();
   render();
+};
+
+export const handleAnimationItemDoubleClick = (e, deps) => {
+  const { store, render, props } = deps;
+  const itemId = e.currentTarget.id.replace("animation-item-", "");
+
+  // Find the animation item data from props.flatGroups
+  let itemData = null;
+  for (const group of props.flatGroups || []) {
+    const foundItem = group.children?.find((child) => child.id === itemId);
+    if (foundItem) {
+      itemData = { ...foundItem, parent: group.id };
+      break;
+    }
+  }
+
+  if (itemData) {
+    // Set up the form for editing
+    store.setEditMode({ editMode: true, itemId, itemData });
+    store.toggleDialog();
+    render();
+  }
 };
 
 export const handleFormActionClick = (e, deps) => {
@@ -73,27 +97,38 @@ export const handleFormActionClick = (e, deps) => {
       ? store.getState()
       : store._state || store.state;
     const targetGroupId = storeState.targetGroupId;
+    const editItemId = storeState.editItemId;
 
-    // Forward animation creation to parent with selected properties and keyframes
-    dispatchEvent(
-      new CustomEvent("animation-created", {
-        detail: {
-          groupId: targetGroupId,
-          name: formData.name,
-          animationProperties: storeState.animationProperties,
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    if (storeState.editMode && storeState.editItemId) {
+      // Edit mode - dispatch animation update
+      dispatchEvent(
+        new CustomEvent("animation-updated", {
+          detail: {
+            itemId: editItemId,
+            name: formData.name,
+            animationProperties: storeState.animationProperties,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } else {
+      // Add mode - dispatch animation creation
+      dispatchEvent(
+        new CustomEvent("animation-created", {
+          detail: {
+            groupId: targetGroupId,
+            name: formData.name,
+            animationProperties: storeState.animationProperties,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
 
     // Close dialog and reset everything
     store.toggleDialog();
-    // Reset animation properties
-    const storeState2 = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    storeState2.animationProperties = {};
     render();
   }
 };

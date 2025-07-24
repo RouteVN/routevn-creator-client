@@ -231,6 +231,41 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
 
+export const setEditMode = (state, { editMode, itemId, itemData }) => {
+  state.editMode = editMode;
+  state.editItemId = itemId;
+
+  if (editMode && itemData) {
+    // Set groupId to support form submission
+    state.targetGroupId = itemData.parent || null;
+
+    // Update form for editing
+    state.form.title = "Edit Animation";
+    state.form.description = "Edit the animation";
+    state.form.actions.buttons[0].content = "Update Animation";
+
+    // Set default values
+    state.defaultValues = {
+      name: itemData.name || "",
+    };
+
+    // Set animation properties
+    state.animationProperties = itemData.animationProperties || {};
+  } else {
+    // Reset to add mode
+    state.form.title = "Add Animation";
+    state.form.description = "Create a new animation";
+    state.form.actions.buttons[0].content = "Add Animation";
+
+    state.defaultValues = {
+      name: "",
+    };
+
+    state.editItemId = null;
+    state.animationProperties = {};
+  }
+};
+
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
