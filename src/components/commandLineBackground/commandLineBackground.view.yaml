@@ -34,29 +34,17 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-  breadcumb-actions:
+  breadcumb:
     eventListeners:
-      click:
+      item-click:
         handler: handleBreadcumbActionsClick
-  breadcumb-background:
-    eventListeners:
-      click:
-        handler: handleBreadcumbBackgroundClick
   button-select:
     eventListeners:
       click:
         handler: handleButtonSelectClick
-  tab-images:
+  tabs:
     eventListeners:
-      click:
-        handler: handleTabClick
-  tab-layouts:
-    eventListeners:
-      click:
-        handler: handleTabClick
-  tab-videos:
-    eventListeners:
-      click:
+      item-click:
         handler: handleTabClick
   video-item-*:
     eventListeners:
@@ -67,9 +55,7 @@ template:
   - rtgl-view w=f h=f p=lg:
     - $if mode == 'current':
       - rtgl-view d=h g=md:
-        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Background
+      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
       - rtgl-text: Background Selection
       - $if tab == 'images':
           - $if selectedImageId:
@@ -101,23 +87,8 @@ template:
 
     - $if mode == 'gallery':
       - rtgl-view d=h g=md:
-        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text#breadcumb-background s=sm c=mu-fg mb=lg cur=p: Background
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - $if tab == 'images':
-            - rtgl-text s=sm c=mu-fg mb=lg: Image Selection
-          $elif tab == 'layouts':
-            - rtgl-text s=sm c=mu-fg mb=lg: Layout Selection
-          $elif tab == 'videos':
-            - rtgl-text s=sm c=mu-fg mb=lg: Video Selection
-      - rtgl-view d=h g=lg mb=lg:
-        - 'rtgl-view#tab-images d=h av=c ah=c px=lg py=sm bgc=${tab == "images" ? "ac" : "mu-bg"} cur=p':
-          - 'rtgl-text c=${tab == "images" ? "primary" : "mu-fg"}': Images
-        - 'rtgl-view#tab-layouts d=h av=c ah=c px=lg py=sm bgc=${tab == "layouts" ? "ac" : "mu-bg"} cur=p':
-          - 'rtgl-text c=${tab == "layouts" ? "primary" : "mu-fg"}': Layouts
-        - 'rtgl-view#tab-videos d=h av=c ah=c px=lg py=sm bgc=${tab == "videos" ? "ac" : "mu-bg"} cur=p':
-          - 'rtgl-text c=${tab == "videos" ? "primary" : "mu-fg"}': Videos
+      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+      - rtgl-tabs#tabs selected-tab=${tab} .items=tabs:
       - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
         - rtgl-view h=f flex=1 sv:
           - rvn-base-file-explorer#base-file-explorer .items=items:

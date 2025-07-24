@@ -1,5 +1,20 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
+const tabs = [
+  {
+    id: "images",
+    label: "Images",
+  },
+  {
+    id: "layouts",
+    label: "Layouts",
+  },
+  {
+    id: "videos",
+    label: "Videos",
+  },
+];
+
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
   tab: "images", // "images", "layouts", or "videos"
@@ -146,9 +161,29 @@ export const toViewData = ({ state, props }, payload) => {
     { label: "Bottom Right", value: "bottom-right" },
   ];
 
+  console.log("bbbbbbbbbbbbb");
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+    {
+      id: "current",
+      label: "Background",
+    },
+  ];
+
+  if (state.mode === "gallery") {
+    breadcrumb.push({
+      label: "Select",
+    });
+  }
+
   return {
     mode: state.mode,
     tab: state.tab,
+    tabs,
+    breadcrumb,
     items: flatItems,
     groups: flatGroups,
     selectedImageId: state.selectedImageId,

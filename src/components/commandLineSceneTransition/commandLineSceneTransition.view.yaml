@@ -76,8 +76,8 @@ template:
         - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
         - rtgl-text s=sm c=mu-fg mb=lg: '>'
         - rtgl-text s=sm c=mu-fg mb=lg: Transition
-      
-      - rtgl-text mb=md: 
+
+      - rtgl-text mb=md:
           $if tab == 'section':
             Target Section
           $else:
@@ -90,15 +90,15 @@ template:
         - $if selectedName:
             - rtgl-text s=sm: ${selectedName}
           $else:
-            - rtgl-text s=sm: 
+            - rtgl-text s=sm:
                 $if tab == 'section':
                   Select Section
                 $else:
                   Select Scene
-      
+
       - rtgl-text mb=md: Transition Animation
       - rtgl-select#animation-select .options=animationOptions .value=selectedAnimation mb=lg:
-      
+
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
         - rtgl-button#reset-button v=ol: Reset
@@ -115,22 +115,22 @@ template:
             - rtgl-text s=sm c=mu-fg mb=lg: Section Selection
           $else:
             - rtgl-text s=sm c=mu-fg mb=lg: Scene Selection
-      
+
       # Tab selector
       - rtgl-view d=h g=lg mb=lg:
-        - 'rtgl-view#tab-section d=h av=c ah=c px=lg py=sm bgc=${tab == "section" ? "ac" : "mu-bg"} cur=p':
-          - 'rtgl-text c=${tab == "section" ? "primary" : "mu-fg"}': Sections
-        - 'rtgl-view#tab-scene d=h av=c ah=c px=lg py=sm bgc=${tab == "scene" ? "ac" : "mu-bg"} cur=p':
-          - 'rtgl-text c=${tab == "scene" ? "primary" : "mu-fg"}': Scenes
-      
+        - 'rtgl-view#tab-section d=h av=c ah=c px=lg py=sm cur=p':
+          - 'rtgl-text': Sections
+        - 'rtgl-view#tab-scene d=h av=c ah=c px=lg py=sm cur=p':
+          - 'rtgl-text': Scenes
+
       # Search bar
-      - rtgl-text mb=md: 
+      - rtgl-text mb=md:
           $if tab == 'section':
             Search Sections
           $else:
             Search Scenes
       - rtgl-input#search-input .value=searchQuery placeholder="Type to search..." mb=lg:
-      
+
       # List grouped by folders
       - rtgl-view h=f w=f g=sm sv:
         - $for group in groups:
