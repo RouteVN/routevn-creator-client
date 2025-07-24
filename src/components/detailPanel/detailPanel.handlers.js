@@ -59,7 +59,6 @@ export const handleEditableNumberClick = (e, deps) => {
         min: field.min || 0,
         max: field.max || 100,
         step: field.step || 1,
-        value: field.value || 0,
       },
     ],
     actions: {
@@ -71,6 +70,9 @@ export const handleEditableNumberClick = (e, deps) => {
           content: "Submit",
         },
       ],
+    },
+    defaultValues: {
+      [field.name]: field.value || 0,
     },
   });
   render();
@@ -321,6 +323,9 @@ export const handleEditableTextClick = (e, deps) => {
           content: "Submit",
         },
       ],
+    },
+    defaultValues: {
+      [field.name]: field.value || "",
     },
   });
   render();
