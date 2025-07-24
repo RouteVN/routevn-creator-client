@@ -7,7 +7,7 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    existingBgm:
+    line:
       type: object
       properties:
         audioId:

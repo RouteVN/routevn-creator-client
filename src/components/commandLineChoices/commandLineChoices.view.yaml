@@ -1,18 +1,53 @@
 elementName: rvn-command-line-choices
 
+propsSchema:
+  type: object
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+    line:
+      type: object
+      properties:
+        presentation:
+          type: object
+
 viewDataSchema:
   type: object
-  properties: {}
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
 
 refs:
   add-choice-button:
     eventListeners:
       click:
         handler: handleAddChoiceClick
-  choice-item-*:
+  remove-choice-*:
     eventListeners:
       click:
-        handler: handleChoiceItemClick
+        handler: handleRemoveChoiceClick
+  choice-text-*:
+    eventListeners:
+      input:
+        handler: handleChoiceTextInput
+  layout-select:
+    eventListeners:
+      option-selected:
+        handler: handleLayoutSelectChange
   submit-button:
     eventListeners:
       click:
@@ -28,17 +63,22 @@ template:
       - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
       - rtgl-text s=sm c=mu-fg mb=lg: '>'
       - rtgl-text s=sm c=mu-fg mb=lg: Choices
-    
-    - rtgl-text: Player Choices Configuration
-    
+
+    - rtgl-text mb=md: Player Choices Configuration
+
+    - rtgl-text mb=md: Layout Selection
+    - rtgl-select#layout-select .options=layouts .selectedValue=selectedLayoutId placeholder="Choose a layout..." mb=lg:
+
+    - rtgl-text mb=md: Configure Choices
     - rtgl-view g=md:
       - $for choice, index in choices:
-        - rtgl-view#choice-item-${index} d=h av=c jc=s-b p=sm bgc=bg br=sm:
-          - rtgl-text: 'Choice ${index}: ${choice.text}'
-          - rtgl-button: Remove
-      
+        - rtgl-view d=h av=c jc=s-b g=md p=sm bgc=bg br=sm:
+          - rtgl-view flex=1:
+            - rtgl-input#choice-text-${index} .value=choices[${index}].text placeholder="Enter choice text...":
+          - rtgl-button#remove-choice-${index} v=ol s=sm: Remove
+
       - rtgl-button#add-choice-button: Add Choice
-    
+
     - rtgl-view flex=1:
     - rtgl-view d=h av=c ah=e w=f g=lg:
       - rtgl-button#reset-button v=ol: Reset

@@ -26,6 +26,8 @@ propsSchema:
   properties:
     fileId:
       type: string
+    imageId:
+      type: string
   required: []
 
 template:
