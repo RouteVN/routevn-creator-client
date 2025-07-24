@@ -98,19 +98,11 @@ export const handleVideoItemClick = (payload, deps) => {
 export const handleTabClick = (e, deps) => {
   const { store, render } = deps;
 
-  // Handle clicks on both the tab container and its children
-  // const element = payload.target.id
-  //   ? payload.target
-  //   : payload.target.closest('[id^="tab-"]');
-  // const tabValue = element?.id?.replace("tab-", "");
-
-  // if (tabValue) {
   store.setTab({
     tab: e.detail.id,
   });
 
   render();
-  // }
 };
 
 export const handleSubmitClick = (e, deps) => {
