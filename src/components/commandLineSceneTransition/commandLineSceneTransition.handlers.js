@@ -15,7 +15,7 @@ export const handleBeforeMount = (deps) => {
   // Initialize from existing line data if available
   if (props?.line?.presentation?.sectionTransition) {
     const transition = props.line.presentation.sectionTransition;
-    
+
     if (transition.sceneId) {
       // Scene transition
       store.setSelectedSceneId({
@@ -68,23 +68,26 @@ export const handleSectionItemClick = (e, deps) => {
 
 export const handleTabClick = (payload, deps) => {
   const { store, render } = deps;
-  
+
   // Handle clicks on both the tab container and its children
-  const element = payload.target.id ? payload.target : payload.target.closest('[id^="tab-"]');
+  const element = payload.target.id
+    ? payload.target
+    : payload.target.closest('[id^="tab-"]');
   const tabValue = element?.id?.replace("tab-", "");
-  
+
   if (tabValue) {
     store.setTab({
       tab: tabValue,
     });
-    
+
     render();
   }
 };
 
 export const handleSubmitClick = (payload, deps) => {
   const { dispatchEvent, store } = deps;
-  const { selectedSceneId, selectedSectionId, selectedAnimation, tab } = store.getState();
+  const { selectedSceneId, selectedSectionId, selectedAnimation, tab } =
+    store.getState();
 
   if (tab === "scene") {
     if (!selectedSceneId) {
@@ -172,7 +175,7 @@ export const handleSearchInput = (e, deps) => {
 export const handleResetClick = (e, deps) => {
   const { store, render } = deps;
   const tab = store.selectTab();
-  
+
   if (tab === "scene") {
     store.setSelectedSceneId({
       sceneId: undefined,
@@ -182,7 +185,7 @@ export const handleResetClick = (e, deps) => {
       sectionId: undefined,
     });
   }
-  
+
   store.setSelectedAnimation({
     animation: "fade",
   });

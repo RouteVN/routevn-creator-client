@@ -90,23 +90,23 @@ export const setTempSelectedVideoId = (state, payload) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const items = state.tab === "images" 
-    ? state.imageItems 
-    : state.tab === "layouts" 
-    ? state.layoutItems 
-    : state.videoItems;
-  const flatItems = toFlatItems(items).filter(
-    (item) => item.type === "folder",
-  );
+  const items =
+    state.tab === "images"
+      ? state.imageItems
+      : state.tab === "layouts"
+        ? state.layoutItems
+        : state.videoItems;
+  const flatItems = toFlatItems(items).filter((item) => item.type === "folder");
   const flatGroups = toFlatGroups(items).map((group) => {
     return {
       ...group,
       children: group.children.map((child) => {
-        const isSelected = state.tab === "images" 
-          ? child.id === state.tempSelectedImageId
-          : state.tab === "layouts"
-          ? child.id === state.tempSelectedLayoutId
-          : child.id === state.tempSelectedVideoId;
+        const isSelected =
+          state.tab === "images"
+            ? child.id === state.tempSelectedImageId
+            : state.tab === "layouts"
+              ? child.id === state.tempSelectedLayoutId
+              : child.id === state.tempSelectedVideoId;
         return {
           ...child,
           bw: isSelected ? "md" : "",
@@ -119,17 +119,17 @@ export const toViewData = ({ state, props }, payload) => {
   let selectedName = null;
   if (state.tab === "images" && state.selectedImageId) {
     const selectedImage = toFlatItems(state.imageItems).find(
-      (item) => item.id === state.selectedImageId
+      (item) => item.id === state.selectedImageId,
     );
     selectedName = selectedImage ? selectedImage.name : null;
   } else if (state.tab === "layouts" && state.selectedLayoutId) {
     const selectedLayout = toFlatItems(state.layoutItems).find(
-      (item) => item.id === state.selectedLayoutId
+      (item) => item.id === state.selectedLayoutId,
     );
     selectedName = selectedLayout ? selectedLayout.name : null;
   } else if (state.tab === "videos" && state.selectedVideoId) {
     const selectedVideo = toFlatItems(state.videoItems).find(
-      (item) => item.id === state.selectedVideoId
+      (item) => item.id === state.selectedVideoId,
     );
     selectedName = selectedVideo ? selectedVideo.name : null;
   }

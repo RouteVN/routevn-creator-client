@@ -55,7 +55,6 @@ export const selectNavigationDirection = ({ state }) => {
 
 export const toViewData = ({ state, props }) => {
   const lines = (props.lines || []).map((line, i) => {
-    
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";
 
@@ -79,7 +78,9 @@ export const toViewData = ({ state, props }) => {
     let choices;
 
     // Handle both nested and non-nested structures
-    const sectionTransitionData = line.presentation?.sectionTransition || line.presentation?.presentation?.sectionTransition;
+    const sectionTransitionData =
+      line.presentation?.sectionTransition ||
+      line.presentation?.presentation?.sectionTransition;
 
     if (sectionTransitionData) {
       if (sectionTransitionData.sceneId) {
@@ -87,7 +88,7 @@ export const toViewData = ({ state, props }) => {
         // Get scene name from repository
         const allScenes = toFlatItems(state.repositoryState.scenes || []);
         const targetScene = allScenes.find(
-          (scene) => scene.id === sectionTransitionData.sceneId
+          (scene) => scene.id === sectionTransitionData.sceneId,
         );
         transitionTarget = targetScene?.name || "Unknown Scene";
       } else if (sectionTransitionData.sectionId) {
@@ -99,7 +100,8 @@ export const toViewData = ({ state, props }) => {
     }
 
     // Handle choices
-    const choicesData = line.presentation?.choices || line.presentation?.presentation?.choices;
+    const choicesData =
+      line.presentation?.choices || line.presentation?.presentation?.choices;
     if (choicesData && choicesData.choices && choicesData.choices.length > 0) {
       hasChoices = true;
       choices = choicesData.choices;
@@ -120,7 +122,7 @@ export const toViewData = ({ state, props }) => {
       choices,
     };
   });
-  
+
   return {
     lines,
     selectedLineId: props.selectedLineId,

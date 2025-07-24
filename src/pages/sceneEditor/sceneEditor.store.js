@@ -673,7 +673,9 @@ export const selectPresentationData = ({ state }) => {
 
   // Choices
   // Handle both nested and non-nested structures
-  const choicesData = selectedLine.presentation.choices || selectedLine.presentation.presentation?.choices;
+  const choicesData =
+    selectedLine.presentation.choices ||
+    selectedLine.presentation.presentation?.choices;
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(

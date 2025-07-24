@@ -3,15 +3,15 @@ import { toFlatItems } from "../../deps/repository";
 export const handleBeforeMount = (deps) => {
   const { repository, store, render, props } = deps;
   const { images, layouts, videos } = repository.getState();
-  
+
   store.setImageItems({
     items: images,
   });
-  
+
   store.setLayoutItems({
     items: layouts,
   });
-  
+
   store.setVideoItems({
     items: videos,
   });
@@ -97,16 +97,18 @@ export const handleVideoItemClick = (payload, deps) => {
 
 export const handleTabClick = (payload, deps) => {
   const { store, render } = deps;
-  
+
   // Handle clicks on both the tab container and its children
-  const element = payload.target.id ? payload.target : payload.target.closest('[id^="tab-"]');
+  const element = payload.target.id
+    ? payload.target
+    : payload.target.closest('[id^="tab-"]');
   const tabValue = element?.id?.replace("tab-", "");
-  
+
   if (tabValue) {
     store.setTab({
       tab: tabValue,
     });
-    
+
     render();
   }
 };
@@ -116,7 +118,7 @@ export const handleSubmitClick = (e, deps) => {
   const tab = store.selectTab();
 
   let backgroundData = {};
-  
+
   if (tab === "images") {
     const selectedImageId = store.selectSelectedImageId();
     if (!selectedImageId) {
@@ -228,7 +230,7 @@ export const handleButtonSelectClick = (payload, deps) => {
       fileId: tempSelectedVideo.fileId,
     });
   }
-  
+
   store.setMode({
     mode: "current",
   });

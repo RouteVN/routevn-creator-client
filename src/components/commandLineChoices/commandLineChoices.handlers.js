@@ -1,6 +1,6 @@
 export const handleAddChoiceClick = (e, deps) => {
   const { store, render } = deps;
-  
+
   store.setMode("editChoice");
   store.setEditingIndex(-1); // -1 means new choice
   render();
@@ -8,35 +8,43 @@ export const handleAddChoiceClick = (e, deps) => {
 
 export const handleEditChoiceClick = (e, deps) => {
   const { store, render } = deps;
-  
+
   try {
-    const index = parseInt(e.currentTarget.getAttribute('data-index'));
-    console.log('[handleEditChoiceClick] Switching to editChoice mode, index:', index);
-    
+    const index = parseInt(e.currentTarget.getAttribute("data-index"));
+    console.log(
+      "[handleEditChoiceClick] Switching to editChoice mode, index:",
+      index,
+    );
+
     store.setMode("editChoice");
     store.setEditingIndex(index);
-    
+
     // Validate state using selectors before rendering
     const mode = store.selectMode();
     const editForm = store.selectEditForm();
-    console.log('[handleEditChoiceClick] Mode:', mode, 'EditForm:', editForm);
-    
+    console.log("[handleEditChoiceClick] Mode:", mode, "EditForm:", editForm);
+
     if (mode === "editChoice" && editForm) {
       render();
     } else {
-      console.error('[handleEditChoiceClick] Invalid state for rendering - mode:', mode, 'editForm:', editForm);
+      console.error(
+        "[handleEditChoiceClick] Invalid state for rendering - mode:",
+        mode,
+        "editForm:",
+        editForm,
+      );
     }
   } catch (error) {
-    console.error('[handleEditChoiceClick] Error:', error);
+    console.error("[handleEditChoiceClick] Error:", error);
   }
 };
 
 export const handleCancelEditClick = (e, deps) => {
   const { store, render } = deps;
-  
+
   store.setMode("list");
   store.setEditingIndex(-1);
-  
+
   // Ensure we have a clean state before rendering using selectors
   const mode = store.selectMode();
   if (mode === "list") {
@@ -46,16 +54,16 @@ export const handleCancelEditClick = (e, deps) => {
 
 export const handleSaveChoiceClick = (e, deps) => {
   const { store, render } = deps;
-  
+
   store.saveChoice();
   render();
 };
 
 export const handleEditFormInput = (e, deps) => {
   const { store, render } = deps;
-  const field = e.currentTarget.getAttribute('data-field');
+  const field = e.currentTarget.getAttribute("data-field");
   const value = e.currentTarget.value;
-  
+
   store.updateEditForm({ field, value });
   render();
 };
@@ -63,8 +71,8 @@ export const handleEditFormInput = (e, deps) => {
 export const handleActionTypeChange = (e, deps) => {
   const { store, render } = deps;
   const value = e.detail.value;
-  
-  store.updateEditForm({ field: 'actionType', value });
+
+  store.updateEditForm({ field: "actionType", value });
   render();
 };
 
@@ -127,7 +135,9 @@ export const handleBeforeMount = (deps) => {
   const { store, render, props } = deps;
 
   // Initialize from existing line data if available
-  const choicesData = props?.line?.presentation?.choices || props?.line?.presentation?.presentation?.choices;
+  const choicesData =
+    props?.line?.presentation?.choices ||
+    props?.line?.presentation?.presentation?.choices;
   if (choicesData) {
     // Set existing choices by directly modifying choices array
     if (choicesData.choices && choicesData.choices.length > 0) {
@@ -135,7 +145,7 @@ export const handleBeforeMount = (deps) => {
       // This is acceptable during mount phase
       const currentChoices = store.selectChoices();
       currentChoices.length = 0; // Clear existing
-      choicesData.choices.forEach(choice => {
+      choicesData.choices.forEach((choice) => {
         currentChoices.push({
           text: choice.text,
           action: choice.action || { type: "continue" },
@@ -158,21 +168,23 @@ export const handlePropsChanged = (deps) => {
   const { store, render, props } = deps;
 
   // Re-initialize when props change
-  const choicesData = props?.line?.presentation?.choices || props?.line?.presentation?.presentation?.choices;
+  const choicesData =
+    props?.line?.presentation?.choices ||
+    props?.line?.presentation?.presentation?.choices;
   if (choicesData) {
     const currentChoices = store.selectChoices();
-    
+
     // Reset choices to initial state first
     currentChoices.length = 0;
     currentChoices.push(
       { text: "Choice 1", action: { type: "continue" } },
-      { text: "Choice 2", action: { type: "continue" } }
+      { text: "Choice 2", action: { type: "continue" } },
     );
 
     // Set existing choices
     if (choicesData.choices && choicesData.choices.length > 0) {
       currentChoices.length = 0; // Clear again
-      choicesData.choices.forEach(choice => {
+      choicesData.choices.forEach((choice) => {
         currentChoices.push({
           text: choice.text,
           action: choice.action || { type: "continue" },
@@ -201,10 +213,10 @@ export const handleBreadcumbActionsClick = (payload, deps) => {
 
 export const handleBreadcumbChoicesClick = (payload, deps) => {
   const { store, render } = deps;
-  
+
   store.setMode("list");
   store.setEditingIndex(-1);
-  
+
   // Ensure we have a clean state before rendering using selectors
   const mode = store.selectMode();
   if (mode === "list") {
