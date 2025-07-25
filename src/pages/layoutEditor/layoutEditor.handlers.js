@@ -232,18 +232,21 @@ export const handleRequestImageGroups = (e, deps) => {
 
 export const handleImageSelectorUpdated = async (e, deps) => {
   const { repository, store, render } = deps;
-  const { imageId } = e.detail;
+  const { imageId, fieldIndex } = e.detail;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
-  // Update the selected item with the new imageId
+  // Get the field name using the proper selector
+  const fieldName = store.selectDetailFieldNameByIndex(fieldIndex);
+
+  // Update the selected item with the new image field
   repository.addAction({
     actionType: "treeUpdate",
     target: `layouts.items.${layoutId}.elements`,
     value: {
       id: selectedItemId,
       replace: false,
-      item: { imageId },
+      item: { [fieldName]: imageId },
     },
   });
 
