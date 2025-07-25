@@ -441,3 +441,25 @@ export const handleShowImageSelectorDialog = (e, deps) => {
   });
   render();
 };
+
+export const handleClearImage = (e, deps) => {
+  const { props, dispatchEvent } = deps;
+
+  // Extract field index from element ID
+  const fieldIndex = parseInt(e.currentTarget.id.replace("clear-image-", ""));
+  const field = props.fields[fieldIndex];
+
+  if (field && field.type === "image-selector") {
+    // Emit update event to clear the image
+    dispatchEvent(
+      new CustomEvent("image-selector-updated", {
+        detail: {
+          fieldIndex,
+          imageId: "", // Empty string to clear the image
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+};

@@ -240,13 +240,14 @@ export const handleImageSelectorUpdated = async (e, deps) => {
   const fieldName = store.selectDetailFieldNameByIndex(fieldIndex);
 
   // Update the selected item with the new image field
+  // If imageId is empty string, we set it to null to clear the image
   repository.addAction({
     actionType: "treeUpdate",
     target: `layouts.items.${layoutId}.elements`,
     value: {
       id: selectedItemId,
       replace: false,
-      item: { [fieldName]: imageId },
+      item: { [fieldName]: imageId || null },
     },
   });
 
