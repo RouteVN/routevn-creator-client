@@ -85,6 +85,10 @@ refs:
     eventListeners:
       option-selected:
         handler: handleSelectChange
+  editable-number-*:
+    eventListeners:
+      click:
+        handler: handleEditableNumberClick
   image-selector-field-*:
     eventListeners:
       click:
@@ -133,7 +137,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-select#select-${field.id} av=c .selectedValue=visibleFields[${i}].value .options=visibleFields[${i}].options:
+                              - rtgl-select#select-${field.name} av=c .selectedValue=field.value .options=field.options:
                             $else:
                               - rtgl-text: ${field.value}
                     $elif field.type == 'color':
@@ -176,6 +180,14 @@ template:
                                 $else:
                                   - "rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md":
                                       - rtgl-text c=mu-fg: No Image
+                    $elif field.type == 'number':
+                      - rtgl-view:
+                          - rtgl-text c=mu-fg: ${field.label}
+                          - $if field.editable:
+                              - "rtgl-view#editable-number-${field.name} cur=p":
+                                  - rtgl-text s=${field.size}: ${field.value}
+                            $else:
+                              - rtgl-text s=${field.size}: ${field.value}
                     $elif field.type == 'audio':
                       - $if field.editable:
                           - rtgl-view pos=rel:
@@ -187,9 +199,9 @@ template:
         $else:
           - rtgl-view w=f h=f av=c ah=c:
               - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}
-  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
+  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y} placement="bottom-end":
       - $if form:
-          - rtgl-form#form slot=content .form=form:
+          - rtgl-form#form slot=content .defaultValues=popover.defaultValues .form=form:
 
   - rtgl-dialog#color-dialog ?open=${colorDialog.isOpen}:
       - rtgl-view slot=content g=md:

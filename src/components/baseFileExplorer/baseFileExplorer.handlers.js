@@ -282,8 +282,6 @@ export const handleItemClick = (e, deps) => {
   const { dispatchEvent, store, render } = deps;
   const itemId = e.currentTarget.id.replace("item-", "");
 
-  console.log("22222222222222");
-
   // Update selected item
   store.setSelectedItemId(itemId);
   render();
