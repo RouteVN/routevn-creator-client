@@ -209,6 +209,15 @@ export const selectPopover = ({ state }) => {
   return state.popover;
 };
 
+export const selectFormState = ({ state }) => {
+  return {
+    targetGroupId: state.targetGroupId,
+    editItemId: state.editItemId,
+    editMode: state.editMode,
+    animationProperties: state.animationProperties,
+  };
+};
+
 export const setPopover = (state, { mode, x, y, payload }) => {
   state.popover.mode = mode;
   state.popover.x = x;
@@ -223,15 +232,11 @@ export const closePopover = (state) => {
   state.popover.payload = {};
 };
 
-export const toggleDialog = (state) => {
-  state.isDialogOpen = !state.isDialogOpen;
-};
-
-export const setTargetGroupId = (state, groupId) => {
-  state.targetGroupId = groupId;
-};
-
-export const setEditMode = (state, { editMode, itemId, itemData }) => {
+export const openDialog = (
+  state,
+  { editMode = false, itemId = null, itemData = null } = {},
+) => {
+  state.isDialogOpen = true;
   state.editMode = editMode;
   state.editItemId = itemId;
 
@@ -239,10 +244,8 @@ export const setEditMode = (state, { editMode, itemId, itemData }) => {
     // Set groupId to support form submission
     state.targetGroupId = itemData.parent || null;
 
-    // Update form for editing
-    state.form.title = "Edit Animation";
-    state.form.description = "Edit the animation";
-    state.form.actions.buttons[0].content = "Update Animation";
+    // Use edit form
+    state.form = editAnimationForm;
 
     // Set default values
     state.defaultValues = {
@@ -252,18 +255,78 @@ export const setEditMode = (state, { editMode, itemId, itemData }) => {
     // Set animation properties
     state.animationProperties = itemData.animationProperties || {};
   } else {
-    // Reset to add mode
-    state.form.title = "Add Animation";
-    state.form.description = "Create a new animation";
-    state.form.actions.buttons[0].content = "Add Animation";
+    // Use add form
+    state.form = addAnimationForm;
 
     state.defaultValues = {
       name: "",
     };
 
-    state.editItemId = null;
     state.animationProperties = {};
   }
+};
+
+export const closeDialog = (state) => {
+  state.isDialogOpen = false;
+  state.editMode = false;
+  state.editItemId = null;
+  state.form = addAnimationForm;
+  state.defaultValues = {
+    name: "",
+  };
+  state.animationProperties = {};
+};
+
+export const setTargetGroupId = (state, groupId) => {
+  state.targetGroupId = groupId;
+};
+
+const addAnimationForm = {
+  title: "Add Animation",
+  description: "Create a new animation",
+  fields: [
+    {
+      name: "name",
+      inputType: "inputText",
+      label: "Name",
+      description: "Enter the animation name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Animation",
+      },
+    ],
+  },
+};
+
+const editAnimationForm = {
+  title: "Edit Animation",
+  description: "Edit the animation",
+  fields: [
+    {
+      name: "name",
+      inputType: "inputText",
+      label: "Name",
+      description: "Enter the animation name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Update Animation",
+      },
+    ],
+  },
 };
 
 export const setSearchQuery = (state, query) => {

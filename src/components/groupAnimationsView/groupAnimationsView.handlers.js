@@ -39,18 +39,16 @@ export const handleAddAnimationClick = (e, deps) => {
   const groupId = e.currentTarget.id.replace("add-animation-button-", "");
   store.setTargetGroupId(groupId);
 
-  // Toggle dialog open
-  store.setEditMode(false);
-  store.toggleDialog();
+  // Open dialog for adding
+  store.openDialog();
   render();
 };
 
 export const handleCloseDialog = (e, deps) => {
   const { store, render } = deps;
 
-  // Close dialog and reset to add mode
-  store.setEditMode(false);
-  store.toggleDialog();
+  // Close dialog
+  store.closeDialog();
   render();
 };
 
@@ -75,9 +73,8 @@ export const handleAnimationItemDoubleClick = (e, deps) => {
   }
 
   if (itemData) {
-    // Set up the form for editing
-    store.setEditMode({ editMode: true, itemId, itemData });
-    store.toggleDialog();
+    // Open dialog for editing
+    store.openDialog({ editMode: true, itemId, itemData });
     render();
   }
 };
@@ -92,21 +89,19 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get the target group ID from store - access the internal state properly
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const targetGroupId = storeState.targetGroupId;
-    const editItemId = storeState.editItemId;
+    // Get form state using selector
+    const formState = store.selectFormState();
+    const { targetGroupId, editItemId, editMode, animationProperties } =
+      formState;
 
-    if (storeState.editMode && storeState.editItemId) {
+    if (editMode && editItemId) {
       // Edit mode - dispatch animation update
       dispatchEvent(
         new CustomEvent("animation-updated", {
           detail: {
             itemId: editItemId,
             name: formData.name,
-            animationProperties: storeState.animationProperties,
+            animationProperties,
           },
           bubbles: true,
           composed: true,
@@ -119,7 +114,7 @@ export const handleFormActionClick = (e, deps) => {
           detail: {
             groupId: targetGroupId,
             name: formData.name,
-            animationProperties: storeState.animationProperties,
+            animationProperties,
           },
           bubbles: true,
           composed: true,
@@ -127,8 +122,8 @@ export const handleFormActionClick = (e, deps) => {
       );
     }
 
-    // Close dialog and reset everything
-    store.toggleDialog();
+    // Close dialog
+    store.closeDialog();
     render();
   }
 };
