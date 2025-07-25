@@ -20,6 +20,10 @@ viewDataSchema:
       type: number
     submitDisabled:
       type: boolean
+    form:
+      type: object
+    defaultValues:
+      type: object
 
 propsSchema:
   type: object
@@ -35,18 +39,6 @@ propsSchema:
           type: number
 
 refs:
-  disable-click-select:
-    eventListeners:
-      option-selected:
-        handler: handleDisableClickSelectChange
-  auto-play-select:
-    eventListeners:
-      option-selected:
-        handler: handleAutoPlaySelectChange
-  auto-play-delay-input:
-    eventListeners:
-      input:
-        handler: handleAutoPlayDelayChange
   submit-button:
     eventListeners:
       click:
@@ -55,22 +47,17 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
+  controls-form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
 
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-      - rtgl-text mb=md: Play Mode Controls Configuration
-
-      - rtgl-text mb=sm: Disable User Click
-      - rtgl-select#disable-click-select .options=booleanOptions .selectedValue=disableUserClick mb=md:
-
-      - rtgl-text mb=sm: Auto Play
-      - rtgl-select#auto-play-select .options=booleanOptions .selectedValue=autoPlay mb=md:
-
-      - rtgl-text mb=sm: Auto Play Delay (milliseconds)
-      - rtgl-input#auto-play-delay-input type="number" .value=autoPlayDelay placeholder="1000" mb=lg:
+      - rtgl-form#controls-form .defaultValues=defaultValues .form=form w=f:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
