@@ -80,23 +80,23 @@ export const toViewData = ({ state, props }, payload) => {
   // Update form options with current data
   const form = {
     ...state.form,
-    fields: state.form.fields.map(field => {
-      if (field.name === 'layoutId') {
-        return { 
-          ...field, 
+    fields: state.form.fields.map((field) => {
+      if (field.name === "layoutId") {
+        return {
+          ...field,
           options: layoutOptions,
-          value: state.selectedLayoutId
+          value: state.selectedLayoutId,
         };
       }
-      if (field.name === 'characterId') {
-        return { 
-          ...field, 
+      if (field.name === "characterId") {
+        return {
+          ...field,
           options: characterOptions,
-          value: state.selectedCharacterId
+          value: state.selectedCharacterId,
         };
       }
       return field;
-    })
+    }),
   };
 
   // Update default values with current selections

@@ -86,18 +86,18 @@ export const toViewData = ({ state, props }, payload) => {
   // Update form fields with current values
   const form = {
     ...state.form,
-    fields: state.form.fields.map(field => {
-      if (field.name === 'disableUserClick') {
+    fields: state.form.fields.map((field) => {
+      if (field.name === "disableUserClick") {
         return { ...field, value: state.disableUserClick };
       }
-      if (field.name === 'autoPlay') {
+      if (field.name === "autoPlay") {
         return { ...field, value: state.autoPlay };
       }
-      if (field.name === 'autoPlayDelay') {
+      if (field.name === "autoPlayDelay") {
         return { ...field, value: state.autoPlayDelay };
       }
       return field;
-    })
+    }),
   };
 
   // Update default values with current selections

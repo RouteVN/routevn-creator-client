@@ -22,7 +22,7 @@ export const handleFormChange = (e, deps) => {
   if (formData.layoutId !== undefined) {
     store.setSelectedLayoutId({ layoutId: formData.layoutId });
   }
-  
+
   if (formData.characterId !== undefined) {
     store.setSelectedCharacterId({ characterId: formData.characterId });
   }

@@ -96,7 +96,7 @@ export const toViewData = ({ state, props }, payload) => {
   let enhancedGroups = [];
   let selectedItem = null;
   let selectedName = null;
-  
+
   const allItems = toFlatItems(state.items);
   const allScenes = allItems.filter((item) => item.type === "scene");
 
@@ -220,40 +220,47 @@ export const toViewData = ({ state, props }, payload) => {
   }
 
   // Update form based on current tab and available options
-  const targetOptions = state.tab === "scene"
-    ? allScenes.map(scene => ({
-        value: scene.id,
-        label: scene.name,
-      }))
-    : (state.sections || []).map(section => ({
-        value: section.id,
-        label: section.name,
-      }));
+  const targetOptions =
+    state.tab === "scene"
+      ? allScenes.map((scene) => ({
+          value: scene.id,
+          label: scene.name,
+        }))
+      : (state.sections || []).map((section) => ({
+          value: section.id,
+          label: section.name,
+        }));
 
   const form = {
     ...state.form,
-    fields: state.form.fields.map(field => {
-      if (field.name === 'targetId') {
+    fields: state.form.fields.map((field) => {
+      if (field.name === "targetId") {
         return {
           ...field,
-          label: state.tab === 'scene' ? 'Target Scene' : 'Target Section',
+          label: state.tab === "scene" ? "Target Scene" : "Target Section",
           options: targetOptions,
-          value: state.tab === 'scene' ? state.selectedSceneId : state.selectedSectionId,
+          value:
+            state.tab === "scene"
+              ? state.selectedSceneId
+              : state.selectedSectionId,
         };
       }
-      if (field.name === 'animation') {
+      if (field.name === "animation") {
         return {
           ...field,
           value: state.selectedAnimation,
         };
       }
       return field;
-    })
+    }),
   };
 
   // Update default values based on current selection
   const defaultValues = {
-    targetId: state.tab === 'scene' ? (state.selectedSceneId || '') : (state.selectedSectionId || ''),
+    targetId:
+      state.tab === "scene"
+        ? state.selectedSceneId || ""
+        : state.selectedSectionId || "",
     animation: state.selectedAnimation,
   };
 
