@@ -51,8 +51,15 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
     let element = {
       id: node.id,
       type: node.type,
-      x: parseInt(node.x),
-      y: parseInt(node.y),
+      x: parseInt(node.x || 0),
+      y: parseInt(node.y || 0),
+      width: parseInt(node.width || 100),
+      height: parseInt(node.height || 100),
+      anchorX: parseFloat(node.anchorX || 0),
+      anchorY: parseFloat(node.anchorY || 0),
+      scaleX: parseFloat(node.scaleX || 1),
+      scaleY: parseFloat(node.scaleY || 1),
+      rotation: parseInt(node.rotation || 0),
     };
 
     if (node.type === "text") {
@@ -74,7 +81,6 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
       }
     }
 
-    // Map children recursively while maintaining tree structure
     if (node.children && node.children.length > 0) {
       element.children = node.children.map(mapNode);
     }

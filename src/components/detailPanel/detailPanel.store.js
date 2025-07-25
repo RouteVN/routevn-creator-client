@@ -7,6 +7,7 @@ export const INITIAL_STATE = Object.freeze({
     position: { x: 0, y: 0 },
     fields: [],
     actions: [],
+    defaultValues: {},
   },
   // Text dialog state
   textDialog: {
@@ -152,12 +153,16 @@ export const selectField = ({ props }, name) => {
   return props.fields.find((field) => field.name === name);
 };
 
-export const showPopover = (state, { position, fields, actions }) => {
+export const showPopover = (
+  state,
+  { position, fields, actions, defaultValues = {} },
+) => {
   state.popover = {
     isOpen: true,
     position,
     fields,
     actions,
+    defaultValues,
   };
 };
 

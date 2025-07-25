@@ -30,6 +30,49 @@ export const handleSelectChange = (e, deps) => {
   );
 };
 
+export const handleEditableNumberClick = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
+
+  const fieldName = e.currentTarget.id.replace("editable-number-", "");
+  const field = store.selectField(fieldName);
+
+  // Calculate position for left-bottom placement relative to mouse cursor
+  const position = {
+    x: e.clientX, // Move 200px to the left of cursor
+    y: e.clientY, // Move 10px down from cursor
+  };
+
+  store.showPopover({
+    position,
+    fields: [
+      {
+        name: field.name,
+        inputType: "slider-input",
+        label: field.label,
+        description: field.description || "Adjust the value",
+        min: field.min || 0,
+        max: field.max || 100,
+        step: field.step || 1,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Submit",
+        },
+      ],
+    },
+    defaultValues: {
+      [field.name]: field.value || 0,
+    },
+  });
+  render();
+};
+
 export const handleFileInputChange = (e, deps) => {
   const { dispatchEvent, props } = deps;
 
@@ -79,14 +122,9 @@ export const handleTitleClick = (e, deps) => {
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
   const position = {
-    x: e.clientX - 200, // Move 200px to the left of cursor
-    y: e.clientY + 10, // Move 10px down from cursor
+    x: e.clientX,
+    y: e.clientY,
   };
-
-  // Ensure popover doesn't go off-screen to the left
-  if (position.x < 10) {
-    position.x = 10;
-  }
 
   store.showPopover({ position });
   render();
@@ -246,14 +284,9 @@ export const handleEditableTextClick = (e, deps) => {
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
   const position = {
-    x: e.clientX - 200, // Move 200px to the left of cursor
-    y: e.clientY + 10, // Move 10px down from cursor
+    x: e.clientX,
+    y: e.clientY,
   };
-
-  // Ensure popover doesn't go off-screen to the left
-  if (position.x < 10) {
-    position.x = 10;
-  }
 
   store.showPopover({
     position,
@@ -275,6 +308,9 @@ export const handleEditableTextClick = (e, deps) => {
           content: "Submit",
         },
       ],
+    },
+    defaultValues: {
+      [field.name]: field.value || "",
     },
   });
   render();
