@@ -118,22 +118,26 @@ export const handleCharacterSelectorClick = (payload, deps) => {
   render();
 };
 
-export const handleBreadcumbActionsClick = (payload, deps) => {
-  const { dispatchEvent } = deps;
+export const handleBreadcumbClick = (e, deps) => {
+  const { dispatchEvent, store, render } = deps;
 
-  dispatchEvent(
-    new CustomEvent("back-to-actions", {
-      detail: {},
-    }),
-  );
-};
-
-export const handleBreadcumbCharactersClick = (payload, deps) => {
-  const { store, render } = deps;
-  store.setMode({
-    mode: "current",
-  });
-  render();
+  if (e.detail.id === "actions") {
+    dispatchEvent(
+      new CustomEvent("back-to-actions", {
+        detail: {},
+      }),
+    );
+  } else if (e.detail.id === "current") {
+    store.setMode({
+      mode: "current",
+    });
+    render();
+  } else if (e.detail.id === "character-select") {
+    store.setMode({
+      mode: "sprite-select",
+    });
+    render();
+  }
 };
 
 export const handleRemoveCharacterClick = (e, deps) => {
@@ -160,14 +164,6 @@ export const handleAddCharacterClick = (payload, deps) => {
     mode: "character-select",
   });
 
-  render();
-};
-
-export const handleBreadcumbCharacterSelectClick = (payload, deps) => {
-  const { store, render } = deps;
-  store.setMode({
-    mode: "sprite-select",
-  });
   render();
 };
 

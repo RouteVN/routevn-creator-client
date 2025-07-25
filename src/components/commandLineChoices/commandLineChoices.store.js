@@ -149,6 +149,27 @@ export const toViewData = ({ state, props }, payload) => {
   const editModeTitle =
     (state?.editingIndex || -1) >= 0 ? "Edit Choice" : "Add New Choice";
 
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+  ];
+
+  if (state?.mode === "editChoice") {
+    breadcrumb.push({
+      id: "list",
+      label: "Choices",
+    });
+    breadcrumb.push({
+      label: editModeTitle,
+    });
+  } else {
+    breadcrumb.push({
+      label: "Choices",
+    });
+  }
+
   const viewData = {
     mode: state?.mode || "list",
     choices: processedChoices,
@@ -164,6 +185,7 @@ export const toViewData = ({ state, props }, payload) => {
     },
     actionTypeOptions,
     editModeTitle,
+    breadcrumb,
   };
 
   console.log("[toViewData] Returning view data:", viewData);

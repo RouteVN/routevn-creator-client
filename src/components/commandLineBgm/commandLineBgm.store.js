@@ -63,6 +63,27 @@ export const toViewData = ({ state, props }, payload) => {
         ?.name
     : undefined;
 
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+  ];
+
+  if (state.mode === "gallery") {
+    breadcrumb.push({
+      id: "current",
+      label: "BGM",
+    });
+    breadcrumb.push({
+      label: "Select",
+    });
+  } else {
+    breadcrumb.push({
+      label: "BGM",
+    });
+  }
+
   return {
     mode: state.mode,
     items: flatItems,
@@ -71,5 +92,6 @@ export const toViewData = ({ state, props }, payload) => {
     selectedAudioId: state.selectedAudioId,
     selectedFileId: state.selectedFileId,
     selectedAudioName,
+    breadcrumb,
   };
 };

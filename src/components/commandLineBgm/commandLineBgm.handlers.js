@@ -72,22 +72,21 @@ export const handleAudioSelectorClick = (payload, deps) => {
   render();
 };
 
-export const handleBreadcumbActionsClick = (payload, deps) => {
-  const { dispatchEvent } = deps;
+export const handleBreadcumbActionsClick = (e, deps) => {
+  const { dispatchEvent, store, render } = deps;
 
-  dispatchEvent(
-    new CustomEvent("back-to-actions", {
-      detail: {},
-    }),
-  );
-};
-
-export const handleBreadcumbBgmClick = (payload, deps) => {
-  const { store, render } = deps;
-  store.setMode({
-    mode: "current",
-  });
-  render();
+  if (e.detail.id === "actions") {
+    dispatchEvent(
+      new CustomEvent("back-to-actions", {
+        detail: {},
+      }),
+    );
+  } else {
+    store.setMode({
+      mode: e.detail.id,
+    });
+    render();
+  }
 };
 
 export const handleButtonSelectClickAudio = (payload, deps) => {

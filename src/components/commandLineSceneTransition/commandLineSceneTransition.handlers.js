@@ -66,7 +66,17 @@ export const handleSectionItemClick = (e, deps) => {
   render();
 };
 
-export const handleTabClick = (payload, deps) => {
+export const handleTabClick = (e, deps) => {
+  const { store, render } = deps;
+
+  store.setTab({
+    tab: e.detail.id,
+  });
+
+  render();
+};
+
+export const handleTabClickOld = (payload, deps) => {
   const { store, render } = deps;
 
   // Handle clicks on both the tab container and its children
@@ -138,22 +148,21 @@ export const handleTransitionSelectorClick = (payload, deps) => {
   render();
 };
 
-export const handleBreadcumbActionsClick = (payload, deps) => {
-  const { dispatchEvent } = deps;
+export const handleBreadcumbClick = (e, deps) => {
+  const { dispatchEvent, store, render } = deps;
 
-  dispatchEvent(
-    new CustomEvent("back-to-actions", {
-      detail: {},
-    }),
-  );
-};
-
-export const handleBreadcumbTransitionClick = (payload, deps) => {
-  const { store, render } = deps;
-  store.setMode({
-    mode: "current",
-  });
-  render();
+  if (e.detail.id === "actions") {
+    dispatchEvent(
+      new CustomEvent("back-to-actions", {
+        detail: {},
+      }),
+    );
+  } else if (e.detail.id === "current") {
+    store.setMode({
+      mode: "current",
+    });
+    render();
+  }
 };
 
 export const handleAnimationSelectChange = (e, deps) => {

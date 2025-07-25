@@ -1,0 +1,77 @@
+elementName: rvn-command-line-controls
+
+viewDataSchema:
+  type: object
+  properties:
+    breadcrumb:
+      type: array
+      items:
+        type: object
+        properties:
+          text:
+            type: string
+          action:
+            type: string
+    disableUserClick:
+      type: boolean
+    autoPlay:
+      type: boolean
+    autoPlayDelay:
+      type: number
+    submitDisabled:
+      type: boolean
+
+propsSchema:
+  type: object
+  properties:
+    line:
+      type: object
+      properties:
+        disableUserClick:
+          type: boolean
+        autoPlay:
+          type: boolean
+        autoPlayDelay:
+          type: number
+
+refs:
+  disable-click-select:
+    eventListeners:
+      option-selected:
+        handler: handleDisableClickSelectChange
+  auto-play-select:
+    eventListeners:
+      option-selected:
+        handler: handleAutoPlaySelectChange
+  auto-play-delay-input:
+    eventListeners:
+      input:
+        handler: handleAutoPlayDelayChange
+  submit-button:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+  breadcumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcumbClick
+
+template:
+  - rtgl-view w=f h=f p=lg:
+      - rtgl-view d=h g=md:
+          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+
+      - rtgl-text mb=md: Play Mode Controls Configuration
+
+      - rtgl-text mb=sm: Disable User Click
+      - rtgl-select#disable-click-select .options=booleanOptions .selectedValue=disableUserClick mb=md:
+
+      - rtgl-text mb=sm: Auto Play
+      - rtgl-select#auto-play-select .options=booleanOptions .selectedValue=autoPlay mb=md:
+
+      - rtgl-text mb=sm: Auto Play Delay (milliseconds)
+      - rtgl-input#auto-play-delay-input type="number" .value=autoPlayDelay placeholder="1000" mb=lg:
+
+      - rtgl-view flex=1:
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+          - rtgl-button#submit-button dis=${submitDisabled}: Submit

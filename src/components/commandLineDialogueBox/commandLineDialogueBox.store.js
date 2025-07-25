@@ -33,11 +33,22 @@ export const toViewData = ({ state, props }, payload) => {
       label: character.name,
     }));
 
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+    {
+      label: "Dialogue Box",
+    },
+  ];
+
   return {
     layouts: layoutOptions,
     characters: characterOptions,
     selectedLayoutId: state.selectedLayoutId,
     selectedCharacterId: state.selectedCharacterId,
     submitDisabled: false,
+    breadcrumb,
   };
 };

@@ -167,15 +167,19 @@ export const toViewData = ({ state, props }, payload) => {
       id: "actions",
       label: "Actions",
     },
-    {
-      id: "current",
-      label: "Background",
-    },
   ];
 
   if (state.mode === "gallery") {
     breadcrumb.push({
+      id: "current",
+      label: "Background",
+    });
+    breadcrumb.push({
       label: "Select",
+    });
+  } else {
+    breadcrumb.push({
+      label: "Background",
     });
   }
 

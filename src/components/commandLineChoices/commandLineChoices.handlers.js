@@ -201,25 +201,23 @@ export const handlePropsChanged = (deps) => {
   render();
 };
 
-export const handleBreadcumbActionsClick = (payload, deps) => {
-  const { dispatchEvent } = deps;
+export const handleBreadcumbClick = (e, deps) => {
+  const { dispatchEvent, store, render } = deps;
 
-  dispatchEvent(
-    new CustomEvent("back-to-actions", {
-      detail: {},
-    }),
-  );
-};
+  if (e.detail.id === "actions") {
+    dispatchEvent(
+      new CustomEvent("back-to-actions", {
+        detail: {},
+      }),
+    );
+  } else if (e.detail.id === "list") {
+    store.setMode("list");
+    store.setEditingIndex(-1);
 
-export const handleBreadcumbChoicesClick = (payload, deps) => {
-  const { store, render } = deps;
-
-  store.setMode("list");
-  store.setEditingIndex(-1);
-
-  // Ensure we have a clean state before rendering using selectors
-  const mode = store.selectMode();
-  if (mode === "list") {
-    render();
+    // Ensure we have a clean state before rendering using selectors
+    const mode = store.selectMode();
+    if (mode === "list") {
+      render();
+    }
   }
 };
