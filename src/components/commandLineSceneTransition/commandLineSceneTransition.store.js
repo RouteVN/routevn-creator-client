@@ -9,6 +9,44 @@ export const INITIAL_STATE = Object.freeze({
   selectedSectionId: undefined,
   selectedAnimation: "fade",
   searchQuery: "",
+
+  defaultValues: {
+    targetId: "",
+    animation: "fade",
+  },
+
+  form: {
+    fields: [
+      {
+        name: "targetId",
+        inputType: "select",
+        label: "Target Section",
+        description: "",
+        required: false,
+        placeholder: "Choose a target...",
+        options: [],
+      },
+      {
+        name: "animation",
+        inputType: "select",
+        label: "Transition Animation",
+        description: "",
+        required: false,
+        placeholder: "Choose animation...",
+        options: [
+          { value: "fade", label: "Fade" },
+          { value: "slide", label: "Slide" },
+          { value: "dissolve", label: "Dissolve" },
+          { value: "wipe", label: "Wipe" },
+          { value: "none", label: "None" },
+        ],
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [],
+    },
+  },
 });
 
 export const setMode = (state, payload) => {
@@ -29,10 +67,16 @@ export const setTab = (state, payload) => {
 
 export const setSelectedSceneId = (state, payload) => {
   state.selectedSceneId = payload.sceneId;
+  if (state.tab === "scene") {
+    state.defaultValues.targetId = payload.sceneId || "";
+  }
 };
 
 export const setSelectedSectionId = (state, payload) => {
   state.selectedSectionId = payload.sectionId;
+  if (state.tab === "section") {
+    state.defaultValues.targetId = payload.sectionId || "";
+  }
 };
 
 export const selectTab = ({ state }) => {
@@ -41,6 +85,7 @@ export const selectTab = ({ state }) => {
 
 export const setSelectedAnimation = (state, payload) => {
   state.selectedAnimation = payload.animation;
+  state.defaultValues.animation = payload.animation;
 };
 
 export const setSearchQuery = (state, payload) => {
@@ -51,14 +96,13 @@ export const toViewData = ({ state, props }, payload) => {
   let enhancedGroups = [];
   let selectedItem = null;
   let selectedName = null;
+  
+  const allItems = toFlatItems(state.items);
+  const allScenes = allItems.filter((item) => item.type === "scene");
 
   if (state.tab === "scene") {
-    const allItems = toFlatItems(state.items);
     const flatItems = allItems.filter((item) => item.type === "folder");
     const flatGroups = toFlatGroups(state.items);
-
-    // Find all scenes
-    const allScenes = allItems.filter((item) => item.type === "scene");
 
     // Filter scenes by search query
     const filteredScenes = state.searchQuery
@@ -175,6 +219,44 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
+  // Update form based on current tab and available options
+  const targetOptions = state.tab === "scene"
+    ? allScenes.map(scene => ({
+        value: scene.id,
+        label: scene.name,
+      }))
+    : (state.sections || []).map(section => ({
+        value: section.id,
+        label: section.name,
+      }));
+
+  const form = {
+    ...state.form,
+    fields: state.form.fields.map(field => {
+      if (field.name === 'targetId') {
+        return {
+          ...field,
+          label: state.tab === 'scene' ? 'Target Scene' : 'Target Section',
+          options: targetOptions,
+          value: state.tab === 'scene' ? state.selectedSceneId : state.selectedSectionId,
+        };
+      }
+      if (field.name === 'animation') {
+        return {
+          ...field,
+          value: state.selectedAnimation,
+        };
+      }
+      return field;
+    })
+  };
+
+  // Update default values based on current selection
+  const defaultValues = {
+    targetId: state.tab === 'scene' ? (state.selectedSceneId || '') : (state.selectedSectionId || ''),
+    animation: state.selectedAnimation,
+  };
+
   return {
     mode: state.mode,
     tab: state.tab,
@@ -188,5 +270,7 @@ export const toViewData = ({ state, props }, payload) => {
     selectedName,
     searchQuery: state.searchQuery,
     breadcrumb,
+    form,
+    defaultValues,
   };
 };

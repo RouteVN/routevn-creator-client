@@ -165,11 +165,23 @@ export const handleBreadcumbClick = (e, deps) => {
   }
 };
 
-export const handleAnimationSelectChange = (e, deps) => {
+export const handleFormChange = (e, deps) => {
   const { store, render } = deps;
-  store.setSelectedAnimation({
-    animation: e.currentTarget.value,
-  });
+  const formData = e.detail.formData;
+  const tab = store.selectTab();
+
+  if (formData.targetId !== undefined) {
+    if (tab === "scene") {
+      store.setSelectedSceneId({ sceneId: formData.targetId });
+    } else {
+      store.setSelectedSectionId({ sectionId: formData.targetId });
+    }
+  }
+
+  if (formData.animation !== undefined) {
+    store.setSelectedAnimation({ animation: formData.animation });
+  }
+
   render();
 };
 
@@ -187,11 +199,11 @@ export const handleResetClick = (e, deps) => {
 
   if (tab === "scene") {
     store.setSelectedSceneId({
-      sceneId: undefined,
+      sceneId: "",
     });
   } else if (tab === "section") {
     store.setSelectedSectionId({
-      sectionId: undefined,
+      sectionId: "",
     });
   }
 

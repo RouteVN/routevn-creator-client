@@ -21,27 +21,23 @@ export const handleBeforeMount = (deps) => {
   }
 };
 
-export const handleDisableClickSelectChange = (e, deps) => {
+export const handleFormChange = (e, deps) => {
   const { store, render } = deps;
-  const disableUserClick = e.detail.value;
+  const formData = e.detail.formData;
 
-  store.setDisableUserClick({ disableUserClick });
-  render();
-};
+  if (formData.disableUserClick !== undefined) {
+    store.setDisableUserClick({ disableUserClick: formData.disableUserClick });
+  }
 
-export const handleAutoPlaySelectChange = (e, deps) => {
-  const { store, render } = deps;
-  const autoPlay = e.detail.value;
+  if (formData.autoPlay !== undefined) {
+    store.setAutoPlay({ autoPlay: formData.autoPlay });
+  }
 
-  store.setAutoPlay({ autoPlay });
-  render();
-};
+  if (formData.autoPlayDelay !== undefined) {
+    const autoPlayDelay = parseInt(formData.autoPlayDelay) || 1000;
+    store.setAutoPlayDelay({ autoPlayDelay });
+  }
 
-export const handleAutoPlayDelayChange = (e, deps) => {
-  const { store, render } = deps;
-  const autoPlayDelay = parseInt(e.target.value) || 1000;
-
-  store.setAutoPlayDelay({ autoPlayDelay });
   render();
 };
 

@@ -20,7 +20,11 @@ propsSchema:
 
 viewDataSchema:
   type: object
-  properties: {}
+  properties:
+    form:
+      type: object
+    defaultValues:
+      type: object
 
 refs:
   transition-selector:
@@ -47,10 +51,6 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
-  animation-select:
-    eventListeners:
-      change:
-        handler: handleAnimationSelectChange
   search-input:
     eventListeners:
       input:
@@ -59,6 +59,10 @@ refs:
     eventListeners:
       item-click:
         handler: handleTabClick
+  transition-form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -67,27 +71,7 @@ template:
       - rtgl-view d=h g=md:
         - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-      - rtgl-text mb=md:
-          $if tab == 'section':
-            Target Section
-          $else:
-            Target Scene
-      - rtgl-view#transition-selector g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p mb=lg:
-        - $if tab == 'section':
-            - rtgl-svg svg=section wh=24:
-          $else:
-            - rtgl-svg svg=scene wh=24:
-        - $if selectedName:
-            - rtgl-text s=sm: ${selectedName}
-          $else:
-            - rtgl-text s=sm:
-                $if tab == 'section':
-                  Select Section
-                $else:
-                  Select Scene
-
-      - rtgl-text mb=md: Transition Animation
-      - rtgl-select#animation-select .options=animationOptions .value=selectedAnimation mb=lg:
+      - rtgl-form#transition-form .defaultValues=defaultValues .form=form w=f:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
