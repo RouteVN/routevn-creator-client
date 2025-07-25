@@ -79,7 +79,7 @@ refs:
 
 template:
   - 'rtgl-view#container w=f h=f pos=rel bgc=bg style="overflow: hidden; min-height: 400px; cursor: ${containerCursor};"':
-    - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; min-width: 100vw; min-height: 100vh;"':
+    - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; min-width: 100%; min-height: 100%;"':
       - $for item in items:
         - 'rtgl-view#item-${item.id} pos=abs w=120 h=60 bgc=mu bw=sm bc=ac br=md style="left: ${item.x}px; top: ${item.y}px; cursor: ${itemCursor}; z-index: 10; user-select: none;"':
           - rtgl-view w=f h=f av=c ah=c p=md:
