@@ -146,6 +146,39 @@ export const toViewData = ({ state, props }, payload) => {
     }),
   );
 
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+  ];
+
+  if (state.mode === "character-select") {
+    breadcrumb.push({
+      id: "current",
+      label: "Characters",
+    });
+    breadcrumb.push({
+      label: "Select",
+    });
+  } else if (state.mode === "sprite-select") {
+    breadcrumb.push({
+      id: "current",
+      label: "Characters",
+    });
+    breadcrumb.push({
+      id: "character-select",
+      label: selectedCharacterName || "Character",
+    });
+    breadcrumb.push({
+      label: "Sprite Selection",
+    });
+  } else {
+    breadcrumb.push({
+      label: "Characters",
+    });
+  }
+
   return {
     mode: state.mode,
     items: flatItems,
@@ -155,5 +188,6 @@ export const toViewData = ({ state, props }, payload) => {
     spriteItems,
     spriteGroups,
     selectedCharacterName,
+    breadcrumb,
   };
 };

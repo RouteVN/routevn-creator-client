@@ -22,10 +22,21 @@ export const setComparisonValue = (state, value) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+    {
+      label: "Conditional",
+    },
+  ];
+
   return {
     conditionType: state.conditionType,
     selectedVariable: state.selectedVariable,
     operator: state.operator,
     comparisonValue: state.comparisonValue,
+    breadcrumb,
   };
 };

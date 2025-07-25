@@ -88,11 +88,33 @@ export const toViewData = ({ state, props }, payload) => {
     { label: "Manual", value: "manual" },
   ];
 
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+  ];
+
+  if (state.mode === "gallery") {
+    breadcrumb.push({
+      id: "current",
+      label: "Sound Effects",
+    });
+    breadcrumb.push({
+      label: "Audio Selection",
+    });
+  } else {
+    breadcrumb.push({
+      label: "Sound Effects",
+    });
+  }
+
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
     triggerOptions,
     soundEffects: state.soundEffects,
+    breadcrumb,
   };
 };

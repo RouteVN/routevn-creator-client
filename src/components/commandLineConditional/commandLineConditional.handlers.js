@@ -46,12 +46,14 @@ export const handleSubmitClick = (e, deps) => {
   );
 };
 
-export const handleBreadcumbActionsClick = (payload, deps) => {
+export const handleBreadcumbClick = (e, deps) => {
   const { dispatchEvent } = deps;
 
-  dispatchEvent(
-    new CustomEvent("back-to-actions", {
-      detail: {},
-    }),
-  );
+  if (e.detail.id === "actions") {
+    dispatchEvent(
+      new CustomEvent("back-to-actions", {
+        detail: {},
+      }),
+    );
+  }
 };

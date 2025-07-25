@@ -27,18 +27,10 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-  breadcumb-actions:
+  breadcumb:
     eventListeners:
-      click:
-        handler: handleBreadcumbActionsClick
-  breadcumb-characters:
-    eventListeners:
-      click:
-        handler: handleBreadcumbCharactersClick
-  breadcumb-character-select:
-    eventListeners:
-      click:
-        handler: handleBreadcumbCharacterSelectClick
+      item-click:
+        handler: handleBreadcumbClick
   add-character-button:
     eventListeners:
       click:
@@ -68,9 +60,7 @@ template:
   - rtgl-view w=f h=f p=lg:
     - $if mode == 'current':
       - rtgl-view d=h g=md:
-        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Characters
+        - rtgl-breadcrumb#breadcumb .items=breadcrumb:
       - rtgl-text: Characters
       - rtgl-view g=md:
         - $for character, i in selectedCharacters:
@@ -96,11 +86,7 @@ template:
 
     - $if mode == 'character-select':
       - rtgl-view d=h g=md:
-        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text#breadcumb-characters s=sm c=mu-fg mb=lg cur=p: Characters
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Character Selection
+        - rtgl-breadcrumb#breadcumb .items=breadcrumb:
       - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
         - rtgl-view h=f flex=1 sv:
           - rvn-base-file-explorer#base-file-explorer .items=items:
@@ -121,13 +107,7 @@ template:
 
     - $if mode == 'sprite-select':
       - rtgl-view d=h g=md:
-        - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text#breadcumb-characters s=sm c=mu-fg mb=lg cur=p: Characters
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text#breadcumb-character-select s=sm c=mu-fg mb=lg cur=p: ${selectedCharacterName}
-        - rtgl-text s=sm c=mu-fg mb=lg: '>'
-        - rtgl-text s=sm c=mu-fg mb=lg: Sprite Selection
+        - rtgl-breadcrumb#breadcumb .items=breadcrumb:
       - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
         - rtgl-view h=f flex=1 sv:
           - rvn-base-file-explorer#base-file-explorer .items=spriteItems:

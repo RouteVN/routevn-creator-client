@@ -188,6 +188,8 @@ template:
                   - rvn-command-line-characters#command-line-characters .line=selectedLine:
                 $elif mode == "sceneTransition":
                   - rvn-command-line-scene-transition#command-line-scene-transition .line=selectedLine .sections=sections:
+                $elif mode == "controls":
+                  - rvn-command-line-controls#command-line-controls .line=selectedLine:
                 $elif mode == "conditional":
                   - rvn-command-line-conditional#command-line-conditional:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

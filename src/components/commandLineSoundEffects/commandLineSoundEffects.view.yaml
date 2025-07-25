@@ -42,14 +42,10 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-  breadcumb-actions:
+  breadcumb:
     eventListeners:
-      click:
-        handler: handleBreadcumbActionsClick
-  breadcumb-sound-effects:
-    eventListeners:
-      click:
-        handler: handleBreadcumbSoundEffectsClick
+      item-click:
+        handler: handleBreadcumbClick
   button-select:
     eventListeners:
       click:
@@ -63,9 +59,7 @@ template:
   - rtgl-view w=f h=f p=lg:
     - $if mode == 'current':
         - rtgl-view d=h g=md:
-          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-          - rtgl-text s=sm c=mu-fg mb=lg: '>'
-          - rtgl-text s=sm c=mu-fg mb=lg: Sound Effects
+          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
         - rtgl-text: Sound Effects
 
         # List of sound effects
@@ -87,11 +81,7 @@ template:
           - rtgl-button#submit-button: Submit
       $elif mode == 'gallery':
         - rtgl-view d=h g=md:
-          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-          - rtgl-text s=sm c=mu-fg mb=lg: '>'
-          - rtgl-text#breadcumb-sound-effects s=sm c=mu-fg mb=lg cur=p: Sound Effects
-          - rtgl-text s=sm c=mu-fg mb=lg: '>'
-          - rtgl-text s=sm c=mu-fg mb=lg: Audio Selection
+          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
         - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
           - rtgl-view h=f flex=1 sv:
             - rvn-base-file-explorer#base-file-explorer .items=items:

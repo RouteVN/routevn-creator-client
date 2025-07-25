@@ -68,23 +68,17 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-  breadcumb-actions:
+  breadcumb:
     eventListeners:
-      click:
-        handler: handleBreadcumbActionsClick
-  breadcumb-choices:
-    eventListeners:
-      click:
-        handler: handleBreadcumbChoicesClick
+      item-click:
+        handler: handleBreadcumbClick
 
 template:
   - rtgl-view w=f h=f p=lg:
     - $if mode == "list":
       - rtgl-view:
         - rtgl-view d=h g=md:
-          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-          - rtgl-text s=sm c=mu-fg mb=lg: '>'
-          - rtgl-text s=sm c=mu-fg mb=lg: Choices
+          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
         - rtgl-text mb=md: Player Choices Configuration
 
@@ -111,11 +105,7 @@ template:
       $elif mode == "editChoice":
         - rtgl-view:
           - rtgl-view d=h g=md:
-            - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-            - rtgl-text s=sm c=mu-fg mb=lg: '>'
-            - rtgl-text#breadcumb-choices s=sm c=mu-fg mb=lg cur=p: Choices
-            - rtgl-text s=sm c=mu-fg mb=lg: '>'
-            - rtgl-text s=sm c=mu-fg mb=lg: ${editModeTitle}
+            - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
           - rtgl-text mb=md: ${editModeTitle}
 
