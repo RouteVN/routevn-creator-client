@@ -39,14 +39,9 @@ export const handleEditableNumberClick = (e, deps) => {
 
   // Calculate position for left-bottom placement relative to mouse cursor
   const position = {
-    x: e.clientX - 200, // Move 200px to the left of cursor
-    y: e.clientY + 10, // Move 10px down from cursor
+    x: e.clientX, // Move 200px to the left of cursor
+    y: e.clientY, // Move 10px down from cursor
   };
-
-  // Ensure popover doesn't go off-screen to the left
-  if (position.x < 10) {
-    position.x = 10;
-  }
 
   store.showPopover({
     position,
@@ -127,14 +122,9 @@ export const handleTitleClick = (e, deps) => {
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
   const position = {
-    x: e.clientX - 200, // Move 200px to the left of cursor
-    y: e.clientY + 10, // Move 10px down from cursor
+    x: e.clientX,
+    y: e.clientY,
   };
-
-  // Ensure popover doesn't go off-screen to the left
-  if (position.x < 10) {
-    position.x = 10;
-  }
 
   store.showPopover({ position });
   render();
@@ -294,14 +284,9 @@ export const handleEditableTextClick = (e, deps) => {
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
   const position = {
-    x: e.clientX - 200, // Move 200px to the left of cursor
-    y: e.clientY + 10, // Move 10px down from cursor
+    x: e.clientX,
+    y: e.clientY,
   };
-
-  // Ensure popover doesn't go off-screen to the left
-  if (position.x < 10) {
-    position.x = 10;
-  }
 
   store.showPopover({
     position,

@@ -199,7 +199,7 @@ template:
         $else:
           - rtgl-view w=f h=f av=c ah=c:
               - rtgl-text c=mu-fg s=lg ta=c: ${emptyMessage}
-  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
+  - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y} placement="bottom-end":
       - $if form:
           - rtgl-form#form slot=content .defaultValues=popover.defaultValues .form=form:
 
