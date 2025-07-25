@@ -29,7 +29,10 @@ export const extractFileIdsFromRenderState = (obj) => {
       Object.keys(value).forEach((key) => {
         // Check if this property is 'url', 'src', 'hoverUrl', or 'clickUrl' and extract fileId
         if (
-          (key === "url" || key === "src" || key === "hoverUrl" || key === "clickUrl") &&
+          (key === "url" ||
+            key === "src" ||
+            key === "hoverUrl" ||
+            key === "clickUrl") &&
           typeof value[key] === "string"
         ) {
           if (value[key].startsWith("file:")) {
