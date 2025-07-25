@@ -236,10 +236,8 @@ export const handleImageSelectorUpdated = async (e, deps) => {
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
-  // Get the field name from the fields array
-  const viewData = store.toViewData();
-  const field = viewData.detailFields[fieldIndex];
-  const fieldName = field ? field.name : "imageId";
+  // Get the field name using the proper selector
+  const fieldName = store.selectDetailFieldNameByIndex(fieldIndex);
 
   // Update the selected item with the new image field
   repository.addAction({

@@ -151,6 +151,26 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
+  const selectedItem = selectSelectedItem({ state });
+  if (!selectedItem) return "imageId";
+
+  // For sprite type, we have 3 image selector fields
+  if (selectedItem.type === "sprite") {
+    // All the standard fields (name, type, x, y, width, height, etc.)
+    const baseFieldsCount = 11;
+
+    // The image selectors start after the base fields
+    const imageSelectorStartIndex = baseFieldsCount;
+
+    if (fieldIndex === imageSelectorStartIndex) return "imageId";
+    if (fieldIndex === imageSelectorStartIndex + 1) return "hoverImageId";
+    if (fieldIndex === imageSelectorStartIndex + 2) return "clickImageId";
+  }
+
+  return "imageId"; // default fallback
+};
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
