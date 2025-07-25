@@ -39,8 +39,8 @@ export const handleAddAnimationClick = (e, deps) => {
   const groupId = e.currentTarget.id.replace("add-animation-button-", "");
   store.setTargetGroupId(groupId);
 
-  // Toggle dialog open
-  store.toggleDialog();
+  // Open dialog for adding
+  store.openDialog();
   render();
 };
 
@@ -48,7 +48,7 @@ export const handleCloseDialog = (e, deps) => {
   const { store, render } = deps;
 
   // Close dialog
-  store.toggleDialog();
+  store.closeDialog();
   render();
 };
 
@@ -56,6 +56,27 @@ export const handleClosePopover = (e, deps) => {
   const { store, render } = deps;
   store.closePopover();
   render();
+};
+
+export const handleAnimationItemDoubleClick = (e, deps) => {
+  const { store, render, props } = deps;
+  const itemId = e.currentTarget.id.replace("animation-item-", "");
+
+  // Find the animation item data from props.flatGroups
+  let itemData = null;
+  for (const group of props.flatGroups || []) {
+    const foundItem = group.children?.find((child) => child.id === itemId);
+    if (foundItem) {
+      itemData = { ...foundItem, parent: group.id };
+      break;
+    }
+  }
+
+  if (itemData) {
+    // Open dialog for editing
+    store.openDialog({ editMode: true, itemId, itemData });
+    render();
+  }
 };
 
 export const handleFormActionClick = (e, deps) => {
@@ -68,36 +89,41 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get the target group ID from store - access the internal state properly
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const targetGroupId = storeState.targetGroupId;
+    // Get form state using selector
+    const formState = store.selectFormState();
+    const { targetGroupId, editItemId, editMode, animationProperties } =
+      formState;
 
-    // Forward animation creation to parent with selected properties and keyframes
-    dispatchEvent(
-      new CustomEvent("animation-created", {
-        detail: {
-          groupId: targetGroupId,
-          name: formData.name,
-          properties: storeState.selectedProperties,
-          initialValue: storeState.initialValue,
-          propertyKeyframes: storeState.propertyKeyframes,
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    if (editMode && editItemId) {
+      // Edit mode - dispatch animation update
+      dispatchEvent(
+        new CustomEvent("animation-updated", {
+          detail: {
+            itemId: editItemId,
+            name: formData.name,
+            animationProperties,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } else {
+      // Add mode - dispatch animation creation
+      dispatchEvent(
+        new CustomEvent("animation-created", {
+          detail: {
+            groupId: targetGroupId,
+            name: formData.name,
+            animationProperties,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
 
-    // Close dialog and reset everything
-    store.toggleDialog();
-    store.setSelectedProperties([]);
-    store.setInitialValue(0);
-    // Reset property keyframes
-    const storeState2 = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    storeState2.propertyKeyframes = {};
+    // Close dialog
+    store.closeDialog();
     render();
   }
 };

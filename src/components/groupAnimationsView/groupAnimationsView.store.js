@@ -110,7 +110,7 @@ const createAddPropertyForm = (propertyOptions) => {
   };
 };
 
-const keyframeDropdownItems = [
+const baseKeyframeDropdownItems = [
   {
     label: "edit",
     type: "item",
@@ -209,6 +209,15 @@ export const selectPopover = ({ state }) => {
   return state.popover;
 };
 
+export const selectFormState = ({ state }) => {
+  return {
+    targetGroupId: state.targetGroupId,
+    editItemId: state.editItemId,
+    editMode: state.editMode,
+    animationProperties: state.animationProperties,
+  };
+};
+
 export const setPopover = (state, { mode, x, y, payload }) => {
   state.popover.mode = mode;
   state.popover.x = x;
@@ -223,12 +232,101 @@ export const closePopover = (state) => {
   state.popover.payload = {};
 };
 
-export const toggleDialog = (state) => {
-  state.isDialogOpen = !state.isDialogOpen;
+export const openDialog = (
+  state,
+  { editMode = false, itemId = null, itemData = null } = {},
+) => {
+  state.isDialogOpen = true;
+  state.editMode = editMode;
+  state.editItemId = itemId;
+
+  if (editMode && itemData) {
+    // Set groupId to support form submission
+    state.targetGroupId = itemData.parent || null;
+
+    // Use edit form
+    state.form = editAnimationForm;
+
+    // Set default values
+    state.defaultValues = {
+      name: itemData.name || "",
+    };
+
+    // Set animation properties
+    state.animationProperties = itemData.animationProperties || {};
+  } else {
+    // Use add form
+    state.form = addAnimationForm;
+
+    state.defaultValues = {
+      name: "",
+    };
+
+    state.animationProperties = {};
+  }
+};
+
+export const closeDialog = (state) => {
+  state.isDialogOpen = false;
+  state.editMode = false;
+  state.editItemId = null;
+  state.form = addAnimationForm;
+  state.defaultValues = {
+    name: "",
+  };
+  state.animationProperties = {};
 };
 
 export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
+};
+
+const addAnimationForm = {
+  title: "Add Animation",
+  description: "Create a new animation",
+  fields: [
+    {
+      name: "name",
+      inputType: "inputText",
+      label: "Name",
+      description: "Enter the animation name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Animation",
+      },
+    ],
+  },
+};
+
+const editAnimationForm = {
+  title: "Edit Animation",
+  description: "Edit the animation",
+  fields: [
+    {
+      name: "name",
+      inputType: "inputText",
+      label: "Name",
+      description: "Enter the animation name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Update Animation",
+      },
+    ],
+  },
 };
 
 export const setSearchQuery = (state, query) => {
@@ -348,13 +446,15 @@ export const toViewData = ({ state, props }) => {
         isCollapsed: state.collapsedIds.includes(group.id),
         children: state.collapsedIds.includes(group.id)
           ? []
-          : filteredChildren.map((item) => ({
-              ...item,
-              selectedStyle:
-                item.id === selectedItemId
-                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                  : "",
-            })),
+          : filteredChildren.map((item) => {
+              return {
+                ...item,
+                selectedStyle:
+                  item.id === selectedItemId
+                    ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                    : "",
+              };
+            }),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };
@@ -365,9 +465,59 @@ export const toViewData = ({ state, props }) => {
     (item) => !Object.keys(state.animationProperties).includes(item.value),
   );
 
+  const keyframeDropdownItems = (() => {
+    if (state.popover.mode !== "keyframeMenu") {
+      return propertyNameDropdownItems;
+    }
+
+    const { property, index } = state.popover.payload;
+    const keyframes = state.animationProperties[property].keyframes;
+    const currentIndex = Number(index);
+    const isFirstKeyframe = currentIndex === 0;
+    const isLastKeyframe = currentIndex === keyframes.length - 1;
+
+    return baseKeyframeDropdownItems.filter((item) => {
+      if (item.value === "move-left" && isFirstKeyframe) return false;
+      if (item.value === "move-right" && isLastKeyframe) return false;
+      return true;
+    });
+  })();
+
   const addPropertyForm = createAddPropertyForm(toAddProperties);
 
-  console.log("state.animationProperties", state.animationProperties);
+  // Create default values for edit forms
+  let editKeyframeDefaultValues = {};
+  let editInitialValueDefaultValues = {};
+
+  if (state.popover.mode === "editKeyframe") {
+    const { property, index } = state.popover.payload;
+    const currentKeyframe =
+      state.animationProperties[property].keyframes[index];
+
+    editKeyframeDefaultValues = {
+      duration: currentKeyframe.duration,
+      value: currentKeyframe.value,
+      easing: currentKeyframe.easing,
+    };
+  }
+
+  if (state.popover.mode === "editInitialValue") {
+    const { property } = state.popover.payload;
+    const currentInitialValue =
+      state.animationProperties[property].initialValue;
+
+    editInitialValueDefaultValues = {
+      initialValue: currentInitialValue,
+    };
+  }
+
+  // TODO this is hacky way to work around limitation of passing props
+  const itemAnimationProperties = {};
+  flatGroups.forEach((group) => {
+    group.children.forEach((child) => {
+      itemAnimationProperties[child.id] = child.animationProperties;
+    });
+  });
 
   return {
     flatGroups,
@@ -377,15 +527,15 @@ export const toViewData = ({ state, props }) => {
     form: state.form,
     isDialogOpen: state.isDialogOpen,
     animationProperties: state.animationProperties,
+    itemAnimationProperties,
     initialValue: state.initialValue,
     addPropertyForm,
     addKeyframeForm,
     updateKeyframeForm,
     editInitialValueForm,
-    keyframeDropdownItems:
-      state.popover.mode === "keyframeMenu"
-        ? keyframeDropdownItems
-        : propertyNameDropdownItems,
+    editKeyframeDefaultValues,
+    editInitialValueDefaultValues,
+    keyframeDropdownItems,
     addPropertyButtonVisible: toAddProperties.length !== 0,
     popover: {
       ...state.popover,
