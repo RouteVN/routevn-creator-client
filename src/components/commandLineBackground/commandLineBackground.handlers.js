@@ -65,6 +65,16 @@ export const handleImageSelected = (e, deps) => {
   render();
 };
 
+export const handleFormExtra = (e, deps) => {
+  console.log("extraaaaaaaaa", e.detail);
+  const { store, render } = deps;
+  store.setMode({
+    mode: "gallery",
+  });
+
+  render();
+};
+
 export const handleLayoutItemClick = (payload, deps) => {
   const { store, render } = deps;
 

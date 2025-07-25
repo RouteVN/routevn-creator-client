@@ -15,6 +15,40 @@ const tabs = [
   },
 ];
 
+const createDialogueForm = () => {
+  const form = {
+    fields: [
+      {
+        name: "background",
+        label: "Background",
+        required: true,
+        inputType: "image",
+        width: 80,
+        height: 80,
+      },
+      {
+        name: "animation",
+        label: "Animation",
+        required: true,
+        inputType: "select",
+        options: [],
+        width: 80,
+        height: 80,
+      },
+    ],
+  };
+  const defaultValues = {
+    background: "",
+    animation: "",
+  };
+  const fieldResources = {};
+  return {
+    form,
+    defaultValues,
+    fieldResources,
+  };
+};
+
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
   tab: "images", // "images", "layouts", or "videos"
@@ -199,5 +233,6 @@ export const toViewData = ({ state, props }, payload) => {
     tempSelectedVideoId: state.tempSelectedVideoId,
     selectedName: selectedName,
     positionOptions: positionOptions,
+    dialogueForm: createDialogueForm(),
   };
 };
