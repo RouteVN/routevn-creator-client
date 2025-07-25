@@ -93,6 +93,10 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorFieldClick
+  clear-image-*:
+    eventListeners:
+      click:
+        handler: handleClearImage
   image-selector:
     eventListeners:
       image-selected:
@@ -168,8 +172,10 @@ template:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
                               - $if field.fileId:
-                                  - "rtgl-view#image-selector-field-${i} cur=p br=md":
-                                      - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
+                                  - rtgl-view d=f g=xs:
+                                      - "rtgl-view#image-selector-field-${i} cur=p br=md":
+                                          - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}:
+                                      - rtgl-button#clear-image-${i} variant=se size=sm: Clear
                                 $else:
                                   - "rtgl-view#image-selector-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p":
                                       - rtgl-text c=mu-fg: Select Image
