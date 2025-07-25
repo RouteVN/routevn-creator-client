@@ -143,9 +143,42 @@ export const toViewData = ({ state, props }, payload) => {
     { value: "none", label: "None" },
   ];
 
+  const tabs = [
+    {
+      id: "section",
+      label: "Sections",
+    },
+    {
+      id: "scene",
+      label: "Scenes",
+    },
+  ];
+
+  let breadcrumb = [
+    {
+      id: "actions",
+      label: "Actions",
+    },
+  ];
+
+  if (state.mode === "gallery") {
+    breadcrumb.push({
+      id: "current",
+      label: "Transition",
+    });
+    breadcrumb.push({
+      label: state.tab === "section" ? "Section Selection" : "Scene Selection",
+    });
+  } else {
+    breadcrumb.push({
+      label: "Transition",
+    });
+  }
+
   return {
     mode: state.mode,
     tab: state.tab,
+    tabs,
     groups: enhancedGroups,
     animationOptions,
     selectedSceneId: state.selectedSceneId,
@@ -154,5 +187,6 @@ export const toViewData = ({ state, props }, payload) => {
     selectedItem,
     selectedName,
     searchQuery: state.searchQuery,
+    breadcrumb,
   };
 };

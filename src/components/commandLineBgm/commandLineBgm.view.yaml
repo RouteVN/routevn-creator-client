@@ -26,14 +26,10 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-  breadcumb-actions:
+  breadcumb:
     eventListeners:
-      click:
+      item-click:
         handler: handleBreadcumbActionsClick
-  breadcumb-bgm:
-    eventListeners:
-      click:
-        handler: handleBreadcumbBgmClick
   button-select:
     eventListeners:
       click:
@@ -43,9 +39,7 @@ template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
-              - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-              - rtgl-text s=sm c=mu-fg mb=lg: ">"
-              - rtgl-text s=sm c=mu-fg mb=lg: BGM
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
           - rtgl-text: Background Music
           - $if selectedAudioId:
               - rtgl-view#audio-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
@@ -63,11 +57,7 @@ template:
 
       - $if mode == 'gallery':
           - rtgl-view d=h g=md:
-              - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-              - rtgl-text s=sm c=mu-fg mb=lg: ">"
-              - rtgl-text#breadcumb-bgm s=sm c=mu-fg mb=lg cur=p: BGM
-              - rtgl-text s=sm c=mu-fg mb=lg: ">"
-              - rtgl-text s=sm c=mu-fg mb=lg: Audio Selection
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
           - 'rtgl-view d=h w=f g=lg style="min-height: 0;"':
               - rtgl-view h=f flex=1 sv:
                   - rvn-base-file-explorer#base-file-explorer .items=items:

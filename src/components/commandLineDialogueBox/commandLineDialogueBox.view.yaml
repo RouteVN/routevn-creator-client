@@ -66,17 +66,15 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-  breadcumb-actions:
+  breadcumb:
     eventListeners:
-      click:
-        handler: handleBreadcumbActionsClick
+      item-click:
+        handler: handleBreadcumbClick
 
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md:
-          - rtgl-text#breadcumb-actions s=sm c=mu-fg mb=lg cur=p: Actions
-          - rtgl-text s=sm c=mu-fg mb=lg: ">"
-          - rtgl-text s=sm c=mu-fg mb=lg: Dialogue Box
+          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
       - rtgl-text: Select Layout for Dialogue Box
 

@@ -42,8 +42,14 @@ export const INITIAL_STATE = Object.freeze({
       icon: "transition",
       mode: "sceneTransition",
     },
+    {
+      id: "11",
+      label: "Controls",
+      icon: "controls",
+      mode: "controls",
+    },
     // {
-    //   id: "11",
+    //   id: "12",
     //   label: "Conditional",
     //   icon: "code",
     //   mode: "conditional",
