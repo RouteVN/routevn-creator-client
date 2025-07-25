@@ -27,9 +27,9 @@ export const extractFileIdsFromRenderState = (obj) => {
 
     if (typeof value === "object") {
       Object.keys(value).forEach((key) => {
-        // Check if this property is 'url' or 'src' and extract fileId
+        // Check if this property is 'url', 'src', 'hoverUrl', or 'clickUrl' and extract fileId
         if (
-          (key === "url" || key === "src") &&
+          (key === "url" || key === "src" || key === "hoverUrl" || key === "clickUrl") &&
           typeof value[key] === "string"
         ) {
           if (value[key].startsWith("file:")) {
@@ -74,10 +74,24 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
       };
     }
 
-    if (node.type === "sprite" && node.imageId) {
-      const imageItem = imageItems[node.imageId];
-      if (imageItem && imageItem.fileId) {
-        element.url = `file:${imageItem.fileId}`;
+    if (node.type === "sprite") {
+      if (node.imageId) {
+        const imageItem = imageItems[node.imageId];
+        if (imageItem && imageItem.fileId) {
+          element.url = `file:${imageItem.fileId}`;
+        }
+      }
+      if (node.hoverImageId) {
+        const hoverImageItem = imageItems[node.hoverImageId];
+        if (hoverImageItem && hoverImageItem.fileId) {
+          element.hoverUrl = `file:${hoverImageItem.fileId}`;
+        }
+      }
+      if (node.clickImageId) {
+        const clickImageItem = imageItems[node.clickImageId];
+        if (clickImageItem && clickImageItem.fileId) {
+          element.clickUrl = `file:${clickImageItem.fileId}`;
+        }
       }
     }
 

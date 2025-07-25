@@ -279,8 +279,22 @@ export const toViewData = ({ state, props }, payload) => {
               {
                 type: "image-selector",
                 label: "Image",
-                value: selectedItem.imageId || "",
+                value: selectedItem.imageId ?? "",
                 name: "imageId",
+                editable: true,
+              },
+              {
+                type: "image-selector",
+                label: "Hover Image",
+                value: selectedItem.hoverImageId ?? "",
+                name: "hoverImageId",
+                editable: true,
+              },
+              {
+                type: "image-selector",
+                label: "Click Image",
+                value: selectedItem.clickImageId ?? "",
+                name: "clickImageId",
                 editable: true,
               },
             ]
