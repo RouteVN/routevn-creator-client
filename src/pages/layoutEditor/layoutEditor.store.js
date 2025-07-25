@@ -181,6 +181,7 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Helper to transform images data into groups
   const imageGroups = toFlatGroups(state.images);
+  const imageItems = state.images.items;
 
   const detailTitle = selectedItem ? "Layout Item Details" : "";
   const detailFields = selectedItem
@@ -301,6 +302,9 @@ export const toViewData = ({ state, props }, payload) => {
                 label: "Image",
                 value: selectedItem.imageId ?? "",
                 name: "imageId",
+                fileId: selectedItem.imageId
+                  ? imageItems[selectedItem.imageId]?.fileId
+                  : null,
                 editable: true,
               },
               {
@@ -308,6 +312,9 @@ export const toViewData = ({ state, props }, payload) => {
                 label: "Hover Image",
                 value: selectedItem.hoverImageId ?? "",
                 name: "hoverImageId",
+                fileId: selectedItem.hoverImageId
+                  ? imageItems[selectedItem.hoverImageId]?.fileId
+                  : null,
                 editable: true,
               },
               {
@@ -315,6 +322,9 @@ export const toViewData = ({ state, props }, payload) => {
                 label: "Click Image",
                 value: selectedItem.clickImageId ?? "",
                 name: "clickImageId",
+                fileId: selectedItem.clickImageId
+                  ? imageItems[selectedItem.clickImageId]?.fileId
+                  : null,
                 editable: true,
               },
             ]
