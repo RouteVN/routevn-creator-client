@@ -15,19 +15,18 @@ export const handleBeforeMount = (deps) => {
   }
 };
 
-export const handleLayoutSelectChange = (e, deps) => {
+export const handleFormChange = (e, deps) => {
   const { store, render } = deps;
-  const layoutId = e.detail.value;
+  const formData = e.detail.formData;
 
-  store.setSelectedLayoutId({ layoutId });
-  render();
-};
+  if (formData.layoutId !== undefined) {
+    store.setSelectedLayoutId({ layoutId: formData.layoutId });
+  }
 
-export const handleCharacterSelectChange = (e, deps) => {
-  const { store, render } = deps;
-  const characterId = e.detail.value;
+  if (formData.characterId !== undefined) {
+    store.setSelectedCharacterId({ characterId: formData.characterId });
+  }
 
-  store.setSelectedCharacterId({ characterId });
   render();
 };
 

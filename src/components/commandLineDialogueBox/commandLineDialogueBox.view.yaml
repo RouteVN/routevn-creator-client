@@ -23,6 +23,10 @@ viewDataSchema:
             type: string
     submitDisabled:
       type: boolean
+    form:
+      type: object
+    defaultValues:
+      type: object
 
 propsSchema:
   type: object
@@ -54,36 +58,21 @@ propsSchema:
           type: string
 
 refs:
-  layout-select:
-    eventListeners:
-      option-selected:
-        handler: handleLayoutSelectChange
-  character-select:
-    eventListeners:
-      option-selected:
-        handler: handleCharacterSelectChange
-  submit-button:
-    eventListeners:
-      click:
-        handler: handleSubmitClick
   breadcumb:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
+  dialogue-form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
 
 template:
   - rtgl-view w=f h=f p=lg:
-      - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-      - rtgl-text: Select Layout for Dialogue Box
-
-      - rtgl-select#layout-select .options=layouts .selectedValue=selectedLayoutId placeholder="Choose a layout...":
-
-      - rtgl-text: Select Character for Dialogue Box
-
-      - rtgl-select#character-select .options=characters .selectedValue=selectedCharacterId placeholder="Choose a character...":
+      - rtgl-form#dialogue-form .defaultValues=defaultValues .form=form w=f:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button dis=${submitDisabled}: Submit
+          - rtgl-button#submit-button disabled=${submitDisabled}: Submit
