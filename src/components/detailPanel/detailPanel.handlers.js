@@ -455,7 +455,7 @@ export const handleClearImage = (e, deps) => {
       new CustomEvent("image-selector-updated", {
         detail: {
           fieldIndex,
-          imageId: "", // Empty string to clear the image
+          imageId: null,
         },
         bubbles: true,
         composed: true,

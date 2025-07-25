@@ -247,7 +247,7 @@ export const handleImageSelectorUpdated = async (e, deps) => {
     value: {
       id: selectedItemId,
       replace: false,
-      item: { [fieldName]: imageId || null },
+      item: { [fieldName]: imageId },
     },
   });
 
