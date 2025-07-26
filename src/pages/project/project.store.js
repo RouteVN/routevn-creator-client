@@ -1,9 +1,35 @@
+const form = {
+  fields: [
+    {
+      name: "name",
+      inputType: "popover-input",
+      label: "Project Name",
+      required: true,
+    },
+    {
+      name: "description",
+      inputType: "popover-input",
+      label: "Description",
+      required: true,
+    },
+    {
+      name: "iconFileId",
+      inputType: "image",
+      label: "Image URL",
+      required: false,
+      width: 120,
+      height: 120,
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   project: {
     name: "",
     description: "",
     imageUrl: "/public/project_logo_placeholder.png",
   },
+  fieldResources: {},
   popover: {
     isOpen: false,
     formConfig: undefined,
@@ -85,8 +111,16 @@ export const hidePopover = (state) => {
   };
 };
 
+export const setProject = (state, project) => {
+  state.project = project;
+};
+
 export const setProjectName = (state, name) => {
   state.project.name = name;
+};
+
+export const setFieldResources = (state, fieldResources) => {
+  state.fieldResources = fieldResources;
 };
 
 export const setProjectDescription = (state, description) => {
@@ -100,6 +134,8 @@ export const setProjectImageUrl = (state, imageUrl) => {
 export const toViewData = ({ state, props }, payload) => {
   return {
     ...state,
-    form: state.formConfigs[state.popover.formConfig],
+    defaultValues: state.project,
+    fieldResources: state.fieldResources,
+    form,
   };
 };
