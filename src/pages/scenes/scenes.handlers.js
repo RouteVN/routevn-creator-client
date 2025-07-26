@@ -209,7 +209,7 @@ export const handleSceneFormAction = (e, deps) => {
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
       id: newSceneId,
-      name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+      name: formData.name,
       x: sceneWhiteboardPosition.x,
       y: sceneWhiteboardPosition.y,
     });

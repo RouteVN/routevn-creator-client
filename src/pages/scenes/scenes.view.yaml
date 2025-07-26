@@ -42,6 +42,5 @@ template:
           - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
     - 'rtgl-view pos=fix z=100 ah=c p=md w=240 bgc=mu br=md style="left: calc((100vw - 240px) / 2); bottom: 20px;"':
       - 'rtgl-button#add-scene-btn bgc=pr p=md br=full': Add Scene
-    - $if showSceneForm:
-      - 'rtgl-view pos=fix z=200 bgc=mu bw=sm bc=ac br=md p=lg w=320 style="left: ${sceneFormPosition.x}px; top: ${sceneFormPosition.y}px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"':
-        - rtgl-form#scene-form .form=sceneFormFields w=f:
+    - rtgl-popover#scene-form-popover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
+      - rtgl-form#scene-form slot=content .form=sceneFormFields w=320:
