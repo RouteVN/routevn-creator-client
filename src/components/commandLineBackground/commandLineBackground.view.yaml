@@ -61,33 +61,7 @@ template:
       - rtgl-view d=h g=md:
       - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-      - rtgl-form#form .form=dialogueForm.form:
-      # - rtgl-text: Background Selection
-      # - $if tab == 'images':
-      #     - $if selectedImageId:
-      #         - rvn-file-image#background-selector imageId=${selectedImageId} w=345 h=200:
-      #       $else:
-      #         - rtgl-view#background-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
-      #           - rtgl-text: Select Image
-      #   $elif tab == 'layouts':
-      #     - $if selectedLayoutId:
-      #         - rtgl-view#background-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
-      #           - rtgl-text: ${selectedName}
-      #       $else:
-      #         - rtgl-view#background-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
-      #           - rtgl-text: Select Layout
-      #   $elif tab == 'videos':
-      #     - $if selectedVideoId:
-      #         - rvn-file-video#background-selector videoId=${selectedVideoId} w=345 h=200:
-      #       $else:
-      #         - rtgl-view#background-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
-      #           - rtgl-text: Select Video
-      # - $if tab == 'layouts':
-      #     - rtgl-view:
-      #       - rtgl-text: Select Position
-      #       - rtgl-select .options=positionOptions:
-
-
+      - rtgl-form#form .form=dialogueForm.form .fieldResources=formFieldResources:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:

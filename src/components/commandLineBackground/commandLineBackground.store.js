@@ -23,8 +23,8 @@ const createDialogueForm = () => {
         label: "Background",
         required: true,
         inputType: "image",
-        width: 80,
-        height: 80,
+        width: 355,
+        height: 200,
       },
       {
         name: "animation",
@@ -32,8 +32,6 @@ const createDialogueForm = () => {
         required: true,
         inputType: "select",
         options: [],
-        width: 80,
-        height: 80,
       },
     ],
   };
@@ -41,11 +39,9 @@ const createDialogueForm = () => {
     background: "",
     animation: "",
   };
-  const fieldResources = {};
   return {
     form,
     defaultValues,
-    fieldResources,
   };
 };
 
@@ -62,6 +58,11 @@ export const INITIAL_STATE = Object.freeze({
   tempSelectedImageId: undefined,
   tempSelectedLayoutId: undefined,
   tempSelectedVideoId: undefined,
+  formFieldResources: {
+    background: {
+      src: "/awefaew.png",
+    },
+  },
 });
 
 export const selectSelectedImageId = ({ state }) => {
@@ -70,6 +71,10 @@ export const selectSelectedImageId = ({ state }) => {
 
 export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
+};
+
+export const setFormFieldResources = (state, payload) => {
+  state.formFieldResources = payload;
 };
 
 export const setMode = (state, payload) => {
@@ -195,7 +200,6 @@ export const toViewData = ({ state, props }, payload) => {
     { label: "Bottom Right", value: "bottom-right" },
   ];
 
-  console.log("bbbbbbbbbbbbb");
   let breadcrumb = [
     {
       id: "actions",
@@ -234,5 +238,6 @@ export const toViewData = ({ state, props }, payload) => {
     selectedName: selectedName,
     positionOptions: positionOptions,
     dialogueForm: createDialogueForm(),
+    formFieldResources: state.formFieldResources,
   };
 };
