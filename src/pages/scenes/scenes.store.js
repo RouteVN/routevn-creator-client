@@ -4,6 +4,11 @@ export const INITIAL_STATE = Object.freeze({
   scenesData: { tree: [], items: {} },
   selectedItemId: null,
   whiteboardItems: [],
+  isWaitingForPlacement: false,
+  showSceneForm: false,
+  sceneFormPosition: { x: 0, y: 0 },
+  sceneWhiteboardPosition: { x: 0, y: 0 },
+  sceneFormData: { name: "", folderId: "_root" },
 });
 
 export const setItems = (state, scenesData) => {
@@ -28,6 +33,33 @@ export const addWhiteboardItem = (state, newItem) => {
 
 export const setWhiteboardItems = (state, items) => {
   state.whiteboardItems = items;
+};
+
+export const setWaitingForPlacement = (state, isWaiting) => {
+  state.isWaitingForPlacement = isWaiting;
+};
+
+export const setShowSceneForm = (state, show) => {
+  state.showSceneForm = show;
+};
+
+export const setSceneFormPosition = (state, position) => {
+  state.sceneFormPosition = position;
+};
+
+export const setSceneWhiteboardPosition = (state, position) => {
+  state.sceneWhiteboardPosition = position;
+};
+
+export const setSceneFormData = (state, data) => {
+  state.sceneFormData = { ...state.sceneFormData, ...data };
+};
+
+export const resetSceneForm = (state) => {
+  state.showSceneForm = false;
+  state.isWaitingForPlacement = false;
+  state.sceneFormPosition = { x: 0, y: 0 };
+  state.sceneFormData = { name: "", folderId: "_root" };
 };
 
 // Track if we've initialized from repository yet
@@ -101,6 +133,53 @@ export const toViewData = ({ state, props }, payload) => {
     : [];
   const detailEmptyMessage = "Select a scene to view details";
 
+  // Get folder options for form
+  const folderOptions = [
+    { id: "_root", name: "Root Folder" },
+    ...flatItems
+      .filter((item) => item.type === "folder")
+      .map((folder) => ({ id: folder.id, name: folder.name || folder.id })),
+  ];
+
+  // Define form fields
+  const sceneFormFields = {
+    title: "Create New Scene",
+    fields: [
+      {
+        name: "name",
+        inputType: "inputText",
+        label: "Scene Name",
+        description: "Enter the scene name",
+        required: true,
+      },
+      {
+        name: "folderId",
+        inputType: "select",
+        label: "Folder",
+        options: folderOptions.map((option) => ({
+          value: option.id,
+          label: option.name,
+        })),
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          content: "Cancel",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Create Scene",
+        },
+      ],
+    },
+  };
+
   return {
     flatItems,
     flatGroups,
@@ -112,5 +191,12 @@ export const toViewData = ({ state, props }, payload) => {
     detailTitle,
     detailFields,
     detailEmptyMessage,
+    isWaitingForPlacement: state.isWaitingForPlacement,
+    showSceneForm: state.showSceneForm,
+    sceneFormPosition: state.sceneFormPosition,
+    sceneFormData: state.sceneFormData,
+    sceneFormFields,
+    folderOptions,
+    whiteboardCursor: state.isWaitingForPlacement ? "crosshair" : "default",
   };
 };
