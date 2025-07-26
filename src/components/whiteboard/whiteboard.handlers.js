@@ -3,19 +3,7 @@ import { fromEvent, tap } from "rxjs";
 let dragOffset = { x: 0, y: 0 };
 
 export const handleContainerMouseDown = (event, deps) => {
-  const { store } = deps;
-
-  if (store.selectIsPanMode()) {
-    // Start panning
-    store.startPanning({
-      mouseX: event.clientX,
-      mouseY: event.clientY,
-    });
-  }
-};
-
-export const handleCanvasMouseDown = (event, deps) => {
-  const { store } = deps;
+  const { store, getRefIds } = deps;
 
   if (store.selectIsPanMode()) {
     // Start panning
@@ -24,8 +12,27 @@ export const handleCanvasMouseDown = (event, deps) => {
       mouseY: event.clientY,
     });
   } else {
-    // Deselect items when clicking on canvas
-    deps.dispatchEvent(new CustomEvent("item-deselected"));
+    // Calculate click position in canvas coordinates using the same method as canvas handler
+    const canvas = getRefIds().canvas.elm;
+    const canvasRect = canvas.getBoundingClientRect();
+    const pan = store.selectPan();
+    const zoomLevel = store.selectZoomLevel();
+
+    const canvasX = (event.clientX - canvasRect.left - pan.x) / zoomLevel;
+    const canvasY = (event.clientY - canvasRect.top - pan.y) / zoomLevel;
+
+    console.log({"canvasrectleft": canvasRect.left, "canvasrecttop": canvasRect.top, "panx": pan.x, "pany": pan.y});
+
+    console.log(canvasX)
+    console.log(canvasY)
+    // Emit click event with coordinates
+    deps.dispatchEvent(
+      new CustomEvent("canvas-click", {
+        detail: { formX: event.clientX, formY: event.clientY, whiteboardX: canvasX, whiteboardY: canvasY },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 };
 

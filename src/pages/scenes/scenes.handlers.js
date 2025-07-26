@@ -108,83 +108,119 @@ export const handleWhiteboardItemDoubleClick = (e, deps) => {
 };
 
 export const handleAddSceneClick = (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render } = deps;
 
-  // Use a simple ID generator instead of nanoid
-  const newSceneId = `scene-${Date.now()}-${Math.random()
-    .toString(36)
-    .substr(2, 9)}`;
-  const newSceneName = `Scene ${new Date().toLocaleTimeString()}`;
+  // Start waiting for placement
+  store.setWaitingForPlacement(true);
+  render();
+};
 
-  // Get currently selected folder or default to root
-  let targetParent = "_root";
+export const handleWhiteboardClick = (e, deps) => {
+  const { store, render } = deps;
   const currentState = store.getState();
-  if (currentState.selectedItemId) {
-    // If something is selected, try to use it as parent or its parent
-    targetParent = currentState.selectedItemId;
-  }
 
-  const sectionId = nanoid();
-  const stepId = nanoid();
-  // Add new scene to repository
-  const repositoryAction = {
-    actionType: "treePush",
-    target: "scenes",
-    value: {
-      parent: targetParent,
-      position: "last",
-      item: {
-        id: newSceneId,
-        type: "scene",
-        name: newSceneName,
-        createdAt: new Date().toISOString(),
-        position: { x: 200, y: 200 },
-        sections: {
-          items: {
-            [sectionId]: {
-              name: "Section New",
-              lines: {
-                items: {
-                  [stepId]: {
-                    instructions: {
-                      presentationInstructions: {},
+  if (currentState.isWaitingForPlacement) {
+    // Get click position relative to whiteboard
+    const { formX, formY, whiteboardX, whiteboardY } = e.detail;
+
+    // Reset form data
+    store.setSceneFormData({ name: "", folderId: "_root" });
+
+    // Show the form at the clicked position
+    store.setSceneFormPosition({ x: formX, y: formY });
+    store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
+    store.setWaitingForPlacement(false);
+    store.setShowSceneForm(true);
+    render();
+  }
+};
+
+export const handleSceneFormAction = (e, deps) => {
+  const { store, render, repository } = deps;
+  const actionId = e.detail.actionId;
+
+  if (actionId === "cancel") {
+    store.resetSceneForm();
+    render();
+  } else if (actionId === "submit") {
+    const currentState = store.getState();
+    const { sceneWhiteboardPosition } = currentState;
+    
+    // Get form values from the event detail (same pattern as typography)
+    const formData = e.detail.formValues;
+
+    console.log("Submitting scene with form data:", formData);
+
+    // Use a simple ID generator instead of nanoid
+    const newSceneId = `scene-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    const sectionId = nanoid();
+    const stepId = nanoid();
+    // Add new scene to repository
+    const repositoryAction = {
+      actionType: "treePush",
+      target: "scenes",
+      value: {
+        parent: formData.folderId || "_root",
+        position: "last",
+        item: {
+          id: newSceneId,
+          type: "scene",
+          name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+          createdAt: new Date().toISOString(),
+          position: { x: sceneWhiteboardPosition.x, y: sceneWhiteboardPosition.y },
+          sections: {
+            items: {
+              [sectionId]: {
+                name: "Section New",
+                lines: {
+                  items: {
+                    [stepId]: {
+                      instructions: {
+                        presentationInstructions: {},
+                      },
                     },
                   },
+                  tree: [
+                    {
+                      id: stepId,
+                    },
+                  ],
                 },
-                tree: [
-                  {
-                    id: stepId,
-                  },
-                ],
               },
             },
+            tree: [
+              {
+                id: sectionId,
+              },
+            ],
           },
-          tree: [
-            {
-              id: sectionId,
-            },
-          ],
         },
       },
-    },
-  };
+    };
 
-  repository.addAction(repositoryAction);
+    repository.addAction(repositoryAction);
+    
+    // Add to whiteboard items for visual display
+    store.addWhiteboardItem({
+      id: newSceneId,
+      name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+      x: sceneWhiteboardPosition.x,
+      y: sceneWhiteboardPosition.y,
+    });
 
-  // Add to whiteboard items for visual display
-  store.addWhiteboardItem({
-    id: newSceneId,
-    name: newSceneName,
-    x: 200,
-    y: 200,
-  });
+    // Update store with new scenes data
+    const { scenes: updatedScenes } = repository.getState();
+    store.setItems(updatedScenes);
 
-  // Update store with new scenes data
-  const { scenes: updatedScenes } = repository.getState();
-  store.setItems(updatedScenes);
+    // Reset form
+    store.resetSceneForm();
 
-  console.log(
-    `Scene "${newSceneName}" created successfully in parent ${targetParent}`,
-  );
-  render();
+    console.log(
+      `Scene "${formData.name}" created successfully in folder "${formData.folderId}" at (${sceneWhiteboardPosition.x}, ${sceneWhiteboardPosition.y})`,
+    );
+    render();
+  }
 };
