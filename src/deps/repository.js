@@ -342,16 +342,32 @@ export const createRepository = (initialState, localStorageKey) => {
   // Original behavior for backward compatibility
   return createRepositoryInternal(initialState, []);
 };
-
 const createRepositoryInternal = (initialState, initialActionSteams) => {
   const actionStream = initialActionSteams || [];
 
+  // Cache variables
+  let cachedState = null;
+  let isCacheValid = false;
+  let lastActionCount = 0;
+
   const addAction = (action) => {
     actionStream.push(action);
+    // Invalidate cache when new action is added
+    isCacheValid = false;
   };
 
   const getState = () => {
-    return actionStream.reduce((acc, action) => {
+    // Check if cache is valid
+    if (
+      isCacheValid &&
+      actionStream.length === lastActionCount &&
+      cachedState !== null
+    ) {
+      return structuredClone(cachedState);
+    }
+
+    // Compute new state and update cache
+    cachedState = actionStream.reduce((acc, action) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);
@@ -368,6 +384,12 @@ const createRepositoryInternal = (initialState, initialActionSteams) => {
       }
       return acc;
     }, structuredClone(initialState));
+
+    // Update cache metadata
+    isCacheValid = true;
+    lastActionCount = actionStream.length;
+
+    return structuredClone(cachedState);
   };
 
   const getActionStream = () => {
