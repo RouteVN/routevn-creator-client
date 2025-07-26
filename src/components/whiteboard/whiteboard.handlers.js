@@ -12,26 +12,28 @@ export const handleContainerMouseDown = (event, deps) => {
       mouseY: event.clientY,
     });
   } else {
-    // Calculate click position in canvas coordinates using the same method as canvas handler
-    const canvas = getRefIds().canvas.elm;
-    const canvasRect = canvas.getBoundingClientRect();
+    // Calculate click position in canvas coordinates using container coordinates
+    const container = getRefIds().container.elm;
+    const containerRect = container.getBoundingClientRect();
     const pan = store.selectPan();
     const zoomLevel = store.selectZoomLevel();
 
-    const canvasX = (event.clientX - canvasRect.left - pan.x) / zoomLevel;
-    const canvasY = (event.clientY - canvasRect.top - pan.y) / zoomLevel;
+    // Use container coordinates instead of canvas coordinates for proper zoom calculation
+    const canvasX = (event.clientX - containerRect.left - pan.x) / zoomLevel;
+    const canvasY = (event.clientY - containerRect.top - pan.y) / zoomLevel;
 
-    console.log({"canvasrectleft": canvasRect.left, "canvasrecttop": canvasRect.top, "panx": pan.x, "pany": pan.y});
-
-    console.log(canvasX)
-    console.log(canvasY)
     // Emit click event with coordinates
     deps.dispatchEvent(
       new CustomEvent("canvas-click", {
-        detail: { formX: event.clientX, formY: event.clientY, whiteboardX: canvasX, whiteboardY: canvasY },
+        detail: {
+          formX: event.clientX,
+          formY: event.clientY,
+          whiteboardX: canvasX,
+          whiteboardY: canvasY,
+        },
         bubbles: true,
         composed: true,
-      })
+      }),
     );
   }
 };

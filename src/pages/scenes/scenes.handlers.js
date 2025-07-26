@@ -145,7 +145,7 @@ export const handleSceneFormAction = (e, deps) => {
   } else if (actionId === "submit") {
     const currentState = store.getState();
     const { sceneWhiteboardPosition } = currentState;
-    
+
     // Get form values from the event detail (same pattern as typography)
     const formData = e.detail.formValues;
 
@@ -170,7 +170,10 @@ export const handleSceneFormAction = (e, deps) => {
           type: "scene",
           name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
           createdAt: new Date().toISOString(),
-          position: { x: sceneWhiteboardPosition.x, y: sceneWhiteboardPosition.y },
+          position: {
+            x: sceneWhiteboardPosition.x,
+            y: sceneWhiteboardPosition.y,
+          },
           sections: {
             items: {
               [sectionId]: {
@@ -202,7 +205,7 @@ export const handleSceneFormAction = (e, deps) => {
     };
 
     repository.addAction(repositoryAction);
-    
+
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
       id: newSceneId,

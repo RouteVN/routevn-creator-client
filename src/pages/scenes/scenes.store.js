@@ -156,7 +156,7 @@ export const toViewData = ({ state, props }, payload) => {
         name: "folderId",
         inputType: "select",
         label: "Folder",
-        options: folderOptions.map(option => ({
+        options: folderOptions.map((option) => ({
           value: option.id,
           label: option.name,
         })),
