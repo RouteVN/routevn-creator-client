@@ -51,15 +51,66 @@ export const handleBeforeMount = (deps) => {
   }
 };
 
-export const handleOnUpdate = () => {};
+export const handleAfterMount = async (deps) => {
+  const { httpClient, store, render, props, repository } = deps;
+  const { images, layouts, videos } = repository.getState();
 
-export const handleImageSelected = (e, deps) => {
-  const { store, render } = deps;
+  // Initialize with existing background data if available
+  if (props?.line?.presentation?.background?.imageId) {
+    const flatImageItems = toFlatItems(images);
+    const existingImage = flatImageItems.find(
+      (item) => item.id === props.line.presentation.background.imageId,
+    );
+
+    if (existingImage) {
+      const { url } = await httpClient.creator.getFileContent({
+        fileId: existingImage.fileId,
+        projectId: "someprojectId",
+      });
+
+      store.setFormFieldResources({
+        background: {
+          src: url,
+        },
+      });
+      render();
+    }
+  }
+};
+
+export const handleImageSelected = async (e, deps) => {
+  const { store, render, httpClient, repository } = deps;
+  const { images } = repository.getState();
 
   const { imageId } = e.detail;
 
   store.setTempSelectedImageId({
     imageId: imageId,
+  });
+
+  render();
+
+  const flatImageItems = toFlatItems(images);
+  const existingImage = flatImageItems.find((item) => item.id === imageId);
+
+  const { url } = await httpClient.creator.getFileContent({
+    fileId: existingImage.fileId,
+    projectId: "someprojectId",
+  });
+
+  store.setFormFieldResources({
+    background: {
+      src: url,
+    },
+  });
+  render();
+};
+
+export const handleFormExtra = (e, deps) => {
+  console.log("extraaaaaaaaa", e.detail);
+  const { store, render } = deps;
+  store.setMode({
+    mode: "gallery",
   });
 
   render();
