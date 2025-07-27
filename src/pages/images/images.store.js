@@ -29,7 +29,12 @@ const form = {
 export const INITIAL_STATE = Object.freeze({
   imagesData: { tree: [], items: {} },
   selectedItemId: null,
+  fieldResources: {},
 });
+
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
+};
 
 export const setItems = (state, imagesData) => {
   state.imagesData = imagesData;
@@ -110,5 +115,6 @@ export const toViewData = ({ state }) => {
     repositoryTarget: "images",
     form,
     defaultValues,
+    fieldResources: state.fieldResources,
   };
 };
