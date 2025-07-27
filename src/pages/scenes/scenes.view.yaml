@@ -17,6 +17,8 @@ refs:
         handler: handleWhiteboardItemSelected
       item-double-click:
         handler: handleWhiteboardItemDoubleClick
+      canvas-click:
+        handler: handleWhiteboardClick
   add-scene-btn:
     eventListeners:
       click:
@@ -25,18 +27,24 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
+  scene-form:
+    eventListeners:
+      action-click:
+        handler: handleSceneFormAction
 
 template:
-  - rtgl-view d=h w=f h=f: 
+  - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f w=f:
       - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
           - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
           - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
-        - rvn-whiteboard#whiteboard .items=whiteboardItems .initialZoomLevel=1:
+        - rvn-whiteboard#whiteboard .items=whiteboardItems .initialZoomLevel=1 .cursor=whiteboardCursor:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
           - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
     - 'rtgl-view pos=fix z=100 ah=c p=md w=240 bgc=mu br=md style="left: calc((100vw - 240px) / 2); bottom: 20px;"':
       - 'rtgl-button#add-scene-btn bgc=pr p=md br=full': Add Scene
+    - rtgl-popover#scene-form-popover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
+      - rtgl-form#scene-form slot=content .form=sceneFormFields w=320:

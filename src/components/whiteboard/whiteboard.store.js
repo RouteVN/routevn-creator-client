@@ -160,7 +160,7 @@ export const toViewData = ({ state, props }) => {
     panY: state.panY,
     zoomLevel: state.zoomLevel,
     zoomLevelPercent: Math.round(state.zoomLevel * 100),
-    containerCursor: state.isPanMode ? "grab" : "default",
+    containerCursor: props.cursor || (state.isPanMode ? "grab" : "default"),
     itemCursor: state.isPanMode ? "default" : "move",
   };
 };

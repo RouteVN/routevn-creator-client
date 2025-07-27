@@ -49,6 +49,8 @@ propsSchema:
             type: number
     initialZoomLevel:
       type: number
+    cursor:
+      type: string
 
 refs:
   container:
@@ -57,10 +59,6 @@ refs:
         handler: handleContainerWheel
       mousedown:
         handler: handleContainerMouseDown
-  canvas:
-    eventListeners:
-      mousedown:
-        handler: handleCanvasMouseDown
   item-*:
     eventListeners:
       mousedown:
