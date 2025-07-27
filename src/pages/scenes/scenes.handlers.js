@@ -66,6 +66,10 @@ export const handleFileExplorerClickItem = (e, deps) => {
   });
 };
 
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
+};
+
 export const handleWhiteboardItemPositionChanged = (e, deps) => {
   const { store, render, repository } = deps;
   const { itemId, x, y } = e.detail;
@@ -112,6 +116,25 @@ export const handleAddSceneClick = (e, deps) => {
 
   // Start waiting for placement
   store.setWaitingForPlacement(true);
+  render();
+};
+
+export const handleFormChange = (e, deps) => {
+  const { repository, render, store } = deps;
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "scenes",
+    value: {
+      id: store.selectSelectedItemId(),
+      replace: false,
+      item: {
+        [e.detail.name]: e.detail.fieldValue,
+      },
+    },
+  });
+
+  const { scenes } = repository.getState();
+  store.setItems(scenes);
   render();
 };
 

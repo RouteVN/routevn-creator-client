@@ -19,14 +19,12 @@ refs:
         handler: handleImageItemClick
       files-uploaded:
         handler: handleDragDropFileSelected
-  detail-panel:
+  detail-form:
     eventListeners:
-      replace-item:
-        handler: handleReplaceItem
-      file-action:
-        handler: handleFileAction
-      item-update:
-        handler: handleDetailPanelItemUpdate
+      extra-event:
+        handler: handleFormExtraEvent
+      form-change:
+        handler: handleFormChange
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -38,5 +36,5 @@ template:
       - rtgl-view flex=1 h=f:
         - rvn-group-images-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - rtgl-view slot="content" w=f h=f:
-          - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+        - $if selectedItemId:
+          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues .fieldResources=fieldResources:

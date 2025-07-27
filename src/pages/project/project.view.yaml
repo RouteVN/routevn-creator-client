@@ -27,25 +27,17 @@ refs:
         handler: handleFormValueClick
   form:
     eventListeners:
-      action-click:
-        handler: handleFormActionClick
+      form-change:
+        handler: handleFormChange
+      extra-event:
+        handler: handleFormExtraEvent
   project-image:
     eventListeners:
       click:
         handler: handleProjectImageClick
 
+
 template:
   - rtgl-view w=f h=f p=lg:
     - rtgl-text s=h4: Project
-    - rtgl-view mt=md g=md:
-      - rtgl-view g=sm:
-          - rtgl-text s=sm c=mu-fg: Project Name
-          - rtgl-text#form-value-name s=sm: ${project.name}
-      - rtgl-view g=sm:
-          - rtgl-text s=sm c=mu-fg: Description
-          - rtgl-text#form-value-description s=sm: ${project.description}
-      - rtgl-view g=sm:
-          - rtgl-text s=sm c=mu-fg: Image
-          - rtgl-image#project-image w=64 h=64 br=m src=${project.imageUrl}:
-    - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
-      - rtgl-form#form slot=content .form=form:
+    - rtgl-form#form .form=form w=240 .defaultValues=defaultValues .fieldResources=fieldResources:

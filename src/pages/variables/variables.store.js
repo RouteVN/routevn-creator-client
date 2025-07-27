@@ -1,6 +1,23 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    { name: "name", inputType: "popover-input", label: "Name" },
+    {
+      name: "variableType",
+      inputType: "popover-input",
+      label: "Variable Type",
+    },
+    {
+      name: "defaultValue",
+      inputType: "popover-input",
+      label: "Default Value",
+    },
+    { name: "readonly", inputType: "popover-input", label: "Read Only" },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   variablesData: { tree: [], items: {} },
   selectedItemId: null,
@@ -17,91 +34,32 @@ export const setSelectedItemId = (state, itemId) => {
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const toViewData = ({ state, props }, payload) => {
-  console.log("🔧 Variables toViewData called with state:", state);
-
   const flatItems = toFlatItems(state.variablesData);
   const flatGroups = toFlatGroups(state.variablesData);
-
-  console.log("🔧 Variables processed data:", {
-    variablesData: state.variablesData,
-    flatItems,
-    flatGroups,
-  });
 
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay: selectedItem.type === "variable" ? "Variable" : "Folder",
-        displayFileType:
-          selectedItem.fileType ||
-          (selectedItem.type === "variable" ? "Variable" : null),
-        displayFileSize: selectedItem.fileSize
-          ? formatFileSize(selectedItem.fileSize)
-          : null,
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
+  let defaultValues = {};
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      variableType: selectedItem.variableType || "",
+      defaultValue: selectedItem.defaultValue || "",
+      readonly: selectedItem.readonly ? "true" : "false",
+    };
+  }
 
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        {
-          type: "text",
-          label: "Name",
-          value: selectedItemDetails.name,
-          id: "name",
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          type: "text",
-          label: "Variable Type",
-          value: selectedItemDetails.variableType,
-          show: !!selectedItemDetails.variableType,
-        },
-        {
-          type: "text",
-          label: "Default Value",
-          value: selectedItemDetails.defaultValue,
-          show: !!selectedItemDetails.defaultValue,
-        },
-        {
-          type: "text",
-          label: "Read Only",
-          value: selectedItemDetails.readonly ? "Yes" : "No",
-          show: selectedItemDetails.readonly !== undefined,
-        },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
-        },
-      ]
-    : [];
-  const detailEmptyMessage = "No selection";
-
-  const viewData = {
+  return {
     flatItems,
     flatGroups,
     resourceCategory: "systemConfig",
     selectedResourceId: "variables",
     repositoryTarget: "variables",
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
+    form,
+    defaultValues,
   };
-
-  console.log("🔧 Variables returning viewData:", viewData);
-
-  return viewData;
 };

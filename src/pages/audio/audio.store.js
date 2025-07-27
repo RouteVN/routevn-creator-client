@@ -1,10 +1,38 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "waveform",
+      width: 240,
+      height: 100,
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "fileType", inputType: "read-only-text", description: "File Type" },
+    {
+      name: "fileSize",
+      inputType: "read-only-text",
+      description: "File Size",
+    },
+    {
+      name: "duration",
+      inputType: "read-only-text",
+      description: "Duration",
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   audioData: { tree: [], items: {} },
   selectedItemId: null,
+  fieldResources: {},
 });
+
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
+};
 
 export const setItems = (state, audioData) => {
   state.audioData = audioData;
@@ -33,39 +61,23 @@ export const toViewData = ({ state }) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Transform selectedItem into detailPanel props
-  let detailFields;
-  if (selectedItem) {
-    detailFields = [
-      {
-        type: "audio",
-        waveformDataFileId: selectedItem.waveformDataFileId,
-        editable: true,
-        accept: "audio/*",
-      },
-      { id: "name", type: "text", value: selectedItem.name, editable: true },
-      { type: "text", label: "File Type", value: selectedItem.fileType },
-      {
-        type: "text",
-        label: "File Size",
-        value: formatFileSize(selectedItem.fileSize),
-      },
-      {
-        type: "text",
-        label: "Duration",
-        value: selectedItem.duration
-          ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(
-              selectedItem.duration % 60,
-            )
-              .toString()
-              .padStart(2, "0")}`
-          : "Unknown",
-        show: !!selectedItem.duration,
-      },
-    ];
-  }
+  // Transform selectedItem into form defaults
+  let defaultValues = {};
 
-  const detailEmptyMessage = "No selection";
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      fileType: selectedItem.fileType,
+      fileSize: formatFileSize(selectedItem.fileSize),
+      duration: selectedItem.duration
+        ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(
+            selectedItem.duration % 60,
+          )
+            .toString()
+            .padStart(2, "0")}`
+        : "Unknown",
+    };
+  }
 
   return {
     flatItems,
@@ -73,9 +85,9 @@ export const toViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "audio",
     selectedItemId: state.selectedItemId,
-    detailTitle: undefined,
-    detailFields,
-    detailEmptyMessage,
     repositoryTarget: "audio",
+    form,
+    defaultValues,
+    fieldResources: state.fieldResources,
   };
 };

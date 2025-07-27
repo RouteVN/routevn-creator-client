@@ -3,9 +3,6 @@ export const INITIAL_STATE = Object.freeze({
   selectedResourceId: "general",
   repositoryTarget: "settings",
   flatItems: [],
-  detailTitle: "",
-  detailFields: [],
-  detailEmptyMessage: "Select a setting to configure",
 });
 
 export const toViewData = ({ state, props }) => {
