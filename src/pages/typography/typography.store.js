@@ -1,5 +1,16 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
+const form = {
+  fields: [
+    { name: "name", inputType: "popover-input", label: "Name" },
+    { name: "fontSize", inputType: "popover-input", label: "Font Size" },
+    { name: "colorId", inputType: "popover-input", label: "Color ID" },
+    { name: "fontId", inputType: "popover-input", label: "Font ID" },
+    { name: "fontWeight", inputType: "popover-input", label: "Font Weight" },
+    { name: "previewText", inputType: "popover-input", label: "Preview Text" },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
@@ -40,115 +51,17 @@ export const toViewData = ({ state, props }, payload) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Helper functions to resolve IDs to names and values
-  const getColorName = (colorId) => {
-    if (!colorId) return null;
-    const color = toFlatItems(state.colorsData)
-      .filter((item) => item.type === "color")
-      .find((color) => color.id === colorId);
-    return color ? color.name : colorId;
-  };
-
-  const getColorHex = (colorId) => {
-    if (!colorId) return "#000000";
-    const color = toFlatItems(state.colorsData)
-      .filter((item) => item.type === "color")
-      .find((color) => color.id === colorId);
-    return color ? color.hex : "#000000";
-  };
-
-  const getFontName = (fontId) => {
-    if (!fontId) return null;
-    const font = toFlatItems(state.fontsData)
-      .filter((item) => item.type === "font")
-      .find((font) => font.id === fontId);
-    return font ? font.fontFamily : fontId;
-  };
-
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay:
-          selectedItem.type === "typography" ? "Typography" : "Folder",
-        displayFontSize: selectedItem.fontSize || null,
-        displayFontColor: getColorName(selectedItem.colorId),
-        displayFontStyle: getFontName(selectedItem.fontId),
-        displayFontWeight: selectedItem.fontWeight || null,
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
-
-  // Generate color and font options for dropdowns
-  const colorOptions = toFlatItems(state.colorsData)
-    .filter((item) => item.type === "color")
-    .map((color) => ({
-      id: color.id,
-      label: color.name,
-      value: color.id,
-    }));
-
-  const fontOptions = toFlatItems(state.fontsData)
-    .filter((item) => item.type === "font")
-    .map((font) => ({
-      id: font.id,
-      label: font.fontFamily,
-      value: font.id,
-    }));
-
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Typography Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        {
-          type: "typography",
-          name: selectedItemDetails.name,
-          fontSize: selectedItemDetails.displayFontSize || "16",
-          fontColor: getColorHex(selectedItemDetails.colorId),
-          fontStyle: getFontName(selectedItemDetails.fontId),
-          fontWeight: selectedItemDetails.displayFontWeight || "normal",
-          colorId: selectedItemDetails.colorId || "",
-          fontId: selectedItemDetails.fontId || "",
-          colorOptions: colorOptions,
-          fontOptions: fontOptions,
-          show: !!selectedItemDetails.displayFontSize,
-          editable: true,
-        },
-        {
-          type: "text",
-          label: "Name",
-          value: selectedItemDetails.name,
-          name: "name",
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          type: "text",
-          label: "Font Size",
-          value: selectedItemDetails.displayFontSize,
-          show: !!selectedItemDetails.displayFontSize,
-        },
-        {
-          type: "text",
-          label: "Font Color",
-          value: selectedItemDetails.displayFontColor,
-          show: !!selectedItemDetails.displayFontColor,
-        },
-        {
-          type: "text",
-          label: "Font Style",
-          value: selectedItemDetails.displayFontStyle,
-          show: !!selectedItemDetails.displayFontStyle,
-        },
-        {
-          type: "text",
-          label: "Font Weight",
-          value: selectedItemDetails.displayFontWeight,
-          show: !!selectedItemDetails.displayFontWeight,
-        },
-      ].filter((field) => field.show !== false)
-    : [];
-  const detailEmptyMessage = "Select a typography style to view details";
+  let defaultValues = {};
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      fontSize: selectedItem.fontSize || "",
+      colorId: selectedItem.colorId || "",
+      fontId: selectedItem.fontId || "",
+      fontWeight: selectedItem.fontWeight || "",
+      previewText: selectedItem.previewText || "",
+    };
+  }
 
   return {
     flatItems,
@@ -156,12 +69,10 @@ export const toViewData = ({ state, props }, payload) => {
     resourceCategory: "userInterface",
     selectedResourceId: "typography",
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
     repositoryTarget: "typography",
     colorsData: state.colorsData,
     fontsData: state.fontsData,
+    form,
+    defaultValues,
   };
 };

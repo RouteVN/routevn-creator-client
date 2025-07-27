@@ -21,6 +21,10 @@ refs:
     eventListeners:
       click:
         handler: handleAddSceneClick
+  detail-form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
 
 template:
   - rtgl-view d=h w=f h=f: 
@@ -31,8 +35,8 @@ template:
           - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-whiteboard#whiteboard .items=whiteboardItems .initialZoomLevel=1:
-      - rvn-resizable-panel#detail-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - rtgl-view slot="content" w=f h=f:
-          - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+      - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+        - $if selectedItemId:
+          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
     - 'rtgl-view pos=fix z=100 ah=c p=md w=240 bgc=mu br=md style="left: calc((100vw - 240px) / 2); bottom: 20px;"':
       - 'rtgl-button#add-scene-btn bgc=pr p=md br=full': Add Scene

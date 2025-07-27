@@ -181,7 +181,7 @@ export const handleDataChanged = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleDetailPanelItemUpdate = async (e, deps) => {
+export const handleFormChange = async (e, deps) => {
   const { repository, store, render } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
@@ -192,7 +192,9 @@ export const handleDetailPanelItemUpdate = async (e, deps) => {
     value: {
       id: selectedItemId,
       replace: false,
-      item: e.detail.formValues,
+      item: {
+        [e.detail.name]: e.detail.fieldValue,
+      },
     },
   });
 
@@ -207,61 +209,34 @@ export const handleDetailPanelItemUpdate = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleRequestImageGroups = (e, deps) => {
-  const { getRefIds, store } = deps;
-  const { fieldIndex, currentValue } = e.detail;
-
-  // Get groups from transformed repository data
-  const viewData = store.toViewData();
-  const groups = viewData.imageGroups;
-
-  // Show dialog with groups using correct ref access pattern
-  const refIds = getRefIds();
-  const selectedItemId = store.selectSelectedItemId();
-  const detailPanelRef = refIds[`detail-panel-${selectedItemId}`];
-
-  if (detailPanelRef && detailPanelRef.elm && detailPanelRef.elm.store) {
-    detailPanelRef.elm.store.showImageSelectorDialog({
-      fieldIndex,
-      groups,
-      currentValue,
+export const handleFormExtraEvent = async (e, deps) => {
+  const { repository, store, render } = deps;
+  const { name, value } = e.detail;
+  
+  // Handle image selector events
+  if (name && name.includes('imageId')) {
+    const layoutId = store.selectLayoutId();
+    const selectedItemId = store.selectSelectedItemId();
+    
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: `layouts.items.${layoutId}.elements`,
+      value: {
+        id: selectedItemId,
+        replace: false,
+        item: { [name]: value },
+      },
     });
-    detailPanelRef.elm.render();
+
+    // Sync store with updated repository data
+    const { layouts, images } = repository.getState();
+    const layout = layouts.items[layoutId];
+
+    store.setItems(layout?.elements || { items: {}, tree: [] });
+    store.setImages(images);
+    render();
+
+    await renderLayoutPreview(deps);
   }
 };
 
-export const handleImageSelectorUpdated = async (e, deps) => {
-  const { repository, store, render } = deps;
-  const { imageId, fieldIndex } = e.detail;
-  const layoutId = store.selectLayoutId();
-  const selectedItemId = store.selectSelectedItemId();
-
-  // Get the field name using the proper selector
-  const fieldName = store.selectDetailFieldNameByIndex(fieldIndex);
-
-  // Update the selected item with the new image field
-  // If imageId is empty string, we set it to null to clear the image
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `layouts.items.${layoutId}.elements`,
-    value: {
-      id: selectedItemId,
-      replace: false,
-      item: { [fieldName]: imageId },
-    },
-  });
-
-  const { layouts } = repository.getState();
-  const layout = layouts.items[layoutId];
-
-  // Preserve selectedItemId before updating store
-  const currentSelectedItemId = store.selectSelectedItemId();
-
-  store.setItems(layout?.elements || { items: {}, tree: [] });
-
-  // Restore selectedItemId after store update
-  store.setSelectedItemId(currentSelectedItemId);
-
-  render();
-  await renderLayoutPreview(deps);
-};

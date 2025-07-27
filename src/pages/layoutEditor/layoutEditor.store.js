@@ -9,6 +9,7 @@ export const INITIAL_STATE = Object.freeze({
   selectedItemId: null,
   layoutId: null,
   images: { tree: [], items: {} },
+  fieldResources: {},
   contextMenuItems: [
     {
       label: "Container",
@@ -139,6 +140,10 @@ export const setImages = (state, images) => {
   state.images = images;
 };
 
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
+};
+
 export const selectLayoutId = ({ state }) => {
   return state.layoutId;
 };
@@ -183,169 +188,67 @@ export const toViewData = ({ state, props }, payload) => {
   const imageGroups = toFlatGroups(state.images);
   const imageItems = state.images.items;
 
-  const detailTitle = selectedItem ? "Layout Item Details" : "";
-  const detailFields = selectedItem
-    ? [
-        {
-          type: "text",
-          label: "Name",
-          value: selectedItem.name,
-          name: "name",
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItem.type },
-        {
-          type: "number",
-          label: "X Position",
-          value: selectedItem.x,
-          name: "x",
-          editable: true,
-          min: 0,
-          max: SCREEN_WIDTH,
-          step: 1,
-        },
-        {
-          type: "number",
-          label: "Y Position",
-          value: selectedItem.y,
-          name: "y",
-          editable: true,
-          min: 0,
-          max: SCREEN_HEIGHT,
-          step: 1,
-        },
-        {
-          type: "number",
-          label: "Width",
-          value: selectedItem.width,
-          name: "width",
-          editable: true,
-          min: 1,
-          max: SCREEN_WIDTH,
-          step: 1,
-        },
-        {
-          type: "number",
-          label: "Height",
-          value: selectedItem.height,
-          name: "height",
-          editable: true,
-          min: 1,
-          max: SCREEN_HEIGHT,
-          step: 1,
-        },
-        {
-          type: "number",
-          label: "Anchor X (0-1)",
-          value: selectedItem.anchorX,
-          name: "anchorX",
-          editable: true,
-          min: 0,
-          max: 1,
-          step: 0.1,
-        },
-        {
-          type: "number",
-          label: "Anchor Y (0-1)",
-          value: selectedItem.anchorY,
-          name: "anchorY",
-          editable: true,
-          min: 0,
-          max: 1,
-          step: 0.1,
-        },
-        {
-          type: "number",
-          label: "Scale X",
-          value: selectedItem.scaleX,
-          name: "scaleX",
-          editable: true,
-          min: 0.1,
-          max: 4,
-          step: 0.1,
-        },
-        {
-          type: "number",
-          label: "Scale Y",
-          value: selectedItem.scaleY,
-          name: "scaleY",
-          editable: true,
-          min: 0.1,
-          max: 4,
-          step: 0.1,
-        },
-        {
-          type: "number",
-          label: "Rotation",
-          value: selectedItem.rotation,
-          name: "rotation",
-          editable: true,
-          min: -360,
-          max: 360,
-          step: 1,
-        },
-        ...(selectedItem.type === "text"
-          ? [
-              {
-                type: "text",
-                label: "Text Content",
-                value: selectedItem.text,
-                name: "text",
-                editable: true,
-              },
-            ]
-          : []),
-        ...(selectedItem.type === "sprite"
-          ? [
-              {
-                type: "image-selector",
-                label: "Image",
-                value: selectedItem.imageId ?? "",
-                name: "imageId",
-                fileId: selectedItem.imageId
-                  ? imageItems[selectedItem.imageId]?.fileId
-                  : null,
-                editable: true,
-              },
-              {
-                type: "image-selector",
-                label: "Hover Image",
-                value: selectedItem.hoverImageId ?? "",
-                name: "hoverImageId",
-                fileId: selectedItem.hoverImageId
-                  ? imageItems[selectedItem.hoverImageId]?.fileId
-                  : null,
-                editable: true,
-              },
-              {
-                type: "image-selector",
-                label: "Click Image",
-                value: selectedItem.clickImageId ?? "",
-                name: "clickImageId",
-                fileId: selectedItem.clickImageId
-                  ? imageItems[selectedItem.clickImageId]?.fileId
-                  : null,
-                editable: true,
-              },
-            ]
-          : []),
-      ]
-    : [];
-  const detailEmptyMessage = "Select a layout item to view details";
+  // Create form configuration based on selected item type
+  const form = selectedItem ? {
+    fields: [
+      { name: "name", inputType: "popover-input", label: "Name" },
+      { name: "type", inputType: "read-only-text", label: "Type" },
+      { name: "x", inputType: "number-input", label: "X Position", min: 0, max: SCREEN_WIDTH, step: 1 },
+      { name: "y", inputType: "number-input", label: "Y Position", min: 0, max: SCREEN_HEIGHT, step: 1 },
+      { name: "width", inputType: "number-input", label: "Width", min: 1, max: SCREEN_WIDTH, step: 1 },
+      { name: "height", inputType: "number-input", label: "Height", min: 1, max: SCREEN_HEIGHT, step: 1 },
+      { name: "anchorX", inputType: "number-input", label: "Anchor X (0-1)", min: 0, max: 1, step: 0.1 },
+      { name: "anchorY", inputType: "number-input", label: "Anchor Y (0-1)", min: 0, max: 1, step: 0.1 },
+      { name: "scaleX", inputType: "number-input", label: "Scale X", min: 0.1, max: 4, step: 0.1 },
+      { name: "scaleY", inputType: "number-input", label: "Scale Y", min: 0.1, max: 4, step: 0.1 },
+      { name: "rotation", inputType: "number-input", label: "Rotation", min: -360, max: 360, step: 1 },
+      ...(selectedItem.type === "text" ? [
+        { name: "text", inputType: "popover-input", label: "Text Content" },
+      ] : []),
+      ...(selectedItem.type === "sprite" ? [
+        { name: "imageId", inputType: "image-selector", label: "Image" },
+        { name: "hoverImageId", inputType: "image-selector", label: "Hover Image" },
+        { name: "clickImageId", inputType: "image-selector", label: "Click Image" },
+      ] : []),
+    ],
+  } : null;
+
+  // Create default values for the form
+  const defaultValues = selectedItem ? {
+    name: selectedItem.name,
+    type: selectedItem.type,
+    x: selectedItem.x,
+    y: selectedItem.y,
+    width: selectedItem.width,
+    height: selectedItem.height,
+    anchorX: selectedItem.anchorX,
+    anchorY: selectedItem.anchorY,
+    scaleX: selectedItem.scaleX,
+    scaleY: selectedItem.scaleY,
+    rotation: selectedItem.rotation,
+    ...(selectedItem.type === "text" ? {
+      text: selectedItem.text,
+    } : {}),
+    ...(selectedItem.type === "sprite" ? {
+      imageId: selectedItem.imageId ?? "",
+      hoverImageId: selectedItem.hoverImageId ?? "",
+      clickImageId: selectedItem.clickImageId ?? "",
+    } : {}),
+  } : {};
 
   return {
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
     repositoryTarget: `layouts.items.${state.layoutId}.elements`,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
     resourceCategory: "userInterface",
     selectedResourceId: "layout-editor",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     images: state.images,
     imageGroups,
+    form,
+    defaultValues,
+    fieldResources: state.fieldResources,
   };
 };

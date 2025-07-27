@@ -146,114 +146,25 @@ export const handleTypographyCreated = (e, deps) => {
   render();
 };
 
-export const handleFileAction = (e, deps) => {
-  const { store, render, repository } = deps;
-  const { value, newName } = e.detail;
 
-  if (value === "rename-item-confirmed") {
-    // Get the currently selected item
-    const selectedItem = store.selectSelectedItem();
-    if (!selectedItem) {
-      return;
-    }
 
-    // Update the typography item name
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: "typography",
-      value: {
-        id: selectedItem.id,
-        replace: false,
-        item: {
-          name: newName,
-        },
-      },
-    });
-
-    // Update the store with the new repository state
-    const { typography } = repository.getState();
-    store.setItems(typography);
-    render();
-  }
-};
-
-export const handleReplaceItem = (e, deps) => {
-  const { store, render, repository } = deps;
-
-  // Get the currently selected item
-  const selectedItem = store.selectSelectedItem();
-  if (!selectedItem) {
-    return;
-  }
-
-  const { fontSize, fontColor, fontStyle, fontWeight, previewText } = e.detail;
-
-  // Create update object with only the fields that are provided
-  // This preserves existing values for fields that aren't being updated
-  const updateItem = {};
-
-  if (fontSize !== undefined && fontSize !== null && fontSize !== "") {
-    // Validate font size is a number
-    if (isNaN(fontSize) || parseInt(fontSize) <= 0) {
-      alert("Please enter a valid font size (positive number)");
-      return;
-    }
-    updateItem.fontSize = fontSize;
-  }
-
-  if (fontColor !== undefined && fontColor !== null && fontColor !== "") {
-    updateItem.colorId = fontColor; // Store color ID
-  }
-
-  if (fontStyle !== undefined && fontStyle !== null && fontStyle !== "") {
-    updateItem.fontId = fontStyle; // Store font ID
-  }
-
-  if (fontWeight !== undefined && fontWeight !== null && fontWeight !== "") {
-    updateItem.fontWeight = fontWeight;
-  }
-
-  if (previewText !== undefined && previewText !== null) {
-    updateItem.previewText =
-      previewText || "The quick brown fox jumps over the lazy dog";
-  }
-
-  // Only update if there are changes to make
-  if (Object.keys(updateItem).length === 0) {
-    return;
-  }
-
-  // Update the typography in the repository
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "typography",
-    value: {
-      id: selectedItem.id,
-      replace: false,
-      item: updateItem,
-    },
-  });
-
-  // Update the store with the new repository state
-  const { typography } = repository.getState();
-  store.setItems(typography);
-  render();
-};
-
-export const handleDetailPanelItemUpdate = (e, deps) => {
-  const { repository, store, render } = deps;
-
+export const handleFormChange = (e, deps) => {
+  const { repository, render, store } = deps;
   repository.addAction({
     actionType: "treeUpdate",
     target: "typography",
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
-      item: e.detail.formValues,
+      item: {
+        [e.detail.name]: e.detail.fieldValue,
+      },
     },
   });
 
-  const { typography } = repository.getState();
+  const { typography, colors, fonts } = repository.getState();
   store.setItems(typography);
+  store.setColorsData(colors);
+  store.setFontsData(fonts);
   render();
 };

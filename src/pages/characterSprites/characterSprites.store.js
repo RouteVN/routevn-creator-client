@@ -1,11 +1,39 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "image",
+      height: 135,
+    },
+    { name: "name", inputType: "popover-input", label: "Name" },
+    { name: "typeDisplay", inputType: "read-only-text", label: "Type" },
+    {
+      name: "displayFileType",
+      inputType: "read-only-text",
+      label: "File Type",
+    },
+    {
+      name: "displayFileSize",
+      inputType: "read-only-text",
+      label: "File Size",
+    },
+    { name: "fullPath", inputType: "read-only-text", label: "Path" },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   spritesData: { tree: [], items: {} },
   selectedItemId: undefined,
   characterId: undefined,
+  fieldResources: {},
 });
+
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
+};
 
 export const setItems = (state, spritesData) => {
   state.spritesData = spritesData;
@@ -45,60 +73,21 @@ export const toViewData = ({ state, props }, payload) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay: selectedItem.type === "image" ? "Sprite" : "Folder",
-        displayFileType:
-          selectedItem.fileType ||
-          (selectedItem.type === "image" ? "PNG" : null),
-        displayFileSize: selectedItem.fileSize
-          ? formatFileSize(selectedItem.fileSize)
-          : null,
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
+  // Transform selectedItem into form defaults
+  let defaultValues = {};
 
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Sprite Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        {
-          type: "image",
-          fileId: selectedItemDetails.fileId,
-          width: 240,
-          height: 135,
-        },
-        {
-          id: "name",
-          type: "text",
-          label: "Name",
-          value: selectedItemDetails.name,
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          type: "text",
-          label: "File Type",
-          value: selectedItemDetails.displayFileType,
-          show: !!selectedItemDetails.displayFileType,
-        },
-        {
-          type: "text",
-          label: "File Size",
-          value: selectedItemDetails.displayFileSize,
-          show: !!selectedItemDetails.displayFileSize,
-        },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
-        },
-      ]
-    : [];
-  const detailEmptyMessage = "Select a sprite to view details";
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      typeDisplay: selectedItem.type === "image" ? "Sprite" : "Folder",
+      displayFileType:
+        selectedItem.fileType || (selectedItem.type === "image" ? "PNG" : ""),
+      displayFileSize: selectedItem.fileSize
+        ? formatFileSize(selectedItem.fileSize)
+        : "",
+      fullPath: selectedItem.fullLabel || selectedItem.name || "",
+    };
+  }
 
   return {
     flatItems,
@@ -106,10 +95,9 @@ export const toViewData = ({ state, props }, payload) => {
     resourceCategory: "assets",
     selectedResourceId: "character-sprites",
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
     repositoryTarget: `characters.items.${state.characterId}.sprites`,
+    form,
+    defaultValues,
+    fieldResources: state.fieldResources,
   };
 };

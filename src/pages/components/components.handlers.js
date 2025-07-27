@@ -136,16 +136,17 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleDetailPanelItemUpdate = (e, deps) => {
-  const { repository, store, render } = deps;
-
+export const handleFormChange = (e, deps) => {
+  const { repository, render, store } = deps;
   repository.addAction({
     actionType: "treeUpdate",
     target: "components",
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
-      item: e.detail.formValues,
+      item: {
+        [e.detail.name]: e.detail.fieldValue,
+      },
     },
   });
 

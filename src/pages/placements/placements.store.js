@@ -1,6 +1,19 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    { name: "name", inputType: "popover-input", label: "Name" },
+    { name: "x", inputType: "popover-input", label: "Position X" },
+    { name: "y", inputType: "popover-input", label: "Position Y" },
+    { name: "scaleX", inputType: "popover-input", label: "Scale X" },
+    { name: "scaleY", inputType: "popover-input", label: "Scale Y" },
+    { name: "anchorX", inputType: "popover-input", label: "Anchor X" },
+    { name: "anchorY", inputType: "popover-input", label: "Anchor Y" },
+    { name: "rotation", inputType: "popover-input", label: "Rotation" },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   placementData: { tree: [], items: {} },
   selectedItemId: null,
@@ -19,115 +32,36 @@ export const selectSelectedItemId = ({ state }) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  console.log("🎯 Placements toViewData called with state:", state);
-
   const flatItems = toFlatItems(state.placementData);
   const flatGroups = toFlatGroups(state.placementData);
-
-  console.log("🎯 Placements processed data:", {
-    placementData: state.placementData,
-    flatItems,
-    flatGroups,
-  });
 
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay: selectedItem.type === "placement" ? "Placement" : "Folder",
-        displayFileType:
-          selectedItem.fileType ||
-          (selectedItem.type === "placement" ? "JSON" : null),
-        displayFileSize: selectedItem.fileSize
-          ? formatFileSize(selectedItem.fileSize)
-          : null,
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
+  let defaultValues = {};
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      x: selectedItem.x || "",
+      y: selectedItem.y || "",
+      scaleX: selectedItem.scaleX || "",
+      scaleY: selectedItem.scaleY || "",
+      anchorX: selectedItem.anchorX || "",
+      anchorY: selectedItem.anchorY || "",
+      rotation: selectedItem.rotation || "",
+    };
+  }
 
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Placement Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        {
-          id: "name",
-          type: "text",
-          label: "Name",
-          value: selectedItemDetails.name,
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          type: "text",
-          label: "Position X",
-          value: selectedItemDetails.x,
-          show: !!selectedItemDetails.x,
-        },
-        {
-          type: "text",
-          label: "Position Y",
-          value: selectedItemDetails.y,
-          show: !!selectedItemDetails.y,
-        },
-        {
-          type: "text",
-          label: "Scale",
-          value: selectedItemDetails.scale,
-          show: !!selectedItemDetails.scale,
-        },
-        {
-          type: "text",
-          label: "Anchor",
-          value: selectedItemDetails.anchor,
-          show: !!selectedItemDetails.anchor,
-        },
-        {
-          type: "text",
-          label: "Rotation",
-          value: selectedItemDetails.rotation,
-          show: !!selectedItemDetails.rotation,
-        },
-        {
-          type: "text",
-          label: "File Type",
-          value: selectedItemDetails.displayFileType,
-          show: !!selectedItemDetails.displayFileType,
-        },
-        {
-          type: "text",
-          label: "File Size",
-          value: selectedItemDetails.displayFileSize,
-          show: !!selectedItemDetails.displayFileSize,
-        },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
-        },
-      ]
-    : [];
-  const detailEmptyMessage = "Select a placement to view details";
-
-  const viewData = {
+  return {
     flatItems,
     flatGroups,
     resourceCategory: "assets",
     selectedResourceId: "placements",
     repositoryTarget: "placements",
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
+    form,
+    defaultValues,
   };
-
-  console.log("🎯 Placements returning viewData:", viewData);
-
-  return viewData;
 };

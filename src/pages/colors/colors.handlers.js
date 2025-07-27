@@ -60,75 +60,19 @@ export const handleColorEdited = (e, deps) => {
   });
 };
 
-export const handleColorUpdated = (e, deps) => {
-  const { store, render, repository } = deps;
 
-  // Get the currently selected item
-  const selectedItem = store.selectSelectedItem();
-  if (!selectedItem) {
-    return;
-  }
 
-  // Update the color in the repository
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "colors",
-    value: {
-      id: selectedItem.id,
-      replace: false,
-      item: {
-        hex: e.detail.hex,
-      },
-    },
-  });
-
-  // Update the store with the new repository state
-  const { colors } = repository.getState();
-  store.setItems(colors);
-  render();
-};
-
-export const handleFileAction = (e, deps) => {
-  const { store, render, repository } = deps;
-  const { value, newName } = e.detail;
-
-  if (value === "rename-item-confirmed") {
-    // Get the currently selected item
-    const selectedItem = store.selectSelectedItem();
-    if (!selectedItem) {
-      return;
-    }
-
-    // Update the item name in the repository
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: "colors",
-      value: {
-        id: selectedItem.id,
-        replace: false,
-        item: {
-          name: newName,
-        },
-      },
-    });
-
-    // Update the store with the new repository state
-    const { colors } = repository.getState();
-    store.setItems(colors);
-    render();
-  }
-};
-
-export const handleDetailPanelItemUpdate = (e, deps) => {
-  const { repository, store, render } = deps;
-
+export const handleFormChange = (e, deps) => {
+  const { repository, render, store } = deps;
   repository.addAction({
     actionType: "treeUpdate",
     target: "colors",
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
-      item: e.detail.formValues,
+      item: {
+        [e.detail.name]: e.detail.fieldValue,
+      },
     },
   });
 

@@ -1,10 +1,28 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    {
+      name: "thumbnailFileId",
+      inputType: "image",
+      width: 240,
+      height: 135,
+    },
+    { name: "name", inputType: "popover-input", label: "Name" },
+    { name: "fileType", inputType: "read-only-text", label: "File Type" },
+    {
+      name: "fileSize",
+      inputType: "read-only-text",
+      label: "File Size",
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   videosData: { tree: [], items: {} },
   selectedItemId: null,
-  videoUrls: {}, // Cache for video URLs by fileId
+  fieldResources: {},
 });
 
 export const setItems = (state, videosData) => {
@@ -15,8 +33,8 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
 
-export const setVideoUrl = (state, { fileId, url }) => {
-  state.videoUrls[fileId] = url;
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -41,7 +59,15 @@ export const toViewData = ({ state }) => {
 
   // Transform selectedItem into detailPanel props
   let detailFields;
+  let defaultValues = {};
+
   if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      fileType: selectedItem.fileType,
+      fileSize: formatFileSize(selectedItem.fileSize),
+    };
+
     detailFields = [
       {
         type: "image",
@@ -74,5 +100,8 @@ export const toViewData = ({ state }) => {
     detailFields,
     detailEmptyMessage,
     repositoryTarget: "videos",
+    form,
+    defaultValues,
+    fieldResources: state.fieldResources,
   };
 };

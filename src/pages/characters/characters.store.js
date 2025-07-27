@@ -1,10 +1,38 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "image",
+      width: 240,
+    },
+    { name: "name", inputType: "popover-input", label: "Name" },
+    { name: "description", inputType: "popover-input", label: "Description" },
+    { name: "typeDisplay", inputType: "read-only-text", label: "Type" },
+    {
+      name: "displayFileType",
+      inputType: "read-only-text",
+      label: "File Type",
+    },
+    {
+      name: "displayFileSize",
+      inputType: "read-only-text",
+      label: "File Size",
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   charactersData: { tree: [], items: {} },
   selectedItemId: null,
+  fieldResources: {},
 });
+
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
+};
 
 export const setItems = (state, charactersData) => {
   state.charactersData = charactersData;
@@ -34,76 +62,23 @@ export const toViewData = ({ state, props }, payload) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay: selectedItem.type === "character" ? "Character" : "Folder",
-        displayFileType:
-          selectedItem.fileType ||
-          (selectedItem.type === "character" ? "PNG" : null),
-        displayFileSize: selectedItem.fileSize
-          ? formatFileSize(selectedItem.fileSize)
-          : null,
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
+  // Transform selectedItem into form defaults
+  let defaultValues = {};
 
-  console.log({
-    flatItems,
-    flatGroups,
-    selectedItem,
-  });
-
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Character Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        // Always show character avatar - editable for uploading/replacing
-        {
-          type: "image",
-          fileId: selectedItemDetails.fileId || null,
-          width: 240,
-          height: 135,
-          editable: true,
-        },
-        {
-          id: "name",
-          type: "text",
-          label: "Name",
-          value: selectedItemDetails.name,
-          editable: true,
-        },
-        {
-          id: "description",
-          type: "text",
-          label: "Description",
-          value: selectedItemDetails.description || "No description provided",
-          size: "md",
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          type: "text",
-          label: "File Type",
-          value: selectedItemDetails.displayFileType,
-          show: !!selectedItemDetails.displayFileType,
-        },
-        {
-          type: "text",
-          label: "File Size",
-          value: selectedItemDetails.displayFileSize,
-          show: !!selectedItemDetails.displayFileSize,
-        },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
-        },
-      ]
-    : [];
-  const detailEmptyMessage = "Select a character to view details";
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      description: selectedItem.description || "No description provided",
+      typeDisplay: selectedItem.type === "character" ? "Character" : "Folder",
+      displayFileType:
+        selectedItem.fileType ||
+        (selectedItem.type === "character" ? "PNG" : ""),
+      displayFileSize: selectedItem.fileSize
+        ? formatFileSize(selectedItem.fileSize)
+        : "",
+      fullPath: selectedItem.fullLabel || selectedItem.name || "",
+    };
+  }
 
   return {
     flatItems,
@@ -111,10 +86,9 @@ export const toViewData = ({ state, props }, payload) => {
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
     repositoryTarget: "characters",
+    form,
+    defaultValues,
+    fieldResources: state.fieldResources,
   };
 };

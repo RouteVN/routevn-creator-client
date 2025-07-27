@@ -17,10 +17,22 @@ export const handleDataChanged = (e, deps) => {
   render();
 };
 
-export const handleAudioItemClick = (e, deps) => {
-  const { store, render } = deps;
+export const handleAudioItemClick = async (e, deps) => {
+  const { store, render, httpClient } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
+
+  const selectedItem = store.selectSelectedItem();
+
+  const { url } = await httpClient.creator.getFileContent({
+    fileId: selectedItem.waveformDataFileId,
+    projectId: "someprojectId",
+  });
+  store.setFieldResources({
+    waveformDataFileId: {
+      waveformDataUrl: url,
+    },
+  });
   render();
 };
 
@@ -61,19 +73,31 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleReplaceItem = async (e, deps) => {
-  const { store, render, repository, uploadAudioFiles } = deps;
-  const { file } = e.detail;
+export const handleFormExtraEvent = async (e, deps) => {
+  const { repository, store, render, filePicker, uploadAudioFiles, httpClient } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
+    console.warn("No item selected for audio replacement");
     return;
   }
+
+  const files = await filePicker.open({
+    accept: "audio/*",
+    multiple: false,
+  });
+
+  if (files.length === 0) {
+    return; // User cancelled
+  }
+
+  const file = files[0];
 
   const uploadedFiles = await uploadAudioFiles([file], "someprojectId");
 
   if (uploadedFiles.length === 0) {
+    console.error("File upload failed, no files uploaded");
     return;
   }
 
@@ -97,20 +121,30 @@ export const handleReplaceItem = async (e, deps) => {
 
   // Update the store with the new repository state
   const { audio } = repository.getState();
+  const { url } = await httpClient.creator.getFileContent({
+    fileId: uploadResult.waveformDataFileId,
+    projectId: "someprojectId",
+  });
+  store.setFieldResources({
+    waveformDataFileId: {
+      waveformDataUrl: url,
+    },
+  });
   store.setItems(audio);
   render();
 };
 
-export const handleDetailPanelItemUpdate = (e, deps) => {
-  const { repository, store, render } = deps;
-
+export const handleFormChange = (e, deps) => {
+  const { repository, render, store } = deps;
   repository.addAction({
     actionType: "treeUpdate",
     target: "audio",
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
-      item: e.detail.formValues,
+      item: {
+        [e.detail.name]: e.detail.fieldValue,
+      },
     },
   });
 
@@ -119,33 +153,3 @@ export const handleDetailPanelItemUpdate = (e, deps) => {
   render();
 };
 
-export const handleFileAction = (e, deps) => {
-  const { store, render, repository } = deps;
-  const detail = e.detail;
-
-  if (detail.value === "rename-item-confirmed") {
-    // Get the currently selected item
-    const selectedItem = store.selectSelectedItem();
-    if (!selectedItem) {
-      return;
-    }
-
-    // Update the item name in the repository
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: "audio",
-      value: {
-        id: selectedItem.id,
-        replace: false,
-        item: {
-          name: detail.newName,
-        },
-      },
-    });
-
-    // Update the store with the new repository state
-    const { audio } = repository.getState();
-    store.setItems(audio);
-    render();
-  }
-};

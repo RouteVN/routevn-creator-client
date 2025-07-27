@@ -19,16 +19,12 @@ refs:
         handler: handleDragDropFileSelected
       character-created:
         handler: handleCharacterCreated
-  detail-panel:
+  detail-form:
     eventListeners:
-      image-file-selected:
-        handler: handleDetailPanelImageSelected
-      replace-item:
-        handler: handleReplaceItem
-      file-action:
-        handler: handleFileAction
-      item-update:
-        handler: handleDetailPanelItemUpdate
+      extra-event:
+        handler: handleFormExtraEvent
+      form-change:
+        handler: handleFormChange
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -39,6 +35,6 @@ template:
           - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-group-characters-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-      - rvn-resizable-panel#detail-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - rtgl-view slot="content" w=f h=f:
-          - rvn-detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+      - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+        - $if selectedItemId:
+          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues .fieldResources=fieldResources:

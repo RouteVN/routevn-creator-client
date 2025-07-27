@@ -110,16 +110,17 @@ const getInitialValue = (property) => {
   return defaultValues[property] || 0;
 };
 
-export const handleDetailPanelItemUpdate = (e, deps) => {
-  const { repository, store, render } = deps;
-
+export const handleFormChange = (e, deps) => {
+  const { repository, render, store } = deps;
   repository.addAction({
     actionType: "treeUpdate",
     target: "animations",
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
-      item: e.detail.formValues,
+      item: {
+        [e.detail.name]: e.detail.fieldValue,
+      },
     },
   });
 
