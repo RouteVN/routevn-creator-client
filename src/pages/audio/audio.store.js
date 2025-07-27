@@ -4,22 +4,22 @@ import { formatFileSize } from "../../utils/index.js";
 const form = {
   fields: [
     {
-      name: "waveformDataFileId",
-      inputType: "audio",
+      name: "fileId",
+      inputType: "waveform",
       width: 240,
       height: 100,
     },
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "fileType", inputType: "read-only-text", label: "File Type" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "fileType", inputType: "read-only-text", description: "File Type" },
     {
       name: "fileSize",
       inputType: "read-only-text",
-      label: "File Size",
+      description: "File Size",
     },
     {
       name: "duration",
       inputType: "read-only-text",
-      label: "Duration",
+      description: "Duration",
     },
   ],
 };

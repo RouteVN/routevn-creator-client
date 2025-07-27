@@ -18,19 +18,20 @@ export const handleDataChanged = (e, deps) => {
 };
 
 export const handleAudioItemClick = async (e, deps) => {
-  const { store, render, httpClient } = deps;
+  const { store, render, httpClient, downloadWaveformData } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
-  const { url } = await httpClient.creator.getFileContent({
-    fileId: selectedItem.waveformDataFileId,
-    projectId: "someprojectId",
-  });
+  const waveformData = await downloadWaveformData(
+    selectedItem.waveformDataFileId,
+    httpClient,
+  );
+
   store.setFieldResources({
-    waveformDataFileId: {
-      waveformDataUrl: url,
+    fileId: {
+      waveformData,
     },
   });
   render();
@@ -117,7 +118,6 @@ export const handleFormExtraEvent = async (e, deps) => {
       replace: false,
       item: {
         fileId: uploadResult.fileId,
-        name: uploadResult.file.name,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
         waveformDataFileId: uploadResult.waveformDataFileId,
@@ -128,13 +128,9 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   // Update the store with the new repository state
   const { audio } = repository.getState();
-  const { url } = await httpClient.creator.getFileContent({
-    fileId: uploadResult.waveformDataFileId,
-    projectId: "someprojectId",
-  });
   store.setFieldResources({
-    waveformDataFileId: {
-      waveformDataUrl: url,
+    fileId: {
+      waveformData: uploadResult.waveformData,
     },
   });
   store.setItems(audio);

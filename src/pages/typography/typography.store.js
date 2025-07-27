@@ -2,12 +2,20 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "fontSize", inputType: "popover-input", label: "Font Size" },
-    { name: "colorId", inputType: "popover-input", label: "Color ID" },
-    { name: "fontId", inputType: "popover-input", label: "Font ID" },
-    { name: "fontWeight", inputType: "popover-input", label: "Font Weight" },
-    { name: "previewText", inputType: "popover-input", label: "Preview Text" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "fontSize", inputType: "read-only-text", description: "Font Size" },
+    { name: "colorId", inputType: "read-only-text", description: "Color ID" },
+    { name: "fontId", inputType: "read-only-text", description: "Font ID" },
+    {
+      name: "fontWeight",
+      inputType: "read-only-text",
+      description: "Font Weight",
+    },
+    {
+      name: "previewText",
+      inputType: "read-only-text",
+      description: "Preview Text",
+    },
   ],
 };
 

@@ -8,19 +8,19 @@ const form = {
       inputType: "image",
       height: 135,
     },
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "typeDisplay", inputType: "read-only-text", label: "Type" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
     {
       name: "displayFileType",
       inputType: "read-only-text",
-      label: "File Type",
+      description: "File Type",
     },
     {
       name: "displayFileSize",
       inputType: "read-only-text",
-      label: "File Size",
+      description: "File Size",
     },
-    { name: "fullPath", inputType: "read-only-text", label: "Path" },
+    { name: "fullPath", inputType: "read-only-text", description: "Path" },
   ],
 };
 

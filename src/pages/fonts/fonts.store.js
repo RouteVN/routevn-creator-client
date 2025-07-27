@@ -8,13 +8,13 @@ const form = {
       inputType: "font",
       previewText: "Aa",
     },
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "fontFamily", inputType: "read-only-text", label: "Font Family" },
-    { name: "fileType", inputType: "read-only-text", label: "File Type" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "fontFamily", inputType: "read-only-text", description: "Font Family" },
+    { name: "fileType", inputType: "read-only-text", description: "File Type" },
     {
       name: "fileSize",
       inputType: "read-only-text",
-      label: "File Size",
+      description: "File Size",
     },
   ],
 };

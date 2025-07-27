@@ -2,9 +2,9 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "typeDisplay", inputType: "read-only-text", label: "Type" },
-    { name: "fullPath", inputType: "read-only-text", label: "Path" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
+    { name: "fullPath", inputType: "read-only-text", description: "Path" },
   ],
 };
 

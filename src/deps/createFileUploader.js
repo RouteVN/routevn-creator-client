@@ -218,6 +218,7 @@ export const createAudioFileUploader = ({ httpClient }) => {
           fileId,
           waveformDataFileId,
           duration,
+          waveformData,
         };
       } catch (error) {
         return {

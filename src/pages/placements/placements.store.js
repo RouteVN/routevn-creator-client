@@ -3,14 +3,14 @@ import { formatFileSize } from "../../utils/index.js";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "x", inputType: "popover-input", label: "Position X" },
-    { name: "y", inputType: "popover-input", label: "Position Y" },
-    { name: "scaleX", inputType: "popover-input", label: "Scale X" },
-    { name: "scaleY", inputType: "popover-input", label: "Scale Y" },
-    { name: "anchorX", inputType: "popover-input", label: "Anchor X" },
-    { name: "anchorY", inputType: "popover-input", label: "Anchor Y" },
-    { name: "rotation", inputType: "popover-input", label: "Rotation" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "x", inputType: "read-only-text", description: "Position X" },
+    { name: "y", inputType: "read-only-text", description: "Position Y" },
+    { name: "scaleX", inputType: "read-only-text", description: "Scale X" },
+    { name: "scaleY", inputType: "read-only-text", description: "Scale Y" },
+    { name: "anchorX", inputType: "read-only-text", description: "Anchor X" },
+    { name: "anchorY", inputType: "read-only-text", description: "Anchor Y" },
+    { name: "rotation", inputType: "read-only-text", description: "Rotation" },
   ],
 };
 

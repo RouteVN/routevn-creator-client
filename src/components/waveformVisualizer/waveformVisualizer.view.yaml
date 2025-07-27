@@ -38,12 +38,4 @@ refs:
     selector: canvas
 
 template:
-  - rtgl-view w=f h=f pos=rel w=${w} h=${h}:
-    - $if isLoading:
-        - rtgl-view w=f h=f av=c ah=c:
-          - rtgl-text c=mu-fg: Loading waveform...
-      $elif hasError:
-        - rtgl-view w=f h=f av=c ah=c:
-          - rtgl-text c=er-fg: Failed to load waveform
-      $else:
-        - 'canvas#canvas style="width:100%; height:100%;"':
+  - rtgl-waveform  .waveformData=waveformData w=${w} h=${h}:

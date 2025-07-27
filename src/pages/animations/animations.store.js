@@ -3,9 +3,13 @@ import { formatFileSize } from "../../utils/index.js";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "duration", inputType: "popover-input", label: "Duration" },
-    { name: "keyframes", inputType: "popover-input", label: "Keyframes" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "duration", inputType: "read-only-text", description: "Duration" },
+    {
+      name: "keyframes",
+      inputType: "read-only-text",
+      description: "Keyframes",
+    },
   ],
 };
 

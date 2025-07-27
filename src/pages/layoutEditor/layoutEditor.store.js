@@ -192,12 +192,12 @@ export const toViewData = ({ state, props }, payload) => {
   const form = selectedItem
     ? {
         fields: [
-          { name: "name", inputType: "popover-input", label: "Name" },
-          { name: "type", inputType: "read-only-text", label: "Type" },
+          { name: "name", inputType: "popover-input", description: "Name" },
+          { name: "type", inputType: "read-only-text", description: "Type" },
           {
             name: "x",
             inputType: "number-input",
-            label: "X Position",
+            description: "X Position",
             min: 0,
             max: SCREEN_WIDTH,
             step: 1,
@@ -205,7 +205,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "y",
             inputType: "number-input",
-            label: "Y Position",
+            description: "Y Position",
             min: 0,
             max: SCREEN_HEIGHT,
             step: 1,
@@ -213,7 +213,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "width",
             inputType: "number-input",
-            label: "Width",
+            description: "Width",
             min: 1,
             max: SCREEN_WIDTH,
             step: 1,
@@ -221,7 +221,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "height",
             inputType: "number-input",
-            label: "Height",
+            description: "Height",
             min: 1,
             max: SCREEN_HEIGHT,
             step: 1,
@@ -229,7 +229,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "anchorX",
             inputType: "number-input",
-            label: "Anchor X (0-1)",
+            description: "Anchor X (0-1)",
             min: 0,
             max: 1,
             step: 0.1,
@@ -237,7 +237,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "anchorY",
             inputType: "number-input",
-            label: "Anchor Y (0-1)",
+            description: "Anchor Y (0-1)",
             min: 0,
             max: 1,
             step: 0.1,
@@ -245,7 +245,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "scaleX",
             inputType: "number-input",
-            label: "Scale X",
+            description: "Scale X",
             min: 0.1,
             max: 4,
             step: 0.1,
@@ -253,7 +253,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "scaleY",
             inputType: "number-input",
-            label: "Scale Y",
+            description: "Scale Y",
             min: 0.1,
             max: 4,
             step: 0.1,
@@ -261,7 +261,7 @@ export const toViewData = ({ state, props }, payload) => {
           {
             name: "rotation",
             inputType: "number-input",
-            label: "Rotation",
+            description: "Rotation",
             min: -360,
             max: 360,
             step: 1,
@@ -271,7 +271,7 @@ export const toViewData = ({ state, props }, payload) => {
                 {
                   name: "text",
                   inputType: "popover-input",
-                  label: "Text Content",
+                  description: "Text Content",
                 },
               ]
             : []),
@@ -280,17 +280,17 @@ export const toViewData = ({ state, props }, payload) => {
                 {
                   name: "imageId",
                   inputType: "image-selector",
-                  label: "Image",
+                  description: "Image",
                 },
                 {
                   name: "hoverImageId",
                   inputType: "image-selector",
-                  label: "Hover Image",
+                  description: "Hover Image",
                 },
                 {
                   name: "clickImageId",
                   inputType: "image-selector",
-                  label: "Click Image",
+                  description: "Click Image",
                 },
               ]
             : []),

@@ -2,8 +2,8 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "createdAt", inputType: "read-only-text", label: "Created At" },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "createdAt", inputType: "read-only-text", description: "Created At" },
   ],
 };
 

@@ -3,19 +3,19 @@ const form = {
     {
       name: "name",
       inputType: "popover-input",
-      label: "Project Name",
+      description: "Project Name",
       required: true,
     },
     {
       name: "description",
       inputType: "popover-input",
-      label: "Description",
+      description: "Description",
       required: true,
     },
     {
       name: "iconFileId",
       inputType: "image",
-      label: "Image URL",
+      description: "Image URL",
       required: false,
       width: 120,
       height: 120,

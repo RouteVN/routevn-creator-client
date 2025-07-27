@@ -9,19 +9,17 @@ const form = {
       width: 240,
       height: 135,
     },
-    { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "fileType", inputType: "read-only-text", label: "File Type" },
+    { name: "name", inputType: "popover-input", description: "Name" },
     {
       name: "fileSize",
       inputType: "read-only-text",
-      label: "File Size",
+      description: "File Size",
       // value: formatFileSize(selectedItem.fileSize),
     },
     {
       name: "dimensions",
       inputType: "read-only-text",
-      label: "Dimensions",
-      // value: `${selectedItem.width} × ${selectedItem.height}`,
+      description: "Dimensions",
     },
   ],
 };
