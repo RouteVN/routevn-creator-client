@@ -19,18 +19,12 @@ refs:
         handler: handleImageItemClick
       files-uploaded:
         handler: handleDragDropFileSelected
-  detail-panel:
-    eventListeners:
-      replace-item:
-        handler: handleReplaceItem
-      file-action:
-        handler: handleFileAction
-      item-update:
-        handler: handleDetailPanelItemUpdate
   detail-form:
     eventListeners:
       extra-event:
         handler: handleFormExtraEvent
+      form-change:
+        handler: handleFormChange
 
 template:
   - rtgl-view d=h w=f h=f:
