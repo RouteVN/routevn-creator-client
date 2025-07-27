@@ -212,12 +212,12 @@ export const handleFormChange = async (e, deps) => {
 export const handleFormExtraEvent = async (e, deps) => {
   const { repository, store, render } = deps;
   const { name, value } = e.detail;
-  
+
   // Handle image selector events
-  if (name && name.includes('imageId')) {
+  if (name && name.includes("imageId")) {
     const layoutId = store.selectLayoutId();
     const selectedItemId = store.selectSelectedItemId();
-    
+
     repository.addAction({
       actionType: "treeUpdate",
       target: `layouts.items.${layoutId}.elements`,
@@ -239,4 +239,3 @@ export const handleFormExtraEvent = async (e, deps) => {
     await renderLayoutPreview(deps);
   }
 };
-

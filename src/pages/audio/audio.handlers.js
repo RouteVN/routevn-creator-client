@@ -74,7 +74,14 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
-  const { repository, store, render, filePicker, uploadAudioFiles, httpClient } = deps;
+  const {
+    repository,
+    store,
+    render,
+    filePicker,
+    uploadAudioFiles,
+    httpClient,
+  } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -152,4 +159,3 @@ export const handleFormChange = (e, deps) => {
   store.setItems(audio);
   render();
 };
-

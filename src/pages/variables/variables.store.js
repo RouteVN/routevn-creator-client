@@ -4,8 +4,16 @@ import { formatFileSize } from "../../utils/index.js";
 const form = {
   fields: [
     { name: "name", inputType: "popover-input", label: "Name" },
-    { name: "variableType", inputType: "popover-input", label: "Variable Type" },
-    { name: "defaultValue", inputType: "popover-input", label: "Default Value" },
+    {
+      name: "variableType",
+      inputType: "popover-input",
+      label: "Variable Type",
+    },
+    {
+      name: "defaultValue",
+      inputType: "popover-input",
+      label: "Default Value",
+    },
     { name: "readonly", inputType: "popover-input", label: "Read Only" },
   ],
 };

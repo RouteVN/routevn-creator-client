@@ -60,7 +60,9 @@ export const toViewData = ({ state, props }, payload) => {
       name: selectedItem.name,
       fontFamily: selectedItem.fontFamily || "",
       fileType: selectedItem.fileType || "",
-      fileSize: selectedItem.fileSize ? formatFileSize(selectedItem.fileSize) : "",
+      fileSize: selectedItem.fileSize
+        ? formatFileSize(selectedItem.fileSize)
+        : "",
     };
   }
 

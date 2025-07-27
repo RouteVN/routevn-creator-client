@@ -146,8 +146,6 @@ export const handleTypographyCreated = (e, deps) => {
   render();
 };
 
-
-
 export const handleFormChange = (e, deps) => {
   const { repository, render, store } = deps;
   repository.addAction({

@@ -60,8 +60,6 @@ export const handleColorEdited = (e, deps) => {
   });
 };
 
-
-
 export const handleFormChange = (e, deps) => {
   const { repository, render, store } = deps;
   repository.addAction({

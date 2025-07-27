@@ -142,4 +142,3 @@ export const handleDataChanged = (e, deps) => {
   store.setItems(component?.elements || { items: {}, tree: [] });
   render();
 };
-

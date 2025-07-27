@@ -21,7 +21,7 @@ export const handleCharacterItemClick = async (e, deps) => {
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
-  
+
   if (selectedItem && selectedItem.fileId) {
     const { url } = await httpClient.creator.getFileContent({
       fileId: selectedItem.fileId,
@@ -247,7 +247,6 @@ export const handleFormExtraEvent = async (e, deps) => {
   }
 };
 
-
 export const handleFormChange = (e, deps) => {
   const { repository, render, store } = deps;
   repository.addAction({
@@ -266,4 +265,3 @@ export const handleFormChange = (e, deps) => {
   store.setItems(characters);
   render();
 };
-

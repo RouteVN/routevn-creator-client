@@ -81,7 +81,9 @@ export const toViewData = ({ state, props }, payload) => {
   if (selectedItem) {
     defaultValues = {
       name: selectedItem.name,
-      createdAt: selectedItem.createdAt ? new Date(selectedItem.createdAt).toLocaleDateString() : "",
+      createdAt: selectedItem.createdAt
+        ? new Date(selectedItem.createdAt).toLocaleDateString()
+        : "",
     };
   }
 

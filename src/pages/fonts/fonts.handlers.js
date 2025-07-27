@@ -20,7 +20,6 @@ export const handleFontItemClick = (e, deps) => {
   render();
 };
 
-
 export const handleFormExtraEvent = async (e, deps) => {
   const { repository, store, render, filePicker, uploadFontFiles } = deps;
 
@@ -84,7 +83,6 @@ export const handleFormExtraEvent = async (e, deps) => {
   store.setItems(fonts);
   render();
 };
-
 
 export const handleDragDropFileSelected = async (e, deps) => {
   const {

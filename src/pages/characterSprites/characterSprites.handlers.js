@@ -146,10 +146,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
 export const handleFormChange = (e, deps) => {
   const { repository, render, store } = deps;
-  
+
   const characterId = store.selectCharacterId();
   const selectedItemId = store.selectSelectedItemId();
-  
+
   repository.addAction({
     actionType: "treeUpdate",
     target: `characters.items.${characterId}.sprites`,
@@ -198,7 +198,7 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   const uploadResult = uploadedFiles[0];
   const characterId = store.selectCharacterId();
-  
+
   repository.addAction({
     actionType: "treeUpdate",
     target: `characters.items.${characterId}.sprites`,
