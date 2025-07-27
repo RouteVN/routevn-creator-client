@@ -1,6 +1,13 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    { name: "name", inputType: "popover-input", label: "Name" },
+    { name: "description", inputType: "popover-input", label: "Description" },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   presetData: { tree: [], items: {} },
   selectedItemId: null,
@@ -25,73 +32,22 @@ export const toViewData = ({ state, props }, payload) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay: selectedItem.type === "preset" ? "Preset" : "Folder",
-        displayFileType:
-          selectedItem.fileType ||
-          (selectedItem.type === "preset" ? "JSON" : null),
-        displayFileSize: selectedItem.fileSize
-          ? formatFileSize(selectedItem.fileSize)
-          : null,
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
+  let defaultValues = {};
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      description: selectedItem.description || "",
+    };
+  }
 
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Preset Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        {
-          type: "text",
-          label: "Name",
-          value: selectedItemDetails.name,
-          id: "name",
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          type: "text",
-          label: "Description",
-          value: selectedItemDetails.description,
-          show: !!selectedItemDetails.description,
-        },
-        {
-          type: "text",
-          label: "File Type",
-          value: selectedItemDetails.displayFileType,
-          show: !!selectedItemDetails.displayFileType,
-        },
-        {
-          type: "text",
-          label: "File Size",
-          value: selectedItemDetails.displayFileSize,
-          show: !!selectedItemDetails.displayFileSize,
-        },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
-        },
-      ]
-    : [];
-  const detailEmptyMessage = "Select a preset to view details";
-
-  const viewData = {
+  return {
     flatItems,
     flatGroups,
     resourceCategory: "systemConfig",
     selectedResourceId: "preset",
     repositoryTarget: "preset",
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
+    form,
+    defaultValues,
   };
-
-  return viewData;
 };

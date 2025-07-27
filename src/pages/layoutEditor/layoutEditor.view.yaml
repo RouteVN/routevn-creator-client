@@ -32,14 +32,28 @@ refs:
     eventListeners:
       layout-add-click:
         handler: handleAddLayoutClick
-  detail-panel-*:
+  detail-form:
     eventListeners:
-      item-update:
-        handler: handleDetailPanelItemUpdate
-      request-image-groups:
-        handler: handleRequestImageGroups
-      image-selector-updated:
-        handler: handleImageSelectorUpdated
+      form-change:
+        handler: handleFormChange
+      extra-event:
+        handler: handleFormExtraEvent
+  image-selector:
+    eventListeners:
+      image-selected:
+        handler: handleImageSelectorSelection
+  confirm-image-selection:
+    eventListeners:
+      click:
+        handler: handleConfirmImageSelection
+  cancel-image-selection:
+    eventListeners:
+      click:
+        handler: handleCancelImageSelection
+  image-selector-dialog:
+    eventListeners:
+      close:
+        handler: handleCloseImageSelectorDialog
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -53,5 +67,12 @@ template:
             - rtgl-view pos=abs cor=full:
               - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
     - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
-      - rtgl-view slot="content" w=f h=f:
-        - rvn-detail-panel#detail-panel-${selectedItemId} .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:
+      - $if selectedItemId:
+        - rtgl-view slot="content" w=f h=100vh sv:
+            - rtgl-form#detail-form key=${selectedItemId}  w=f h=f .form=form .defaultValues=defaultValues .fieldResources=fieldResources:
+  - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
+      - rtgl-view slot=content g=md:
+          - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:
+          - rtgl-view d=f jc=fe g=sm:
+              - rtgl-button#cancel-image-selection variant=se: Cancel
+              - rtgl-button#confirm-image-selection variant=pr: OK

@@ -19,4 +19,3 @@ template:
         - rtgl-view g=lg mt=lg:
           - rtgl-text s=md: Settings content will go here
           - rtgl-text s=sm c=mu-fg: This is a placeholder for the general settings interface
-    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

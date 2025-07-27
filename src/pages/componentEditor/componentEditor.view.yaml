@@ -11,12 +11,6 @@ viewDataSchema:
       type: string
     repositoryTarget:
       type: string
-    detailTitle:
-      type: string
-    detailFields:
-      type: array
-    detailEmptyMessage:
-      type: string
 
 refs:
   left-panel:
@@ -32,14 +26,6 @@ refs:
     eventListeners:
       component-add-click:
         handler: handleAddComponentClick
-  detail-panel:
-    eventListeners:
-      item-update:
-        handler: handleDetailPanelItemUpdate
-      request-image-groups:
-        handler: handleRequestImageGroups
-      image-selector-updated:
-        handler: handleImageSelectorUpdated
 
 template:
   - rtgl-view d=h w=f h=f: 
@@ -47,4 +33,3 @@ template:
       - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
         - rvn-group-components-editor-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-    - rvn-detail-panel#detail-panel .title=detailTitle .fields=detailFields .emptyMessage=detailEmptyMessage:

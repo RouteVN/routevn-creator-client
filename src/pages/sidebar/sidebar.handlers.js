@@ -1,13 +1,22 @@
 import { filter, tap } from "rxjs";
 
-export const handleBeforeMount = (deps) => {
-  const { repository, store } = deps;
+export const handleAfterMount = async (deps) => {
+  const { repository, store, httpClient, render } = deps;
   const state = repository.getState();
   const project = state.project;
 
-  if (project.imageUrl) {
-    store.setProjectImageUrl(project.imageUrl);
+  if (!project.iconFileId) {
+    return;
   }
+
+  const { url } = await httpClient.creator.getFileContent({
+    fileId: project.iconFileId,
+    projectId: "someprojectId",
+  });
+
+  store.setProjectImageUrl(url);
+
+  render();
 };
 
 export const handleItemClick = async (payload, deps) => {
@@ -24,14 +33,21 @@ export const handleHeaderClick = (payload, deps) => {
   });
 };
 
-export const handleProjectImageUpdate = (_, deps) => {
-  const { repository, store, render } = deps;
+export const handleProjectImageUpdate = async (_, deps) => {
+  const { repository, store, render, httpClient } = deps;
   const state = repository.getState();
   const project = state.project;
 
-  if (project.imageUrl) {
-    store.setProjectImageUrl(project.imageUrl);
+  if (!project.iconFileId) {
+    return;
   }
+
+  const { url } = await httpClient.creator.getFileContent({
+    fileId: project.iconFileId,
+    projectId: "someprojectId",
+  });
+
+  store.setProjectImageUrl(url);
 
   render();
 };

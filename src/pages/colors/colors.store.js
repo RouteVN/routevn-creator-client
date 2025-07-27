@@ -1,5 +1,12 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
+const form = {
+  fields: [
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "hex", inputType: "read-only-text", description: "Hex Value" },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   colorsData: { tree: [], items: {} },
   selectedItemId: null,
@@ -30,45 +37,13 @@ export const toViewData = ({ state, props }, payload) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay: selectedItem.type === "color" ? "Color" : "Folder",
-        displayHex: selectedItem.hex || null,
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
-
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Color Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        {
-          type: "color",
-          value: selectedItemDetails.displayHex,
-          width: 240,
-          height: 60,
-          show: !!selectedItemDetails.displayHex,
-          editable: true,
-        },
-        {
-          type: "text",
-          label: "Name",
-          value: selectedItemDetails.name,
-          name: "name",
-          editable: true,
-        },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          name: "color",
-          type: "text",
-          label: "Hex Value",
-          value: selectedItemDetails.displayHex,
-        },
-      ]
-    : [];
-  const detailEmptyMessage = "Select a color to view details";
+  let defaultValues = {};
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      hex: selectedItem.hex || "",
+    };
+  }
 
   return {
     flatItems,
@@ -76,10 +51,8 @@ export const toViewData = ({ state, props }, payload) => {
     resourceCategory: "userInterface",
     selectedResourceId: "colors",
     selectedItemId: state.selectedItemId,
-    selectedItem: selectedItemDetails,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
     repositoryTarget: "colors",
+    form,
+    defaultValues,
   };
 };

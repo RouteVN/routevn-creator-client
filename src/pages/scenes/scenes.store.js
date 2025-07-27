@@ -1,5 +1,16 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
+const form = {
+  fields: [
+    { name: "name", inputType: "popover-input", description: "Name" },
+    {
+      name: "createdAt",
+      inputType: "read-only-text",
+      description: "Created At",
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   scenesData: { tree: [], items: {} },
   selectedItemId: null,
@@ -33,6 +44,10 @@ export const addWhiteboardItem = (state, newItem) => {
 
 export const setWhiteboardItems = (state, items) => {
   state.whiteboardItems = items;
+};
+
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
 };
 
 export const setWaitingForPlacement = (state, isWaiting) => {
@@ -98,40 +113,15 @@ export const toViewData = ({ state, props }, payload) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Compute display values for selected item
-  const selectedItemDetails = selectedItem
-    ? {
-        ...selectedItem,
-        typeDisplay: selectedItem.type === "scene" ? "Scene" : "Folder",
-        fullPath: selectedItem.fullLabel || selectedItem.name || "",
-      }
-    : null;
-
-  // Transform selectedItem into detailPanel props
-  const detailTitle = selectedItemDetails ? "Scene Details" : null;
-  const detailFields = selectedItemDetails
-    ? [
-        { type: "text", label: "Name", value: selectedItemDetails.name },
-        { type: "text", label: "Type", value: selectedItemDetails.typeDisplay },
-        {
-          type: "text",
-          label: "Path",
-          value: selectedItemDetails.fullPath,
-          size: "sm",
-        },
-        {
-          type: "text",
-          label: "Created",
-          value: new Date().toLocaleDateString(),
-        },
-        {
-          type: "text",
-          label: "Last Modified",
-          value: new Date().toLocaleDateString(),
-        },
-      ]
-    : [];
-  const detailEmptyMessage = "Select a scene to view details";
+  let defaultValues = {};
+  if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      createdAt: selectedItem.createdAt
+        ? new Date(selectedItem.createdAt).toLocaleDateString()
+        : "",
+    };
+  }
 
   // Get folder options for form
   const folderOptions = [
@@ -188,9 +178,8 @@ export const toViewData = ({ state, props }, payload) => {
     repositoryTarget: "scenes",
     selectedItemId: state.selectedItemId,
     whiteboardItems: state.whiteboardItems,
-    detailTitle,
-    detailFields,
-    detailEmptyMessage,
+    form,
+    defaultValues,
     isWaitingForPlacement: state.isWaitingForPlacement,
     showSceneForm: state.showSceneForm,
     sceneFormPosition: state.sceneFormPosition,

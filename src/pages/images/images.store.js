@@ -1,10 +1,38 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "image",
+      width: 240,
+      height: 135,
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    {
+      name: "fileSize",
+      inputType: "read-only-text",
+      description: "File Size",
+      // value: formatFileSize(selectedItem.fileSize),
+    },
+    {
+      name: "dimensions",
+      inputType: "read-only-text",
+      description: "Dimensions",
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   imagesData: { tree: [], items: {} },
   selectedItemId: null,
+  fieldResources: {},
 });
+
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
+};
 
 export const setItems = (state, imagesData) => {
   state.imagesData = imagesData;
@@ -36,7 +64,16 @@ export const toViewData = ({ state }) => {
 
   // Transform selectedItem into detailPanel props
   let detailFields;
+  let defaultValues = {};
+
   if (selectedItem) {
+    defaultValues = {
+      name: selectedItem.name,
+      fileType: selectedItem.fileType,
+      fileSize: formatFileSize(selectedItem.fileSize),
+      dimensions: `${selectedItem.width} × ${selectedItem.height}`,
+    };
+
     detailFields = [
       {
         type: "image",
@@ -74,5 +111,8 @@ export const toViewData = ({ state }) => {
     detailFields,
     detailEmptyMessage,
     repositoryTarget: "images",
+    form,
+    defaultValues,
+    fieldResources: state.fieldResources,
   };
 };
