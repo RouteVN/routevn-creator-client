@@ -79,22 +79,16 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
 
     if (node.type === "sprite") {
       if (node.imageId) {
-        const imageItem = imageItems[node.imageId];
-        if (imageItem && imageItem.fileId) {
-          element.url = `file:${imageItem.fileId}`;
-        }
+        // node.imageId now contains a fileId directly
+        element.url = `file:${node.imageId}`;
       }
       if (node.hoverImageId) {
-        const hoverImageItem = imageItems[node.hoverImageId];
-        if (hoverImageItem && hoverImageItem.fileId) {
-          element.hoverUrl = `file:${hoverImageItem.fileId}`;
-        }
+        // node.hoverImageId now contains a fileId directly
+        element.hoverUrl = `file:${node.hoverImageId}`;
       }
       if (node.clickImageId) {
-        const clickImageItem = imageItems[node.clickImageId];
-        if (clickImageItem && clickImageItem.fileId) {
-          element.clickUrl = `file:${clickImageItem.fileId}`;
-        }
+        // node.clickImageId now contains a fileId directly
+        element.clickUrl = `file:${node.clickImageId}`;
       }
     }
 

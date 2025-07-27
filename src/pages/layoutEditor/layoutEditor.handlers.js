@@ -15,6 +15,17 @@ const renderLayoutPreview = async (deps) => {
   const layout = layouts.items[layoutId];
 
   const layoutTreeStructure = toTreeStructure(layout.elements);
+
+  // Find an actual image item (not a folder)
+  const imageItem = Object.values(imageItems).find(
+    (item) => item.type === "image",
+  );
+
+  // Check what the sprite is looking for
+  const spriteImageId = layoutTreeStructure[0]?.children?.find(
+    (child) => child.type === "sprite",
+  )?.imageId;
+
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
@@ -159,10 +170,38 @@ export const handleTargetChanged = (payload, deps) => {
 };
 
 export const handleFileExplorerItemClick = async (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, httpClient } = deps;
   const itemId = e.detail.id;
   store.setSelectedItemId(itemId);
   render();
+
+  const selectedItem = store.selectSelectedItem();
+
+  // Fetch image resources for sprite items
+  if (selectedItem && selectedItem.type === "sprite") {
+    const fieldResources = {};
+
+    // Fetch URLs for each image field
+    const imageFields = ["imageId", "hoverImageId", "clickImageId"];
+
+    for (const fieldName of imageFields) {
+      if (selectedItem[fieldName]) {
+        try {
+          const { url } = await httpClient.creator.getFileContent({
+            fileId: selectedItem[fieldName],
+            projectId: "someprojectId",
+          });
+          fieldResources[fieldName] = { src: url };
+        } catch (error) {
+          console.error(`Failed to fetch image for ${fieldName}:`, error);
+        }
+      }
+    }
+
+    store.setFieldResources(fieldResources);
+    render();
+  }
+
   await renderLayoutPreview(deps);
 };
 
@@ -211,7 +250,56 @@ export const handleFormChange = async (e, deps) => {
 
 export const handleFormExtraEvent = async (e, deps) => {
   const { repository, store, render } = deps;
-  const { name, value } = e.detail;
+  const { eventType, name, value, fieldIndex } = e.detail;
+
+  // Handle image field click - check if name includes "imageId" or "ImageId"
+  if (name && (name.includes("imageId") || name.includes("ImageId"))) {
+    const selectedItem = store.selectSelectedItem();
+    if (selectedItem) {
+      // Get current value for the field
+      const currentValue = selectedItem[name] || null;
+
+      // Transform images to groups format for the selector
+      const imageGroups = store.toViewData().imageGroups;
+
+      // Find the field index by matching the field name
+      const form = store.toViewData().form;
+      let actualFieldIndex = fieldIndex;
+      if (actualFieldIndex === undefined && form && form.fields) {
+        actualFieldIndex = form.fields.findIndex(
+          (field) => field.name === name,
+        );
+      }
+
+      store.showImageSelectorDialog({
+        fieldIndex: actualFieldIndex,
+        groups: imageGroups,
+        currentValue,
+      });
+      render();
+    }
+    return;
+  }
+
+  // Handle image selector click event (if eventType is provided)
+  if (eventType === "image-click") {
+    const selectedItem = store.selectSelectedItem();
+    if (selectedItem) {
+      // Get current value for the field
+      const currentValue = selectedItem[name] || null;
+
+      // Transform images to groups format for the selector
+      const imageGroups = store.toViewData().imageGroups;
+
+      store.showImageSelectorDialog({
+        fieldIndex,
+        groups: imageGroups,
+        currentValue,
+      });
+      render();
+    }
+    return;
+  }
 
   // Handle image selector events
   if (name && name.includes("imageId")) {
@@ -238,4 +326,115 @@ export const handleFormExtraEvent = async (e, deps) => {
 
     await renderLayoutPreview(deps);
   }
+};
+
+export const handleImageSelectorSelection = (e, deps) => {
+  const { store, render } = deps;
+  const { imageId } = e.detail;
+
+  store.setTempSelectedImageId({ imageId });
+  render();
+};
+
+export const handleConfirmImageSelection = async (e, deps) => {
+  const { store, render, repository, httpClient } = deps;
+
+  const state = store.getState ? store.getState() : store._state || store.state;
+  const fieldIndex = state.imageSelectorDialog.fieldIndex;
+  const selectedImageId = state.imageSelectorDialog.selectedImageId;
+
+  // Get the field name from the form
+  const selectedItem = store.selectSelectedItem();
+  const form = store.toViewData().form;
+  const fieldName = form?.fields[fieldIndex]?.name;
+
+  if (fieldName && selectedItem && selectedImageId) {
+    const layoutId = store.selectLayoutId();
+    const selectedItemId = store.selectSelectedItemId();
+
+    // Get the selected image object to access its fileId
+    const { images } = repository.getState();
+    const imageItems = images.items;
+    const selectedImage = imageItems[selectedImageId];
+
+    if (!selectedImage) {
+      console.error("Selected image not found:", selectedImageId);
+      return;
+    }
+
+    // Update the repository with the image's fileId
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: `layouts.items.${layoutId}.elements`,
+      value: {
+        id: selectedItemId,
+        replace: false,
+        item: { [fieldName]: selectedImage.fileId },
+      },
+    });
+
+    // Sync store with updated repository data
+    const { layouts, images: updatedImages } = repository.getState();
+    const layout = layouts.items[layoutId];
+
+    store.setItems(layout?.elements || { items: {}, tree: [] });
+    store.setImages(updatedImages);
+
+    // Update fieldResources with the new image URL
+    try {
+      const { url } = await httpClient.creator.getFileContent({
+        fileId: selectedImage.fileId,
+        projectId: "someprojectId",
+      });
+
+      // Get current fieldResources and update with new image
+      const currentResources = state.fieldResources || {};
+      const newFieldResources = {
+        ...currentResources,
+        [fieldName]: { src: url },
+      };
+
+      console.log(
+        "Setting field resources for",
+        fieldName,
+        ":",
+        newFieldResources,
+      );
+      store.setFieldResources(newFieldResources);
+
+      // Get updated selected item after repository update
+      const updatedSelectedItem = store.selectSelectedItem();
+      console.log(
+        "Updated selected item after image selection:",
+        updatedSelectedItem,
+      );
+      console.log(
+        "Field",
+        fieldName,
+        "value:",
+        updatedSelectedItem?.[fieldName],
+      );
+    } catch (error) {
+      console.error(`Failed to fetch image for ${fieldName}:`, error);
+    }
+  }
+
+  // Hide dialog
+  store.hideImageSelectorDialog();
+  render();
+
+  // Re-render the preview
+  await renderLayoutPreview(deps);
+};
+
+export const handleCancelImageSelection = (e, deps) => {
+  const { store, render } = deps;
+  store.hideImageSelectorDialog();
+  render();
+};
+
+export const handleCloseImageSelectorDialog = (e, deps) => {
+  const { store, render } = deps;
+  store.hideImageSelectorDialog();
+  render();
 };

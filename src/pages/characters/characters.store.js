@@ -9,7 +9,11 @@ const form = {
       width: 240,
     },
     { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "description", inputType: "popover-input", description: "Description" },
+    {
+      name: "description",
+      inputType: "popover-input",
+      description: "Description",
+    },
     { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
     {
       name: "displayFileType",

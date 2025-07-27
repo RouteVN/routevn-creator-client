@@ -14,10 +14,16 @@ propsSchema:
           type: string
 
 refs:
-  audio-selector:
+  form:
     eventListeners:
-      click:
-        handler: handleAudioSelectorClick
+      extra-event:
+        handler: handleFormExtra
+      form-change:
+        handler: handleFormChange
+  base-file-explorer:
+    eventListeners:
+      click-item:
+        handler: handleFileExplorerItemClick
   audio-item-*:
     eventListeners:
       click:
@@ -26,6 +32,10 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
+  reset-button:
+    eventListeners:
+      click:
+        handler: handleResetClick
   breadcumb:
     eventListeners:
       item-click:
@@ -39,17 +49,10 @@ template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-          - rtgl-text: Background Music
-          - $if selectedAudioId:
-              - rtgl-view#audio-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
-                  - rtgl-text: ${selectedAudioName}
-            $else:
-              - rtgl-view#audio-selector w=345 h=200 av=c ah=c bgc=ac cur=p:
-                  - rtgl-text: Select Audio
-          - rtgl-view:
-              - rtgl-text: Select Loop Type
-              - rtgl-select .options=loopOptions:
+          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+          
+          - rtgl-form#form .form=form .defaultValues=defaultValues .fieldResources=fieldResources:
+          
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#reset-button v=ol: Reset
@@ -67,8 +70,13 @@ template:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f fw=w g=lg:
                               - $for item in group.children:
-                                  - rtgl-view#audio-item-${item.id} w=200 h=150 bgc=ac cur=p av=c ah=c bw=${item.bw}:
-                                      - rtgl-text: ${item.name}
-                                      - rtgl-text s=sm c=mu-fg: Audio File
+                                  - rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}":
+                                      - $if item.waveformDataFileId:
+                                          - rtgl-view:
+                                              - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
+                                              - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
+                                        $else:
+                                          - rtgl-view w=225 h=150 av=c ah=c bgc=ac:
+                                              - rtgl-text s=sm c=mu-fg: No waveform
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#button-select: Select

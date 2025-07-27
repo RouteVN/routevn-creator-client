@@ -5,6 +5,12 @@ const SCREEN_WIDTH = 1920;
 const SCREEN_HEIGHT = 1080;
 
 export const INITIAL_STATE = Object.freeze({
+  imageSelectorDialog: {
+    isOpen: false,
+    fieldIndex: -1,
+    groups: [],
+    selectedImageId: null,
+  },
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   layoutId: null,
@@ -156,6 +162,27 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const showImageSelectorDialog = (
+  state,
+  { fieldIndex, groups, currentValue },
+) => {
+  state.imageSelectorDialog.isOpen = true;
+  state.imageSelectorDialog.fieldIndex = fieldIndex;
+  state.imageSelectorDialog.groups = groups || [];
+  state.imageSelectorDialog.selectedImageId = currentValue || null;
+};
+
+export const hideImageSelectorDialog = (state) => {
+  state.imageSelectorDialog.isOpen = false;
+  state.imageSelectorDialog.fieldIndex = -1;
+  state.imageSelectorDialog.groups = [];
+  state.imageSelectorDialog.selectedImageId = null;
+};
+
+export const setTempSelectedImageId = (state, { imageId }) => {
+  state.imageSelectorDialog.selectedImageId = imageId;
+};
+
 export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
   const selectedItem = selectSelectedItem({ state });
   if (!selectedItem) return "imageId";
@@ -196,7 +223,7 @@ export const toViewData = ({ state, props }, payload) => {
           { name: "type", inputType: "read-only-text", description: "Type" },
           {
             name: "x",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "X Position",
             min: 0,
             max: SCREEN_WIDTH,
@@ -204,7 +231,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "y",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Y Position",
             min: 0,
             max: SCREEN_HEIGHT,
@@ -212,7 +239,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "width",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Width",
             min: 1,
             max: SCREEN_WIDTH,
@@ -220,7 +247,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "height",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Height",
             min: 1,
             max: SCREEN_HEIGHT,
@@ -228,7 +255,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "anchorX",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Anchor X (0-1)",
             min: 0,
             max: 1,
@@ -236,7 +263,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "anchorY",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Anchor Y (0-1)",
             min: 0,
             max: 1,
@@ -244,7 +271,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "scaleX",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Scale X",
             min: 0.1,
             max: 4,
@@ -252,7 +279,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "scaleY",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Scale Y",
             min: 0.1,
             max: 4,
@@ -260,7 +287,7 @@ export const toViewData = ({ state, props }, payload) => {
           },
           {
             name: "rotation",
-            inputType: "number-input",
+            inputType: "popover-input",
             description: "Rotation",
             min: -360,
             max: 360,
@@ -279,17 +306,17 @@ export const toViewData = ({ state, props }, payload) => {
             ? [
                 {
                   name: "imageId",
-                  inputType: "image-selector",
+                  inputType: "image",
                   description: "Image",
                 },
                 {
                   name: "hoverImageId",
-                  inputType: "image-selector",
+                  inputType: "image",
                   description: "Hover Image",
                 },
                 {
                   name: "clickImageId",
-                  inputType: "image-selector",
+                  inputType: "image",
                   description: "Click Image",
                 },
               ]
@@ -341,5 +368,10 @@ export const toViewData = ({ state, props }, payload) => {
     form,
     defaultValues,
     fieldResources: state.fieldResources,
+    imageSelectorDialog: {
+      isOpen: state.imageSelectorDialog.isOpen,
+      groups: state.imageSelectorDialog.groups,
+      selectedImageId: state.imageSelectorDialog.selectedImageId,
+    },
   };
 };
