@@ -78,17 +78,26 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
     }
 
     if (node.type === "sprite") {
-      if (node.imageId) {
-        // node.imageId now contains a fileId directly
-        element.url = `file:${node.imageId}`;
+      if (node.imageId && imageItems) {
+        // node.imageId contains an imageId, so we need to look up the image
+        const image = imageItems[node.imageId];
+        if (image && image.fileId) {
+          element.url = `file:${image.fileId}`;
+        }
       }
-      if (node.hoverImageId) {
-        // node.hoverImageId now contains a fileId directly
-        element.hoverUrl = `file:${node.hoverImageId}`;
+      if (node.hoverImageId && imageItems) {
+        // node.hoverImageId contains an imageId, so we need to look up the image
+        const hoverImage = imageItems[node.hoverImageId];
+        if (hoverImage && hoverImage.fileId) {
+          element.hoverUrl = `file:${hoverImage.fileId}`;
+        }
       }
-      if (node.clickImageId) {
-        // node.clickImageId now contains a fileId directly
-        element.clickUrl = `file:${node.clickImageId}`;
+      if (node.clickImageId && imageItems) {
+        // node.clickImageId contains an imageId, so we need to look up the image
+        const clickImage = imageItems[node.clickImageId];
+        if (clickImage && clickImage.fileId) {
+          element.clickUrl = `file:${clickImage.fileId}`;
+        }
       }
     }
 
