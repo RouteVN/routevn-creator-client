@@ -339,16 +339,19 @@ export const toViewData = ({ state, props }, payload) => {
                   name: "imageId",
                   inputType: "image",
                   description: "Image",
+                  src: state.fieldResources.imageId?.src,
                 },
                 {
                   name: "hoverImageId",
                   inputType: "image",
                   description: "Hover Image",
+                  src: state.fieldResources.hoverImageId?.src,
                 },
                 {
                   name: "clickImageId",
                   inputType: "image",
                   description: "Click Image",
+                  src: state.fieldResources.clickImageId?.src,
                 },
               ]
             : []),
@@ -398,7 +401,6 @@ export const toViewData = ({ state, props }, payload) => {
     imageGroups,
     form,
     defaultValues,
-    fieldResources: state.fieldResources,
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,
       groups: state.imageSelectorDialog.groups,

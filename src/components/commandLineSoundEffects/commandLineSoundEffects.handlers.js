@@ -30,17 +30,89 @@ export const handleBeforeMount = (deps) => {
   }
 };
 
+export const handleAfterMount = async (deps) => {
+  const { repository, store, render, props, downloadWaveformData, httpClient } =
+    deps;
+  const { audio } = repository.getState();
+
+  // Load waveform data for existing sound effects if available
+  if (
+    props?.line?.presentation?.soundEffects &&
+    Array.isArray(props.line.presentation.soundEffects)
+  ) {
+    const flatAudioItems = toFlatItems(audio);
+    const fieldResources = {};
+
+    // Load waveform data for each existing sound effect
+    for (let i = 0; i < props.line.presentation.soundEffects.length; i++) {
+      const sfx = props.line.presentation.soundEffects[i];
+      const audioItem = flatAudioItems.find((item) => item.id === sfx.audioId);
+
+      if (audioItem?.waveformDataFileId && downloadWaveformData) {
+        try {
+          const waveformData = await downloadWaveformData(
+            audioItem.waveformDataFileId,
+            httpClient,
+          );
+          fieldResources[`sfx[${i}]`] = { waveformData };
+        } catch (error) {
+          console.error(`Failed to load waveform data for sfx[${i}]:`, error);
+        }
+      }
+    }
+
+    // Update field resources if we have any waveform data
+    if (Object.keys(fieldResources).length > 0) {
+      store.setFieldResources(fieldResources);
+      render();
+    }
+  }
+};
+
 export const handleOnUpdate = () => {};
+
+export const handleFormExtra = async (e, deps) => {
+  const { store, render } = deps;
+  const { name } = e.detail;
+
+  // Extract index from field name (e.g., "sfx[0]" -> 0)
+  const match = name.match(/sfx\[(\d+)\]/);
+  if (match) {
+    const index = parseInt(match[1]);
+    // Set current editing to this sound effect
+    const soundEffect = store.getState().soundEffects[index];
+    if (soundEffect) {
+      store.setCurrentEditingId({ id: soundEffect.id });
+      store.setMode({ mode: "gallery" });
+      render();
+    }
+  }
+};
+
+export const handleFormChange = (e, deps) => {
+  const { store, render } = deps;
+  const { name, fieldValue } = e.detail;
+
+  // Handle trigger field changes
+  const triggerMatch = name.match(/sfx\[(\d+)\]\.trigger/);
+  if (triggerMatch) {
+    const index = parseInt(triggerMatch[1]);
+    const soundEffect = store.getState().soundEffects[index];
+    if (soundEffect) {
+      store.updateSoundEffect({
+        id: soundEffect.id,
+        trigger: fieldValue,
+      });
+      render();
+    }
+  }
+};
 
 export const handleAddNewClick = (e, deps) => {
   e.stopPropagation();
   const { store, render } = deps;
 
   store.addSoundEffect();
-  store.setMode({
-    mode: "gallery",
-  });
-
   render();
 };
 
@@ -122,8 +194,8 @@ export const handleBreadcumbClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClickAudio = (payload, deps) => {
-  const { store, render, repository } = deps;
+export const handleButtonSelectClickAudio = async (payload, deps) => {
+  const { store, render, repository, downloadWaveformData, httpClient } = deps;
 
   const { audio } = repository.getState();
 
@@ -134,6 +206,10 @@ export const handleButtonSelectClickAudio = (payload, deps) => {
 
   if (tempSelectedAudio) {
     const currentEditingId = store.getState().currentEditingId;
+    const soundEffects = store.getState().soundEffects;
+    const effectIndex = soundEffects.findIndex(
+      (se) => se.id === currentEditingId,
+    );
 
     store.updateSoundEffect({
       id: currentEditingId,
@@ -141,6 +217,30 @@ export const handleButtonSelectClickAudio = (payload, deps) => {
       fileId: tempSelectedAudio.fileId,
       name: tempSelectedAudio.name,
     });
+
+    // Download waveform data if available
+    if (
+      tempSelectedAudio.waveformDataFileId &&
+      downloadWaveformData &&
+      effectIndex !== -1
+    ) {
+      try {
+        const waveformData = await downloadWaveformData(
+          tempSelectedAudio.waveformDataFileId,
+          httpClient,
+        );
+
+        const currentResources = store.getState().fieldResources || {};
+        const newFieldResources = {
+          ...currentResources,
+          [`sfx[${effectIndex}]`]: { waveformData },
+        };
+
+        store.setFieldResources(newFieldResources);
+      } catch (error) {
+        console.error("Failed to load waveform data:", error);
+      }
+    }
 
     store.setMode({
       mode: "current",

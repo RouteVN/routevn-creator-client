@@ -75,7 +75,7 @@ template:
     - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
       - $if selectedItemId:
         - rtgl-view slot="content" w=f h=100vh sv:
-            - rtgl-form#detail-form key=${selectedItemId}  w=f h=f .form=form .defaultValues=defaultValues .fieldResources=fieldResources:
+            - rtgl-form#detail-form key=${selectedItemId}  w=f h=f .form=form .defaultValues=defaultValues:
   - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:

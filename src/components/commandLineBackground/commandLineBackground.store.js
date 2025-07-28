@@ -15,7 +15,8 @@ const tabs = [
   },
 ];
 
-const createDialogueForm = () => {
+const createDialogueForm = (params) => {
+  const { backgroundSrc } = params;
   const form = {
     fields: [
       {
@@ -23,6 +24,7 @@ const createDialogueForm = () => {
         label: "Background",
         required: true,
         inputType: "image",
+        src: backgroundSrc,
         width: 355,
         height: 200,
       },
@@ -237,7 +239,8 @@ export const toViewData = ({ state, props }, payload) => {
     tempSelectedVideoId: state.tempSelectedVideoId,
     selectedName: selectedName,
     positionOptions: positionOptions,
-    dialogueForm: createDialogueForm(),
-    formFieldResources: state.formFieldResources,
+    dialogueForm: createDialogueForm({
+      backgroundSrc: state.formFieldResources.background?.src,
+    }),
   };
 };

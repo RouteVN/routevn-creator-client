@@ -1,27 +1,31 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const form = {
-  fields: [
-    {
-      name: "fileId",
-      inputType: "image",
-      width: 240,
-      height: 135,
-    },
-    { name: "name", inputType: "popover-input", description: "Name" },
-    {
-      name: "fileSize",
-      inputType: "read-only-text",
-      description: "File Size",
-      // value: formatFileSize(selectedItem.fileSize),
-    },
-    {
-      name: "dimensions",
-      inputType: "read-only-text",
-      description: "Dimensions",
-    },
-  ],
+const createForm = (params) => {
+  const { fileSrc } = params;
+  return {
+    fields: [
+      {
+        name: "fileId",
+        inputType: "image",
+        src: fileSrc,
+        width: 240,
+        height: 135,
+      },
+      { name: "name", inputType: "popover-input", description: "Name" },
+      {
+        name: "fileSize",
+        inputType: "read-only-text",
+        description: "File Size",
+        // value: formatFileSize(selectedItem.fileSize),
+      },
+      {
+        name: "dimensions",
+        inputType: "read-only-text",
+        description: "Dimensions",
+      },
+    ],
+  };
 };
 
 export const INITIAL_STATE = Object.freeze({
@@ -100,6 +104,7 @@ export const toViewData = ({ state }) => {
   }
 
   const detailEmptyMessage = "No selection";
+  const form = createForm(state.fieldResources);
 
   return {
     flatItems,
@@ -113,6 +118,5 @@ export const toViewData = ({ state }) => {
     repositoryTarget: "images",
     form,
     defaultValues,
-    fieldResources: state.fieldResources,
   };
 };
