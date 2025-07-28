@@ -256,3 +256,97 @@ export const handleSceneFormAction = (e, deps) => {
     render();
   }
 };
+
+export const handleWhiteboardItemDelete = (e, deps) => {
+  const { store, render, repository } = deps;
+  const { itemId } = e.detail;
+
+  // Remove from repository
+  repository.addAction({
+    actionType: "treeDelete",
+    target: "scenes",
+    value: {
+      id: itemId,
+    },
+  });
+
+  // Update store with new scenes data
+  const { scenes: updatedScenes } = repository.getState();
+  store.setItems(updatedScenes);
+
+  // Remove from whiteboard items
+  const currentState = store.getState();
+  const updatedWhiteboardItems = currentState.whiteboardItems.filter(
+    (item) => item.id !== itemId,
+  );
+  store.setWhiteboardItems(updatedWhiteboardItems);
+
+  // Clear selection if the deleted item was selected
+  if (currentState.selectedItemId === itemId) {
+    store.setSelectedItemId(null);
+  }
+
+  render();
+};
+
+export const handleWhiteboardItemContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  const { itemId, x, y } = e.detail;
+
+  // Show dropdown menu at the provided position
+  store.showDropdownMenu({
+    position: { x, y },
+    itemId,
+  });
+
+  render();
+};
+
+export const handleDropdownMenuClose = (e, deps) => {
+  const { store, render } = deps;
+  store.hideDropdownMenu();
+  render();
+};
+
+export const handleDropdownMenuClickItem = (e, deps) => {
+  const { store, render, repository } = deps;
+  const detail = e.detail;
+  const itemId = store.selectDropdownMenuItemId();
+
+  // Extract the actual item (rtgl-dropdown-menu wraps it)
+  const item = detail.item || detail;
+
+  // Hide dropdown
+  store.hideDropdownMenu();
+  render();
+
+  // Handle delete action
+  if (item.value === "delete-item" && itemId) {
+    // Remove from repository
+    repository.addAction({
+      actionType: "treeDelete",
+      target: "scenes",
+      value: {
+        id: itemId,
+      },
+    });
+
+    // Update store with new scenes data
+    const { scenes: updatedScenes } = repository.getState();
+    store.setItems(updatedScenes);
+
+    // Remove from whiteboard items
+    const currentState = store.getState();
+    const updatedWhiteboardItems = currentState.whiteboardItems.filter(
+      (item) => item.id !== itemId,
+    );
+    store.setWhiteboardItems(updatedWhiteboardItems);
+
+    // Clear selection if the deleted item was selected
+    if (currentState.selectedItemId === itemId) {
+      store.setSelectedItemId(null);
+    }
+
+    render();
+  }
+};
