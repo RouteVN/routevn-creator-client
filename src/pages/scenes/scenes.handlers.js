@@ -158,6 +158,12 @@ export const handleWhiteboardClick = (e, deps) => {
   }
 };
 
+export const handleSceneFormClose = (e, deps) => {
+  const { store, render } = deps;
+  store.resetSceneForm();
+  render();
+};
+
 export const handleSceneFormAction = (e, deps) => {
   const { store, render, repository } = deps;
   const actionId = e.detail.actionId;
