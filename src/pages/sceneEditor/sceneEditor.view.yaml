@@ -118,9 +118,8 @@ template:
               - rtgl-view w=f h=1 bgc=mu:
               - rtgl-view w=f m=md:
                   - rtgl-view d=h av=c:
-                      - rtgl-text s=sm c=mu-fg: Presentation section
-                      - rtgl-button#add-presentation-button s=sm: Add
-                  - rtgl-view g=md w=f:
+                      - rtgl-text s=sm c=mu-fg: Actions
+                  - rtgl-view g=md w=f pv=md:
                       - $for item in presentationData:
                           - $if item.type == "background":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
@@ -169,6 +168,7 @@ template:
                                       - rtgl-text s=sm: "Choices (${item.data.choicesData.choices.length} options)"
                                       - $for choice in item.data.choicesData.choices:
                                           - rtgl-text s=xs c=mu-fg: "• ${choice.text}"
+                      - rtgl-button#add-presentation-button w=f v=ol: Add Action
   - $if mode != "lines-editor":
       - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
           - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
