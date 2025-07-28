@@ -186,6 +186,33 @@ export const handleItemDoubleClick = (event, deps) => {
   );
 };
 
+export const handleItemContextMenu = (event, deps) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const { dispatchEvent } = deps;
+  const fullId = event.currentTarget.id;
+  const itemId = fullId ? fullId.replace("item-", "") : "";
+
+  if (!itemId) {
+    console.error("ERROR: No itemId found for context menu");
+    return;
+  }
+
+  // Dispatch context menu event to parent
+  dispatchEvent(
+    new CustomEvent("item-context-menu", {
+      detail: {
+        itemId,
+        x: event.clientX,
+        y: event.clientY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleWindowMouseMove = (event, deps) => {
   const { store, getRefIds, dispatchEvent, render } = deps;
 
