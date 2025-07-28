@@ -1,15 +1,12 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 const form = {
-  fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
-    {
-      name: "createdAt",
-      inputType: "read-only-text",
-      description: "Created At",
-    },
-  ],
+  fields: [{ name: "name", inputType: "popover-input", description: "Name" }],
 };
+
+const CONTEXT_MENU_ITEMS = [
+  { label: "Delete", type: "item", value: "delete-item" },
+];
 
 export const INITIAL_STATE = Object.freeze({
   scenesData: { tree: [], items: {} },
@@ -20,6 +17,13 @@ export const INITIAL_STATE = Object.freeze({
   sceneFormPosition: { x: 0, y: 0 },
   sceneWhiteboardPosition: { x: 0, y: 0 },
   sceneFormData: { name: "", folderId: "_root" },
+  // Dropdown menu state
+  dropdownMenu: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    itemId: null,
+  },
 });
 
 export const setItems = (state, scenesData) => {
@@ -77,6 +81,29 @@ export const resetSceneForm = (state) => {
   state.sceneFormData = { name: "", folderId: "_root" };
 };
 
+// Dropdown menu functions
+export const showDropdownMenu = (state, { position, itemId }) => {
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    itemId,
+    items: CONTEXT_MENU_ITEMS,
+  };
+};
+
+export const hideDropdownMenu = (state) => {
+  state.dropdownMenu = {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    itemId: null,
+  };
+};
+
+export const selectDropdownMenuItemId = ({ state }) => {
+  return state.dropdownMenu.itemId;
+};
+
 // Track if we've initialized from repository yet
 let hasInitialized = false;
 
@@ -117,9 +144,6 @@ export const toViewData = ({ state, props }, payload) => {
   if (selectedItem) {
     defaultValues = {
       name: selectedItem.name,
-      createdAt: selectedItem.createdAt
-        ? new Date(selectedItem.createdAt).toLocaleDateString()
-        : "",
     };
   }
 
@@ -188,5 +212,6 @@ export const toViewData = ({ state, props }, payload) => {
     sceneFormFields,
     folderOptions,
     whiteboardCursor: state.isWaitingForPlacement ? "crosshair" : "default",
+    dropdownMenu: state.dropdownMenu,
   };
 };

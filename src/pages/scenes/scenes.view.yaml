@@ -19,6 +19,10 @@ refs:
         handler: handleWhiteboardItemDoubleClick
       canvas-click:
         handler: handleWhiteboardClick
+      item-delete:
+        handler: handleWhiteboardItemDelete
+      item-context-menu:
+        handler: handleWhiteboardItemContextMenu
   add-scene-btn:
     eventListeners:
       click:
@@ -35,16 +39,23 @@ refs:
     eventListeners:
       close:
         handler: handleSceneFormClose
+  dropdown-menu:
+    eventListeners:
+      close:
+        handler: handleDropdownMenuClose
+      click-item:
+        handler: handleDropdownMenuClickItem
 
 template:
   - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f w=f:
       - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
+          - rtgl-text ml=lg s=sm c=mu-fg mv=md: Scenes
           - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
           - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
       - rtgl-view flex=1 h=f:
-        - rvn-whiteboard#whiteboard .items=whiteboardItems .initialZoomLevel=1 .cursor=whiteboardCursor:
+        - rvn-whiteboard#whiteboard .items=whiteboardItems .initialZoomLevel=1 .cursor=whiteboardCursor .selectedItemId=selectedItemId:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
           - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
@@ -53,3 +64,4 @@ template:
         - 'rtgl-button#add-scene-btn icon="scene" s=md v=${addSceneButtonVariant}': Add Scene
     - rtgl-popover#scene-form-popover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
       - rtgl-form#scene-form slot=content .form=sceneFormFields w=320:
+    - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

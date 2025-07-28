@@ -152,7 +152,10 @@ export const selectPan = ({ state, props }, payload) => ({
 export const selectZoomLevel = ({ state, props }, payload) => state.zoomLevel;
 
 export const toViewData = ({ state, props }) => {
-  const items = props.items || [];
+  const items = (props.items || []).map((item) => ({
+    ...item,
+    borderColor: props.selectedItemId === item.id ? "fg" : "ac",
+  }));
 
   // Initialize zoom level from props if provided and not already set
   if (props.initialZoomLevel && state.zoomLevel === 1) {
@@ -161,6 +164,7 @@ export const toViewData = ({ state, props }) => {
 
   return {
     items,
+    selectedItemId: props.selectedItemId,
     isPanMode: state.isPanMode,
     panX: state.panX,
     panY: state.panY,
