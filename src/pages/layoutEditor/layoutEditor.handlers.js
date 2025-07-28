@@ -31,18 +31,7 @@ const renderLayoutPreview = async (deps) => {
     imageItems,
   );
 
-  console.log("=== DEBUG INFO ===");
-  console.log(
-    "layoutTreeStructure:",
-    JSON.stringify(layoutTreeStructure, null, 2),
-  );
-  console.log(
-    "renderStateElements:",
-    JSON.stringify(renderStateElements, null, 2),
-  );
-
   const selectedItem = store.selectSelectedItem();
-  console.log("selectedItem:", selectedItem);
 
   const fileIds = extractFileIdsFromRenderState(renderStateElements);
 
@@ -110,7 +99,6 @@ const renderLayoutPreview = async (deps) => {
     );
 
     if (result) {
-      console.log("Creating red dot at:", result.x, result.y);
       const redDot = {
         id: "selected-anchor",
         type: "rect",
@@ -170,7 +158,7 @@ export const handleTargetChanged = (payload, deps) => {
 };
 
 export const handleFileExplorerItemClick = async (e, deps) => {
-  const { store, render, httpClient } = deps;
+  const { store, render, httpClient, repository } = deps;
   const itemId = e.detail.id;
   store.setSelectedItemId(itemId);
   render();
@@ -181,17 +169,25 @@ export const handleFileExplorerItemClick = async (e, deps) => {
   if (selectedItem && selectedItem.type === "sprite") {
     const fieldResources = {};
 
+    // Get images from repository
+    const { images } = repository.getState();
+    const imageItems = images.items;
+
     // Fetch URLs for each image field
     const imageFields = ["imageId", "hoverImageId", "clickImageId"];
 
     for (const fieldName of imageFields) {
       if (selectedItem[fieldName]) {
         try {
-          const { url } = await httpClient.creator.getFileContent({
-            fileId: selectedItem[fieldName],
-            projectId: "someprojectId",
-          });
-          fieldResources[fieldName] = { src: url };
+          // Get the image object using the imageId
+          const image = imageItems[selectedItem[fieldName]];
+          if (image && image.fileId) {
+            const { url } = await httpClient.creator.getFileContent({
+              fileId: image.fileId,
+              projectId: "someprojectId",
+            });
+            fieldResources[fieldName] = { src: url };
+          }
         } catch (error) {
           console.error(`Failed to fetch image for ${fieldName}:`, error);
         }
@@ -250,10 +246,14 @@ export const handleFormChange = async (e, deps) => {
 
 export const handleFormExtraEvent = async (e, deps) => {
   const { repository, store, render } = deps;
-  const { eventType, name, value, fieldIndex } = e.detail;
+  const { trigger, eventType, name, value, fieldIndex } = e.detail;
+
+  if (!["imageId", "hoverImageId", "clickImageId"].includes(name)) {
+    return;
+  }
 
   // Handle image field click - check if name includes "imageId" or "ImageId"
-  if (name && (name.includes("imageId") || name.includes("ImageId"))) {
+  if (trigger === "click") {
     const selectedItem = store.selectSelectedItem();
     if (selectedItem) {
       // Get current value for the field
@@ -281,50 +281,17 @@ export const handleFormExtraEvent = async (e, deps) => {
     return;
   }
 
-  // Handle image selector click event (if eventType is provided)
-  if (eventType === "image-click") {
+  if (trigger === "contextmenu") {
     const selectedItem = store.selectSelectedItem();
-    if (selectedItem) {
-      // Get current value for the field
-      const currentValue = selectedItem[name] || null;
-
-      // Transform images to groups format for the selector
-      const imageGroups = store.toViewData().imageGroups;
-
-      store.showImageSelectorDialog({
-        fieldIndex,
-        groups: imageGroups,
-        currentValue,
+    // Only show context menu if there's actually an image set for this field
+    if (selectedItem && selectedItem[name]) {
+      e.preventDefault();
+      store.showDropdownMenuForImageField({
+        position: { x: e.detail.x, y: e.detail.y },
+        fieldName: name,
       });
       render();
     }
-    return;
-  }
-
-  // Handle image selector events
-  if (name && name.includes("imageId")) {
-    const layoutId = store.selectLayoutId();
-    const selectedItemId = store.selectSelectedItemId();
-
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: `layouts.items.${layoutId}.elements`,
-      value: {
-        id: selectedItemId,
-        replace: false,
-        item: { [name]: value },
-      },
-    });
-
-    // Sync store with updated repository data
-    const { layouts, images } = repository.getState();
-    const layout = layouts.items[layoutId];
-
-    store.setItems(layout?.elements || { items: {}, tree: [] });
-    store.setImages(images);
-    render();
-
-    await renderLayoutPreview(deps);
   }
 };
 
@@ -369,7 +336,7 @@ export const handleConfirmImageSelection = async (e, deps) => {
       value: {
         id: selectedItemId,
         replace: false,
-        item: { [fieldName]: selectedImage.fileId },
+        item: { [fieldName]: selectedImageId },
       },
     });
 
@@ -394,26 +361,10 @@ export const handleConfirmImageSelection = async (e, deps) => {
         [fieldName]: { src: url },
       };
 
-      console.log(
-        "Setting field resources for",
-        fieldName,
-        ":",
-        newFieldResources,
-      );
       store.setFieldResources(newFieldResources);
 
       // Get updated selected item after repository update
       const updatedSelectedItem = store.selectSelectedItem();
-      console.log(
-        "Updated selected item after image selection:",
-        updatedSelectedItem,
-      );
-      console.log(
-        "Field",
-        fieldName,
-        "value:",
-        updatedSelectedItem?.[fieldName],
-      );
     } catch (error) {
       console.error(`Failed to fetch image for ${fieldName}:`, error);
     }
@@ -437,4 +388,59 @@ export const handleCloseImageSelectorDialog = (e, deps) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
+};
+
+export const handleDropdownMenuClose = (e, deps) => {
+  const { store, render } = deps;
+  store.hideDropdownMenu();
+  render();
+};
+
+export const handleDropdownMenuClickItem = async (e, deps) => {
+  const { store, render, repository } = deps;
+  const detail = e.detail;
+  const item = detail.item || detail;
+  const fieldName = store.selectDropdownMenuFieldName();
+
+  // Hide dropdown
+  store.hideDropdownMenu();
+  render();
+
+  // Handle delete action
+  if (item.value === "delete-image") {
+    const layoutId = store.selectLayoutId();
+    const selectedItemId = store.selectSelectedItemId();
+
+    // Update the repository to remove the image
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: `layouts.items.${layoutId}.elements`,
+      value: {
+        id: selectedItemId,
+        replace: false,
+        item: { [fieldName]: null },
+      },
+    });
+
+    // Sync store with updated repository data
+    const { layouts, images } = repository.getState();
+    const layout = layouts.items[layoutId];
+
+    store.setItems(layout?.elements || { items: {}, tree: [] });
+    store.setImages(images);
+
+    // Update fieldResources to remove the deleted image
+    const state = store.getState
+      ? store.getState()
+      : store._state || store.state;
+    const currentResources = state.fieldResources || {};
+    const newFieldResources = { ...currentResources };
+    delete newFieldResources[fieldName];
+
+    store.setFieldResources(newFieldResources);
+    render();
+
+    // Re-render the preview
+    await renderLayoutPreview(deps);
+  }
 };
