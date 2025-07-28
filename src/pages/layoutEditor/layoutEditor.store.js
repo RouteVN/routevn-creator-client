@@ -11,6 +11,12 @@ export const INITIAL_STATE = Object.freeze({
     groups: [],
     selectedImageId: null,
   },
+  dropdownMenu: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    fieldName: null,
+  },
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   layoutId: null,
@@ -203,6 +209,30 @@ export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
   return "imageId"; // default fallback
 };
 
+export const showDropdownMenuForImageField = (state, { position, fieldName }) => {
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    items: [
+      { label: "Delete", type: "item", value: "delete-image" },
+    ],
+    fieldName,
+  };
+};
+
+export const hideDropdownMenu = (state) => {
+  state.dropdownMenu = {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    fieldName: null,
+  };
+};
+
+export const selectDropdownMenuFieldName = ({ state }) => {
+  return state.dropdownMenu.fieldName;
+};
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
@@ -373,5 +403,6 @@ export const toViewData = ({ state, props }, payload) => {
       groups: state.imageSelectorDialog.groups,
       selectedImageId: state.imageSelectorDialog.selectedImageId,
     },
+    dropdownMenu: state.dropdownMenu,
   };
 };
