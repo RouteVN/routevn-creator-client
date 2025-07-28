@@ -209,13 +209,14 @@ export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
   return "imageId"; // default fallback
 };
 
-export const showDropdownMenuForImageField = (state, { position, fieldName }) => {
+export const showDropdownMenuForImageField = (
+  state,
+  { position, fieldName },
+) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
-    items: [
-      { label: "Delete", type: "item", value: "delete-image" },
-    ],
+    items: [{ label: "Delete", type: "item", value: "delete-image" }],
     fieldName,
   };
 };
