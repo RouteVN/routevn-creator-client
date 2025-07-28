@@ -31,6 +31,10 @@ refs:
     eventListeners:
       action-click:
         handler: handleSceneFormAction
+  scene-form-popover:
+    eventListeners:
+      close:
+        handler: handleSceneFormClose
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -44,7 +48,8 @@ template:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
           - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
-    - 'rtgl-view pos=fix z=100 ah=c p=md w=240 bgc=mu br=md style="left: calc((100vw - 240px) / 2); bottom: 20px;"':
-      - 'rtgl-button#add-scene-btn bgc=pr p=md br=full': Add Scene
+    - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="left: 50%; transform: translateX(-50%); bottom: 20px;"':
+      - rtgl-view d=h av=c:
+        - 'rtgl-button#add-scene-btn icon="scene" s=md v=${addSceneButtonVariant}': Add Scene
     - rtgl-popover#scene-form-popover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
       - rtgl-form#scene-form slot=content .form=sceneFormFields w=320:

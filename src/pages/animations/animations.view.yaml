@@ -23,7 +23,7 @@ refs:
         handler: handleFormChange
 
 template:
-  - rtgl-view d=h w=f h=f: 
+  - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f w=f:
       - rvn-resizable-panel#file-explorer w=250 min-w=180 max-w=400 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
