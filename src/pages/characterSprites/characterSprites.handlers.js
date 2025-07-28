@@ -43,9 +43,7 @@ export const handleImageItemClick = async (e, deps) => {
     projectId: "someprojectId",
   });
   store.setFieldResources({
-    fileId: {
-      src: url,
-    },
+    src: url,
   });
   render();
 };
@@ -220,9 +218,7 @@ export const handleFormExtraEvent = async (e, deps) => {
   const { characters } = repository.getState();
   const character = characters.items[characterId];
   store.setFieldResources({
-    fileId: {
-      src: uploadResult.downloadUrl,
-    },
+    src: uploadResult.downloadUrl,
   });
   store.setItems(character?.sprites || { items: {}, tree: [] });
   render();

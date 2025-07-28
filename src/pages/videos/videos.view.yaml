@@ -33,4 +33,4 @@ template:
         - rvn-group-videos-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
-          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues .fieldResources=fieldResources:
+          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:

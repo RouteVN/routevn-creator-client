@@ -7,6 +7,7 @@ export const INITIAL_STATE = Object.freeze({
   soundEffects: [], // List of selected sound effects
   currentEditingId: null, // ID of sound effect being edited
   tempSelectedAudioId: undefined,
+  fieldResources: {},
 });
 
 export const setMode = (state, payload) => {
@@ -63,6 +64,49 @@ export const setExistingSoundEffects = (state, payload) => {
   state.soundEffects = payload.soundEffects;
 };
 
+export const setFieldResources = (state, resources) => {
+  state.fieldResources = resources;
+};
+
+const createSoundEffectsForm = (params) => {
+  const { soundEffects, fieldResources } = params;
+
+  const triggerOptions = [
+    { label: "On Click", value: "click" },
+    { label: "On Hover", value: "hover" },
+    { label: "On Enter", value: "enter" },
+    { label: "On Exit", value: "exit" },
+    { label: "Manual", value: "manual" },
+  ];
+
+  const fields = [];
+
+  // Create pairs of waveform + trigger fields for each sound effect
+  soundEffects.forEach((effect, index) => {
+    // Add waveform field
+    fields.push({
+      name: `sfx[${index}]`,
+      label: `Sound Effect ${index + 1}`,
+      inputType: "waveform",
+      waveformData: fieldResources[`sfx[${index}]`]?.waveformData,
+      width: 355,
+      height: 150,
+    });
+
+    // Add trigger field immediately after
+    fields.push({
+      name: `sfx[${index}].trigger`,
+      label: `Trigger ${index + 1}`,
+      inputType: "select",
+      options: triggerOptions,
+    });
+  });
+
+  return {
+    fields,
+  };
+};
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
@@ -74,7 +118,10 @@ export const toViewData = ({ state, props }, payload) => {
         const isSelected = child.id === state.tempSelectedAudioId;
         return {
           ...child,
-          bw: isSelected ? "md" : "",
+          selectedStyle: isSelected
+            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+            : "",
+          waveformDataFileId: child.waveformDataFileId,
         };
       }),
     };
@@ -109,6 +156,19 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
+  // Create form configuration
+  const form = createSoundEffectsForm({
+    soundEffects: state.soundEffects,
+    fieldResources: state.fieldResources,
+  });
+
+  // Create default values for form
+  const defaultValues = {};
+  state.soundEffects.forEach((effect, index) => {
+    defaultValues[`sfx[${index}]`] = effect.fileId || "";
+    defaultValues[`sfx[${index}].trigger`] = effect.trigger || "click";
+  });
+
   return {
     mode: state.mode,
     items: flatItems,
@@ -116,5 +176,7 @@ export const toViewData = ({ state, props }, payload) => {
     triggerOptions,
     soundEffects: state.soundEffects,
     breadcrumb,
+    form,
+    defaultValues,
   };
 };

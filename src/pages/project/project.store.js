@@ -1,26 +1,30 @@
-const form = {
-  fields: [
-    {
-      name: "name",
-      inputType: "popover-input",
-      description: "Project Name",
-      required: true,
-    },
-    {
-      name: "description",
-      inputType: "popover-input",
-      description: "Description",
-      required: true,
-    },
-    {
-      name: "iconFileId",
-      inputType: "image",
-      description: "Image URL",
-      required: false,
-      width: 120,
-      height: 120,
-    },
-  ],
+const createForm = (params) => {
+  const { iconSrc } = params;
+  return {
+    fields: [
+      {
+        name: "name",
+        inputType: "popover-input",
+        description: "Project Name",
+        required: true,
+      },
+      {
+        name: "description",
+        inputType: "popover-input",
+        description: "Description",
+        required: true,
+      },
+      {
+        name: "iconFileId",
+        inputType: "image",
+        description: "Image URL",
+        src: iconSrc,
+        required: false,
+        width: 120,
+        height: 120,
+      },
+    ],
+  };
 };
 
 export const INITIAL_STATE = Object.freeze({
@@ -132,10 +136,9 @@ export const setProjectImageUrl = (state, imageUrl) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
+  const form = createForm(state.fieldResources);
   return {
-    ...state,
     defaultValues: state.project,
-    fieldResources: state.fieldResources,
     form,
   };
 };

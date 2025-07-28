@@ -19,9 +19,7 @@ export const handleAfterMount = async (deps) => {
   });
 
   store.setFieldResources({
-    iconFileId: {
-      src: url,
-    },
+    iconSrc: url,
   });
 
   render();
@@ -71,9 +69,7 @@ export const handleFormExtraEvent = async (e, deps) => {
       });
 
       store.setFieldResources({
-        iconFileId: {
-          src: result.downloadUrl,
-        },
+        iconSrc: result.downloadUrl,
       });
 
       subject.dispatch("project-image-update");

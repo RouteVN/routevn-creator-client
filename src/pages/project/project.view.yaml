@@ -40,4 +40,4 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
     - rtgl-text s=h4: Project
-    - rtgl-form#form .form=form w=240 .defaultValues=defaultValues .fieldResources=fieldResources:
+    - rtgl-form#form .form=form w=240 .defaultValues=defaultValues:
