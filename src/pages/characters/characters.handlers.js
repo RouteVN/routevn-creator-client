@@ -28,9 +28,7 @@ export const handleCharacterItemClick = async (e, deps) => {
       projectId: "someprojectId",
     });
     store.setFieldResources({
-      fileId: {
-        src: url,
-      },
+      src: url,
     });
   }
   render();
@@ -233,9 +231,7 @@ export const handleFormExtraEvent = async (e, deps) => {
       // Update the store with the new repository state
       const { characters } = repository.getState();
       store.setFieldResources({
-        fileId: {
-          src: downloadUrl,
-        },
+        src: downloadUrl,
       });
       store.setItems(characters);
       render();

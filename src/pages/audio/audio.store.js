@@ -1,27 +1,35 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const form = {
-  fields: [
-    {
-      name: "fileId",
-      inputType: "waveform",
-      width: 240,
-      height: 100,
-    },
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "fileType", inputType: "read-only-text", description: "File Type" },
-    {
-      name: "fileSize",
-      inputType: "read-only-text",
-      description: "File Size",
-    },
-    {
-      name: "duration",
-      inputType: "read-only-text",
-      description: "Duration",
-    },
-  ],
+const createForm = (params) => {
+  const { waveformData } = params;
+  return {
+    fields: [
+      {
+        name: "fileId",
+        inputType: "waveform",
+        waveformData,
+        width: 240,
+        height: 100,
+      },
+      { name: "name", inputType: "popover-input", description: "Name" },
+      {
+        name: "fileType",
+        inputType: "read-only-text",
+        description: "File Type",
+      },
+      {
+        name: "fileSize",
+        inputType: "read-only-text",
+        description: "File Size",
+      },
+      {
+        name: "duration",
+        inputType: "read-only-text",
+        description: "Duration",
+      },
+    ],
+  };
 };
 
 export const INITIAL_STATE = Object.freeze({
@@ -79,6 +87,8 @@ export const toViewData = ({ state }) => {
     };
   }
 
+  const form = createForm(state.fieldResources);
+
   return {
     flatItems,
     flatGroups,
@@ -88,6 +98,5 @@ export const toViewData = ({ state }) => {
     repositoryTarget: "audio",
     form,
     defaultValues,
-    fieldResources: state.fieldResources,
   };
 };

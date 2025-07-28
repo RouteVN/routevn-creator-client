@@ -1,7 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const createBgmForm = () => {
+const createBgmForm = (params) => {
+  const { waveformData } = params;
   const form = {
     fields: [
       {
@@ -9,6 +10,7 @@ const createBgmForm = () => {
         label: "Background Music",
         required: true,
         inputType: "waveform",
+        waveformData,
         width: 355,
         height: 200,
       },
@@ -139,8 +141,9 @@ export const toViewData = ({ state, props }, payload) => {
     selectedFileId: state.selectedFileId,
     selectedAudioName,
     breadcrumb,
-    form: createBgmForm(),
+    form: createBgmForm({
+      waveformData: state.fieldResources.audio?.waveformData,
+    }),
     defaultValues,
-    fieldResources: state.fieldResources,
   };
 };

@@ -1,22 +1,30 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const form = {
-  fields: [
-    {
-      name: "thumbnailFileId",
-      inputType: "image",
-      width: 240,
-      height: 135,
-    },
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "fileType", inputType: "read-only-text", description: "File Type" },
-    {
-      name: "fileSize",
-      inputType: "read-only-text",
-      description: "File Size",
-    },
-  ],
+const createForm = (params) => {
+  const { thumbnailSrc } = params;
+  return {
+    fields: [
+      {
+        name: "thumbnailFileId",
+        inputType: "image",
+        src: thumbnailSrc,
+        width: 240,
+        height: 135,
+      },
+      { name: "name", inputType: "popover-input", description: "Name" },
+      {
+        name: "fileType",
+        inputType: "read-only-text",
+        description: "File Type",
+      },
+      {
+        name: "fileSize",
+        inputType: "read-only-text",
+        description: "File Size",
+      },
+    ],
+  };
 };
 
 export const INITIAL_STATE = Object.freeze({
@@ -90,6 +98,8 @@ export const toViewData = ({ state }) => {
 
   const detailEmptyMessage = "No selection";
 
+  const form = createForm(state.fieldResources);
+
   return {
     flatItems,
     flatGroups,
@@ -102,6 +112,5 @@ export const toViewData = ({ state }) => {
     repositoryTarget: "videos",
     form,
     defaultValues,
-    fieldResources: state.fieldResources,
   };
 };

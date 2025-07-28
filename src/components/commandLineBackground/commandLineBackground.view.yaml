@@ -61,7 +61,7 @@ template:
       - rtgl-view d=h g=md:
       - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-      - rtgl-form#form .form=dialogueForm.form .fieldResources=formFieldResources:
+      - rtgl-form#form .form=dialogueForm.form:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
