@@ -177,6 +177,7 @@ export const toViewData = ({ state, props }, payload) => {
     selectedResourceId: "scenes",
     repositoryTarget: "scenes",
     selectedItemId: state.selectedItemId,
+    addSceneButtonVariant: state.isWaitingForPlacement ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
     form,
     defaultValues,

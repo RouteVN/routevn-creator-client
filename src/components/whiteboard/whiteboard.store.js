@@ -1,7 +1,5 @@
 // Natural zoom levels
-const ZOOM_LEVELS = [
-  0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0,
-];
+const ZOOM_LEVELS = [0.2, 0.3, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
 const findNearestZoomLevel = (currentZoom) => {
   let closest = ZOOM_LEVELS[0];
@@ -91,19 +89,27 @@ export const stopPanning = (state) => {
 export const zoomAt = (state, { mouseX, mouseY, scaleFactor }) => {
   const newZoom = state.zoomLevel * scaleFactor;
 
-  // Clamp zoom level between 0.1x and 3x
-  if (newZoom < 0.1 || newZoom > 3) return;
+  // Clamp zoom level between 0.2x and 2x, snapping to limits if exceeded
+  let clampedZoom = newZoom;
+  if (newZoom < 0.2) {
+    clampedZoom = 0.2;
+  } else if (newZoom > 2) {
+    clampedZoom = 2.0;
+  }
+
+  // Don't update if already at the limit and trying to go further
+  if (clampedZoom === state.zoomLevel) return;
 
   // Calculate the point in canvas coordinates before zoom
   const canvasX = (mouseX - state.panX) / state.zoomLevel;
   const canvasY = (mouseY - state.panY) / state.zoomLevel;
 
   // Update zoom level
-  state.zoomLevel = newZoom;
+  state.zoomLevel = clampedZoom;
 
   // Calculate new pan to keep the canvas point under the mouse
-  state.panX = mouseX - canvasX * newZoom;
-  state.panY = mouseY - canvasY * newZoom;
+  state.panX = mouseX - canvasX * clampedZoom;
+  state.panY = mouseY - canvasY * clampedZoom;
 };
 
 export const zoomFromCenter = (
