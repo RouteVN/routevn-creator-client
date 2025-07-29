@@ -35,18 +35,12 @@ refs:
     eventListeners:
       click:
         handler: handleTypographyItemClick
+      dblclick:
+        handler: handleTypographyItemDoubleClick
   add-typography-button-*:
     eventListeners:
       click:
         handler: handleAddTypographyClick
-  add-typography-dialog:
-    eventListeners:
-      close:
-        handler: handleCloseDialog
-  typography-form:
-    eventListeners:
-      action-click:
-        handler: handleFormActionClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -69,15 +63,12 @@ template:
                     - rtgl-view fw=w w=f g=md:
                       - $if group.hasChildren:
                           - $for item in group.children:
-                              - 'rtgl-view#typography-item-${item.id} w=f bw=xs pb=md cur=p style="${item.selectedStyle}"':
-                                - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false:
+                              - 'rtgl-view#typography-item-${item.id} w=f bw=xs cur=p style="${item.selectedStyle}"':
+                                - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false:
+                                - rtgl-text s=xs c=mu-fg m=sm ellipsis w="calc(700px - 2 * var(--spacing-md))": ${item.name}
                       - 'rtgl-view#add-typography-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
                         - rtgl-text: Add Typography
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No typography found matching "${searchQuery}"
     - rtgl-view h=33vh:
-
-  - rtgl-dialog#add-typography-dialog ?open=${isDialogOpen}:
-    - rtgl-view slot=content g=md:
-      - rtgl-form#typography-form .defaultValues=defaultValues .form=form w=f:

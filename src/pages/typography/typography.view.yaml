@@ -17,13 +17,31 @@ refs:
         handler: handleDragDropFileSelected
       typography-created:
         handler: handleTypographyCreated
+      typography-updated:
+        handler: handleTypographyUpdated
+      add-typography-click:
+        handler: handleAddTypographyClick
+      typography-item-double-click:
+        handler: handleTypographyItemDoubleClick
   detail-form:
     eventListeners:
       form-change:
         handler: handleFormChange
+      extra-event:
+        handler: handleFormExtraEvent
+  add-typography-dialog:
+    eventListeners:
+      close:
+        handler: handleCloseDialog
+  typography-form:
+    eventListeners:
+      action-click:
+        handler: handleFormActionClick
+      form-change:
+        handler: handleDialogFormChange
 
-template: 
-  - rtgl-view d=h w=f h=f: 
+template:
+  - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f w=f:
       - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
@@ -34,3 +52,13 @@ template:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
           - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
+
+  - rtgl-dialog#add-typography-dialog ?open=${isDialogOpen}:
+    - rtgl-view slot=content d=h g=md w=800:
+      - rtgl-view flex=1:
+        - $if isDialogOpen:
+          - rtgl-form#typography-form key=${formKey} .defaultValues=dialogDefaultValues .form=dialogForm w=f:
+      - rtgl-view flex=1 p=md bwl=xs d=v:
+        - rtgl-text s=lg fw=b mb=md: Preview
+        - $if isDialogOpen:
+          - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
