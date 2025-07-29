@@ -29,6 +29,8 @@ refs:
     eventListeners:
       click:
         handler: handleColorItemClick
+      dblclick:
+        handler: handleColorItemDoubleClick
   add-color-button-*:
     eventListeners:
       click:
@@ -75,8 +77,3 @@ template:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No colors found matching "${searchQuery}"
-    - rtgl-view h=33vh:
-
-  - rtgl-dialog#add-color-dialog ?open=${isDialogOpen}:
-    - rtgl-view slot=content g=md:
-      - rtgl-form#color-form .defaultValues=defaultValues .form=form w=f:
