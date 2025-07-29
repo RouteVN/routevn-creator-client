@@ -2,12 +2,15 @@ import { toFlatItems } from "../../deps/repository";
 
 export const handleBeforeMount = (deps) => {
   const { repository, store, props } = deps;
-  const { characters, placements: transforms } = repository.getState();
+  const { characters, placements, animations } = repository.getState();
   store.setItems({
     items: characters || { tree: [], items: {} },
   });
   store.setTransforms({
-    transforms: transforms || { tree: [], items: {} },
+    transforms: placements || { tree: [], items: {} },
+  });
+  store.setAnimations({
+    animations: animations || { tree: [], items: {} },
   });
 
   // Initialize with existing character data if available
@@ -41,9 +44,96 @@ export const handleBeforeMount = (deps) => {
           transform: existingChar.transformId,
           spriteId: existingChar.spriteParts?.[0]?.spritePartId,
           spriteFileId: spriteFileId,
+          // Initialize new properties from existing data if available
+          spriteName: existingChar.spriteName || "",
+          animation: existingChar.animation || "none",
         });
       }
     });
+  }
+};
+
+export const handleAfterMount = async (deps) => {
+  const { repository, store, render, props, httpClient } = deps;
+
+  // Load sprite image URLs for existing characters if available
+  if (
+    props?.line?.presentation?.character?.items &&
+    Array.isArray(props.line.presentation.character.items)
+  ) {
+    const selectedCharacters = store.getState().selectedCharacters;
+    const formFieldResources = {};
+
+    // Load sprite URLs for each existing character
+    for (let i = 0; i < selectedCharacters.length; i++) {
+      const character = selectedCharacters[i];
+
+      if (character.spriteFileId && httpClient) {
+        try {
+          const { url } = await httpClient.creator.getFileContent({
+            fileId: character.spriteFileId,
+            projectId: "someprojectId",
+          });
+          formFieldResources[`char[${i}]`] = { src: url };
+        } catch (error) {
+          // Failed to load sprite URL
+        }
+      }
+    }
+
+    // Update form field resources if we have any URLs
+    if (Object.keys(formFieldResources).length > 0) {
+      store.setFormFieldResources(formFieldResources);
+      render();
+    }
+  }
+};
+
+export const handleOnUpdate = () => {};
+
+export const handleFormExtra = async (e, deps) => {
+  const { store, render } = deps;
+  const { name, trigger } = e.detail;
+
+  // Extract index from field name (e.g., "char[0]" -> 0)
+  const match = name.match(/char\[(\d+)\]/);
+  if (match) {
+    const index = parseInt(match[1]);
+
+    if (trigger === "contextmenu") {
+      // Show context menu for right-click
+      store.showDropdownMenu({
+        position: { x: e.detail.x, y: e.detail.y },
+        characterIndex: index,
+      });
+      render();
+    } else {
+      // Regular click - go to sprite selection
+      store.setSelectedCharacterIndex({ index });
+      store.setMode({ mode: "sprite-select" });
+      render();
+    }
+  }
+};
+
+export const handleFormChange = (e, deps) => {
+  const { store, render } = deps;
+  const { name, fieldValue } = e.detail;
+
+  // Handle transform field changes
+  const transformMatch = name.match(/char\[(\d+)\]\.transform/);
+  if (transformMatch) {
+    const index = parseInt(transformMatch[1]);
+    store.updateCharacterTransform({ index, transform: fieldValue });
+    render();
+  }
+
+  // Handle animation field changes
+  const animationMatch = name.match(/char\[(\d+)\]\.animation/);
+  if (animationMatch) {
+    const index = parseInt(animationMatch[1]);
+    store.updateCharacterAnimation({ index, animation: fieldValue });
+    render();
   }
 };
 
@@ -81,7 +171,6 @@ export const handleSubmitClick = (payload, deps) => {
 
   // Only dispatch if there are characters to submit
   if (selectedCharacters.length === 0) {
-    console.warn("No characters selected to submit");
     return;
   }
 
@@ -96,6 +185,9 @@ export const handleSubmitClick = (payload, deps) => {
             spritePartId: char.spriteId,
           },
         ],
+        // Include new properties in the output
+        spriteName: char.spriteName || "",
+        animation: char.animation || "none",
       })),
     },
   };
@@ -148,15 +240,6 @@ export const handleRemoveCharacterClick = (e, deps) => {
   render();
 };
 
-export const handleTransformChange = (e, deps) => {
-  const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace("transform-select-", ""));
-  const transform = e.detail.value;
-
-  store.updateCharacterTransform({ index, transform });
-  render();
-};
-
 export const handleAddCharacterClick = (payload, deps) => {
   const { store, render } = deps;
 
@@ -190,8 +273,8 @@ export const handleSpriteItemClick = (e, deps) => {
   render();
 };
 
-export const handleButtonSelectClick = (payload, deps) => {
-  const { store, render, repository } = deps;
+export const handleButtonSelectClick = async (payload, deps) => {
+  const { store, render, repository, downloadImageData, httpClient } = deps;
   const state = store.getState();
 
   if (state.mode === "sprite-select") {
@@ -207,8 +290,28 @@ export const handleButtonSelectClick = (payload, deps) => {
         store.updateCharacterSprite({
           index: selectedCharIndex,
           spriteId: tempSelectedSpriteId,
-          spriteFileId: tempSelectedSprite.fileId,
+          spriteFileId: tempSelectedSprite.fileId || tempSelectedSprite.imageId,
         });
+
+        // Get URL for the sprite and update form field resources
+        if (tempSelectedSprite.fileId && httpClient) {
+          try {
+            const { url } = await httpClient.creator.getFileContent({
+              fileId: tempSelectedSprite.fileId,
+              projectId: "someprojectId",
+            });
+
+            const currentResources = store.getState().formFieldResources || {};
+            const newFormFieldResources = {
+              ...currentResources,
+              [`char[${selectedCharIndex}]`]: { src: url },
+            };
+
+            store.setFormFieldResources(newFormFieldResources);
+          } catch (error) {
+            // Failed to load sprite URL
+          }
+        }
       }
     }
 
@@ -224,5 +327,24 @@ export const handleResetClick = (payload, deps) => {
   const { store, render } = deps;
 
   store.clearCharacters();
+  render();
+};
+
+export const handleDropdownMenuClose = (e, deps) => {
+  const { store, render } = deps;
+  store.hideDropdownMenu();
+  render();
+};
+
+export const handleDropdownMenuClickItem = (e, deps) => {
+  const { store, render } = deps;
+  const { item } = e.detail;
+  const characterIndex = store.selectDropdownMenuCharacterIndex();
+
+  if (item.value === "delete" && characterIndex !== null) {
+    store.removeCharacter(characterIndex);
+  }
+
+  store.hideDropdownMenu();
   render();
 };
