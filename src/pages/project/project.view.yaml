@@ -6,36 +6,18 @@ viewDataSchema:
     project:
       type: object
       properties:
-        id:
-          type: string
-          default: ""
-        name:
-          type: string
-          default: ""
-        description:
-          type: string
-          default: ""
+        defaultValues:
+          type: object
+        form:
+          type: object
 
 refs:
-  popover:
-    eventListeners:
-      close:
-        handler: handleClickOverlay
-  form-value*:
-    eventListeners:
-      click:
-        handler: handleFormValueClick
   form:
     eventListeners:
       form-change:
         handler: handleFormChange
       extra-event:
         handler: handleFormExtraEvent
-  project-image:
-    eventListeners:
-      click:
-        handler: handleProjectImageClick
-
 
 template:
   - rtgl-view w=f h=f p=lg:
