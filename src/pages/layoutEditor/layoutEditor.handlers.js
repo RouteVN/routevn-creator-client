@@ -217,29 +217,33 @@ export const handleDataChanged = async (e, deps) => {
 };
 
 const unflattenKey = (key, value) => {
-  const parts = key.split('_');
+  const parts = key.split("_");
   if (parts.length === 1) {
     return { [key]: value };
   }
-  
+
   const result = {};
   let current = result;
-  
+
   for (let i = 0; i < parts.length - 1; i++) {
     current[parts[i]] = {};
     current = current[parts[i]];
   }
-  
+
   current[parts[parts.length - 1]] = value;
   return result;
 };
 
 const deepMerge = (target, source) => {
   const result = { ...target };
-  
-  Object.keys(source).forEach(key => {
-    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-      if (result[key] && typeof result[key] === 'object') {
+
+  Object.keys(source).forEach((key) => {
+    if (
+      source[key] &&
+      typeof source[key] === "object" &&
+      !Array.isArray(source[key])
+    ) {
+      if (result[key] && typeof result[key] === "object") {
         result[key] = deepMerge(result[key], source[key]);
       } else {
         result[key] = source[key];
@@ -248,7 +252,7 @@ const deepMerge = (target, source) => {
       result[key] = source[key];
     }
   });
-  
+
   return result;
 };
 

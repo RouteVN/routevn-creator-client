@@ -1,19 +1,19 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
-const flattenObject = (obj, prefix = '') => {
+const flattenObject = (obj, prefix = "") => {
   const result = {};
-  
-  Object.keys(obj).forEach(key => {
+
+  Object.keys(obj).forEach((key) => {
     const value = obj[key];
     const newKey = prefix ? `${prefix}_${key}` : key;
-    
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
       Object.assign(result, flattenObject(value, newKey));
     } else {
       result[newKey] = value;
     }
   });
-  
+
   return result;
 };
 
@@ -358,11 +358,11 @@ export const toViewData = ({ state, props }, payload) => {
                   inputType: "select",
                   description: "Text Alignment",
                   options: [
-                    { label: "Left", value: "left" }, 
+                    { label: "Left", value: "left" },
                     { label: "Center", value: "center" },
                     { label: "Right", value: "right" },
                   ],
-                }
+                },
               ]
             : []),
           ...(selectedItem.type === "sprite"
@@ -410,8 +410,10 @@ export const toViewData = ({ state, props }, payload) => {
               text: selectedItem.text,
               style: {
                 align: selectedItem.style?.align ?? "left",
-                wordWrapWidth: selectedItem.style?.wordWrapWidth ?? 300,
-              }
+                wordWrapWidth: parseInt(
+                  selectedItem.style?.wordWrapWidth ?? 300,
+                ),
+              },
             }
           : {}),
         ...(selectedItem.type === "sprite"
