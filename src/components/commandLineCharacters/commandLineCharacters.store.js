@@ -1,13 +1,22 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
+import { nanoid } from "nanoid";
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
   items: [],
   transforms: { tree: [], items: {} },
+  animations: { tree: [], items: {} },
   selectedCharacters: [], // Array of selected characters with their transforms
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
+  formFieldResources: {},
+  dropdownMenu: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    characterIndex: null,
+    items: [{ label: "Delete", type: "item", value: "delete" }],
+  },
 });
 
 export const setMode = (state, payload) => {
@@ -20,6 +29,10 @@ export const setItems = (state, payload) => {
 
 export const setTransforms = (state, payload) => {
   state.transforms = payload.transforms;
+};
+
+export const setAnimations = (state, payload) => {
+  state.animations = payload.animations;
 };
 
 export const addCharacter = (state, character) => {
@@ -35,6 +48,9 @@ export const addCharacter = (state, character) => {
     transform: character.transform || defaultTransform,
     spriteId: character.spriteId || undefined,
     spriteFileId: character.spriteFileId || undefined,
+    // Add the new properties you requested
+    spriteName: character.spriteName || "",
+    animation: character.animation || "none",
   });
 };
 
@@ -55,6 +71,18 @@ export const updateCharacterSprite = (
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].spriteId = spriteId;
     state.selectedCharacters[index].spriteFileId = spriteFileId;
+  }
+};
+
+export const updateCharacterSpriteName = (state, { index, spriteName }) => {
+  if (state.selectedCharacters[index]) {
+    state.selectedCharacters[index].spriteName = spriteName;
+  }
+};
+
+export const updateCharacterAnimation = (state, { index, animation }) => {
+  if (state.selectedCharacters[index]) {
+    state.selectedCharacters[index].animation = animation;
   }
 };
 
@@ -80,6 +108,67 @@ export const selectTempSelectedCharacterId = ({ state }) => {
 
 export const selectTempSelectedSpriteId = ({ state }) => {
   return state.tempSelectedSpriteId;
+};
+
+export const setFormFieldResources = (state, resources) => {
+  state.formFieldResources = resources;
+};
+
+export const showDropdownMenu = (state, { position, characterIndex }) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.position = position;
+  state.dropdownMenu.characterIndex = characterIndex;
+};
+
+export const hideDropdownMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.characterIndex = null;
+};
+
+export const selectDropdownMenuCharacterIndex = ({ state }) => {
+  return state.dropdownMenu.characterIndex;
+};
+
+const createCharactersForm = (params) => {
+  const { characters, transformOptions, animationOptions, formFieldResources } =
+    params;
+
+  const fields = [];
+
+  // Create form fields for each character
+  characters.forEach((character, index) => {
+    // Character sprite image field - get src from formFieldResources
+    const imageSrc = formFieldResources[`char[${index}]`]?.src;
+
+    fields.push({
+      name: `char[${index}]`,
+      label: `Character ${index + 1} - ${character.displayName || character.name || "Character"}`,
+      inputType: "image",
+      src: imageSrc,
+      width: 200,
+      height: 200,
+    });
+
+    // Transform field
+    fields.push({
+      name: `char[${index}].transform`,
+      label: `Transform (Placement)`,
+      inputType: "select",
+      options: transformOptions,
+    });
+
+    // Animation field
+    fields.push({
+      name: `char[${index}].animation`,
+      label: `Animation`,
+      inputType: "select",
+      options: animationOptions,
+    });
+  });
+
+  return {
+    fields,
+  };
 };
 
 export const toViewData = ({ state, props }, payload) => {
@@ -138,7 +227,19 @@ export const toViewData = ({ state, props }, payload) => {
     value: transform.id,
   }));
 
-  // Precompute character display data
+  // Get animation options from repository instead of hardcoded values
+  const animationItems = toFlatItems(state.animations).filter(
+    (item) => item.type === "animation",
+  );
+  const animationOptions = [
+    { label: "None", value: "none" },
+    ...animationItems.map((animation) => ({
+      label: animation.name,
+      value: animation.id,
+    })),
+  ];
+
+  // Precompute character display data with new properties
   const processedSelectedCharacters = state.selectedCharacters.map(
     (character) => ({
       ...character,
@@ -179,15 +280,36 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
+  // Create form configuration
+  const form = createCharactersForm({
+    characters: state.selectedCharacters,
+    transformOptions,
+    animationOptions,
+    formFieldResources: state.formFieldResources,
+  });
+
+  // Create default values for form
+  const defaultValues = {};
+  state.selectedCharacters.forEach((character, index) => {
+    defaultValues[`char[${index}]`] = character.spriteFileId || "";
+    defaultValues[`char[${index}].transform`] =
+      character.transform || transformOptions[0]?.value || "";
+    defaultValues[`char[${index}].animation`] = character.animation || "none";
+  });
+
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
     selectedCharacters: processedSelectedCharacters,
     transformOptions,
+    animationOptions,
     spriteItems,
     spriteGroups,
     selectedCharacterName,
     breadcrumb,
+    form,
+    defaultValues,
+    dropdownMenu: state.dropdownMenu,
   };
 };

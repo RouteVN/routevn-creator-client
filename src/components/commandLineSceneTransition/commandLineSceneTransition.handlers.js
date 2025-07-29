@@ -21,13 +21,13 @@ export const handleBeforeMount = (deps) => {
       store.setSelectedSceneId({
         sceneId: transition.sceneId,
       });
-      store.setTab({ tab: "scene" });
+      store.setType({ type: "scene" });
     } else if (transition.sectionId) {
       // Section transition
       store.setSelectedSectionId({
         sectionId: transition.sectionId,
       });
-      store.setTab({ tab: "section" });
+      store.setType({ type: "section" });
     }
 
     store.setSelectedAnimation({
@@ -96,10 +96,10 @@ export const handleTabClickOld = (payload, deps) => {
 
 export const handleSubmitClick = (payload, deps) => {
   const { dispatchEvent, store } = deps;
-  const { selectedSceneId, selectedSectionId, selectedAnimation, tab } =
+  const { selectedSceneId, selectedSectionId, selectedAnimation, type } =
     store.getState();
 
-  if (tab === "scene") {
+  if (type === "scene") {
     if (!selectedSceneId) {
       return;
     }
@@ -117,7 +117,7 @@ export const handleSubmitClick = (payload, deps) => {
         composed: true,
       }),
     );
-  } else if (tab === "section") {
+  } else if (type === "section") {
     if (!selectedSectionId) {
       return;
     }
@@ -167,11 +167,24 @@ export const handleBreadcumbClick = (e, deps) => {
 
 export const handleFormChange = (e, deps) => {
   const { store, render } = deps;
-  const formData = e.detail.formData;
-  const tab = store.selectTab();
+  const formData = e.detail?.formData || {};
+
+  if (formData.type !== undefined) {
+    store.setType({ type: formData.type });
+    // When type changes, clear the current selection to avoid confusion
+    if (formData.type === "scene") {
+      store.setSelectedSectionId({ sectionId: "" });
+    } else {
+      store.setSelectedSceneId({ sceneId: "" });
+    }
+  }
+
+  // Get the current type (either from formData or current state)
+  const currentType =
+    formData.type !== undefined ? formData.type : store.selectType();
 
   if (formData.targetId !== undefined) {
-    if (tab === "scene") {
+    if (currentType === "scene") {
       store.setSelectedSceneId({ sceneId: formData.targetId });
     } else {
       store.setSelectedSectionId({ sectionId: formData.targetId });
@@ -195,13 +208,15 @@ export const handleSearchInput = (e, deps) => {
 
 export const handleResetClick = (e, deps) => {
   const { store, render } = deps;
-  const tab = store.selectTab();
+  const type = store.selectType();
 
-  if (tab === "scene") {
+  store.setType({ type: "section" });
+
+  if (type === "scene") {
     store.setSelectedSceneId({
       sceneId: "",
     });
-  } else if (tab === "section") {
+  } else if (type === "section") {
     store.setSelectedSectionId({
       sectionId: "",
     });

@@ -2,6 +2,7 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
+  type: "section", // "section" or "scene"
   tab: "section", // "section" or "scene"
   items: [], // scenes
   sections: [], // sections
@@ -11,12 +12,25 @@ export const INITIAL_STATE = Object.freeze({
   searchQuery: "",
 
   defaultValues: {
+    type: "section",
     targetId: "",
     animation: "fade",
   },
 
   form: {
     fields: [
+      {
+        name: "type",
+        inputType: "select",
+        label: "Type",
+        description: "",
+        required: false,
+        placeholder: "Choose type...",
+        options: [
+          { value: "section", label: "Section" },
+          { value: "scene", label: "Scene" },
+        ],
+      },
       {
         name: "targetId",
         inputType: "select",
@@ -65,6 +79,14 @@ export const setTab = (state, payload) => {
   state.tab = payload.tab;
 };
 
+export const setType = (state, payload) => {
+  state.type = payload.type;
+  state.tab = payload.type; // Keep tab in sync with type
+  state.defaultValues.type = payload.type;
+  // Clear target selection when type changes
+  state.defaultValues.targetId = "";
+};
+
 export const setSelectedSceneId = (state, payload) => {
   state.selectedSceneId = payload.sceneId;
   if (state.tab === "scene") {
@@ -81,6 +103,10 @@ export const setSelectedSectionId = (state, payload) => {
 
 export const selectTab = ({ state }) => {
   return state.tab;
+};
+
+export const selectType = ({ state }) => {
+  return state.type;
 };
 
 export const setSelectedAnimation = (state, payload) => {
@@ -219,9 +245,9 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
-  // Update form based on current tab and available options
+  // Update form based on current type and available options
   const targetOptions =
-    state.tab === "scene"
+    state.type === "scene"
       ? allScenes.map((scene) => ({
           value: scene.id,
           label: scene.name,
@@ -234,15 +260,21 @@ export const toViewData = ({ state, props }, payload) => {
   const form = {
     ...state.form,
     fields: state.form.fields.map((field) => {
+      if (field.name === "type") {
+        return {
+          ...field,
+          value: state.type,
+        };
+      }
       if (field.name === "targetId") {
         return {
           ...field,
-          label: state.tab === "scene" ? "Target Scene" : "Target Section",
+          label: state.type === "scene" ? "Target Scene" : "Target Section",
           options: targetOptions,
           value:
-            state.tab === "scene"
-              ? state.selectedSceneId
-              : state.selectedSectionId,
+            state.type === "scene"
+              ? state.selectedSceneId || ""
+              : state.selectedSectionId || "",
         };
       }
       if (field.name === "animation") {
@@ -257,8 +289,9 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Update default values based on current selection
   const defaultValues = {
+    type: state.type,
     targetId:
-      state.tab === "scene"
+      state.type === "scene"
         ? state.selectedSceneId || ""
         : state.selectedSectionId || "",
     animation: state.selectedAnimation,
