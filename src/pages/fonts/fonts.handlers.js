@@ -148,18 +148,12 @@ export const handleDragDropFileSelected = async (e, deps) => {
     await Promise.all(loadPromises);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 
 export const handleFontItemDoubleClick = async (e, deps) => {
-  console.log("📨 Received font-item-double-click event in fonts page:", e.detail);
   const { store, render, repository, httpClient, fontManager } = deps;
   const { itemId } = e.detail;
-  
-  console.log("🔍 Looking for font item with ID:", itemId);
   
   // Find the font item
   const { fonts } = repository.getState();
@@ -167,40 +161,26 @@ export const handleFontItemDoubleClick = async (e, deps) => {
   const fontItem = flatItems.find((item) => item.id === itemId);
   
   if (!fontItem) {
-    console.warn("❌ Font item not found:", itemId);
-    console.log("Available items:", flatItems.map(item => ({ id: item.id, name: item.name })));
+    console.warn("Font item not found:", itemId);
     return;
   }
 
-  console.log("✅ Found font item:", fontItem);
-
   // Extract font information
-  console.log("🔧 Creating font info extractor...");
   const fontInfoExtractor = createFontInfoExtractor({ httpClient, fontManager });
-  
-  console.log("📊 Extracting font info...");
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
   
-  console.log("📋 Font info extracted:", fontInfo);
-  
   // Open modal with font info
-  console.log("🚀 Opening modal...");
   store.setSelectedFontInfo(fontInfo);
   store.setModalOpen(true);
   render();
-  
-  console.log("✨ Modal should now be open");
 };
 
 export const handleCloseModal = (e, deps) => {
-  console.log("🔒 Closing modal...");
   const { store, render } = deps;
   
   store.setModalOpen(false);
   store.setSelectedFontInfo(null);
   render();
-  
-  console.log("✅ Modal closed");
 };
 
 export const handleFormChange = (e, deps) => {

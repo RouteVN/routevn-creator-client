@@ -1,9 +1,42 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
+const fontToBase64Image = (fontFamily, text = "Aa") => {
+  if (!fontFamily) return "";
+
+  // Create a canvas element
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // Set canvas size
+  canvas.width = 200;
+  canvas.height = 100;
+
+  // Use dark mode colors as default
+  const backgroundColor = "#1a1a1a"; // Dark background
+  const foregroundColor = "#ffffff"; // Light text
+
+  // Fill with background color
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, 200, 100);
+
+  // Set font and draw text
+  ctx.fillStyle = foregroundColor;
+  ctx.font = `48px "${fontFamily}", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 100, 50);
+
+  // Convert to base64
+  return canvas.toDataURL("image/png");
+};
+
 const form = {
-  title: "Font Information",
   fields: [
+    {
+      name: "fontPreview",
+      inputType: "image",
+    },
     {
       name: "fileId",
       inputType: "font",
@@ -163,11 +196,39 @@ export const toViewData = ({ state, props }, payload) => {
     : null;
 
   let defaultValues = {};
+  let formWithPreview = { ...form };
+
   if (selectedItem) {
+    // Generate font preview image for the main form
+    const previewImage = fontToBase64Image(selectedItem.fontFamily, "Aa");
+
+    // Update the form with the preview image
+    formWithPreview.fields = form.fields.map((field) => {
+      if (field.name === "fontPreview") {
+        return { ...field, src: previewImage };
+      }
+      return field;
+    });
+
+    // Get file type from extension if browser MIME type is empty
+    const getFileTypeFromName = (fileName) => {
+      if (!fileName) return "";
+      const extension = fileName.toLowerCase().split(".").pop();
+      const extensionMap = {
+        ttf: "font/ttf",
+        otf: "font/otf",
+        woff: "font/woff",
+        woff2: "font/woff2",
+        ttc: "font/ttc",
+        eot: "font/eot",
+      };
+      return extensionMap[extension] || `font/${extension}`;
+    };
+
     defaultValues = {
       name: selectedItem.name,
       fontFamily: selectedItem.fontFamily || "",
-      fileType: selectedItem.fileType || "",
+      fileType: selectedItem.fileType || getFileTypeFromName(selectedItem.name),
       fileSize: selectedItem.fileSize
         ? formatFileSize(selectedItem.fileSize)
         : "",
@@ -180,16 +241,11 @@ export const toViewData = ({ state, props }, payload) => {
     fontInfoValues = {
       fontFamily: state.selectedFontInfo.fontFamily || "",
       fileName: state.selectedFontInfo.fileName || "",
-      fileSize: state.selectedFontInfo.fileSize
-        ? formatFileSize(state.selectedFontInfo.fileSize)
-        : "",
+      fileSize: state.selectedFontInfo.fileSize || "",
       format: state.selectedFontInfo.format || "Unknown",
-      version: state.selectedFontInfo.version || "Unknown",
-      designer: state.selectedFontInfo.designer || "Unknown",
-      copyright: state.selectedFontInfo.copyright || "Unknown",
       weightClass: state.selectedFontInfo.weightClass || "Unknown",
-      isVariableFont: state.selectedFontInfo.isVariableFont ? "Yes" : "No",
-      supportsItalics: state.selectedFontInfo.supportsItalics ? "Yes" : "No",
+      isVariableFont: state.selectedFontInfo.isVariableFont || "Unknown",
+      supportsItalics: state.selectedFontInfo.supportsItalics || "Unknown",
       glyphCount: state.selectedFontInfo.glyphCount?.toString() || "0",
       languageSupport: state.selectedFontInfo.languageSupport || "Unknown",
     };
@@ -202,7 +258,7 @@ export const toViewData = ({ state, props }, payload) => {
     selectedResourceId: "fonts",
     selectedItemId: state.selectedItemId,
     repositoryTarget: "fonts",
-    form,
+    form: formWithPreview,
     defaultValues,
     fieldResources: state.fieldResources,
     isModalOpen: state.isModalOpen,
@@ -211,13 +267,6 @@ export const toViewData = ({ state, props }, payload) => {
     fontInfoForm,
     fontInfoValues,
   };
-
-  console.log(
-    "🎨 toViewData - isModalOpen:",
-    state.isModalOpen,
-    "selectedFontInfo:",
-    state.selectedFontInfo,
-  );
 
   return viewData;
 };

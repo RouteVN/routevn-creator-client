@@ -60,7 +60,7 @@ template:
                 - rtgl-view p=md bgc=bg-hover br=sm:
                   - 'rtgl-view d=h fw=w style="gap: 4px;"':
                     - $for glyph in glyphList:
-                        - 'rtgl-view wh=40 d=v av=c ah=c bw=xs bc=border br=xs bgc=bg':
+                        - 'rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg':
                           - 'rtgl-text style="font-family: ${selectedFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
           $else:
             - rtgl-view d=v av=c ah=c h=200:

@@ -139,7 +139,6 @@ export const createFontInfoExtractor = ({ httpClient, fontManager }) => {
   };
 
   const getSupportedGlyphs = async (fontBuffer) => {
-    console.log('🔍 Getting basic Latin glyphs for display');
     const supportedGlyphs = [];
     
     // Just use basic Latin characters for glyph preview
@@ -160,13 +159,12 @@ export const createFontInfoExtractor = ({ httpClient, fontManager }) => {
       supportedGlyphs.push({ char, unicode });
     }
     
-    console.log(`Using ${supportedGlyphs.length} basic Latin characters for glyph preview`);
     return supportedGlyphs;
   };
 
   const detectLanguageSupport = (glyphs) => {
-    // Simplified - just return Latin since we're only showing Latin characters
-    console.log('🔍 Using basic Latin character set');
+    // TODO: Fix language detection - implement proper script detection based on actual font CMAP tables
+    // Currently simplified to just return Latin since we're only showing Latin characters
     return ['Latin'];
   };
 

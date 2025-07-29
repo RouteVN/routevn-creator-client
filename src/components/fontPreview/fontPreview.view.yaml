@@ -68,5 +68,5 @@ attrsSchema:
       default: "true"
 
 template:
-  - 'rtgl-view#main av=c ah=c ${borderClass} style="width: ${width}px; height: ${height}px; background-color: ${backgroundColor};"':
+  - 'rtgl-view#main av=c ah=c style="width: ${width}px; height: ${height}px; background-color: ${backgroundColor};"':
     - 'rtgl-text style="font-family: ${fontFamily}, sans-serif; font-size: ${fontSize}px; font-weight: ${fontWeight}; color: ${color}; text-align: ${textAlign};"': ${previewText}

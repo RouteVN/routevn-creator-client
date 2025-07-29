@@ -16,7 +16,6 @@ export const handleGroupClick = (e, deps) => {
 };
 
 export const handleFontItemClick = (e, deps) => {
-  console.log("👆 Single click on font item:", e.currentTarget.id);
   const { dispatchEvent } = deps;
   const itemId = e.currentTarget.id.replace("font-item-", "");
 
@@ -31,11 +30,8 @@ export const handleFontItemClick = (e, deps) => {
 };
 
 export const handleFontItemDoubleClick = (e, deps) => {
-  console.log("🖱️ Double-click detected on font item:", e.currentTarget.id);
   const { dispatchEvent } = deps;
   const itemId = e.currentTarget.id.replace("font-item-", "");
-  
-  console.log("📤 Dispatching font-item-double-click event with itemId:", itemId);
 
   // Forward double-click event to parent
   dispatchEvent(
@@ -45,8 +41,6 @@ export const handleFontItemDoubleClick = (e, deps) => {
       composed: true,
     }),
   );
-  
-  console.log("✅ Double-click event dispatched successfully");
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {

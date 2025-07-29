@@ -65,7 +65,7 @@ template:
                               - 'rtgl-view#font-item-${item.id} cur=p':
                                 - rtgl-view w=200 d=v p=md bw=xs br=md:
                                   - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=200 height=150:
-                                  - rtgl-text s=xs c=mu-fg m=sm: ${item.name}
+                                  - rtgl-text s=xs c=mu-fg m=sm ellipsis w="calc(200px - 2 * var(--spacing-md))": ${item.name}
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
