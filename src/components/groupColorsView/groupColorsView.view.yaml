@@ -67,8 +67,9 @@ template:
                     - rtgl-view d=h fw=w g=md:
                       - $if group.hasChildren:
                           - $for item in group.children:
-                              - 'rtgl-view#color-item-${item.id} ah=c bw=xs cur=p style="${item.selectedStyle}"':
-                                - 'rtgl-view w=200 h=150 br=md style="background-color: ${item.hex}"':
+                              - 'rtgl-view#color-item-${item.id} br=md g=sm bw=xs cur=p style="overflow: hidden; ${item.selectedStyle}"':
+                                - 'rtgl-view w=200 h=150 style="background-color: ${item.hex}"':
+                                - rtgl-text s=sm c=mu-fg m=md ellipsis w="calc(200px - 2 * var(--spacing-md))": ${item.name}
                           - 'rtgl-view#add-color-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
                             - rtgl-text: Add Color
                         $else:
@@ -77,3 +78,5 @@ template:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No colors found matching "${searchQuery}"
+
+    - rtgl-view h=33vh:

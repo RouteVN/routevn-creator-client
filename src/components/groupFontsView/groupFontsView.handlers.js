@@ -16,6 +16,7 @@ export const handleGroupClick = (e, deps) => {
 };
 
 export const handleFontItemClick = (e, deps) => {
+  console.log("👆 Single click on font item:", e.currentTarget.id);
   const { dispatchEvent } = deps;
   const itemId = e.currentTarget.id.replace("font-item-", "");
 
@@ -29,6 +30,25 @@ export const handleFontItemClick = (e, deps) => {
   );
 };
 
+export const handleFontItemDoubleClick = (e, deps) => {
+  console.log("🖱️ Double-click detected on font item:", e.currentTarget.id);
+  const { dispatchEvent } = deps;
+  const itemId = e.currentTarget.id.replace("font-item-", "");
+  
+  console.log("📤 Dispatching font-item-double-click event with itemId:", itemId);
+
+  // Forward double-click event to parent
+  dispatchEvent(
+    new CustomEvent("font-item-double-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  
+  console.log("✅ Double-click event dispatched successfully");
+};
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent, fontManager } = deps;
   const { files } = e.detail;
@@ -38,7 +58,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
   // Load fonts for preview
   for (const file of files) {
-    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
+    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
     const fontUrl = URL.createObjectURL(file);
     await fontManager.load(fontName, fontUrl);
   }

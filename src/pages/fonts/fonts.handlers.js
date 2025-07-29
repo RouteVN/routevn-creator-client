@@ -1,4 +1,6 @@
 import { nanoid } from "nanoid";
+import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
+import { toFlatItems } from "../../deps/repository.js";
 
 export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
@@ -31,7 +33,7 @@ export const handleFormExtraEvent = async (e, deps) => {
   }
 
   const files = await filePicker.open({
-    accept: ".ttf,.otf,.woff,.woff2",
+    accept: ".ttf,.otf,.woff,.woff2,.ttc",
     multiple: false,
   });
 
@@ -42,9 +44,9 @@ export const handleFormExtraEvent = async (e, deps) => {
   const file = files[0];
 
   // Validate file format
-  if (!file.name.match(/\.(ttf|otf|woff|woff2)$/i)) {
+  if (!file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i)) {
     alert(
-      "Invalid file format. Please upload a font file (.ttf, .otf, .woff, or .woff2)",
+      "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, or .ttc)",
     );
     return;
   }
@@ -99,11 +101,11 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
   // Validate all files first
   const invalidFiles = Array.from(files).filter(
-    (file) => !file.name.match(/\.(ttf|otf|woff|woff2)$/i),
+    (file) => !file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i),
   );
   if (invalidFiles.length > 0) {
     alert(
-      "Invalid file format. Please upload only font files (.ttf, .otf, .woff, or .woff2)",
+      "Invalid file format. Please upload only font files (.ttf, .otf, .woff, .woff2, or .ttc)",
     );
     return;
   }
@@ -150,6 +152,55 @@ export const handleDragDropFileSelected = async (e, deps) => {
     `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
   );
   render();
+};
+
+export const handleFontItemDoubleClick = async (e, deps) => {
+  console.log("📨 Received font-item-double-click event in fonts page:", e.detail);
+  const { store, render, repository, httpClient, fontManager } = deps;
+  const { itemId } = e.detail;
+  
+  console.log("🔍 Looking for font item with ID:", itemId);
+  
+  // Find the font item
+  const { fonts } = repository.getState();
+  const flatItems = toFlatItems(fonts);
+  const fontItem = flatItems.find((item) => item.id === itemId);
+  
+  if (!fontItem) {
+    console.warn("❌ Font item not found:", itemId);
+    console.log("Available items:", flatItems.map(item => ({ id: item.id, name: item.name })));
+    return;
+  }
+
+  console.log("✅ Found font item:", fontItem);
+
+  // Extract font information
+  console.log("🔧 Creating font info extractor...");
+  const fontInfoExtractor = createFontInfoExtractor({ httpClient, fontManager });
+  
+  console.log("📊 Extracting font info...");
+  const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
+  
+  console.log("📋 Font info extracted:", fontInfo);
+  
+  // Open modal with font info
+  console.log("🚀 Opening modal...");
+  store.setSelectedFontInfo(fontInfo);
+  store.setModalOpen(true);
+  render();
+  
+  console.log("✨ Modal should now be open");
+};
+
+export const handleCloseModal = (e, deps) => {
+  console.log("🔒 Closing modal...");
+  const { store, render } = deps;
+  
+  store.setModalOpen(false);
+  store.setSelectedFontInfo(null);
+  render();
+  
+  console.log("✅ Modal closed");
 };
 
 export const handleFormChange = (e, deps) => {
