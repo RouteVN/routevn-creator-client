@@ -1,57 +1,5 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
-// Helper function to generate typography button image
-const generateTypographyButtonImage = (typography) => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 200;
-  canvas.height = 40;
-  const ctx = canvas.getContext("2d");
-
-  // Background
-  ctx.fillStyle = "#f5f5f5";
-  ctx.fillRect(0, 0, 200, 40);
-
-  // Border
-  ctx.strokeStyle = "#d1d5db";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0, 0, 200, 40);
-
-  // Text
-  ctx.fillStyle = "#374151";
-  ctx.font = "14px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(typography.name || "Typography", 100, 20);
-
-  return canvas.toDataURL();
-};
-
-// Helper function to generate empty typography button image
-const generateEmptyTypographyButtonImage = () => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 200;
-  canvas.height = 40;
-  const ctx = canvas.getContext("2d");
-
-  // Background
-  ctx.fillStyle = "#f9fafb";
-  ctx.fillRect(0, 0, 200, 40);
-
-  // Dashed border
-  ctx.strokeStyle = "#d1d5db";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([5, 5]);
-  ctx.strokeRect(0, 0, 200, 40);
-
-  // Text
-  ctx.fillStyle = "#9ca3af";
-  ctx.font = "14px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("Select Typography", 100, 20);
-
-  return canvas.toDataURL();
-};
 
 const flattenObject = (obj, prefix = "") => {
   const result = {};
@@ -448,13 +396,7 @@ export const toViewData = ({ state, props }, payload) => {
                   name: "typographyId",
                   inputType: "image",
                   description: "Typography Style",
-                  src:
-                    selectedItem.typographyId &&
-                    state.typographyData?.items[selectedItem.typographyId]
-                      ? generateTypographyButtonImage(
-                          state.typographyData.items[selectedItem.typographyId],
-                        )
-                      : generateEmptyTypographyButtonImage(),
+                  src: undefined,
                 },
                 {
                   name: "style_wordWrapWidth",
