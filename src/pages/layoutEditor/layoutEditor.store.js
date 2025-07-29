@@ -1,6 +1,5 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
-
 const flattenObject = (obj, prefix = "") => {
   const result = {};
 
