@@ -37,82 +37,42 @@ export const handleTypographyItemClick = (e, deps) => {
   );
 };
 
-export const handleAddTypographyClick = (e, deps) => {
-  const { store, render } = deps;
-  e.stopPropagation(); // Prevent group click
+export const handleTypographyItemDoubleClick = (e, deps) => {
+  const { dispatchEvent, props } = deps;
+  e.stopPropagation(); // Prevent other click handlers
 
-  console.log("Add typography button clicked", e.currentTarget.id);
+  const itemId = e.currentTarget.id.replace("typography-item-", "");
 
-  // Extract group ID from the clicked button
-  const groupId = e.currentTarget.id.replace("add-typography-button-", "");
-  store.setTargetGroupId(groupId);
+  // Find the item data
+  const item = props.flatGroups
+    ?.flatMap((group) => group.children || [])
+    .find((item) => item.id === itemId);
 
-  // Toggle dialog open
-  store.toggleDialog();
-  render();
-};
-
-export const handleCloseDialog = (e, deps) => {
-  const { store, render } = deps;
-
-  // Close dialog
-  store.toggleDialog();
-  render();
-};
-
-export const handleFormActionClick = (e, deps) => {
-  const { store, render, dispatchEvent, repository } = deps;
-
-  // Check which button was clicked
-  const actionId = e.detail.actionId;
-
-  if (actionId === "submit") {
-    // Get form values from the event detail
-    const formData = e.detail.formValues;
-
-    // Get the store state
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const { targetGroupId } = storeState;
-
-    // Validate required fields (dropdowns ensure valid color and font selections)
-    if (
-      !formData.name ||
-      !formData.fontSize ||
-      !formData.fontColor ||
-      !formData.fontStyle ||
-      !formData.fontWeight
-    ) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    // Validate font size is a number
-    if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
-      alert("Please enter a valid font size (positive number)");
-      return;
-    }
-
-    // Forward typography creation to parent
+  if (item) {
+    // Forward typography item double-click to parent
     dispatchEvent(
-      new CustomEvent("typography-created", {
-        detail: {
-          groupId: targetGroupId,
-          name: formData.name,
-          fontSize: formData.fontSize,
-          fontColor: formData.fontColor,
-          fontStyle: formData.fontStyle,
-          fontWeight: formData.fontWeight,
-          previewText: formData.previewText,
-        },
+      new CustomEvent("typography-item-double-click", {
+        detail: { itemId, item },
         bubbles: true,
         composed: true,
       }),
     );
-
-    // Close dialog
-    store.toggleDialog();
-    render();
   }
+};
+
+export const handleAddTypographyClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+
+  // Extract group ID from the clicked button
+  const groupId = e.currentTarget.id.replace("add-typography-button-", "");
+
+  // Forward add typography click to parent
+  dispatchEvent(
+    new CustomEvent("add-typography-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };

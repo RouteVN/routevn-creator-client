@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { toFlatItems } from "../../deps/repository";
 
 export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
@@ -115,6 +116,7 @@ export const handleTypographyCreated = (e, deps) => {
     groupId,
     name,
     fontSize,
+    lineHeight,
     fontColor,
     fontStyle,
     fontWeight,
@@ -132,6 +134,44 @@ export const handleTypographyCreated = (e, deps) => {
         type: "typography",
         name: name,
         fontSize: fontSize,
+        lineHeight: lineHeight,
+        colorId: fontColor, // Store color ID
+        fontId: fontStyle, // Store font ID
+        fontWeight: fontWeight,
+        previewText:
+          previewText || "The quick brown fox jumps over the lazy dog",
+      },
+    },
+  });
+
+  const { typography } = repository.getState();
+  store.setItems(typography);
+  render();
+};
+
+export const handleTypographyUpdated = (e, deps) => {
+  const { store, render, repository } = deps;
+  const {
+    itemId,
+    name,
+    fontSize,
+    lineHeight,
+    fontColor,
+    fontStyle,
+    fontWeight,
+    previewText,
+  } = e.detail;
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: "typography",
+    value: {
+      id: itemId,
+      replace: false,
+      item: {
+        name: name,
+        fontSize: fontSize,
+        lineHeight: lineHeight,
         colorId: fontColor, // Store color ID
         fontId: fontStyle, // Store font ID
         fontWeight: fontWeight,
@@ -165,4 +205,143 @@ export const handleFormChange = (e, deps) => {
   store.setColorsData(colors);
   store.setFontsData(fonts);
   render();
+};
+
+export const handleFormExtraEvent = (e, deps) => {
+  const { store, render } = deps;
+
+  // Handle typography preview click
+  const selectedItemId = store.selectSelectedItemId();
+  const flatItems = toFlatItems(store.getState().typographyData);
+  const selectedItem = flatItems.find((item) => item.id === selectedItemId);
+
+  if (selectedItem) {
+    // Set form values from the selected item and open edit dialog
+    store.setFormValuesFromItem(selectedItem);
+    store.setEditMode(selectedItemId);
+    store.toggleDialog();
+    render();
+  }
+};
+
+// Dialog handlers
+export const handleAddTypographyClick = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+
+  store.setTargetGroupId(groupId);
+  store.clearEditMode();
+  store.toggleDialog();
+  render();
+};
+
+export const handleTypographyItemDoubleClick = (e, deps) => {
+  const { store, render } = deps;
+  const { itemId, item } = e.detail;
+
+  if (item) {
+    // Set form values from the item
+    store.setFormValuesFromItem(item);
+
+    // Set edit mode and open dialog
+    store.setEditMode(itemId);
+    store.toggleDialog();
+    render();
+  }
+};
+
+export const handleDialogFormChange = (e, deps) => {
+  const { store, render } = deps;
+
+  // Update form values for preview
+  store.updateFormValues(e.detail.formValues);
+  render();
+};
+
+export const handleCloseDialog = (e, deps) => {
+  const { store, render } = deps;
+
+  // Reset form values, clear edit mode, and close dialog
+  store.resetFormValues();
+  store.clearEditMode();
+  store.toggleDialog();
+  render();
+};
+
+export const handleFormActionClick = (e, deps) => {
+  const { store, render, dispatchEvent, repository } = deps;
+
+  // Check which button was clicked
+  const actionId = e.detail.actionId;
+
+  if (actionId === "submit") {
+    // Get form values from the event detail
+    const formData = e.detail.formValues;
+
+    // Get the store state
+    const storeState = store.getState
+      ? store.getState()
+      : store._state || store.state;
+    const { targetGroupId, editMode, editingItemId } = storeState;
+
+    // Validate required fields (dropdowns ensure valid color and font selections)
+    if (
+      !formData.name ||
+      !formData.fontSize ||
+      !formData.fontColor ||
+      !formData.fontStyle ||
+      !formData.fontWeight
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // Validate font size is a number
+    if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
+      alert("Please enter a valid font size (positive number)");
+      return;
+    }
+
+    if (editMode && editingItemId) {
+      // Handle typography update
+      handleTypographyUpdated(
+        {
+          detail: {
+            itemId: editingItemId,
+            name: formData.name,
+            fontSize: formData.fontSize,
+            lineHeight: formData.lineHeight,
+            fontColor: formData.fontColor,
+            fontStyle: formData.fontStyle,
+            fontWeight: formData.fontWeight,
+            previewText: formData.previewText,
+          },
+        },
+        deps,
+      );
+    } else {
+      // Handle typography creation
+      handleTypographyCreated(
+        {
+          detail: {
+            groupId: targetGroupId,
+            name: formData.name,
+            fontSize: formData.fontSize,
+            lineHeight: formData.lineHeight,
+            fontColor: formData.fontColor,
+            fontStyle: formData.fontStyle,
+            fontWeight: formData.fontWeight,
+            previewText: formData.previewText,
+          },
+        },
+        deps,
+      );
+    }
+
+    // Reset form values, clear edit mode, and close dialog
+    store.resetFormValues();
+    store.clearEditMode();
+    store.toggleDialog();
+    render();
+  }
 };

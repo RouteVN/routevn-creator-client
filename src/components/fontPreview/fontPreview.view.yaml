@@ -9,6 +9,8 @@ handleBeforeMountviewDataSchema:
       type: string
     fontSize:
       type: number
+    lineHeight:
+      type: [string, number]
     fontWeight:
       type: [string, number]
     color:
@@ -38,6 +40,10 @@ attrsSchema:
       type: string
       description: Font size in pixels
       default: "100"
+    lineHeight:
+      type: string
+      description: Line height (e.g., 1.5, 1.2, 24px)
+      default: "1.5"
     fontWeight:
       type: string
       description: Font weight
@@ -61,12 +67,20 @@ attrsSchema:
     textAlign:
       type: string
       description: Text alignment
-      default: "center"
+      default: "left"
+    av:
+      type: string
+      description: Vertical alignment
+      default: ""
+    ah:
+      type: string
+      description: Horizontal alignment
+      default: ""
     showBorder:
       type: string
       description: Whether to show border around preview
       default: "true"
 
 template:
-  - 'rtgl-view#main av=c ah=c style="width: ${width}px; height: ${height}px; background-color: ${backgroundColor};"':
-    - 'rtgl-text style="font-family: ${fontFamily}, sans-serif; font-size: ${fontSize}px; font-weight: ${fontWeight}; color: ${color}; text-align: ${textAlign};"': ${previewText}
+  - 'rtgl-view#main av=${av} ah=${ah} style="width: ${width}px; ${heightStyle} background-color: ${backgroundColor}; overflow: hidden;"':
+    - 'rtgl-text style="font-family: ${fontFamily}, sans-serif; font-size: ${fontSize}px; line-height: ${lineHeight}; font-weight: ${fontWeight}; color: ${color}; text-align: ${textAlign};"': ${previewText}

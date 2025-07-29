@@ -3,8 +3,6 @@ import { toFlatItems } from "../../deps/repository";
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: "",
-  isDialogOpen: false,
-  targetGroupId: null,
   colorsData: {
     items: {},
     tree: [],
@@ -12,13 +10,6 @@ export const INITIAL_STATE = Object.freeze({
   fontsData: {
     items: {},
     tree: [],
-  },
-
-  defaultValues: {
-    name: "",
-    fontSize: "16",
-    fontWeight: "normal",
-    previewText: "",
   },
 });
 
@@ -35,14 +26,6 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-export const toggleDialog = (state) => {
-  state.isDialogOpen = !state.isDialogOpen;
-};
-
-export const setTargetGroupId = (state, groupId) => {
-  state.targetGroupId = groupId;
-};
-
 export const setColorsData = (state, colorsData) => {
   state.colorsData = colorsData;
 };
@@ -54,6 +37,7 @@ export const setFontsData = (state, fontsData) => {
 export const toViewData = ({ state, props }, payload) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
+
   const getColorHex = (colorId) => {
     if (!colorId) return "#000000";
     const color = toFlatItems(state.colorsData)
@@ -72,104 +56,20 @@ export const toViewData = ({ state, props }, payload) => {
       : { fontFamily: fontId, fileId: null };
   };
 
-  // Generate color options from props
-  const colorOptions = props.colorsData
-    ? toFlatItems(props.colorsData)
-        .filter((item) => item.type === "color")
-        .map((color) => ({
-          id: color.id,
-          label: color.name,
-          value: color.id,
-        }))
-    : [];
-
-  // Generate font options from props
-  const fontOptions = props.fontsData
-    ? toFlatItems(props.fontsData)
-        .filter((item) => item.type === "font")
-        .map((font) => ({
-          id: font.id,
-          label: font.fontFamily,
-          value: font.id,
-        }))
-    : [];
-
-  // Generate dynamic form with dropdown options
-  const form = {
-    title: "Add Typography",
-    description: "Create a new typography style",
-    fields: [
-      {
-        name: "name",
-        inputType: "inputText",
-        label: "Name",
-        description: "Enter the typography style name",
-        required: true,
-      },
-      {
-        name: "fontColor",
-        inputType: "select",
-        label: "Color",
-        description: "Select a font color",
-        placeholder: "Choose a color",
-        options: colorOptions,
-        required: true,
-      },
-      {
-        name: "fontStyle",
-        inputType: "select",
-        label: "Font Style",
-        description: "Select a font style",
-        placeholder: "Choose a font",
-        options: fontOptions,
-        required: true,
-      },
-      {
-        name: "fontSize",
-        inputType: "inputText",
-        label: "Font Size",
-        description: "Enter the font size (e.g., 16, 18, 24)",
-        required: true,
-      },
-      {
-        name: "fontWeight",
-        inputType: "inputText",
-        label: "Font Weight",
-        description: "Enter the font weight (e.g., normal, bold, 400, 700)",
-        required: true,
-      },
-      {
-        name: "previewText",
-        inputType: "inputText",
-        label: "Preview Text",
-        description: "Text to display in the typography preview",
-        required: false,
-      },
-    ],
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          content: "Add Typography",
-        },
-      ],
-    },
-  };
-
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
     if (!searchQuery) return true;
 
     const name = (item.name || "").toLowerCase();
     const fontSize = (item.fontSize || "").toString().toLowerCase();
+    const lineHeight = (item.lineHeight || "").toString().toLowerCase();
     const fontColor = (item.fontColor || "").toLowerCase();
     const fontWeight = (item.fontWeight || "").toLowerCase();
 
     return (
       name.includes(searchQuery) ||
       fontSize.includes(searchQuery) ||
+      lineHeight.includes(searchQuery) ||
       fontColor.includes(searchQuery) ||
       fontWeight.includes(searchQuery)
     );
@@ -216,9 +116,6 @@ export const toViewData = ({ state, props }, payload) => {
     flatGroups,
     selectedItemId: props.selectedItemId,
     uploadText: "Upload Typography Files",
-    isDialogOpen: state.isDialogOpen,
     searchQuery: state.searchQuery,
-    defaultValues: state.defaultValues,
-    form: form,
   };
 };
