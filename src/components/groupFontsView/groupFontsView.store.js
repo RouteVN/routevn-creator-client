@@ -61,6 +61,6 @@ export const toViewData = ({ state, props }) => {
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
     uploadText: "Upload Font",
-    acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".eot"],
+    acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
   };
 };

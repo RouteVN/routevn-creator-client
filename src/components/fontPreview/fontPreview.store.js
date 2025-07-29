@@ -12,7 +12,6 @@ const toViewData = ({ state, attrs }) => {
     height: parseInt(attrs.height) || 150,
     backgroundColor: attrs.backgroundColor || "transparent",
     textAlign: attrs.textAlign || "center",
-    borderClass: showBorder ? "bgc=bg bc=bo bw=xs br=md p=xs" : "",
   };
 };
 

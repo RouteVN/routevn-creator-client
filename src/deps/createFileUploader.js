@@ -430,7 +430,7 @@ export const createFontFileUploader = ({ httpClient, fontManager }) => {
     const uploadPromises = Array.from(files).map(async (file) => {
       try {
         // Load font file for preview using fontManager
-        const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
+        const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
         const fontUrl = URL.createObjectURL(file);
 
         try {

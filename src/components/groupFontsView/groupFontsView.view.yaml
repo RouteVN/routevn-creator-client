@@ -37,12 +37,14 @@ refs:
     eventListeners:
       click:
         handler: handleFontItemClick
+      dblclick:
+        handler: handleFontItemDoubleClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
     - rtgl-view g=lg w=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search fonts..." value=${searchQuery}: 
+        - rtgl-input#search-input s=sm placeholder="Search fonts..." value=${searchQuery}:
         # TODO implement zoom controls (increase/decrease font size)
       - $if flatGroups.length > 0:
           - $for group in flatGroups:
@@ -61,9 +63,9 @@ template:
                       - $if group.hasChildren:
                           - $for item in group.children:
                               - 'rtgl-view#font-item-${item.id} cur=p':
-                                - rtgl-view w=200 d=v av=c ah=c:
+                                - rtgl-view w=200 d=v p=md bw=xs br=md:
                                   - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=200 height=150:
-                                  - rtgl-text s=xs c=mu-fg mt=xs ta=c: ${item.fontFamily}
+                                  - rtgl-text s=xs c=mu-fg m=sm ellipsis w="calc(200px - 2 * var(--spacing-md))": ${item.name}
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
                           - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
