@@ -216,20 +216,59 @@ export const handleDataChanged = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
+const unflattenKey = (key, value) => {
+  const parts = key.split('_');
+  if (parts.length === 1) {
+    return { [key]: value };
+  }
+  
+  const result = {};
+  let current = result;
+  
+  for (let i = 0; i < parts.length - 1; i++) {
+    current[parts[i]] = {};
+    current = current[parts[i]];
+  }
+  
+  current[parts[parts.length - 1]] = value;
+  return result;
+};
+
+const deepMerge = (target, source) => {
+  const result = { ...target };
+  
+  Object.keys(source).forEach(key => {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      if (result[key] && typeof result[key] === 'object') {
+        result[key] = deepMerge(result[key], source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    } else {
+      result[key] = source[key];
+    }
+  });
+  
+  return result;
+};
+
 export const handleFormChange = async (e, deps) => {
   const { repository, store, render } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
+
+  const unflattenedUpdate = unflattenKey(e.detail.name, e.detail.fieldValue);
+
+  const currentItem = store.selectSelectedItem();
+  const updatedItem = deepMerge(currentItem, unflattenedUpdate);
 
   repository.addAction({
     actionType: "treeUpdate",
     target: `layouts.items.${layoutId}.elements`,
     value: {
       id: selectedItemId,
-      replace: false,
-      item: {
-        [e.detail.name]: e.detail.fieldValue,
-      },
+      replace: true,
+      item: updatedItem,
     },
   });
 

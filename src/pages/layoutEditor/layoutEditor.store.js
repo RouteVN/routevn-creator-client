@@ -1,5 +1,22 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
+const flattenObject = (obj, prefix = '') => {
+  const result = {};
+  
+  Object.keys(obj).forEach(key => {
+    const value = obj[key];
+    const newKey = prefix ? `${prefix}_${key}` : key;
+    
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(result, flattenObject(value, newKey));
+    } else {
+      result[newKey] = value;
+    }
+  });
+  
+  return result;
+};
+
 // TODO: get global screen size from store
 const SCREEN_WIDTH = 1920;
 const SCREEN_HEIGHT = 1080;
@@ -331,6 +348,21 @@ export const toViewData = ({ state, props }, payload) => {
                   inputType: "popover-input",
                   description: "Text Content",
                 },
+                {
+                  name: "style_wordWrapWidth",
+                  inputType: "popover-input",
+                  description: "Word Wrap Width",
+                },
+                {
+                  name: "style_align",
+                  inputType: "select",
+                  description: "Text Alignment",
+                  options: [
+                    { label: "Left", value: "left" }, 
+                    { label: "Center", value: "center" },
+                    { label: "Right", value: "right" },
+                  ],
+                }
               ]
             : []),
           ...(selectedItem.type === "sprite"
@@ -361,7 +393,7 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Create default values for the form
   const defaultValues = selectedItem
-    ? {
+    ? flattenObject({
         name: selectedItem.name,
         type: selectedItem.type,
         x: selectedItem.x,
@@ -376,6 +408,10 @@ export const toViewData = ({ state, props }, payload) => {
         ...(selectedItem.type === "text"
           ? {
               text: selectedItem.text,
+              style: {
+                align: selectedItem.style?.align ?? "left",
+                wordWrapWidth: selectedItem.style?.wordWrapWidth ?? 300,
+              }
             }
           : {}),
         ...(selectedItem.type === "sprite"
@@ -385,7 +421,7 @@ export const toViewData = ({ state, props }, payload) => {
               clickImageId: selectedItem.clickImageId ?? "",
             }
           : {}),
-      }
+      })
     : {};
 
   return {

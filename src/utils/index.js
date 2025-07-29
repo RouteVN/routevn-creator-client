@@ -72,7 +72,8 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
         style: {
           fontSize: 24,
           fill: "white",
-          wordWrapWidth: 300,
+          wordWrapWidth: node.style?.wordWrapWidth ?? 300,
+          align: node.style?.align ?? "left",
         },
       };
     }
