@@ -154,21 +154,24 @@ export const handleDragDropFileSelected = async (e, deps) => {
 export const handleFontItemDoubleClick = async (e, deps) => {
   const { store, render, repository, httpClient, fontManager } = deps;
   const { itemId } = e.detail;
-  
+
   // Find the font item
   const { fonts } = repository.getState();
   const flatItems = toFlatItems(fonts);
   const fontItem = flatItems.find((item) => item.id === itemId);
-  
+
   if (!fontItem) {
     console.warn("Font item not found:", itemId);
     return;
   }
 
   // Extract font information
-  const fontInfoExtractor = createFontInfoExtractor({ httpClient, fontManager });
+  const fontInfoExtractor = createFontInfoExtractor({
+    httpClient,
+    fontManager,
+  });
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
-  
+
   // Open modal with font info
   store.setSelectedFontInfo(fontInfo);
   store.setModalOpen(true);
@@ -177,7 +180,7 @@ export const handleFontItemDoubleClick = async (e, deps) => {
 
 export const handleCloseModal = (e, deps) => {
   const { store, render } = deps;
-  
+
   store.setModalOpen(false);
   store.setSelectedFontInfo(null);
   render();
