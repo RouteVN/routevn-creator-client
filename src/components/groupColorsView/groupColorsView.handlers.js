@@ -29,20 +29,35 @@ export const handleColorItemClick = (e, deps) => {
   );
 };
 
+export const handleColorItemDoubleClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  const itemId = e.currentTarget.id.replace("color-item-", "");
+
+  // Forward color item double-click to parent
+  dispatchEvent(
+    new CustomEvent("color-item-dblclick", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleAddColorClick = (e, deps) => {
-  const { store, render } = deps;
+  const { dispatchEvent } = deps;
   e.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
   const groupId = e.currentTarget.id.replace("add-color-button-", "");
-  store.setTargetGroupId(groupId);
 
-  // Set add mode (not edit mode)
-  store.setEditMode(false);
-
-  // Toggle dialog open
-  store.toggleDialog();
-  render();
+  // Forward add color click to parent
+  dispatchEvent(
+    new CustomEvent("add-color-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleCloseDialog = (e, deps) => {
