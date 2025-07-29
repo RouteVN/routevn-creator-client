@@ -155,7 +155,7 @@ template:
                           - $if field.editable:
                               - "rtgl-view#font-field-${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p":
                                   - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
-                              - 'input#file-input-${i} type=file accept=".ttf,.otf,.woff,.woff2" style="display: none;"':
+                              - 'input#file-input-${i} type=file accept=".ttf,.otf,.woff,.woff2,.ttc" style="display: none;"':
                             $else:
                               - "rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md":
                                   - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}

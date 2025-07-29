@@ -29,6 +29,20 @@ export const handleFontItemClick = (e, deps) => {
   );
 };
 
+export const handleFontItemDoubleClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  const itemId = e.currentTarget.id.replace("font-item-", "");
+
+  // Forward double-click event to parent
+  dispatchEvent(
+    new CustomEvent("font-item-double-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleDragDropFileSelected = async (e, deps) => {
   const { dispatchEvent, fontManager } = deps;
   const { files } = e.detail;
@@ -38,7 +52,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
   // Load fonts for preview
   for (const file of files) {
-    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
+    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
     const fontUrl = URL.createObjectURL(file);
     await fontManager.load(fontName, fontUrl);
   }
