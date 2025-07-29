@@ -78,3 +78,99 @@ export const handleFormChange = (e, deps) => {
   store.setItems(colors);
   render();
 };
+
+export const handleColorItemDoubleClick = (e, deps) => {
+  const { store, render } = deps;
+  const { itemId } = e.detail;
+  store.openEditDialog(itemId);
+  render();
+};
+
+export const handleAddColorClick = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+  store.openAddDialog(groupId);
+  render();
+};
+
+export const handleEditDialogClose = (e, deps) => {
+  const { store, render } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditFormAction = (e, deps) => {
+  const { store, render, repository } = deps;
+
+  if (e.detail.actionId === "submit") {
+    const formData = e.detail.formValues;
+
+    // Update the color in the repository
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "colors",
+      value: {
+        id: store.getState().editItemId,
+        replace: false,
+        item: {
+          name: formData.name,
+          hex: formData.hex,
+        },
+      },
+    });
+
+    const { colors } = repository.getState();
+    store.setItems(colors);
+    store.closeEditDialog();
+    render();
+  }
+};
+
+export const handleFormFieldClick = (e, deps) => {
+  const { store, render } = deps;
+  console.log("e.detail", e.detail);
+  // Check if the clicked field is the color image
+  if (e.detail.name === "colorImage") {
+    const selectedItemId = store.selectSelectedItemId();
+    if (selectedItemId) {
+      store.openEditDialog(selectedItemId);
+      render();
+    }
+  }
+};
+
+export const handleAddDialogClose = (e, deps) => {
+  const { store, render } = deps;
+  store.closeAddDialog();
+  render();
+};
+
+export const handleAddFormAction = (e, deps) => {
+  const { store, render, repository } = deps;
+
+  if (e.detail.actionId === "submit") {
+    const formData = e.detail.formValues;
+    const targetGroupId = store.getState().targetGroupId;
+
+    // Create the color in the repository
+    repository.addAction({
+      actionType: "treePush",
+      target: "colors",
+      value: {
+        parent: targetGroupId,
+        position: "last",
+        item: {
+          id: nanoid(),
+          type: "color",
+          name: formData.name,
+          hex: formData.hex,
+        },
+      },
+    });
+
+    const { colors } = repository.getState();
+    store.setItems(colors);
+    store.closeAddDialog();
+    render();
+  }
+};

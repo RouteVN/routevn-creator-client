@@ -13,6 +13,10 @@ refs:
     eventListeners:
       color-item-click:
         handler: handleColorItemClick
+      color-item-dblclick:
+        handler: handleColorItemDoubleClick
+      add-color-click:
+        handler: handleAddColorClick
       color-created:
         handler: handleColorCreated
       color-edited:
@@ -21,9 +25,27 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
+      extra-event:
+        handler: handleFormFieldClick
+  edit-dialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  edit-form:
+    eventListeners:
+      action-click:
+        handler: handleEditFormAction
+  add-color-dialog:
+    eventListeners:
+      close:
+        handler: handleAddDialogClose
+  add-color-form:
+    eventListeners:
+      action-click:
+        handler: handleAddFormAction
 
-template: 
-  - rtgl-view d=h w=f h=f: 
+template:
+  - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f w=f:
       - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
@@ -34,3 +56,7 @@ template:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
           - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
+  - rtgl-dialog#edit-dialog ?open=${isEditDialogOpen} s=sm:
+    - rtgl-form#edit-form slot=content .defaultValues=editDefaultValues .form=editForm:
+  - rtgl-dialog#add-color-dialog ?open=${isAddDialogOpen} s=sm:
+    - rtgl-form#add-color-form slot=content .defaultValues=addDefaultValues .form=addForm w=f:
