@@ -1,0 +1,58 @@
+elementName: rvn-typography-selector
+
+propsSchema:
+  type: object
+  properties:
+    groups:
+      type: array
+    selectedTypographyId:
+      type: string
+    colorsData:
+      type: object
+    fontsData:
+      type: object
+
+viewDataSchema:
+  type: object
+  properties:
+    groups:
+      type: array
+    selectedTypographyId:
+      type: string
+    searchQuery:
+      type: string
+
+refs:
+  search-input:
+    eventListeners:
+      input-change:
+        handler: handleSearchInput
+  typography-item-*:
+    eventListeners:
+      click:
+        handler: handleTypographyItemClick
+  clear-button:
+    eventListeners:
+      click:
+        handler: handleClearClick
+
+template:
+  - rtgl-view h=400 sv g=lg oy=a:
+    - rtgl-view g=lg w=f:
+      - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+        - rtgl-input#search-input s=sm placeholder="Search typography..." value=${searchQuery}:
+      - rtgl-view w=f ph=md:
+        - rtgl-button#clear-button s=sm t=secondary w=f mb=md:
+          - rtgl-text: Clear typography
+      - $if groups.length > 0:
+          - $for group in groups:
+            - rtgl-view w=f ph=md mb=md:
+              - rtgl-text s=sm c=mu-fg mb=sm: ${group.name}
+              - rtgl-view fw=w w=f g=md:
+                - $for item in group.children:
+                  - 'rtgl-view#typography-item-${item.id} w=f bw=${item.bw} cur=p br=sm':
+                    - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=300 height=60 showBorder=false:
+                    - rtgl-text s=xs c=mu-fg m=sm ellipsis w="calc(300px - 2 * var(--spacing-md))": ${item.name}
+        $else:
+          - rtgl-view w=f h=200 av=c ah=c:
+            - rtgl-text s=lg c=mu-fg: Typography not found

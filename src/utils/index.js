@@ -49,7 +49,13 @@ export const extractFileIdsFromRenderState = (obj) => {
   return Array.from(fileIds);
 };
 
-export const layoutTreeStructureToRenderState = (layout, imageItems) => {
+export const layoutTreeStructureToRenderState = (
+  layout,
+  imageItems,
+  typographyData,
+  colorsData,
+  fontsData,
+) => {
   const mapNode = (node) => {
     let element = {
       id: node.id,
@@ -66,12 +72,35 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
     };
 
     if (node.type === "text") {
+      let textStyle = {};
+
+      // Apply typography if selected
+      if (node.typographyId && typographyData?.items[node.typographyId]) {
+        const typography = typographyData.items[node.typographyId];
+        const colorItem = colorsData?.items[typography.colorId];
+        const fontItem = fontsData?.items[typography.fontId];
+
+        textStyle = {
+          fontSize: typography.fontSize,
+          fontFamily: fontItem?.name || "Arial",
+          fontWeight: typography.fontWeight,
+          fill: colorItem?.hex || "#ffffff",
+          // Note: lineHeight might not be supported by route-graphics, removed for now
+        };
+      } else {
+        // Use default settings
+        textStyle = {
+          fontSize: 24,
+          fill: "white",
+          // Note: lineHeight might not be supported by route-graphics, removed for now
+        };
+      }
+
       element = {
         ...element,
         text: node.text,
         style: {
-          fontSize: 24,
-          fill: "white",
+          ...textStyle,
           wordWrapWidth: parseInt(node.style?.wordWrapWidth ?? 300),
           align: node.style?.align ?? "left",
         },

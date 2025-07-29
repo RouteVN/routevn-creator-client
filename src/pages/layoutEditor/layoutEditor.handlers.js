@@ -11,7 +11,15 @@ const renderLayoutPreview = async (deps) => {
   const {
     layouts,
     images: { items: imageItems },
+    typography: typographyData,
+    colors: colorsData,
+    fonts: fontsData,
   } = repository.getState();
+
+  // Extract items from structured data
+  const typographyItems = typographyData?.items || {};
+  const colorsItems = colorsData?.items || {};
+  const fontsItems = fontsData?.items || {};
   const layout = layouts.items[layoutId];
 
   const layoutTreeStructure = toTreeStructure(layout.elements);
@@ -29,6 +37,9 @@ const renderLayoutPreview = async (deps) => {
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
+    { items: typographyItems },
+    { items: colorsItems },
+    { items: fontsItems },
   );
 
   const selectedItem = store.selectSelectedItem();
@@ -137,11 +148,14 @@ const renderLayoutPreview = async (deps) => {
 export const handleBeforeMount = (deps) => {
   const { router, store, repository } = deps;
   const { layoutId } = router.getPayload();
-  const { layouts, images } = repository.getState();
+  const { layouts, images, typography, colors, fonts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setLayoutId(layoutId);
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
+  store.setTypographyData(typography || { items: {}, tree: [] });
+  store.setColorsData(colors || { items: {}, tree: [] });
+  store.setFontsData(fonts || { items: {}, tree: [] });
 };
 
 export const handleAfterMount = async (deps) => {
@@ -291,12 +305,17 @@ export const handleFormExtraEvent = async (e, deps) => {
   const { repository, store, render } = deps;
   const { trigger, eventType, name, value, fieldIndex } = e.detail;
 
-  if (!["imageId", "hoverImageId", "clickImageId"].includes(name)) {
+  if (
+    !["imageId", "hoverImageId", "clickImageId", "typographyId"].includes(name)
+  ) {
     return;
   }
 
   // Handle image field click - check if name includes "imageId" or "ImageId"
-  if (trigger === "click") {
+  if (
+    trigger === "click" &&
+    ["imageId", "hoverImageId", "clickImageId"].includes(name)
+  ) {
     const selectedItem = store.selectSelectedItem();
     if (selectedItem) {
       // Get current value for the field
@@ -317,6 +336,28 @@ export const handleFormExtraEvent = async (e, deps) => {
       store.showImageSelectorDialog({
         fieldIndex: actualFieldIndex,
         groups: imageGroups,
+        currentValue,
+      });
+      render();
+    }
+    return;
+  }
+
+  // Handle typography field click (button type)
+  if (
+    (trigger === "click" || trigger === "button-click") &&
+    name === "typographyId"
+  ) {
+    const selectedItem = store.selectSelectedItem();
+    if (selectedItem) {
+      // Get current value for the field
+      const currentValue = selectedItem[name] || null;
+
+      // Transform typography data to groups format for the selector
+      const typographyGroups = store.toViewData().typographyGroups;
+
+      store.showTypographySelectorDialog({
+        groups: typographyGroups,
         currentValue,
       });
       render();
@@ -486,4 +527,63 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     // Re-render the preview
     await renderLayoutPreview(deps);
   }
+};
+
+export const handleTypographySelectorSelection = (e, deps) => {
+  const { store, render } = deps;
+  const { typographyId } = e.detail;
+
+  store.setTempSelectedTypographyId({ typographyId });
+  render();
+};
+
+export const handleConfirmTypographySelection = async (e, deps) => {
+  const { store, render, repository } = deps;
+
+  const state = store.getState ? store.getState() : store._state || store.state;
+  const selectedTypographyId =
+    state.typographySelectorDialog.selectedTypographyId;
+
+  const selectedItem = store.selectSelectedItem();
+
+  if (selectedItem) {
+    const layoutId = store.selectLayoutId();
+    const selectedItemId = store.selectSelectedItemId();
+
+    // Update the repository to set the typography
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: `layouts.items.${layoutId}.elements`,
+      value: {
+        id: selectedItemId,
+        replace: false,
+        item: { typographyId: selectedTypographyId },
+      },
+    });
+
+    // Sync store with updated repository data
+    const { layouts } = repository.getState();
+    const layout = layouts.items[layoutId];
+
+    store.setItems(layout?.elements || { items: {}, tree: [] });
+  }
+
+  // Hide dialog
+  store.hideTypographySelectorDialog();
+  render();
+
+  // Re-render the preview
+  await renderLayoutPreview(deps);
+};
+
+export const handleCancelTypographySelection = (e, deps) => {
+  const { store, render } = deps;
+  store.hideTypographySelectorDialog();
+  render();
+};
+
+export const handleCloseTypographySelectorDialog = (e, deps) => {
+  const { store, render } = deps;
+  store.hideTypographySelectorDialog();
+  render();
 };

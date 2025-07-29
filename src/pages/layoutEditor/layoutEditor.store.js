@@ -1,5 +1,58 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
+// Helper function to generate typography button image
+const generateTypographyButtonImage = (typography) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 200;
+  canvas.height = 40;
+  const ctx = canvas.getContext("2d");
+
+  // Background
+  ctx.fillStyle = "#f5f5f5";
+  ctx.fillRect(0, 0, 200, 40);
+
+  // Border
+  ctx.strokeStyle = "#d1d5db";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, 200, 40);
+
+  // Text
+  ctx.fillStyle = "#374151";
+  ctx.font = "14px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(typography.name || "Typography", 100, 20);
+
+  return canvas.toDataURL();
+};
+
+// Helper function to generate empty typography button image
+const generateEmptyTypographyButtonImage = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 200;
+  canvas.height = 40;
+  const ctx = canvas.getContext("2d");
+
+  // Background
+  ctx.fillStyle = "#f9fafb";
+  ctx.fillRect(0, 0, 200, 40);
+
+  // Dashed border
+  ctx.strokeStyle = "#d1d5db";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]);
+  ctx.strokeRect(0, 0, 200, 40);
+
+  // Text
+  ctx.fillStyle = "#9ca3af";
+  ctx.font = "14px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Select Typography", 100, 20);
+
+  return canvas.toDataURL();
+};
+
 const flattenObject = (obj, prefix = "") => {
   const result = {};
 
@@ -28,6 +81,11 @@ export const INITIAL_STATE = Object.freeze({
     groups: [],
     selectedImageId: null,
   },
+  typographySelectorDialog: {
+    isOpen: false,
+    groups: [],
+    selectedTypographyId: null,
+  },
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -38,6 +96,9 @@ export const INITIAL_STATE = Object.freeze({
   selectedItemId: null,
   layoutId: null,
   images: { tree: [], items: {} },
+  typographyData: { tree: [], items: {} },
+  colorsData: { tree: [], items: {} },
+  fontsData: { tree: [], items: {} },
   fieldResources: {},
   contextMenuItems: [
     {
@@ -169,6 +230,18 @@ export const setImages = (state, images) => {
   state.images = images;
 };
 
+export const setTypographyData = (state, typographyData) => {
+  state.typographyData = typographyData;
+};
+
+export const setColorsData = (state, colorsData) => {
+  state.colorsData = colorsData;
+};
+
+export const setFontsData = (state, fontsData) => {
+  state.fontsData = fontsData;
+};
+
 export const setFieldResources = (state, resources) => {
   state.fieldResources = resources;
 };
@@ -204,6 +277,25 @@ export const hideImageSelectorDialog = (state) => {
 
 export const setTempSelectedImageId = (state, { imageId }) => {
   state.imageSelectorDialog.selectedImageId = imageId;
+};
+
+export const showTypographySelectorDialog = (
+  state,
+  { groups, currentValue },
+) => {
+  state.typographySelectorDialog.isOpen = true;
+  state.typographySelectorDialog.groups = groups || [];
+  state.typographySelectorDialog.selectedTypographyId = currentValue || null;
+};
+
+export const hideTypographySelectorDialog = (state) => {
+  state.typographySelectorDialog.isOpen = false;
+  state.typographySelectorDialog.groups = [];
+  state.typographySelectorDialog.selectedTypographyId = null;
+};
+
+export const setTempSelectedTypographyId = (state, { typographyId }) => {
+  state.typographySelectorDialog.selectedTypographyId = typographyId;
 };
 
 export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
@@ -262,6 +354,10 @@ export const toViewData = ({ state, props }, payload) => {
   // Helper to transform images data into groups
   const imageGroups = toFlatGroups(state.images);
   const imageItems = state.images.items;
+
+  // Helper to transform typography data into groups
+  const typographyGroups = toFlatGroups(state.typographyData);
+  const typographyItems = state.typographyData.items;
 
   // Create form configuration based on selected item type
   const form = selectedItem
@@ -349,6 +445,18 @@ export const toViewData = ({ state, props }, payload) => {
                   description: "Text Content",
                 },
                 {
+                  name: "typographyId",
+                  inputType: "image",
+                  description: "Typography Style",
+                  src:
+                    selectedItem.typographyId &&
+                    state.typographyData?.items[selectedItem.typographyId]
+                      ? generateTypographyButtonImage(
+                          state.typographyData.items[selectedItem.typographyId],
+                        )
+                      : generateEmptyTypographyButtonImage(),
+                },
+                {
                   name: "style_wordWrapWidth",
                   inputType: "popover-input",
                   description: "Word Wrap Width",
@@ -408,6 +516,7 @@ export const toViewData = ({ state, props }, payload) => {
         ...(selectedItem.type === "text"
           ? {
               text: selectedItem.text,
+              typographyId: selectedItem.typographyId ?? "",
               style: {
                 align: selectedItem.style?.align ?? "left",
                 wordWrapWidth: parseInt(
@@ -437,12 +546,21 @@ export const toViewData = ({ state, props }, payload) => {
     emptyContextMenuItems: state.emptyContextMenuItems,
     images: state.images,
     imageGroups,
+    typographyData: state.typographyData,
+    typographyGroups,
+    colorsData: state.colorsData,
+    fontsData: state.fontsData,
     form,
     defaultValues,
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,
       groups: state.imageSelectorDialog.groups,
       selectedImageId: state.imageSelectorDialog.selectedImageId,
+    },
+    typographySelectorDialog: {
+      isOpen: state.typographySelectorDialog.isOpen,
+      groups: state.typographySelectorDialog.groups,
+      selectedTypographyId: state.typographySelectorDialog.selectedTypographyId,
     },
     dropdownMenu: state.dropdownMenu,
   };
