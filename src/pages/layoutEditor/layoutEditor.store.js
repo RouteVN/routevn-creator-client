@@ -221,7 +221,6 @@ export const setTempSelectedImageId = (state, { imageId }) => {
   state.imageSelectorDialog.selectedImageId = imageId;
 };
 
-
 export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
   const selectedItem = selectSelectedItem({ state });
   if (!selectedItem) return "imageId";
@@ -265,6 +264,18 @@ export const hideDropdownMenu = (state) => {
 
 export const selectDropdownMenuFieldName = ({ state }) => {
   return state.dropdownMenu.fieldName;
+};
+
+export const selectItems = ({ state }) => {
+  return state.layoutData;
+};
+
+export const selectTypographyData = ({ state }) => {
+  return state.typographyData;
+};
+
+export const selectFontsData = ({ state }) => {
+  return state.fontsData;
 };
 
 export const toViewData = ({ state, props }, payload) => {

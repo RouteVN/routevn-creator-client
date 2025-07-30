@@ -1,8 +1,60 @@
-import { toTreeStructure } from "../../deps/repository";
+import { toTreeStructure, toFlatItems } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
   layoutTreeStructureToRenderState,
 } from "../../utils/index.js";
+
+const loadLayoutFonts = async (deps) => {
+  const { store, loadFontFile } = deps;
+
+  try {
+    // Use store selector functions
+    const layoutElements = store.selectItems();
+    const typographyData = store.selectTypographyData();
+    const fontsData = store.selectFontsData();
+
+    // Get all typography items used in the layout
+    const flatItems = toFlatItems(layoutElements);
+    const usedTypographyIds = new Set();
+
+    // Find all text elements and collect their typography IDs
+    flatItems.forEach((item) => {
+      if (item.type === "text" && item.typographyId) {
+        usedTypographyIds.add(item.typographyId);
+      }
+    });
+
+    // Get typography items and their font IDs
+    const typographyItems = typographyData?.items || {};
+    const usedFontIds = new Set();
+
+    usedTypographyIds.forEach((typographyId) => {
+      const typo = typographyItems[typographyId];
+      if (typo && typo.fontId) {
+        usedFontIds.add(typo.fontId);
+      }
+    });
+
+    // Get font items and load them
+    const fontItems = fontsData?.items || {};
+    const fontLoadPromises = [];
+
+    usedFontIds.forEach((fontId) => {
+      const fontItem = fontItems[fontId];
+      if (fontItem && fontItem.fileId && fontItem.fontFamily) {
+        console.log("Loading font for layout:", fontItem.fontFamily);
+        fontLoadPromises.push(loadFontFile(fontItem));
+      }
+    });
+
+    if (fontLoadPromises.length > 0) {
+      await Promise.all(fontLoadPromises);
+      console.log(`Loaded ${fontLoadPromises.length} fonts for layout`);
+    }
+  } catch (error) {
+    console.error("Error loading layout fonts:", error);
+  }
+};
 
 const renderLayoutPreview = async (deps) => {
   const { store, repository, render, drenderer, httpClient } = deps;
@@ -159,9 +211,13 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { render, getRefIds, drenderer } = deps;
+  const { render, getRefIds, drenderer, loadFontFile } = deps;
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
+
+  // Load all fonts used in this layout before rendering
+  await loadLayoutFonts(deps);
+
   await renderLayoutPreview(deps);
   render();
 };
@@ -343,7 +399,6 @@ export const handleFormExtraEvent = async (e, deps) => {
     return;
   }
 
-
   if (trigger === "contextmenu") {
     const selectedItem = store.selectSelectedItem();
     // Only show context menu if there's actually an image set for this field
@@ -507,4 +562,3 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     await renderLayoutPreview(deps);
   }
 };
-

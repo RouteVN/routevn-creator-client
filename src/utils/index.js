@@ -96,14 +96,25 @@ export const layoutTreeStructureToRenderState = (
         };
       }
 
+      const finalStyle = {
+        ...textStyle,
+        wordWrapWidth: parseInt(node.style?.wordWrapWidth ?? 300),
+        align: node.style?.align ?? "left",
+      };
+
+      console.log("=== Text Rendering Style Properties ===");
+      console.log("Text content:", node.text);
+      console.log("Element ID:", node.id);
+      console.log("All style properties:", finalStyle);
+      Object.keys(finalStyle).forEach((key) => {
+        console.log(`  ${key}:`, finalStyle[key]);
+      });
+      console.log("=====================================");
+
       element = {
         ...element,
         text: node.text,
-        style: {
-          ...textStyle,
-          wordWrapWidth: parseInt(node.style?.wordWrapWidth ?? 300),
-          align: node.style?.align ?? "left",
-        },
+        style: finalStyle,
       };
     }
 
