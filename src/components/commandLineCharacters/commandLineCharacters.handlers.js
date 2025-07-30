@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../deps/repository";
+import { nanoid } from "nanoid";
 
 export const handleBeforeMount = (deps) => {
   const { repository, store, props } = deps;
@@ -13,83 +14,47 @@ export const handleBeforeMount = (deps) => {
     animations: animations || { tree: [], items: {} },
   });
 
-  // Initialize with existing character data if available
-  if (
-    props?.line?.presentation?.character?.items &&
-    Array.isArray(props.line.presentation.character.items)
-  ) {
-    props.line.presentation.character.items.forEach((existingChar) => {
-      // Find the character data from repository
-      const characterData = toFlatItems(
-        characters || { tree: [], items: {} },
-      ).find((char) => char.id === existingChar.id);
-
-      if (characterData) {
-        // Find sprite data if available
-        let spriteFileId = undefined;
-        if (
-          existingChar.spriteParts?.[0]?.spritePartId &&
-          characterData.sprites
-        ) {
-          const sprite = toFlatItems(characterData.sprites).find(
-            (s) => s.id === existingChar.spriteParts[0].spritePartId,
-          );
-          if (sprite) {
-            spriteFileId = sprite.fileId;
-          }
-        }
-
-        store.addCharacter({
-          ...characterData,
-          transform: existingChar.transformId,
-          spriteId: existingChar.spriteParts?.[0]?.spritePartId,
-          spriteFileId: spriteFileId,
-          // Initialize new properties from existing data if available
-          spriteName: existingChar.spriteName || "",
-          animation: existingChar.animation || "none",
-        });
-      }
-    });
+  // Initialize empty character data if no existing characters
+  if (!props?.line?.presentation?.character?.items) {
+    return;
   }
+
+  const { character } = props.line.presentation;
+
+  // Store raw character data from props
+  store.setExistingCharacters({
+    characters: character.items,
+  });
 };
 
 export const handleAfterMount = async (deps) => {
-  const { repository, store, render, props, httpClient } = deps;
+  const { store, render, httpClient } = deps;
 
-  // Load sprite image URLs for existing characters if available
-  if (
-    props?.line?.presentation?.character?.items &&
-    Array.isArray(props.line.presentation.character.items)
-  ) {
-    const selectedCharacters = store.getState().selectedCharacters;
-    const context = {};
+  const selectedCharacters = store.selectCharactersWithRepositoryData();
 
-    // Load sprite URLs for each existing character
-    for (let i = 0; i < selectedCharacters.length; i++) {
-      const character = selectedCharacters[i];
+  if (!selectedCharacters.length > 0) {
+    return;
+  }
 
-      if (character.spriteFileId && httpClient) {
-        try {
-          const { url } = await httpClient.creator.getFileContent({
-            fileId: character.spriteFileId,
-            projectId: "someprojectId",
-          });
-          context[`char[${i}]`] = { src: url };
-        } catch (error) {
-          // Failed to load sprite URL
-        }
+  const context = {};
+
+  for (const [index, character] of selectedCharacters.entries()) {
+    if (character.spriteFileId && httpClient) {
+      try {
+        const { url } = await httpClient.creator.getFileContent({
+          fileId: character.spriteFileId,
+          projectId: "someprojectId",
+        });
+        context[`char[${index}]`] = { src: url };
+      } catch (error) {
+        // Failed to load sprite URL
       }
     }
-
-    // Update context if we have any URLs
-    if (Object.keys(context).length > 0) {
-      store.setContext(context);
-      render();
-    }
   }
-};
 
-export const handleOnUpdate = () => {};
+  store.setContext(context);
+  render();
+};
 
 export const handleFormExtra = async (e, deps) => {
   const { store, render } = deps;
@@ -138,36 +103,28 @@ export const handleFormChange = (e, deps) => {
 };
 
 export const handleCharacterItemClick = (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render } = deps;
   const characterId = e.currentTarget.id.replace("character-item-", "");
 
-  // Find the character data from the repository
-  const { characters } = repository.getState();
-  const tempSelectedCharacter = toFlatItems(
-    characters || { tree: [], items: {} },
-  ).find((char) => char.id === characterId);
+  // Add character to selected characters
+  store.addCharacter({ id: characterId });
 
-  if (tempSelectedCharacter) {
-    // Add character to selected characters
-    store.addCharacter(tempSelectedCharacter);
+  // Set the character index for sprite selection
+  const currentCharacters = store.selectSelectedCharacters();
+  const newCharacterIndex = currentCharacters.length - 1;
+  store.setSelectedCharacterIndex({ index: newCharacterIndex });
 
-    // Set the character index for sprite selection
-    const currentCharacters = store.getState().selectedCharacters;
-    const newCharacterIndex = currentCharacters.length - 1;
-    store.setSelectedCharacterIndex({ index: newCharacterIndex });
-
-    // Jump directly to sprite selection mode
-    store.setMode({
-      mode: "sprite-select",
-    });
-  }
+  // Jump directly to sprite selection mode
+  store.setMode({
+    mode: "sprite-select",
+  });
 
   render();
 };
 
 export const handleSubmitClick = (payload, deps) => {
   const { dispatchEvent, store } = deps;
-  const selectedCharacters = store.getState().selectedCharacters;
+  const selectedCharacters = store.selectSelectedCharacters();
 
   // Only dispatch if there are characters to submit
   if (selectedCharacters.length === 0) {
@@ -178,14 +135,8 @@ export const handleSubmitClick = (payload, deps) => {
     character: {
       items: selectedCharacters.map((char) => ({
         id: char.id,
-        transformId: char.transform,
-        spriteParts: [
-          {
-            id: "base",
-            spritePartId: char.spriteId,
-          },
-        ],
-        // Include new properties in the output
+        transformId: char.transformId,
+        spriteParts: char.spriteParts || [],
         spriteName: char.spriteName || "",
         animation: char.animation || "none",
       })),
@@ -275,12 +226,13 @@ export const handleSpriteItemClick = (e, deps) => {
 
 export const handleButtonSelectClick = async (payload, deps) => {
   const { store, render, repository, downloadImageData, httpClient } = deps;
-  const state = store.getState();
+  const mode = store.selectMode();
+  const selectedCharacters = store.selectCharactersWithRepositoryData();
+  const selectedCharacterIndex = store.selectSelectedCharacterIndex();
 
-  if (state.mode === "sprite-select") {
+  if (mode === "sprite-select") {
     const tempSelectedSpriteId = store.selectTempSelectedSpriteId();
-    const selectedCharIndex = state.selectedCharacterIndex;
-    const selectedChar = state.selectedCharacters[selectedCharIndex];
+    const selectedChar = selectedCharacters[selectedCharacterIndex];
 
     if (selectedChar && selectedChar.sprites) {
       const tempSelectedSprite = toFlatItems(selectedChar.sprites).find(
@@ -288,7 +240,7 @@ export const handleButtonSelectClick = async (payload, deps) => {
       );
       if (tempSelectedSprite) {
         store.updateCharacterSprite({
-          index: selectedCharIndex,
+          index: selectedCharacterIndex,
           spriteId: tempSelectedSpriteId,
           spriteFileId: tempSelectedSprite.fileId || tempSelectedSprite.imageId,
         });
@@ -301,10 +253,10 @@ export const handleButtonSelectClick = async (payload, deps) => {
               projectId: "someprojectId",
             });
 
-            const currentContext = store.getState().context || {};
+            const currentContext = store.selectContext() || {};
             const newContext = {
               ...currentContext,
-              [`char[${selectedCharIndex}]`]: { src: url },
+              [`char[${selectedCharacterIndex}]`]: { src: url },
             };
 
             store.setContext(newContext);
