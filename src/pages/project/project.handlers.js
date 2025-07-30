@@ -16,8 +16,10 @@ export const handleAfterMount = async (deps) => {
     projectId: "someprojectId",
   });
 
-  store.setFieldResources({
-    iconSrc: url,
+  store.setContext({
+    iconFileId: {
+      src: url,
+    },
   });
 
   render();
@@ -60,8 +62,10 @@ export const handleFormExtraEvent = async (e, deps) => {
         value: result.fileId,
       });
 
-      store.setFieldResources({
-        iconSrc: result.downloadUrl,
+      store.setContext({
+        iconFileId: {
+          src: result.downloadUrl,
+        },
       });
 
       subject.dispatch("project-image-update");

@@ -1,41 +1,41 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const createForm = (params) => {
-  const { fileSrc } = params;
-  return {
-    fields: [
-      {
-        name: "fileId",
-        inputType: "image",
-        src: fileSrc,
-        width: 240,
-        height: 135,
-      },
-      { name: "name", inputType: "popover-input", description: "Name" },
-      {
-        name: "fileSize",
-        inputType: "read-only-text",
-        description: "File Size",
-        // value: formatFileSize(selectedItem.fileSize),
-      },
-      {
-        name: "dimensions",
-        inputType: "read-only-text",
-        description: "Dimensions",
-      },
-    ],
-  };
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "image",
+      src: "${fileId.src}",
+      width: 240,
+      height: 135,
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    {
+      name: "fileSize",
+      inputType: "read-only-text",
+      description: "File Size",
+    },
+    {
+      name: "dimensions",
+      inputType: "read-only-text",
+      description: "Dimensions",
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
   imagesData: { tree: [], items: {} },
   selectedItemId: null,
-  fieldResources: {},
+  context: {
+    fileId: {
+      src: "",
+    },
+  },
 });
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const setItems = (state, imagesData) => {
@@ -104,7 +104,6 @@ export const toViewData = ({ state }) => {
   }
 
   const detailEmptyMessage = "No selection";
-  const form = createForm(state.fieldResources);
 
   return {
     flatItems,
@@ -117,6 +116,7 @@ export const toViewData = ({ state }) => {
     detailEmptyMessage,
     repositoryTarget: "images",
     form,
+    context: state.context,
     defaultValues,
   };
 };

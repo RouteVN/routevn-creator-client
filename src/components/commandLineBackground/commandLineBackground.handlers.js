@@ -68,7 +68,7 @@ export const handleAfterMount = async (deps) => {
         projectId: "someprojectId",
       });
 
-      store.setFormFieldResources({
+      store.setContext({
         background: {
           src: url,
         },
@@ -98,7 +98,7 @@ export const handleImageSelected = async (e, deps) => {
     projectId: "someprojectId",
   });
 
-  store.setFormFieldResources({
+  store.setContext({
     background: {
       src: url,
     },

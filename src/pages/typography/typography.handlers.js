@@ -1,29 +1,162 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+// Helper function to sync repository state to store
+const syncRepositoryToStore = (store, repository) => {
   const { typography, colors, fonts } = repository.getState();
   store.setItems(typography);
   store.setColorsData(colors);
   store.setFontsData(fonts);
+};
 
+export const handleBeforeMount = (deps) => {
+  const { store, repository } = deps;
+  syncRepositoryToStore(store, repository);
   return () => {};
 };
 
 export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
-  const { typography, colors, fonts } = repository.getState();
-  store.setItems(typography);
-  store.setColorsData(colors);
-  store.setFontsData(fonts);
+  syncRepositoryToStore(store, repository);
   render();
+};
+
+// Helper function to generate typography preview image
+const generateTypographyPreview = (item, colorsData, fontsData) => {
+  if (!item) {
+    throw new Error("Typography item is required");
+  }
+
+  // Create canvas
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = 300;
+  canvas.height = 120;
+
+  // Background
+  const backgroundColor = "#1a1a1a";
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, 300, 120);
+
+  // Resolve color
+  if (!item.colorId) {
+    throw new Error("colorId is required");
+  }
+  if (!colorsData) {
+    throw new Error("Color data not available to resolve colorId");
+  }
+  const colorItems = toFlatItems(colorsData);
+  const color = colorItems.find(
+    (c) => c.type === "color" && c.id === item.colorId,
+  );
+  if (!color || !color.hex) {
+    throw new Error(
+      `Color with ID ${item.colorId} not found or has no hex value`,
+    );
+  }
+  const textColor = color.hex;
+
+  // Resolve font
+  if (!item.fontId) {
+    throw new Error("fontId is required");
+  }
+  if (!fontsData) {
+    throw new Error("Font data not available to resolve fontId");
+  }
+  const fontItems = toFlatItems(fontsData);
+  const font = fontItems.find((f) => f.type === "font" && f.id === item.fontId);
+  if (!font || !font.fontFamily) {
+    throw new Error(
+      `Font with ID ${item.fontId} not found or has no fontFamily`,
+    );
+  }
+  const fontFamily = font.fontFamily;
+
+  // Validate required properties
+  if (!item.fontSize) {
+    throw new Error("fontSize is required");
+  }
+  if (!item.fontWeight) {
+    throw new Error("fontWeight is required");
+  }
+  if (!item.lineHeight) {
+    throw new Error("lineHeight is required");
+  }
+  if (!item.previewText) {
+    throw new Error("previewText is required");
+  }
+
+  // Set font properties
+  ctx.fillStyle = textColor;
+  ctx.font = `${item.fontWeight} ${item.fontSize}px "${fontFamily}", sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+
+  // Draw text with word wrapping
+  const maxWidth = 280;
+  const x = 10;
+  let y = 10;
+  const words = item.previewText.split(" ");
+  let line = "";
+  const lineHeightPx = item.fontSize * item.lineHeight;
+
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + " ";
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+
+    if (testWidth > maxWidth && n > 0) {
+      ctx.fillText(line, x, y);
+      line = words[n] + " ";
+      y += lineHeightPx;
+
+      if (y + lineHeightPx > 110) break;
+    } else {
+      line = testLine;
+    }
+  }
+
+  if (line.length > 0 && y + lineHeightPx <= 110) {
+    ctx.fillText(line, x, y);
+  }
+
+  return canvas.toDataURL("image/png");
 };
 
 export const handleTypographyItemClick = (e, deps) => {
   const { store, render } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = e.detail;
   store.setSelectedItemId(itemId);
+
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem) {
+    try {
+      const state = store.getState
+        ? store.getState()
+        : store._state || store.state;
+      const { colorsData, fontsData } = state;
+
+      const previewImage = generateTypographyPreview(
+        selectedItem,
+        colorsData,
+        fontsData,
+      );
+
+      store.setContext({
+        typographyPreview: {
+          src: previewImage,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to generate typography preview:", error);
+      store.setContext({
+        typographyPreview: {
+          src: null,
+        },
+      });
+    }
+  }
+
   render();
 };
 
@@ -100,8 +233,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   });
 
   if (successfulUploads.length > 0) {
-    const { typography } = repository.getState();
-    store.setItems(typography);
+    syncRepositoryToStore(store, repository);
   }
 
   console.log(
@@ -138,14 +270,12 @@ export const handleTypographyCreated = (e, deps) => {
         colorId: fontColor, // Store color ID
         fontId: fontStyle, // Store font ID
         fontWeight: fontWeight,
-        previewText:
-          previewText || "The quick brown fox jumps over the lazy dog",
+        previewText: previewText,
       },
     },
   });
 
-  const { typography } = repository.getState();
-  store.setItems(typography);
+  syncRepositoryToStore(store, repository);
   render();
 };
 
@@ -175,14 +305,12 @@ export const handleTypographyUpdated = (e, deps) => {
         colorId: fontColor, // Store color ID
         fontId: fontStyle, // Store font ID
         fontWeight: fontWeight,
-        previewText:
-          previewText || "The quick brown fox jumps over the lazy dog",
+        previewText: previewText,
       },
     },
   });
 
-  const { typography } = repository.getState();
-  store.setItems(typography);
+  syncRepositoryToStore(store, repository);
   render();
 };
 
@@ -200,10 +328,38 @@ export const handleFormChange = (e, deps) => {
     },
   });
 
-  const { typography, colors, fonts } = repository.getState();
-  store.setItems(typography);
-  store.setColorsData(colors);
-  store.setFontsData(fonts);
+  syncRepositoryToStore(store, repository);
+
+  // Update context with new preview after form change
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem) {
+    try {
+      const state = store.getState
+        ? store.getState()
+        : store._state || store.state;
+      const { colorsData, fontsData } = state;
+
+      const previewImage = generateTypographyPreview(
+        selectedItem,
+        colorsData,
+        fontsData,
+      );
+
+      store.setContext({
+        typographyPreview: {
+          src: previewImage,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to update typography preview:", error);
+      store.setContext({
+        typographyPreview: {
+          src: null,
+        },
+      });
+    }
+  }
+
   render();
 };
 

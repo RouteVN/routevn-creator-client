@@ -10,28 +10,9 @@ const hexToRgb = (hex) => {
   return `rgb(${r}, ${g}, ${b})`;
 };
 
-const hexToBase64Image = (hex) => {
-  if (!hex) return "";
-
-  // Create a canvas element
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  // Set canvas size
-  canvas.width = 100;
-  canvas.height = 100;
-
-  // Fill with the color
-  ctx.fillStyle = hex;
-  ctx.fillRect(0, 0, 100, 100);
-
-  // Convert to base64
-  return canvas.toDataURL("image/png");
-};
-
 const form = {
   fields: [
-    { name: "colorImage", inputType: "image" },
+    { name: "colorImage", inputType: "image", src: "${colorImage.src}" },
     { name: "name", inputType: "popover-input", description: "Name" },
     { name: "hex", inputType: "read-only-text", description: "Hex Value" },
     { name: "rgb", inputType: "read-only-text", description: "RGB Value" },
@@ -45,10 +26,19 @@ export const INITIAL_STATE = Object.freeze({
   editItemId: null,
   isAddDialogOpen: false,
   targetGroupId: null,
+  context: {
+    colorImage: {
+      src: "",
+    },
+  },
 });
 
 export const setItems = (state, colorsData) => {
   state.colorsData = colorsData;
+};
+
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -93,17 +83,12 @@ export const toViewData = ({ state, props }, payload) => {
     : null;
 
   let defaultValues = {};
-  let currentForm = {
-    fields: form.fields.map((field) => ({ ...field })),
-  };
   if (selectedItem) {
     defaultValues = {
       name: selectedItem.name,
       hex: selectedItem.hex || "",
       rgb: hexToRgb(selectedItem.hex) || "",
     };
-    // Update the image field with src
-    currentForm.fields[0].src = hexToBase64Image(selectedItem.hex);
   }
 
   // Get edit item details
@@ -194,7 +179,8 @@ export const toViewData = ({ state, props }, payload) => {
     selectedResourceId: "colors",
     selectedItemId: state.selectedItemId,
     repositoryTarget: "colors",
-    form: currentForm,
+    form,
+    context: state.context,
     defaultValues,
     isEditDialogOpen: state.isEditDialogOpen,
     editDefaultValues,

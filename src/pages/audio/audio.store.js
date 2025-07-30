@@ -1,45 +1,46 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const createForm = (params) => {
-  const { waveformData } = params;
-  return {
-    fields: [
-      {
-        name: "fileId",
-        inputType: "waveform",
-        waveformData,
-        width: 240,
-        height: 100,
-      },
-      { name: "name", inputType: "popover-input", description: "Name" },
-      {
-        name: "fileType",
-        inputType: "read-only-text",
-        description: "File Type",
-      },
-      {
-        name: "fileSize",
-        inputType: "read-only-text",
-        description: "File Size",
-      },
-      {
-        name: "duration",
-        inputType: "read-only-text",
-        description: "Duration",
-      },
-    ],
-  };
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "waveform",
+      waveformData: "${fileId.waveformData}",
+      width: 240,
+      height: 100,
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    {
+      name: "fileType",
+      inputType: "read-only-text",
+      description: "File Type",
+    },
+    {
+      name: "fileSize",
+      inputType: "read-only-text",
+      description: "File Size",
+    },
+    {
+      name: "duration",
+      inputType: "read-only-text",
+      description: "Duration",
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
   audioData: { tree: [], items: {} },
   selectedItemId: null,
-  fieldResources: {},
+  context: {
+    fileId: {
+      waveformData: null,
+    },
+  },
 });
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const setItems = (state, audioData) => {
@@ -87,8 +88,6 @@ export const toViewData = ({ state }) => {
     };
   }
 
-  const form = createForm(state.fieldResources);
-
   return {
     flatItems,
     flatGroups,
@@ -97,6 +96,7 @@ export const toViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     repositoryTarget: "audio",
     form,
+    context: state.context,
     defaultValues,
   };
 };

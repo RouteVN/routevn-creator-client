@@ -1,45 +1,46 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const createForm = (params) => {
-  const { src } = params;
-  return {
-    fields: [
-      {
-        name: "fileId",
-        inputType: "image",
-        src: src,
-        width: 240,
-      },
-      { name: "name", inputType: "popover-input", description: "Name" },
-      {
-        name: "description",
-        inputType: "popover-input",
-        description: "Description",
-      },
-      { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
-      {
-        name: "displayFileType",
-        inputType: "read-only-text",
-        description: "File Type",
-      },
-      {
-        name: "displayFileSize",
-        inputType: "read-only-text",
-        description: "File Size",
-      },
-    ],
-  };
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "image",
+      src: "${fileId.src}",
+      width: 240,
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    {
+      name: "description",
+      inputType: "popover-input",
+      description: "Description",
+    },
+    { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
+    {
+      name: "displayFileType",
+      inputType: "read-only-text",
+      description: "File Type",
+    },
+    {
+      name: "displayFileSize",
+      inputType: "read-only-text",
+      description: "File Size",
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
   charactersData: { tree: [], items: {} },
   selectedItemId: null,
-  fieldResources: {},
+  context: {
+    fileId: {
+      src: "",
+    },
+  },
 });
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const setItems = (state, charactersData) => {
@@ -88,8 +89,6 @@ export const toViewData = ({ state, props }, payload) => {
     };
   }
 
-  const form = createForm(state.fieldResources);
-
   return {
     flatItems,
     flatGroups,
@@ -98,6 +97,7 @@ export const toViewData = ({ state, props }, payload) => {
     selectedItemId: state.selectedItemId,
     repositoryTarget: "characters",
     form,
+    context: state.context,
     defaultValues,
   };
 };

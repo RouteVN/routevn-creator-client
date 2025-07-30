@@ -1,33 +1,29 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const createBgmForm = (params) => {
-  const { waveformData } = params;
-  const form = {
-    fields: [
-      {
-        name: "audio",
-        label: "Background Music",
-        required: true,
-        inputType: "waveform",
-        waveformData,
-        width: 355,
-        height: 200,
-      },
-      {
-        name: "loopType",
-        label: "Loop Type",
-        inputType: "select",
-        options: [
-          { label: "No Loop", value: "none" },
-          { label: "Loop Once", value: "once" },
-          { label: "Loop Forever", value: "forever" },
-          { label: "Fade In/Out", value: "fade" },
-        ],
-      },
-    ],
-  };
-  return form;
+const form = {
+  fields: [
+    {
+      name: "audio",
+      label: "Background Music",
+      required: true,
+      inputType: "waveform",
+      waveformData: "${audio.waveformData}",
+      width: 355,
+      height: 200,
+    },
+    {
+      name: "loopType",
+      label: "Loop Type",
+      inputType: "select",
+      options: [
+        { label: "No Loop", value: "none" },
+        { label: "Loop Once", value: "once" },
+        { label: "Loop Forever", value: "forever" },
+        { label: "Fade In/Out", value: "fade" },
+      ],
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
@@ -36,9 +32,9 @@ export const INITIAL_STATE = Object.freeze({
   selectedAudioId: undefined,
   selectedFileId: undefined,
   tempSelectedAudioId: undefined,
-  fieldResources: {
+  context: {
     audio: {
-      fileId: undefined,
+      waveformData: undefined,
     },
   },
 });
@@ -68,8 +64,8 @@ export const setTempSelectedAudioId = (state, payload) => {
   state.tempSelectedAudioId = payload.audioId;
 };
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const toViewData = ({ state, props }, payload) => {
@@ -141,9 +137,8 @@ export const toViewData = ({ state, props }, payload) => {
     selectedFileId: state.selectedFileId,
     selectedAudioName,
     breadcrumb,
-    form: createBgmForm({
-      waveformData: state.fieldResources.audio?.waveformData,
-    }),
+    form,
     defaultValues,
+    context: state.context,
   };
 };
