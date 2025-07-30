@@ -30,12 +30,12 @@ export const INITIAL_STATE = Object.freeze({
       icon: "character",
       mode: "characters",
     },
-    {
-      id: "3",
-      label: "Choices",
-      icon: "choices",
-      mode: "choices",
-    },
+    // {
+    //   id: "3",
+    //   label: "Choices",
+    //   icon: "choices",
+    //   mode: "choices",
+    // },
     {
       id: "10",
       label: "Transition",
@@ -57,12 +57,12 @@ export const INITIAL_STATE = Object.freeze({
   ],
 });
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state }) => {
   return {
     items: state.items,
   };
 };
 
-export const selectItems = ({ state, props }) => {
+export const selectItems = ({ state }) => {
   return state.items;
 };
