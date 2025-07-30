@@ -1,12 +1,21 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-import { nanoid } from "nanoid";
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
   items: [],
   transforms: { tree: [], items: {} },
   animations: { tree: [], items: {} },
-  selectedCharacters: [], // Array of selected characters with their transforms
+  /**
+   * Array of raw character objects with the following structure (same as props):
+   * {
+   *   id: string,              // Character ID from repository
+   *   transformId: string,     // Transform/placement ID
+   *   spriteParts: array,      // Array of sprite parts with spritePartId
+   *   spriteName: string,      // Display name for sprite
+   *   animation: string        // Animation ID or "none"
+   * }
+   */
+  selectedCharacters: [],
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
@@ -35,7 +44,7 @@ export const setAnimations = (state, payload) => {
   state.animations = payload.animations;
 };
 
-export const addCharacter = (state, character) => {
+export const addCharacter = (state, payload) => {
   // Get the first available transform as default
   const transformItems = toFlatItems(state.transforms).filter(
     (item) => item.type === "placement",
@@ -43,14 +52,13 @@ export const addCharacter = (state, character) => {
   const defaultTransform =
     transformItems.length > 0 ? transformItems[0].id : undefined;
 
+  // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
-    ...character,
-    transform: character.transform || defaultTransform,
-    spriteId: character.spriteId || undefined,
-    spriteFileId: character.spriteFileId || undefined,
-    // Add the new properties you requested
-    spriteName: character.spriteName || "",
-    animation: character.animation || "none",
+    id: payload.id,
+    transformId: defaultTransform,
+    spriteParts: [],
+    spriteName: "",
+    animation: "none",
   });
 };
 
@@ -60,7 +68,7 @@ export const removeCharacter = (state, index) => {
 
 export const updateCharacterTransform = (state, { index, transform }) => {
   if (state.selectedCharacters[index]) {
-    state.selectedCharacters[index].transform = transform;
+    state.selectedCharacters[index].transformId = transform;
   }
 };
 
@@ -69,8 +77,12 @@ export const updateCharacterSprite = (
   { index, spriteId, spriteFileId },
 ) => {
   if (state.selectedCharacters[index]) {
-    state.selectedCharacters[index].spriteId = spriteId;
-    state.selectedCharacters[index].spriteFileId = spriteFileId;
+    state.selectedCharacters[index].spriteParts = [
+      {
+        id: "base",
+        spritePartId: spriteId,
+      },
+    ];
   }
 };
 
@@ -129,8 +141,84 @@ export const selectDropdownMenuCharacterIndex = ({ state }) => {
   return state.dropdownMenu.characterIndex;
 };
 
+export const selectSelectedCharacters = ({ state }) => {
+  return state.selectedCharacters;
+};
+
+export const selectMode = ({ state }) => {
+  return state.mode;
+};
+
+export const selectSelectedCharacterIndex = ({ state }) => {
+  return state.selectedCharacterIndex;
+};
+
+export const selectContext = ({ state }) => {
+  return state.context;
+};
+
+export const setExistingCharacters = (state, payload) => {
+  state.selectedCharacters = payload.characters;
+};
+
+export const selectCharactersWithRepositoryData = ({ state }) => {
+  if (!state.selectedCharacters || !Array.isArray(state.selectedCharacters)) {
+    return [];
+  }
+
+  const characterItems = toFlatItems(state.items || []);
+
+  return state.selectedCharacters.map((char) => {
+    // Find the character data from repository
+    const characterData = characterItems.find((item) => item.id === char.id);
+
+    if (!characterData) {
+      // Return a minimal character object if repository data is missing
+      return {
+        id: char.id,
+        name: "Unknown Character",
+        transform: char.transformId,
+        spriteId: char.spriteParts?.[0]?.spritePartId,
+        spriteFileId: undefined,
+        spriteName: char.spriteName || "",
+        animation: char.animation || "none",
+      };
+    }
+
+    // Find sprite data if available
+    let spriteFileId = undefined;
+    if (char.spriteParts?.[0]?.spritePartId && characterData.sprites) {
+      const sprite = toFlatItems(characterData.sprites).find(
+        (s) => s.id === char.spriteParts[0].spritePartId,
+      );
+      if (sprite) {
+        spriteFileId = sprite.fileId;
+      }
+    }
+
+    return {
+      ...characterData,
+      transform: char.transformId,
+      spriteId: char.spriteParts?.[0]?.spritePartId,
+      spriteFileId: spriteFileId,
+      spriteName: char.spriteName || "",
+      animation: char.animation || "none",
+    };
+  });
+};
+
 const createCharactersForm = (params) => {
   const { characters, transformOptions, animationOptions } = params;
+
+  // Guard against invalid input
+  if (
+    !characters ||
+    !Array.isArray(characters) ||
+    !transformOptions ||
+    !animationOptions
+  ) {
+    return { fields: [] };
+  }
 
   const fields = [];
 
@@ -185,35 +273,10 @@ export const toViewData = ({ state, props }, payload) => {
     };
   });
 
-  // Get sprite data for the selected character
+  // Initialize sprite data (will be populated later after processedSelectedCharacters is defined)
   let spriteItems = [];
   let spriteGroups = [];
   let selectedCharacterName = "";
-
-  if (
-    state.mode === "sprite-select" &&
-    state.selectedCharacterIndex !== undefined
-  ) {
-    const selectedChar = state.selectedCharacters[state.selectedCharacterIndex];
-    if (selectedChar && selectedChar.sprites) {
-      selectedCharacterName = selectedChar.name || "Character";
-      spriteItems = toFlatItems(selectedChar.sprites).filter(
-        (item) => item.type === "folder",
-      );
-      spriteGroups = toFlatGroups(selectedChar.sprites).map((group) => {
-        return {
-          ...group,
-          children: group.children.map((child) => {
-            const isSelected = child.id === state.tempSelectedSpriteId;
-            return {
-              ...child,
-              bw: isSelected ? "md" : "",
-            };
-          }),
-        };
-      });
-    }
-  }
 
   // Get transform options from repository instead of hardcoded values
   const transformItems = toFlatItems(state.transforms).filter(
@@ -236,13 +299,42 @@ export const toViewData = ({ state, props }, payload) => {
     })),
   ];
 
-  // Precompute character display data with new properties
-  const processedSelectedCharacters = state.selectedCharacters.map(
-    (character) => ({
-      ...character,
-      displayName: character.name || "Unnamed Character",
-    }),
-  );
+  // Get enriched character data
+  const enrichedCharacters = selectCharactersWithRepositoryData({ state });
+  const processedSelectedCharacters = enrichedCharacters.map((character) => ({
+    ...character,
+    displayName: character.name || "Unnamed Character",
+  }));
+
+  // Get sprite data for the selected character (after processedSelectedCharacters is defined)
+  if (
+    state.mode === "sprite-select" &&
+    state.selectedCharacterIndex !== undefined
+  ) {
+    // Get the enriched character data which includes sprites from repository
+    const enrichedSelectedChar =
+      processedSelectedCharacters[state.selectedCharacterIndex];
+
+    if (enrichedSelectedChar && enrichedSelectedChar.sprites) {
+      selectedCharacterName = enrichedSelectedChar.name || "Character";
+      spriteItems = toFlatItems(enrichedSelectedChar.sprites).filter(
+        (item) => item.type === "folder",
+      );
+
+      spriteGroups = toFlatGroups(enrichedSelectedChar.sprites).map((group) => {
+        return {
+          ...group,
+          children: group.children.map((child) => {
+            const isSelected = child.id === state.tempSelectedSpriteId;
+            return {
+              ...child,
+              bw: isSelected ? "md" : "",
+            };
+          }),
+        };
+      });
+    }
+  }
 
   let breadcrumb = [
     {
@@ -277,21 +369,25 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
-  // Create form configuration
-  const form = createCharactersForm({
-    characters: state.selectedCharacters,
-    transformOptions,
-    animationOptions,
-  });
+  // Create form configuration only for current mode
+  let form = { fields: [] };
+  let defaultValues = {};
 
-  // Create default values for form
-  const defaultValues = {};
-  state.selectedCharacters.forEach((character, index) => {
-    defaultValues[`char[${index}]`] = character.spriteFileId || "";
-    defaultValues[`char[${index}].transform`] =
-      character.transform || transformOptions[0]?.value || "";
-    defaultValues[`char[${index}].animation`] = character.animation || "none";
-  });
+  if (state.mode === "current") {
+    form = createCharactersForm({
+      characters: processedSelectedCharacters,
+      transformOptions,
+      animationOptions,
+    });
+
+    // Create default values for form
+    processedSelectedCharacters.forEach((character, index) => {
+      defaultValues[`char[${index}]`] = character.spriteFileId || "";
+      defaultValues[`char[${index}].transform`] =
+        character.transform || transformOptions[0]?.value || "";
+      defaultValues[`char[${index}].animation`] = character.animation || "none";
+    });
+  }
 
   return {
     mode: state.mode,
