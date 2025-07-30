@@ -38,6 +38,9 @@ export const INITIAL_STATE = Object.freeze({
   selectedItemId: null,
   layoutId: null,
   images: { tree: [], items: {} },
+  typographyData: { tree: [], items: {} },
+  colorsData: { tree: [], items: {} },
+  fontsData: { tree: [], items: {} },
   fieldResources: {},
   contextMenuItems: [
     {
@@ -86,6 +89,10 @@ export const INITIAL_STATE = Object.freeze({
         x: 0,
         y: 0,
         text: "text",
+        style: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
         anchorX: 0.5,
         anchorY: 0.5,
         scaleX: 1,
@@ -143,6 +150,10 @@ export const INITIAL_STATE = Object.freeze({
         x: SCREEN_WIDTH / 2,
         y: SCREEN_HEIGHT / 2,
         text: "text",
+        style: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
         anchorX: 0.5,
         anchorY: 0.5,
         scaleX: 1,
@@ -167,6 +178,18 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const setImages = (state, images) => {
   state.images = images;
+};
+
+export const setTypographyData = (state, typographyData) => {
+  state.typographyData = typographyData;
+};
+
+export const setColorsData = (state, colorsData) => {
+  state.colorsData = colorsData;
+};
+
+export const setFontsData = (state, fontsData) => {
+  state.fontsData = fontsData;
 };
 
 export const setFieldResources = (state, resources) => {
@@ -251,6 +274,18 @@ export const selectDropdownMenuFieldName = ({ state }) => {
   return state.dropdownMenu.fieldName;
 };
 
+export const selectItems = ({ state }) => {
+  return state.layoutData;
+};
+
+export const selectTypographyData = ({ state }) => {
+  return state.typographyData;
+};
+
+export const selectFontsData = ({ state }) => {
+  return state.fontsData;
+};
+
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
@@ -262,6 +297,15 @@ export const toViewData = ({ state, props }, payload) => {
   // Helper to transform images data into groups
   const imageGroups = toFlatGroups(state.images);
   const imageItems = state.images.items;
+
+  // Helper to transform typography data into groups
+  const typographyGroups = toFlatGroups(state.typographyData);
+  const typographyItems = typographyGroups.flatMap((group) =>
+    group.children.map((item) => ({
+      label: item.name,
+      value: item.id,
+    })),
+  );
 
   // Create form configuration based on selected item type
   const form = selectedItem
@@ -349,6 +393,12 @@ export const toViewData = ({ state, props }, payload) => {
                   description: "Text Content",
                 },
                 {
+                  name: "typographyId",
+                  inputType: "select",
+                  description: "Typography Style",
+                  options: [...typographyItems],
+                },
+                {
                   name: "style_wordWrapWidth",
                   inputType: "popover-input",
                   description: "Word Wrap Width",
@@ -362,6 +412,18 @@ export const toViewData = ({ state, props }, payload) => {
                     { label: "Center", value: "center" },
                     { label: "Right", value: "right" },
                   ],
+                },
+                {
+                  name: "hoverTypographyId",
+                  inputType: "select",
+                  description: "Hover Style",
+                  options: [{ label: "None", value: "" }, ...typographyItems],
+                },
+                {
+                  name: "clickedTypographyId",
+                  inputType: "select",
+                  description: "Clicked Style",
+                  options: [{ label: "None", value: "" }, ...typographyItems],
                 },
               ]
             : []),
@@ -408,6 +470,9 @@ export const toViewData = ({ state, props }, payload) => {
         ...(selectedItem.type === "text"
           ? {
               text: selectedItem.text,
+              typographyId: selectedItem.typographyId ?? "",
+              hoverTypographyId: selectedItem.hoverTypographyId ?? "",
+              clickedTypographyId: selectedItem.clickedTypographyId ?? "",
               style: {
                 align: selectedItem.style?.align ?? "left",
                 wordWrapWidth: parseInt(
@@ -437,6 +502,10 @@ export const toViewData = ({ state, props }, payload) => {
     emptyContextMenuItems: state.emptyContextMenuItems,
     images: state.images,
     imageGroups,
+    typographyData: state.typographyData,
+    typographyGroups,
+    colorsData: state.colorsData,
+    fontsData: state.fontsData,
     form,
     defaultValues,
     imageSelectorDialog: {
