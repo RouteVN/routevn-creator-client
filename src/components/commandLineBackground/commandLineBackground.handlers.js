@@ -4,77 +4,47 @@ export const handleBeforeMount = (deps) => {
   const { repository, store, props } = deps;
   const { images, layouts, videos } = repository.getState();
 
-  store.setImageItems({
-    items: images,
+  store.setRepositoryState({
+    images,
+    layouts,
+    videos,
   });
 
-  store.setLayoutItems({
-    items: layouts,
-  });
-
-  store.setVideoItems({
-    items: videos,
-  });
-
-  // Initialize with existing background data if available
-  if (props?.line?.presentation?.background?.imageId) {
-    const flatImageItems = toFlatItems(images);
-    const existingImage = flatImageItems.find(
-      (item) => item.id === props.line.presentation.background.imageId,
-    );
-
-    if (existingImage) {
-      store.setSelectedImageAndFileId({
-        imageId: props.line.presentation.background.imageId,
-        fileId: existingImage.fileId,
-      });
-      store.setTab({ tab: "images" });
-    }
-  } else if (props?.line?.presentation?.background?.layoutId) {
-    store.setSelectedLayoutId({
-      layoutId: props.line.presentation.background.layoutId,
-    });
-    store.setTab({ tab: "layouts" });
-  } else if (props?.line?.presentation?.background?.videoId) {
-    const flatVideoItems = toFlatItems(videos);
-    const existingVideo = flatVideoItems.find(
-      (item) => item.id === props.line.presentation.background.videoId,
-    );
-
-    if (existingVideo) {
-      store.setSelectedVideoAndFileId({
-        videoId: props.line.presentation.background.videoId,
-        fileId: existingVideo.fileId,
-      });
-      store.setTab({ tab: "videos" });
-    }
+  const { resourceId, resourceType } = props.line.presentation.background;
+  if (!resourceId || !resourceType) {
+    return;
   }
+
+  store.setSelectedResource({
+    resourceId,
+    resourceType,
+  });
 };
 
 export const handleAfterMount = async (deps) => {
-  const { httpClient, store, render, props, repository } = deps;
-  const { images, layouts, videos } = repository.getState();
+  const { httpClient, store, render } = deps;
+  const selectedResource = store.selectSelectedResource();
 
-  // Initialize with existing background data if available
-  if (props?.line?.presentation?.background?.imageId) {
-    const flatImageItems = toFlatItems(images);
-    const existingImage = flatImageItems.find(
-      (item) => item.id === props.line.presentation.background.imageId,
-    );
+  if (!selectedResource) {
+    return;
+  }
 
-    if (existingImage) {
-      const { url } = await httpClient.creator.getFileContent({
-        fileId: existingImage.fileId,
-        projectId: "someprojectId",
-      });
+  if (selectedResource.resourceType === "image" && selectedResource.fileId) {
+    const { url } = await httpClient.creator.getFileContent({
+      fileId: selectedResource.fileId,
+      projectId: "someprojectId",
+    });
 
-      store.setContext({
-        background: {
-          src: url,
-        },
-      });
-      render();
-    }
+    store.setContext({
+      background: {
+        src: url,
+      },
+    });
+    render();
+  } else if (selectedResource.resourceType === "layout") {
+    // TODO: Implement layout resource preview loading
+  } else if (selectedResource.resourceType === "video") {
+    // TODO: Implement video resource preview loading
   }
 };
 
@@ -84,8 +54,9 @@ export const handleImageSelected = async (e, deps) => {
 
   const { imageId } = e.detail;
 
-  store.setTempSelectedImageId({
-    imageId: imageId,
+  store.setTempSelectedResource({
+    resourceId: imageId,
+    resourceType: "image",
   });
 
   render();
@@ -107,7 +78,6 @@ export const handleImageSelected = async (e, deps) => {
 };
 
 export const handleFormExtra = (e, deps) => {
-  console.log("extraaaaaaaaa", e.detail);
   const { store, render } = deps;
   store.setMode({
     mode: "gallery",
@@ -116,33 +86,13 @@ export const handleFormExtra = (e, deps) => {
   render();
 };
 
-export const handleLayoutItemClick = (payload, deps) => {
+export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
+  const resourceId = e.currentTarget.id.replace("resource-item-", "");
 
-  // Extract layout ID from the element ID (format: layout-item-{id})
-  const elementId =
-    payload.target.id || payload.target.closest('[id^="layout-item-"]')?.id;
-  const layoutId = elementId?.replace("layout-item-", "");
-
-  store.setTempSelectedLayoutId({
-    layoutId: layoutId,
+  store.setTempSelectedResource({
+    resourceId,
   });
-
-  render();
-};
-
-export const handleVideoItemClick = (payload, deps) => {
-  const { store, render } = deps;
-
-  // Extract video ID from the element ID (format: video-item-{id})
-  const elementId =
-    payload.target.id || payload.target.closest('[id^="video-item-"]')?.id;
-  const videoId = elementId?.replace("video-item-", "");
-
-  store.setTempSelectedVideoId({
-    videoId: videoId,
-  });
-
   render();
 };
 
@@ -158,35 +108,16 @@ export const handleTabClick = (e, deps) => {
 
 export const handleSubmitClick = (e, deps) => {
   const { dispatchEvent, store } = deps;
-  const tab = store.selectTab();
+  const selectedResource = store.selectSelectedResource();
 
-  let backgroundData = {};
-
-  if (tab === "images") {
-    const selectedImageId = store.selectSelectedImageId();
-    if (!selectedImageId) {
-      return;
-    }
-    backgroundData = {
-      imageId: selectedImageId,
-    };
-  } else if (tab === "layouts") {
-    const selectedLayoutId = store.selectSelectedLayoutId();
-    if (!selectedLayoutId) {
-      return;
-    }
-    backgroundData = {
-      layoutId: selectedLayoutId,
-    };
-  } else if (tab === "videos") {
-    const selectedVideoId = store.selectSelectedVideoId();
-    if (!selectedVideoId) {
-      return;
-    }
-    backgroundData = {
-      videoId: selectedVideoId,
-    };
+  if (!selectedResource) {
+    return;
   }
+
+  const backgroundData = {
+    resourceId: selectedResource.resourceId,
+    resourceType: selectedResource.resourceType,
+  };
 
   dispatchEvent(
     new CustomEvent("submit", {
@@ -199,22 +130,12 @@ export const handleSubmitClick = (e, deps) => {
 
 export const handleBackgroundSelectorClick = (payload, deps) => {
   const { store, render } = deps;
-  const tab = store.selectTab();
+  const selectedResource = store.selectSelectedResource();
 
-  if (tab === "images") {
-    const selectedImageId = store.selectSelectedImageId();
-    store.setTempSelectedImageId({
-      imageId: selectedImageId,
-    });
-  } else if (tab === "layouts") {
-    const selectedLayoutId = store.selectSelectedLayoutId();
-    store.setTempSelectedLayoutId({
-      layoutId: selectedLayoutId,
-    });
-  } else if (tab === "videos") {
-    const selectedVideoId = store.selectSelectedVideoId();
-    store.setTempSelectedVideoId({
-      videoId: selectedVideoId,
+  if (selectedResource) {
+    store.setTempSelectedResource({
+      resourceId: selectedResource.resourceId,
+      resourceType: selectedResource.resourceType,
     });
   }
 
@@ -242,36 +163,35 @@ export const handleBreadcumbActionsClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClick = (payload, deps) => {
+export const handleButtonSelectClick = (e, deps) => {
   const { store, render, repository } = deps;
-  const tab = store.selectTab();
+  const tempSelectedResourceId = store.selectTempSelectedResourceId();
+  const tempSelectedResourceType = store.selectTab();
 
-  if (tab === "images") {
-    const { images } = repository.getState();
-    const tempSelectedImageId = store.selectTempSelectedImageId();
-    const tempSelectedImage = toFlatItems(images).find(
-      (image) => image.id === tempSelectedImageId,
-    );
-    store.setSelectedImageAndFileId({
-      imageId: tempSelectedImageId,
-      fileId: tempSelectedImage.fileId,
-    });
-  } else if (tab === "layouts") {
-    const tempSelectedLayoutId = store.selectTempSelectedLayoutId();
-    store.setSelectedLayoutId({
-      layoutId: tempSelectedLayoutId,
-    });
-  } else if (tab === "videos") {
-    const { videos } = repository.getState();
-    const tempSelectedVideoId = store.selectTempSelectedVideoId();
-    const tempSelectedVideo = toFlatItems(videos).find(
-      (video) => video.id === tempSelectedVideoId,
-    );
-    store.setSelectedVideoAndFileId({
-      videoId: tempSelectedVideoId,
-      fileId: tempSelectedVideo.fileId,
-    });
+  if (!tempSelectedResourceId || !tempSelectedResourceType) {
+    return;
   }
+
+  let fileId;
+  if (tempSelectedResourceType === "image") {
+    const { images } = repository.getState();
+    const tempSelectedImage = toFlatItems(images).find(
+      (image) => image.id === tempSelectedResourceId,
+    );
+    fileId = tempSelectedImage?.fileId;
+  } else if (tempSelectedResourceType === "video") {
+    const { videos } = repository.getState();
+    const tempSelectedVideo = toFlatItems(videos).find(
+      (video) => video.id === tempSelectedResourceId,
+    );
+    fileId = tempSelectedVideo?.fileId;
+  }
+
+  store.setSelectedResource({
+    resourceId: tempSelectedResourceId,
+    resourceType: tempSelectedResourceType,
+    fileId: fileId,
+  });
 
   store.setMode({
     mode: "current",
