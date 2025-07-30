@@ -1,41 +1,42 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const createForm = (params) => {
-  const { src } = params;
-  return {
-    fields: [
-      {
-        name: "fileId",
-        inputType: "image",
-        src: src,
-        height: 135,
-      },
-      { name: "name", inputType: "popover-input", description: "Name" },
-      { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
-      {
-        name: "displayFileType",
-        inputType: "read-only-text",
-        description: "File Type",
-      },
-      {
-        name: "displayFileSize",
-        inputType: "read-only-text",
-        description: "File Size",
-      },
-    ],
-  };
+const form = {
+  fields: [
+    {
+      name: "fileId",
+      inputType: "image",
+      src: "${fileId.src}",
+      height: 135,
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
+    {
+      name: "displayFileType",
+      inputType: "read-only-text",
+      description: "File Type",
+    },
+    {
+      name: "displayFileSize",
+      inputType: "read-only-text",
+      description: "File Size",
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
   spritesData: { tree: [], items: {} },
   selectedItemId: undefined,
   characterId: undefined,
-  fieldResources: {},
+  context: {
+    fileId: {
+      src: "",
+    },
+  },
 });
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const setItems = (state, spritesData) => {
@@ -92,8 +93,6 @@ export const toViewData = ({ state, props }, payload) => {
     };
   }
 
-  const form = createForm(state.fieldResources);
-
   return {
     flatItems,
     flatGroups,
@@ -102,6 +101,7 @@ export const toViewData = ({ state, props }, payload) => {
     selectedItemId: state.selectedItemId,
     repositoryTarget: `characters.items.${state.characterId}.sprites`,
     form,
+    context: state.context,
     defaultValues,
   };
 };

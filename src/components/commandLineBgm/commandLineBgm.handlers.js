@@ -47,7 +47,7 @@ export const handleAfterMount = async (deps) => {
           httpClient,
         );
 
-        store.setFieldResources({
+        store.setContext({
           audio: {
             waveformData,
           },
@@ -92,9 +92,9 @@ export const handleResetClick = (e, deps) => {
     fileId: undefined,
   });
 
-  store.setFieldResources({
+  store.setContext({
     audio: {
-      fileId: undefined,
+      waveformData: undefined,
     },
   });
 
@@ -220,13 +220,12 @@ export const handleButtonSelectClickAudio = async (payload, deps) => {
         httpClient,
       );
 
-      // Update field resources with waveform data
-      const newFieldResources = {
+      // Update context with waveform data
+      store.setContext({
         audio: {
           waveformData,
         },
-      };
-      store.setFieldResources(newFieldResources);
+      });
     }
 
     store.setMode({

@@ -62,7 +62,7 @@ export const handleAfterMount = async (deps) => {
     Array.isArray(props.line.presentation.character.items)
   ) {
     const selectedCharacters = store.getState().selectedCharacters;
-    const formFieldResources = {};
+    const context = {};
 
     // Load sprite URLs for each existing character
     for (let i = 0; i < selectedCharacters.length; i++) {
@@ -74,16 +74,16 @@ export const handleAfterMount = async (deps) => {
             fileId: character.spriteFileId,
             projectId: "someprojectId",
           });
-          formFieldResources[`char[${i}]`] = { src: url };
+          context[`char[${i}]`] = { src: url };
         } catch (error) {
           // Failed to load sprite URL
         }
       }
     }
 
-    // Update form field resources if we have any URLs
-    if (Object.keys(formFieldResources).length > 0) {
-      store.setFormFieldResources(formFieldResources);
+    // Update context if we have any URLs
+    if (Object.keys(context).length > 0) {
+      store.setContext(context);
       render();
     }
   }
@@ -301,13 +301,13 @@ export const handleButtonSelectClick = async (payload, deps) => {
               projectId: "someprojectId",
             });
 
-            const currentResources = store.getState().formFieldResources || {};
-            const newFormFieldResources = {
-              ...currentResources,
+            const currentContext = store.getState().context || {};
+            const newContext = {
+              ...currentContext,
               [`char[${selectedCharIndex}]`]: { src: url },
             };
 
-            store.setFormFieldResources(newFormFieldResources);
+            store.setContext(newContext);
           } catch (error) {
             // Failed to load sprite URL
           }

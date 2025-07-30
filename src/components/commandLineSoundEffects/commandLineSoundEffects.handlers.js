@@ -41,7 +41,7 @@ export const handleAfterMount = async (deps) => {
     Array.isArray(props.line.presentation.soundEffects)
   ) {
     const flatAudioItems = toFlatItems(audio);
-    const fieldResources = {};
+    const context = {};
 
     // Load waveform data for each existing sound effect
     for (let i = 0; i < props.line.presentation.soundEffects.length; i++) {
@@ -54,16 +54,16 @@ export const handleAfterMount = async (deps) => {
             audioItem.waveformDataFileId,
             httpClient,
           );
-          fieldResources[`sfx[${i}]`] = { waveformData };
+          context[`sfx[${i}]`] = { waveformData };
         } catch (error) {
           console.error(`Failed to load waveform data for sfx[${i}]:`, error);
         }
       }
     }
 
-    // Update field resources if we have any waveform data
-    if (Object.keys(fieldResources).length > 0) {
-      store.setFieldResources(fieldResources);
+    // Update context if we have any waveform data
+    if (Object.keys(context).length > 0) {
+      store.setContext(context);
       render();
     }
   }
@@ -230,13 +230,13 @@ export const handleButtonSelectClickAudio = async (payload, deps) => {
           httpClient,
         );
 
-        const currentResources = store.getState().fieldResources || {};
-        const newFieldResources = {
-          ...currentResources,
+        const currentContext = store.getState().context || {};
+        const newContext = {
+          ...currentContext,
           [`sfx[${effectIndex}]`]: { waveformData },
         };
 
-        store.setFieldResources(newFieldResources);
+        store.setContext(newContext);
       } catch (error) {
         console.error("Failed to load waveform data:", error);
       }

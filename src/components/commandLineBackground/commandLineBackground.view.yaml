@@ -57,20 +57,16 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
+    - rtgl-view d=h g=md:
+    - rtgl-breadcrumb#breadcumb .items=breadcrumb:
     - $if mode == 'current':
-      - rtgl-view d=h g=md:
-      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-
-      - rtgl-form#form .form=dialogueForm.form:
-
+      - rtgl-form#form .form=dialogueForm.form .context=context:
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
         - rtgl-button#reset-button v=ol: Reset
         - rtgl-button#submit-button: Submit
 
     - $if mode == 'gallery':
-      - rtgl-view d=h g=md:
-      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
       - rtgl-tabs#tabs selected-tab=${tab} .items=tabs:
       - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
         - rtgl-view h=f flex=1 sv:

@@ -51,7 +51,7 @@ template:
         - rvn-group-typography-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId .colorsData=colorsData .fontsData=fontsData:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
-          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
+          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .context=context .defaultValues=defaultValues:
 
   - rtgl-dialog#add-typography-dialog ?open=${isDialogOpen}:
     - rtgl-view slot=content d=h g=md w=800:

@@ -27,8 +27,10 @@ export const handleCharacterItemClick = async (e, deps) => {
       fileId: selectedItem.fileId,
       projectId: "someprojectId",
     });
-    store.setFieldResources({
-      src: url,
+    store.setContext({
+      fileId: {
+        src: url,
+      },
     });
   }
   render();
@@ -230,8 +232,10 @@ export const handleFormExtraEvent = async (e, deps) => {
 
       // Update the store with the new repository state
       const { characters } = repository.getState();
-      store.setFieldResources({
-        src: downloadUrl,
+      store.setContext({
+        fileId: {
+          src: downloadUrl,
+        },
       });
       store.setItems(characters);
       render();

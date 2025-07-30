@@ -7,7 +7,7 @@ export const INITIAL_STATE = Object.freeze({
   soundEffects: [], // List of selected sound effects
   currentEditingId: null, // ID of sound effect being edited
   tempSelectedAudioId: undefined,
-  fieldResources: {},
+  context: {},
 });
 
 export const setMode = (state, payload) => {
@@ -64,13 +64,11 @@ export const setExistingSoundEffects = (state, payload) => {
   state.soundEffects = payload.soundEffects;
 };
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
-const createSoundEffectsForm = (params) => {
-  const { soundEffects, fieldResources } = params;
-
+const createSoundEffectsForm = (soundEffects) => {
   const triggerOptions = [
     { label: "On Click", value: "click" },
     { label: "On Hover", value: "hover" },
@@ -88,7 +86,7 @@ const createSoundEffectsForm = (params) => {
       name: `sfx[${index}]`,
       label: `Sound Effect ${index + 1}`,
       inputType: "waveform",
-      waveformData: fieldResources[`sfx[${index}]`]?.waveformData,
+      waveformData: "${sfx[" + index + "].waveformData}",
       width: 355,
       height: 150,
     });
@@ -157,10 +155,7 @@ export const toViewData = ({ state, props }, payload) => {
   }
 
   // Create form configuration
-  const form = createSoundEffectsForm({
-    soundEffects: state.soundEffects,
-    fieldResources: state.fieldResources,
-  });
+  const form = createSoundEffectsForm(state.soundEffects);
 
   // Create default values for form
   const defaultValues = {};
@@ -178,5 +173,6 @@ export const toViewData = ({ state, props }, payload) => {
     breadcrumb,
     form,
     defaultValues,
+    context: state.context,
   };
 };

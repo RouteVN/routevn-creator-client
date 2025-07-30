@@ -1,5 +1,24 @@
 import { nanoid } from "nanoid";
 
+const hexToBase64Image = (hex) => {
+  if (!hex) return "";
+
+  // Create a canvas element
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // Set canvas size
+  canvas.width = 100;
+  canvas.height = 100;
+
+  // Fill with the color
+  ctx.fillStyle = hex;
+  ctx.fillRect(0, 0, 100, 100);
+
+  // Convert to base64
+  return canvas.toDataURL("image/png");
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { colors } = repository.getState();
@@ -19,6 +38,15 @@ export const handleColorItemClick = (e, deps) => {
   const { store, render } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
+
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem && selectedItem.hex) {
+    store.setContext({
+      colorImage: {
+        src: hexToBase64Image(selectedItem.hex),
+      },
+    });
+  }
   render();
 };
 
@@ -76,6 +104,16 @@ export const handleFormChange = (e, deps) => {
 
   const { colors } = repository.getState();
   store.setItems(colors);
+
+  // Update context if hex value changed
+  if (e.detail.name === "hex") {
+    store.setContext({
+      colorImage: {
+        src: hexToBase64Image(e.detail.fieldValue),
+      },
+    });
+  }
+
   render();
 };
 
@@ -104,13 +142,14 @@ export const handleEditFormAction = (e, deps) => {
 
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;
+    const editItemId = store.getState().editItemId;
 
     // Update the color in the repository
     repository.addAction({
       actionType: "treeUpdate",
       target: "colors",
       value: {
-        id: store.getState().editItemId,
+        id: editItemId,
         replace: false,
         item: {
           name: formData.name,
@@ -121,6 +160,16 @@ export const handleEditFormAction = (e, deps) => {
 
     const { colors } = repository.getState();
     store.setItems(colors);
+
+    // Update context if this is the selected item
+    if (editItemId === store.getState().selectedItemId) {
+      store.setContext({
+        colorImage: {
+          src: hexToBase64Image(formData.hex),
+        },
+      });
+    }
+
     store.closeEditDialog();
     render();
   }
@@ -151,6 +200,7 @@ export const handleAddFormAction = (e, deps) => {
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;
     const targetGroupId = store.getState().targetGroupId;
+    const newColorId = nanoid();
 
     // Create the color in the repository
     repository.addAction({
@@ -160,7 +210,7 @@ export const handleAddFormAction = (e, deps) => {
         parent: targetGroupId,
         position: "last",
         item: {
-          id: nanoid(),
+          id: newColorId,
           type: "color",
           name: formData.name,
           hex: formData.hex,

@@ -69,7 +69,7 @@ template:
         - rtgl-text: Sound Effects
 
         # Form for sound effects
-        - rtgl-form#form .form=form .defaultValues=defaultValues:
+        - rtgl-form#form .form=form .context=context .defaultValues=defaultValues:
         
         # Add new button
         - rtgl-button#add-new-button v=ol w=f: + Add New Sound Effect

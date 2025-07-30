@@ -55,7 +55,7 @@ template:
         - rvn-group-colors-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - $if selectedItemId:
-          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues:
+          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .context=context .defaultValues=defaultValues:
   - rtgl-dialog#edit-dialog ?open=${isEditDialogOpen} s=sm:
     - rtgl-form#edit-form slot=content .defaultValues=editDefaultValues .form=editForm:
   - rtgl-dialog#add-color-dialog ?open=${isAddDialogOpen} s=sm:

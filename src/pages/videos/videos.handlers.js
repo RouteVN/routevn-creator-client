@@ -28,8 +28,10 @@ export const handleVideoItemClick = async (e, deps) => {
       fileId: selectedItem.thumbnailFileId,
       projectId: "someprojectId",
     });
-    store.setFieldResources({
-      thumbnailSrc: url,
+    store.setContext({
+      thumbnailFileId: {
+        src: url,
+      },
     });
   }
   render();
@@ -117,8 +119,10 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   // Update the store with the new repository state
   const { videos } = repository.getState();
-  store.setFieldResources({
-    thumbnailSrc: uploadResult.thumbnailDownloadUrl,
+  store.setContext({
+    thumbnailFileId: {
+      src: uploadResult.thumbnailDownloadUrl,
+    },
   });
   store.setItems(videos);
   render();

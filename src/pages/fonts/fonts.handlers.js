@@ -19,6 +19,15 @@ export const handleFontItemClick = (e, deps) => {
   const { store, render } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
+
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem) {
+    store.setContext({
+      fileId: {
+        fontFamily: selectedItem.fontFamily || "",
+      },
+    });
+  }
   render();
 };
 
@@ -77,7 +86,7 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   // Update the store with the new repository state
   const { fonts } = repository.getState();
-  store.setFieldResources({
+  store.setContext({
     fileId: {
       fontFamily: uploadResult.fontName,
     },

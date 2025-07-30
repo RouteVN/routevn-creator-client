@@ -51,7 +51,7 @@ template:
           - rtgl-view d=h g=md:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
           
-          - rtgl-form#form .form=form .defaultValues=defaultValues:
+          - rtgl-form#form .form=form .defaultValues=defaultValues .context=context:
           
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:

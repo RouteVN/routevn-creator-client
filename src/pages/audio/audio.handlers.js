@@ -29,8 +29,10 @@ export const handleAudioItemClick = async (e, deps) => {
     httpClient,
   );
 
-  store.setFieldResources({
-    waveformData,
+  store.setContext({
+    fileId: {
+      waveformData,
+    },
   });
   render();
 };
@@ -126,8 +128,10 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   // Update the store with the new repository state
   const { audio } = repository.getState();
-  store.setFieldResources({
-    waveformData: uploadResult.waveformData,
+  store.setContext({
+    fileId: {
+      waveformData: uploadResult.waveformData,
+    },
   });
   store.setItems(audio);
   render();
