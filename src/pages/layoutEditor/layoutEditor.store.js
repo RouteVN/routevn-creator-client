@@ -414,13 +414,13 @@ export const toViewData = ({ state, props }, payload) => {
                   ],
                 },
                 {
-                  name: "hoverStyle",
+                  name: "hoverTypographyId",
                   inputType: "select",
                   description: "Hover Style",
                   options: [{ label: "None", value: "" }, ...typographyItems],
                 },
                 {
-                  name: "clickedTextStyle",
+                  name: "clickedTypographyId",
                   inputType: "select",
                   description: "Clicked Style",
                   options: [{ label: "None", value: "" }, ...typographyItems],
@@ -471,8 +471,8 @@ export const toViewData = ({ state, props }, payload) => {
           ? {
               text: selectedItem.text,
               typographyId: selectedItem.typographyId ?? "",
-              hoverStyle: selectedItem.hoverStyle ?? "",
-              clickedTextStyle: selectedItem.clickedTextStyle ?? "",
+              hoverTypographyId: selectedItem.hoverTypographyId ?? "",
+              clickedTypographyId: selectedItem.clickedTypographyId ?? "",
               style: {
                 align: selectedItem.style?.align ?? "left",
                 wordWrapWidth: parseInt(

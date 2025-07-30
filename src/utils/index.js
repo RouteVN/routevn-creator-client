@@ -106,8 +106,8 @@ export const layoutTreeStructureToRenderState = (
       const interactionStyles = {};
 
       // Process hover style
-      if (node.hoverStyle) {
-        const hoverTypography = typographyData.items[node.hoverStyle];
+      if (node.hoverTypographyId) {
+        const hoverTypography = typographyData.items[node.hoverTypographyId];
         if (hoverTypography) {
           const hoverColorItem = colorsData.items[hoverTypography.colorId];
           const hoverFontItem = fontsData.items[hoverTypography.fontId];
@@ -123,8 +123,9 @@ export const layoutTreeStructureToRenderState = (
       }
 
       // Process clicked style
-      if (node.clickedTextStyle) {
-        const clickedTypography = typographyData.items[node.clickedTextStyle];
+      if (node.clickedTypographyId) {
+        const clickedTypography =
+          typographyData.items[node.clickedTypographyId];
         if (clickedTypography) {
           const clickedColorItem = colorsData.items[clickedTypography.colorId];
           const clickedFontItem = fontsData.items[clickedTypography.fontId];

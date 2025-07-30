@@ -25,12 +25,12 @@ const loadLayoutFonts = async (deps) => {
           usedTypographyIds.add(item.typographyId);
         }
         // Add hover style typography
-        if (item.hoverStyle) {
-          usedTypographyIds.add(item.hoverStyle);
+        if (item.hoverTypographyId) {
+          usedTypographyIds.add(item.hoverTypographyId);
         }
         // Add clicked style typography
-        if (item.clickedTextStyle) {
-          usedTypographyIds.add(item.clickedTextStyle);
+        if (item.clickedTypographyId) {
+          usedTypographyIds.add(item.clickedTypographyId);
         }
       }
     });
@@ -351,8 +351,8 @@ export const handleFormChange = async (e, deps) => {
   if (
     currentItem.type === "text" &&
     (e.detail.name === "typographyId" ||
-      e.detail.name === "hoverStyle" ||
-      e.detail.name === "clickedTextStyle")
+      e.detail.name === "hoverTypographyId" ||
+      e.detail.name === "clickedTypographyId")
   ) {
     const typographyId = e.detail.fieldValue;
     if (typographyId && typographyId !== "" && typographyId !== "default") {
