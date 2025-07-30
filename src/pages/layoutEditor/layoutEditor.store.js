@@ -28,11 +28,6 @@ export const INITIAL_STATE = Object.freeze({
     groups: [],
     selectedImageId: null,
   },
-  typographySelectorDialog: {
-    isOpen: false,
-    groups: [],
-    selectedTypographyId: null,
-  },
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -226,24 +221,6 @@ export const setTempSelectedImageId = (state, { imageId }) => {
   state.imageSelectorDialog.selectedImageId = imageId;
 };
 
-export const showTypographySelectorDialog = (
-  state,
-  { groups, currentValue },
-) => {
-  state.typographySelectorDialog.isOpen = true;
-  state.typographySelectorDialog.groups = groups || [];
-  state.typographySelectorDialog.selectedTypographyId = currentValue || null;
-};
-
-export const hideTypographySelectorDialog = (state) => {
-  state.typographySelectorDialog.isOpen = false;
-  state.typographySelectorDialog.groups = [];
-  state.typographySelectorDialog.selectedTypographyId = null;
-};
-
-export const setTempSelectedTypographyId = (state, { typographyId }) => {
-  state.typographySelectorDialog.selectedTypographyId = typographyId;
-};
 
 export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
   const selectedItem = selectSelectedItem({ state });
@@ -393,9 +370,17 @@ export const toViewData = ({ state, props }, payload) => {
                 },
                 {
                   name: "typographyId",
-                  inputType: "image",
+                  inputType: "select",
                   description: "Typography Style",
-                  src: undefined,
+                  options: [
+                    { label: "Default", value: "" },
+                    ...typographyGroups.flatMap((group) =>
+                      group.children.map((item) => ({
+                        label: item.name,
+                        value: item.id,
+                      })),
+                    ),
+                  ],
                 },
                 {
                   name: "style_wordWrapWidth",
@@ -497,11 +482,6 @@ export const toViewData = ({ state, props }, payload) => {
       isOpen: state.imageSelectorDialog.isOpen,
       groups: state.imageSelectorDialog.groups,
       selectedImageId: state.imageSelectorDialog.selectedImageId,
-    },
-    typographySelectorDialog: {
-      isOpen: state.typographySelectorDialog.isOpen,
-      groups: state.typographySelectorDialog.groups,
-      selectedTypographyId: state.typographySelectorDialog.selectedTypographyId,
     },
     dropdownMenu: state.dropdownMenu,
   };

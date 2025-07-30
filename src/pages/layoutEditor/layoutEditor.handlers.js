@@ -343,27 +343,6 @@ export const handleFormExtraEvent = async (e, deps) => {
     return;
   }
 
-  // Handle typography field click (button type)
-  if (
-    (trigger === "click" || trigger === "button-click") &&
-    name === "typographyId"
-  ) {
-    const selectedItem = store.selectSelectedItem();
-    if (selectedItem) {
-      // Get current value for the field
-      const currentValue = selectedItem[name] || null;
-
-      // Transform typography data to groups format for the selector
-      const typographyGroups = store.toViewData().typographyGroups;
-
-      store.showTypographySelectorDialog({
-        groups: typographyGroups,
-        currentValue,
-      });
-      render();
-    }
-    return;
-  }
 
   if (trigger === "contextmenu") {
     const selectedItem = store.selectSelectedItem();
@@ -529,61 +508,3 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   }
 };
 
-export const handleTypographySelectorSelection = (e, deps) => {
-  const { store, render } = deps;
-  const { typographyId } = e.detail;
-
-  store.setTempSelectedTypographyId({ typographyId });
-  render();
-};
-
-export const handleConfirmTypographySelection = async (e, deps) => {
-  const { store, render, repository } = deps;
-
-  const state = store.getState ? store.getState() : store._state || store.state;
-  const selectedTypographyId =
-    state.typographySelectorDialog.selectedTypographyId;
-
-  const selectedItem = store.selectSelectedItem();
-
-  if (selectedItem) {
-    const layoutId = store.selectLayoutId();
-    const selectedItemId = store.selectSelectedItemId();
-
-    // Update the repository to set the typography
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: `layouts.items.${layoutId}.elements`,
-      value: {
-        id: selectedItemId,
-        replace: false,
-        item: { typographyId: selectedTypographyId },
-      },
-    });
-
-    // Sync store with updated repository data
-    const { layouts } = repository.getState();
-    const layout = layouts.items[layoutId];
-
-    store.setItems(layout?.elements || { items: {}, tree: [] });
-  }
-
-  // Hide dialog
-  store.hideTypographySelectorDialog();
-  render();
-
-  // Re-render the preview
-  await renderLayoutPreview(deps);
-};
-
-export const handleCancelTypographySelection = (e, deps) => {
-  const { store, render } = deps;
-  store.hideTypographySelectorDialog();
-  render();
-};
-
-export const handleCloseTypographySelectorDialog = (e, deps) => {
-  const { store, render } = deps;
-  store.hideTypographySelectorDialog();
-  render();
-};

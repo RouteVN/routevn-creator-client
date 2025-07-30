@@ -49,10 +49,10 @@ refs:
     eventListeners:
       click:
         handler: handleFontFieldClick
-  typography-field-*:
+  typography-select-*:
     eventListeners:
-      click:
-        handler: handleTypographyFieldClick
+      change:
+        handler: handleTypographySelectChange
   popover:
     eventListeners:
       close:
@@ -161,12 +161,11 @@ template:
                                   - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
                     $elif field.type == 'typography':
                       - rtgl-view:
+                          - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - 'rtgl-view#typography-field-${i} w=240 h=80 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p style="color: ${field.fontColor}; font-size: ${field.fontSize}px; font-weight: ${field.fontWeight};"':
-                                  - rtgl-text: ${field.name}
+                              - rtgl-select#typography-select-${i} av=c .selectedValue=field.value .options=field.options:
                             $else:
-                              - 'rtgl-view w=240 h=80 av=c ah=c bgc=bg bc=bo bw=xs br=md style="color: ${field.fontColor}; font-size: ${field.fontSize}px; font-weight: ${field.fontWeight};"':
-                                  - rtgl-text: ${field.name}
+                              - rtgl-text: ${field.name}
                     $elif field.type == 'image-selector':
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}

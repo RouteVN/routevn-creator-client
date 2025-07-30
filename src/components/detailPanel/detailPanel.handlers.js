@@ -245,30 +245,27 @@ export const handleFontFieldClick = (e, deps) => {
   }
 };
 
-export const handleTypographyFieldClick = (e, deps) => {
+export const handleTypographySelectChange = (e, deps) => {
   const { store, render, props } = deps;
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
-    e.currentTarget.id.replace("typography-field-", ""),
+    e.currentTarget.id.replace("typography-select-", ""),
   );
   const field = props.fields[fieldIndex];
+  const selectedValue = e.detail.value;
 
-  if (field && field.type === "typography" && field.editable) {
-    // Open typography dialog with current typography data
-    store.showTypographyDialog({
-      fieldIndex,
-      itemData: {
-        fontSize: field.fontSize || "16",
-        fontColor: field.colorId || "",
-        fontStyle: field.fontId || "",
-        fontWeight: field.fontWeight || "normal",
-        previewText: field.previewText || "",
-      },
-      colorOptions: field.colorOptions || [],
-      fontOptions: field.fontOptions || [],
+  if (
+    field &&
+    field.type === "typography" &&
+    field.editable &&
+    props.onFieldChange
+  ) {
+    props.onFieldChange({
+      fieldName: field.name,
+      value: selectedValue,
+      index: fieldIndex,
     });
-    render();
   }
 };
 

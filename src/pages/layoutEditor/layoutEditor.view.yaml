@@ -54,22 +54,6 @@ refs:
     eventListeners:
       close:
         handler: handleCloseImageSelectorDialog
-  typography-selector:
-    eventListeners:
-      typography-selected:
-        handler: handleTypographySelectorSelection
-  confirm-typography-selection:
-    eventListeners:
-      click:
-        handler: handleConfirmTypographySelection
-  cancel-typography-selection:
-    eventListeners:
-      click:
-        handler: handleCancelTypographySelection
-  typography-selector-dialog:
-    eventListeners:
-      close:
-        handler: handleCloseTypographySelectorDialog
   dropdown-menu:
     eventListeners:
       close:
@@ -98,10 +82,4 @@ template:
           - rtgl-view d=f jc=fe g=sm:
               - rtgl-button#cancel-image-selection variant=se: Cancel
               - rtgl-button#confirm-image-selection variant=pr: OK
-  - rtgl-dialog#typography-selector-dialog ?open=${typographySelectorDialog.isOpen}:
-      - rtgl-view slot=content g=md:
-          - rvn-typography-selector#typography-selector .groups=typographySelectorDialog.groups .selectedTypographyId=typographySelectorDialog.selectedTypographyId .colorsData=colorsData .fontsData=fontsData:
-          - rtgl-view d=f jc=fe g=sm:
-              - rtgl-button#cancel-typography-selection variant=se: Cancel
-              - rtgl-button#confirm-typography-selection variant=pr: OK
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen} placement=left:
