@@ -475,7 +475,7 @@ export const selectPresentationData = ({ state }) => {
   // Background
   if (selectedLine.presentation.background) {
     const backgroundImage =
-      images[selectedLine.presentation.background.imageId];
+      images[selectedLine.presentation.background.resourceId];
     if (backgroundImage) {
       presentationItems.push({
         type: "background",
