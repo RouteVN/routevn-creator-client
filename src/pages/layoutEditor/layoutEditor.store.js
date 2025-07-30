@@ -89,6 +89,10 @@ export const INITIAL_STATE = Object.freeze({
         x: 0,
         y: 0,
         text: "text",
+        style: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
         anchorX: 0.5,
         anchorY: 0.5,
         scaleX: 1,
@@ -146,6 +150,10 @@ export const INITIAL_STATE = Object.freeze({
         x: SCREEN_WIDTH / 2,
         y: SCREEN_HEIGHT / 2,
         text: "text",
+        style: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
         anchorX: 0.5,
         anchorY: 0.5,
         scaleX: 1,
@@ -292,7 +300,12 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Helper to transform typography data into groups
   const typographyGroups = toFlatGroups(state.typographyData);
-  const typographyItems = state.typographyData.items;
+  const typographyItems = typographyGroups.flatMap((group) =>
+    group.children.map((item) => ({
+      label: item.name,
+      value: item.id,
+    })),
+  );
 
   // Create form configuration based on selected item type
   const form = selectedItem
@@ -383,15 +396,7 @@ export const toViewData = ({ state, props }, payload) => {
                   name: "typographyId",
                   inputType: "select",
                   description: "Typography Style",
-                  options: [
-                    { label: "Default", value: "" },
-                    ...typographyGroups.flatMap((group) =>
-                      group.children.map((item) => ({
-                        label: item.name,
-                        value: item.id,
-                      })),
-                    ),
-                  ],
+                  options: [...typographyItems],
                 },
                 {
                   name: "style_wordWrapWidth",
@@ -412,31 +417,13 @@ export const toViewData = ({ state, props }, payload) => {
                   name: "hoverStyle",
                   inputType: "select",
                   description: "Hover Style",
-                  options: [
-                    { label: "Unselected", value: "" },
-                    { label: "Default", value: "default" },
-                    ...typographyGroups.flatMap((group) =>
-                      group.children.map((item) => ({
-                        label: item.name,
-                        value: item.id,
-                      })),
-                    ),
-                  ],
+                  options: [{ label: "None", value: "" }, ...typographyItems],
                 },
                 {
                   name: "clickedTextStyle",
                   inputType: "select",
                   description: "Clicked Style",
-                  options: [
-                    { label: "Unselected", value: "" },
-                    { label: "Default", value: "default" },
-                    ...typographyGroups.flatMap((group) =>
-                      group.children.map((item) => ({
-                        label: item.name,
-                        value: item.id,
-                      })),
-                    ),
-                  ],
+                  options: [{ label: "None", value: "" }, ...typographyItems],
                 },
               ]
             : []),

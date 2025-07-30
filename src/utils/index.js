@@ -75,17 +75,17 @@ export const layoutTreeStructureToRenderState = (
       let textStyle = {};
 
       // Apply typography if selected
-      if (node.typographyId && typographyData?.items[node.typographyId]) {
+      if (node.typographyId && typographyData.items[node.typographyId]) {
         const typography = typographyData.items[node.typographyId];
-        const colorItem = colorsData?.items[typography.colorId];
-        const fontItem = fontsData?.items[typography.fontId];
+        const colorItem = colorsData.items[typography.colorId];
+        const fontItem = fontsData.items[typography.fontId];
 
         textStyle = {
           fontSize: typography.fontSize,
-          fontFamily: fontItem?.fontFamily || "Arial",
+          fontFamily: fontItem.fontFamily,
           fontWeight: typography.fontWeight,
-          fill: colorItem?.hex || "#ffffff",
-          lineHeight: (typography.lineHeight ?? 1.5) * typography.fontSize,
+          fill: colorItem.hex,
+          lineHeight: typography.lineHeight * typography.fontSize,
         };
       } else {
         // Use default settings
@@ -98,54 +98,44 @@ export const layoutTreeStructureToRenderState = (
 
       const finalStyle = {
         ...textStyle,
-        wordWrapWidth: parseInt(node.style?.wordWrapWidth ?? 300),
-        align: node.style?.align ?? "left",
+        wordWrapWidth: parseInt(node.style.wordWrapWidth),
+        align: node.style.align,
       };
 
       // Handle interaction styles
       const interactionStyles = {};
 
       // Process hover style
-      if (
-        node.hoverStyle &&
-        node.hoverStyle !== "" &&
-        node.hoverStyle !== "default"
-      ) {
-        const hoverTypography = typographyData?.items[node.hoverStyle];
+      if (node.hoverStyle) {
+        const hoverTypography = typographyData.items[node.hoverStyle];
         if (hoverTypography) {
-          const hoverColorItem = colorsData?.items[hoverTypography.colorId];
-          const hoverFontItem = fontsData?.items[hoverTypography.fontId];
+          const hoverColorItem = colorsData.items[hoverTypography.colorId];
+          const hoverFontItem = fontsData.items[hoverTypography.fontId];
 
           interactionStyles.hoverStyle = {
             fontSize: hoverTypography.fontSize,
-            fontFamily: hoverFontItem?.fontFamily || "Arial",
+            fontFamily: hoverFontItem.fontFamily,
             fontWeight: hoverTypography.fontWeight,
-            fill: hoverColorItem?.hex || "#ffffff",
-            lineHeight:
-              (hoverTypography.lineHeight ?? 1.5) * hoverTypography.fontSize,
+            fill: hoverColorItem.hex,
+            lineHeight: hoverTypography.lineHeight * hoverTypography.fontSize,
           };
         }
       }
 
       // Process clicked style
-      if (
-        node.clickedTextStyle &&
-        node.clickedTextStyle !== "" &&
-        node.clickedTextStyle !== "default"
-      ) {
-        const clickedTypography = typographyData?.items[node.clickedTextStyle];
+      if (node.clickedTextStyle) {
+        const clickedTypography = typographyData.items[node.clickedTextStyle];
         if (clickedTypography) {
-          const clickedColorItem = colorsData?.items[clickedTypography.colorId];
-          const clickedFontItem = fontsData?.items[clickedTypography.fontId];
+          const clickedColorItem = colorsData.items[clickedTypography.colorId];
+          const clickedFontItem = fontsData.items[clickedTypography.fontId];
 
           interactionStyles.clickedTextStyle = {
             fontSize: clickedTypography.fontSize,
-            fontFamily: clickedFontItem?.fontFamily || "Arial",
+            fontFamily: clickedFontItem.fontFamily,
             fontWeight: clickedTypography.fontWeight,
-            fill: clickedColorItem?.hex || "#ffffff",
+            fill: clickedColorItem.hex,
             lineHeight:
-              (clickedTypography.lineHeight ?? 1.5) *
-              clickedTypography.fontSize,
+              clickedTypography.lineHeight * clickedTypography.fontSize,
           };
         }
       }

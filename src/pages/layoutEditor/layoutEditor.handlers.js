@@ -25,19 +25,11 @@ const loadLayoutFonts = async (deps) => {
           usedTypographyIds.add(item.typographyId);
         }
         // Add hover style typography
-        if (
-          item.hoverStyle &&
-          item.hoverStyle !== "" &&
-          item.hoverStyle !== "default"
-        ) {
+        if (item.hoverStyle) {
           usedTypographyIds.add(item.hoverStyle);
         }
         // Add clicked style typography
-        if (
-          item.clickedTextStyle &&
-          item.clickedTextStyle !== "" &&
-          item.clickedTextStyle !== "default"
-        ) {
+        if (item.clickedTextStyle) {
           usedTypographyIds.add(item.clickedTextStyle);
         }
       }
