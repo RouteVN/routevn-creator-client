@@ -82,7 +82,7 @@ export const layoutTreeStructureToRenderState = (
 
         textStyle = {
           fontSize: typography.fontSize,
-          fontFamily: fontItem?.name || "Arial",
+          fontFamily: fontItem?.fontFamily || "Arial",
           fontWeight: typography.fontWeight,
           fill: colorItem?.hex || "#ffffff",
           // Note: lineHeight might not be supported by route-graphics, removed for now
