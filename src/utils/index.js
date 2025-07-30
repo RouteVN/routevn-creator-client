@@ -104,37 +104,48 @@ export const layoutTreeStructureToRenderState = (
 
       // Handle interaction styles
       const interactionStyles = {};
-      
+
       // Process hover style
-      if (node.hoverStyle && node.hoverStyle !== "" && node.hoverStyle !== "default") {
+      if (
+        node.hoverStyle &&
+        node.hoverStyle !== "" &&
+        node.hoverStyle !== "default"
+      ) {
         const hoverTypography = typographyData?.items[node.hoverStyle];
         if (hoverTypography) {
           const hoverColorItem = colorsData?.items[hoverTypography.colorId];
           const hoverFontItem = fontsData?.items[hoverTypography.fontId];
-          
+
           interactionStyles.hoverStyle = {
             fontSize: hoverTypography.fontSize,
             fontFamily: hoverFontItem?.fontFamily || "Arial",
             fontWeight: hoverTypography.fontWeight,
             fill: hoverColorItem?.hex || "#ffffff",
-            lineHeight: (hoverTypography.lineHeight ?? 1.5) * hoverTypography.fontSize,
+            lineHeight:
+              (hoverTypography.lineHeight ?? 1.5) * hoverTypography.fontSize,
           };
         }
       }
-      
+
       // Process clicked style
-      if (node.clickedTextStyle && node.clickedTextStyle !== "" && node.clickedTextStyle !== "default") {
+      if (
+        node.clickedTextStyle &&
+        node.clickedTextStyle !== "" &&
+        node.clickedTextStyle !== "default"
+      ) {
         const clickedTypography = typographyData?.items[node.clickedTextStyle];
         if (clickedTypography) {
           const clickedColorItem = colorsData?.items[clickedTypography.colorId];
           const clickedFontItem = fontsData?.items[clickedTypography.fontId];
-          
+
           interactionStyles.clickedTextStyle = {
             fontSize: clickedTypography.fontSize,
             fontFamily: clickedFontItem?.fontFamily || "Arial",
             fontWeight: clickedTypography.fontWeight,
             fill: clickedColorItem?.hex || "#ffffff",
-            lineHeight: (clickedTypography.lineHeight ?? 1.5) * clickedTypography.fontSize,
+            lineHeight:
+              (clickedTypography.lineHeight ?? 1.5) *
+              clickedTypography.fontSize,
           };
         }
       }

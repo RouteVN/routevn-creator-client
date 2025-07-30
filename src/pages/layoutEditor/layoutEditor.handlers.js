@@ -25,11 +25,19 @@ const loadLayoutFonts = async (deps) => {
           usedTypographyIds.add(item.typographyId);
         }
         // Add hover style typography
-        if (item.hoverStyle && item.hoverStyle !== "" && item.hoverStyle !== "default") {
+        if (
+          item.hoverStyle &&
+          item.hoverStyle !== "" &&
+          item.hoverStyle !== "default"
+        ) {
           usedTypographyIds.add(item.hoverStyle);
         }
         // Add clicked style typography
-        if (item.clickedTextStyle && item.clickedTextStyle !== "" && item.clickedTextStyle !== "default") {
+        if (
+          item.clickedTextStyle &&
+          item.clickedTextStyle !== "" &&
+          item.clickedTextStyle !== "default"
+        ) {
           usedTypographyIds.add(item.clickedTextStyle);
         }
       }
@@ -348,13 +356,18 @@ export const handleFormChange = async (e, deps) => {
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
 
   // Load font if typography-related field is changed
-  if (currentItem.type === "text" && (e.detail.name === "typographyId" || e.detail.name === "hoverStyle" || e.detail.name === "clickedTextStyle")) {
+  if (
+    currentItem.type === "text" &&
+    (e.detail.name === "typographyId" ||
+      e.detail.name === "hoverStyle" ||
+      e.detail.name === "clickedTextStyle")
+  ) {
     const typographyId = e.detail.fieldValue;
     if (typographyId && typographyId !== "" && typographyId !== "default") {
       const typographyData = store.selectTypographyData();
       const fontsData = store.selectFontsData();
       const typography = typographyData?.items?.[typographyId];
-      
+
       if (typography && typography.fontId) {
         const fontItem = fontsData?.items?.[typography.fontId];
         if (fontItem && fontItem.fileId && fontItem.fontFamily) {
