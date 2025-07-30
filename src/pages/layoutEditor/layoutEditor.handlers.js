@@ -1,8 +1,71 @@
-import { toTreeStructure } from "../../deps/repository";
+import { toTreeStructure, toFlatItems } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
   layoutTreeStructureToRenderState,
 } from "../../utils/index.js";
+
+const loadLayoutFonts = async (deps) => {
+  const { store, loadFontFile } = deps;
+
+  try {
+    // Use store selector functions
+    const layoutElements = store.selectItems();
+    const typographyData = store.selectTypographyData();
+    const fontsData = store.selectFontsData();
+
+    // Get all typography items used in the layout
+    const flatItems = toFlatItems(layoutElements);
+    const usedTypographyIds = new Set();
+
+    // Find all text elements and collect their typography IDs
+    flatItems.forEach((item) => {
+      if (item.type === "text") {
+        // Add main typography style
+        if (item.typographyId) {
+          usedTypographyIds.add(item.typographyId);
+        }
+        // Add hover style typography
+        if (item.hoverTypographyId) {
+          usedTypographyIds.add(item.hoverTypographyId);
+        }
+        // Add clicked style typography
+        if (item.clickedTypographyId) {
+          usedTypographyIds.add(item.clickedTypographyId);
+        }
+      }
+    });
+
+    // Get typography items and their font IDs
+    const typographyItems = typographyData?.items || {};
+    const usedFontIds = new Set();
+
+    usedTypographyIds.forEach((typographyId) => {
+      const typo = typographyItems[typographyId];
+      if (typo && typo.fontId) {
+        usedFontIds.add(typo.fontId);
+      }
+    });
+
+    // Get font items and load them
+    const fontItems = fontsData?.items || {};
+    const fontLoadPromises = [];
+
+    usedFontIds.forEach((fontId) => {
+      const fontItem = fontItems[fontId];
+      if (fontItem && fontItem.fileId && fontItem.fontFamily) {
+        console.log("Loading font for layout:", fontItem.fontFamily);
+        fontLoadPromises.push(loadFontFile(fontItem));
+      }
+    });
+
+    if (fontLoadPromises.length > 0) {
+      await Promise.all(fontLoadPromises);
+      console.log(`Loaded ${fontLoadPromises.length} fonts for layout`);
+    }
+  } catch (error) {
+    console.error("Error loading layout fonts:", error);
+  }
+};
 
 const renderLayoutPreview = async (deps) => {
   const { store, repository, render, drenderer, httpClient } = deps;
@@ -11,7 +74,15 @@ const renderLayoutPreview = async (deps) => {
   const {
     layouts,
     images: { items: imageItems },
+    typography: typographyData,
+    colors: colorsData,
+    fonts: fontsData,
   } = repository.getState();
+
+  // Extract items from structured data
+  const typographyItems = typographyData?.items || {};
+  const colorsItems = colorsData?.items || {};
+  const fontsItems = fontsData?.items || {};
   const layout = layouts.items[layoutId];
 
   const layoutTreeStructure = toTreeStructure(layout.elements);
@@ -29,6 +100,9 @@ const renderLayoutPreview = async (deps) => {
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
+    { items: typographyItems },
+    { items: colorsItems },
+    { items: fontsItems },
   );
 
   const selectedItem = store.selectSelectedItem();
@@ -137,17 +211,24 @@ const renderLayoutPreview = async (deps) => {
 export const handleBeforeMount = (deps) => {
   const { router, store, repository } = deps;
   const { layoutId } = router.getPayload();
-  const { layouts, images } = repository.getState();
+  const { layouts, images, typography, colors, fonts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setLayoutId(layoutId);
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
+  store.setTypographyData(typography || { items: {}, tree: [] });
+  store.setColorsData(colors || { items: {}, tree: [] });
+  store.setFontsData(fonts || { items: {}, tree: [] });
 };
 
 export const handleAfterMount = async (deps) => {
-  const { render, getRefIds, drenderer } = deps;
+  const { render, getRefIds, drenderer, loadFontFile } = deps;
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
+
+  // Load all fonts used in this layout before rendering
+  await loadLayoutFonts(deps);
+
   await renderLayoutPreview(deps);
   render();
 };
@@ -257,7 +338,7 @@ const deepMerge = (target, source) => {
 };
 
 export const handleFormChange = async (e, deps) => {
-  const { repository, store, render } = deps;
+  const { repository, store, render, loadFontFile } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
@@ -265,6 +346,32 @@ export const handleFormChange = async (e, deps) => {
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
+
+  // Load font if typography-related field is changed
+  if (
+    currentItem.type === "text" &&
+    (e.detail.name === "typographyId" ||
+      e.detail.name === "hoverTypographyId" ||
+      e.detail.name === "clickedTypographyId")
+  ) {
+    const typographyId = e.detail.fieldValue;
+    if (typographyId && typographyId !== "" && typographyId !== "default") {
+      const typographyData = store.selectTypographyData();
+      const fontsData = store.selectFontsData();
+      const typography = typographyData?.items?.[typographyId];
+
+      if (typography && typography.fontId) {
+        const fontItem = fontsData?.items?.[typography.fontId];
+        if (fontItem && fontItem.fileId && fontItem.fontFamily) {
+          try {
+            await loadFontFile(fontItem);
+          } catch (error) {
+            console.error("Failed to load font:", error);
+          }
+        }
+      }
+    }
+  }
 
   repository.addAction({
     actionType: "treeUpdate",
@@ -291,12 +398,17 @@ export const handleFormExtraEvent = async (e, deps) => {
   const { repository, store, render } = deps;
   const { trigger, eventType, name, value, fieldIndex } = e.detail;
 
-  if (!["imageId", "hoverImageId", "clickImageId"].includes(name)) {
+  if (
+    !["imageId", "hoverImageId", "clickImageId", "typographyId"].includes(name)
+  ) {
     return;
   }
 
   // Handle image field click - check if name includes "imageId" or "ImageId"
-  if (trigger === "click") {
+  if (
+    trigger === "click" &&
+    ["imageId", "hoverImageId", "clickImageId"].includes(name)
+  ) {
     const selectedItem = store.selectSelectedItem();
     if (selectedItem) {
       // Get current value for the field

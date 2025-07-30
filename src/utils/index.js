@@ -49,7 +49,13 @@ export const extractFileIdsFromRenderState = (obj) => {
   return Array.from(fileIds);
 };
 
-export const layoutTreeStructureToRenderState = (layout, imageItems) => {
+export const layoutTreeStructureToRenderState = (
+  layout,
+  imageItems,
+  typographyData,
+  colorsData,
+  fontsData,
+) => {
   const mapNode = (node) => {
     let element = {
       id: node.id,
@@ -66,15 +72,80 @@ export const layoutTreeStructureToRenderState = (layout, imageItems) => {
     };
 
     if (node.type === "text") {
+      let textStyle = {};
+
+      // Apply typography if selected
+      if (node.typographyId && typographyData.items[node.typographyId]) {
+        const typography = typographyData.items[node.typographyId];
+        const colorItem = colorsData.items[typography.colorId];
+        const fontItem = fontsData.items[typography.fontId];
+
+        textStyle = {
+          fontSize: typography.fontSize,
+          fontFamily: fontItem.fontFamily,
+          fontWeight: typography.fontWeight,
+          fill: colorItem.hex,
+          lineHeight: typography.lineHeight * typography.fontSize,
+        };
+      } else {
+        // Use default settings
+        textStyle = {
+          fontSize: 24,
+          fill: "white",
+          lineHeight: 1.5 * 24,
+        };
+      }
+
+      const finalStyle = {
+        ...textStyle,
+        wordWrapWidth: parseInt(node.style.wordWrapWidth),
+        align: node.style.align,
+      };
+
+      // Handle interaction styles
+      const interactionStyles = {};
+
+      // Process hover style
+      if (node.hoverTypographyId) {
+        const hoverTypography = typographyData.items[node.hoverTypographyId];
+        if (hoverTypography) {
+          const hoverColorItem = colorsData.items[hoverTypography.colorId];
+          const hoverFontItem = fontsData.items[hoverTypography.fontId];
+
+          interactionStyles.hoverStyle = {
+            fontSize: hoverTypography.fontSize,
+            fontFamily: hoverFontItem.fontFamily,
+            fontWeight: hoverTypography.fontWeight,
+            fill: hoverColorItem.hex,
+            lineHeight: hoverTypography.lineHeight * hoverTypography.fontSize,
+          };
+        }
+      }
+
+      // Process clicked style
+      if (node.clickedTypographyId) {
+        const clickedTypography =
+          typographyData.items[node.clickedTypographyId];
+        if (clickedTypography) {
+          const clickedColorItem = colorsData.items[clickedTypography.colorId];
+          const clickedFontItem = fontsData.items[clickedTypography.fontId];
+
+          interactionStyles.clickedTextStyle = {
+            fontSize: clickedTypography.fontSize,
+            fontFamily: clickedFontItem.fontFamily,
+            fontWeight: clickedTypography.fontWeight,
+            fill: clickedColorItem.hex,
+            lineHeight:
+              clickedTypography.lineHeight * clickedTypography.fontSize,
+          };
+        }
+      }
+
       element = {
         ...element,
         text: node.text,
-        style: {
-          fontSize: 24,
-          fill: "white",
-          wordWrapWidth: parseInt(node.style?.wordWrapWidth ?? 300),
-          align: node.style?.align ?? "left",
-        },
+        style: finalStyle,
+        ...interactionStyles,
       };
     }
 
