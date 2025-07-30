@@ -85,14 +85,14 @@ export const layoutTreeStructureToRenderState = (
           fontFamily: fontItem?.fontFamily || "Arial",
           fontWeight: typography.fontWeight,
           fill: colorItem?.hex || "#ffffff",
-          // Note: lineHeight might not be supported by route-graphics, removed for now
+          lineHeight: (typography.lineHeight ?? 1.5) * typography.fontSize,
         };
       } else {
         // Use default settings
         textStyle = {
           fontSize: 24,
           fill: "white",
-          // Note: lineHeight might not be supported by route-graphics, removed for now
+          lineHeight: 1.5 * 24,
         };
       }
 
@@ -101,15 +101,6 @@ export const layoutTreeStructureToRenderState = (
         wordWrapWidth: parseInt(node.style?.wordWrapWidth ?? 300),
         align: node.style?.align ?? "left",
       };
-
-      console.log("=== Text Rendering Style Properties ===");
-      console.log("Text content:", node.text);
-      console.log("Element ID:", node.id);
-      console.log("All style properties:", finalStyle);
-      Object.keys(finalStyle).forEach((key) => {
-        console.log(`  ${key}:`, finalStyle[key]);
-      });
-      console.log("=====================================");
 
       element = {
         ...element,
