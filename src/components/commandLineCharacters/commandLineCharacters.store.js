@@ -10,7 +10,7 @@ export const INITIAL_STATE = Object.freeze({
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
-  formFieldResources: {},
+  context: {},
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -110,8 +110,8 @@ export const selectTempSelectedSpriteId = ({ state }) => {
   return state.tempSelectedSpriteId;
 };
 
-export const setFormFieldResources = (state, resources) => {
-  state.formFieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const showDropdownMenu = (state, { position, characterIndex }) => {
@@ -130,21 +130,18 @@ export const selectDropdownMenuCharacterIndex = ({ state }) => {
 };
 
 const createCharactersForm = (params) => {
-  const { characters, transformOptions, animationOptions, formFieldResources } =
-    params;
+  const { characters, transformOptions, animationOptions } = params;
 
   const fields = [];
 
   // Create form fields for each character
   characters.forEach((character, index) => {
-    // Character sprite image field - get src from formFieldResources
-    const imageSrc = formFieldResources[`char[${index}]`]?.src;
-
+    // Character sprite image field - use template syntax for context
     fields.push({
       name: `char[${index}]`,
       label: `Character ${index + 1} - ${character.displayName || character.name || "Character"}`,
       inputType: "image",
-      src: imageSrc,
+      src: `\${char[${index}].src}`,
       width: 200,
       height: 200,
     });
@@ -285,7 +282,6 @@ export const toViewData = ({ state, props }, payload) => {
     characters: state.selectedCharacters,
     transformOptions,
     animationOptions,
-    formFieldResources: state.formFieldResources,
   });
 
   // Create default values for form
@@ -310,6 +306,7 @@ export const toViewData = ({ state, props }, payload) => {
     breadcrumb,
     form,
     defaultValues,
+    context: state.context,
     dropdownMenu: state.dropdownMenu,
   };
 };

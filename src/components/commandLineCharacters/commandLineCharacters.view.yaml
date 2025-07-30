@@ -78,7 +78,7 @@ template:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
         # Form for characters
         - rtgl-view flex=1 sv w=f:
-          - rtgl-form#form .form=form .defaultValues=defaultValues:
+          - rtgl-form#form .form=form .context=context .defaultValues=defaultValues:
           # Add character button
           - rtgl-button#add-character-button v=ol w=f: + Add Character
 

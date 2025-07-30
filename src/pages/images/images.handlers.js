@@ -62,8 +62,10 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   // Update the store with the new repository state
   const { images } = repository.getState();
-  store.setFieldResources({
-    fileSrc: uploadResult.downloadUrl,
+  store.setContext({
+    fileId: {
+      src: uploadResult.downloadUrl,
+    },
   });
   store.setItems(images);
   render();
@@ -80,8 +82,10 @@ export const handleImageItemClick = async (e, deps) => {
     fileId: selectedItem.fileId,
     projectId: "someprojectId",
   });
-  store.setFieldResources({
-    fileSrc: url,
+  store.setContext({
+    fileId: {
+      src: url,
+    },
   });
   render();
 };

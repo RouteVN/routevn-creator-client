@@ -41,6 +41,7 @@ const form = {
       name: "fileId",
       inputType: "font",
       previewText: "Aa",
+      fontFamily: "${fileId.fontFamily}",
     },
     { name: "name", inputType: "popover-input", description: "Name" },
     {
@@ -111,7 +112,11 @@ const fontInfoForm = {
 export const INITIAL_STATE = Object.freeze({
   fontsData: { tree: [], items: {} },
   selectedItemId: null,
-  fieldResources: {},
+  context: {
+    fileId: {
+      fontFamily: "",
+    },
+  },
   isModalOpen: false,
   selectedFontInfo: null,
 });
@@ -132,8 +137,8 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const setModalOpen = (state, isOpen) => {
@@ -260,7 +265,7 @@ export const toViewData = ({ state, props }, payload) => {
     repositoryTarget: "fonts",
     form: formWithPreview,
     defaultValues,
-    fieldResources: state.fieldResources,
+    context: state.context,
     isModalOpen: state.isModalOpen,
     selectedFontInfo: state.selectedFontInfo,
     glyphList: state.selectedFontInfo?.glyphs || getGlyphList(),

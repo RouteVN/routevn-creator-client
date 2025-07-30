@@ -1,94 +1,36 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
-const typographyToBase64Image = (typography, colorsData, fontsData) => {
-  if (!typography) return "";
-
-  // Create a canvas element
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  // Set canvas size
-  canvas.width = 300;
-  canvas.height = 120;
-
-  // Use dark mode colors as default
-  const backgroundColor = "#1a1a1a"; // Dark background
-  let textColor = "#ffffff"; // Default light text
-
-  // Fill with background color
-  ctx.fillStyle = backgroundColor;
-  ctx.fillRect(0, 0, 300, 120);
-
-  // Get color hex from colorId
-  if (typography.colorId && colorsData) {
-    const colorItems = toFlatItems(colorsData);
-    const color = colorItems.find(
-      (item) => item.type === "color" && item.id === typography.colorId,
-    );
-    if (color && color.hex) {
-      textColor = color.hex;
-    }
-  }
-
-  // Get font family from fontId
-  let fontFamily = "sans-serif";
-  if (typography.fontId && fontsData) {
-    const fontItems = toFlatItems(fontsData);
-    const font = fontItems.find(
-      (item) => item.type === "font" && item.id === typography.fontId,
-    );
-    if (font && font.fontFamily) {
-      fontFamily = font.fontFamily;
-    }
-  }
-
-  // Set font properties
-  const fontSize = typography.fontSize || 16;
-  const fontWeight = typography.fontWeight || "400";
-  const lineHeight = typography.lineHeight || 1.5;
-
-  // Set text properties
-  ctx.fillStyle = textColor;
-  ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}", sans-serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-
-  // Draw text with line wrapping
-  const text =
-    typography.previewText || "The quick brown fox jumps over the lazy dog";
-  const maxWidth = 280; // Leave some padding
-  const x = 10;
-  let y = 10;
-
-  // Simple word wrapping
-  const words = text.split(" ");
-  let line = "";
-  const lineHeightPx = fontSize * lineHeight;
-
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + " ";
-    const metrics = ctx.measureText(testLine);
-    const testWidth = metrics.width;
-
-    if (testWidth > maxWidth && n > 0) {
-      ctx.fillText(line, x, y);
-      line = words[n] + " ";
-      y += lineHeightPx;
-
-      // Stop if we're running out of space
-      if (y + lineHeightPx > 110) break;
-    } else {
-      line = testLine;
-    }
-  }
-
-  // Draw the last line
-  if (line.length > 0 && y + lineHeightPx <= 110) {
-    ctx.fillText(line, x, y);
-  }
-
-  // Convert to base64
-  return canvas.toDataURL("image/png");
+const form = {
+  fields: [
+    {
+      name: "typographyPreview",
+      inputType: "image",
+      src: "${typographyPreview.src}",
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    {
+      name: "fontSize",
+      inputType: "read-only-text",
+      description: "Font Size",
+    },
+    {
+      name: "lineHeight",
+      inputType: "read-only-text",
+      description: "Line Height",
+    },
+    { name: "colorName", inputType: "read-only-text", description: "Color" },
+    { name: "fontName", inputType: "read-only-text", description: "Font" },
+    {
+      name: "fontWeight",
+      inputType: "read-only-text",
+      description: "Font Weight",
+    },
+    {
+      name: "previewText",
+      inputType: "read-only-text",
+      description: "Preview Text",
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
@@ -96,6 +38,11 @@ export const INITIAL_STATE = Object.freeze({
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
   selectedItemId: null,
+  context: {
+    typographyPreview: {
+      src: "",
+    },
+  },
 
   // Dialog state
   isDialogOpen: false,
@@ -108,18 +55,18 @@ export const INITIAL_STATE = Object.freeze({
     name: "",
     fontColor: "",
     fontStyle: "",
-    fontSize: 16,
-    lineHeight: 1.5,
-    fontWeight: "400",
-    previewText: "The quick brown fox jumps over the lazy dog",
+    fontSize: null,
+    lineHeight: null,
+    fontWeight: null,
+    previewText: null,
   },
 
   defaultValues: {
     name: "",
-    fontSize: 16,
-    lineHeight: 1.5,
-    fontWeight: "400",
-    previewText: "The quick brown fox jumps over the lazy dog",
+    fontSize: null,
+    lineHeight: null,
+    fontWeight: null,
+    previewText: null,
   },
 });
 
@@ -133,6 +80,10 @@ export const setColorsData = (state, colorsData) => {
 
 export const setFontsData = (state, fontsData) => {
   state.fontsData = fontsData;
+};
+
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -167,23 +118,25 @@ export const resetFormValues = (state) => {
     name: "",
     fontColor: "",
     fontStyle: "",
-    fontSize: 16,
-    lineHeight: 1.5,
-    fontWeight: "400",
-    previewText: "The quick brown fox jumps over the lazy dog",
+    fontSize: null,
+    lineHeight: null,
+    fontWeight: null,
+    previewText: null,
   };
 };
 
 export const setFormValuesFromItem = (state, item) => {
+  if (!item) {
+    throw new Error("Item is required for setFormValuesFromItem");
+  }
   state.currentFormValues = {
     name: item.name || "",
     fontColor: item.colorId || "",
     fontStyle: item.fontId || "",
-    fontSize: item.fontSize || 16,
-    lineHeight: item.lineHeight || 1.5,
-    fontWeight: item.fontWeight || "400",
-    previewText:
-      item.previewText || "The quick brown fox jumps over the lazy dog",
+    fontSize: item.fontSize,
+    lineHeight: item.lineHeight,
+    fontWeight: item.fontWeight,
+    previewText: item.previewText,
   };
 };
 
@@ -206,41 +159,44 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Helper function to get color name from ID
   const getColorName = (colorId) => {
-    if (!colorId) return "";
+    if (!colorId) throw new Error("colorId is required");
     const colorItems = toFlatItems(state.colorsData);
     const color = colorItems.find(
       (item) => item.type === "color" && item.id === colorId,
     );
-    return color ? color.name : colorId;
+    if (!color) throw new Error(`Color with ID ${colorId} not found`);
+    return color.name;
   };
 
   // Helper function to get font name from ID
   const getFontName = (fontId) => {
-    if (!fontId) return "";
+    if (!fontId) throw new Error("fontId is required");
     const fontItems = toFlatItems(state.fontsData);
     const font = fontItems.find(
       (item) => item.type === "font" && item.id === fontId,
     );
-    return font ? font.fontFamily : fontId;
+    if (!font) throw new Error(`Font with ID ${fontId} not found`);
+    return font.fontFamily;
   };
 
   // Helper functions for dialog form
   const getColorHex = (colorId) => {
-    if (!colorId) return "#000000";
+    if (!colorId) throw new Error("colorId is required for getColorHex");
     const color = toFlatItems(state.colorsData)
       .filter((item) => item.type === "color")
       .find((color) => color.id === colorId);
-    return color ? color.hex : "#000000";
+    if (!color || !color.hex)
+      throw new Error(`Color with ID ${colorId} not found or has no hex value`);
+    return color.hex;
   };
 
   const getFontData = (fontId) => {
-    if (!fontId) return { fontFamily: null, fileId: null };
+    if (!fontId) throw new Error("fontId is required for getFontData");
     const font = toFlatItems(state.fontsData)
       .filter((item) => item.type === "font")
       .find((font) => font.id === fontId);
-    return font
-      ? { fontFamily: font.fontFamily, fileId: font.fileId }
-      : { fontFamily: fontId, fileId: null };
+    if (!font) throw new Error(`Font with ID ${fontId} not found`);
+    return { fontFamily: font.fontFamily, fileId: font.fileId };
   };
 
   // Generate color options for dialog form
@@ -365,112 +321,65 @@ export const toViewData = ({ state, props }, payload) => {
           name: editingItem.name || "",
           fontColor: editingItem.colorId || "",
           fontStyle: editingItem.fontId || "",
-          fontSize: editingItem.fontSize || 16,
-          lineHeight: editingItem.lineHeight || 1.5,
-          fontWeight: editingItem.fontWeight || "400",
-          previewText:
-            editingItem.previewText ||
-            "The quick brown fox jumps over the lazy dog",
+          fontSize: editingItem.fontSize,
+          lineHeight: editingItem.lineHeight,
+          fontWeight: editingItem.fontWeight,
+          previewText: editingItem.previewText,
         }
       : state.defaultValues;
 
   // Get preview values based on current form values
   const getPreviewColor = () => {
     const colorId = state.currentFormValues.fontColor;
-    return getColorHex(colorId);
+    if (!colorId) return null;
+    try {
+      return getColorHex(colorId);
+    } catch (error) {
+      console.error("Failed to get preview color:", error);
+      return null;
+    }
   };
 
   const getPreviewFontData = () => {
     const fontId = state.currentFormValues.fontStyle;
-    return getFontData(fontId);
+    if (!fontId) return { fontFamily: null, fileId: null };
+    try {
+      return getFontData(fontId);
+    } catch (error) {
+      console.error("Failed to get preview font data:", error);
+      return { fontFamily: null, fileId: null };
+    }
   };
 
   const previewFontData = getPreviewFontData();
 
   let detailFormDefaultValues = {};
-  let detailForm = {
-    fields: [
-      { name: "name", inputType: "popover-input", description: "Name" },
-      {
-        name: "fontSize",
-        inputType: "read-only-text",
-        description: "Font Size",
-      },
-      {
-        name: "lineHeight",
-        inputType: "read-only-text",
-        description: "Line Height",
-      },
-      { name: "colorName", inputType: "read-only-text", description: "Color" },
-      { name: "fontName", inputType: "read-only-text", description: "Font" },
-      {
-        name: "fontWeight",
-        inputType: "read-only-text",
-        description: "Font Weight",
-      },
-      {
-        name: "previewText",
-        inputType: "read-only-text",
-        description: "Preview Text",
-      },
-    ],
-  };
 
   if (selectedItem) {
-    // Generate typography preview image
-    const previewImage = typographyToBase64Image(
-      selectedItem,
-      state.colorsData,
-      state.fontsData,
-    );
-
-    // Add preview image field to the form
-    detailForm = {
-      fields: [
-        {
-          name: "typographyPreview",
-          inputType: "image",
-          src: previewImage,
-        },
-        { name: "name", inputType: "popover-input", description: "Name" },
-        {
-          name: "fontSize",
-          inputType: "read-only-text",
-          description: "Font Size",
-        },
-        {
-          name: "lineHeight",
-          inputType: "read-only-text",
-          description: "Line Height",
-        },
-        {
-          name: "colorName",
-          inputType: "read-only-text",
-          description: "Color",
-        },
-        { name: "fontName", inputType: "read-only-text", description: "Font" },
-        {
-          name: "fontWeight",
-          inputType: "read-only-text",
-          description: "Font Weight",
-        },
-        {
-          name: "previewText",
-          inputType: "read-only-text",
-          description: "Preview Text",
-        },
-      ],
-    };
-
-    detailFormDefaultValues = {
-      name: selectedItem.name,
-      fontSize: selectedItem.fontSize || "",
-      lineHeight: selectedItem.lineHeight || "",
-      colorName: getColorName(selectedItem.colorId),
-      fontName: getFontName(selectedItem.fontId),
-      fontWeight: selectedItem.fontWeight || "",
-      previewText: selectedItem.previewText || "",
-    };
+    try {
+      detailFormDefaultValues = {
+        name: selectedItem.name,
+        fontSize: selectedItem.fontSize || "",
+        lineHeight: selectedItem.lineHeight || "",
+        colorName: selectedItem.colorId
+          ? getColorName(selectedItem.colorId)
+          : "",
+        fontName: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
+        fontWeight: selectedItem.fontWeight || "",
+        previewText: selectedItem.previewText || "",
+      };
+    } catch (error) {
+      console.error("Failed to get detail form values:", error);
+      detailFormDefaultValues = {
+        name: selectedItem.name || "",
+        fontSize: selectedItem.fontSize || "",
+        lineHeight: selectedItem.lineHeight || "",
+        colorName: "",
+        fontName: "",
+        fontWeight: selectedItem.fontWeight || "",
+        previewText: selectedItem.previewText || "",
+      };
+    }
   }
 
   return {
@@ -482,7 +391,8 @@ export const toViewData = ({ state, props }, payload) => {
     repositoryTarget: "typography",
     colorsData: state.colorsData,
     fontsData: state.fontsData,
-    form: detailForm,
+    form,
+    context: state.context,
     defaultValues: detailFormDefaultValues,
 
     // Dialog-related data
@@ -492,12 +402,10 @@ export const toViewData = ({ state, props }, payload) => {
     formKey: state.editMode ? `edit-${state.editingItemId}` : "add-typography",
 
     // Preview values for dialog
-    previewText:
-      state.currentFormValues.previewText ||
-      "The quick brown fox jumps over the lazy dog",
-    previewFontSize: state.currentFormValues.fontSize || 16,
-    previewLineHeight: state.currentFormValues.lineHeight || 1.5,
-    previewFontWeight: state.currentFormValues.fontWeight || "400",
+    previewText: state.currentFormValues.previewText,
+    previewFontSize: state.currentFormValues.fontSize,
+    previewLineHeight: state.currentFormValues.lineHeight,
+    previewFontWeight: state.currentFormValues.fontWeight,
     previewColor: getPreviewColor(),
     previewFontFamily: previewFontData.fontFamily,
     previewFontFileId: previewFontData.fileId,

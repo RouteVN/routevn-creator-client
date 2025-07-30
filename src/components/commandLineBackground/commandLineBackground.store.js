@@ -15,36 +15,25 @@ const tabs = [
   },
 ];
 
-const createDialogueForm = (params) => {
-  const { backgroundSrc } = params;
-  const form = {
-    fields: [
-      {
-        name: "background",
-        label: "Background",
-        required: true,
-        inputType: "image",
-        src: backgroundSrc,
-        width: 355,
-        height: 200,
-      },
-      {
-        name: "animation",
-        label: "Animation",
-        required: true,
-        inputType: "select",
-        options: [],
-      },
-    ],
-  };
-  const defaultValues = {
-    background: "",
-    animation: "",
-  };
-  return {
-    form,
-    defaultValues,
-  };
+const form = {
+  fields: [
+    {
+      name: "background",
+      label: "Background",
+      required: true,
+      inputType: "image",
+      src: "${background.src}",
+      width: 355,
+      height: 200,
+    },
+    {
+      name: "animation",
+      label: "Animation",
+      required: true,
+      inputType: "select",
+      options: [],
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
@@ -60,9 +49,9 @@ export const INITIAL_STATE = Object.freeze({
   tempSelectedImageId: undefined,
   tempSelectedLayoutId: undefined,
   tempSelectedVideoId: undefined,
-  formFieldResources: {
+  context: {
     background: {
-      src: "/awefaew.png",
+      src: undefined,
     },
   },
 });
@@ -75,8 +64,8 @@ export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
 };
 
-export const setFormFieldResources = (state, payload) => {
-  state.formFieldResources = payload;
+export const setContext = (state, payload) => {
+  state.context = payload;
 };
 
 export const setMode = (state, payload) => {
@@ -239,8 +228,13 @@ export const toViewData = ({ state, props }, payload) => {
     tempSelectedVideoId: state.tempSelectedVideoId,
     selectedName: selectedName,
     positionOptions: positionOptions,
-    dialogueForm: createDialogueForm({
-      backgroundSrc: state.formFieldResources.background?.src,
-    }),
+    dialogueForm: {
+      form,
+      defaultValues: {
+        background: "",
+        animation: "",
+      },
+    },
+    context: state.context,
   };
 };

@@ -1,36 +1,37 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 import { formatFileSize } from "../../utils/index.js";
 
-const createForm = (params) => {
-  const { thumbnailSrc } = params;
-  return {
-    fields: [
-      {
-        name: "thumbnailFileId",
-        inputType: "image",
-        src: thumbnailSrc,
-        width: 240,
-        height: 135,
-      },
-      { name: "name", inputType: "popover-input", description: "Name" },
-      {
-        name: "fileType",
-        inputType: "read-only-text",
-        description: "File Type",
-      },
-      {
-        name: "fileSize",
-        inputType: "read-only-text",
-        description: "File Size",
-      },
-    ],
-  };
+const form = {
+  fields: [
+    {
+      name: "thumbnailFileId",
+      inputType: "image",
+      src: "${thumbnailFileId.src}",
+      width: 240,
+      height: 135,
+    },
+    { name: "name", inputType: "popover-input", description: "Name" },
+    {
+      name: "fileType",
+      inputType: "read-only-text",
+      description: "File Type",
+    },
+    {
+      name: "fileSize",
+      inputType: "read-only-text",
+      description: "File Size",
+    },
+  ],
 };
 
 export const INITIAL_STATE = Object.freeze({
   videosData: { tree: [], items: {} },
   selectedItemId: null,
-  fieldResources: {},
+  context: {
+    thumbnailFileId: {
+      src: "",
+    },
+  },
 });
 
 export const setItems = (state, videosData) => {
@@ -41,8 +42,8 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
 
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -98,8 +99,6 @@ export const toViewData = ({ state }) => {
 
   const detailEmptyMessage = "No selection";
 
-  const form = createForm(state.fieldResources);
-
   return {
     flatItems,
     flatGroups,
@@ -111,6 +110,7 @@ export const toViewData = ({ state }) => {
     detailEmptyMessage,
     repositoryTarget: "videos",
     form,
+    context: state.context,
     defaultValues,
   };
 };
