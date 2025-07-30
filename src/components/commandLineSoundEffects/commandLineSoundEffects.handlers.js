@@ -1,75 +1,59 @@
 import { toFlatItems } from "../../deps/repository";
+import { nanoid } from "nanoid";
 
 export const handleBeforeMount = (deps) => {
-  const { repository, store, render, props } = deps;
+  const { repository, store, props } = deps;
   const { audio } = repository.getState();
-  store.setItems({
-    items: audio,
+
+  store.setRepositoryState({
+    audio,
   });
 
-  // Initialize with existing SFX data if available
-  if (
-    props?.line?.presentation?.soundEffects &&
-    Array.isArray(props.line.presentation.soundEffects)
-  ) {
-    const flatAudioItems = toFlatItems(audio);
-    const existingSfxData = props.line.presentation.soundEffects.map((sfx) => {
-      const audioItem = flatAudioItems.find((item) => item.id === sfx.audioId);
-      return {
-        id: sfx.id,
-        audioId: sfx.audioId,
-        fileId: audioItem?.fileId || null,
-        trigger: sfx.trigger || "click",
-        name: audioItem?.name || "Sound Effect",
-      };
-    });
-
-    store.setExistingSoundEffects({
-      soundEffects: existingSfxData,
-    });
+  if (!props?.line?.presentation?.soundEffects) {
+    return;
   }
+
+  const { soundEffects } = props.line.presentation;
+
+  if (!soundEffects || soundEffects.length === 0) {
+    return;
+  }
+
+  store.setExistingSoundEffects({
+    soundEffects,
+  });
 };
 
 export const handleAfterMount = async (deps) => {
-  const { repository, store, render, props, downloadWaveformData, httpClient } =
-    deps;
-  const { audio } = repository.getState();
+  const { store, render, downloadWaveformData, httpClient } = deps;
 
-  // Load waveform data for existing sound effects if available
-  if (
-    props?.line?.presentation?.soundEffects &&
-    Array.isArray(props.line.presentation.soundEffects)
-  ) {
-    const flatAudioItems = toFlatItems(audio);
-    const context = {};
+  const soundEffects = store.selectSoundEffectsWithAudioData();
 
-    // Load waveform data for each existing sound effect
-    for (let i = 0; i < props.line.presentation.soundEffects.length; i++) {
-      const sfx = props.line.presentation.soundEffects[i];
-      const audioItem = flatAudioItems.find((item) => item.id === sfx.audioId);
+  if (!soundEffects || soundEffects.length === 0) {
+    return;
+  }
 
-      if (audioItem?.waveformDataFileId && downloadWaveformData) {
-        try {
-          const waveformData = await downloadWaveformData(
-            audioItem.waveformDataFileId,
-            httpClient,
-          );
-          context[`sfx[${i}]`] = { waveformData };
-        } catch (error) {
-          console.error(`Failed to load waveform data for sfx[${i}]:`, error);
-        }
+  const context = {};
+
+  // Load waveform data for each existing sound effect
+  for (const [index, sfx] of soundEffects.entries()) {
+    if (sfx.waveformDataFileId) {
+      try {
+        const waveformData = await downloadWaveformData(
+          sfx.waveformDataFileId,
+          httpClient,
+        );
+        context[`sfx[${index}]`] = { waveformData };
+      } catch (error) {
+        console.error(`Failed to load waveform data for sfx[${index}]:`, error);
+        throw error;
       }
     }
-
-    // Update context if we have any waveform data
-    if (Object.keys(context).length > 0) {
-      store.setContext(context);
-      render();
-    }
   }
-};
 
-export const handleOnUpdate = () => {};
+  store.setContext(context);
+  render();
+};
 
 export const handleFormExtra = async (e, deps) => {
   const { store, render } = deps;
@@ -80,7 +64,8 @@ export const handleFormExtra = async (e, deps) => {
   if (match) {
     const index = parseInt(match[1]);
     // Set current editing to this sound effect
-    const soundEffect = store.getState().soundEffects[index];
+    const soundEffects = store.selectSoundEffects();
+    const soundEffect = soundEffects[index];
     if (soundEffect) {
       store.setCurrentEditingId({ id: soundEffect.id });
       store.setMode({ mode: "gallery" });
@@ -90,29 +75,16 @@ export const handleFormExtra = async (e, deps) => {
 };
 
 export const handleFormChange = (e, deps) => {
-  const { store, render } = deps;
-  const { name, fieldValue } = e.detail;
-
-  // Handle trigger field changes
-  const triggerMatch = name.match(/sfx\[(\d+)\]\.trigger/);
-  if (triggerMatch) {
-    const index = parseInt(triggerMatch[1]);
-    const soundEffect = store.getState().soundEffects[index];
-    if (soundEffect) {
-      store.updateSoundEffect({
-        id: soundEffect.id,
-        trigger: fieldValue,
-      });
-      render();
-    }
-  }
+  // No longer needed since we removed trigger functionality
 };
 
 export const handleAddNewClick = (e, deps) => {
   e.stopPropagation();
   const { store, render } = deps;
 
-  store.addSoundEffect();
+  store.addSoundEffect({
+    id: nanoid(),
+  });
   render();
 };
 
@@ -144,13 +116,13 @@ export const handleDeleteClick = (e, deps) => {
   render();
 };
 
-export const handleAudioItemClick = (e, deps) => {
+export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("audio-item-", "");
+  const id = e.currentTarget.id.replace("resource-item-", "");
 
-  store.setTempSelectedAudioId({
-    audioId: id,
+  store.setTempSelectedResourceId({
+    resourceId: id,
   });
 
   render();
@@ -160,15 +132,15 @@ export const handleSubmitClick = (e, deps) => {
   e.stopPropagation();
 
   const { dispatchEvent, store } = deps;
-  const soundEffects = store.getState().soundEffects;
-  const filteredEffects = soundEffects.filter((se) => se.audioId);
+  const soundEffects = store.selectSoundEffects();
+  const filteredEffects = soundEffects.filter((se) => se.resourceId);
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        soundEffects: filteredEffects.map((se) => ({
-          id: se.id,
-          audioId: se.audioId,
+        soundEffects: filteredEffects.map((sfx) => ({
+          id: sfx.id,
+          resourceId: sfx.resourceId,
         })),
       },
       bubbles: true,
@@ -194,43 +166,38 @@ export const handleBreadcumbClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClickAudio = async (payload, deps) => {
+export const handleButtonSelectClick = async (e, deps) => {
   const { store, render, repository, downloadWaveformData, httpClient } = deps;
 
   const { audio } = repository.getState();
 
-  const tempSelectedAudioId = store.selectTempSelectedAudioId();
+  const tempSelectedResourceId = store.selectTempSelectedResourceId();
   const tempSelectedAudio = toFlatItems(audio).find(
-    (audio) => audio.id === tempSelectedAudioId,
+    (audio) => audio.id === tempSelectedResourceId,
   );
 
   if (tempSelectedAudio) {
-    const currentEditingId = store.getState().currentEditingId;
-    const soundEffects = store.getState().soundEffects;
+    const currentEditingId = store.selectCurrentEditingId();
+    const soundEffects = store.selectSoundEffects();
     const effectIndex = soundEffects.findIndex(
       (se) => se.id === currentEditingId,
     );
 
     store.updateSoundEffect({
       id: currentEditingId,
-      audioId: tempSelectedAudioId,
-      fileId: tempSelectedAudio.fileId,
+      resourceId: tempSelectedResourceId,
       name: tempSelectedAudio.name,
     });
 
     // Download waveform data if available
-    if (
-      tempSelectedAudio.waveformDataFileId &&
-      downloadWaveformData &&
-      effectIndex !== -1
-    ) {
+    if (effectIndex !== -1) {
       try {
         const waveformData = await downloadWaveformData(
           tempSelectedAudio.waveformDataFileId,
           httpClient,
         );
 
-        const currentContext = store.getState().context || {};
+        const currentContext = store.selectContext() || {};
         const newContext = {
           ...currentContext,
           [`sfx[${effectIndex}]`]: { waveformData },
@@ -247,16 +214,4 @@ export const handleButtonSelectClickAudio = async (payload, deps) => {
     });
     render();
   }
-};
-
-export const handleTriggerChange = (e, deps) => {
-  const { store, render } = deps;
-  const id = e.currentTarget.id.replace("trigger-select-", "");
-
-  store.updateSoundEffect({
-    id: id,
-    trigger: e.target.value,
-  });
-
-  render();
 };

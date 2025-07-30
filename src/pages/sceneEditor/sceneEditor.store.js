@@ -529,13 +529,14 @@ export const selectPresentationData = ({ state }) => {
   // Sound Effects
   if (selectedLine.presentation.soundEffects) {
     const soundEffectsAudio = selectedLine.presentation.soundEffects.map(
-      (se) => ({
-        ...se,
-        audio: audios[se.audioId],
+      (sfx) => ({
+        ...sfx,
+        audio: audios[sfx.resourceId],
       }),
     );
     const soundEffectsNames = soundEffectsAudio
-      .map((se) => se.audio.name)
+      .map((sfx) => sfx.audio?.name || "Unknown")
+      .filter((name) => name !== "Unknown")
       .join(", ");
 
     presentationItems.push({
