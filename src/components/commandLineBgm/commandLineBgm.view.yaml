@@ -2,7 +2,51 @@ elementName: rvn-command-line-bgm
 
 viewDataSchema:
   type: object
-  properties: {}
+  properties:
+    mode:
+      type: string
+      enum: ["current", "gallery"]
+    items:
+      type: array
+    groups:
+      type: array
+    loopOptions:
+      type: array
+      items:
+        type: object
+        properties:
+          label:
+            type: string
+          value:
+            type: string
+    tempSelectedResourceId:
+      type: string
+    breadcrumb:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          label:
+            type: string
+    form:
+      type: object
+    defaultValues:
+      type: object
+      properties:
+        audio:
+          type: string
+        loopType:
+          type: string
+    context:
+      type: object
+      properties:
+        audio:
+          type: object
+          properties:
+            waveformData:
+              type: string
 
 propsSchema:
   type: object
@@ -10,8 +54,19 @@ propsSchema:
     line:
       type: object
       properties:
-        audioId:
-          type: string
+        presentation:
+          type: object
+          properties:
+            bgm:
+              type: object
+              properties:
+                resourceId:
+                  type: string
+                resourceType:
+                  type: string
+                  enum: ["audio"]
+                loopType:
+                  type: string
 
 refs:
   form:
@@ -24,10 +79,10 @@ refs:
     eventListeners:
       click-item:
         handler: handleFileExplorerItemClick
-  audio-item-*:
+  resource-item-*:
     eventListeners:
       click:
-        handler: handleAudioItemClick
+        handler: handleResourceItemClick
   submit-button:
     eventListeners:
       click:
@@ -43,7 +98,7 @@ refs:
   button-select:
     eventListeners:
       click:
-        handler: handleButtonSelectClickAudio
+        handler: handleButtonSelectClick
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -70,7 +125,7 @@ template:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f fw=w g=lg:
                               - $for item in group.children:
-                                  - rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}":
+                                  - rtgl-view#resource-item-${item.id} cur=p style="${item.selectedStyle}":
                                       - $if item.waveformDataFileId:
                                           - rtgl-view:
                                               - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:

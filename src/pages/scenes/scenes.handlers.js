@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 
 export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+  const { store, repository, render } = deps;
   const { scenes } = repository.getState();
   const scenesData = scenes || { tree: [], items: {} };
 
