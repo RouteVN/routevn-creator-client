@@ -3,74 +3,59 @@ import { toFlatItems } from "../../deps/repository";
 export const handleBeforeMount = (deps) => {
   const { repository, store, props } = deps;
   const { audio } = repository.getState();
-  store.setItems({
-    items: audio,
+
+  store.setRepositoryState({
+    audio,
   });
 
-  // Initialize with existing BGM data if available (sync part only)
-  if (props?.line?.presentation?.bgm?.audioId) {
-    const flatAudioItems = toFlatItems(audio);
-    const existingAudio = flatAudioItems.find(
-      (item) => item.id === props.line.presentation.bgm.audioId,
-    );
-
-    if (existingAudio) {
-      store.setSelectedAudioAndFileId({
-        audioId: props.line.presentation.bgm.audioId,
-        fileId: existingAudio.fileId,
-      });
-    }
+  // Initialize with existing BGM data if available
+  const resourceId = props?.line?.presentation?.bgm?.resourceId;
+  if (resourceId) {
+    store.setSelectedResource({
+      resourceId,
+    });
   }
 };
 
 export const handleAfterMount = async (deps) => {
-  const { repository, store, render, props, downloadWaveformData, httpClient } =
-    deps;
-  const { audio } = repository.getState();
+  const { store, render, downloadWaveformData, httpClient } = deps;
+  const selectedResource = store.selectSelectedResource();
 
-  // Load waveform data for existing BGM if available
-  if (props?.line?.presentation?.bgm?.audioId) {
-    const flatAudioItems = toFlatItems(audio);
-    const existingAudio = flatAudioItems.find(
-      (item) => item.id === props.line.presentation.bgm.audioId,
+  if (selectedResource?.item?.waveformDataFileId) {
+    console.log(
+      "After mount - downloading waveform data for:",
+      selectedResource.item.waveformDataFileId,
     );
 
-    if (existingAudio?.waveformDataFileId && downloadWaveformData) {
-      console.log(
-        "After mount - downloading waveform data for:",
-        existingAudio.waveformDataFileId,
+    try {
+      const waveformData = await downloadWaveformData(
+        selectedResource.item.waveformDataFileId,
+        httpClient,
       );
 
-      try {
-        const waveformData = await downloadWaveformData(
-          existingAudio.waveformDataFileId,
-          httpClient,
-        );
-
-        store.setContext({
-          audio: {
-            waveformData,
-          },
-        });
-        render();
-      } catch (error) {
-        console.error("Failed to load waveform data:", error);
-      }
+      store.setContext({
+        audio: {
+          waveformData,
+        },
+      });
+      render();
+    } catch (error) {
+      console.error("Failed to load waveform data:", error);
     }
   }
 };
-
-export const handleOnUpdate = () => {};
 
 export const handleFormExtra = (e, deps) => {
   const { store, render } = deps;
   console.log("BGM form extra event", e.detail);
 
   // When user clicks on waveform field, open gallery
-  const selectedAudioId = store.selectSelectedAudioId();
-  store.setTempSelectedAudioId({
-    audioId: selectedAudioId,
-  });
+  const selectedResource = store.selectSelectedResource();
+  if (selectedResource) {
+    store.setTempSelectedResource({
+      resourceId: selectedResource.resourceId,
+    });
+  }
 
   store.setMode({
     mode: "gallery",
@@ -87,9 +72,8 @@ export const handleFormChange = (e, deps) => {
 export const handleResetClick = (e, deps) => {
   const { store, render } = deps;
 
-  store.setSelectedAudioAndFileId({
-    audioId: undefined,
-    fileId: undefined,
+  store.setSelectedResource({
+    resourceId: undefined,
   });
 
   store.setContext({
@@ -101,13 +85,12 @@ export const handleResetClick = (e, deps) => {
   render();
 };
 
-export const handleAudioItemClick = (e, deps) => {
+export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
+  const resourceId = e.currentTarget.id.replace("resource-item-", "");
 
-  const id = e.currentTarget.id.replace("audio-item-", "");
-
-  store.setTempSelectedAudioId({
-    audioId: id,
+  store.setTempSelectedResource({
+    resourceId,
   });
 
   render();
@@ -118,8 +101,8 @@ export const handleFileExplorerItemClick = async (e, deps) => {
   const itemId = e.detail.id;
   const { audio } = repository.getState();
 
-  store.setTempSelectedAudioId({
-    audioId: itemId,
+  store.setTempSelectedResource({
+    resourceId: itemId,
   });
   render();
 
@@ -151,10 +134,10 @@ export const handleFileExplorerItemClick = async (e, deps) => {
 };
 
 export const handleSubmitClick = (e, deps) => {
-  e.stopPropagation(); // Prevent double firing
+  e.stopPropagation();
 
   const { dispatchEvent, store, refs } = deps;
-  const selectedAudioId = store.selectSelectedAudioId();
+  const selectedResource = store.selectSelectedResource();
 
   // Get form values with fallback
   let formValues = {};
@@ -162,14 +145,15 @@ export const handleSubmitClick = (e, deps) => {
     formValues = refs.form.getValues();
   }
 
-  console.log("Submit - selectedAudioId:", selectedAudioId);
+  console.log("Submit - selectedResource:", selectedResource);
   console.log("Submit - formValues:", formValues);
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         bgm: {
-          audioId: selectedAudioId,
+          resourceId: selectedResource?.resourceId,
+          resourceType: selectedResource?.resourceType,
           loopType: formValues.loopType || "none",
         },
       },
@@ -196,21 +180,22 @@ export const handleBreadcumbActionsClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClickAudio = async (payload, deps) => {
+export const handleButtonSelectClick = async (e, deps) => {
   const { store, render, repository, downloadWaveformData, httpClient } = deps;
-
   const { audio } = repository.getState();
+  const tempSelectedResourceId = store.selectTempSelectedResourceId();
 
-  const tempSelectedAudioId = store.selectTempSelectedAudioId();
+  if (!tempSelectedResourceId) {
+    return;
+  }
 
   const tempSelectedAudio = toFlatItems(audio).find(
-    (audio) => audio.id === tempSelectedAudioId,
+    (audio) => audio.id === tempSelectedResourceId,
   );
 
   if (tempSelectedAudio) {
-    store.setSelectedAudioAndFileId({
-      audioId: tempSelectedAudioId,
-      fileId: tempSelectedAudio.fileId,
+    store.setSelectedResource({
+      resourceId: tempSelectedResourceId,
     });
 
     // Download waveform data for the selected audio

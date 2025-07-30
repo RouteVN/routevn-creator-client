@@ -10,6 +10,10 @@ export const handleBeforeMount = (deps) => {
     videos,
   });
 
+  if (!props.line.presentation?.background) {
+    return;
+  }
+
   const { resourceId, resourceType } = props.line.presentation.background;
   if (!resourceId || !resourceType) {
     return;

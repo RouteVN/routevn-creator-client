@@ -98,8 +98,8 @@ export const layoutTreeStructureToRenderState = (
 
       const finalStyle = {
         ...textStyle,
-        wordWrapWidth: parseInt(node.style.wordWrapWidth),
-        align: node.style.align,
+        wordWrapWidth: parseInt(node.style?.wordWrapWidth),
+        align: node.style?.align,
       };
 
       // Handle interaction styles
