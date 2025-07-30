@@ -1,0 +1,109 @@
+elementName: rvn-command-line-section-transition
+
+propsSchema:
+  type: object
+  properties:
+    line:
+      type: object
+      properties:
+        presentation:
+          type: object
+          properties:
+            sectionTransition:
+              type: object
+              properties:
+                sceneId:
+                  type: string
+                sectionId:
+                  type: string
+                animation:
+                  type: string
+    sections:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+
+viewDataSchema:
+  type: object
+  properties:
+    mode:
+      type: string
+    breadcrumb:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          label:
+            type: string
+    form:
+      type: object
+      properties:
+        fields:
+          type: array
+        actions:
+          type: object
+    context:
+      type: object
+      properties:
+        sceneOptions:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              label:
+                type: string
+        sectionOptions:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              label:
+                type: string
+        sameScene:
+          type: string
+    defaultValues:
+      type: object
+      properties:
+        sameScene:
+          type: string
+        sceneId:
+          type: string
+        sectionId:
+          type: string
+        animation:
+          type: string
+
+refs:
+  submit-button:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+  breadcumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcumbClick
+  transition-form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
+
+template:
+  - rtgl-view w=f h=f p=lg:
+    - $if mode == 'current':
+      - rtgl-view d=h g=md:
+        - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+      - rtgl-form#transition-form .defaultValues=defaultValues .form=form .context=context w=f:
+      - rtgl-view flex=1:
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+        - rtgl-button#submit-button: Submit

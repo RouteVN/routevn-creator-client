@@ -187,7 +187,7 @@ template:
                 $elif mode == "characters":
                   - rvn-command-line-characters#command-line-characters .line=selectedLine:
                 $elif mode == "sceneTransition":
-                  - rvn-command-line-scene-transition#command-line-scene-transition .line=selectedLine .sections=sections:
+                  - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections:
                 $elif mode == "controls":
                   - rvn-command-line-controls#command-line-controls .line=selectedLine:
                 $elif mode == "conditional":
