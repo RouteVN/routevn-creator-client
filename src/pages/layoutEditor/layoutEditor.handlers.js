@@ -19,8 +19,19 @@ const loadLayoutFonts = async (deps) => {
 
     // Find all text elements and collect their typography IDs
     flatItems.forEach((item) => {
-      if (item.type === "text" && item.typographyId) {
-        usedTypographyIds.add(item.typographyId);
+      if (item.type === "text") {
+        // Add main typography style
+        if (item.typographyId) {
+          usedTypographyIds.add(item.typographyId);
+        }
+        // Add hover style typography
+        if (item.hoverStyle && item.hoverStyle !== "" && item.hoverStyle !== "default") {
+          usedTypographyIds.add(item.hoverStyle);
+        }
+        // Add clicked style typography
+        if (item.clickedTextStyle && item.clickedTextStyle !== "" && item.clickedTextStyle !== "default") {
+          usedTypographyIds.add(item.clickedTextStyle);
+        }
       }
     });
 
@@ -327,7 +338,7 @@ const deepMerge = (target, source) => {
 };
 
 export const handleFormChange = async (e, deps) => {
-  const { repository, store, render } = deps;
+  const { repository, store, render, loadFontFile } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
@@ -335,6 +346,27 @@ export const handleFormChange = async (e, deps) => {
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
+
+  // Load font if typography-related field is changed
+  if (currentItem.type === "text" && (e.detail.name === "typographyId" || e.detail.name === "hoverStyle" || e.detail.name === "clickedTextStyle")) {
+    const typographyId = e.detail.fieldValue;
+    if (typographyId && typographyId !== "" && typographyId !== "default") {
+      const typographyData = store.selectTypographyData();
+      const fontsData = store.selectFontsData();
+      const typography = typographyData?.items?.[typographyId];
+      
+      if (typography && typography.fontId) {
+        const fontItem = fontsData?.items?.[typography.fontId];
+        if (fontItem && fontItem.fileId && fontItem.fontFamily) {
+          try {
+            await loadFontFile(fontItem);
+          } catch (error) {
+            console.error("Failed to load font:", error);
+          }
+        }
+      }
+    }
+  }
 
   repository.addAction({
     actionType: "treeUpdate",

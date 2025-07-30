@@ -408,6 +408,36 @@ export const toViewData = ({ state, props }, payload) => {
                     { label: "Right", value: "right" },
                   ],
                 },
+                {
+                  name: "hoverStyle",
+                  inputType: "select",
+                  description: "Hover Style",
+                  options: [
+                    { label: "Unselected", value: "" },
+                    { label: "Default", value: "default" },
+                    ...typographyGroups.flatMap((group) =>
+                      group.children.map((item) => ({
+                        label: item.name,
+                        value: item.id,
+                      })),
+                    ),
+                  ],
+                },
+                {
+                  name: "clickedTextStyle",
+                  inputType: "select",
+                  description: "Clicked Style",
+                  options: [
+                    { label: "Unselected", value: "" },
+                    { label: "Default", value: "default" },
+                    ...typographyGroups.flatMap((group) =>
+                      group.children.map((item) => ({
+                        label: item.name,
+                        value: item.id,
+                      })),
+                    ),
+                  ],
+                },
               ]
             : []),
           ...(selectedItem.type === "sprite"
@@ -454,6 +484,8 @@ export const toViewData = ({ state, props }, payload) => {
           ? {
               text: selectedItem.text,
               typographyId: selectedItem.typographyId ?? "",
+              hoverStyle: selectedItem.hoverStyle ?? "",
+              clickedTextStyle: selectedItem.clickedTextStyle ?? "",
               style: {
                 align: selectedItem.style?.align ?? "left",
                 wordWrapWidth: parseInt(
