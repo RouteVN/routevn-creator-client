@@ -509,7 +509,7 @@ export const selectPresentationData = ({ state }) => {
 
   // BGM
   if (selectedLine.presentation.bgm) {
-    const bgmAudio = audios[selectedLine.presentation.bgm.audioId];
+    const bgmAudio = audios[selectedLine.presentation.bgm.resourceId];
     if (bgmAudio) {
       presentationItems.push({
         type: "bgm",
@@ -517,7 +517,10 @@ export const selectPresentationData = ({ state }) => {
         dataMode: "bgm",
         icon: "music",
         data: {
-          bgmAudio,
+          bgmAudio: {
+            fileId: bgmAudio.fileId,
+            name: bgmAudio.name,
+          },
         },
       });
     }

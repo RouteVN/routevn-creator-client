@@ -29,9 +29,8 @@ const form = {
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
   items: [],
-  selectedAudioId: undefined,
-  selectedFileId: undefined,
-  tempSelectedAudioId: undefined,
+  selectedResourceId: undefined,
+  tempSelectedResourceId: undefined,
   context: {
     audio: {
       waveformData: undefined,
@@ -43,65 +42,49 @@ export const setMode = (state, payload) => {
   state.mode = payload.mode;
 };
 
-export const setItems = (state, payload) => {
-  state.items = payload.items;
+export const setRepositoryState = (state, payload) => {
+  state.items = payload.audio;
 };
 
-export const selectSelectedAudioId = ({ state }) => {
-  return state.selectedAudioId;
+export const selectTempSelectedResourceId = ({ state }) => {
+  return state.tempSelectedResourceId;
 };
 
-export const selectTempSelectedAudioId = ({ state }) => {
-  return state.tempSelectedAudioId;
+export const setSelectedResource = (state, payload) => {
+  state.selectedResourceId = payload.resourceId;
 };
 
-export const setSelectedAudioAndFileId = (state, payload) => {
-  state.selectedAudioId = payload.audioId;
-  state.selectedFileId = payload.fileId;
-};
-
-export const setTempSelectedAudioId = (state, payload) => {
-  state.tempSelectedAudioId = payload.audioId;
+export const setTempSelectedResource = (state, payload) => {
+  state.tempSelectedResourceId = payload.resourceId;
 };
 
 export const setContext = (state, context) => {
   state.context = context;
 };
 
-export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.items).filter(
-    (item) => item.type === "folder",
-  );
-  const flatGroups = toFlatGroups(state.items).map((group) => {
-    return {
-      ...group,
-      children: group.children.map((child) => {
-        const isSelected = child.id === state.tempSelectedAudioId;
-        return {
-          ...child,
-          selectedStyle: isSelected
-            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-            : "",
-          waveformDataFileId: child.waveformDataFileId,
-        };
-      }),
-    };
-  });
+export const selectSelectedResource = ({ state }) => {
+  if (!state.selectedResourceId) {
+    return null;
+  }
 
-  const loopOptions = [
-    { label: "No Loop", value: "none" },
-    { label: "Loop Once", value: "once" },
-    { label: "Loop Forever", value: "forever" },
-    { label: "Fade In/Out", value: "fade" },
-  ];
+  const flatItems = toFlatItems(state.items);
+  const item = flatItems.find((item) => item.id === state.selectedResourceId);
 
-  // Get selected audio name
-  const selectedAudioName = state.selectedAudioId
-    ? toFlatItems(state.items).find((item) => item.id === state.selectedAudioId)
-        ?.name
-    : undefined;
+  if (!item) {
+    return null;
+  }
 
-  let breadcrumb = [
+  return {
+    resourceId: state.selectedResourceId,
+    resourceType: "audio",
+    fileId: item.fileId,
+    name: item.name,
+    item: item,
+  };
+};
+
+export const selectBreadcrumb = ({ state }) => {
+  const breadcrumb = [
     {
       id: "actions",
       label: "Actions",
@@ -122,9 +105,41 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
-  // Get default values for form
+  return breadcrumb;
+};
+
+export const toViewData = ({ state, props }) => {
+  const flatItems = toFlatItems(state.items).filter(
+    (item) => item.type === "folder",
+  );
+  const flatGroups = toFlatGroups(state.items).map((group) => {
+    return {
+      ...group,
+      children: group.children.map((child) => {
+        const isSelected = child.id === state.tempSelectedResourceId;
+        return {
+          ...child,
+          selectedStyle: isSelected
+            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+            : "",
+          waveformDataFileId: child.waveformDataFileId,
+        };
+      }),
+    };
+  });
+
+  const selectedResource = selectSelectedResource({ state });
+  const breadcrumb = selectBreadcrumb({ state });
+
+  const loopOptions = [
+    { label: "No Loop", value: "none" },
+    { label: "Loop Once", value: "once" },
+    { label: "Loop Forever", value: "forever" },
+    { label: "Fade In/Out", value: "fade" },
+  ];
+
   const defaultValues = {
-    audio: state.selectedFileId,
+    audio: selectedResource?.fileId,
     loopType: props?.line?.presentation?.bgm?.loopType || "none",
   };
 
@@ -133,9 +148,7 @@ export const toViewData = ({ state, props }, payload) => {
     items: flatItems,
     groups: flatGroups,
     loopOptions,
-    selectedAudioId: state.selectedAudioId,
-    selectedFileId: state.selectedFileId,
-    selectedAudioName,
+    tempSelectedResourceId: state.tempSelectedResourceId,
     breadcrumb,
     form,
     defaultValues,
