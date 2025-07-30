@@ -1,12 +1,20 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-import { nanoid } from "nanoid";
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
   items: [],
-  soundEffects: [], // List of selected sound effects
+  /**
+   * Array of sound effect objects with the following structure:
+   * {
+   *   id: string,           // Unique identifier for the sound effect
+   *   resourceId: string,   // ID of the audio resource from repository
+   *   resourceType: "audio", // Type of resource (always "audio")
+   *   name: string         // Display name for the sound effect
+   * }
+   */
+  soundEffects: [],
   currentEditingId: null, // ID of sound effect being edited
-  tempSelectedAudioId: undefined,
+  tempSelectedResourceId: undefined,
   context: {},
 });
 
@@ -14,28 +22,51 @@ export const setMode = (state, payload) => {
   state.mode = payload.mode;
 };
 
-export const setItems = (state, payload) => {
-  state.items = payload.items;
+const createSoundEffectsForm = (soundEffects) => {
+  const fields = [];
+
+  // Create waveform fields for each sound effect
+  soundEffects.forEach((effect, index) => {
+    fields.push({
+      name: `sfx[${index}]`,
+      label: effect.name || `Sound Effect ${index + 1}`,
+      inputType: "waveform",
+      waveformData: "${sfx[" + index + "].waveformData}",
+      width: 355,
+      height: 150,
+    });
+  });
+
+  return {
+    fields,
+  };
 };
 
-export const setTempSelectedAudioId = (state, payload) => {
-  state.tempSelectedAudioId = payload.audioId;
+export const setRepositoryState = (state, payload) => {
+  state.items = payload.audio;
 };
 
-export const selectTempSelectedAudioId = ({ state }) => {
-  return state.tempSelectedAudioId;
+export const setTempSelectedResourceId = (state, payload) => {
+  state.tempSelectedResourceId = payload.resourceId;
 };
 
-export const addSoundEffect = (state) => {
+export const addSoundEffect = (state, payload) => {
   const newSoundEffect = {
-    id: nanoid(),
-    audioId: null,
-    fileId: null,
-    trigger: "click",
+    id: payload.id,
+    resourceId: null,
+    resourceType: "audio",
     name: "New Sound Effect",
   };
   state.soundEffects.push(newSoundEffect);
   state.currentEditingId = newSoundEffect.id;
+};
+
+export const setExistingSoundEffects = (state, payload) => {
+  state.soundEffects = payload.soundEffects;
+};
+
+export const setContext = (state, context) => {
+  state.context = context;
 };
 
 export const updateSoundEffect = (state, payload) => {
@@ -56,84 +87,41 @@ export const setCurrentEditingId = (state, payload) => {
   state.currentEditingId = payload.id;
 };
 
+export const selectTempSelectedResourceId = ({ state }) => {
+  return state.tempSelectedResourceId;
+};
+
 export const selectCurrentEditingSoundEffect = ({ state }) => {
   return state.soundEffects.find((se) => se.id === state.currentEditingId);
 };
 
-export const setExistingSoundEffects = (state, payload) => {
-  state.soundEffects = payload.soundEffects;
+export const selectSoundEffects = ({ state }) => {
+  return state.soundEffects;
 };
 
-export const setContext = (state, context) => {
-  state.context = context;
+export const selectCurrentEditingId = ({ state }) => {
+  return state.currentEditingId;
 };
 
-const createSoundEffectsForm = (soundEffects) => {
-  const triggerOptions = [
-    { label: "On Click", value: "click" },
-    { label: "On Hover", value: "hover" },
-    { label: "On Enter", value: "enter" },
-    { label: "On Exit", value: "exit" },
-    { label: "Manual", value: "manual" },
-  ];
-
-  const fields = [];
-
-  // Create pairs of waveform + trigger fields for each sound effect
-  soundEffects.forEach((effect, index) => {
-    // Add waveform field
-    fields.push({
-      name: `sfx[${index}]`,
-      label: `Sound Effect ${index + 1}`,
-      inputType: "waveform",
-      waveformData: "${sfx[" + index + "].waveformData}",
-      width: 355,
-      height: 150,
-    });
-
-    // Add trigger field immediately after
-    fields.push({
-      name: `sfx[${index}].trigger`,
-      label: `Trigger ${index + 1}`,
-      inputType: "select",
-      options: triggerOptions,
-    });
-  });
-
-  return {
-    fields,
-  };
+export const selectContext = ({ state }) => {
+  return state.context;
 };
 
-export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.items).filter(
-    (item) => item.type === "folder",
-  );
-  const flatGroups = toFlatGroups(state.items).map((group) => {
+export const selectSoundEffectsWithAudioData = ({ state }) => {
+  const flatAudioItems = toFlatItems(state.items);
+
+  return state.soundEffects.map((sfx) => {
+    const audioItem = flatAudioItems.find((item) => item.id === sfx.resourceId);
     return {
-      ...group,
-      children: group.children.map((child) => {
-        const isSelected = child.id === state.tempSelectedAudioId;
-        return {
-          ...child,
-          selectedStyle: isSelected
-            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-            : "",
-          waveformDataFileId: child.waveformDataFileId,
-        };
-      }),
+      ...sfx,
+      name: audioItem?.name,
+      waveformDataFileId: audioItem?.waveformDataFileId,
     };
   });
+};
 
-  const triggerOptions = [
-    { label: "On Click", value: "click" },
-    { label: "On Hover", value: "hover" },
-    { label: "On Enter", value: "enter" },
-    { label: "On Exit", value: "exit" },
-    { label: "Manual", value: "manual" },
-  ];
-
-  let breadcrumb = [
+export const selectBreadcrumb = ({ state }) => {
+  const breadcrumb = [
     {
       id: "actions",
       label: "Actions",
@@ -154,22 +142,52 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
+  return breadcrumb;
+};
+
+export const toViewData = ({ state, props }) => {
+  const flatItems = toFlatItems(state.items).filter(
+    (item) => item.type === "folder",
+  );
+  const flatGroups = toFlatGroups(state.items).map((group) => {
+    return {
+      ...group,
+      children: group.children.map((child) => {
+        const isSelected = child.id === state.tempSelectedResourceId;
+        return {
+          ...child,
+          selectedStyle: isSelected
+            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+            : "",
+          waveformDataFileId: child.waveformDataFileId,
+        };
+      }),
+    };
+  });
+
+  const breadcrumb = selectBreadcrumb({ state });
+  const soundEffectsWithAudioData = selectSoundEffectsWithAudioData({ state });
+
   // Create form configuration
-  const form = createSoundEffectsForm(state.soundEffects);
+  const form = createSoundEffectsForm(soundEffectsWithAudioData);
 
   // Create default values for form
   const defaultValues = {};
-  state.soundEffects.forEach((effect, index) => {
-    defaultValues[`sfx[${index}]`] = effect.fileId || "";
-    defaultValues[`sfx[${index}].trigger`] = effect.trigger || "click";
+  soundEffectsWithAudioData.forEach((effect, index) => {
+    // Get fileId from the audio item if we have resourceId
+    const audioItem = effect.resourceId
+      ? toFlatItems(state.items).find((item) => item.id === effect.resourceId)
+      : null;
+
+    defaultValues[`sfx[${index}]`] = audioItem?.fileId || "";
   });
 
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
-    triggerOptions,
-    soundEffects: state.soundEffects,
+    soundEffects: soundEffectsWithAudioData,
+    tempSelectedResourceId: state.tempSelectedResourceId,
     breadcrumb,
     form,
     defaultValues,

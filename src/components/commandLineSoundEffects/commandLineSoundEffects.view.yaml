@@ -2,24 +2,55 @@ elementName: rvn-command-line-sound-effects
 
 viewDataSchema:
   type: object
-  properties: {}
-
-propsSchema:
-  type: object
   properties:
-    line:
+    mode:
+      type: string
+      enum: ["current", "gallery"]
+    items:
+      type: array
+    groups:
+      type: array
+    soundEffects:
+      type: array
+    tempSelectedResourceId:
+      type: string
+    breadcrumb:
       type: array
       items:
         type: object
         properties:
           id:
             type: string
-          audioId:
+          label:
             type: string
-          trigger:
-            type: string
-          name:
-            type: string
+    form:
+      type: object
+    defaultValues:
+      type: object
+    context:
+      type: object
+
+propsSchema:
+  type: object
+  properties:
+    line:
+      type: object
+      properties:
+        presentation:
+          type: object
+          properties:
+            soundEffects:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  resourceId:
+                    type: string
+                  resourceType:
+                    type: string
+                    enum: ["audio"]
 
 refs:
   add-new-button:
@@ -34,10 +65,10 @@ refs:
     eventListeners:
       click:
         handler: handleDeleteClick
-  audio-item-*:
+  resource-item-*:
     eventListeners:
       click:
-        handler: handleAudioItemClick
+        handler: handleResourceItemClick
   submit-button:
     eventListeners:
       click:
@@ -49,11 +80,7 @@ refs:
   button-select:
     eventListeners:
       click:
-        handler: handleButtonSelectClickAudio
-  trigger-select-*:
-    eventListeners:
-      change:
-        handler: handleTriggerChange
+        handler: handleButtonSelectClick
   form:
     eventListeners:
       extra-event:
@@ -70,7 +97,7 @@ template:
 
         # Form for sound effects
         - rtgl-form#form .form=form .context=context .defaultValues=defaultValues:
-        
+
         # Add new button
         - rtgl-button#add-new-button v=ol w=f: + Add New Sound Effect
 
@@ -89,7 +116,7 @@ template:
                 - rtgl-text: ${group.name}
                 - rtgl-view d=h w=f fw=w g=lg:
                   - $for item in group.children:
-                    - rtgl-view#audio-item-${item.id} cur=p style="${item.selectedStyle}":
+                    - rtgl-view#resource-item-${item.id} cur=p style="${item.selectedStyle}":
                       - $if item.waveformDataFileId:
                         - rtgl-view:
                           - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
