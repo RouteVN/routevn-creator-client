@@ -1,71 +1,8 @@
-import { toTreeStructure, toFlatItems } from "../../deps/repository";
+import { toTreeStructure } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
   layoutTreeStructureToRenderState,
 } from "../../utils/index.js";
-
-const loadLayoutFonts = async (deps) => {
-  const { store, loadFontFile } = deps;
-
-  try {
-    // Use store selector functions
-    const layoutElements = store.selectItems();
-    const typographyData = store.selectTypographyData();
-    const fontsData = store.selectFontsData();
-
-    // Get all typography items used in the layout
-    const flatItems = toFlatItems(layoutElements);
-    const usedTypographyIds = new Set();
-
-    // Find all text elements and collect their typography IDs
-    flatItems.forEach((item) => {
-      if (item.type === "text") {
-        // Add main typography style
-        if (item.typographyId) {
-          usedTypographyIds.add(item.typographyId);
-        }
-        // Add hover style typography
-        if (item.hoverTypographyId) {
-          usedTypographyIds.add(item.hoverTypographyId);
-        }
-        // Add clicked style typography
-        if (item.clickedTypographyId) {
-          usedTypographyIds.add(item.clickedTypographyId);
-        }
-      }
-    });
-
-    // Get typography items and their font IDs
-    const typographyItems = typographyData?.items || {};
-    const usedFontIds = new Set();
-
-    usedTypographyIds.forEach((typographyId) => {
-      const typo = typographyItems[typographyId];
-      if (typo && typo.fontId) {
-        usedFontIds.add(typo.fontId);
-      }
-    });
-
-    // Get font items and load them
-    const fontItems = fontsData?.items || {};
-    const fontLoadPromises = [];
-
-    usedFontIds.forEach((fontId) => {
-      const fontItem = fontItems[fontId];
-      if (fontItem && fontItem.fileId && fontItem.fontFamily) {
-        console.log("Loading font for layout:", fontItem.fontFamily);
-        fontLoadPromises.push(loadFontFile(fontItem));
-      }
-    });
-
-    if (fontLoadPromises.length > 0) {
-      await Promise.all(fontLoadPromises);
-      console.log(`Loaded ${fontLoadPromises.length} fonts for layout`);
-    }
-  } catch (error) {
-    console.error("Error loading layout fonts:", error);
-  }
-};
 
 const renderLayoutPreview = async (deps) => {
   const { store, repository, render, drenderer, getFileContent } = deps;
@@ -107,6 +44,7 @@ const renderLayoutPreview = async (deps) => {
 
   const selectedItem = store.selectSelectedItem();
 
+  // Extract all file IDs from render state (includes both images and fonts)
   const fileIds = extractFileIdsFromRenderState(renderStateElements);
 
   const assets = {};
@@ -116,10 +54,35 @@ const renderLayoutPreview = async (deps) => {
       fileId: fileId,
       projectId: "someprojectId",
     });
-    assets[`file:${fileId}`] = {
-      url: url,
-      type: "image/png",
-    };
+
+    // Determine file type
+    let type = "image/png"; // default for images
+
+    // Check if this is a font file by looking in fonts data
+    const fontItem = Object.values(fontsItems).find(
+      (font) => font.fileId === fileId,
+    );
+    if (fontItem) {
+      // This is a font file, determine MIME type
+      const fileName = fontItem.name || "";
+      if (fileName.endsWith(".woff2")) type = "font/woff2";
+      else if (fileName.endsWith(".woff")) type = "font/woff";
+      else if (fileName.endsWith(".ttf")) type = "font/ttf";
+      else if (fileName.endsWith(".otf")) type = "font/otf";
+      else type = "font/ttf"; // default font type
+
+      // For fonts, use fontFamily as the key instead of fileId
+      assets[fontItem.fontFamily] = {
+        url: url,
+        type: type,
+      };
+    } else {
+      // For non-fonts (like images), use the file reference
+      assets[`file:${fileId}`] = {
+        url: url,
+        type: type,
+      };
+    }
   }
 
   // Clear the canvas before loading new assets
@@ -222,12 +185,9 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { render, getRefIds, drenderer, loadFontFile } = deps;
+  const { render, getRefIds, drenderer } = deps;
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
-
-  // Load all fonts used in this layout before rendering
-  await loadLayoutFonts(deps);
 
   await renderLayoutPreview(deps);
   render();
@@ -338,7 +298,7 @@ const deepMerge = (target, source) => {
 };
 
 export const handleFormChange = async (e, deps) => {
-  const { repository, store, render, loadFontFile } = deps;
+  const { repository, store, render } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
@@ -346,32 +306,6 @@ export const handleFormChange = async (e, deps) => {
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
-
-  // Load font if typography-related field is changed
-  if (
-    currentItem.type === "text" &&
-    (e.detail.name === "typographyId" ||
-      e.detail.name === "hoverTypographyId" ||
-      e.detail.name === "clickedTypographyId")
-  ) {
-    const typographyId = e.detail.fieldValue;
-    if (typographyId && typographyId !== "" && typographyId !== "default") {
-      const typographyData = store.selectTypographyData();
-      const fontsData = store.selectFontsData();
-      const typography = typographyData?.items?.[typographyId];
-
-      if (typography && typography.fontId) {
-        const fontItem = fontsData?.items?.[typography.fontId];
-        if (fontItem && fontItem.fileId && fontItem.fontFamily) {
-          try {
-            await loadFontFile(fontItem);
-          } catch (error) {
-            console.error("Failed to load font:", error);
-          }
-        }
-      }
-    }
-  }
 
   repository.addAction({
     actionType: "treeUpdate",

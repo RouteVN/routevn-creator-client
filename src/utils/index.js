@@ -27,12 +27,13 @@ export const extractFileIdsFromRenderState = (obj) => {
 
     if (typeof value === "object") {
       Object.keys(value).forEach((key) => {
-        // Check if this property is 'url', 'src', 'hoverUrl', or 'clickUrl' and extract fileId
+        // Check if this property contains file references and extract fileId
         if (
           (key === "url" ||
             key === "src" ||
             key === "hoverUrl" ||
-            key === "clickUrl") &&
+            key === "clickUrl" ||
+            key === "fontFileId") &&
           typeof value[key] === "string"
         ) {
           if (value[key].startsWith("file:")) {
@@ -86,6 +87,7 @@ export const layoutTreeStructureToRenderState = (
           fontWeight: typography.fontWeight,
           fill: colorItem.hex,
           lineHeight: typography.lineHeight * typography.fontSize,
+          fontFileId: fontItem.fileId ? `file:${fontItem.fileId}` : undefined,
         };
       } else {
         // Use default settings
@@ -118,6 +120,9 @@ export const layoutTreeStructureToRenderState = (
             fontWeight: hoverTypography.fontWeight,
             fill: hoverColorItem.hex,
             lineHeight: hoverTypography.lineHeight * hoverTypography.fontSize,
+            fontFileId: hoverFontItem.fileId
+              ? `file:${hoverFontItem.fileId}`
+              : undefined,
           };
         }
       }
@@ -137,6 +142,9 @@ export const layoutTreeStructureToRenderState = (
             fill: clickedColorItem.hex,
             lineHeight:
               clickedTypography.lineHeight * clickedTypography.fontSize,
+            fontFileId: clickedFontItem.fileId
+              ? `file:${clickedFontItem.fileId}`
+              : undefined,
           };
         }
       }
