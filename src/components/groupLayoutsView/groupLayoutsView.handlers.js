@@ -74,6 +74,10 @@ export const handleFormActionClick = (e, deps) => {
       alert("Please enter a layout name");
       return;
     }
+    if (!formData.layoutType) {
+      alert("Please select a layout type");
+      return;
+    }
 
     // Dispatch layout creation event to parent
     dispatchEvent(
@@ -81,6 +85,7 @@ export const handleFormActionClick = (e, deps) => {
         detail: {
           groupId,
           name: formData.name,
+          layoutType: formData.layoutType,
         },
         bubbles: true,
         composed: true,

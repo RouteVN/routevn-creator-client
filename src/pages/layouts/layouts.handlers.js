@@ -24,7 +24,7 @@ export const handleImageItemClick = (e, deps) => {
 
 export const handleLayoutCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name } = e.detail;
+  const { groupId, name, layoutType } = e.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -36,6 +36,7 @@ export const handleLayoutCreated = (e, deps) => {
         id: nanoid(),
         type: "layout",
         name: name,
+        layoutType: layoutType,
         elements: {
           items: {},
           tree: [],
