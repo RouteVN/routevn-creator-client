@@ -12,7 +12,7 @@ refs:
   file-explorer:
     eventListeners:
       data-changed:
-        handler: handleDataChanged
+        handler: handleFileExplorerDataChanged
   groupview:
     eventListeners:
       image-item-click:

@@ -5,13 +5,13 @@ import { extractFileIdsFromRenderState } from "../../utils/index.js";
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(
   fileIds,
-  httpClient,
+  getFileContent,
   { audios, images },
 ) {
   const assets = {};
   for (const fileId of fileIds) {
     try {
-      const { url } = await httpClient.creator.getFileContent({
+      const { url } = await getFileContent({
         fileId,
         projectId: "someprojectId",
       });
@@ -38,10 +38,10 @@ async function createAssetsFromFileIds(
 }
 
 // Helper function to render the scene state
-async function renderSceneState(store, drenderer, httpClient) {
+async function renderSceneState(store, drenderer, getFileContent) {
   const renderState = store.selectRenderState();
   const fileIds = extractFileIdsFromRenderState(renderState);
-  const assets = await createAssetsFromFileIds(fileIds, httpClient, {
+  const assets = await createAssetsFromFileIds(fileIds, getFileContent, {
     audios: store.selectAudios(),
     images: store.selectImages(),
   });
@@ -186,7 +186,7 @@ export const handleCommandLineSubmit = (e, deps) => {
 };
 
 export const handleEditorDataChanged = (e, deps) => {
-  const { repository, store, render, drenderer, getRefIds, httpClient } = deps;
+  const { repository, store, drenderer, getFileContent } = deps;
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -226,7 +226,7 @@ export const handleEditorDataChanged = (e, deps) => {
   store.setLineTextContent({ lineId, text: e.detail.content });
 
   setTimeout(async () => {
-    await renderSceneState(store, drenderer, httpClient);
+    await renderSceneState(store, drenderer, getFileContent);
   }, 10);
 };
 
@@ -375,7 +375,7 @@ export const handleNewLine = (e, deps) => {
 };
 
 export const handleMoveUp = (e, deps) => {
-  const { store, getRefIds, render, drenderer, httpClient } = deps;
+  const { store, getRefIds, render, drenderer, getFileContent } = deps;
   const currentLineId = e.detail.lineId;
   const previousLineId = store.selectPreviousLineId({ lineId: currentLineId });
 
@@ -414,7 +414,7 @@ export const handleMoveUp = (e, deps) => {
       linesEditorRef.elm.render();
 
       setTimeout(async () => {
-        await renderSceneState(store, drenderer, httpClient);
+        await renderSceneState(store, drenderer, getFileContent);
       }, 10);
     }, 0);
   }
@@ -427,7 +427,7 @@ export const handleBackToActions = (e, deps) => {
 };
 
 export const handleMoveDown = (e, deps) => {
-  const { store, getRefIds, render, drenderer, httpClient } = deps;
+  const { store, getRefIds, render, drenderer, getFileContent } = deps;
   const currentLineId = e.detail.lineId;
   const nextLineId = store.selectNextLineId({ lineId: currentLineId });
 
@@ -459,7 +459,7 @@ export const handleMoveDown = (e, deps) => {
       linesEditorRef.elm.render();
 
       setTimeout(async () => {
-        await renderSceneState(store, drenderer, httpClient);
+        await renderSceneState(store, drenderer, getFileContent);
       }, 10);
     }, 0);
   }

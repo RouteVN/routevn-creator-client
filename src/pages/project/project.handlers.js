@@ -5,13 +5,13 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { repository, httpClient, render, store } = deps;
+  const { repository, render, store, getFileContent } = deps;
   const { project } = repository.getState();
 
   if (!project.iconFileId) {
     return;
   }
-  const { url } = await httpClient.creator.getFileContent({
+  const { url } = await getFileContent({
     fileId: project.iconFileId,
     projectId: "someprojectId",
   });
@@ -54,6 +54,7 @@ export const handleFormExtraEvent = async (e, deps) => {
     const file = files[0];
     const successfulUploads = await uploadImageFiles([file], "someprojectId");
 
+    // TODO better handle failed uploads
     if (successfulUploads.length > 0) {
       const result = successfulUploads[0];
       repository.addAction({
