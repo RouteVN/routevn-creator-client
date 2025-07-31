@@ -70,7 +70,7 @@ const renderLayoutPreview = async (deps) => {
       else if (fileName.endsWith(".ttf")) type = "font/ttf";
       else if (fileName.endsWith(".otf")) type = "font/otf";
       else type = "font/ttf"; // default font type
-      
+
       // For fonts, use fontFamily as the key instead of fileId
       assets[fontItem.fontFamily] = {
         url: url,
