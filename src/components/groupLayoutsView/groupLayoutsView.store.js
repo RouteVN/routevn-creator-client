@@ -95,6 +95,18 @@ export const toViewData = ({ state, props }) => {
           description: "Enter the layout name",
           required: true,
         },
+        {
+          name: "layoutType",
+          inputType: "select",
+          label: "Layout Type",
+          description: "Select the layout type",
+          required: true,
+          options: [
+            { value: "normal", label: "Normal" },
+            { value: "dialogue", label: "Dialogue" },
+            { value: "choice", label: "Choice" },
+          ],
+        },
       ],
       actions: {
         layout: "",

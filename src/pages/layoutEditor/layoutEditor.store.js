@@ -37,6 +37,7 @@ export const INITIAL_STATE = Object.freeze({
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   layoutId: null,
+  layoutType: null,
   images: { tree: [], items: {} },
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
@@ -172,6 +173,10 @@ export const setLayoutId = (state, layoutId) => {
   state.layoutId = layoutId;
 };
 
+export const setLayoutType = (state, layoutType) => {
+  state.layoutType = layoutType;
+};
+
 export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
@@ -198,6 +203,10 @@ export const setFieldResources = (state, resources) => {
 
 export const selectLayoutId = ({ state }) => {
   return state.layoutId;
+};
+
+export const selectCurrentLayoutType = ({ state }) => {
+  return state.layoutType;
 };
 
 export const selectSelectedItem = ({ state }) => {
