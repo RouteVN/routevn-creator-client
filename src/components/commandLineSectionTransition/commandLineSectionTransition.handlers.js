@@ -6,7 +6,8 @@ export const handleBeforeMount = (deps) => {
     items: scenes,
   });
 
-  const { sectionTransition } = props?.line?.presentation;
+  // Safe access to nested properties
+  const sectionTransition = props?.line?.presentation?.sectionTransition;
 
   if (!sectionTransition) {
     return;
