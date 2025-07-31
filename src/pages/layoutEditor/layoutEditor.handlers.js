@@ -7,7 +7,7 @@ import {
 
 
 const renderLayoutPreview = async (deps) => {
-  const { store, repository, render, drenderer, httpClient } = deps;
+  const { store, repository, render, drenderer, getFileContent } = deps;
   const layoutId = store.selectLayoutId();
 
   const {
@@ -53,8 +53,8 @@ const renderLayoutPreview = async (deps) => {
 
   const assets = {};
 
-  for (const fileId of allFileIds) {
-    const { url } = await httpClient.creator.getFileContent({
+  for (const fileId of fileIds) {
+    const { url } = await getFileContent({
       fileId: fileId,
       projectId: "someprojectId",
     });
@@ -212,7 +212,7 @@ export const handleTargetChanged = (payload, deps) => {
 };
 
 export const handleFileExplorerItemClick = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
+  const { store, render, getFileContent, repository } = deps;
   const itemId = e.detail.id;
   store.setSelectedItemId(itemId);
   render();
@@ -236,7 +236,7 @@ export const handleFileExplorerItemClick = async (e, deps) => {
           // Get the image object using the imageId
           const image = imageItems[selectedItem[fieldName]];
           if (image && image.fileId) {
-            const { url } = await httpClient.creator.getFileContent({
+            const { url } = await getFileContent({
               fileId: image.fileId,
               projectId: "someprojectId",
             });
@@ -407,7 +407,7 @@ export const handleImageSelectorSelection = (e, deps) => {
 };
 
 export const handleConfirmImageSelection = async (e, deps) => {
-  const { store, render, repository, httpClient } = deps;
+  const { store, render, repository, getFileContent } = deps;
 
   const state = store.getState ? store.getState() : store._state || store.state;
   const fieldIndex = state.imageSelectorDialog.fieldIndex;
@@ -452,7 +452,7 @@ export const handleConfirmImageSelection = async (e, deps) => {
 
     // Update fieldResources with the new image URL
     try {
-      const { url } = await httpClient.creator.getFileContent({
+      const { url } = await getFileContent({
         fileId: selectedImage.fileId,
         projectId: "someprojectId",
       });

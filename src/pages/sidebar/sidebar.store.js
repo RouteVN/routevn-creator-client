@@ -42,10 +42,9 @@ export const setProjectImageUrl = (state, imageUrl) => {
   state.header.image.src = imageUrl;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state }) => {
   return {
-    ...state,
     header: state.header,
-    itemsEncoded: state.items,
+    items: state.items,
   };
 };

@@ -16,14 +16,14 @@ export const handleDataChanged = (e, deps) => {
 };
 
 export const handleCharacterItemClick = async (e, deps) => {
-  const { store, render, httpClient } = deps;
+  const { store, render, getFileContent } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
   if (selectedItem && selectedItem.fileId) {
-    const { url } = await httpClient.creator.getFileContent({
+    const { url } = await getFileContent({
       fileId: selectedItem.fileId,
       projectId: "someprojectId",
     });

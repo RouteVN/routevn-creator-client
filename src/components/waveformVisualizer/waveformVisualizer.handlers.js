@@ -1,5 +1,5 @@
 export const handleAfterMount = async (deps) => {
-  const { attrs, store, render, httpClient, downloadWaveformData } = deps;
+  const { attrs, store, render, downloadWaveformData } = deps;
 
   if (!attrs.waveformDataFileId) {
     return;
@@ -7,10 +7,9 @@ export const handleAfterMount = async (deps) => {
 
   try {
     // Download waveform data from API Object Storage
-    const waveformData = await downloadWaveformData(
-      attrs.waveformDataFileId,
-      httpClient,
-    );
+    const waveformData = await downloadWaveformData({
+      fileId: attrs.waveformDataFileId,
+    });
 
     store.setWaveformData(waveformData);
     store.setLoading(false);
@@ -23,8 +22,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleOnUpdate = async (changes, deps) => {
-  const { attrs, store, render, getRefIds, httpClient, downloadWaveformData } =
-    deps;
+  const { attrs, store, render, downloadWaveformData } = deps;
 
   if (!attrs.waveformDataFileId) {
     return;
@@ -34,10 +32,9 @@ export const handleOnUpdate = async (changes, deps) => {
   render();
 
   try {
-    const waveformData = await downloadWaveformData(
-      attrs.waveformDataFileId,
-      httpClient,
-    );
+    const waveformData = await downloadWaveformData({
+      fileId: attrs.waveformDataFileId,
+    });
     store.setWaveformData(waveformData);
     store.setLoading(false);
     render();

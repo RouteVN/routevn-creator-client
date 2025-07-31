@@ -95,7 +95,7 @@ template:
                       - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
                           - rtgl-text s=sm: "<>"
                   - rtgl-view:
-                      - rtgl-text: TODO show graph of sections
+                      - rtgl-text: ${sectionsGraph}
             $else:
               - rtgl-view:
                   - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':

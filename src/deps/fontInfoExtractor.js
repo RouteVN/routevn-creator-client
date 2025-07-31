@@ -1,8 +1,8 @@
-export const createFontInfoExtractor = ({ httpClient, fontManager }) => {
+export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
   const extractFontInfo = async (fontItem) => {
     try {
       // Get font file data
-      const response = await httpClient.creator.getFileContent({
+      const response = await getFileContent({
         fileId: fontItem.fileId,
         projectId: "someprojectId",
       });

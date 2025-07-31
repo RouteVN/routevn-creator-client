@@ -28,7 +28,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, httpClient } = deps;
+  const { store, render, getFileContent } = deps;
 
   const selectedCharacters = store.selectCharactersWithRepositoryData();
 
@@ -39,9 +39,9 @@ export const handleAfterMount = async (deps) => {
   const context = {};
 
   for (const [index, character] of selectedCharacters.entries()) {
-    if (character.spriteFileId && httpClient) {
+    if (character.spriteFileId && getFileContent) {
       try {
-        const { url } = await httpClient.creator.getFileContent({
+        const { url } = await getFileContent({
           fileId: character.spriteFileId,
           projectId: "someprojectId",
         });
@@ -224,8 +224,8 @@ export const handleSpriteItemClick = (e, deps) => {
   render();
 };
 
-export const handleButtonSelectClick = async (payload, deps) => {
-  const { store, render, repository, downloadImageData, httpClient } = deps;
+export const handleButtonSelectClick = async (e, deps) => {
+  const { store, render, getFileContent } = deps;
   const mode = store.selectMode();
   const selectedCharacters = store.selectCharactersWithRepositoryData();
   const selectedCharacterIndex = store.selectSelectedCharacterIndex();
@@ -246,9 +246,9 @@ export const handleButtonSelectClick = async (payload, deps) => {
         });
 
         // Get URL for the sprite and update form field resources
-        if (tempSelectedSprite.fileId && httpClient) {
+        if (tempSelectedSprite.fileId && getFileContent) {
           try {
-            const { url } = await httpClient.creator.getFileContent({
+            const { url } = await getFileContent({
               fileId: tempSelectedSprite.fileId,
               projectId: "someprojectId",
             });
