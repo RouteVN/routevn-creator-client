@@ -15,11 +15,7 @@ import {
   createDownloadWaveformData,
   createGetFileContent,
 } from "./deps/createFileUploader";
-import {
-  createFontManager,
-  loadFontFile,
-  loadFontsFromAssetBuffer,
-} from "./deps/fontManager";
+import { createFontManager, loadFontFile } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 
@@ -117,7 +113,6 @@ const uploadFontFiles = createFontFileUploader({
 const filePicker = createFilePicker();
 const getFileContent = createGetFileContent({ httpClient });
 const loadFontFileFunc = loadFontFile({ getFileContent, fontManager });
-const loadFontsFromAssetBufferFunc = loadFontsFromAssetBuffer({ fontManager });
 const downloadWaveformData = createDownloadWaveformData({ getFileContent });
 
 const componentDependencies = {
@@ -133,7 +128,6 @@ const componentDependencies = {
   uploadFontFiles,
   fontManager,
   loadFontFile: loadFontFileFunc,
-  loadFontsFromAssetBuffer: loadFontsFromAssetBufferFunc,
   downloadWaveformData,
   drenderer,
   filePicker,
@@ -153,7 +147,6 @@ const pageDependencies = {
   uploadFontFiles,
   fontManager,
   loadFontFile: loadFontFileFunc,
-  loadFontsFromAssetBuffer: loadFontsFromAssetBufferFunc,
   downloadWaveformData,
   drenderer,
   filePicker,
