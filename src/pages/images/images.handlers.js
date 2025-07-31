@@ -4,10 +4,9 @@ export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
   const { images } = repository.getState();
   store.setItems(images);
-  return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
+export const handleFileExplorerDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
   const { images } = repository.getState();
   store.setItems(images);
@@ -20,7 +19,6 @@ export const handleFormExtraEvent = async (e, deps) => {
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn("No item selected for image replacement");
     return;
   }
 
@@ -37,6 +35,7 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   const uploadedFiles = await uploadImageFiles([file], "someprojectId");
 
+  // TODO improve error handling
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");
     return;
@@ -72,13 +71,13 @@ export const handleFormExtraEvent = async (e, deps) => {
 };
 
 export const handleImageItemClick = async (e, deps) => {
-  const { store, render, httpClient } = deps;
+  const { store, render, getFileContent } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
-  const { url } = await httpClient.creator.getFileContent({
+  const { url } = await getFileContent({
     fileId: selectedItem.fileId,
     projectId: "someprojectId",
   });

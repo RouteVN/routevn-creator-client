@@ -1,7 +1,7 @@
 import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
-  const { repository, store, httpClient, render } = deps;
+  const { repository, store, getFileContent, render } = deps;
   const state = repository.getState();
   const project = state.project;
 
@@ -9,7 +9,7 @@ export const handleAfterMount = async (deps) => {
     return;
   }
 
-  const { url } = await httpClient.creator.getFileContent({
+  const { url } = await getFileContent({
     fileId: project.iconFileId,
     projectId: "someprojectId",
   });
@@ -20,21 +20,21 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleItemClick = async (payload, deps) => {
-  const { render, router, subject } = deps;
+  const { subject } = deps;
   subject.dispatch("redirect", {
     path: payload.detail.item.id,
   });
 };
 
 export const handleHeaderClick = (payload, deps) => {
-  const { render, router, subject } = deps;
+  const { subject } = deps;
   subject.dispatch("redirect", {
     path: "/project",
   });
 };
 
 export const handleProjectImageUpdate = async (_, deps) => {
-  const { repository, store, render, httpClient } = deps;
+  const { repository, store, render, getFileContent } = deps;
   const state = repository.getState();
   const project = state.project;
 
@@ -42,7 +42,7 @@ export const handleProjectImageUpdate = async (_, deps) => {
     return;
   }
 
-  const { url } = await httpClient.creator.getFileContent({
+  const { url } = await getFileContent({
     fileId: project.iconFileId,
     projectId: "someprojectId",
   });

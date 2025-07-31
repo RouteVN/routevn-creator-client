@@ -18,7 +18,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, downloadWaveformData, httpClient } = deps;
+  const { store, render, downloadWaveformData } = deps;
   const selectedResource = store.selectSelectedResource();
 
   if (selectedResource?.item?.waveformDataFileId) {
@@ -28,10 +28,9 @@ export const handleAfterMount = async (deps) => {
     );
 
     try {
-      const waveformData = await downloadWaveformData(
-        selectedResource.item.waveformDataFileId,
-        httpClient,
-      );
+      const waveformData = await downloadWaveformData({
+        fileId: selectedResource.item.waveformDataFileId,
+      });
 
       store.setContext({
         audio: {
@@ -97,7 +96,7 @@ export const handleResourceItemClick = (e, deps) => {
 };
 
 export const handleFileExplorerItemClick = async (e, deps) => {
-  const { store, render, downloadWaveformData, httpClient, repository } = deps;
+  const { store, render, downloadWaveformData, repository } = deps;
   const itemId = e.detail.id;
   const { audio } = repository.getState();
 
@@ -120,10 +119,9 @@ export const handleFileExplorerItemClick = async (e, deps) => {
     );
 
     try {
-      const waveformData = await downloadWaveformData(
-        selectedItem.waveformDataFileId,
-        httpClient,
-      );
+      const waveformData = await downloadWaveformData({
+        fileId: selectedItem.waveformDataFileId,
+      });
 
       // This is for preview in gallery mode, not for setting the final selection
       console.log("File explorer - got waveform data:", waveformData);
@@ -181,7 +179,7 @@ export const handleBreadcumbActionsClick = (e, deps) => {
 };
 
 export const handleButtonSelectClick = async (e, deps) => {
-  const { store, render, repository, downloadWaveformData, httpClient } = deps;
+  const { store, render, repository, downloadWaveformData } = deps;
   const { audio } = repository.getState();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
 
@@ -200,10 +198,9 @@ export const handleButtonSelectClick = async (e, deps) => {
 
     // Download waveform data for the selected audio
     if (tempSelectedAudio.waveformDataFileId && downloadWaveformData) {
-      const waveformData = await downloadWaveformData(
-        tempSelectedAudio.waveformDataFileId,
-        httpClient,
-      );
+      const waveformData = await downloadWaveformData({
+        fileId: tempSelectedAudio.waveformDataFileId,
+      });
 
       // Update context with waveform data
       store.setContext({

@@ -18,16 +18,15 @@ export const handleDataChanged = (e, deps) => {
 };
 
 export const handleAudioItemClick = async (e, deps) => {
-  const { store, render, httpClient, downloadWaveformData } = deps;
+  const { store, render, downloadWaveformData } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
-  const waveformData = await downloadWaveformData(
-    selectedItem.waveformDataFileId,
-    httpClient,
-  );
+  const waveformData = await downloadWaveformData({
+    fileId: selectedItem.waveformDataFileId,
+  });
 
   store.setContext({
     fileId: {

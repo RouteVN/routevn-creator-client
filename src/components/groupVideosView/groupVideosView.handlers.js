@@ -30,7 +30,7 @@ export const handleVideoItemClick = (e, deps) => {
 };
 
 export const handleVideoThumbnailDoubleClick = async (e, deps) => {
-  const { store, render, httpClient, props = {} } = deps;
+  const { store, render, getFileContent, props = {} } = deps;
   const itemId = e.currentTarget.id.replace("video-item-", "");
 
   const flatGroups = props.flatGroups || [];
@@ -47,7 +47,7 @@ export const handleVideoThumbnailDoubleClick = async (e, deps) => {
   store.setVideoVisible(selectedVideo);
   render();
 
-  const { url } = await httpClient.creator.getFileContent({
+  const { url } = await getFileContent({
     fileId: selectedVideo.fileId,
     projectId: "someprojectId",
   });

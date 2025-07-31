@@ -40,7 +40,7 @@ const componentLayoutTreeStructureToRenderState = (layout, imageItems) => {
 };
 
 const renderComponentPreview = async (deps) => {
-  const { store, repository, render, drenderer, httpClient } = deps;
+  const { store, repository, render, drenderer, getFileContent } = deps;
   const componentId = store.selectComponentId();
 
   const {
@@ -65,7 +65,7 @@ const renderComponentPreview = async (deps) => {
   const assets = {};
 
   for (const fileId of fileIds) {
-    const { url } = await httpClient.creator.getFileContent({
+    const { url } = await getFileContent({
       fileId: fileId,
       projectId: "someprojectId",
     });

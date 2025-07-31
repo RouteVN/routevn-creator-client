@@ -144,23 +144,25 @@ const uploadWaveformData = async (waveformData, httpClient, projectId) => {
   }
 };
 
-export const downloadWaveformData = async (fileId, httpClient) => {
-  try {
-    const { url } = await httpClient.creator.getFileContent({
-      fileId: fileId,
-      projectId: "someprojectId",
-    });
-    const response = await fetch(url);
+export const createDownloadWaveformData = ({ getFileContent }) => {
+  return async ({ fileId }) => {
+    try {
+      const { url } = await getFileContent({
+        fileId: fileId,
+        projectId: "someprojectId",
+      });
+      const response = await fetch(url);
 
-    if (response.ok) {
-      const waveformData = await response.json();
-      return waveformData;
-    } else {
+      if (response.ok) {
+        const waveformData = await response.json();
+        return waveformData;
+      } else {
+        return null;
+      }
+    } catch (error) {
       return null;
     }
-  } catch (error) {
-    return null;
-  }
+  };
 };
 
 export const createAudioFileUploader = ({ httpClient }) => {
@@ -496,5 +498,15 @@ export const createFontFileUploader = ({ httpClient, fontManager }) => {
     const successfulUploads = uploadResults.filter((result) => result.success);
 
     return successfulUploads;
+  };
+};
+
+export const createGetFileContent = ({ httpClient }) => {
+  return async ({ fileId, projectId }) => {
+    const result = await httpClient.creator.getFileContent({
+      fileId,
+      projectId,
+    });
+    return result;
   };
 };

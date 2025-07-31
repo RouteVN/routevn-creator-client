@@ -32,7 +32,7 @@ const getFileIdFromProps = (attrs, repository) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, httpClient, render, repository } = deps;
+  const { store, attrs, getFileContent, render, repository } = deps;
 
   const fileId = getFileIdFromProps(attrs, repository);
 
@@ -42,7 +42,7 @@ export const handleAfterMount = async (deps) => {
 
   try {
     // TODO batch file requests
-    const { url } = await httpClient.creator.getFileContent({
+    const { url } = await getFileContent({
       fileId: fileId,
       projectId: "someprojectId",
     });
@@ -57,7 +57,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleOnUpdate = async (changes, deps) => {
-  const { store, attrs, httpClient, render, repository } = deps;
+  const { store, attrs, getFileContent, render, repository } = deps;
 
   const fileId = getFileIdFromProps(attrs, repository);
 
@@ -68,7 +68,7 @@ export const handleOnUpdate = async (changes, deps) => {
 
   try {
     // TODO batch file requests
-    const { url } = await httpClient.creator.getFileContent({
+    const { url } = await getFileContent({
       fileId: fileId,
       projectId: "someprojectId",
     });
