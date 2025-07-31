@@ -54,11 +54,11 @@ export const toViewData = ({ state, props }, payload) => {
   if (selectedItem) {
     const layoutTypeLabels = {
       normal: "Normal",
-      dialogue: "Dialogue", 
-      choice: "Choice"
+      dialogue: "Dialogue",
+      choice: "Choice",
     };
-    
-    const layoutTypeLabel = selectedItem.layoutType 
+
+    const layoutTypeLabel = selectedItem.layoutType
       ? layoutTypeLabels[selectedItem.layoutType] || selectedItem.layoutType
       : "";
 
