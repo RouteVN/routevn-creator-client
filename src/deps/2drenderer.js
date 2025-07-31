@@ -48,6 +48,5 @@ export const create2dRenderer = async () => {
       await app.loadAssets(assetBufferManager.getBufferMap());
     },
     render: (payload) => app.render(payload),
-    getBufferMap: () => assetBufferManager?.getBufferMap() || {},
   };
 };

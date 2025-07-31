@@ -70,12 +70,19 @@ const renderLayoutPreview = async (deps) => {
       else if (fileName.endsWith(".ttf")) type = "font/ttf";
       else if (fileName.endsWith(".otf")) type = "font/otf";
       else type = "font/ttf"; // default font type
+      
+      // For fonts, use fontFamily as the key instead of fileId
+      assets[fontItem.fontFamily] = {
+        url: url,
+        type: type,
+      };
+    } else {
+      // For non-fonts (like images), use the file reference
+      assets[`file:${fileId}`] = {
+        url: url,
+        type: type,
+      };
     }
-
-    assets[`file:${fileId}`] = {
-      url: url,
-      type: type,
-    };
   }
 
   // Clear the canvas before loading new assets
@@ -85,22 +92,6 @@ const renderLayoutPreview = async (deps) => {
   });
 
   await drenderer.loadAssets(assets);
-
-  // Load fonts from asset buffer
-  const bufferMap = drenderer.getBufferMap();
-  const fontItems = fileIds
-    .map((fileId) =>
-      Object.values(fontsItems).find((font) => font.fileId === fileId),
-    )
-    .filter(Boolean);
-
-  if (fontItems.length > 0) {
-    const { loadFontsFromAssetBuffer } = deps;
-    const results = await loadFontsFromAssetBuffer(fontItems, bufferMap);
-    const cachedCount = results.filter((r) => r.cached).length;
-    const loadedCount = results.filter((r) => r.success && !r.cached).length;
-    console.log(`Font loading: ${loadedCount} loaded, ${cachedCount} cached`);
-  }
 
   // Calculate red dot position if selected
   let elementsToRender = renderStateElements;
