@@ -12,7 +12,7 @@ import {
   createAudioFileUploader,
   createVideoFileUploader,
   createFontFileUploader,
-  downloadWaveformData,
+  createDownloadWaveformData,
   createGetFileContent,
 } from "./deps/createFileUploader";
 import { createFontManager, loadFontFile } from "./deps/fontManager";
@@ -110,9 +110,10 @@ const uploadFontFiles = createFontFileUploader({
   httpClient,
   fontManager,
 });
-const loadFontFileFunc = loadFontFile({ httpClient, fontManager });
 const filePicker = createFilePicker();
 const getFileContent = createGetFileContent({ httpClient });
+const loadFontFileFunc = loadFontFile({ getFileContent, fontManager });
+const downloadWaveformData = createDownloadWaveformData({ getFileContent });
 
 const componentDependencies = {
   httpClient,

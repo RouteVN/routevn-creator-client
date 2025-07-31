@@ -25,7 +25,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, downloadWaveformData, httpClient } = deps;
+  const { store, render, downloadWaveformData } = deps;
 
   const soundEffects = store.selectSoundEffectsWithAudioData();
 
@@ -39,10 +39,9 @@ export const handleAfterMount = async (deps) => {
   for (const [index, sfx] of soundEffects.entries()) {
     if (sfx.waveformDataFileId) {
       try {
-        const waveformData = await downloadWaveformData(
-          sfx.waveformDataFileId,
-          httpClient,
-        );
+        const waveformData = await downloadWaveformData({
+          fileId: sfx.waveformDataFileId,
+        });
         context[`sfx[${index}]`] = { waveformData };
       } catch (error) {
         console.error(`Failed to load waveform data for sfx[${index}]:`, error);
@@ -167,7 +166,7 @@ export const handleBreadcumbClick = (e, deps) => {
 };
 
 export const handleButtonSelectClick = async (e, deps) => {
-  const { store, render, repository, downloadWaveformData, httpClient } = deps;
+  const { store, render, repository, downloadWaveformData } = deps;
 
   const { audio } = repository.getState();
 
@@ -192,10 +191,9 @@ export const handleButtonSelectClick = async (e, deps) => {
     // Download waveform data if available
     if (effectIndex !== -1) {
       try {
-        const waveformData = await downloadWaveformData(
-          tempSelectedAudio.waveformDataFileId,
-          httpClient,
-        );
+        const waveformData = await downloadWaveformData({
+          fileId: tempSelectedAudio.waveformDataFileId,
+        });
 
         const currentContext = store.selectContext() || {};
         const newContext = {

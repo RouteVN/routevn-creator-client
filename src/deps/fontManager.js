@@ -17,10 +17,10 @@ export const createFontManager = () => {
   };
 };
 
-export const loadFontFile = ({ httpClient, fontManager }) => {
+export const loadFontFile = ({ getFileContent, fontManager }) => {
   return async (fontItem) => {
     try {
-      const response = await httpClient.creator.getFileContent({
+      const response = await getFileContent({
         fileId: fontItem.fileId,
         projectId: "someprojectId",
       });
