@@ -52,9 +52,14 @@ export const toViewData = ({ state, props }, payload) => {
   let defaultValues = {};
 
   if (selectedItem) {
-    const layoutTypeLabel = selectedItem.layoutType
-      ? selectedItem.layoutType.charAt(0).toUpperCase() +
-        selectedItem.layoutType.slice(1)
+    const layoutTypeLabels = {
+      normal: "Normal",
+      dialogue: "Dialogue", 
+      choice: "Choice"
+    };
+    
+    const layoutTypeLabel = selectedItem.layoutType 
+      ? layoutTypeLabels[selectedItem.layoutType] || selectedItem.layoutType
       : "";
 
     defaultValues = {
