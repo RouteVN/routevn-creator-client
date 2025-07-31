@@ -117,6 +117,7 @@ const uploadFontFiles = createFontFileUploader({
 const filePicker = createFilePicker();
 const getFileContent = createGetFileContent({ httpClient });
 const loadFontFileFunc = loadFontFile({ getFileContent, fontManager });
+const loadFontsFromAssetBufferFunc = loadFontsFromAssetBuffer({ fontManager });
 const downloadWaveformData = createDownloadWaveformData({ getFileContent });
 
 const componentDependencies = {

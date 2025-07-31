@@ -64,6 +64,21 @@ export const loadFontsFromAssetBuffer = ({ fontManager }) => {
 
     for (const fontItem of fontItems) {
       try {
+        // Check if font is already loaded to avoid duplicate loading
+        const existingFont = Array.from(document.fonts).find(
+          (font) => font.family === fontItem.fontFamily,
+        );
+
+        if (existingFont) {
+          console.log(`Font ${fontItem.fontFamily} already loaded, skipping`);
+          results.push({
+            success: true,
+            fontItem,
+            cached: true,
+          });
+          continue;
+        }
+
         const bufferKey = `file:${fontItem.fileId}`;
         const bufferData = bufferMap[bufferKey];
 
@@ -76,9 +91,11 @@ export const loadFontsFromAssetBuffer = ({ fontManager }) => {
               fontItem.fontFamily,
               arrayBuffer,
             );
+            console.log(`Loaded font ${fontItem.fontFamily} from buffer`);
             results.push({
               success: true,
               fontItem,
+              cached: false,
             });
           } else {
             console.error(

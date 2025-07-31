@@ -1,7 +1,6 @@
 import { toTreeStructure } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
-  extractFontFileIds,
   layoutTreeStructureToRenderState,
 } from "../../utils/index.js";
 
@@ -45,14 +44,8 @@ const renderLayoutPreview = async (deps) => {
 
   const selectedItem = store.selectSelectedItem();
 
-  // Extract both image and font file IDs
-  const imageFileIds = extractFileIdsFromRenderState(renderStateElements);
-  const fontFileIds = extractFontFileIds(
-    layoutTreeStructure,
-    { items: typographyItems },
-    { items: fontsItems },
-  );
-  const allFileIds = [...new Set([...imageFileIds, ...fontFileIds])];
+  // Extract all file IDs from render state (includes both images and fonts)
+  const fileIds = extractFileIdsFromRenderState(renderStateElements);
 
   const assets = {};
 
@@ -65,24 +58,18 @@ const renderLayoutPreview = async (deps) => {
     // Determine file type
     let type = "image/png"; // default for images
 
-    // Check if this is a font file
-    const isFontFile = fontFileIds.includes(fileId);
-    if (isFontFile) {
-      // Try to determine font type from font data
-      const fontItem = Object.values(fontsItems).find(
-        (font) => font.fileId === fileId,
-      );
-      if (fontItem) {
-        // Common font MIME types
-        const fileName = fontItem.name || "";
-        if (fileName.endsWith(".woff2")) type = "font/woff2";
-        else if (fileName.endsWith(".woff")) type = "font/woff";
-        else if (fileName.endsWith(".ttf")) type = "font/ttf";
-        else if (fileName.endsWith(".otf")) type = "font/otf";
-        else type = "font/ttf"; // default font type
-      } else {
-        type = "font/ttf"; // fallback
-      }
+    // Check if this is a font file by looking in fonts data
+    const fontItem = Object.values(fontsItems).find(
+      (font) => font.fileId === fileId,
+    );
+    if (fontItem) {
+      // This is a font file, determine MIME type
+      const fileName = fontItem.name || "";
+      if (fileName.endsWith(".woff2")) type = "font/woff2";
+      else if (fileName.endsWith(".woff")) type = "font/woff";
+      else if (fileName.endsWith(".ttf")) type = "font/ttf";
+      else if (fileName.endsWith(".otf")) type = "font/otf";
+      else type = "font/ttf"; // default font type
     }
 
     assets[`file:${fileId}`] = {
@@ -101,7 +88,7 @@ const renderLayoutPreview = async (deps) => {
 
   // Load fonts from asset buffer
   const bufferMap = drenderer.getBufferMap();
-  const fontItems = fontFileIds
+  const fontItems = fileIds
     .map((fileId) =>
       Object.values(fontsItems).find((font) => font.fileId === fileId),
     )
@@ -109,8 +96,10 @@ const renderLayoutPreview = async (deps) => {
 
   if (fontItems.length > 0) {
     const { loadFontsFromAssetBuffer } = deps;
-    await loadFontsFromAssetBuffer(fontItems, bufferMap);
-    console.log(`Loaded ${fontItems.length} fonts from asset buffer`);
+    const results = await loadFontsFromAssetBuffer(fontItems, bufferMap);
+    const cachedCount = results.filter((r) => r.cached).length;
+    const loadedCount = results.filter((r) => r.success && !r.cached).length;
+    console.log(`Font loading: ${loadedCount} loaded, ${cachedCount} cached`);
   }
 
   // Calculate red dot position if selected
