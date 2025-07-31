@@ -52,14 +52,12 @@ refs:
     eventListeners:
       click:
         handler: handleSaveChoiceClick
-  edit-form-*:
+  choice-form:
     eventListeners:
       input:
-        handler: handleEditFormInput
-  action-type-select:
-    eventListeners:
-      option-selected:
-        handler: handleActionTypeChange
+        handler: handleChoiceFormInput
+      change:
+        handler: handleChoiceFormChange
   layout-select:
     eventListeners:
       option-selected:
@@ -76,55 +74,35 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
     - $if mode == "list":
-      - rtgl-view:
+      - rtgl-view wh=f:
         - rtgl-view d=h g=md:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-        - rtgl-text mb=md: Player Choices Configuration
-
-        - rtgl-text mb=md: Layout Selection
+        - rtgl-text mb=md: Choices Layout
         - rtgl-select#layout-select .options=layouts .selectedValue=selectedLayoutId mb=lg:
 
-        - rtgl-text mb=md: Configure Choices
-        - rtgl-view g=md:
+        - rtgl-text mb=md mt=md: Choices
+        - rtgl-view g=md w=f:
           - $for choice, index in choices:
-            - rtgl-view d=h av=c jc=s-b g=md p=sm bgc=bg br=sm:
-              - rtgl-view flex=1:
+            - rtgl-view#edit-choice-${index} data-index=${index} d=h av=c w=f  g=md p=sm bgc=mu br=sm cur=p:
+              - rtgl-view flex=1 w=f:
                 - rtgl-text: ${choice.text}
                 - rtgl-text s=xs c=mu-fg: ${choice.actionLabel}
-              - rtgl-view d=h g=sm:
-                - rtgl-button#edit-choice-${index} data-index=${index} v=ol s=sm: Edit
-                - rtgl-button#remove-choice-${index} v=ol s=sm: Remove
 
-          - rtgl-button#add-choice-button: Add Choice
+          - rtgl-button#add-choice-button v=ol w=f: Add Choice
 
         - rtgl-view flex=1:
         - rtgl-view d=h av=c ah=e w=f g=lg:
           - rtgl-button#reset-button v=ol: Reset
           - rtgl-button#submit-button: Submit
       $elif mode == "editChoice":
-        - rtgl-view:
+        - rtgl-view wh=f:
           - rtgl-view d=h g=md:
             - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
           - rtgl-text mb=md: ${editModeTitle}
 
-          - rtgl-text mb=sm: Choice Text
-          - rtgl-input#edit-form-text data-field="text" .value=editForm.text mb=md:
-
-          - rtgl-text mb=sm: Update Variables
-          - rtgl-input#edit-form-variables data-field="variables" .value=editForm.variables mb=md:
-
-          # TODO: weird bug this will throw error if uncommented
-          # - rtgl-text mb=sm: Action dfae
-          - rtgl-select#action-type-select .options=actionTypeOptions .selectedValue=editForm.actionType mb=md:
-
-          - $if editForm.actionType == "moveToScene":
-              - rtgl-text mb=sm: Target Scene ID
-              - rtgl-input#edit-form-sceneId data-field="sceneId" .value=editForm.sceneId mb=md:
-          - $if editForm.actionType == "moveToSection":
-              - rtgl-text mb=sm: Target Section ID
-              - rtgl-input#edit-form-sectionId data-field="sectionId" .value=editForm.sectionId mb=md:
+          - rtgl-form#choice-form .form=choiceFormTemplate .defaultValues=defaultValues:
 
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:

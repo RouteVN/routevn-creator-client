@@ -59,20 +59,19 @@ export const handleSaveChoiceClick = (e, deps) => {
   render();
 };
 
-export const handleEditFormInput = (e, deps) => {
+export const handleChoiceFormInput = (e, deps) => {
   const { store, render } = deps;
-  const field = e.currentTarget.getAttribute("data-field");
-  const value = e.currentTarget.value;
+  const { field, value } = e.detail;
 
   store.updateEditForm({ field, value });
   render();
 };
 
-export const handleActionTypeChange = (e, deps) => {
+export const handleChoiceFormChange = (e, deps) => {
   const { store, render } = deps;
-  const value = e.detail.value;
+  const { field, value } = e.detail;
 
-  store.updateEditForm({ field: "actionType", value });
+  store.updateEditForm({ field, value });
   render();
 };
 
