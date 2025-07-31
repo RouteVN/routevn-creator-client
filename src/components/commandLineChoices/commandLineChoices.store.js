@@ -1,3 +1,49 @@
+const CHOICE_FORM_TEMPLATE = Object.freeze({
+  fields: [
+    {
+      name: "text",
+      inputType: "inputText",
+      label: "Choice Text",
+      required: true,
+      placeholder: "Enter choice text",
+    },
+    {
+      name: "variables",
+      inputType: "inputText",
+      label: "Update Variables",
+      required: false,
+      placeholder: "Variable updates",
+    },
+    {
+      name: "actionType",
+      inputType: "select",
+      label: "Action",
+      required: true,
+      options: [
+        { value: "continue", label: "Continue (Do Nothing)" },
+        { value: "moveToScene", label: "Move to Scene" },
+        { value: "moveToSection", label: "Move to Section" },
+      ],
+    },
+    {
+      name: "sceneId",
+      inputType: "inputText",
+      label: "Target Scene ID",
+      required: false,
+      placeholder: "Scene ID",
+      condition: { field: "actionType", value: "moveToScene" },
+    },
+    {
+      name: "sectionId",
+      inputType: "inputText",
+      label: "Target Section ID",
+      required: false,
+      placeholder: "Section ID",
+      condition: { field: "actionType", value: "moveToSection" },
+    },
+  ],
+});
+
 export const INITIAL_STATE = Object.freeze({
   mode: "list", // "list" or "editChoice"
   choices: [
@@ -13,6 +59,7 @@ export const INITIAL_STATE = Object.freeze({
     sceneId: "",
     sectionId: "",
   },
+  choiceFormTemplate: CHOICE_FORM_TEMPLATE,
 });
 
 export const setMode = (state, mode) => {
@@ -29,11 +76,12 @@ export const setEditingIndex = (state, index) => {
     const choice = state.choices[index];
     console.log("[setEditingIndex] Editing existing choice:", choice);
 
-    state.editForm.text = choice.text || "";
+    // Ensure all values are strings and properly escaped
+    state.editForm.text = String(choice.text || "");
     state.editForm.variables = ""; // placeholder
-    state.editForm.actionType = choice.action?.type || "continue";
-    state.editForm.sceneId = choice.action?.sceneId || "";
-    state.editForm.sectionId = choice.action?.sectionId || "";
+    state.editForm.actionType = String(choice.action?.type || "continue");
+    state.editForm.sceneId = String(choice.action?.sceneId || "");
+    state.editForm.sectionId = String(choice.action?.sectionId || "");
   } else {
     // New choice or reset
     console.log("[setEditingIndex] Creating new choice form");
@@ -170,6 +218,15 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
+  // Create clean defaultValues object for the form
+  const defaultValues = {
+    // text: state?.editForm?.text || "",
+    // variables: state?.editForm?.variables || "",
+    // actionType: state?.editForm?.actionType || "continue",
+    // sceneId: state?.editForm?.sceneId || "",
+    // sectionId: state?.editForm?.sectionId || "",
+  };
+
   const viewData = {
     mode: state?.mode || "list",
     choices: processedChoices,
@@ -183,9 +240,11 @@ export const toViewData = ({ state, props }, payload) => {
       sceneId: "",
       sectionId: "",
     },
+    defaultValues,
     actionTypeOptions,
     editModeTitle,
     breadcrumb,
+    choiceFormTemplate: CHOICE_FORM_TEMPLATE,
   };
 
   console.log("[toViewData] Returning view data:", viewData);

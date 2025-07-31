@@ -553,16 +553,10 @@ export const handlePresentationActionRightClick = (e, deps) => {
   render();
 };
 
-export const handleActionsContainerClick = (e, deps) => {
-  e.stopPropagation();
-};
-
 export const handleActionClicked = (e, deps) => {
   const { store, render } = deps;
   store.setMode(e.detail.item.mode);
-  console.log("zzzzzzzzzzzzz");
   render();
-  console.log("yyyyyyyyyyyy");
 };
 
 export const handleSectionTabRightClick = (e, deps) => {
@@ -582,7 +576,7 @@ export const handleSectionTabRightClick = (e, deps) => {
   render();
 };
 
-export const handleActionsOverlayClick = (e, deps) => {
+export const handleActionsDialogClose = (e, deps) => {
   const { store, render } = deps;
   store.setMode("lines-editor");
   render();

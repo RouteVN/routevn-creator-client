@@ -30,12 +30,12 @@ export const INITIAL_STATE = Object.freeze({
       icon: "character",
       mode: "characters",
     },
-    // {
-    //   id: "3",
-    //   label: "Choices",
-    //   icon: "choices",
-    //   mode: "choices",
-    // },
+    {
+      id: "3",
+      label: "Choices",
+      icon: "choices",
+      mode: "choices",
+    },
     {
       id: "10",
       label: "Transition",
