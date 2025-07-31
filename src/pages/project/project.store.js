@@ -13,13 +13,9 @@ const form = {
       required: true,
     },
     {
-      name: "iconFileId",
-      inputType: "image",
-      description: "Image URL",
-      src: "${iconFileId.src}",
-      required: false,
-      width: 120,
-      height: 120,
+      inputType: "slot",
+      slot: "icon-file-id",
+      description: "Project Icon",
     },
   ],
 };
@@ -30,25 +26,19 @@ export const INITIAL_STATE = Object.freeze({
     description: "",
     iconFileId: undefined,
   },
-  context: {
-    iconFileId: {
-      src: "/public/project_logo_placeholder.png",
-    },
-  },
 });
 
 export const setProject = (state, project) => {
   state.project = project;
 };
 
-export const setContext = (state, context) => {
-  state.context = context;
+export const setIconFileId = (state, iconFileId) => {
+  state.project.iconFileId = iconFileId;
 };
 
 export const toViewData = ({ state }) => {
   return {
     defaultValues: state.project,
     form,
-    context: state.context,
   };
 };

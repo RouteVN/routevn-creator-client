@@ -3,23 +3,48 @@ elementName: rvn-project
 viewDataSchema:
   type: object
   properties:
-    project:
+    defaultValues:
       type: object
       properties:
-        defaultValues:
-          type: object
-        form:
-          type: object
+        name:
+          type: string
+          default: ""
+        description:
+          type: string
+          default: ""
+        iconFileId:
+          type: string
+    form:
+      type: object
+      properties:
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              inputType:
+                type: string
+              description:
+                type: string
+              required:
+                type: boolean
+              slot:
+                type: string
 
 refs:
   form:
     eventListeners:
       form-change:
         handler: handleFormChange
-      extra-event:
+  icon-image:
+    eventListeners:
+      click:
         handler: handleFormExtraEvent
 
 template:
   - rtgl-view w=f h=f p=lg:
     - rtgl-text s=h4: Project
     - rtgl-form#form .form=form .context=context w=240 .defaultValues=defaultValues:
+      - rvn-file-image#icon-image fileId=${defaultValues.iconFileId} wh=128 slot=icon-file-id cur=p:

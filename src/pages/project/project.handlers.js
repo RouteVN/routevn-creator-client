@@ -4,27 +4,6 @@ export const handleBeforeMount = (deps) => {
   store.setProject(project);
 };
 
-export const handleAfterMount = async (deps) => {
-  const { repository, render, store, getFileContent } = deps;
-  const { project } = repository.getState();
-
-  if (!project.iconFileId) {
-    return;
-  }
-  const { url } = await getFileContent({
-    fileId: project.iconFileId,
-    projectId: "someprojectId",
-  });
-
-  store.setContext({
-    iconFileId: {
-      src: url,
-    },
-  });
-
-  render();
-};
-
 export const handleFormChange = (e, deps) => {
   const { repository } = deps;
   repository.addAction({
@@ -37,9 +16,6 @@ export const handleFormChange = (e, deps) => {
 export const handleFormExtraEvent = async (e, deps) => {
   const { filePicker, uploadImageFiles, repository, subject, render, store } =
     deps;
-  if (e.detail.name !== "iconFileId") {
-    return;
-  }
 
   try {
     const files = await filePicker.open({
@@ -63,11 +39,7 @@ export const handleFormExtraEvent = async (e, deps) => {
         value: result.fileId,
       });
 
-      store.setContext({
-        iconFileId: {
-          src: result.downloadUrl,
-        },
-      });
+      store.setIconFileId(result.fileId);
 
       subject.dispatch("project-image-update");
       render();
