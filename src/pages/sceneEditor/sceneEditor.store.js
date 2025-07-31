@@ -388,6 +388,11 @@ export const toViewData = ({ state, props }, payload) => {
         ...item,
       }),
     ),
+    sectionsGraph: JSON.stringify(
+      selectSectionTransitionsDAG({ state }),
+      null,
+      2,
+    ),
   };
 };
 
@@ -705,4 +710,66 @@ export const selectPresentationData = ({ state }) => {
 
 export const toggleSectionsGraphView = (state) => {
   state.sectionsGraphView = !state.sectionsGraphView;
+};
+
+export const selectSectionTransitionsDAG = ({ state }) => {
+  const currentScene = selectScene({ state });
+
+  if (!currentScene) {
+    return { nodes: [], edges: [], adjacencyList: {} };
+  }
+
+  const nodes = [];
+  const edges = [];
+
+  // Add all sections from current scene as nodes
+  currentScene.sections.forEach((section) => {
+    nodes.push({
+      id: section.id,
+      sceneId: currentScene.id,
+      sceneName: currentScene.name,
+      sectionName: section.name,
+      type: "section",
+    });
+
+    // Check all lines in this section for section transitions within current scene
+    if (section.lines) {
+      section.lines.forEach((line) => {
+        const sectionTransition = line.presentation?.sectionTransition;
+
+        if (sectionTransition && sectionTransition.sectionId) {
+          // Only include transitions to other sections within the same scene
+          const targetSection = currentScene.sections.find(
+            (s) => s.id === sectionTransition.sectionId,
+          );
+
+          if (targetSection) {
+            edges.push({
+              from: section.id,
+              to: sectionTransition.sectionId,
+              type: "section",
+              animation: sectionTransition.animation || "fade",
+              lineId: line.id,
+            });
+          }
+        }
+      });
+    }
+  });
+
+  // Create adjacency list for easier graph traversal
+  const adjacencyList = {};
+  nodes.forEach((node) => {
+    adjacencyList[node.id] = {
+      node,
+      outgoing: edges.filter((edge) => edge.from === node.id),
+      incoming: edges.filter((edge) => edge.to === node.id),
+    };
+  });
+
+  return {
+    nodes,
+    edges,
+    adjacencyList,
+  };
 };
