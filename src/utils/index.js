@@ -135,7 +135,7 @@ export const layoutTreeStructureToRenderState = (
           const clickedColorItem = colorsData.items[clickedTypography.colorId];
           const clickedFontItem = fontsData.items[clickedTypography.fontId];
 
-          interactionStyles.clickedTextStyle = {
+          interactionStyles.clickedStyle = {
             fontSize: clickedTypography.fontSize,
             fontFamily: clickedFontItem.fontFamily,
             fontWeight: clickedTypography.fontWeight,
