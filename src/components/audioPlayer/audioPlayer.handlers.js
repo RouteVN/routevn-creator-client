@@ -3,14 +3,6 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
   return percentage * duration;
 };
 
-const getAudioUrl = async (fileId, httpClient) => {
-  const { url } = await httpClient.creator.getFileContent({
-    fileId,
-    projectId: "someprojectId",
-  });
-  return url;
-};
-
 export const handleBeforeMount = (deps) => {
   const { store, attrs, render, audioManager } = deps;
 
@@ -63,13 +55,16 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, httpClient, render, audioManager } = deps;
+  const { store, attrs, getFileContent, render, audioManager } = deps;
   const { fileId, autoPlay } = attrs;
   try {
     store.setLoading(true);
     render();
 
-    const url = await getAudioUrl(fileId, httpClient);
+    const { url } = await getFileContent({
+      fileId,
+      projectId: "someprojectId",
+    });
     await audioManager.loadAudio(url);
 
     if (autoPlay) {
@@ -84,7 +79,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleOnUpdate = async (changes, deps) => {
   const { oldProps } = changes;
-  const { store, attrs, httpClient, render, audioManager } = deps;
+  const { store, attrs, getFileContent, render, audioManager } = deps;
   const { fileId, autoPlay } = attrs;
 
   if (oldProps.fileId === fileId) {
@@ -97,7 +92,10 @@ export const handleOnUpdate = async (changes, deps) => {
 
     audioManager.stop();
 
-    const url = await getAudioUrl(fileId, httpClient);
+    const { url } = await getFileContent({
+      fileId,
+      projectId: "someprojectId",
+    });
     await audioManager.loadAudio(url);
 
     if (autoPlay) {

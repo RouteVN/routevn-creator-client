@@ -17,14 +17,14 @@ export const handleDataChanged = (e, deps) => {
 };
 
 export const handleVideoItemClick = async (e, deps) => {
-  const { store, render, httpClient } = deps;
+  const { store, render, getFileContent } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
   if (selectedItem && selectedItem.thumbnailFileId) {
-    const { url } = await httpClient.creator.getFileContent({
+    const { url } = await getFileContent({
       fileId: selectedItem.thumbnailFileId,
       projectId: "someprojectId",
     });

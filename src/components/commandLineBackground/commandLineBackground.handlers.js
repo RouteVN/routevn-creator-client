@@ -26,7 +26,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { httpClient, store, render } = deps;
+  const { getFileContent, store, render } = deps;
   const selectedResource = store.selectSelectedResource();
 
   if (!selectedResource) {
@@ -34,7 +34,7 @@ export const handleAfterMount = async (deps) => {
   }
 
   if (selectedResource.resourceType === "image" && selectedResource.fileId) {
-    const { url } = await httpClient.creator.getFileContent({
+    const { url } = await getFileContent({
       fileId: selectedResource.fileId,
       projectId: "someprojectId",
     });
@@ -53,7 +53,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleImageSelected = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
+  const { store, render, getFileContent, repository } = deps;
   const { images } = repository.getState();
 
   const { imageId } = e.detail;
@@ -68,7 +68,7 @@ export const handleImageSelected = async (e, deps) => {
   const flatImageItems = toFlatItems(images);
   const existingImage = flatImageItems.find((item) => item.id === imageId);
 
-  const { url } = await httpClient.creator.getFileContent({
+  const { url } = await getFileContent({
     fileId: existingImage.fileId,
     projectId: "someprojectId",
   });

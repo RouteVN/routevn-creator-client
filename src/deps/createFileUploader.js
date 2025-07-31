@@ -498,3 +498,13 @@ export const createFontFileUploader = ({ httpClient, fontManager }) => {
     return successfulUploads;
   };
 };
+
+export const createGetFileContent = ({ httpClient }) => {
+  return async ({ fileId, projectId }) => {
+    const result = await httpClient.creator.getFileContent({
+      fileId,
+      projectId,
+    });
+    return result;
+  };
+};
