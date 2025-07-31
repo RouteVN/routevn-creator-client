@@ -200,6 +200,14 @@ export const selectLayoutId = ({ state }) => {
   return state.layoutId;
 };
 
+export const selectCurrentLayoutType = ({ state }, { repository }) => {
+  if (!state.layoutId) return null;
+  const { layouts } = repository.getState();
+  const flatItems = toFlatItems(layouts);
+  const currentLayout = flatItems.find((item) => item.id === state.layoutId);
+  return currentLayout?.layoutType || null;
+};
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.layoutData);

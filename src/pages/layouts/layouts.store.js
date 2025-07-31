@@ -4,6 +4,11 @@ const form = {
   fields: [
     { name: "name", inputType: "popover-input", description: "Name" },
     { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
+    {
+      name: "layoutTypeDisplay",
+      inputType: "read-only-text",
+      description: "Layout Type",
+    },
     { name: "fullPath", inputType: "read-only-text", description: "Path" },
   ],
 };
@@ -47,9 +52,15 @@ export const toViewData = ({ state, props }, payload) => {
   let defaultValues = {};
 
   if (selectedItem) {
+    const layoutTypeLabel = selectedItem.layoutType
+      ? selectedItem.layoutType.charAt(0).toUpperCase() +
+        selectedItem.layoutType.slice(1)
+      : "";
+
     defaultValues = {
       name: selectedItem.name,
       typeDisplay: selectedItem.type === "layout" ? "Layout" : "Folder",
+      layoutTypeDisplay: layoutTypeLabel,
       fullPath: selectedItem.fullLabel || selectedItem.name || "",
     };
   }
