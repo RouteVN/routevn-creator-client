@@ -177,6 +177,7 @@ export const handleBeforeMount = (deps) => {
   const { layouts, images, typography, colors, fonts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setLayoutId(layoutId);
+  store.setLayoutType(layout.layoutType);
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
   store.setTypographyData(typography || { items: {}, tree: [] });
