@@ -393,6 +393,7 @@ export const toViewData = ({ state, props }, payload) => {
       null,
       2,
     ),
+    isActionsDialogOpen: state.mode !== "lines-editor",
   };
 };
 

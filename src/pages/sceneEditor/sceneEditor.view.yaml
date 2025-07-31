@@ -34,14 +34,6 @@ refs:
         handler: handleOpenCommandLine
       contextmenu:
         handler: handlePresentationActionRightClick
-  actions-overlay:
-    eventListeners:
-      click:
-        handler: handleActionsOverlayClick
-  actions-container:
-    eventListeners:
-      click:
-        handler: handleActionsContainerClick
   section-tab-*:
     eventListeners:
       click:
@@ -82,6 +74,10 @@ refs:
     eventListeners:
       click:
         handler: handleToggleSectionsGraphView
+  actions-dialog:
+    eventListeners:
+      close:
+        handler: handleActionsDialogClose
 
 template:
   - rtgl-view w=f h=f:
@@ -169,29 +165,28 @@ template:
                                       - $for choice in item.data.choicesData.choices:
                                           - rtgl-text s=xs c=mu-fg: "• ${choice.text}"
                       - rtgl-button#add-presentation-button w=f v=ol: Add Action
-  - $if mode != "lines-editor":
-      - rtgl-view#actions-overlay pos=abs cor=full ah=c av=c:
-          - rtgl-view#actions-container w=800 h=80vh bgc=mu p=m:
-              - $if mode == "actions":
-                  - rvn-command-line-actions#command-line-actions:
-                $elif mode == "dialoguebox":
-                  - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .line=selectedLine:
-                $elif mode == "choices":
-                  - rvn-command-line-choices#command-line-choices .layouts=layouts .line=selectedLine:
-                $elif mode == "background":
-                  - rvn-command-line-background#command-line-background data-mode="background" .line=selectedLine:
-                $elif mode == "bgm":
-                  - rvn-command-line-bgm#command-line-bgm .line=selectedLine:
-                $elif mode == "sfx":
-                  - rvn-command-line-sound-effects#command-line-sound-effects .line=selectedLine:
-                $elif mode == "characters":
-                  - rvn-command-line-characters#command-line-characters .line=selectedLine:
-                $elif mode == "sceneTransition":
-                  - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections:
-                $elif mode == "controls":
-                  - rvn-command-line-controls#command-line-controls .line=selectedLine:
-                $elif mode == "conditional":
-                  - rvn-command-line-conditional#command-line-conditional:
+  - rtgl-dialog#actions-dialog ?open=${isActionsDialogOpen}:
+      - rtgl-view slot=content w=800 h=80vh:
+          - $if mode == "actions":
+              - rvn-command-line-actions#command-line-actions:
+            $elif mode == "dialoguebox":
+              - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .line=selectedLine:
+            $elif mode == "choices":
+              - rvn-command-line-choices#command-line-choices .layouts=layouts .line=selectedLine:
+            $elif mode == "background":
+              - rvn-command-line-background#command-line-background data-mode="background" .line=selectedLine:
+            $elif mode == "bgm":
+              - rvn-command-line-bgm#command-line-bgm .line=selectedLine:
+            $elif mode == "sfx":
+              - rvn-command-line-sound-effects#command-line-sound-effects .line=selectedLine:
+            $elif mode == "characters":
+              - rvn-command-line-characters#command-line-characters .line=selectedLine:
+            $elif mode == "sceneTransition":
+              - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections:
+            $elif mode == "controls":
+              - rvn-command-line-controls#command-line-controls .line=selectedLine:
+            $elif mode == "conditional":
+              - rvn-command-line-conditional#command-line-conditional:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:
