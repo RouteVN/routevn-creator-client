@@ -15,7 +15,11 @@ import {
   createDownloadWaveformData,
   createGetFileContent,
 } from "./deps/createFileUploader";
-import { createFontManager, loadFontFile, loadFontsFromAssetBuffer } from "./deps/fontManager";
+import {
+  createFontManager,
+  loadFontFile,
+  loadFontsFromAssetBuffer,
+} from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 

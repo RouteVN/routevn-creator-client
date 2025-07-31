@@ -66,19 +66,26 @@ export const loadFontsFromAssetBuffer = ({ fontManager }) => {
       try {
         const bufferKey = `file:${fontItem.fileId}`;
         const bufferData = bufferMap[bufferKey];
-        
+
         if (bufferData) {
           // Extract ArrayBuffer from the buffer data object
           const arrayBuffer = bufferData.buffer || bufferData;
-          
+
           if (arrayBuffer instanceof ArrayBuffer) {
-            await fontManager.loadFontFromArrayBuffer(fontItem.fontFamily, arrayBuffer);
+            await fontManager.loadFontFromArrayBuffer(
+              fontItem.fontFamily,
+              arrayBuffer,
+            );
             results.push({
               success: true,
               fontItem,
             });
           } else {
-            console.error(`Invalid buffer type for font ${fontItem.name}:`, typeof arrayBuffer, arrayBuffer);
+            console.error(
+              `Invalid buffer type for font ${fontItem.name}:`,
+              typeof arrayBuffer,
+              arrayBuffer,
+            );
             results.push({ success: false, error: "Invalid buffer type" });
           }
         } else {

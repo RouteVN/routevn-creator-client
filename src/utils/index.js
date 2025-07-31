@@ -51,12 +51,15 @@ export const extractFileIdsFromRenderState = (obj) => {
 
 export const extractFontFileIds = (layout, typographyData, fontsData) => {
   const fontFileIds = new Set();
-  
+
   const extractFromLayout = (elements) => {
-    elements.forEach(element => {
-      if (element.type === 'text') {
+    elements.forEach((element) => {
+      if (element.type === "text") {
         // Check main typography
-        if (element.typographyId && typographyData.items[element.typographyId]) {
+        if (
+          element.typographyId &&
+          typographyData.items[element.typographyId]
+        ) {
           const typography = typographyData.items[element.typographyId];
           if (typography.fontId && fontsData.items[typography.fontId]) {
             const font = fontsData.items[typography.fontId];
@@ -65,22 +68,36 @@ export const extractFontFileIds = (layout, typographyData, fontsData) => {
             }
           }
         }
-        
+
         // Check hover typography
-        if (element.hoverTypographyId && typographyData.items[element.hoverTypographyId]) {
-          const hoverTypography = typographyData.items[element.hoverTypographyId];
-          if (hoverTypography.fontId && fontsData.items[hoverTypography.fontId]) {
+        if (
+          element.hoverTypographyId &&
+          typographyData.items[element.hoverTypographyId]
+        ) {
+          const hoverTypography =
+            typographyData.items[element.hoverTypographyId];
+          if (
+            hoverTypography.fontId &&
+            fontsData.items[hoverTypography.fontId]
+          ) {
             const hoverFont = fontsData.items[hoverTypography.fontId];
             if (hoverFont.fileId) {
               fontFileIds.add(hoverFont.fileId);
             }
           }
         }
-        
+
         // Check clicked typography
-        if (element.clickedTypographyId && typographyData.items[element.clickedTypographyId]) {
-          const clickedTypography = typographyData.items[element.clickedTypographyId];
-          if (clickedTypography.fontId && fontsData.items[clickedTypography.fontId]) {
+        if (
+          element.clickedTypographyId &&
+          typographyData.items[element.clickedTypographyId]
+        ) {
+          const clickedTypography =
+            typographyData.items[element.clickedTypographyId];
+          if (
+            clickedTypography.fontId &&
+            fontsData.items[clickedTypography.fontId]
+          ) {
             const clickedFont = fontsData.items[clickedTypography.fontId];
             if (clickedFont.fileId) {
               fontFileIds.add(clickedFont.fileId);
@@ -88,14 +105,14 @@ export const extractFontFileIds = (layout, typographyData, fontsData) => {
           }
         }
       }
-      
+
       // Recursively check children
       if (element.children && element.children.length > 0) {
         extractFromLayout(element.children);
       }
     });
   };
-  
+
   extractFromLayout(layout);
   return Array.from(fontFileIds);
 };

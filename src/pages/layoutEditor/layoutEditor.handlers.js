@@ -5,7 +5,6 @@ import {
   layoutTreeStructureToRenderState,
 } from "../../utils/index.js";
 
-
 const renderLayoutPreview = async (deps) => {
   const { store, repository, render, drenderer, getFileContent } = deps;
   const layoutId = store.selectLayoutId();
@@ -48,7 +47,11 @@ const renderLayoutPreview = async (deps) => {
 
   // Extract both image and font file IDs
   const imageFileIds = extractFileIdsFromRenderState(renderStateElements);
-  const fontFileIds = extractFontFileIds(layoutTreeStructure, { items: typographyItems }, { items: fontsItems });
+  const fontFileIds = extractFontFileIds(
+    layoutTreeStructure,
+    { items: typographyItems },
+    { items: fontsItems },
+  );
   const allFileIds = [...new Set([...imageFileIds, ...fontFileIds])];
 
   const assets = {};
@@ -58,28 +61,30 @@ const renderLayoutPreview = async (deps) => {
       fileId: fileId,
       projectId: "someprojectId",
     });
-    
+
     // Determine file type
     let type = "image/png"; // default for images
-    
+
     // Check if this is a font file
     const isFontFile = fontFileIds.includes(fileId);
     if (isFontFile) {
       // Try to determine font type from font data
-      const fontItem = Object.values(fontsItems).find(font => font.fileId === fileId);
+      const fontItem = Object.values(fontsItems).find(
+        (font) => font.fileId === fileId,
+      );
       if (fontItem) {
         // Common font MIME types
-        const fileName = fontItem.name || '';
-        if (fileName.endsWith('.woff2')) type = 'font/woff2';
-        else if (fileName.endsWith('.woff')) type = 'font/woff';
-        else if (fileName.endsWith('.ttf')) type = 'font/ttf';
-        else if (fileName.endsWith('.otf')) type = 'font/otf';
-        else type = 'font/ttf'; // default font type
+        const fileName = fontItem.name || "";
+        if (fileName.endsWith(".woff2")) type = "font/woff2";
+        else if (fileName.endsWith(".woff")) type = "font/woff";
+        else if (fileName.endsWith(".ttf")) type = "font/ttf";
+        else if (fileName.endsWith(".otf")) type = "font/otf";
+        else type = "font/ttf"; // default font type
       } else {
-        type = 'font/ttf'; // fallback
+        type = "font/ttf"; // fallback
       }
     }
-    
+
     assets[`file:${fileId}`] = {
       url: url,
       type: type,
@@ -93,13 +98,15 @@ const renderLayoutPreview = async (deps) => {
   });
 
   await drenderer.loadAssets(assets);
-  
+
   // Load fonts from asset buffer
   const bufferMap = drenderer.getBufferMap();
-  const fontItems = fontFileIds.map(fileId => 
-    Object.values(fontsItems).find(font => font.fileId === fileId)
-  ).filter(Boolean);
-  
+  const fontItems = fontFileIds
+    .map((fileId) =>
+      Object.values(fontsItems).find((font) => font.fileId === fileId),
+    )
+    .filter(Boolean);
+
   if (fontItems.length > 0) {
     const { loadFontsFromAssetBuffer } = deps;
     await loadFontsFromAssetBuffer(fontItems, bufferMap);
@@ -319,7 +326,6 @@ export const handleFormChange = async (e, deps) => {
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
-
 
   repository.addAction({
     actionType: "treeUpdate",
