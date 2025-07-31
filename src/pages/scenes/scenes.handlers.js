@@ -210,9 +210,7 @@ export const handleSceneFormAction = (e, deps) => {
                 lines: {
                   items: {
                     [stepId]: {
-                      instructions: {
-                        presentationInstructions: {},
-                      },
+                      presentation: {},
                     },
                   },
                   tree: [
