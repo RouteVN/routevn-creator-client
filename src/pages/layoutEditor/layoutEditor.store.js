@@ -89,6 +89,7 @@ export const INITIAL_STATE = Object.freeze({
         name: "New Text",
         x: 0,
         y: 0,
+        contentType: "custom",
         text: "text",
         style: {
           wordWrapWidth: 300,
@@ -150,6 +151,7 @@ export const INITIAL_STATE = Object.freeze({
         name: "New Text",
         x: SCREEN_WIDTH / 2,
         y: SCREEN_HEIGHT / 2,
+        contentType: "custom",
         text: "text",
         style: {
           wordWrapWidth: 300,
@@ -397,9 +399,45 @@ export const toViewData = ({ state, props }, payload) => {
           ...(selectedItem.type === "text"
             ? [
                 {
-                  name: "text",
-                  inputType: "popover-input",
-                  description: "Text Content",
+                  '$if layoutType == "normal"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [{ label: "Custom Content", value: "custom" }],
+                    required: true,
+                  },
+                },
+                {
+                  '$if layoutType == "dialogue"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [
+                      { label: "Custom Content", value: "custom" },
+                      { label: "Dialogue Content", value: "dialogue.content" },
+                      { label: "Character Name", value: "character.name" },
+                    ],
+                    required: true,
+                  },
+                },
+                {
+                  '$if layoutType == "choice"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [
+                      { label: "Custom Content", value: "custom" },
+                      { label: "Choice Content", value: "choice.content" },
+                    ],
+                    required: true,
+                  },
+                },
+                {
+                  '$if contentType == "custom"': {
+                    name: "text",
+                    inputType: "popover-input",
+                    description: "Text Content",
+                  },
                 },
                 {
                   name: "typographyId",
@@ -478,6 +516,7 @@ export const toViewData = ({ state, props }, payload) => {
         rotation: selectedItem.rotation,
         ...(selectedItem.type === "text"
           ? {
+              contentType: selectedItem.contentType,
               text: selectedItem.text,
               typographyId: selectedItem.typographyId ?? "",
               hoverTypographyId: selectedItem.hoverTypographyId ?? "",
@@ -500,6 +539,11 @@ export const toViewData = ({ state, props }, payload) => {
       })
     : {};
 
+  const context = {
+    layoutType: state.layoutType,
+    ...defaultValues,
+  };
+
   return {
     flatItems,
     flatGroups,
@@ -516,6 +560,7 @@ export const toViewData = ({ state, props }, payload) => {
     colorsData: state.colorsData,
     fontsData: state.fontsData,
     form,
+    context,
     defaultValues,
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,
