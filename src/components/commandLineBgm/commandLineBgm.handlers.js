@@ -18,30 +18,24 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, downloadWaveformData } = deps;
+  // No longer needed since we use form slot instead of context
+};
+
+export const handleAudioWaveformClick = (e, deps) => {
+  const { store, render } = deps;
+
+  // When user clicks on waveform, open gallery
   const selectedResource = store.selectSelectedResource();
-
-  if (selectedResource?.item?.waveformDataFileId) {
-    console.log(
-      "After mount - downloading waveform data for:",
-      selectedResource.item.waveformDataFileId,
-    );
-
-    try {
-      const waveformData = await downloadWaveformData({
-        fileId: selectedResource.item.waveformDataFileId,
-      });
-
-      store.setContext({
-        audio: {
-          waveformData,
-        },
-      });
-      render();
-    } catch (error) {
-      console.error("Failed to load waveform data:", error);
-    }
+  if (selectedResource) {
+    store.setTempSelectedResource({
+      resourceId: selectedResource.resourceId,
+    });
   }
+
+  store.setMode({
+    mode: "gallery",
+  });
+  render();
 };
 
 export const handleFormExtra = (e, deps) => {
@@ -75,11 +69,6 @@ export const handleResetClick = (e, deps) => {
     resourceId: undefined,
   });
 
-  store.setContext({
-    audio: {
-      waveformData: undefined,
-    },
-  });
 
   render();
 };
@@ -178,8 +167,8 @@ export const handleBreadcumbActionsClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClick = async (e, deps) => {
-  const { store, render, repository, downloadWaveformData } = deps;
+export const handleButtonSelectClick = (e, deps) => {
+  const { store, render, repository } = deps;
   const { audio } = repository.getState();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
 
@@ -196,19 +185,6 @@ export const handleButtonSelectClick = async (e, deps) => {
       resourceId: tempSelectedResourceId,
     });
 
-    // Download waveform data for the selected audio
-    if (tempSelectedAudio.waveformDataFileId && downloadWaveformData) {
-      const waveformData = await downloadWaveformData({
-        fileId: tempSelectedAudio.waveformDataFileId,
-      });
-
-      // Update context with waveform data
-      store.setContext({
-        audio: {
-          waveformData,
-        },
-      });
-    }
 
     store.setMode({
       mode: "current",

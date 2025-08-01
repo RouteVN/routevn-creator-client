@@ -28,78 +28,75 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, getFileContent } = deps;
-
-  const selectedCharacters = store.selectCharactersWithRepositoryData();
-
-  if (!selectedCharacters.length > 0) {
-    return;
-  }
-
-  const context = {};
-
-  for (const [index, character] of selectedCharacters.entries()) {
-    if (character.spriteFileId && getFileContent) {
-      try {
-        const { url } = await getFileContent({
-          fileId: character.spriteFileId,
-          projectId: "someprojectId",
-        });
-        context[`char[${index}]`] = { src: url };
-      } catch (error) {
-        // Failed to load sprite URL
-      }
-    }
-  }
-
-  store.setContext(context);
-  render();
+  // No longer needed since we use form slot instead of context
 };
 
-export const handleFormExtra = async (e, deps) => {
-  const { store, render } = deps;
-  const { name, trigger } = e.detail;
-
-  // Extract index from field name (e.g., "char[0]" -> 0)
-  const match = name.match(/char\[(\d+)\]/);
-  if (match) {
-    const index = parseInt(match[1]);
-
-    if (trigger === "contextmenu") {
-      // Show context menu for right-click
-      store.showDropdownMenu({
-        position: { x: e.detail.x, y: e.detail.y },
-        characterIndex: index,
-      });
-      render();
-    } else {
-      // Regular click - go to sprite selection
-      store.setSelectedCharacterIndex({ index });
-      store.setMode({ mode: "sprite-select" });
-      render();
-    }
-  }
+export const handleFormExtra = (e, deps) => {
+  // No longer needed since we use direct handlers on slot elements
 };
 
 export const handleFormChange = (e, deps) => {
+  // No longer needed since we use direct select handlers
+};
+
+export const handleCharacterClick = (e, deps) => {
   const { store, render } = deps;
-  const { name, fieldValue } = e.detail;
+  const id = e.currentTarget.id;
+  
+  // Extract character index from ID (format: character-{id}-{index})
+  const parts = id.split('-');
+  const index = parseInt(parts[parts.length - 1]);
 
-  // Handle transform field changes
-  const transformMatch = name.match(/char\[(\d+)\]\.transform/);
-  if (transformMatch) {
-    const index = parseInt(transformMatch[1]);
-    store.updateCharacterTransform({ index, transform: fieldValue });
-    render();
-  }
+  // Set the character index for sprite selection
+  store.setSelectedCharacterIndex({ index });
 
-  // Handle animation field changes
-  const animationMatch = name.match(/char\[(\d+)\]\.animation/);
-  if (animationMatch) {
-    const index = parseInt(animationMatch[1]);
-    store.updateCharacterAnimation({ index, animation: fieldValue });
-    render();
-  }
+  // Go to sprite selection mode
+  store.setMode({
+    mode: "sprite-select",
+  });
+
+  render();
+};
+
+export const handleCharacterContextMenu = (e, deps) => {
+  e.preventDefault();
+  const { store, render } = deps;
+  const id = e.currentTarget.id;
+  
+  // Extract character index from ID (format: character-{id}-{index})
+  const parts = id.split('-');
+  const index = parseInt(parts[parts.length - 1]);
+
+  store.showDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    characterIndex: index,
+  });
+
+  render();
+};
+
+export const handleTransformChange = (e, deps) => {
+  const { store, render } = deps;
+  const id = e.currentTarget.id;
+  const value = e.currentTarget.value;
+  
+  // Extract index from ID (format: transform-{index})
+  const index = parseInt(id.replace("transform-", ""));
+
+  store.updateCharacterTransform({ index, transform: value });
+  render();
+};
+
+export const handleAnimationChange = (e, deps) => {
+  const { store, render } = deps;
+  const id = e.currentTarget.id;
+  const value = e.currentTarget.value;
+  
+  // Extract index from ID (format: animation-{index})
+  const index = parseInt(id.replace("animation-", ""));
+
+  store.updateCharacterAnimation({ index, animation: value });
+  render();
 };
 
 export const handleCharacterItemClick = (e, deps) => {
@@ -224,8 +221,8 @@ export const handleSpriteItemClick = (e, deps) => {
   render();
 };
 
-export const handleButtonSelectClick = async (e, deps) => {
-  const { store, render, getFileContent } = deps;
+export const handleButtonSelectClick = (e, deps) => {
+  const { store, render } = deps;
   const mode = store.selectMode();
   const selectedCharacters = store.selectCharactersWithRepositoryData();
   const selectedCharacterIndex = store.selectSelectedCharacterIndex();
@@ -245,25 +242,6 @@ export const handleButtonSelectClick = async (e, deps) => {
           spriteFileId: tempSelectedSprite.fileId || tempSelectedSprite.imageId,
         });
 
-        // Get URL for the sprite and update form field resources
-        if (tempSelectedSprite.fileId && getFileContent) {
-          try {
-            const { url } = await getFileContent({
-              fileId: tempSelectedSprite.fileId,
-              projectId: "someprojectId",
-            });
-
-            const currentContext = store.selectContext() || {};
-            const newContext = {
-              ...currentContext,
-              [`char[${selectedCharacterIndex}]`]: { src: url },
-            };
-
-            store.setContext(newContext);
-          } catch (error) {
-            // Failed to load sprite URL
-          }
-        }
       }
     }
 

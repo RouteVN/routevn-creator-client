@@ -38,4 +38,4 @@ refs:
     selector: canvas
 
 template:
-  - rtgl-waveform  .waveformData=waveformData w=${w} h=${h}:
+  - rtgl-waveform .waveformData=waveformData w=${w} h=${h}:

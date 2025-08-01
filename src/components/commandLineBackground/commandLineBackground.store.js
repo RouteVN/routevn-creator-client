@@ -18,13 +18,9 @@ const tabs = [
 const form = {
   fields: [
     {
-      name: "background",
-      label: "Background",
-      required: true,
-      inputType: "image",
-      src: "${background.src}",
-      width: 355,
-      height: 200,
+      inputType: "slot",
+      slot: "background",
+      description: "Background",
     },
     {
       name: "animation",
@@ -45,20 +41,12 @@ export const INITIAL_STATE = Object.freeze({
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
-  context: {
-    background: {
-      src: undefined,
-    },
-  },
 });
 
 export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-export const setContext = (state, payload) => {
-  state.context = payload;
-};
 
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
@@ -179,10 +167,9 @@ export const toViewData = ({ state }) => {
     dialogueForm: {
       form,
       defaultValues: {
-        background: "",
+        backgroundFileId: selectedResource?.fileId || "",
         animation: "",
       },
     },
-    context: state.context,
   };
 };

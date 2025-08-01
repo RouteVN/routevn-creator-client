@@ -81,16 +81,24 @@ export const handleAddNewClick = (e, deps) => {
   e.stopPropagation();
   const { store, render } = deps;
 
-  store.addSoundEffect({
-    id: nanoid(),
+  // Create a new sound effect but don't add it to the store yet
+  const newId = nanoid();
+  
+  // Set it as currently editing and go to gallery mode
+  store.setCurrentEditingId({
+    id: newId,
   });
+  store.setMode({
+    mode: "gallery",
+  });
+  
   render();
 };
 
-export const handleSoundEffectItemClick = (e, deps) => {
+export const handleSoundEffectClick = (e, deps) => {
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("sound-effect-item-", "");
+  const id = e.currentTarget.id.replace("sound-effect-", "");
 
   store.setCurrentEditingId({
     id: id,
@@ -102,18 +110,21 @@ export const handleSoundEffectItemClick = (e, deps) => {
   render();
 };
 
-export const handleDeleteClick = (e, deps) => {
-  e.stopPropagation();
+export const handleSoundEffectContextMenu = (e, deps) => {
+  e.preventDefault();
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("delete-button-", "");
+  const id = e.currentTarget.id.replace("sound-effect-", "");
+  const rect = e.currentTarget.getBoundingClientRect();
 
-  store.deleteSoundEffect({
-    id: id,
+  store.showDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    soundEffectId: id,
   });
 
   render();
 };
+
 
 export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
@@ -165,8 +176,33 @@ export const handleBreadcumbClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClick = async (e, deps) => {
-  const { store, render, repository, downloadWaveformData } = deps;
+export const handleDropdownMenuClose = (e, deps) => {
+  const { store, render } = deps;
+  store.hideDropdownMenu();
+  render();
+};
+
+export const handleDropdownMenuClickItem = (e, deps) => {
+  const { store, render } = deps;
+  const { detail } = e;
+
+  // Extract the actual item (rtgl-dropdown-menu wraps it)
+  const item = detail.item || detail;
+  const soundEffectId = store.selectDropdownMenuSoundEffectId();
+
+  store.hideDropdownMenu();
+
+  if (item.value === "delete" && soundEffectId) {
+    store.deleteSoundEffect({
+      id: soundEffectId,
+    });
+  }
+
+  render();
+};
+
+export const handleButtonSelectClick = (e, deps) => {
+  const { store, render, repository } = deps;
 
   const { audio } = repository.getState();
 
@@ -178,33 +214,25 @@ export const handleButtonSelectClick = async (e, deps) => {
   if (tempSelectedAudio) {
     const currentEditingId = store.selectCurrentEditingId();
     const soundEffects = store.selectSoundEffects();
-    const effectIndex = soundEffects.findIndex(
-      (se) => se.id === currentEditingId,
-    );
+    const existingEffect = soundEffects.find((se) => se.id === currentEditingId);
 
-    store.updateSoundEffect({
-      id: currentEditingId,
-      resourceId: tempSelectedResourceId,
-      name: tempSelectedAudio.name,
-    });
-
-    // Download waveform data if available
-    if (effectIndex !== -1) {
-      try {
-        const waveformData = await downloadWaveformData({
-          fileId: tempSelectedAudio.waveformDataFileId,
-        });
-
-        const currentContext = store.selectContext() || {};
-        const newContext = {
-          ...currentContext,
-          [`sfx[${effectIndex}]`]: { waveformData },
-        };
-
-        store.setContext(newContext);
-      } catch (error) {
-        console.error("Failed to load waveform data:", error);
-      }
+    if (existingEffect) {
+      // Update existing sound effect
+      store.updateSoundEffect({
+        id: currentEditingId,
+        resourceId: tempSelectedResourceId,
+        name: tempSelectedAudio.name,
+      });
+    } else {
+      // Create new sound effect (this was triggered by "Add New" button)
+      store.addSoundEffect({
+        id: currentEditingId,
+      });
+      store.updateSoundEffect({
+        id: currentEditingId,
+        resourceId: tempSelectedResourceId,
+        name: tempSelectedAudio.name,
+      });
     }
 
     store.setMode({

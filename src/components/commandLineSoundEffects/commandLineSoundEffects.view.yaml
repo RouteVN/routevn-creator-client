@@ -27,8 +27,22 @@ viewDataSchema:
       type: object
     defaultValues:
       type: object
-    context:
+    dropdownMenu:
       type: object
+      properties:
+        isOpen:
+          type: boolean
+        position:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+        items:
+          type: array
+        soundEffectId:
+          type: string
 
 propsSchema:
   type: object
@@ -57,14 +71,12 @@ refs:
     eventListeners:
       click:
         handler: handleAddNewClick
-  sound-effect-item-*:
+  sound-effect-*:
     eventListeners:
       click:
-        handler: handleSoundEffectItemClick
-  delete-button-*:
-    eventListeners:
-      click:
-        handler: handleDeleteClick
+        handler: handleSoundEffectClick
+      contextmenu:
+        handler: handleSoundEffectContextMenu
   resource-item-*:
     eventListeners:
       click:
@@ -87,6 +99,12 @@ refs:
         handler: handleFormExtra
       form-change:
         handler: handleFormChange
+  dropdown-menu:
+    eventListeners:
+      close:
+        handler: handleDropdownMenuClose
+      click-item:
+        handler: handleDropdownMenuClickItem
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -96,10 +114,13 @@ template:
         - rtgl-text: Sound Effects
 
         # Form for sound effects
-        - rtgl-form#form .form=form .context=context .defaultValues=defaultValues:
-
-        # Add new button
-        - rtgl-button#add-new-button v=ol w=f: + Add New Sound Effect
+        - rtgl-form#form .form=form .defaultValues=defaultValues:
+            - rtgl-view#sound-effects-container slot=sound-effects g=md:
+                - $for soundEffect in defaultValues.soundEffects:
+                    - rtgl-view g=sm:
+                        - rvn-waveform-visualizer#sound-effect-${soundEffect.id} waveformDataFileId=${soundEffect.waveformDataFileId} width=355 height=150 style="cursor: pointer"
+                        - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${soundEffect.name}
+                - rtgl-button#add-new-button v=ol w=f mt=md: + Add New Sound Effect
 
         - rtgl-view flex=1:
         - rtgl-view d=h av=c ah=e w=f g=lg:
@@ -126,3 +147,5 @@ template:
                           - rtgl-text s=sm c=mu-fg: No waveform
         - rtgl-view d=h av=c ah=e w=f g=lg:
           - rtgl-button#button-select: Select
+
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

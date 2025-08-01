@@ -1,4 +1,5 @@
 const CHOICE_FORM_TEMPLATE = Object.freeze({
+  title: 'Edit Choice',
   fields: [
     {
       name: "text",
@@ -60,6 +61,12 @@ export const INITIAL_STATE = Object.freeze({
     sectionId: "",
   },
   choiceFormTemplate: CHOICE_FORM_TEMPLATE,
+  dropdownMenu: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    choiceIndex: null,
+    items: [{ label: "Delete", type: "item", value: "delete" }],
+  },
 });
 
 export const setMode = (state, mode) => {
@@ -152,6 +159,21 @@ export const setSelectedLayoutId = (state, payload) => {
   state.selectedLayoutId = payload.layoutId;
 };
 
+export const showDropdownMenu = (state, { position, choiceIndex }) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.position = position;
+  state.dropdownMenu.choiceIndex = choiceIndex;
+};
+
+export const hideDropdownMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.choiceIndex = null;
+};
+
+export const selectDropdownMenuChoiceIndex = ({ state }) => {
+  return state.dropdownMenu.choiceIndex;
+};
+
 // Selectors
 export const selectMode = ({ state }) => state?.mode || "list";
 export const selectEditingIndex = ({ state }) => state?.editingIndex || -1;
@@ -166,6 +188,23 @@ export const selectEditForm = ({ state }) =>
 export const selectChoices = ({ state }) => state?.choices || [];
 export const selectSelectedLayoutId = ({ state }) =>
   state?.selectedLayoutId || "";
+
+const form = {
+  fields: [
+    {
+      name: "layoutId",
+      inputType: "select",
+      label: "Choices Layout",
+      required: false,
+      options: '${layoutOptions}',
+    },
+    {
+      inputType: "slot",
+      slot: "choices",
+      description: "Choices",
+    },
+  ],
+};
 
 export const toViewData = ({ state, props }, payload) => {
   console.log("[toViewData] Called with state:", state, "props:", props);
@@ -218,13 +257,21 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
-  // Create clean defaultValues object for the form
+  // Create context for form template
+  const context = {
+    layoutOptions: layoutOptions,
+  };
+
+
+  // Create defaultValues with choices data
   const defaultValues = {
-    // text: state?.editForm?.text || "",
-    // variables: state?.editForm?.variables || "",
-    // actionType: state?.editForm?.actionType || "continue",
-    // sceneId: state?.editForm?.sceneId || "",
-    // sectionId: state?.editForm?.sectionId || "",
+    layoutId: state?.selectedLayoutId || "",
+    choices: processedChoices,
+    text: state?.editForm?.text || "",
+    variables: state?.editForm?.variables || "",
+    actionType: state?.editForm?.actionType || "continue",
+    sceneId: state?.editForm?.sceneId || "",
+    sectionId: state?.editForm?.sectionId || "",
   };
 
   const viewData = {
@@ -245,6 +292,9 @@ export const toViewData = ({ state, props }, payload) => {
     editModeTitle,
     breadcrumb,
     choiceFormTemplate: CHOICE_FORM_TEMPLATE,
+    form,
+    context,
+    dropdownMenu: state.dropdownMenu,
   };
 
   console.log("[toViewData] Returning view data:", viewData);

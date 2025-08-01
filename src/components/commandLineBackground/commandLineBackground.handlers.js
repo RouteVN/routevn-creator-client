@@ -26,30 +26,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { getFileContent, store, render } = deps;
-  const selectedResource = store.selectSelectedResource();
-
-  if (!selectedResource) {
-    return;
-  }
-
-  if (selectedResource.resourceType === "image" && selectedResource.fileId) {
-    const { url } = await getFileContent({
-      fileId: selectedResource.fileId,
-      projectId: "someprojectId",
-    });
-
-    store.setContext({
-      background: {
-        src: url,
-      },
-    });
-    render();
-  } else if (selectedResource.resourceType === "layout") {
-    // TODO: Implement layout resource preview loading
-  } else if (selectedResource.resourceType === "video") {
-    // TODO: Implement video resource preview loading
-  }
+  // No longer needed since we use form slot instead of context
 };
 
 export const handleImageSelected = async (e, deps) => {
@@ -73,11 +50,6 @@ export const handleImageSelected = async (e, deps) => {
     projectId: "someprojectId",
   });
 
-  store.setContext({
-    background: {
-      src: url,
-    },
-  });
   render();
 };
 
@@ -132,7 +104,7 @@ export const handleSubmitClick = (e, deps) => {
   );
 };
 
-export const handleBackgroundSelectorClick = (payload, deps) => {
+export const handleBackgroundImageClick = (payload, deps) => {
   const { store, render } = deps;
   const selectedResource = store.selectSelectedResource();
 
@@ -196,6 +168,7 @@ export const handleButtonSelectClick = (e, deps) => {
     resourceType: tempSelectedResourceType,
     fileId: fileId,
   });
+
 
   store.setMode({
     mode: "current",
