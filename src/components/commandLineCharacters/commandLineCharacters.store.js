@@ -19,7 +19,6 @@ export const INITIAL_STATE = Object.freeze({
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
-  context: {},
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -122,10 +121,6 @@ export const selectTempSelectedSpriteId = ({ state }) => {
   return state.tempSelectedSpriteId;
 };
 
-export const setContext = (state, context) => {
-  state.context = context;
-};
-
 export const showDropdownMenu = (state, { position, characterIndex }) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
@@ -151,10 +146,6 @@ export const selectMode = ({ state }) => {
 
 export const selectSelectedCharacterIndex = ({ state }) => {
   return state.selectedCharacterIndex;
-};
-
-export const selectContext = ({ state }) => {
-  return state.context;
 };
 
 export const setExistingCharacters = (state, payload) => {
@@ -207,53 +198,14 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
   });
 };
 
-const createCharactersForm = (params) => {
-  const { characters, transformOptions, animationOptions } = params;
-
-  // Guard against invalid input
-  if (
-    !characters ||
-    !Array.isArray(characters) ||
-    !transformOptions ||
-    !animationOptions
-  ) {
-    return { fields: [] };
-  }
-
-  const fields = [];
-
-  // Create form fields for each character
-  characters.forEach((character, index) => {
-    // Character sprite image field - use template syntax for context
-    fields.push({
-      name: `char[${index}]`,
-      label: `Character ${index + 1} - ${character.displayName || character.name || "Character"}`,
-      inputType: "image",
-      src: `\${char[${index}].src}`,
-      width: 200,
-      height: 200,
-    });
-
-    // Transform field
-    fields.push({
-      name: `char[${index}].transform`,
-      label: `Transform (Placement)`,
-      inputType: "select",
-      options: transformOptions,
-    });
-
-    // Animation field
-    fields.push({
-      name: `char[${index}].animation`,
-      label: `Animation`,
-      inputType: "select",
-      options: animationOptions,
-    });
-  });
-
-  return {
-    fields,
-  };
+const form = {
+  fields: [
+    {
+      inputType: "slot",
+      slot: "characters",
+      description: "Characters",
+    },
+  ],
 };
 
 export const toViewData = ({ state, props }, payload) => {
@@ -369,25 +321,12 @@ export const toViewData = ({ state, props }, payload) => {
     });
   }
 
-  // Create form configuration only for current mode
-  let form = { fields: [] };
-  let defaultValues = {};
-
-  if (state.mode === "current") {
-    form = createCharactersForm({
-      characters: processedSelectedCharacters,
-      transformOptions,
-      animationOptions,
-    });
-
-    // Create default values for form
-    processedSelectedCharacters.forEach((character, index) => {
-      defaultValues[`char[${index}]`] = character.spriteFileId || "";
-      defaultValues[`char[${index}].transform`] =
-        character.transform || transformOptions[0]?.value || "";
-      defaultValues[`char[${index}].animation`] = character.animation || "none";
-    });
-  }
+  // Create default values with character data and options
+  const defaultValues = {
+    characters: processedSelectedCharacters,
+    transformOptions,
+    animationOptions,
+  };
 
   return {
     mode: state.mode,
@@ -402,7 +341,6 @@ export const toViewData = ({ state, props }, payload) => {
     breadcrumb,
     form,
     defaultValues,
-    context: state.context,
     dropdownMenu: state.dropdownMenu,
   };
 };

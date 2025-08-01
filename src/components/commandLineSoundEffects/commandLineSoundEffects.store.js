@@ -15,31 +15,27 @@ export const INITIAL_STATE = Object.freeze({
   soundEffects: [],
   currentEditingId: null, // ID of sound effect being edited
   tempSelectedResourceId: undefined,
-  context: {},
+  // Dropdown menu state
+  dropdownMenu: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    soundEffectId: null,
+  },
 });
 
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
 };
 
-const createSoundEffectsForm = (soundEffects) => {
-  const fields = [];
-
-  // Create waveform fields for each sound effect
-  soundEffects.forEach((effect, index) => {
-    fields.push({
-      name: `sfx[${index}]`,
-      label: effect.name || `Sound Effect ${index + 1}`,
-      inputType: "waveform",
-      waveformData: "${sfx[" + index + "].waveformData}",
-      width: 355,
-      height: 150,
-    });
-  });
-
-  return {
-    fields,
-  };
+const form = {
+  fields: [
+    {
+      inputType: "slot",
+      slot: "sound-effects",
+      description: "Sound Effects",
+    },
+  ],
 };
 
 export const setRepositoryState = (state, payload) => {
@@ -65,10 +61,6 @@ export const setExistingSoundEffects = (state, payload) => {
   state.soundEffects = payload.soundEffects;
 };
 
-export const setContext = (state, context) => {
-  state.context = context;
-};
-
 export const updateSoundEffect = (state, payload) => {
   const index = state.soundEffects.findIndex((se) => se.id === payload.id);
   if (index !== -1) {
@@ -87,6 +79,34 @@ export const setCurrentEditingId = (state, payload) => {
   state.currentEditingId = payload.id;
 };
 
+export const showDropdownMenu = (state, { position, soundEffectId }) => {
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    soundEffectId,
+    items: [
+      {
+        label: "Delete",
+        type: "item",
+        value: "delete",
+      },
+    ],
+  };
+};
+
+export const hideDropdownMenu = (state) => {
+  state.dropdownMenu = {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+    soundEffectId: null,
+  };
+};
+
+export const selectDropdownMenuSoundEffectId = ({ state }) => {
+  return state.dropdownMenu.soundEffectId;
+};
+
 export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
@@ -101,10 +121,6 @@ export const selectSoundEffects = ({ state }) => {
 
 export const selectCurrentEditingId = ({ state }) => {
   return state.currentEditingId;
-};
-
-export const selectContext = ({ state }) => {
-  return state.context;
 };
 
 export const selectSoundEffectsWithAudioData = ({ state }) => {
@@ -168,19 +184,10 @@ export const toViewData = ({ state, props }) => {
   const breadcrumb = selectBreadcrumb({ state });
   const soundEffectsWithAudioData = selectSoundEffectsWithAudioData({ state });
 
-  // Create form configuration
-  const form = createSoundEffectsForm(soundEffectsWithAudioData);
-
-  // Create default values for form
-  const defaultValues = {};
-  soundEffectsWithAudioData.forEach((effect, index) => {
-    // Get fileId from the audio item if we have resourceId
-    const audioItem = effect.resourceId
-      ? toFlatItems(state.items).find((item) => item.id === effect.resourceId)
-      : null;
-
-    defaultValues[`sfx[${index}]`] = audioItem?.fileId || "";
-  });
+  // Create default values with sound effects data
+  const defaultValues = {
+    soundEffects: soundEffectsWithAudioData,
+  };
 
   return {
     mode: state.mode,
@@ -191,6 +198,6 @@ export const toViewData = ({ state, props }) => {
     breadcrumb,
     form,
     defaultValues,
-    context: state.context,
+    dropdownMenu: state.dropdownMenu,
   };
 };

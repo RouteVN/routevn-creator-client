@@ -4,13 +4,9 @@ import { formatFileSize } from "../../utils/index.js";
 const form = {
   fields: [
     {
-      name: "audio",
-      label: "Background Music",
-      required: true,
-      inputType: "waveform",
-      waveformData: "${audio.waveformData}",
-      width: 355,
-      height: 200,
+      inputType: "slot",
+      slot: "audio",
+      description: "Background Music",
     },
     {
       name: "loopType",
@@ -31,11 +27,6 @@ export const INITIAL_STATE = Object.freeze({
   items: [],
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
-  context: {
-    audio: {
-      waveformData: undefined,
-    },
-  },
 });
 
 export const setMode = (state, payload) => {
@@ -56,10 +47,6 @@ export const setSelectedResource = (state, payload) => {
 
 export const setTempSelectedResource = (state, payload) => {
   state.tempSelectedResourceId = payload.resourceId;
-};
-
-export const setContext = (state, context) => {
-  state.context = context;
 };
 
 export const selectSelectedResource = ({ state }) => {
@@ -139,7 +126,7 @@ export const toViewData = ({ state, props }) => {
   ];
 
   const defaultValues = {
-    audio: selectedResource?.fileId,
+    audioWaveformDataFileId: selectedResource?.item?.waveformDataFileId || "",
     loopType: props?.line?.presentation?.bgm?.loopType || "none",
   };
 
@@ -152,6 +139,5 @@ export const toViewData = ({ state, props }) => {
     breadcrumb,
     form,
     defaultValues,
-    context: state.context,
   };
 };

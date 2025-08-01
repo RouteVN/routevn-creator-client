@@ -45,14 +45,6 @@ viewDataSchema:
               type: string
             animation:
               type: string
-    context:
-      type: object
-      properties:
-        background:
-          type: object
-          properties:
-            src:
-              type: string
 
 propsSchema:
   type: object
@@ -101,13 +93,18 @@ refs:
     eventListeners:
       extra-event:
         handler: handleFormExtra
+  background-image:
+    eventListeners:
+      click:
+        handler: handleBackgroundImageClick
 
 template:
   - rtgl-view w=f h=f p=lg:
     - rtgl-view d=h g=md:
     - rtgl-breadcrumb#breadcumb .items=breadcrumb:
     - $if mode == 'current':
-      - rtgl-form#form .form=dialogueForm.form .context=context:
+      - rtgl-form#form .form=dialogueForm.form .defaultValues=dialogueForm.defaultValues:
+        - rvn-file-image#background-image fileId=${dialogueForm.defaultValues.backgroundFileId} w=355 h=200 slot=background cur=p:
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
         - rtgl-button#reset-button v=ol: Reset

@@ -39,14 +39,6 @@ viewDataSchema:
           type: string
         loopType:
           type: string
-    context:
-      type: object
-      properties:
-        audio:
-          type: object
-          properties:
-            waveformData:
-              type: string
 
 propsSchema:
   type: object
@@ -99,15 +91,20 @@ refs:
     eventListeners:
       click:
         handler: handleButtonSelectClick
+  audio-waveform:
+    eventListeners:
+      click:
+        handler: handleAudioWaveformClick
 
 template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-          
-          - rtgl-form#form .form=form .defaultValues=defaultValues .context=context:
-          
+
+          - rtgl-form#form .form=form .defaultValues=defaultValues:
+            - 'rvn-waveform-visualizer#audio-waveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 slot=audio style="cursor: pointer"':
+
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#reset-button v=ol: Reset
