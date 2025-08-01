@@ -399,24 +399,40 @@ export const toViewData = ({ state, props }, payload) => {
           ...(selectedItem.type === "text"
             ? [
                 {
-                  name: "contentType",
-                  inputType: "select",
-                  description: "Content Type",
-                  options: [
-                    { label: "Custom Content", value: "custom" },
-                    ...(state.layoutType === "dialogue"
-                      ? [
-                          {
-                            label: "Dialogue Content",
-                            value: "dialogue.content",
-                          },
-                          { label: "Character Name", value: "character.name" },
-                        ]
-                      : state.layoutType === "choice"
-                        ? [{ label: "Choice Content", value: "choice.content" }]
-                        : []),
-                  ],
-                  required: true,
+                  '$if layoutType == "normal"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [
+                      { label: "Custom Content", value: "custom" },
+                    ],
+                    required: true
+                  }
+                },
+                {
+                  '$if layoutType == "dialogue"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [
+                      { label: "Custom Content", value: "custom" },
+                      { label: "Dialogue Content", value: "dialogue.content" },
+                      { label: "Character Name", value: "character.name" },
+                    ],
+                    required: true,
+                  },
+                },
+                {
+                  '$if layoutType == "choice"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [
+                      { label: "Custom Content", value: "custom" },
+                      { label: "Choice Content", value: "choice.content" },
+                    ],
+                    required: true,
+                  },
                 },
                 {
                   '$if contentType == "custom"': {
