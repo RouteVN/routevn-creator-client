@@ -403,11 +403,9 @@ export const toViewData = ({ state, props }, payload) => {
                     name: "contentType",
                     inputType: "select",
                     description: "Content Type",
-                    options: [
-                      { label: "Custom Content", value: "custom" },
-                    ],
-                    required: true
-                  }
+                    options: [{ label: "Custom Content", value: "custom" }],
+                    required: true,
+                  },
                 },
                 {
                   '$if layoutType == "dialogue"': {
