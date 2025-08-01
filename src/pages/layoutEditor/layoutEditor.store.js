@@ -21,6 +21,21 @@ const flattenObject = (obj, prefix = "") => {
 const SCREEN_WIDTH = 1920;
 const SCREEN_HEIGHT = 1080;
 
+const dialogueForm = {
+  fields: [
+    {
+      name: "character-name",
+      description: "Character Name",
+      inputType: "inputText",
+    },
+    {
+      name: "dialogue-content",
+      description: "Dialogue Content",
+      inputType: "inputText",
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   imageSelectorDialog: {
     isOpen: false,
@@ -43,6 +58,10 @@ export const INITIAL_STATE = Object.freeze({
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
   fieldResources: {},
+  dialogueDefaultValues: {
+    "character-name": "Character R",
+    "dialogue-content": "This is a sample dialogue content.",
+  },
   contextMenuItems: [
     {
       label: "Container",
@@ -203,12 +222,20 @@ export const setFieldResources = (state, resources) => {
   state.fieldResources = resources;
 };
 
+export const setDialogueDefaultValue = (state, { name, fieldValue }) => {
+  state.dialogueDefaultValues[name] = fieldValue;
+};
+
 export const selectLayoutId = ({ state }) => {
   return state.layoutId;
 };
 
 export const selectCurrentLayoutType = ({ state }) => {
   return state.layoutType;
+};
+
+export const selectDialogueDefaultValues = ({ state }) => {
+  return state.dialogueDefaultValues;
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -562,6 +589,9 @@ export const toViewData = ({ state, props }, payload) => {
     form,
     context,
     defaultValues,
+    dialogueForm,
+    dialogueDefaultValues: state.dialogueDefaultValues,
+    layoutType: state.layoutType,
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,
       groups: state.imageSelectorDialog.groups,
