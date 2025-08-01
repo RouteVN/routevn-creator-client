@@ -169,7 +169,6 @@ export const handleButtonSelectClick = (e, deps) => {
     fileId: fileId,
   });
 
-
   store.setMode({
     mode: "current",
   });

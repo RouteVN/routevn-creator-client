@@ -49,7 +49,6 @@ export const setTempSelectedResource = (state, payload) => {
   state.tempSelectedResourceId = payload.resourceId;
 };
 
-
 export const selectSelectedResource = ({ state }) => {
   if (!state.selectedResourceId) {
     return null;

@@ -83,7 +83,7 @@ export const handleAddNewClick = (e, deps) => {
 
   // Create a new sound effect but don't add it to the store yet
   const newId = nanoid();
-  
+
   // Set it as currently editing and go to gallery mode
   store.setCurrentEditingId({
     id: newId,
@@ -91,7 +91,7 @@ export const handleAddNewClick = (e, deps) => {
   store.setMode({
     mode: "gallery",
   });
-  
+
   render();
 };
 
@@ -124,7 +124,6 @@ export const handleSoundEffectContextMenu = (e, deps) => {
 
   render();
 };
-
 
 export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
@@ -214,7 +213,9 @@ export const handleButtonSelectClick = (e, deps) => {
   if (tempSelectedAudio) {
     const currentEditingId = store.selectCurrentEditingId();
     const soundEffects = store.selectSoundEffects();
-    const existingEffect = soundEffects.find((se) => se.id === currentEditingId);
+    const existingEffect = soundEffects.find(
+      (se) => se.id === currentEditingId,
+    );
 
     if (existingEffect) {
       // Update existing sound effect

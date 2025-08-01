@@ -121,7 +121,6 @@ export const selectTempSelectedSpriteId = ({ state }) => {
   return state.tempSelectedSpriteId;
 };
 
-
 export const showDropdownMenu = (state, { position, characterIndex }) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
@@ -148,7 +147,6 @@ export const selectMode = ({ state }) => {
 export const selectSelectedCharacterIndex = ({ state }) => {
   return state.selectedCharacterIndex;
 };
-
 
 export const setExistingCharacters = (state, payload) => {
   state.selectedCharacters = payload.characters;

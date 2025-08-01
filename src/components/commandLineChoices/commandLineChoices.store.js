@@ -1,5 +1,5 @@
 const CHOICE_FORM_TEMPLATE = Object.freeze({
-  title: 'Edit Choice',
+  title: "Edit Choice",
   fields: [
     {
       name: "text",
@@ -196,7 +196,7 @@ const form = {
       inputType: "select",
       label: "Choices Layout",
       required: false,
-      options: '${layoutOptions}',
+      options: "${layoutOptions}",
     },
     {
       inputType: "slot",
@@ -261,7 +261,6 @@ export const toViewData = ({ state, props }, payload) => {
   const context = {
     layoutOptions: layoutOptions,
   };
-
 
   // Create defaultValues with choices data
   const defaultValues = {

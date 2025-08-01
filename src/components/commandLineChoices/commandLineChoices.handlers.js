@@ -42,7 +42,7 @@ export const handleChoiceClick = (e, deps) => {
 export const handleChoiceContextMenu = (e, deps) => {
   e.preventDefault();
   const { store, render } = deps;
-  
+
   const index = parseInt(e.currentTarget.getAttribute("data-index"));
 
   store.showDropdownMenu({

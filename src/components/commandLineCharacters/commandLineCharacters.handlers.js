@@ -42,9 +42,9 @@ export const handleFormChange = (e, deps) => {
 export const handleCharacterClick = (e, deps) => {
   const { store, render } = deps;
   const id = e.currentTarget.id;
-  
+
   // Extract character index from ID (format: character-{id}-{index})
-  const parts = id.split('-');
+  const parts = id.split("-");
   const index = parseInt(parts[parts.length - 1]);
 
   // Set the character index for sprite selection
@@ -62,9 +62,9 @@ export const handleCharacterContextMenu = (e, deps) => {
   e.preventDefault();
   const { store, render } = deps;
   const id = e.currentTarget.id;
-  
+
   // Extract character index from ID (format: character-{id}-{index})
-  const parts = id.split('-');
+  const parts = id.split("-");
   const index = parseInt(parts[parts.length - 1]);
 
   store.showDropdownMenu({
@@ -79,7 +79,7 @@ export const handleTransformChange = (e, deps) => {
   const { store, render } = deps;
   const id = e.currentTarget.id;
   const value = e.currentTarget.value;
-  
+
   // Extract index from ID (format: transform-{index})
   const index = parseInt(id.replace("transform-", ""));
 
@@ -91,7 +91,7 @@ export const handleAnimationChange = (e, deps) => {
   const { store, render } = deps;
   const id = e.currentTarget.id;
   const value = e.currentTarget.value;
-  
+
   // Extract index from ID (format: animation-{index})
   const index = parseInt(id.replace("animation-", ""));
 
@@ -241,7 +241,6 @@ export const handleButtonSelectClick = (e, deps) => {
           spriteId: tempSelectedSpriteId,
           spriteFileId: tempSelectedSprite.fileId || tempSelectedSprite.imageId,
         });
-
       }
     }
 

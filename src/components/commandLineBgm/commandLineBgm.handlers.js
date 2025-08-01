@@ -69,7 +69,6 @@ export const handleResetClick = (e, deps) => {
     resourceId: undefined,
   });
 
-
   render();
 };
 
@@ -184,7 +183,6 @@ export const handleButtonSelectClick = (e, deps) => {
     store.setSelectedResource({
       resourceId: tempSelectedResourceId,
     });
-
 
     store.setMode({
       mode: "current",

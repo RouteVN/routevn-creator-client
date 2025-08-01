@@ -47,7 +47,6 @@ export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
 };

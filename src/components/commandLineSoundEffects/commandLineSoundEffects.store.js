@@ -61,7 +61,6 @@ export const setExistingSoundEffects = (state, payload) => {
   state.soundEffects = payload.soundEffects;
 };
 
-
 export const updateSoundEffect = (state, payload) => {
   const index = state.soundEffects.findIndex((se) => se.id === payload.id);
   if (index !== -1) {
@@ -123,7 +122,6 @@ export const selectSoundEffects = ({ state }) => {
 export const selectCurrentEditingId = ({ state }) => {
   return state.currentEditingId;
 };
-
 
 export const selectSoundEffectsWithAudioData = ({ state }) => {
   const flatAudioItems = toFlatItems(state.items);
