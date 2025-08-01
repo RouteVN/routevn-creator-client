@@ -3,6 +3,7 @@ import {
   extractFileIdsFromRenderState,
   layoutTreeStructureToRenderState,
 } from "../../utils/index.js";
+import { parseAndRender } from "jempl";
 
 const renderLayoutPreview = async (deps) => {
   const { store, repository, render, drenderer, getFileContent } = deps;
@@ -86,14 +87,13 @@ const renderLayoutPreview = async (deps) => {
   }
 
   // Clear the canvas before loading new assets
-  drenderer.render({
-    elements: [],
-    transitions: [],
-  });
+  // drenderer.render({
+  //   elements: [],
+  //   transitions: [],
+  // });
 
   await drenderer.loadAssets(assets);
 
-  // Calculate red dot position if selected
   let elementsToRender = renderStateElements;
 
   if (selectedItem) {
@@ -164,9 +164,16 @@ const renderLayoutPreview = async (deps) => {
     }
   }
 
+  const dialogueDefaultValues = store.selectDialogueDefaultValues();
+  const data = {
+    character: { name: dialogueDefaultValues["character-name"] },
+    dialogue: { content: dialogueDefaultValues["dialogue-content"] },
+  };
+  const finalElements = parseAndRender(elementsToRender, data);
+
   // Render all elements including red dot
   drenderer.render({
-    elements: elementsToRender,
+    elements: finalElements,
     transitions: [],
   });
 };
@@ -307,6 +314,13 @@ export const handleFormChange = async (e, deps) => {
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
+
+  if (e.detail.formValues.contentType === "character.name") {
+    updatedItem.text = "${character.name}";
+  }
+  if (e.detail.formValues.contentType === "dialogue.content") {
+    updatedItem.text = "${dialogue.content}";
+  }
 
   repository.addAction({
     actionType: "treeUpdate",
@@ -533,4 +547,15 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     // Re-render the preview
     await renderLayoutPreview(deps);
   }
+};
+
+export const handleDialogueFormChange = async (e, deps) => {
+  const { store, render } = deps;
+  const { name, fieldValue } = e.detail;
+
+  // Update the dialogue default values in the store
+  store.setDialogueDefaultValue({ name, fieldValue });
+  render();
+
+  await renderLayoutPreview(deps);
 };
