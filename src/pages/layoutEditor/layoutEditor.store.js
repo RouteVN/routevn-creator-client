@@ -399,17 +399,22 @@ export const toViewData = ({ state, props }, payload) => {
           ...(selectedItem.type === "text"
             ? [
                 {
-                  name: 'contentType',
-                  inputType: 'select',
-                  description: 'Content Type',
+                  name: "contentType",
+                  inputType: "select",
+                  description: "Content Type",
                   options: [
-                    { label: 'Custom Content', value: 'custom' },
-                    ...(state.layoutType === 'dialogue' ? [
-                      { label: 'Dialogue Content', value: 'dialogue.content' },
-                      { label: 'Character Name', value: 'character.name' },
-                    ] : state.layoutType === 'choice' ? [
-                      { label: 'Choice Content', value: 'choice.content' },
-                    ] : [])
+                    { label: "Custom Content", value: "custom" },
+                    ...(state.layoutType === "dialogue"
+                      ? [
+                          {
+                            label: "Dialogue Content",
+                            value: "dialogue.content",
+                          },
+                          { label: "Character Name", value: "character.name" },
+                        ]
+                      : state.layoutType === "choice"
+                        ? [{ label: "Choice Content", value: "choice.content" }]
+                        : []),
                   ],
                   required: true,
                 },
@@ -418,7 +423,7 @@ export const toViewData = ({ state, props }, payload) => {
                     name: "text",
                     inputType: "popover-input",
                     description: "Text Content",
-                  }
+                  },
                 },
                 {
                   name: "typographyId",
@@ -523,7 +528,7 @@ export const toViewData = ({ state, props }, payload) => {
   const context = {
     layoutType: state.layoutType,
     ...defaultValues,
-  }
+  };
 
   return {
     flatItems,
