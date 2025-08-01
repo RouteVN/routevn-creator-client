@@ -34,10 +34,12 @@ refs:
     eventListeners:
       click:
         handler: handleRemoveCharacterClick
-  character-item-*:
+  character-*:
     eventListeners:
       click:
-        handler: handleCharacterItemClick
+        handler: handleCharacterClick
+      contextmenu:
+        handler: handleCharacterContextMenu
   sprite-item-*:
     eventListeners:
       click:
@@ -70,6 +72,18 @@ refs:
         handler: handleDropdownMenuClose
       click-item:
         handler: handleDropdownMenuClickItem
+  transform-*:
+    eventListeners:
+      change:
+        handler: handleTransformChange
+  animation-*:
+    eventListeners:
+      change:
+        handler: handleAnimationChange
+  character-item-*:
+    eventListeners:
+      click:
+        handler: handleCharacterItemClick
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -78,9 +92,23 @@ template:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
         # Form for characters
         - rtgl-view flex=1 sv w=f:
-          - rtgl-form#form .form=form .context=context .defaultValues=defaultValues:
-          # Add character button
-          - rtgl-button#add-character-button v=ol w=f: + Add Character
+          - rtgl-form#form .form=form .defaultValues=defaultValues:
+            - rtgl-view#characters-container slot=characters g=md w=f:
+              - $for character, index in defaultValues.characters:
+                - rtgl-view d=h g=md av=t bgc=ac p=md br=md w=f:
+                  - rtgl-view g=sm:
+                    - $if character.spriteFileId:
+                        - rvn-file-image#character-${character.id}-${index} fileId=${character.spriteFileId} w=120 h=120 cur=p br=sm:
+                      $else:
+                        - rtgl-view#character-${character.id}-${index} w=120 h=120 av=c ah=c bgc=mu br=sm cur=p:
+                          - rtgl-text s=sm c=mu-fg: No Sprite
+                    - rtgl-text s=sm w=120 ah=c ellipsis=true: ${character.displayName}
+                  - rtgl-view flex=1 g=sm:
+                    - rtgl-text s=sm c=mu-fg: Transform
+                    - rtgl-select#transform-${index} .options=defaultValues.transformOptions value=${character.transform} w=f:
+                    - rtgl-text s=sm c=mu-fg mt=sm: Animation
+                    - rtgl-select#animation-${index} .options=defaultValues.animationOptions value=${character.animation} w=f:
+              - rtgl-button#add-character-button v=ol w=f mt=md: + Add Character
 
         - rtgl-view d=h av=c ah=e w=f g=lg:
           - rtgl-button#submit-button: Submit

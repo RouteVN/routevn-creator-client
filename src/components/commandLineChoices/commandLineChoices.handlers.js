@@ -6,13 +6,13 @@ export const handleAddChoiceClick = (e, deps) => {
   render();
 };
 
-export const handleEditChoiceClick = (e, deps) => {
+export const handleChoiceClick = (e, deps) => {
   const { store, render } = deps;
 
   try {
     const index = parseInt(e.currentTarget.getAttribute("data-index"));
     console.log(
-      "[handleEditChoiceClick] Switching to editChoice mode, index:",
+      "[handleChoiceClick] Switching to editChoice mode, index:",
       index,
     );
 
@@ -22,21 +22,35 @@ export const handleEditChoiceClick = (e, deps) => {
     // Validate state using selectors before rendering
     const mode = store.selectMode();
     const editForm = store.selectEditForm();
-    console.log("[handleEditChoiceClick] Mode:", mode, "EditForm:", editForm);
+    console.log("[handleChoiceClick] Mode:", mode, "EditForm:", editForm);
 
     if (mode === "editChoice" && editForm) {
       render();
     } else {
       console.error(
-        "[handleEditChoiceClick] Invalid state for rendering - mode:",
+        "[handleChoiceClick] Invalid state for rendering - mode:",
         mode,
         "editForm:",
         editForm,
       );
     }
   } catch (error) {
-    console.error("[handleEditChoiceClick] Error:", error);
+    console.error("[handleChoiceClick] Error:", error);
   }
+};
+
+export const handleChoiceContextMenu = (e, deps) => {
+  e.preventDefault();
+  const { store, render } = deps;
+
+  const index = parseInt(e.currentTarget.getAttribute("data-index"));
+
+  store.showDropdownMenu({
+    position: { x: e.clientX, y: e.clientY },
+    choiceIndex: index,
+  });
+
+  render();
 };
 
 export const handleCancelEditClick = (e, deps) => {
@@ -197,6 +211,39 @@ export const handlePropsChanged = (deps) => {
     });
   }
 
+  render();
+};
+
+export const handleFormExtra = (e, deps) => {
+  // No longer needed since we use direct handlers on slot elements
+};
+
+export const handleFormChange = (e, deps) => {
+  const { store, render } = deps;
+  const { field, value } = e.detail;
+
+  if (field === "layoutId") {
+    store.setSelectedLayoutId({ layoutId: value });
+    render();
+  }
+};
+
+export const handleDropdownMenuClose = (e, deps) => {
+  const { store, render } = deps;
+  store.hideDropdownMenu();
+  render();
+};
+
+export const handleDropdownMenuClickItem = (e, deps) => {
+  const { store, render } = deps;
+  const { item } = e.detail;
+  const choiceIndex = store.selectDropdownMenuChoiceIndex();
+
+  if (item.value === "delete" && choiceIndex !== null) {
+    store.removeChoice(choiceIndex);
+  }
+
+  store.hideDropdownMenu();
   render();
 };
 
