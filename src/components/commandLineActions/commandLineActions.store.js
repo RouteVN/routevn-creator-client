@@ -30,24 +30,24 @@ export const INITIAL_STATE = Object.freeze({
       icon: "character",
       mode: "characters",
     },
-    {
-      id: "3",
-      label: "Choices",
-      icon: "choices",
-      mode: "choices",
-    },
-    {
-      id: "10",
-      label: "Transition",
-      icon: "transition",
-      mode: "sceneTransition",
-    },
-    {
-      id: "11",
-      label: "Controls",
-      icon: "controls",
-      mode: "controls",
-    },
+    // {
+    //   id: "3",
+    //   label: "Choices",
+    //   icon: "choices",
+    //   mode: "choices",
+    // },
+    // {
+    //   id: "10",
+    //   label: "Transition",
+    //   icon: "transition",
+    //   mode: "sceneTransition",
+    // },
+    // {
+    //   id: "11",
+    //   label: "Controls",
+    //   icon: "controls",
+    //   mode: "controls",
+    // },
     // {
     //   id: "12",
     //   label: "Conditional",
