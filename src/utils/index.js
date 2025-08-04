@@ -181,6 +181,11 @@ export const layoutTreeStructureToRenderState = (
       }
     }
 
+    if (node.type === "container") {
+      // For containers, we need to handle direction and children
+      element.direction = node.direction;
+    }
+
     if (node.children && node.children.length > 0) {
       element.children = node.children.map(mapNode);
     }
