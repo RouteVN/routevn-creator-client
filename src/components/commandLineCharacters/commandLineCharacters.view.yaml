@@ -8,22 +8,9 @@ propsSchema:
   type: object
   properties:
     line:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          imageId:
-            type: string
-          spriteName:
-            type: string
-          transform:
-            type: string
-          animation:
-            type: string
-          name:
-            type: string
+      type: object
+    presentationState:
+      type: object
 
 refs:
   add-character-button:
@@ -74,12 +61,8 @@ refs:
         handler: handleDropdownMenuClickItem
   transform-*:
     eventListeners:
-      change:
+      option-selected:
         handler: handleTransformChange
-  animation-*:
-    eventListeners:
-      change:
-        handler: handleAnimationChange
   character-item-*:
     eventListeners:
       click:
@@ -105,9 +88,7 @@ template:
                     - rtgl-text s=sm w=120 ah=c ellipsis=true: ${character.displayName}
                   - rtgl-view flex=1 g=sm:
                     - rtgl-text s=sm c=mu-fg: Transform
-                    - rtgl-select#transform-${index} .options=defaultValues.transformOptions value=${character.transform} w=f:
-                    - rtgl-text s=sm c=mu-fg mt=sm: Animation
-                    - rtgl-select#animation-${index} .options=defaultValues.animationOptions value=${character.animation} w=f:
+                    - rtgl-select#transform-${index} .options=defaultValues.transformOptions .selectedValue=character.transformId w=f:
               - rtgl-button#add-character-button v=ol w=f mt=md: + Add Character
 
         - rtgl-view d=h av=c ah=e w=f g=lg:

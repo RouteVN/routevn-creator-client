@@ -58,7 +58,7 @@ export const selectCharacters = ({ state }) => {
         variables: {
           name: character.name || "Unnamed Character",
         },
-        spriteParts: {},
+        sprites: {},
       };
 
       // Process sprite parts if they exist
@@ -66,7 +66,7 @@ export const selectCharacters = ({ state }) => {
         Object.keys(character.sprites.items).forEach((spriteId) => {
           const sprite = character.sprites.items[spriteId];
           if (sprite.fileId) {
-            processedCharacters[characterId].spriteParts[spriteId] = {
+            processedCharacters[characterId].sprites[spriteId] = {
               fileId: sprite.fileId,
             };
           }
@@ -214,7 +214,7 @@ export const hidePopover = (state) => {
   };
 };
 
-export const setLineTextContent = (state, { lineId, text }) => {
+export const setLineTextContent = (state, { lineId, content }) => {
   const scene = selectScene({ state });
   if (!scene) return;
 
@@ -238,10 +238,10 @@ export const setLineTextContent = (state, { lineId, text }) => {
     line.presentation.dialogue = {};
   }
 
-  line.presentation.dialogue.text = text;
+  line.presentation.dialogue.content = content;
 };
 
-export const selectRenderState = ({ state }) => {
+export const selectPresentationState = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) return null;
 
@@ -265,6 +265,24 @@ export const selectRenderState = ({ state }) => {
       JSON.parse(JSON.stringify(line.presentation)),
     ),
   );
+
+  return presentationState;
+};
+
+export const selectRenderState = ({ state }) => {
+  const presentationState = selectPresentationState({ state });
+  if (!presentationState) return null;
+
+  console.log("presentationState", presentationState);
+
+  const characterImages = {};
+  const characters = selectCharacters({ state });
+  Object.entries(characters).forEach(([id, character]) => {
+    Object.assign(characterImages, character.sprites);
+  });
+  console.log("characterImages", characterImages);
+  console.log("characters", characters);
+
   const renderState = constructRenderState({
     presentationState,
     screen: {
@@ -273,16 +291,18 @@ export const selectRenderState = ({ state }) => {
       backgroundColor: "#cccccc",
     },
     resolveFile: (f) => `file:${f}`,
-    assets: {
-      images: selectImages({ state }),
+    resources: {
+      images: { ...selectImages({ state }), ...characterImages },
       transforms: selectPlacements({ state }),
-      characters: selectCharacters({ state }),
-      audios: selectAudios({ state }),
+      characters,
+      audio: selectAudios({ state }),
+      layouts: selectLayouts({ state }),
     },
     ui: {
       layouts: selectLayouts({ state }),
     },
   });
+  console.log("renderState", renderState);
   return renderState;
 };
 
@@ -361,6 +381,7 @@ export const toViewData = ({ state, props }, payload) => {
   }
 
   const repositoryState = selectRepositoryState({ state });
+  const presentationState = selectPresentationState({ state });
 
   console.log("selectedLine", selectedLine);
 
@@ -371,6 +392,7 @@ export const toViewData = ({ state, props }, payload) => {
       ? currentSection.lines
       : [],
     presentationData: selectPresentationData({ state }),
+    presentationState,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
@@ -515,7 +537,7 @@ export const selectPresentationData = ({ state }) => {
 
   // BGM
   if (selectedLine.presentation.bgm) {
-    const bgmAudio = audios[selectedLine.presentation.bgm.resourceId];
+    const bgmAudio = audios[selectedLine.presentation.bgm.audioId];
     if (bgmAudio) {
       presentationItems.push({
         type: "bgm",
@@ -533,11 +555,11 @@ export const selectPresentationData = ({ state }) => {
   }
 
   // Sound Effects
-  if (selectedLine.presentation.soundEffects) {
-    const soundEffectsAudio = selectedLine.presentation.soundEffects.map(
+  if (selectedLine.presentation.sfx?.items) {
+    const soundEffectsAudio = selectedLine.presentation.sfx.items.map(
       (sfx) => ({
         ...sfx,
-        audio: audios[sfx.resourceId],
+        audio: audios[sfx.audioId],
       }),
     );
     const soundEffectsNames = soundEffectsAudio
@@ -564,8 +586,8 @@ export const selectPresentationData = ({ state }) => {
         const character = repositoryState.characters?.items?.[char.id];
         let sprite = null;
 
-        if (char.spriteParts?.[0]?.spritePartId && character?.sprites) {
-          const spriteId = char.spriteParts[0].spritePartId;
+        if (char.sprites?.[0]?.imageId && character?.sprites) {
+          const spriteId = char.sprites[0].imageId;
           const flatSprites = toFlatItems(character.sprites);
           sprite = flatSprites.find((s) => s.id === spriteId);
         }

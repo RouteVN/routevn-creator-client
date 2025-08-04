@@ -5,7 +5,7 @@ export const INITIAL_STATE = Object.freeze({
   cursorPosition: 0, // Track cursor position for navigation
   goalColumn: 0, // Remember the desired column when moving vertically
   isNavigating: false, // Flag to prevent cursor reset during navigation
-  navigationDirection: "down", // 'up' or 'down' - for proper cursor positioning
+  navigationDirection: null, // 'up', 'down', 'end', or null - for proper cursor positioning
   repositoryState: {},
 });
 
@@ -60,15 +60,29 @@ export const toViewData = ({ state, props }) => {
 
     let backgroundFileId;
     if (line.presentation?.background) {
-      const imageId = line.presentation.background.imageId;
-      backgroundFileId = state.repositoryState.images.items[imageId]?.fileId;
+      const resourceId = line.presentation.background.resourceId;
+      backgroundFileId = state.repositoryState.images.items[resourceId]?.fileId;
     }
 
     let characterFileId;
-    if (line.presentation?.dialogue?.characterId) {
-      const characterId = line.presentation.dialogue.characterId;
-      characterFileId =
-        state.repositoryState.characters?.items?.[characterId]?.fileId;
+    // Check if line has character presentation with sprites
+    if (
+      line.presentation?.character?.items &&
+      line.presentation.character.items.length > 0
+    ) {
+      const firstCharacter = line.presentation.character.items[0];
+      // Check if character has sprites array
+      if (firstCharacter.sprites && firstCharacter.sprites.length > 0) {
+        const firstSprite = firstCharacter.sprites[0];
+        // Get the image file ID from the images repository
+        if (
+          firstSprite.imageId &&
+          state.repositoryState.images?.items?.[firstSprite.imageId]
+        ) {
+          characterFileId =
+            state.repositoryState.images.items[firstSprite.imageId].fileId;
+        }
+      }
     }
 
     let sceneTransition;
