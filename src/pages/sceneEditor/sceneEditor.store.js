@@ -95,7 +95,10 @@ export const selectPlacements = ({ state }) => {
 export const selectLayouts = ({ state }) => {
   const layouts = state.repositoryState.layouts?.items || {};
   const images = selectImages({ state });
-  const typography = state.repositoryState.typography || { items: {}, tree: [] };
+  const typography = state.repositoryState.typography || {
+    items: {},
+    tree: [],
+  };
   const colors = state.repositoryState.colors || { items: {}, tree: [] };
   const fonts = state.repositoryState.fonts || { items: {}, tree: [] };
   const processedLayouts = {};
