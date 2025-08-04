@@ -17,22 +17,33 @@ export const handleBeforeMount = (deps) => {
 
 export const handleFormChange = (e, deps) => {
   const { store, render } = deps;
-  const formData = e.detail.formData;
+  console.log("e.detail", e.detail);
+  const { formValues } = e.detail;
 
-  if (formData.layoutId !== undefined) {
-    store.setSelectedLayoutId({ layoutId: formData.layoutId });
+  if (!formValues) {
+    return;
   }
 
-  if (formData.characterId !== undefined) {
-    store.setSelectedCharacterId({ characterId: formData.characterId });
+  if (formValues.layoutId !== undefined) {
+    store.setSelectedLayoutId({ layoutId: formValues.layoutId });
+  }
+
+  if (formValues.characterId !== undefined) {
+    store.setSelectedCharacterId({ characterId: formValues.characterId });
   }
 
   render();
 };
 
 export const handleSubmitClick = (e, deps) => {
+  console.log("[handleSubmitClick] Submit button clicked");
   const { store, dispatchEvent } = deps;
   const { selectedLayoutId, selectedCharacterId } = store.getState();
+
+  console.log("[handleSubmitClick] Current state:", {
+    selectedLayoutId,
+    selectedCharacterId,
+  });
 
   // Create dialogue object with only non-empty values
   const dialogue = {};
@@ -43,6 +54,8 @@ export const handleSubmitClick = (e, deps) => {
     dialogue.characterId = selectedCharacterId;
   }
 
+  console.log("[handleSubmitClick] Dialogue object to submit:", dialogue);
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
@@ -50,6 +63,8 @@ export const handleSubmitClick = (e, deps) => {
       },
     }),
   );
+
+  console.log("[handleSubmitClick] Submit event dispatched");
 };
 
 export const handleBreadcumbClick = (e, deps) => {
