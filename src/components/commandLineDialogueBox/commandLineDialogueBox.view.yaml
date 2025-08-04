@@ -66,6 +66,10 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
+  submit-button:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -75,4 +79,4 @@ template:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button disabled=${submitDisabled}: Submit
+          - rtgl-button#submit-button: Submit

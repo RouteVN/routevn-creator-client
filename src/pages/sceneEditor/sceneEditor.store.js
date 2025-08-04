@@ -39,6 +39,10 @@ export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
 
+export const selectFonts = ({ state }) => {
+  return state.repositoryState.fonts?.items || {};
+};
+
 export const selectImages = ({ state }) => {
   return state.repositoryState.images?.items || {};
 };
@@ -55,6 +59,7 @@ export const selectCharacters = ({ state }) => {
     const character = characters[characterId];
     if (character.type === "character") {
       processedCharacters[characterId] = {
+        name: character.name,
         variables: {
           name: character.name || "Unnamed Character",
         },
@@ -289,7 +294,7 @@ export const selectRenderState = ({ state }) => {
   Object.entries(characters).forEach(([id, character]) => {
     Object.assign(characterImages, character.sprites);
   });
-  console.log("characterImages", characterImages);
+  console.log("layouts", selectLayouts({ state }));
   console.log("characters", characters);
 
   const renderState = constructRenderState({

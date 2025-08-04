@@ -24,7 +24,7 @@ const SCREEN_HEIGHT = 1080;
 const dialogueForm = {
   fields: [
     {
-      name: "character-name",
+      name: "dialogue-character-name",
       description: "Character Name",
       inputType: "inputText",
     },
@@ -59,7 +59,7 @@ export const INITIAL_STATE = Object.freeze({
   fontsData: { tree: [], items: {} },
   fieldResources: {},
   dialogueDefaultValues: {
-    "character-name": "Character R",
+    "dialogue-character-name": "Character R",
     "dialogue-content": "This is a sample dialogue content.",
   },
   contextMenuItems: [
@@ -442,7 +442,10 @@ export const toViewData = ({ state, props }, payload) => {
                     options: [
                       { label: "Custom Content", value: "custom" },
                       { label: "Dialogue Content", value: "dialogue.content" },
-                      { label: "Character Name", value: "character.name" },
+                      {
+                        label: "Character Name",
+                        value: "dialogue.character.name",
+                      },
                     ],
                     required: true,
                   },
