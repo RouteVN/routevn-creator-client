@@ -85,6 +85,19 @@ export const toViewData = ({ state, props }) => {
       }
     }
 
+    // Also check for dialogue character data
+    if (!characterFileId && line.presentation?.dialogue?.characterId) {
+      // Get character data from repository
+      const characters = toFlatItems(state.repositoryState.characters || []);
+      const character = characters.find(
+        (c) => c.id === line.presentation.dialogue.characterId,
+      );
+
+      if (character && character.fileId) {
+        characterFileId = character.fileId;
+      }
+    }
+
     let sceneTransition;
     let sectionTransition;
     let transitionTarget;

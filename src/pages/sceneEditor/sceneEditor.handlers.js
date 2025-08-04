@@ -7,7 +7,7 @@ import { filter, tap, debounceTime } from "rxjs";
 async function createAssetsFromFileIds(
   fileIds,
   getFileContent,
-  { audios, images },
+  { audios, images, fonts = {} },
 ) {
   const assets = {};
   for (const fileId of fileIds) {
@@ -20,6 +20,7 @@ async function createAssetsFromFileIds(
 
       Object.entries(audios)
         .concat(Object.entries(images))
+        .concat(Object.entries(fonts))
         .forEach(([key, item]) => {
           if (item.fileId === fileId) {
             type = item.fileType;
@@ -45,6 +46,7 @@ async function renderSceneState(store, drenderer, getFileContent) {
   const assets = await createAssetsFromFileIds(fileIds, getFileContent, {
     audios: store.selectAudios(),
     images: store.selectImages(),
+    fonts: store.selectFonts(),
   });
   await drenderer.loadAssets(assets);
   drenderer.render(renderState);
@@ -206,8 +208,8 @@ export const handleCommandLineSubmit = (e, deps) => {
   }, 10);
 };
 
-export const handleEditorDataChanged = (e, deps) => {
-  const { subject, store } = deps;
+export const handleEditorDataChanged = async (e, deps) => {
+  const { subject, store, drenderer, getFileContent } = deps;
 
   // Update local store immediately for UI responsiveness
   store.setLineTextContent({
@@ -220,6 +222,11 @@ export const handleEditorDataChanged = (e, deps) => {
     lineId: e.detail.lineId,
     content: e.detail.content,
   });
+
+  // Render the scene immediately with the updated content
+  setTimeout(async () => {
+    await renderSceneState(store, drenderer, getFileContent);
+  }, 10);
 };
 
 export const handleAddPresentationButtonClick = (e, deps) => {

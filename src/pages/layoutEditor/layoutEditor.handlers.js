@@ -166,8 +166,10 @@ const renderLayoutPreview = async (deps) => {
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
   const data = {
-    character: { name: dialogueDefaultValues["character-name"] },
-    dialogue: { content: dialogueDefaultValues["dialogue-content"] },
+    dialogue: {
+      content: dialogueDefaultValues["dialogue-content"],
+      character: { name: dialogueDefaultValues["dialogue-character-name"] },
+    },
   };
   const finalElements = parseAndRender(elementsToRender, data);
 
@@ -315,8 +317,8 @@ export const handleFormChange = async (e, deps) => {
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
 
-  if (e.detail.formValues.contentType === "character.name") {
-    updatedItem.text = "${character.name}";
+  if (e.detail.formValues.contentType === "dialogue.character.name") {
+    updatedItem.text = "${dialogue.character.name}";
   }
   if (e.detail.formValues.contentType === "dialogue.content") {
     updatedItem.text = "${dialogue.content}";
