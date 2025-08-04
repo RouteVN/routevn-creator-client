@@ -523,6 +523,21 @@ export const toViewData = ({ state, props }, payload) => {
                 },
               ]
             : []),
+          ...(selectedItem.type === "container"
+            ? [
+                {
+                  name: "direction",
+                  inputType: "select",
+                  description: "Direction",
+                  options: [
+                    { label: "None", value: undefined },
+                    { label: "Horizontal", value: "horizontal" },
+                    { label: "Vertical", value: "vertical" },
+                  ],
+                  required: true,
+                },
+              ]
+            : []),
         ],
       }
     : null;
@@ -561,6 +576,11 @@ export const toViewData = ({ state, props }, payload) => {
               imageId: selectedItem.imageId ?? "",
               hoverImageId: selectedItem.hoverImageId ?? "",
               clickImageId: selectedItem.clickImageId ?? "",
+            }
+          : {}),
+        ...(selectedItem.type === "container"
+          ? {
+              direction: selectedItem.direction,
             }
           : {}),
       })
