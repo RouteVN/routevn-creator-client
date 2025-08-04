@@ -9,34 +9,34 @@ export const handleBeforeMount = (deps) => {
     audio,
   });
 
-  if (!props?.line?.presentation?.soundEffects) {
+  if (!props?.line?.presentation?.sfx?.items) {
     return;
   }
 
-  const { soundEffects } = props.line.presentation;
+  const { items } = props.line.presentation.sfx;
 
-  if (!soundEffects || soundEffects.length === 0) {
+  if (!items || items.length === 0) {
     return;
   }
 
-  store.setExistingSoundEffects({
-    soundEffects,
+  store.setExistingSfx({
+    sfx: items,
   });
 };
 
 export const handleAfterMount = async (deps) => {
   const { store, render, downloadWaveformData } = deps;
 
-  const soundEffects = store.selectSoundEffectsWithAudioData();
+  const sfx = store.selectSfxWithAudioData();
 
-  if (!soundEffects || soundEffects.length === 0) {
+  if (!sfx || sfx.length === 0) {
     return;
   }
 
   const context = {};
 
   // Load waveform data for each existing sound effect
-  for (const [index, sfx] of soundEffects.entries()) {
+  for (const [index, sfx] of sfx.entries()) {
     if (sfx.waveformDataFileId) {
       try {
         const waveformData = await downloadWaveformData({
@@ -63,8 +63,8 @@ export const handleFormExtra = async (e, deps) => {
   if (match) {
     const index = parseInt(match[1]);
     // Set current editing to this sound effect
-    const soundEffects = store.selectSoundEffects();
-    const soundEffect = soundEffects[index];
+    const sfx = store.selectSfxs();
+    const soundEffect = sfx[index];
     if (soundEffect) {
       store.setCurrentEditingId({ id: soundEffect.id });
       store.setMode({ mode: "gallery" });
@@ -95,10 +95,10 @@ export const handleAddNewClick = (e, deps) => {
   render();
 };
 
-export const handleSoundEffectClick = (e, deps) => {
+export const handleSfxClick = (e, deps) => {
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("sound-effect-", "");
+  const id = e.currentTarget.id.replace("sfx-", "");
 
   store.setCurrentEditingId({
     id: id,
@@ -110,16 +110,16 @@ export const handleSoundEffectClick = (e, deps) => {
   render();
 };
 
-export const handleSoundEffectContextMenu = (e, deps) => {
+export const handleSfxContextMenu = (e, deps) => {
   e.preventDefault();
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("sound-effect-", "");
+  const id = e.currentTarget.id.replace("sfx-", "");
   const rect = e.currentTarget.getBoundingClientRect();
 
   store.showDropdownMenu({
     position: { x: e.clientX, y: e.clientY },
-    soundEffectId: id,
+    sfxId: id,
   });
 
   render();
@@ -141,16 +141,18 @@ export const handleSubmitClick = (e, deps) => {
   e.stopPropagation();
 
   const { dispatchEvent, store } = deps;
-  const soundEffects = store.selectSoundEffects();
-  const filteredEffects = soundEffects.filter((se) => se.resourceId);
+  const sfx = store.selectSfxs();
+  const filteredEffects = sfx.filter((se) => se.audioId);
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        soundEffects: filteredEffects.map((sfx) => ({
-          id: sfx.id,
-          resourceId: sfx.resourceId,
-        })),
+        sfx: {
+          items: filteredEffects.map((sfx) => ({
+            id: sfx.id,
+            audioId: sfx.audioId,
+          })),
+        },
       },
       bubbles: true,
       composed: true,
@@ -187,13 +189,13 @@ export const handleDropdownMenuClickItem = (e, deps) => {
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
-  const soundEffectId = store.selectDropdownMenuSoundEffectId();
+  const sfxId = store.selectDropdownMenuSfxId();
 
   store.hideDropdownMenu();
 
-  if (item.value === "delete" && soundEffectId) {
-    store.deleteSoundEffect({
-      id: soundEffectId,
+  if (item.value === "delete" && sfxId) {
+    store.deleteSfx({
+      id: sfxId,
     });
   }
 
@@ -212,26 +214,24 @@ export const handleButtonSelectClick = (e, deps) => {
 
   if (tempSelectedAudio) {
     const currentEditingId = store.selectCurrentEditingId();
-    const soundEffects = store.selectSoundEffects();
-    const existingEffect = soundEffects.find(
-      (se) => se.id === currentEditingId,
-    );
+    const sfx = store.selectSfxs();
+    const existingEffect = sfx.find((se) => se.id === currentEditingId);
 
     if (existingEffect) {
       // Update existing sound effect
-      store.updateSoundEffect({
+      store.updateSfx({
         id: currentEditingId,
-        resourceId: tempSelectedResourceId,
+        audioId: tempSelectedResourceId,
         name: tempSelectedAudio.name,
       });
     } else {
       // Create new sound effect (this was triggered by "Add New" button)
-      store.addSoundEffect({
+      store.addSfx({
         id: currentEditingId,
       });
-      store.updateSoundEffect({
+      store.updateSfx({
         id: currentEditingId,
-        resourceId: tempSelectedResourceId,
+        audioId: tempSelectedResourceId,
         name: tempSelectedAudio.name,
       });
     }

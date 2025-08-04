@@ -4,15 +4,13 @@ export const INITIAL_STATE = Object.freeze({
   mode: "current",
   items: [],
   transforms: { tree: [], items: {} },
-  animations: { tree: [], items: {} },
   /**
    * Array of raw character objects with the following structure (same as props):
    * {
    *   id: string,              // Character ID from repository
    *   transformId: string,     // Transform/placement ID
-   *   spriteParts: array,      // Array of sprite parts with spritePartId
-   *   spriteName: string,      // Display name for sprite
-   *   animation: string        // Animation ID or "none"
+   *   sprites: array,          // Array of sprites with imageId
+   *   spriteName: string       // Display name for sprite
    * }
    */
   selectedCharacters: [],
@@ -39,10 +37,6 @@ export const setTransforms = (state, payload) => {
   state.transforms = payload.transforms;
 };
 
-export const setAnimations = (state, payload) => {
-  state.animations = payload.animations;
-};
-
 export const addCharacter = (state, payload) => {
   // Get the first available transform as default
   const transformItems = toFlatItems(state.transforms).filter(
@@ -51,13 +45,21 @@ export const addCharacter = (state, payload) => {
   const defaultTransform =
     transformItems.length > 0 ? transformItems[0].id : undefined;
 
+  console.log("[addCharacter] Adding character:", {
+    characterId: payload.id,
+    availableTransforms: transformItems.map((t) => ({
+      id: t.id,
+      name: t.name,
+    })),
+    defaultTransform,
+  });
+
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
     id: payload.id,
     transformId: defaultTransform,
-    spriteParts: [],
+    sprites: [],
     spriteName: "",
-    animation: "none",
   });
 };
 
@@ -66,8 +68,18 @@ export const removeCharacter = (state, index) => {
 };
 
 export const updateCharacterTransform = (state, { index, transform }) => {
+  console.log("[updateCharacterTransform] Before update:", {
+    index,
+    transform,
+    currentTransformId: state.selectedCharacters[index]?.transformId,
+    character: state.selectedCharacters[index],
+  });
+
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].transformId = transform;
+    console.log("[updateCharacterTransform] After update:", {
+      newTransformId: state.selectedCharacters[index].transformId,
+    });
   }
 };
 
@@ -76,10 +88,10 @@ export const updateCharacterSprite = (
   { index, spriteId, spriteFileId },
 ) => {
   if (state.selectedCharacters[index]) {
-    state.selectedCharacters[index].spriteParts = [
+    state.selectedCharacters[index].sprites = [
       {
         id: "base",
-        spritePartId: spriteId,
+        imageId: spriteId,
       },
     ];
   }
@@ -88,12 +100,6 @@ export const updateCharacterSprite = (
 export const updateCharacterSpriteName = (state, { index, spriteName }) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].spriteName = spriteName;
-  }
-};
-
-export const updateCharacterAnimation = (state, { index, animation }) => {
-  if (state.selectedCharacters[index]) {
-    state.selectedCharacters[index].animation = animation;
   }
 };
 
@@ -168,19 +174,18 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
       return {
         id: char.id,
         name: "Unknown Character",
-        transform: char.transformId,
-        spriteId: char.spriteParts?.[0]?.spritePartId,
+        transformId: char.transformId,
+        spriteId: char.sprites?.[0]?.imageId,
         spriteFileId: undefined,
         spriteName: char.spriteName || "",
-        animation: char.animation || "none",
       };
     }
 
     // Find sprite data if available
     let spriteFileId = undefined;
-    if (char.spriteParts?.[0]?.spritePartId && characterData.sprites) {
+    if (char.sprites?.[0]?.imageId && characterData.sprites) {
       const sprite = toFlatItems(characterData.sprites).find(
-        (s) => s.id === char.spriteParts[0].spritePartId,
+        (s) => s.id === char.sprites[0].imageId,
       );
       if (sprite) {
         spriteFileId = sprite.fileId;
@@ -189,11 +194,10 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
 
     return {
       ...characterData,
-      transform: char.transformId,
-      spriteId: char.spriteParts?.[0]?.spritePartId,
+      transformId: char.transformId,
+      spriteId: char.sprites?.[0]?.imageId,
       spriteFileId: spriteFileId,
       spriteName: char.spriteName || "",
-      animation: char.animation || "none",
     };
   });
 };
@@ -239,24 +243,23 @@ export const toViewData = ({ state, props }, payload) => {
     value: transform.id,
   }));
 
-  // Get animation options from repository instead of hardcoded values
-  const animationItems = toFlatItems(state.animations).filter(
-    (item) => item.type === "animation",
-  );
-  const animationOptions = [
-    { label: "None", value: "none" },
-    ...animationItems.map((animation) => ({
-      label: animation.name,
-      value: animation.id,
-    })),
-  ];
-
   // Get enriched character data
   const enrichedCharacters = selectCharactersWithRepositoryData({ state });
   const processedSelectedCharacters = enrichedCharacters.map((character) => ({
     ...character,
     displayName: character.name || "Unnamed Character",
   }));
+
+  // Debug logging for transform selector
+  console.log("[commandLineCharacters] Transform options:", transformOptions);
+  console.log(
+    "[commandLineCharacters] Selected characters with transformId:",
+    processedSelectedCharacters.map((c) => ({
+      id: c.id,
+      transformId: c.transformId,
+      name: c.displayName,
+    })),
+  );
 
   // Get sprite data for the selected character (after processedSelectedCharacters is defined)
   if (
@@ -325,8 +328,17 @@ export const toViewData = ({ state, props }, payload) => {
   const defaultValues = {
     characters: processedSelectedCharacters,
     transformOptions,
-    animationOptions,
   };
+
+  // More detailed logging
+  console.log("[commandLineCharacters] defaultValues:", {
+    characters: defaultValues.characters.map((c) => ({
+      id: c.id,
+      transformId: c.transformId,
+      displayName: c.displayName,
+    })),
+    transformOptions: defaultValues.transformOptions,
+  });
 
   return {
     mode: state.mode,
@@ -334,7 +346,6 @@ export const toViewData = ({ state, props }, payload) => {
     groups: flatGroups,
     selectedCharacters: processedSelectedCharacters,
     transformOptions,
-    animationOptions,
     spriteItems,
     spriteGroups,
     selectedCharacterName,

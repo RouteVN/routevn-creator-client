@@ -9,10 +9,10 @@ export const handleBeforeMount = (deps) => {
   });
 
   // Initialize with existing BGM data if available
-  const resourceId = props?.line?.presentation?.bgm?.resourceId;
-  if (resourceId) {
+  const audioId = props?.line?.presentation?.bgm?.audioId;
+  if (audioId) {
     store.setSelectedResource({
-      resourceId,
+      resourceId: audioId,
     });
   }
 };
@@ -138,8 +138,7 @@ export const handleSubmitClick = (e, deps) => {
     new CustomEvent("submit", {
       detail: {
         bgm: {
-          resourceId: selectedResource?.resourceId,
-          resourceType: selectedResource?.resourceType,
+          audioId: selectedResource?.resourceId,
           loopType: formValues.loopType || "none",
         },
       },

@@ -88,8 +88,9 @@ template:
               - 'rtgl-view w="calc((100vw - 64px) / 2)"':
                   - rtgl-view d=h w=f:
                       - rtgl-view flex=1:
-                      - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
-                          - rtgl-text s=sm: "<>"
+                      # Toggle graph view button - commented out for now
+                      # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
+                      #     - rtgl-text s=sm: "<>"
                   - rtgl-view:
                       - rtgl-text: ${sectionsGraph}
             $else:
@@ -98,11 +99,13 @@ template:
                       - $for section in sections:
                           - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
                               - rtgl-text s=sm: ${section.name}
-                      - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
-                          - rtgl-text s=sm: +
+                      # Section add button - commented out for now
+                      # - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
+                      #     - rtgl-text s=sm: +
                       - rtgl-view flex=1:
-                      - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
-                          - rtgl-text s=sm: "<>"
+                      # Toggle graph view button - commented out for now
+                      # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
+                      #     - rtgl-text s=sm: "<>"
                   - 'rtgl-view w=f p=md h="calc(100vh - 48px - 32px - 2px)" sv':
                       - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId:
                       - rtgl-view h=30vh:
@@ -180,7 +183,7 @@ template:
             $elif mode == "sfx":
               - rvn-command-line-sound-effects#command-line-sound-effects .line=selectedLine:
             $elif mode == "characters":
-              - rvn-command-line-characters#command-line-characters .line=selectedLine:
+              - rvn-command-line-characters#command-line-characters .line=selectedLine .presentationState=presentationState:
             $elif mode == "sceneTransition":
               - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections:
             $elif mode == "controls":
