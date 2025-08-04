@@ -113,7 +113,7 @@ template:
           - rtgl-view w=f:
               - rtgl-view:
                   - rtgl-view w=700 h=400 bgc=fg:
-                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
+                      - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex;"':
               - rtgl-view w=f h=1 bgc=mu:
               - rtgl-view w=f m=md:
                   - rtgl-view d=h av=c:
