@@ -10,7 +10,7 @@
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
         "nanoid": "^5.1.5",
-        "route-engine-js": "^0.0.2-rc9",
+        "route-engine-js": "0.0.2-rc10",
         "route-graphics": "^0.0.2-rc15",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
@@ -284,7 +284,7 @@
 
     "rollup": ["rollup@4.41.0", "", { "dependencies": { "@types/estree": "1.0.7" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.41.0", "@rollup/rollup-android-arm64": "4.41.0", "@rollup/rollup-darwin-arm64": "4.41.0", "@rollup/rollup-darwin-x64": "4.41.0", "@rollup/rollup-freebsd-arm64": "4.41.0", "@rollup/rollup-freebsd-x64": "4.41.0", "@rollup/rollup-linux-arm-gnueabihf": "4.41.0", "@rollup/rollup-linux-arm-musleabihf": "4.41.0", "@rollup/rollup-linux-arm64-gnu": "4.41.0", "@rollup/rollup-linux-arm64-musl": "4.41.0", "@rollup/rollup-linux-loongarch64-gnu": "4.41.0", "@rollup/rollup-linux-powerpc64le-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-musl": "4.41.0", "@rollup/rollup-linux-s390x-gnu": "4.41.0", "@rollup/rollup-linux-x64-gnu": "4.41.0", "@rollup/rollup-linux-x64-musl": "4.41.0", "@rollup/rollup-win32-arm64-msvc": "4.41.0", "@rollup/rollup-win32-ia32-msvc": "4.41.0", "@rollup/rollup-win32-x64-msvc": "4.41.0", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-HqMFpUbWlf/tvcxBFNKnJyzc7Lk+XO3FGc3pbNBLqEbOz0gPLRgcrlS3UF4MfUrVlstOaP/q0kM6GVvi+LrLRg=="],
 
-    "route-engine-js": ["route-engine-js@0.0.2-rc9", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.1.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-addljmS+TM5/ZKP0eErUR+DXb8gYuZtf8PXKaIjb2OnAN0erhZ97SmZxW/WNvOkE3HwEM9KRyZdxSWxEFITwlw=="],
+    "route-engine-js": ["route-engine-js@0.0.2-rc10", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.1.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-4+KPjx2fTCuXKWNQFy18FuNndNnvAZeVjGtAmxSCHv71vZ6/y+sYDsxG8NsAYnBSCSYvrD/IBogapT22GE1BqQ=="],
 
     "route-graphics": ["route-graphics@0.0.2-rc15", "", { "dependencies": { "pixi.js": "^8.7.1", "rxjs": "^7.8.2" } }, "sha512-uynPhmc/VQuUipGUwiKXNYIr+WZGvouuLw2Ys0UI+FEF6EJH1OgQpRbmjKukg4all4k1EUnh1/FcVqZADW3W+w=="],
 
@@ -357,8 +357,6 @@
     "micromatch/picomatch": ["picomatch@2.3.1", "", {}, "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA=="],
 
     "postcss/nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
-
-    "route-engine-js/jempl": ["jempl@0.1.0", "", {}, "sha512-KVnndQm931bEl3V3xTU1JubxbyIR4HPJSefkpwloX6goixh7zMaSrHYWyDeLqTw+J5sY4p4AcKhGMvIl9kIYgw=="],
 
     "vite/esbuild": ["esbuild@0.25.4", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.25.4", "@esbuild/android-arm": "0.25.4", "@esbuild/android-arm64": "0.25.4", "@esbuild/android-x64": "0.25.4", "@esbuild/darwin-arm64": "0.25.4", "@esbuild/darwin-x64": "0.25.4", "@esbuild/freebsd-arm64": "0.25.4", "@esbuild/freebsd-x64": "0.25.4", "@esbuild/linux-arm": "0.25.4", "@esbuild/linux-arm64": "0.25.4", "@esbuild/linux-ia32": "0.25.4", "@esbuild/linux-loong64": "0.25.4", "@esbuild/linux-mips64el": "0.25.4", "@esbuild/linux-ppc64": "0.25.4", "@esbuild/linux-riscv64": "0.25.4", "@esbuild/linux-s390x": "0.25.4", "@esbuild/linux-x64": "0.25.4", "@esbuild/netbsd-arm64": "0.25.4", "@esbuild/netbsd-x64": "0.25.4", "@esbuild/openbsd-arm64": "0.25.4", "@esbuild/openbsd-x64": "0.25.4", "@esbuild/sunos-x64": "0.25.4", "@esbuild/win32-arm64": "0.25.4", "@esbuild/win32-ia32": "0.25.4", "@esbuild/win32-x64": "0.25.4" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-8pgjLUcUjcgDg+2Q4NYXnPbo/vncAY4UmyaCm0jZevERqCHZIaWwdJHkf8XQtu4AxSKCdvrUbT0XUr1IdZzI8Q=="],
 

@@ -178,6 +178,17 @@ const isCursorOnLastLine = (element) => {
   const range = selection.getRangeAt(0);
   if (!element.contains(range.startContainer)) return false;
 
+  // First, check if the element has multiple visual lines
+  const elementHeight = element.scrollHeight;
+  const lineHeight =
+    parseFloat(window.getComputedStyle(element).lineHeight) || 20;
+  const hasMultipleLines = elementHeight > lineHeight * 1.5; // Allow some tolerance
+
+  if (!hasMultipleLines) {
+    // Single line content - always navigate to next editor on ArrowDown
+    return true;
+  }
+
   // Get the bounding rectangle of the cursor position
   const cursorRect = range.getBoundingClientRect();
 
@@ -475,14 +486,25 @@ export const handleLineKeyDown = (e, deps) => {
         // In text-editor mode, check if cursor is on last line
         const isOnLastLine = isCursorOnLastLine(e.currentTarget);
 
+        console.log("[linesEditor] ArrowDown in text-editor mode:", {
+          lineId: e.currentTarget.id,
+          isOnLastLine,
+          elementHeight: e.currentTarget.scrollHeight,
+          lineHeight: parseFloat(
+            window.getComputedStyle(e.currentTarget).lineHeight,
+          ),
+          textContent: e.currentTarget.textContent.substring(0, 50) + "...",
+        });
+
         if (isOnLastLine) {
           // Cursor is on last line, move to next line
           e.preventDefault();
           e.stopPropagation(); // Prevent bubbling to container
           const goalColumn = store.selectGoalColumn() || 0;
 
-          // Set navigating flag
+          // Set navigating flag and direction
           store.setIsNavigating(true);
+          store.setNavigationDirection("down");
 
           dispatchEvent(
             new CustomEvent("moveDown", {
@@ -699,8 +721,9 @@ export const handleOnFocus = (e, deps) => {
 
   // Check if we're navigating - if so, don't reset cursor or re-render
   if (store.selectIsNavigating()) {
-    // Reset the flag but don't render
+    // Reset the flag and direction but don't render
     store.setIsNavigating(false);
+    store.setNavigationDirection(null);
     return;
   }
 

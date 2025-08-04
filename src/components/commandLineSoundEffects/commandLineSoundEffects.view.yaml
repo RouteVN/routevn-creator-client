@@ -10,7 +10,7 @@ viewDataSchema:
       type: array
     groups:
       type: array
-    soundEffects:
+    sfx:
       type: array
     tempSelectedResourceId:
       type: string
@@ -41,7 +41,7 @@ viewDataSchema:
               type: number
         items:
           type: array
-        soundEffectId:
+        sfxId:
           type: string
 
 propsSchema:
@@ -53,30 +53,30 @@ propsSchema:
         presentation:
           type: object
           properties:
-            soundEffects:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  resourceId:
-                    type: string
-                  resourceType:
-                    type: string
-                    enum: ["audio"]
+            sfx:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      audioId:
+                        type: string
 
 refs:
   add-new-button:
     eventListeners:
       click:
         handler: handleAddNewClick
-  sound-effect-*:
+  sfx-*:
     eventListeners:
       click:
-        handler: handleSoundEffectClick
+        handler: handleSfxClick
       contextmenu:
-        handler: handleSoundEffectContextMenu
+        handler: handleSfxContextMenu
   resource-item-*:
     eventListeners:
       click:
@@ -115,11 +115,11 @@ template:
 
         # Form for sound effects
         - rtgl-form#form .form=form .defaultValues=defaultValues:
-            - rtgl-view#sound-effects-container slot=sound-effects g=md:
-                - $for soundEffect in defaultValues.soundEffects:
+            - rtgl-view#sfx-container slot=sfx g=md:
+                - $for sfx in defaultValues.sfx:
                     - rtgl-view g=sm:
-                        - rvn-waveform-visualizer#sound-effect-${soundEffect.id} waveformDataFileId=${soundEffect.waveformDataFileId} width=355 height=150 style="cursor: pointer"
-                        - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${soundEffect.name}
+                        - rvn-waveform-visualizer#sfx-${sfx.id} waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150 style="cursor: pointer"
+                        - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
                 - rtgl-button#add-new-button v=ol w=f mt=md: + Add New Sound Effect
 
         - rtgl-view flex=1:

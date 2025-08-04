@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
+import { filter, tap, debounceTime } from "rxjs";
 
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(
@@ -71,7 +72,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleSectionTabClick = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, drenderer, getFileContent } = deps;
   const id = e.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
 
@@ -85,10 +86,15 @@ export const handleSectionTabClick = (e, deps) => {
   }
 
   render();
+
+  // Render the canvas with the latest data
+  setTimeout(async () => {
+    await renderSceneState(store, drenderer, getFileContent);
+  }, 10);
 };
 
 export const handleCommandLineSubmit = (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render, repository, drenderer, getFileContent } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -112,6 +118,11 @@ export const handleCommandLineSubmit = (e, deps) => {
     store.setRepositoryState(repository.getState());
     store.setMode("lines-editor");
     render();
+
+    // Render the canvas with the latest data
+    setTimeout(async () => {
+      await renderSceneState(store, drenderer, getFileContent);
+    }, 10);
     return;
   }
 
@@ -134,6 +145,11 @@ export const handleCommandLineSubmit = (e, deps) => {
     store.setRepositoryState(repository.getState());
     store.setMode("lines-editor");
     render();
+
+    // Render the canvas with the latest data
+    setTimeout(async () => {
+      await renderSceneState(store, drenderer, getFileContent);
+    }, 10);
     return;
   }
 
@@ -143,7 +159,7 @@ export const handleCommandLineSubmit = (e, deps) => {
 
   let submissionData = e.detail;
 
-  // If this is a dialogue submission, preserve the existing text
+  // If this is a dialogue submission, preserve the existing content
   if (submissionData.dialogue) {
     const { scenes } = repository.getState();
     const scene = toFlatItems(scenes)
@@ -156,13 +172,13 @@ export const handleCommandLineSubmit = (e, deps) => {
       );
       if (section) {
         const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-        if (line && line.presentation?.dialogue?.text) {
+        if (line && line.presentation?.dialogue?.content) {
           // Preserve existing text
           submissionData = {
             ...submissionData,
             dialogue: {
               ...submissionData.dialogue,
-              text: line.presentation.dialogue.text,
+              content: line.presentation.dialogue.content,
             },
           };
         }
@@ -183,51 +199,27 @@ export const handleCommandLineSubmit = (e, deps) => {
   store.setMode("lines-editor");
 
   render();
-};
 
-export const handleEditorDataChanged = (e, deps) => {
-  const { repository, store, drenderer, getFileContent } = deps;
-
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
-  const lineId = e.detail.lineId;
-
-  // Get existing dialogue data to preserve layoutId and characterId
-  const { scenes } = repository.getState();
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-
-  let existingDialogue = {};
-  if (scene) {
-    const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
-    if (section) {
-      const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-      if (line && line.presentation?.dialogue) {
-        existingDialogue = line.presentation.dialogue;
-      }
-    }
-  }
-
-  repository.addAction({
-    actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
-    value: {
-      replace: false,
-      item: {
-        dialogue: {
-          ...existingDialogue,
-          text: e.detail.content,
-        },
-      },
-    },
-  });
-
-  store.setLineTextContent({ lineId, text: e.detail.content });
-
+  // Render the canvas with the latest data
   setTimeout(async () => {
     await renderSceneState(store, drenderer, getFileContent);
   }, 10);
+};
+
+export const handleEditorDataChanged = (e, deps) => {
+  const { subject, store } = deps;
+
+  // Update local store immediately for UI responsiveness
+  store.setLineTextContent({
+    lineId: e.detail.lineId,
+    content: e.detail.content,
+  });
+
+  // Dispatch to subject for throttled/debounced repository update
+  subject.dispatch("updateDialogueContent", {
+    lineId: e.detail.lineId,
+    content: e.detail.content,
+  });
 };
 
 export const handleAddPresentationButtonClick = (e, deps) => {
@@ -274,31 +266,74 @@ export const handleSectionAddClick = (e, deps) => {
 };
 
 export const handleSplitLine = (e, deps) => {
-  const { store, render, repository, getRefIds } = deps;
+  const { repository, store, render, getRefIds, drenderer, getFileContent } =
+    deps;
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = e.detail;
 
-  // First, update the current line with the left content
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-    value: {
-      id: lineId,
-      replace: false,
-      item: {
-        presentation: {
-          dialogue: {
-            text: leftContent,
-          },
-        },
-      },
-    },
+  console.log("[handleSplitLine] Splitting line:", {
+    lineId,
+    leftContent,
+    rightContent,
+    leftLength: leftContent.length,
+    rightLength: rightContent.length,
   });
 
+  // Get existing presentation data to preserve everything except dialogue content
+  const { scenes } = repository.getState();
+  const scene = toFlatItems(scenes)
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === sceneId);
+
+  let existingPresentation = {};
+  let existingDialogue = {};
+  if (scene) {
+    const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
+    if (section) {
+      const line = toFlatItems(section.lines).find((l) => l.id === lineId);
+      if (line && line.presentation) {
+        // Preserve ALL presentation data
+        existingPresentation = JSON.parse(JSON.stringify(line.presentation));
+        if (line.presentation.dialogue) {
+          existingDialogue = line.presentation.dialogue;
+        }
+      }
+    }
+  }
+
+  // First, update the current line with the left content
+  // Only update the dialogue.content, preserve everything else
+  if (existingDialogue && Object.keys(existingDialogue).length > 0) {
+    // If dialogue exists, update only the content
+    repository.addAction({
+      actionType: "set",
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation.dialogue.content`,
+      value: leftContent,
+    });
+  } else if (leftContent) {
+    // If no dialogue exists but we have content, create minimal dialogue
+    repository.addAction({
+      actionType: "set",
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation.dialogue`,
+      value: {
+        content: leftContent,
+      },
+    });
+  }
+
   // Then, create a new line with the right content and insert it after the current line
+  // New line should have empty presentation except for dialogue.content
+  const newLinePresentation = rightContent
+    ? {
+        dialogue: {
+          content: rightContent,
+        },
+      }
+    : {};
+
   repository.addAction({
     actionType: "treePush",
     target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
@@ -307,19 +342,16 @@ export const handleSplitLine = (e, deps) => {
       position: { after: lineId },
       item: {
         id: newLineId,
-        presentation: {
-          dialogue: {
-            text: rightContent,
-          },
-        },
+        presentation: newLinePresentation,
       },
     },
   });
 
-  // Update the scene data
+  // Update store with new repository state IMMEDIATELY for UI responsiveness
+  store.setRepositoryState(repository.getState());
 
+  // Handle UI updates immediately for responsiveness
   // Pre-configure the linesEditor before rendering
-
   const refIds = getRefIds();
   const linesEditorRef = refIds["lines-editor"];
 
@@ -330,9 +362,6 @@ export const handleSplitLine = (e, deps) => {
     linesEditorRef.elm.store.setNavigationDirection("down");
     linesEditorRef.elm.store.setIsNavigating(true);
   }
-
-  // Update store with new repository state (this is the key missing step!)
-  store.setRepositoryState(repository.getState());
 
   // Update selectedLineId through the store (not directly in linesEditor)
   store.setSelectedLineId(newLineId);
@@ -349,6 +378,11 @@ export const handleSplitLine = (e, deps) => {
       linesEditorRef.elm.render();
     }
   });
+
+  // Render the canvas with the latest data
+  setTimeout(async () => {
+    await renderSceneState(store, drenderer, getFileContent);
+  }, 10);
 };
 
 export const handleNewLine = (e, deps) => {
@@ -466,24 +500,31 @@ export const handleMoveDown = (e, deps) => {
 };
 
 export const handleMergeLines = (e, deps) => {
-  const { store, getRefIds, render, repository } = deps;
+  const { store, getRefIds, render, repository, drenderer, getFileContent } =
+    deps;
   const { prevLineId, currentLineId, contentToAppend } = e.detail;
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
-  // Get previous line content
+  // Get previous line content and existing dialogue properties
   const scene = store.selectScene();
   const section = scene.sections.find((s) => s.id === sectionId);
   const prevLine = section.lines.find((s) => s.id === prevLineId);
 
   if (!prevLine) return;
 
-  const prevContent = prevLine.presentation?.dialogue?.text || "";
+  const prevContent = prevLine.presentation?.dialogue?.content || "";
   const mergedContent = prevContent + contentToAppend;
 
   // Store the length of the previous content for cursor positioning
   const prevContentLength = prevContent.length;
+
+  // Get existing dialogue data to preserve layoutId and characterId
+  let existingDialogue = {};
+  if (prevLine.presentation?.dialogue) {
+    existingDialogue = prevLine.presentation.dialogue;
+  }
 
   // Update previous line with merged content
   repository.addAction({
@@ -493,7 +534,8 @@ export const handleMergeLines = (e, deps) => {
       replace: false,
       item: {
         dialogue: {
-          text: mergedContent,
+          ...existingDialogue,
+          content: mergedContent,
         },
       },
     },
@@ -533,6 +575,11 @@ export const handleMergeLines = (e, deps) => {
       linesEditorRef.elm.render();
     }
   });
+
+  // Render the canvas with the latest data
+  setTimeout(async () => {
+    await renderSceneState(store, drenderer, getFileContent);
+  }, 10);
 };
 
 export const handleOpenCommandLine = (e, deps) => {
@@ -649,11 +696,16 @@ export const handlePopoverClickOverlay = (e, deps) => {
 };
 
 export const handleLineSelectionChanged = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, drenderer, getFileContent } = deps;
   const { lineId } = e.detail;
 
   store.setSelectedLineId(lineId);
   render();
+
+  // Render the canvas with the latest data
+  setTimeout(async () => {
+    await renderSceneState(store, drenderer, getFileContent);
+  }, 10);
 };
 
 export const handleFormActionClick = (e, deps) => {
@@ -704,4 +756,67 @@ export const handleToggleSectionsGraphView = (e, deps) => {
   const { store, render } = deps;
   store.toggleSectionsGraphView();
   render();
+};
+
+// Handler for throttled/debounced dialogue content updates
+export const handleUpdateDialogueContent = (payload, deps) => {
+  const { repository, store, drenderer, getFileContent } = deps;
+  const { lineId, content } = payload;
+
+  const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+
+  // Get existing dialogue data to preserve layoutId and characterId
+  const { scenes } = repository.getState();
+  const scene = toFlatItems(scenes)
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === sceneId);
+
+  let existingDialogue = {};
+  if (scene) {
+    const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
+    if (section) {
+      const line = toFlatItems(section.lines).find((l) => l.id === lineId);
+      if (line && line.presentation?.dialogue) {
+        existingDialogue = line.presentation.dialogue;
+      }
+    }
+  }
+
+  repository.addAction({
+    actionType: "set",
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+    value: {
+      replace: false,
+      item: {
+        dialogue: {
+          ...existingDialogue,
+          content: content,
+        },
+      },
+    },
+  });
+
+  // Note: store.setLineTextContent is already called immediately in handleEditorDataChanged
+  // so we don't need to call it again here
+
+  setTimeout(async () => {
+    await renderSceneState(store, drenderer, getFileContent);
+  }, 10);
+};
+
+// RxJS subscriptions for handling events with throttling/debouncing
+export const subscriptions = (deps) => {
+  const { subject } = deps;
+
+  return [
+    // Debounce dialogue content updates by 2000ms (2 seconds)
+    subject.pipe(
+      filter(({ action }) => action === "updateDialogueContent"),
+      debounceTime(2000),
+      tap(({ payload }) => {
+        deps.handlers.handleUpdateDialogueContent(payload, deps);
+      }),
+    ),
+  ];
 };

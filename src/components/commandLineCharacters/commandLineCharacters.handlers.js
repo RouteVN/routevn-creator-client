@@ -10,20 +10,32 @@ export const handleBeforeMount = (deps) => {
   store.setTransforms({
     transforms: placements || { tree: [], items: {} },
   });
-  store.setAnimations({
-    animations: animations || { tree: [], items: {} },
-  });
 
-  // Initialize empty character data if no existing characters
-  if (!props?.line?.presentation?.character?.items) {
+  // Use presentationState if available, otherwise fall back to line.presentation
+  let characterItems = null;
+
+  if (props?.presentationState?.character?.items) {
+    console.log(
+      "[commandLineCharacters] Using presentationState for defaults:",
+      props.presentationState.character,
+    );
+    characterItems = props.presentationState.character.items;
+  } else if (props?.line?.presentation?.character?.items) {
+    console.log(
+      "[commandLineCharacters] Falling back to line.presentation for defaults:",
+      props.line.presentation.character,
+    );
+    characterItems = props.line.presentation.character.items;
+  }
+
+  if (!characterItems) {
+    console.log("[commandLineCharacters] No existing character data found");
     return;
   }
 
-  const { character } = props.line.presentation;
-
   // Store raw character data from props
   store.setExistingCharacters({
-    characters: character.items,
+    characters: characterItems,
   });
 };
 
@@ -77,25 +89,25 @@ export const handleCharacterContextMenu = (e, deps) => {
 
 export const handleTransformChange = (e, deps) => {
   const { store, render } = deps;
-  const id = e.currentTarget.id;
-  const value = e.currentTarget.value;
+  const id = e.currentTarget?.id || e.target?.id;
+  // Try both event structures (native change event and custom option-selected event)
+  const value = e.detail?.value || e.currentTarget?.value || e.target?.value;
 
   // Extract index from ID (format: transform-{index})
   const index = parseInt(id.replace("transform-", ""));
 
+  console.log("[handleTransformChange] Transform change event:", {
+    id,
+    value,
+    index,
+    eventType: e.type,
+    detail: e.detail,
+    currentTarget: e.currentTarget,
+    target: e.target,
+    selectedCharacters: store.selectSelectedCharacters(),
+  });
+
   store.updateCharacterTransform({ index, transform: value });
-  render();
-};
-
-export const handleAnimationChange = (e, deps) => {
-  const { store, render } = deps;
-  const id = e.currentTarget.id;
-  const value = e.currentTarget.value;
-
-  // Extract index from ID (format: animation-{index})
-  const index = parseInt(id.replace("animation-", ""));
-
-  store.updateCharacterAnimation({ index, animation: value });
   render();
 };
 
@@ -133,9 +145,8 @@ export const handleSubmitClick = (payload, deps) => {
       items: selectedCharacters.map((char) => ({
         id: char.id,
         transformId: char.transformId,
-        spriteParts: char.spriteParts || [],
+        sprites: char.sprites || [],
         spriteName: char.spriteName || "",
-        animation: char.animation || "none",
       })),
     },
   };

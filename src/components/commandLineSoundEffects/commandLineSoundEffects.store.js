@@ -7,12 +7,12 @@ export const INITIAL_STATE = Object.freeze({
    * Array of sound effect objects with the following structure:
    * {
    *   id: string,           // Unique identifier for the sound effect
-   *   resourceId: string,   // ID of the audio resource from repository
+   *   audioId: string,      // ID of the audio resource from repository
    *   resourceType: "audio", // Type of resource (always "audio")
    *   name: string         // Display name for the sound effect
    * }
    */
-  soundEffects: [],
+  sfx: [],
   currentEditingId: null, // ID of sound effect being edited
   tempSelectedResourceId: undefined,
   // Dropdown menu state
@@ -20,7 +20,7 @@ export const INITIAL_STATE = Object.freeze({
     isOpen: false,
     position: { x: 0, y: 0 },
     items: [],
-    soundEffectId: null,
+    sfxId: null,
   },
 });
 
@@ -32,7 +32,7 @@ const form = {
   fields: [
     {
       inputType: "slot",
-      slot: "sound-effects",
+      slot: "sfx",
       description: "Sound Effects",
     },
   ],
@@ -46,30 +46,30 @@ export const setTempSelectedResourceId = (state, payload) => {
   state.tempSelectedResourceId = payload.resourceId;
 };
 
-export const addSoundEffect = (state, payload) => {
-  const newSoundEffect = {
+export const addSfx = (state, payload) => {
+  const newSfx = {
     id: payload.id,
-    resourceId: null,
+    audioId: null,
     resourceType: "audio",
     name: "New Sound Effect",
   };
-  state.soundEffects.push(newSoundEffect);
-  state.currentEditingId = newSoundEffect.id;
+  state.sfx.push(newSfx);
+  state.currentEditingId = newSfx.id;
 };
 
-export const setExistingSoundEffects = (state, payload) => {
-  state.soundEffects = payload.soundEffects;
+export const setExistingSfxs = (state, payload) => {
+  state.sfx = payload.sfx;
 };
 
-export const updateSoundEffect = (state, payload) => {
-  const index = state.soundEffects.findIndex((se) => se.id === payload.id);
+export const updateSfx = (state, payload) => {
+  const index = state.sfx.findIndex((se) => se.id === payload.id);
   if (index !== -1) {
-    state.soundEffects[index] = { ...state.soundEffects[index], ...payload };
+    state.sfx[index] = { ...state.sfx[index], ...payload };
   }
 };
 
-export const deleteSoundEffect = (state, payload) => {
-  state.soundEffects = state.soundEffects.filter((se) => se.id !== payload.id);
+export const deleteSfx = (state, payload) => {
+  state.sfx = state.sfx.filter((se) => se.id !== payload.id);
   if (state.currentEditingId === payload.id) {
     state.currentEditingId = null;
   }
@@ -79,11 +79,11 @@ export const setCurrentEditingId = (state, payload) => {
   state.currentEditingId = payload.id;
 };
 
-export const showDropdownMenu = (state, { position, soundEffectId }) => {
+export const showDropdownMenu = (state, { position, sfxId }) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
-    soundEffectId,
+    sfxId,
     items: [
       {
         label: "Delete",
@@ -99,35 +99,35 @@ export const hideDropdownMenu = (state) => {
     isOpen: false,
     position: { x: 0, y: 0 },
     items: [],
-    soundEffectId: null,
+    sfxId: null,
   };
 };
 
-export const selectDropdownMenuSoundEffectId = ({ state }) => {
-  return state.dropdownMenu.soundEffectId;
+export const selectDropdownMenuSfxId = ({ state }) => {
+  return state.dropdownMenu.sfxId;
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-export const selectCurrentEditingSoundEffect = ({ state }) => {
-  return state.soundEffects.find((se) => se.id === state.currentEditingId);
+export const selectCurrentEditingSfx = ({ state }) => {
+  return state.sfx.find((se) => se.id === state.currentEditingId);
 };
 
-export const selectSoundEffects = ({ state }) => {
-  return state.soundEffects;
+export const selectSfxs = ({ state }) => {
+  return state.sfx;
 };
 
 export const selectCurrentEditingId = ({ state }) => {
   return state.currentEditingId;
 };
 
-export const selectSoundEffectsWithAudioData = ({ state }) => {
+export const selectSfxWithAudioData = ({ state }) => {
   const flatAudioItems = toFlatItems(state.items);
 
-  return state.soundEffects.map((sfx) => {
-    const audioItem = flatAudioItems.find((item) => item.id === sfx.resourceId);
+  return state.sfx.map((sfx) => {
+    const audioItem = flatAudioItems.find((item) => item.id === sfx.audioId);
     return {
       ...sfx,
       name: audioItem?.name,
@@ -182,18 +182,18 @@ export const toViewData = ({ state, props }) => {
   });
 
   const breadcrumb = selectBreadcrumb({ state });
-  const soundEffectsWithAudioData = selectSoundEffectsWithAudioData({ state });
+  const sfxWithAudioData = selectSfxWithAudioData({ state });
 
   // Create default values with sound effects data
   const defaultValues = {
-    soundEffects: soundEffectsWithAudioData,
+    sfx: sfxWithAudioData,
   };
 
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
-    soundEffects: soundEffectsWithAudioData,
+    sfx: sfxWithAudioData,
     tempSelectedResourceId: state.tempSelectedResourceId,
     breadcrumb,
     form,
