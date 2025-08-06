@@ -9,10 +9,9 @@ import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
 // File management imports
 import { createFileManager } from "./deps/fileManager";
-import { createHttpStorageAdapter } from "./deps/httpStorageAdapter";
 import { createIndexedDBStorageAdapter } from "./deps/indexedDBStorageAdapter";
 import { createLegacyUploaders } from "./deps/fileUploaderCompat";
-import { createFontManager, loadFontFile } from "./deps/fontManager";
+import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 
@@ -99,12 +98,9 @@ const fontManager = createFontManager();
 
 // File management setup with new architecture
 // TODO: Make this configurable via userConfig
-const useLocalStorage = true; // Set to true to use IndexedDB instead of HTTP
 
-// Choose storage adapter based on configuration
-const storageAdapter = useLocalStorage
-  ? createIndexedDBStorageAdapter()
-  : createHttpStorageAdapter({ httpClient });
+// Use indexedDB for local storage. This can be configured to use other adapters like HTTP etc...
+const storageAdapter = createIndexedDBStorageAdapter()
 
 // Create the unified file manager
 const fileManager = createFileManager({
