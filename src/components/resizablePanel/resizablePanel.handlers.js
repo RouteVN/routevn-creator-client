@@ -61,7 +61,7 @@ const handleResizeMove = (e, deps) => {
     subject.dispatch("panel-resize", {
       panelType: attrs["panel-type"] || "file-explorer",
       width: store.selectPanelWidth(),
-      resizeSide: attrs["resize-side"] || "right"
+      resizeSide: attrs["resize-side"] || "right",
     });
   }
 
@@ -85,7 +85,7 @@ const handleResizeEnd = (e, deps, listeners) => {
     subject.dispatch("panel-resize-end", {
       panelType,
       width: currentWidth,
-      resizeSide: attrs["resize-side"] || "right"
+      resizeSide: attrs["resize-side"] || "right",
     });
   }
 
