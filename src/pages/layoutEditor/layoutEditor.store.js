@@ -36,6 +36,73 @@ const dialogueForm = {
   ],
 };
 
+const choiceForm = {
+  fields: [
+    {
+      name: "choicesNum",
+      inputType: "select",
+      description: "Number of Choices",
+      options: [
+        { label: "1", value: 1 },
+        { label: "2", value: 2 },
+        { label: "3", value: 3 },
+        { label: "4", value: 4 },
+        { label: "5", value: 5 },
+        { label: "6", value: 6 },
+      ],
+      placeholder: "Select number of choices",
+      required: true,
+    },
+    // TODO: think this can be done with $for choice, i in choices: ...
+    {
+      name: "choices[0]",
+      inputType: "inputText",
+      description: "Choice Content 1 Text",
+      placeholder: "Enter choice text",
+    },
+    {
+      "$if choicesNum > 1": {
+        name: "choices[1]",
+        inputType: "inputText",
+        description: "Choice Content 2 Text",
+        placeholder: "Enter choice text",
+      },
+    },
+    {
+      "$if choicesNum > 2": {
+        name: "choices[2]",
+        inputType: "inputText",
+        description: "Choice Content 3 Text",
+        placeholder: "Enter choice text",
+      },
+    },
+    {
+      "$if choicesNum > 3": {
+        name: "choices[3]",
+        inputType: "inputText",
+        description: "Choice Content 4 Text",
+        placeholder: "Enter choice text",
+      },
+    },
+    {
+      "$if choicesNum > 4": {
+        name: "choices[4]",
+        inputType: "inputText",
+        description: "Choice Content 5 Text",
+        placeholder: "Enter choice text",
+      },
+    },
+    {
+      "$if choicesNum > 5": {
+        name: "choices[5]",
+        inputType: "inputText",
+        description: "Choice Content 6 Text",
+        placeholder: "Enter choice text",
+      },
+    },
+  ],
+};
+
 export const INITIAL_STATE = Object.freeze({
   imageSelectorDialog: {
     isOpen: false,
@@ -61,6 +128,10 @@ export const INITIAL_STATE = Object.freeze({
   dialogueDefaultValues: {
     "dialogue-character-name": "Character R",
     "dialogue-content": "This is a sample dialogue content.",
+  },
+  choiceDefaultValues: {
+    choicesNum: 2,
+    choices: ["Choice A", "Choice B", "", "", "", ""],
   },
   contextMenuItems: [
     {
@@ -226,6 +297,15 @@ export const setDialogueDefaultValue = (state, { name, fieldValue }) => {
   state.dialogueDefaultValues[name] = fieldValue;
 };
 
+export const setChoiceDefaultValue = (state, { name, fieldValue }) => {
+  if (name.startsWith("choices[")) {
+    const index = parseInt(name.match(/\d+/)[0]);
+    state.choiceDefaultValues.choices[index] = fieldValue;
+  } else {
+    state.choiceDefaultValues[name] = fieldValue;
+  }
+};
+
 export const selectLayoutId = ({ state }) => {
   return state.layoutId;
 };
@@ -236,6 +316,10 @@ export const selectCurrentLayoutType = ({ state }) => {
 
 export const selectDialogueDefaultValues = ({ state }) => {
   return state.dialogueDefaultValues;
+};
+
+export const selectChoiceDefaultValues = ({ state }) => {
+  return state.choiceDefaultValues;
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -457,7 +541,12 @@ export const toViewData = ({ state, props }, payload) => {
                     description: "Content Type",
                     options: [
                       { label: "Custom Content", value: "custom" },
-                      { label: "Choice Content", value: "choice.content" },
+                      { label: "Choice Content 1", value: "choices[0]" },
+                      { label: "Choice Content 2", value: "choices[1]" },
+                      { label: "Choice Content 3", value: "choices[2]" },
+                      { label: "Choice Content 4", value: "choices[3]" },
+                      { label: "Choice Content 5", value: "choices[4]" },
+                      { label: "Choice Content 6", value: "choices[5]" },
                     ],
                     required: true,
                   },
@@ -539,6 +628,23 @@ export const toViewData = ({ state, props }, payload) => {
                   ],
                   required: true,
                 },
+                {
+                  '$if layoutType == "choice"': {
+                    name: "containerType",
+                    inputType: "select",
+                    description: "Container Type",
+                    options: [
+                      { label: "Custom Container", value: undefined },
+                      { label: "Choice Container 1", value: "choices[0]" },
+                      { label: "Choice Container 2", value: "choices[1]" },
+                      { label: "Choice Container 3", value: "choices[2]" },
+                      { label: "Choice Container 4", value: "choices[3]" },
+                      { label: "Choice Container 5", value: "choices[4]" },
+                      { label: "Choice Container 6", value: "choices[5]" },
+                    ],
+                    required: true,
+                  },
+                },
               ]
             : []),
         ],
@@ -584,6 +690,7 @@ export const toViewData = ({ state, props }, payload) => {
         ...(selectedItem.type === "container"
           ? {
               direction: selectedItem.direction,
+              containerType: selectedItem.containerType,
             }
           : {}),
       })
@@ -592,6 +699,10 @@ export const toViewData = ({ state, props }, payload) => {
   const context = {
     layoutType: state.layoutType,
     ...defaultValues,
+  };
+
+  const choicesContext = {
+    ...state.choiceDefaultValues,
   };
 
   return {
@@ -614,6 +725,9 @@ export const toViewData = ({ state, props }, payload) => {
     defaultValues,
     dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
+    choiceForm,
+    choiceDefaultValues: state.choiceDefaultValues,
+    choicesContext,
     layoutType: state.layoutType,
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,
