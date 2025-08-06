@@ -42,6 +42,10 @@ refs:
     eventListeners:
       form-change:
         handler: handleDialogueFormChange
+  choice-form:
+    eventListeners:
+      form-change:
+        handler: handleChoiceFormChange
   image-selector:
     eventListeners:
       image-selected:
@@ -78,6 +82,8 @@ template:
               - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
         - $if layoutType == 'dialogue':
           - rtgl-form#dialogue-form w=f h=f .form=dialogueForm .defaultValues=dialogueDefaultValues:
+        - $if layoutType == 'choice':
+          - rtgl-form#choice-form w=f h=f .form=choiceForm .defaultValues=choiceDefaultValues .context=choicesContext:
     - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
       - $if selectedItemId:
         - rtgl-view slot="content" w=f h=100vh sv:

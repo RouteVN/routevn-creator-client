@@ -6,12 +6,12 @@
         "@rettangoli/fe": "^0.0.7-rc11",
         "esbuild": "^0.25.5",
         "immer": "^10.1.1",
-        "jempl": "^0.1.2",
+        "jempl": "^0.1.3-rc1",
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
         "nanoid": "^5.1.5",
         "route-engine-js": "0.0.2-rc10",
-        "route-graphics": "^0.0.2-rc15",
+        "route-graphics": "^0.0.2-rc16",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
         "snabbdom-to-html": "^7.1.0",
@@ -214,7 +214,7 @@
 
     "ismobilejs": ["ismobilejs@1.1.1", "", {}, "sha512-VaFW53yt8QO61k2WJui0dHf4SlL8lxBofUuUmwBo0ljPk0Drz2TiuDW4jo3wDcv41qy/SxrJ+VAzJ/qYqsmzRw=="],
 
-    "jempl": ["jempl@0.1.2", "", {}, "sha512-/DD2XTLWxn1j3pdq/iReZPlSpJDKz7c1/w6PzLUOIfdOvbIm9+jlAvZ+aFf5jpLjFRauVBUpPeBN1c+LJYjrrg=="],
+    "jempl": ["jempl@0.1.3-rc1", "", {}, "sha512-3ImBIOckq0zYY+YSCW2VO7ETrJbCB6oELssHriofKlRmHg39xdo2yONucNKfhVXnFDmLwTDEHnIX6Z6m4TC+WA=="],
 
     "js-binary-schema-parser": ["js-binary-schema-parser@2.0.3", "", {}, "sha512-xezGJmOb4lk/M1ZZLTR/jaBHQ4gG/lqQnJqdIv4721DMggsa1bDVlHXNeHYogaIEHD9vCRv0fcL4hMA+Coarkg=="],
 
@@ -286,7 +286,7 @@
 
     "route-engine-js": ["route-engine-js@0.0.2-rc10", "", { "dependencies": { "immer": "^10.1.1", "jempl": "^0.1.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-4+KPjx2fTCuXKWNQFy18FuNndNnvAZeVjGtAmxSCHv71vZ6/y+sYDsxG8NsAYnBSCSYvrD/IBogapT22GE1BqQ=="],
 
-    "route-graphics": ["route-graphics@0.0.2-rc15", "", { "dependencies": { "pixi.js": "^8.7.1", "rxjs": "^7.8.2" } }, "sha512-uynPhmc/VQuUipGUwiKXNYIr+WZGvouuLw2Ys0UI+FEF6EJH1OgQpRbmjKukg4all4k1EUnh1/FcVqZADW3W+w=="],
+    "route-graphics": ["route-graphics@0.0.2-rc16", "", { "dependencies": { "pixi.js": "^8.7.1", "rxjs": "^7.8.2" } }, "sha512-3Ca74fH7N4p6Z/8+945VRPU1FP6Vk5lWdBlX3J7jrFAJAeSpjs7o0QZQWjdIQL15uffggK1wSyHP0S7ALRzYWw=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
@@ -357,6 +357,8 @@
     "micromatch/picomatch": ["picomatch@2.3.1", "", {}, "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA=="],
 
     "postcss/nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
+
+    "route-engine-js/jempl": ["jempl@0.1.2", "", {}, "sha512-/DD2XTLWxn1j3pdq/iReZPlSpJDKz7c1/w6PzLUOIfdOvbIm9+jlAvZ+aFf5jpLjFRauVBUpPeBN1c+LJYjrrg=="],
 
     "vite/esbuild": ["esbuild@0.25.4", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.25.4", "@esbuild/android-arm": "0.25.4", "@esbuild/android-arm64": "0.25.4", "@esbuild/android-x64": "0.25.4", "@esbuild/darwin-arm64": "0.25.4", "@esbuild/darwin-x64": "0.25.4", "@esbuild/freebsd-arm64": "0.25.4", "@esbuild/freebsd-x64": "0.25.4", "@esbuild/linux-arm": "0.25.4", "@esbuild/linux-arm64": "0.25.4", "@esbuild/linux-ia32": "0.25.4", "@esbuild/linux-loong64": "0.25.4", "@esbuild/linux-mips64el": "0.25.4", "@esbuild/linux-ppc64": "0.25.4", "@esbuild/linux-riscv64": "0.25.4", "@esbuild/linux-s390x": "0.25.4", "@esbuild/linux-x64": "0.25.4", "@esbuild/netbsd-arm64": "0.25.4", "@esbuild/netbsd-x64": "0.25.4", "@esbuild/openbsd-arm64": "0.25.4", "@esbuild/openbsd-x64": "0.25.4", "@esbuild/sunos-x64": "0.25.4", "@esbuild/win32-arm64": "0.25.4", "@esbuild/win32-ia32": "0.25.4", "@esbuild/win32-x64": "0.25.4" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-8pgjLUcUjcgDg+2Q4NYXnPbo/vncAY4UmyaCm0jZevERqCHZIaWwdJHkf8XQtu4AxSKCdvrUbT0XUr1IdZzI8Q=="],
 

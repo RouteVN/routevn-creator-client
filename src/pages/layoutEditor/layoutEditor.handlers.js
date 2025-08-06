@@ -23,18 +23,9 @@ const renderLayoutPreview = async (deps) => {
   const fontsItems = fontsData?.items || {};
   const layout = layouts.items[layoutId];
 
+  const choicesNum = store.selectChoiceDefaultValues().choicesNum;
+  console.log(layout.elements);
   const layoutTreeStructure = toTreeStructure(layout.elements);
-
-  // Find an actual image item (not a folder)
-  const imageItem = Object.values(imageItems).find(
-    (item) => item.type === "image",
-  );
-
-  // Check what the sprite is looking for
-  const spriteImageId = layoutTreeStructure[0]?.children?.find(
-    (child) => child.type === "sprite",
-  )?.imageId;
-
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
@@ -165,14 +156,53 @@ const renderLayoutPreview = async (deps) => {
   }
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
+  const choiceDefaultValues = store.selectChoiceDefaultValues();
   const data = {
     dialogue: {
       content: dialogueDefaultValues["dialogue-content"],
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
     },
+    choices: choiceDefaultValues.choices,
   };
-  const finalElements = parseAndRender(elementsToRender, data);
 
+  // Filter out choice containers where index >= choicesNum
+  const filterChoiceContainers = (elements) => {
+    return elements.reduce((acc, element) => {
+      // Check if this is a choice container
+      const choiceMatch =
+        element.containerType &&
+        element.containerType.match(/^choices\[(\d+)\]$/);
+      console.log(
+        `Processing element: ${element.id}, type: ${element.containerType}, match: ${choiceMatch}`,
+      );
+      if (choiceMatch) {
+        const choiceIndex = parseInt(choiceMatch[1], 10);
+        console.log(`Processing choice container with index ${choiceIndex}`);
+        // Skip this container if its index is >= choicesNum
+        if (choiceIndex >= choicesNum) {
+          console.log(
+            `Skipping choice container with index ${choiceIndex} (choicesNum is ${choicesNum})`,
+          );
+          return acc;
+        }
+      }
+
+      // If element has children, recursively filter them
+      if (element.children && element.children.length > 0) {
+        element = {
+          ...element,
+          children: filterChoiceContainers(element.children),
+        };
+      }
+
+      acc.push(element);
+      return acc;
+    }, []);
+  };
+
+  const filteredElements = filterChoiceContainers(elementsToRender);
+  const finalElements = parseAndRender(filteredElements, data);
+  console.log("Final elements to render:", finalElements);
   // Render all elements including red dot
   drenderer.render({
     elements: finalElements,
@@ -322,6 +352,16 @@ export const handleFormChange = async (e, deps) => {
   }
   if (e.detail.formValues.contentType === "dialogue.content") {
     updatedItem.text = "${dialogue.content}";
+  }
+  if (
+    e.detail.formValues.contentType &&
+    e.detail.formValues.contentType.startsWith("choices[")
+  ) {
+    const choiceIndex = parseInt(
+      e.detail.formValues.contentType.match(/\d+/)[0],
+      10,
+    );
+    updatedItem.text = `\${choices[${choiceIndex}]}`;
   }
 
   repository.addAction({
@@ -557,6 +597,17 @@ export const handleDialogueFormChange = async (e, deps) => {
 
   // Update the dialogue default values in the store
   store.setDialogueDefaultValue({ name, fieldValue });
+  render();
+
+  await renderLayoutPreview(deps);
+};
+
+export const handleChoiceFormChange = async (e, deps) => {
+  const { store, render } = deps;
+  const { name, fieldValue } = e.detail;
+
+  // Update the choice default values in the store
+  store.setChoiceDefaultValue({ name, fieldValue });
   render();
 
   await renderLayoutPreview(deps);

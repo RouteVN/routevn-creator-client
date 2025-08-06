@@ -184,6 +184,7 @@ export const layoutTreeStructureToRenderState = (
     if (node.type === "container") {
       // For containers, we need to handle direction and children
       element.direction = node.direction;
+      element.containerType = node.containerType;
     }
 
     if (node.children && node.children.length > 0) {
