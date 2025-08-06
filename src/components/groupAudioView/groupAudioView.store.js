@@ -42,6 +42,14 @@ export const updateAudioPlayerPosition = (state, { left, right }) => {
   state.audioPlayerRight = right;
 };
 
+export const updateAudioPlayerLeft = (state, left) => {
+  state.audioPlayerLeft = left;
+};
+
+export const updateAudioPlayerRight = (state, right) => {
+  state.audioPlayerRight = right;
+};
+
 export const selectAudioPlayerLeft = (state) => {
   return state.audioPlayerLeft;
 };
