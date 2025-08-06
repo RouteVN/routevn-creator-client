@@ -100,7 +100,7 @@ const fontManager = createFontManager();
 // TODO: Make this configurable via userConfig
 
 // Use indexedDB for local storage. This can be configured to use other adapters like HTTP etc...
-const storageAdapter = createIndexedDBStorageAdapter()
+const storageAdapter = createIndexedDBStorageAdapter();
 
 // Create the unified file manager
 const fileManager = createFileManager({
