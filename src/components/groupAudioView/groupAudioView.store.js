@@ -42,6 +42,14 @@ export const updateAudioPlayerPosition = (state, { left, right }) => {
   state.audioPlayerRight = right;
 };
 
+export const selectAudioPlayerLeft = (state) => {
+  return state.audioPlayerLeft;
+};
+
+export const selectAudioPlayerRight = (state) => {
+  return state.audioPlayerRight;
+};
+
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();

@@ -78,65 +78,45 @@ export const handleAudioPlayerClose = (e, deps) => {
   render();
 };
 
-export const handleAfterMount = (deps) => {
-  const { store, render, userConfig } = deps;
+export const handleBeforeMount = (deps) => {
+  const { store, userConfig } = deps;
 
-  // Store current panel widths
-  let currentLeftWidth = parseInt(
+  // Initialize panel widths from userConfig
+  const leftWidth = parseInt(
     userConfig.get("resizablePanel.file-explorerWidth") || "280",
     10,
   );
-  let currentRightWidth = parseInt(
+  const rightWidth = parseInt(
     userConfig.get("resizablePanel.detail-panelWidth") || "320",
     10,
   );
 
-  // Function to update position
-  const updatePosition = () => {
-    store.updateAudioPlayerPosition({
-      left: currentLeftWidth,
-      right: currentRightWidth,
-    });
-    render();
-  };
-
-  // Initial position
-  updatePosition();
-
-  // Listen for panel resize events using subject
-  const { subject } = deps;
-  if (subject) {
-    const subscription = subject.pipe().subscribe(({ action, payload }) => {
-      if (action === "panel-resize") {
-        // Update width during resize based on which panel is resizing
-        if (payload.panelType === "file-explorer") {
-          currentLeftWidth = payload.width;
-        } else if (payload.panelType === "detail-panel") {
-          currentRightWidth = payload.width;
-        }
-        updatePosition();
-      } else if (action === "panel-resize-end") {
-        // Update from userConfig when resize ends (in case of any discrepancy)
-        currentLeftWidth = parseInt(
-          userConfig.get("resizablePanel.file-explorerWidth") || "280",
-          10,
-        );
-        currentRightWidth = parseInt(
-          userConfig.get("resizablePanel.detail-panelWidth") || "320",
-          10,
-        );
-        updatePosition();
-      }
-    });
-
-    // Store subscription for cleanup
-    store._resizeSubscription = subscription;
-  }
+  store.updateAudioPlayerPosition({
+    left: leftWidth,
+    right: rightWidth,
+  });
 };
 
-export const handleBeforeUnmount = (deps) => {
-  const { store } = deps;
-  if (store._resizeSubscription) {
-    store._resizeSubscription.unsubscribe();
-  }
+export const subscriptions = (deps) => {
+  const { store, render, subject } = deps;
+
+  return [
+    subject.pipe().subscribe(({ action, payload }) => {
+      if (action === "panel-resize" || action === "panel-resize-end") {
+        // Update width based on which panel is resizing
+        if (payload.panelType === "file-explorer") {
+          store.updateAudioPlayerPosition({
+            left: payload.width,
+            right: store.selectAudioPlayerRight(),
+          });
+        } else if (payload.panelType === "detail-panel") {
+          store.updateAudioPlayerPosition({
+            left: store.selectAudioPlayerLeft(),
+            right: payload.width,
+          });
+        }
+        render();
+      }
+    }),
+  ];
 };

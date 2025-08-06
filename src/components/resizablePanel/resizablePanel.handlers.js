@@ -57,13 +57,11 @@ const handleResizeMove = (e, deps) => {
   store.setPanelWidth(newWidth, attrs);
 
   // Dispatch resize event via subject for other components to listen
-  if (subject) {
-    subject.dispatch("panel-resize", {
-      panelType: attrs["panel-type"] || "file-explorer",
-      width: store.selectPanelWidth(),
-      resizeSide: attrs["resize-side"] || "right",
-    });
-  }
+  subject.dispatch("panel-resize", {
+    panelType: attrs["panel-type"] || "file-explorer",
+    width: store.selectPanelWidth(),
+    resizeSide: attrs["resize-side"] || "right",
+  });
 
   render();
 };
@@ -81,13 +79,11 @@ const handleResizeEnd = (e, deps, listeners) => {
   userConfig.set(configKey, currentWidth.toString());
 
   // Dispatch resize-end event via subject
-  if (subject) {
-    subject.dispatch("panel-resize-end", {
-      panelType,
-      width: currentWidth,
-      resizeSide: attrs["resize-side"] || "right",
-    });
-  }
+  subject.dispatch("panel-resize-end", {
+    panelType,
+    width: currentWidth,
+    resizeSide: attrs["resize-side"] || "right",
+  });
 
   store.setIsResizing(false);
   render();
