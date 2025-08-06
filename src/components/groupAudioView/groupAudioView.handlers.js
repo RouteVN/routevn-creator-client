@@ -91,11 +91,8 @@ export const handleBeforeMount = (deps) => {
     10,
   );
 
-  // Add 64px offset for the sidebar
-  store.updateAudioPlayerPosition({
-    left: leftWidth + 64,
-    right: rightWidth,
-  });
+  store.updateAudioPlayerLeft(leftWidth + 64);
+  store.updateAudioPlayerRight(rightWidth);
 };
 
 export const subscriptions = (deps) => {
@@ -106,7 +103,6 @@ export const subscriptions = (deps) => {
       if (action === "panel-resize" || action === "panel-resize-end") {
         // Update width based on which panel is resizing
         if (payload.panelType === "file-explorer") {
-          // Add 64px offset for the sidebar on the left
           store.updateAudioPlayerLeft(payload.width + 64);
         } else if (payload.panelType === "detail-panel") {
           store.updateAudioPlayerRight(payload.width);

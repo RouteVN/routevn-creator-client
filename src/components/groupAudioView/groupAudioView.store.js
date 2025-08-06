@@ -37,11 +37,6 @@ export const closeAudioPlayer = (state) => {
   };
 };
 
-export const updateAudioPlayerPosition = (state, { left, right }) => {
-  state.audioPlayerLeft = left;
-  state.audioPlayerRight = right;
-};
-
 export const updateAudioPlayerLeft = (state, left) => {
   state.audioPlayerLeft = left;
 };
