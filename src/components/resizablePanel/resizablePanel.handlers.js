@@ -42,7 +42,7 @@ export const handleResizeStart = (e, deps) => {
 };
 
 const handleResizeMove = (e, deps) => {
-  const { store, render, dispatchEvent, attrs } = deps;
+  const { store, render, attrs, subject } = deps;
 
   if (!store.selectIsResizing()) return;
 
@@ -56,11 +56,20 @@ const handleResizeMove = (e, deps) => {
 
   store.setPanelWidth(newWidth, attrs);
 
+  // Dispatch resize event via subject for other components to listen
+  if (subject) {
+    subject.dispatch("panel-resize", {
+      panelType: attrs["panel-type"] || "file-explorer",
+      width: store.selectPanelWidth(),
+      resizeSide: attrs["resize-side"] || "right"
+    });
+  }
+
   render();
 };
 
 const handleResizeEnd = (e, deps, listeners) => {
-  const { store, render, attrs, userConfig } = deps;
+  const { store, render, attrs, userConfig, subject } = deps;
   const { handleMouseMove, handleMouseUp } = listeners;
 
   console.log("🔧 Resizable panel resize end");
@@ -70,6 +79,15 @@ const handleResizeEnd = (e, deps, listeners) => {
   const configKey = `resizablePanel.${panelType}Width`;
   const currentWidth = store.selectPanelWidth();
   userConfig.set(configKey, currentWidth.toString());
+
+  // Dispatch resize-end event via subject
+  if (subject) {
+    subject.dispatch("panel-resize-end", {
+      panelType,
+      width: currentWidth,
+      resizeSide: attrs["resize-side"] || "right"
+    });
+  }
 
   store.setIsResizing(false);
   render();

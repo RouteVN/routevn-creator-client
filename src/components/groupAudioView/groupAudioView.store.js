@@ -6,6 +6,8 @@ export const INITIAL_STATE = Object.freeze({
     fileId: undefined,
   },
   showAudioPlayer: false,
+  audioPlayerLeft: 0,
+  audioPlayerRight: 0,
 });
 
 export const toggleGroupCollapse = (state, groupId) => {
@@ -33,6 +35,11 @@ export const closeAudioPlayer = (state) => {
     title: "",
     fileId: undefined,
   };
+};
+
+export const updateAudioPlayerPosition = (state, { left, right }) => {
+  state.audioPlayerLeft = left;
+  state.audioPlayerRight = right;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -85,5 +92,7 @@ export const toViewData = ({ state, props }) => {
     searchQuery: state.searchQuery,
     uploadText: "Upload Audio",
     acceptedFileTypes: [".mp3", ".wav", ".ogg", ".aac", ".flac", ".m4a"],
+    audioPlayerLeft: state.audioPlayerLeft,
+    audioPlayerRight: state.audioPlayerRight,
   };
 };
