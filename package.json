@@ -16,7 +16,8 @@
     "vite": "^6.3.5"
   },
   "scripts": {
-    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl fe build && rtgl ui build-svg",
+    "build:dev": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build -d",
+    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build",
     "watch": "rtgl fe watch",
     "serve": "bunx serve _site -p 3001",
     "lint": "bunx prettier --check src",
