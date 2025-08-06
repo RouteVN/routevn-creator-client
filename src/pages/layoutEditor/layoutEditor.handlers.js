@@ -24,7 +24,7 @@ const renderLayoutPreview = async (deps) => {
   const layout = layouts.items[layoutId];
 
   const choicesNum = store.selectChoiceDefaultValues().choicesNum;
-  console.log(layout.elements);
+
   const layoutTreeStructure = toTreeStructure(layout.elements);
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
@@ -172,17 +172,11 @@ const renderLayoutPreview = async (deps) => {
       const choiceMatch =
         element.containerType &&
         element.containerType.match(/^choices\[(\d+)\]$/);
-      console.log(
-        `Processing element: ${element.id}, type: ${element.containerType}, match: ${choiceMatch}`,
-      );
+
       if (choiceMatch) {
         const choiceIndex = parseInt(choiceMatch[1], 10);
-        console.log(`Processing choice container with index ${choiceIndex}`);
         // Skip this container if its index is >= choicesNum
         if (choiceIndex >= choicesNum) {
-          console.log(
-            `Skipping choice container with index ${choiceIndex} (choicesNum is ${choicesNum})`,
-          );
           return acc;
         }
       }
@@ -202,7 +196,6 @@ const renderLayoutPreview = async (deps) => {
 
   const filteredElements = filterChoiceContainers(elementsToRender);
   const finalElements = parseAndRender(filteredElements, data);
-  console.log("Final elements to render:", finalElements);
   // Render all elements including red dot
   drenderer.render({
     elements: finalElements,
