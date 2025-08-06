@@ -166,6 +166,7 @@ const renderLayoutPreview = async (deps) => {
   };
 
   // Filter out choice containers where index >= choicesNum
+  // TODO: ideally this kind of filter should be done using jempl
   const filterChoiceContainers = (elements) => {
     return elements.reduce((acc, element) => {
       // Check if this is a choice container
@@ -350,10 +351,12 @@ export const handleFormChange = async (e, deps) => {
     e.detail.formValues.contentType &&
     e.detail.formValues.contentType.startsWith("choices[")
   ) {
+    // TODO: those needs to update to proper set and get in future.
     const choiceIndex = parseInt(
       e.detail.formValues.contentType.match(/\d+/)[0],
       10,
     );
+    // TODO: those needs to update to proper set and get in future.
     updatedItem.text = `\${choices[${choiceIndex}]}`;
   }
 

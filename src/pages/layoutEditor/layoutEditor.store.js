@@ -53,6 +53,7 @@ const choiceForm = {
       placeholder: "Select number of choices",
       required: true,
     },
+    // TODO: think this can be done with $for choice, i in choices: ...
     {
       name: "choices[0]",
       inputType: "inputText",
