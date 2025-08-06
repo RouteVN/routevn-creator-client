@@ -7,14 +7,11 @@ import Subject from "./deps/subject";
 import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
 import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
-import {
-  createImageFileUploader,
-  createAudioFileUploader,
-  createVideoFileUploader,
-  createFontFileUploader,
-  createDownloadWaveformData,
-  createGetFileContent,
-} from "./deps/createFileUploader";
+// File management imports
+import { createFileManager } from "./deps/fileManager";
+import { createHttpStorageAdapter } from "./deps/httpStorageAdapter";
+import { createIndexedDBStorageAdapter } from "./deps/indexedDBStorageAdapter";
+import { createLegacyUploaders } from "./deps/fileUploaderCompat";
 import { createFontManager, loadFontFile } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
@@ -96,24 +93,38 @@ const subject = new Subject();
 const router = new Router();
 const audioManager = new AudioManager();
 const drenderer = await create2dRenderer();
-const uploadImageFiles = createImageFileUploader({
-  httpClient,
-});
-const uploadAudioFiles = createAudioFileUploader({
-  httpClient,
-});
-const uploadVideoFiles = createVideoFileUploader({
-  httpClient,
-});
+
+// Create font manager (needed by fileManager)
 const fontManager = createFontManager();
-const uploadFontFiles = createFontFileUploader({
-  httpClient,
+
+// File management setup with new architecture
+// TODO: Make this configurable via userConfig
+const useLocalStorage = true; // Set to true to use IndexedDB instead of HTTP
+
+// Choose storage adapter based on configuration
+const storageAdapter = useLocalStorage
+  ? createIndexedDBStorageAdapter()
+  : createHttpStorageAdapter({ httpClient });
+
+// Create the unified file manager
+const fileManager = createFileManager({
+  storageAdapter,
   fontManager,
 });
+
+// Create legacy uploaders for backward compatibility
+// This ensures existing code continues to work without changes
+const {
+  uploadImageFiles,
+  uploadAudioFiles,
+  uploadVideoFiles,
+  uploadFontFiles,
+  downloadWaveformData,
+  getFileContent,
+  loadFontFile: loadFontFileFunc,
+} = createLegacyUploaders({ fileManager, httpClient, fontManager });
+
 const filePicker = createFilePicker();
-const getFileContent = createGetFileContent({ httpClient });
-const loadFontFileFunc = loadFontFile({ getFileContent, fontManager });
-const downloadWaveformData = createDownloadWaveformData({ getFileContent });
 
 const componentDependencies = {
   httpClient,
@@ -132,6 +143,8 @@ const componentDependencies = {
   drenderer,
   filePicker,
   getFileContent,
+  // Also include the new fileManager for components that want to use it
+  fileManager,
 };
 
 const pageDependencies = {
@@ -151,6 +164,8 @@ const pageDependencies = {
   drenderer,
   filePicker,
   getFileContent,
+  // Also include the new fileManager for pages that want to use it
+  fileManager,
 };
 
 const deps = {

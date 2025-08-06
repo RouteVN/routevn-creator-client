@@ -50,57 +50,18 @@ export const handleComponentCreated = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, httpClient, repository } = deps;
+  const { store, render, fileManager, uploadImageFiles, repository } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Create upload promises for all files
-  const uploadPromises = Array.from(files).map(async (file) => {
-    try {
-      const { downloadUrl, uploadUrl, fileId } =
-        await httpClient.creator.uploadFile({
-          projectId: "someprojectId",
-        });
+  // Use fileManager if available, otherwise fall back to uploadImageFiles
+  const uploader = fileManager || { upload: uploadImageFiles };
 
-      const response = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type, // Ensure the Content-Type matches the file type
-        },
-      });
+  // Upload all files
+  const uploadResults = await uploader.upload(files, "someprojectId");
 
-      if (response.ok) {
-        console.log("File uploaded successfully:", file.name);
-        return {
-          success: true,
-          file,
-          downloadUrl,
-          fileId,
-        };
-      } else {
-        console.error("File upload failed:", file.name, response.statusText);
-        return {
-          success: false,
-          file,
-          error: response.statusText,
-        };
-      }
-    } catch (error) {
-      console.error("File upload error:", file.name, error);
-      return {
-        success: false,
-        file,
-        error: error.message,
-      };
-    }
-  });
-
-  // Wait for all uploads to complete
-  const uploadResults = await Promise.all(uploadPromises);
-
-  // Add successfully uploaded files to repository
-  const successfulUploads = uploadResults.filter((result) => result.success);
+  // uploadResults already contains only successful uploads
+  const successfulUploads = uploadResults;
 
   successfulUploads.forEach((result) => {
     repository.addAction({
