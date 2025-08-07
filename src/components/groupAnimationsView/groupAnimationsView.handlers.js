@@ -223,13 +223,15 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   console.log("e.detail", e.detail);
   const popover = store.selectPopover();
   const { property, index } = popover.payload;
+  // Use the stored x, y coordinates from popover state
+  const { x, y } = popover;
 
   // e.detail.index
   if (e.detail.item.value === "edit") {
     store.setPopover({
       mode: "editKeyframe",
-      x: e.detail.x,
-      y: e.detail.y,
+      x: x,
+      y: y,
       payload: {
         property,
         index,
@@ -244,8 +246,8 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "add-right") {
     store.setPopover({
       mode: "addKeyframe",
-      x: e.detail.x,
-      y: e.detail.y,
+      x: x,
+      y: y,
       payload: {
         property,
         index: index + 1,
@@ -254,8 +256,8 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "add-left") {
     store.setPopover({
       mode: "addKeyframe",
-      x: e.detail.x,
-      y: e.detail.y,
+      x: x,
+      y: y,
       payload: {
         property,
         index,
