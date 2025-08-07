@@ -85,5 +85,5 @@ template:
             - rtgl-text s=lg c=mu-fg: No audios found matching "${searchQuery}"
     - rtgl-view h=33vh:
     - $if showAudioPlayer:
-      - 'rtgl-view pos=fix cor=bottom h=72 style="left: 304px; right: 270px;"':
+      - 'rtgl-view h=72 pos=fix cor=bottom z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
         - rvn-audio-player fileId=${playingAudio.fileId} autoPlay=true .title=playingAudio.title:
