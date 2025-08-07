@@ -77,3 +77,38 @@ export const handleAudioPlayerClose = (e, deps) => {
   store.closeAudioPlayer();
   render();
 };
+
+export const handleBeforeMount = (deps) => {
+  const { store, userConfig } = deps;
+
+  // Initialize panel widths from userConfig
+  const leftWidth = parseInt(
+    userConfig.get("resizablePanel.file-explorerWidth") || "280",
+    10,
+  );
+  const rightWidth = parseInt(
+    userConfig.get("resizablePanel.detail-panelWidth") || "320",
+    10,
+  );
+
+  store.updateAudioPlayerLeft(leftWidth + 64);
+  store.updateAudioPlayerRight(rightWidth);
+};
+
+export const subscriptions = (deps) => {
+  const { store, render, subject } = deps;
+
+  return [
+    subject.pipe().subscribe(({ action, payload }) => {
+      if (action === "panel-resize" || action === "panel-resize-end") {
+        // Update width based on which panel is resizing
+        if (payload.panelType === "file-explorer") {
+          store.updateAudioPlayerLeft(payload.width + 64);
+        } else if (payload.panelType === "detail-panel") {
+          store.updateAudioPlayerRight(payload.width);
+        }
+        render();
+      }
+    }),
+  ];
+};

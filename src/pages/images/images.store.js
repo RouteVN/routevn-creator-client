@@ -8,7 +8,6 @@ const form = {
       inputType: "image",
       src: "${fileId.src}",
       width: 240,
-      height: 135,
     },
     { name: "name", inputType: "popover-input", description: "Name" },
     {
@@ -83,7 +82,6 @@ export const toViewData = ({ state }) => {
         type: "image",
         fileId: selectedItem.fileId,
         width: 240,
-        height: 135,
         editable: true,
         accept: "image/*",
         eventType: "image-file-selected",

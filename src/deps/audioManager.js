@@ -32,8 +32,6 @@ export default class AudioManager {
   }
 
   cleanup() {
-    this.stop();
-
     if (this.audioContext && this.audioContext.state !== "closed") {
       this.audioContext.close();
     }
@@ -41,7 +39,6 @@ export default class AudioManager {
     this.audioContext = null;
     this.gainNode = null;
     this.audioBuffer = null;
-    this.listeners.clear();
   }
 
   async loadAudio(url) {
