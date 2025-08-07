@@ -63,6 +63,34 @@ export const toViewData = ({ state, props, attrs }) => {
   const timeAtMouse = (state.mouseX / timelineWidth) * durationValue;
   const timeDisplay = Math.round(timeAtMouse * 10) / 10; // round to 1 decimal
 
+  // Process keyframes to add width percentages
+  if (selectedProperties.length > 0 && maxDuration > 0) {
+    selectedProperties = selectedProperties.map((property) => {
+      if (property.keyframes && property.keyframes.length > 0) {
+        const propertyTotalDuration = property.keyframes.reduce(
+          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
+          0,
+        );
+
+        // Calculate width percentage for each keyframe
+        const keyframesWithWidth = property.keyframes.map((keyframe) => {
+          const duration = parseFloat(keyframe.duration) || 1000;
+          const widthPercent = (duration / propertyTotalDuration) * 100;
+          return {
+            ...keyframe,
+            widthPercent: widthPercent.toFixed(2),
+          };
+        });
+
+        return {
+          ...property,
+          keyframes: keyframesWithWidth,
+        };
+      }
+      return property;
+    });
+  }
+
   console.log("selectedProperties", selectedProperties);
 
   const result = {
