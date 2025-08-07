@@ -46,14 +46,14 @@ export const toViewData = ({ state, props, attrs }) => {
     selectedProperties.forEach((property) => {
       if (property.keyframes && property.keyframes.length > 0) {
         const propertyDuration = property.keyframes.reduce(
-          (sum, keyframe) => sum + (keyframe.duration || 1000),
+          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
           0,
         );
         maxDuration = Math.max(maxDuration, propertyDuration);
       }
     });
   }
-  const totalDuration = maxDuration > 0 ? `${maxDuration / 1000}s` : "0s";
+  const totalDuration = maxDuration > 0 ? `${maxDuration}ms` : "0ms";
 
   // Parse duration to calculate time at mouse position
   const durationValue = maxDuration / 1000;
