@@ -55,10 +55,23 @@ const editInitialValueForm = {
   title: "Edit Initial Value",
   fields: [
     {
-      name: "initialValue",
-      inputType: "inputText",
-      label: "Initial Value",
+      name: "valueSource",
+      inputType: "select",
+      label: "Value Source",
+      options: [
+        { label: "Use Default Value", value: "default" },
+        { label: "Custom Value", value: "custom" },
+      ],
+      defaultValue: "custom",
       required: true,
+    },
+    {
+      "$if valueSource == 'custom'": {
+        //$when: "valueSource == 'custom'",
+        name: "initialValue",
+        inputType: "inputText",
+        label: "Custom Initial Value",
+      },
     },
   ],
   actions: {
@@ -91,10 +104,23 @@ const createAddPropertyForm = (propertyOptions) => {
         required: true,
       },
       {
-        name: "initialValue",
-        inputType: "inputText",
-        label: "Initial Value",
+        name: "valueSource",
+        inputType: "select",
+        label: "Initial Value Source",
+        options: [
+          { label: "Use Default Value", value: "default" },
+          { label: "Custom Value", value: "custom" },
+        ],
+        defaultValue: "default",
         required: true,
+      },
+      {
+        "$if valueSource == 'custom'": {
+          //$when: "valueSource == 'custom'",
+          name: "initialValue",
+          inputType: "inputText",
+          label: "Custom Initial Value",
+        },
       },
     ],
     actions: {
@@ -193,6 +219,7 @@ export const INITIAL_STATE = Object.freeze({
     x: undefined,
     y: undefined,
     payload: {},
+    formValues: {},
   },
 });
 
@@ -230,6 +257,11 @@ export const closePopover = (state) => {
   state.popover.x = undefined;
   state.popover.y = undefined;
   state.popover.payload = {};
+  state.popover.formValues = {};
+};
+
+export const updatePopoverFormValues = (state, formValues) => {
+  state.popover.formValues = formValues;
 };
 
 export const openDialog = (
@@ -334,12 +366,13 @@ export const setSearchQuery = (state, query) => {
 };
 
 export const addProperty = (state, payload) => {
-  const { property, initialValue } = payload;
+  const { property, initialValue, isDefault } = payload;
   if (state.animationProperties[property]) {
     return;
   }
   state.animationProperties[property] = {
     initialValue,
+    isDefault,
     keyframes: [],
   };
 };
@@ -412,9 +445,10 @@ export const updateKeyframe = (state, payload) => {
 };
 
 export const updateInitialValue = (state, payload) => {
-  const { property, initialValue } = payload;
+  const { property, initialValue, isDefault } = payload;
 
   state.animationProperties[property].initialValue = initialValue;
+  state.animationProperties[property].isDefault = isDefault;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -485,9 +519,21 @@ export const toViewData = ({ state, props }) => {
 
   const addPropertyForm = createAddPropertyForm(toAddProperties);
 
-  // Create default values for edit forms
+  // Create default values for forms
+  let addPropertyDefaultValues = {};
   let editKeyframeDefaultValues = {};
   let editInitialValueDefaultValues = {};
+
+  // Create context objects for forms
+  let addPropertyContext = {};
+  let editInitialValueContext = {};
+
+  // Set context for add property form
+  if (state.popover.mode === "addProperty") {
+    addPropertyDefaultValues = state.popover.formValues || {};
+    addPropertyContext = { ...addPropertyDefaultValues };
+    console.log("[AddProperty Context]", addPropertyContext);
+  }
 
   if (state.popover.mode === "editKeyframe") {
     const { property, index } = state.popover.payload;
@@ -506,9 +552,29 @@ export const toViewData = ({ state, props }) => {
     const currentInitialValue =
       state.animationProperties[property].initialValue;
 
+    // Check if current value matches default
+    const defaultValues = {
+      x: 0,
+      y: 0,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+    };
+
+    const isUsingDefault = currentInitialValue === defaultValues[property];
+
     editInitialValueDefaultValues = {
       initialValue: currentInitialValue,
+      valueSource: isUsingDefault ? "default" : "custom",
     };
+
+    editInitialValueContext = {
+      ...editInitialValueDefaultValues,
+      ...state.popover.formValues,
+    };
+
+    console.log("[EditInitialValue Context]", editInitialValueContext);
   }
 
   // TODO this is hacky way to work around limitation of passing props
@@ -530,9 +596,11 @@ export const toViewData = ({ state, props }) => {
     itemAnimationProperties,
     initialValue: state.initialValue,
     addPropertyForm,
+    addPropertyContext,
     addKeyframeForm,
     updateKeyframeForm,
     editInitialValueForm,
+    editInitialValueContext,
     editKeyframeDefaultValues,
     editInitialValueDefaultValues,
     keyframeDropdownItems,
