@@ -85,11 +85,11 @@ template:
                   - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
                       - $if property.keyframes:
                           - $for keyframe, j in property.keyframes:
-                              - rtgl-view#keyframe-${property.name}-${j} d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e mr=xs:
-                                  - rtgl-text s=xs: ${keyframe.duration}ms
+                              - 'rtgl-view#keyframe-${property.name}-${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs style="width: ${keyframe.widthPercent}%"':
+                                  - rtgl-text s=xs: ${keyframe.value}
                         $else:
                           - rtgl-view d=h p=xs h=f bgc=ac flex=1 br=sm ah=e av=e:
-                              - rtgl-text s=xs: 1s
+                              - rtgl-text s=xs: 0
         $else:
           - rtgl-view w=f av=c ah=c p=lg:
               - rtgl-text s=sm c=mu-fg: "Click Add Properties to add animation properties"

@@ -24,11 +24,11 @@ const assetItems = [
     name: "Placements",
     path: "/project/resources/placements",
   },
-  // {
-  //   id: "animations",
-  //   name: "Animations",
-  //   path: "/project/resources/animations",
-  // },
+  {
+    id: "animations",
+    name: "Animations",
+    path: "/project/resources/animations",
+  },
 ];
 
 const userInterfaceItems = [
