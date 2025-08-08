@@ -14,6 +14,17 @@ const addKeyframeForm = {
       required: true,
     },
     {
+      name: "relative",
+      inputType: "select",
+      label: "Relative",
+      options: [
+        { label: "False", value: "false" },
+        { label: "True", value: "true" },
+      ],
+      defaultValue: "false",
+      required: true,
+    },
+    {
       name: "easing",
       inputType: "select",
       label: "Easing",
@@ -388,6 +399,7 @@ export const addKeyframe = (state, keyframe) => {
     duration: keyframe.duration,
     easing: keyframe.easing,
     value: keyframe.value,
+    relative: keyframe.relative === "true",
   });
 };
 
@@ -538,6 +550,7 @@ export const toViewData = ({ state, props }) => {
       duration: currentKeyframe.duration,
       value: currentKeyframe.value,
       easing: currentKeyframe.easing,
+      relative: currentKeyframe.relative ? "true" : "false",
     };
   }
 
