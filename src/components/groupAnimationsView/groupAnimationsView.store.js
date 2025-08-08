@@ -66,12 +66,10 @@ const editInitialValueForm = {
       required: true,
     },
     {
-      "$if valueSource == 'custom'": {
-        //$when: "valueSource == 'custom'",
-        name: "initialValue",
-        inputType: "inputText",
-        label: "Custom Initial Value",
-      },
+      $when: "valueSource == 'custom'",
+      name: "initialValue",
+      inputType: "inputText",
+      label: "Custom Initial Value",
     },
   ],
   actions: {
@@ -115,12 +113,10 @@ const createAddPropertyForm = (propertyOptions) => {
         required: true,
       },
       {
-        "$if valueSource == 'custom'": {
-          //$when: "valueSource == 'custom'",
-          name: "initialValue",
-          inputType: "inputText",
-          label: "Custom Initial Value",
-        },
+        $when: "valueSource == 'custom'",
+        name: "initialValue",
+        inputType: "inputText",
+        label: "Custom Initial Value",
       },
     ],
     actions: {
