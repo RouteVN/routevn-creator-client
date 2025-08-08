@@ -362,13 +362,12 @@ export const setSearchQuery = (state, query) => {
 };
 
 export const addProperty = (state, payload) => {
-  const { property, initialValue, isDefault } = payload;
+  const { property, initialValue } = payload;
   if (state.animationProperties[property]) {
     return;
   }
   state.animationProperties[property] = {
     initialValue,
-    isDefault,
     keyframes: [],
   };
 };
@@ -441,10 +440,9 @@ export const updateKeyframe = (state, payload) => {
 };
 
 export const updateInitialValue = (state, payload) => {
-  const { property, initialValue, isDefault } = payload;
+  const { property, initialValue } = payload;
 
   state.animationProperties[property].initialValue = initialValue;
-  state.animationProperties[property].isDefault = isDefault;
 };
 
 export const toViewData = ({ state, props }) => {
