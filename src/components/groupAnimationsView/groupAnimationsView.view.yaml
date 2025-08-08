@@ -76,6 +76,8 @@ refs:
     eventListeners:
       action-click:
         handler: handleAddPropertyFormSubmit
+      form-change:
+        handler: handleAddPropertyFormChange
   add-keyframe-form:
     eventListeners:
       action-click:
@@ -92,6 +94,8 @@ refs:
     eventListeners:
       action-click:
         handler: handleEditInitialValueFormSubmit
+      form-change:
+        handler: handleEditInitialValueFormChange
   keyframe-dropdown-menu:
     eventListeners:
       close:
@@ -156,11 +160,11 @@ template:
 
       - rtgl-popover#add-property-popover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
         - $if popover.mode == 'addProperty':
-          - rtgl-form#add-property-form slot=content .form=addPropertyForm:
+          - rtgl-form#add-property-form slot=content .form=addPropertyForm .context=addPropertyContext:
         - $if popover.mode == 'addKeyframe':
           - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
         - $if popover.mode == 'editKeyframe':
           - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm .defaultValues=editKeyframeDefaultValues:
         - $if popover.mode == 'editInitialValue':
-          - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm .defaultValues=editInitialValueDefaultValues:
+          - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm .defaultValues=editInitialValueDefaultValues .context=editInitialValueContext:
       - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}:

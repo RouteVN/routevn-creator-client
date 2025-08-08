@@ -142,8 +142,26 @@ export const handleAddPropertiesClick = (e, deps) => {
 
 export const handleAddPropertyFormSubmit = (e, deps) => {
   const { store, render } = deps;
-  const { property, initialValue } = e.detail.formValues;
-  store.addProperty({ property, initialValue });
+  const { property, initialValue, valueSource } = e.detail.formValues;
+
+  // Get default value for the property if using existing value
+  const defaultValues = {
+    x: 0,
+    y: 0,
+    alpha: 1,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+  };
+
+  const finalInitialValue =
+    valueSource === "default"
+      ? defaultValues[property] !== undefined
+        ? defaultValues[property]
+        : 0
+      : initialValue;
+
+  store.addProperty({ property, initialValue: finalInitialValue });
   store.closePopover();
   render();
 };
@@ -223,13 +241,15 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   console.log("e.detail", e.detail);
   const popover = store.selectPopover();
   const { property, index } = popover.payload;
+  // Use the stored x, y coordinates from popover state
+  const { x, y } = popover;
 
   // e.detail.index
   if (e.detail.item.value === "edit") {
     store.setPopover({
       mode: "editKeyframe",
-      x: e.detail.x,
-      y: e.detail.y,
+      x: x,
+      y: y,
       payload: {
         property,
         index,
@@ -244,8 +264,8 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "add-right") {
     store.setPopover({
       mode: "addKeyframe",
-      x: e.detail.x,
-      y: e.detail.y,
+      x: x,
+      y: y,
       payload: {
         property,
         index: index + 1,
@@ -254,8 +274,8 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "add-left") {
     store.setPopover({
       mode: "addKeyframe",
-      x: e.detail.x,
-      y: e.detail.y,
+      x: x,
+      y: y,
       payload: {
         property,
         index,
@@ -299,14 +319,85 @@ export const handleInitialValueClick = (e, deps) => {
   render();
 };
 
+export const handleAddPropertyFormChange = (e, deps) => {
+  const { store, render } = deps;
+
+  // Form-change event passes individual field changes
+  const { name, fieldValue } = e.detail;
+
+  console.log("[AddProperty Form Change] Field:", name, "Value:", fieldValue);
+
+  // Get current form values and update the changed field
+  const currentFormValues = store.selectPopover().formValues || {};
+  const updatedFormValues = {
+    ...currentFormValues,
+    [name]: fieldValue,
+  };
+
+  console.log(
+    "[AddProperty Form Change] Updated FormValues:",
+    updatedFormValues,
+  );
+  store.updatePopoverFormValues(updatedFormValues);
+  render();
+};
+
+export const handleEditInitialValueFormChange = (e, deps) => {
+  const { store, render } = deps;
+
+  // Form-change event passes individual field changes
+  const { name, fieldValue } = e.detail;
+
+  console.log(
+    "[EditInitialValue Form Change] Field:",
+    name,
+    "Value:",
+    fieldValue,
+  );
+
+  // Get current form values and update the changed field
+  const currentFormValues = store.selectPopover().formValues || {};
+  const updatedFormValues = {
+    ...currentFormValues,
+    [name]: fieldValue,
+  };
+
+  console.log(
+    "[EditInitialValue Form Change] Updated FormValues:",
+    updatedFormValues,
+  );
+  store.updatePopoverFormValues(updatedFormValues);
+  render();
+};
+
 export const handleEditInitialValueFormSubmit = (e, deps) => {
   const { store, render } = deps;
   const {
     payload: { property },
   } = store.selectPopover();
+
+  const { initialValue, valueSource } = e.detail.formValues;
+
+  // Get default value for the property if using existing value
+  const defaultValues = {
+    x: 0,
+    y: 0,
+    alpha: 1,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+  };
+
+  const finalInitialValue =
+    valueSource === "default"
+      ? defaultValues[property] !== undefined
+        ? defaultValues[property]
+        : 0
+      : initialValue;
+
   store.updateInitialValue({
     property,
-    initialValue: e.detail.formValues.initialValue,
+    initialValue: finalInitialValue,
   });
   store.closePopover();
   render();

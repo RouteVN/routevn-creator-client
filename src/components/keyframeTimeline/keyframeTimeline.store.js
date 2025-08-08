@@ -27,16 +27,29 @@ const getInitialValue = (property) => {
 export const toViewData = ({ state, props, attrs }) => {
   let selectedProperties = [];
 
-  console.log("props.animationProperties", props.animationProperties);
+  // console.log("props.animationProperties", props.animationProperties);
 
   if (props.animationProperties) {
     // Main page usage: convert animationProperties object to array
+    const defaultValues = {
+      x: 0,
+      y: 0,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+    };
+
     selectedProperties = Object.keys(props.animationProperties).map(
-      (propertyName) => ({
-        name: propertyName,
-        initialValue: props.animationProperties[propertyName].initialValue,
-        keyframes: props.animationProperties[propertyName].keyframes,
-      }),
+      (propertyName) => {
+        const value = props.animationProperties[propertyName].initialValue;
+        const isDefault = value === defaultValues[propertyName];
+        return {
+          name: propertyName,
+          initialValue: isDefault ? "D" : value,
+          keyframes: props.animationProperties[propertyName].keyframes,
+        };
+      },
     );
   }
 
@@ -46,14 +59,14 @@ export const toViewData = ({ state, props, attrs }) => {
     selectedProperties.forEach((property) => {
       if (property.keyframes && property.keyframes.length > 0) {
         const propertyDuration = property.keyframes.reduce(
-          (sum, keyframe) => sum + (keyframe.duration || 1000),
+          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
           0,
         );
         maxDuration = Math.max(maxDuration, propertyDuration);
       }
     });
   }
-  const totalDuration = maxDuration > 0 ? `${maxDuration / 1000}s` : "0s";
+  const totalDuration = maxDuration > 0 ? `${maxDuration}ms` : "0ms";
 
   // Parse duration to calculate time at mouse position
   const durationValue = maxDuration / 1000;
@@ -63,7 +76,35 @@ export const toViewData = ({ state, props, attrs }) => {
   const timeAtMouse = (state.mouseX / timelineWidth) * durationValue;
   const timeDisplay = Math.round(timeAtMouse * 10) / 10; // round to 1 decimal
 
-  console.log("selectedProperties", selectedProperties);
+  // Process keyframes to add width percentages
+  if (selectedProperties.length > 0 && maxDuration > 0) {
+    selectedProperties = selectedProperties.map((property) => {
+      if (property.keyframes && property.keyframes.length > 0) {
+        const propertyTotalDuration = property.keyframes.reduce(
+          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
+          0,
+        );
+
+        // Calculate width percentage for each keyframe
+        const keyframesWithWidth = property.keyframes.map((keyframe) => {
+          const duration = parseFloat(keyframe.duration) || 1000;
+          const widthPercent = (duration / propertyTotalDuration) * 100;
+          return {
+            ...keyframe,
+            widthPercent: widthPercent.toFixed(2),
+          };
+        });
+
+        return {
+          ...property,
+          keyframes: keyframesWithWidth,
+        };
+      }
+      return property;
+    });
+  }
+
+  // console.log("selectedProperties", selectedProperties);
 
   const result = {
     totalDuration,
