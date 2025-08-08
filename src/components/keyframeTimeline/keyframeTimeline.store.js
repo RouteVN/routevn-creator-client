@@ -89,8 +89,19 @@ export const toViewData = ({ state, props, attrs }) => {
         const keyframesWithWidth = property.keyframes.map((keyframe) => {
           const duration = parseFloat(keyframe.duration) || 1000;
           const widthPercent = (duration / propertyTotalDuration) * 100;
+          // Add prefix for relative values
+          let displayValue = keyframe.value;
+          if (keyframe.relative) {
+            // Check if value already has a sign
+            const numValue = parseFloat(keyframe.value);
+            if (!isNaN(numValue)) {
+              displayValue =
+                numValue >= 0 ? `[+${keyframe.value}]` : `[${keyframe.value}]`;
+            }
+          }
           return {
             ...keyframe,
+            value: displayValue,
             widthPercent: widthPercent.toFixed(2),
           };
         });
