@@ -1,5 +1,95 @@
 import { nanoid } from "nanoid";
 
+// Constants for preview rendering
+const CANVAS_WIDTH = 1920;
+const CANVAS_HEIGHT = 1080;
+const BG_COLOR = "#4a4a4a";
+const PREVIEW_RECT_WIDTH = 200;
+const PREVIEW_RECT_HEIGHT = 200;
+
+// Helper to create render state with animations
+const createAnimationRenderState = (animationProperties) => {
+  const elements = [
+    {
+      id: "bg",
+      type: "rect",
+      x: 0,
+      y: 0,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      fill: BG_COLOR,
+    },
+    {
+      id: "preview-element",
+      type: "rect",
+      x: CANVAS_WIDTH / 2,  // 960 - center position with anchor 0.5
+      y: CANVAS_HEIGHT / 2,  // 540 - center position with anchor 0.5
+      width: PREVIEW_RECT_WIDTH,
+      height: PREVIEW_RECT_HEIGHT,
+      fill: "white",
+      anchorX: 0.5,
+      anchorY: 0.5,
+    },
+  ];
+
+  // Build transitions array from animation properties
+  const transitions = [];
+  if (animationProperties && Object.keys(animationProperties).length > 0) {
+    // Convert our animation properties to the correct format
+    const formattedAnimationProperties = {};
+    
+    for (const [property, config] of Object.entries(animationProperties)) {
+      if (config.keyframes && config.keyframes.length > 0) {
+        // Map property names to route-graphics format
+        let propName = property;
+        if (property === 'scaleX') propName = 'scale.x';
+        else if (property === 'scaleY') propName = 'scale.y';
+        
+        // Get default values based on property
+        let defaultValue = 0;
+        if (property === 'x') defaultValue = 960;
+        else if (property === 'y') defaultValue = 540;
+        else if (property === 'rotation') defaultValue = 0;
+        else if (property === 'alpha') defaultValue = 1;
+        else if (property === 'scaleX' || property === 'scaleY') defaultValue = 1;
+        
+        // Parse initial value, use default if not set or invalid
+        const initialValue = config.initialValue !== undefined && config.initialValue !== '' 
+          ? parseFloat(config.initialValue)
+          : defaultValue;
+        
+        formattedAnimationProperties[propName] = {
+          initialValue: isNaN(initialValue) ? defaultValue : initialValue,
+          keyframes: config.keyframes.map(kf => ({
+            // Parse duration to milliseconds (remove 'ms' or 's' suffix)
+            duration: kf.duration.includes('s') && !kf.duration.includes('ms')
+              ? parseFloat(kf.duration) * 1000
+              : parseFloat(kf.duration) || 1000,
+            value: parseFloat(kf.value) || 0,
+            easing: kf.easing || "linear",
+            relative: kf.relative === true || kf.relative === "true",
+          })),
+        };
+      }
+    }
+
+    if (Object.keys(formattedAnimationProperties).length > 0) {
+      transitions.push({
+        id: 'animation-preview',
+        elementId: 'preview-element',
+        type: 'keyframes',
+        event: 'add',
+        animationProperties: formattedAnimationProperties
+      });
+    }
+  }
+
+  return {
+    elements,
+    transitions,
+  };
+};
+
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
   const searchQuery = e.detail.value || "";
@@ -31,8 +121,8 @@ export const handleAnimationItemClick = (e, deps) => {
   );
 };
 
-export const handleAddAnimationClick = (e, deps) => {
-  const { store, render } = deps;
+export const handleAddAnimationClick = async (e, deps) => {
+  const { store, render, drenderer, getRefIds } = deps;
   e.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
@@ -42,6 +132,19 @@ export const handleAddAnimationClick = (e, deps) => {
   // Open dialog for adding
   store.openDialog();
   render();
+
+  // Initialize drenderer after dialog is opened and canvas is in DOM
+  const { canvas } = getRefIds();
+  if (canvas && canvas.elm && !drenderer.initialized) {
+    await drenderer.init({
+      canvas: canvas.elm,
+    });
+    drenderer.initialized = true;
+    
+    // Render initial preview state
+    const renderState = createAnimationRenderState({});
+    drenderer.render(renderState);
+  }
 };
 
 export const handleCloseDialog = (e, deps) => {
@@ -58,8 +161,8 @@ export const handleClosePopover = (e, deps) => {
   render();
 };
 
-export const handleAnimationItemDoubleClick = (e, deps) => {
-  const { store, render, props } = deps;
+export const handleAnimationItemDoubleClick = async (e, deps) => {
+  const { store, render, props, drenderer, getRefIds } = deps;
   const itemId = e.currentTarget.id.replace("animation-item-", "");
 
   // Find the animation item data from props.flatGroups
@@ -76,6 +179,20 @@ export const handleAnimationItemDoubleClick = (e, deps) => {
     // Open dialog for editing
     store.openDialog({ editMode: true, itemId, itemData });
     render();
+
+    // Initialize drenderer after dialog is opened and canvas is in DOM
+    const { canvas } = getRefIds();
+    if (canvas && canvas.elm) {
+      await drenderer.init({
+        canvas: canvas.elm,
+      });
+      drenderer.initialized = true;
+      
+      // Render initial preview with existing animation properties
+      const animationProperties = itemData.animationProperties || {};
+      const renderState = createAnimationRenderState(animationProperties);
+      drenderer.render(renderState);
+    }
   }
 };
 
@@ -141,7 +258,7 @@ export const handleAddPropertiesClick = (e, deps) => {
 };
 
 export const handleAddPropertyFormSubmit = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, drenderer } = deps;
   const { property, initialValue, valueSource } = e.detail.formValues;
 
   // Get default value for the property if using existing value
@@ -164,6 +281,14 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
   store.addProperty({ property, initialValue: finalInitialValue });
   store.closePopover();
   render();
+  
+  // Update preview
+  if (drenderer.initialized) {
+    const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+    const renderState = createAnimationRenderState(animationProperties);
+    drenderer.render(renderState);
+  }
 };
 
 export const handleInitialValueChange = (e, deps) => {
@@ -192,7 +317,7 @@ export const handleAddKeyframeInDialog = (e, deps) => {
 };
 
 export const handleAddKeyframeFormSubmit = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, drenderer } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
@@ -205,6 +330,14 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
+  
+  // Update preview
+  if (drenderer.initialized) {
+    const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+    const renderState = createAnimationRenderState(animationProperties);
+    drenderer.render(renderState);
+  }
 };
 
 export const handleKeyframeRightClick = (e, deps) => {
@@ -236,7 +369,7 @@ export const handlePropertyNameRightClick = (e, deps) => {
 };
 
 export const handleKeyframeDropdownItemClick = (e, deps) => {
-  const { render, store } = deps;
+  const { render, store, drenderer } = deps;
 
   console.log("e.detail", e.detail);
   const popover = store.selectPopover();
@@ -258,9 +391,23 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "delete-property") {
     store.deleteProperty({ property });
     store.closePopover();
+    // Update preview after deleting property
+    if (drenderer.initialized) {
+      const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(animationProperties);
+      drenderer.render(renderState);
+    }
   } else if (e.detail.item.value === "delete-keyframe") {
     store.deleteKeyframe({ property, index });
     store.closePopover();
+    // Update preview after deleting keyframe
+    if (drenderer.initialized) {
+      const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(animationProperties);
+      drenderer.render(renderState);
+    }
   } else if (e.detail.item.value === "add-right") {
     store.setPopover({
       mode: "addKeyframe",
@@ -284,16 +431,30 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "move-right") {
     store.moveKeyframeRight({ property, index });
     store.closePopover();
+    // Update preview after moving keyframe
+    if (drenderer.initialized) {
+      const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(animationProperties);
+      drenderer.render(renderState);
+    }
   } else if (e.detail.item.value === "move-left") {
     store.moveKeyframeLeft({ property, index });
     store.closePopover();
+    // Update preview after moving keyframe
+    if (drenderer.initialized) {
+      const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(animationProperties);
+      drenderer.render(renderState);
+    }
   }
 
   render();
 };
 
 export const handleEditKeyframeFormSubmit = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, drenderer } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
@@ -304,6 +465,14 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
+  
+  // Update preview
+  if (drenderer.initialized) {
+    const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+    const renderState = createAnimationRenderState(animationProperties);
+    drenderer.render(renderState);
+  }
 };
 
 export const handleInitialValueClick = (e, deps) => {
@@ -370,8 +539,52 @@ export const handleEditInitialValueFormChange = (e, deps) => {
   render();
 };
 
+export const handleReplayAnimation = async (e, deps) => {
+  console.log("[REPLAY] Handler called");
+  const { store, drenderer } = deps;
+  
+  if (!drenderer.initialized) {
+    console.log("[REPLAY] drenderer not initialized, returning");
+    return;
+  }
+  
+  // Get current animation properties
+  const formState = store.selectFormState();
+  const animationProperties = formState.animationProperties || {};
+  console.log("[REPLAY] Animation properties:", animationProperties);
+  
+  // First render without the preview element to reset
+  const resetState = {
+    elements: [
+      {
+        id: "bg",
+        type: "rect",
+        x: 0,
+        y: 0,
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        fill: BG_COLOR,
+      },
+    ],
+    transitions: [],
+  };
+  
+  console.log("[REPLAY] Rendering reset state (removing element)");
+  await drenderer.render(resetState);
+  
+  // Then render with the element and animations after a small delay
+  // The 'add' event will trigger the animation
+  setTimeout(() => {
+    console.log("[REPLAY] Rendering with animations (adding element back)");
+    const renderState = createAnimationRenderState(animationProperties);
+    console.log("[REPLAY] Render state:", renderState);
+    drenderer.render(renderState);
+    console.log("[REPLAY] Animation replay triggered");
+  }, 100);
+};
+
 export const handleEditInitialValueFormSubmit = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, drenderer } = deps;
   const {
     payload: { property },
   } = store.selectPopover();
@@ -401,4 +614,12 @@ export const handleEditInitialValueFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
+  
+  // Update preview
+  if (drenderer.initialized) {
+    const formState = store.selectFormState();
+    const animationProperties = formState.animationProperties || {};
+    const renderState = createAnimationRenderState(animationProperties);
+    drenderer.render(renderState);
+  }
 };
