@@ -8,7 +8,7 @@ const PREVIEW_RECT_WIDTH = 200;
 const PREVIEW_RECT_HEIGHT = 200;
 
 // Helper to create render state with animations
-const createAnimationRenderState = (animationProperties) => {
+const createAnimationRenderState = (animationProperties, includeAnimations = true) => {
   const elements = [
     {
       id: "bg",
@@ -34,7 +34,7 @@ const createAnimationRenderState = (animationProperties) => {
 
   // Build transitions array from animation properties
   const transitions = [];
-  if (animationProperties && Object.keys(animationProperties).length > 0) {
+  if (includeAnimations && animationProperties && Object.keys(animationProperties).length > 0) {
     // Convert our animation properties to the correct format
     const formattedAnimationProperties = {};
     
@@ -141,8 +141,8 @@ export const handleAddAnimationClick = async (e, deps) => {
     });
     drenderer.initialized = true;
     
-    // Render initial preview state
-    const renderState = createAnimationRenderState({});
+    // Render initial preview state WITHOUT animations
+    const renderState = createAnimationRenderState({}, false);
     drenderer.render(renderState);
   }
 };
@@ -188,9 +188,9 @@ export const handleAnimationItemDoubleClick = async (e, deps) => {
       });
       drenderer.initialized = true;
       
-      // Render initial preview with existing animation properties
+      // Render initial preview WITHOUT animations (static preview)
       const animationProperties = itemData.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties);
+      const renderState = createAnimationRenderState(animationProperties, false);
       drenderer.render(renderState);
     }
   }
@@ -286,7 +286,7 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
   if (drenderer.initialized) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-    const renderState = createAnimationRenderState(animationProperties);
+    const renderState = createAnimationRenderState(animationProperties, false);
     drenderer.render(renderState);
   }
 };
@@ -335,7 +335,7 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
   if (drenderer.initialized) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-    const renderState = createAnimationRenderState(animationProperties);
+    const renderState = createAnimationRenderState(animationProperties, false);
     drenderer.render(renderState);
   }
 };
@@ -395,7 +395,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     if (drenderer.initialized) {
       const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties);
+      const renderState = createAnimationRenderState(animationProperties, false);
       drenderer.render(renderState);
     }
   } else if (e.detail.item.value === "delete-keyframe") {
@@ -405,7 +405,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     if (drenderer.initialized) {
       const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties);
+      const renderState = createAnimationRenderState(animationProperties, false);
       drenderer.render(renderState);
     }
   } else if (e.detail.item.value === "add-right") {
@@ -435,7 +435,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     if (drenderer.initialized) {
       const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties);
+      const renderState = createAnimationRenderState(animationProperties, false);
       drenderer.render(renderState);
     }
   } else if (e.detail.item.value === "move-left") {
@@ -445,7 +445,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     if (drenderer.initialized) {
       const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties);
+      const renderState = createAnimationRenderState(animationProperties, false);
       drenderer.render(renderState);
     }
   }
@@ -470,7 +470,7 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
   if (drenderer.initialized) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-    const renderState = createAnimationRenderState(animationProperties);
+    const renderState = createAnimationRenderState(animationProperties, false);
     drenderer.render(renderState);
   }
 };
@@ -576,7 +576,7 @@ export const handleReplayAnimation = async (e, deps) => {
   // The 'add' event will trigger the animation
   setTimeout(() => {
     console.log("[REPLAY] Rendering with animations (adding element back)");
-    const renderState = createAnimationRenderState(animationProperties);
+    const renderState = createAnimationRenderState(animationProperties, true);  // true = include animations for replay
     console.log("[REPLAY] Render state:", renderState);
     drenderer.render(renderState);
     console.log("[REPLAY] Animation replay triggered");
@@ -619,7 +619,7 @@ export const handleEditInitialValueFormSubmit = (e, deps) => {
   if (drenderer.initialized) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
-    const renderState = createAnimationRenderState(animationProperties);
+    const renderState = createAnimationRenderState(animationProperties, false);
     drenderer.render(renderState);
   }
 };
