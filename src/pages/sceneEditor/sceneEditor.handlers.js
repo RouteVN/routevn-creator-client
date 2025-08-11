@@ -335,10 +335,10 @@ export const handleSplitLine = (e, deps) => {
   // New line should have empty presentation except for dialogue.content
   const newLinePresentation = rightContent
     ? {
-      dialogue: {
-        content: rightContent,
-      },
-    }
+        dialogue: {
+          content: rightContent,
+        },
+      }
     : {};
 
   repository.addAction({
