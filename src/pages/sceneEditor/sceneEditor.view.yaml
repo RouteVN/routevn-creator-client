@@ -155,11 +155,13 @@ template:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-text s=sm: "Section to: ${item.data.sectionTransitionData.section.name} (${item.data.sectionTransitionData.animation})"
                             $elif item.type == "dialogue":
-                              - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                                  - rtgl-svg svg=${item.icon} wh=24:
-                                  - $if item.data.dialogueCharacterData:
-                                      - rvn-file-image fileId=${item.data.dialogueCharacterData.fileId} w=32 h=32 br=f:
-                                  - rtgl-text s=sm: "Dialogue Box: ${item.data.dialogueData.name}"
+                              - $if item.data.dialogueCharacterData || item.data.dialogueData:
+                                  - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                                      - rtgl-svg svg=${item.icon} wh=24:
+                                      - $if item.data.dialogueData:
+                                          - rtgl-text s=sm: ${item.data.dialogueData.name}
+                                      - $if item.data.dialogueCharacterData:
+                                          - rvn-file-image fileId=${item.data.dialogueCharacterData.fileId} w=32 h=32 br=f:
                             $elif item.type == "choices":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg=${item.icon} wh=24:
