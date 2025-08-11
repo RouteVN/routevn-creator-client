@@ -8,7 +8,10 @@ const PREVIEW_RECT_WIDTH = 200;
 const PREVIEW_RECT_HEIGHT = 200;
 
 // Helper to create render state with animations
-const createAnimationRenderState = (animationProperties, includeAnimations = true) => {
+const createAnimationRenderState = (
+  animationProperties,
+  includeAnimations = true,
+) => {
   const elements = [
     {
       id: "bg",
@@ -22,8 +25,8 @@ const createAnimationRenderState = (animationProperties, includeAnimations = tru
     {
       id: "preview-element",
       type: "rect",
-      x: CANVAS_WIDTH / 2,  // 960 - center position with anchor 0.5
-      y: CANVAS_HEIGHT / 2,  // 540 - center position with anchor 0.5
+      x: CANVAS_WIDTH / 2, // 960 - center position with anchor 0.5
+      y: CANVAS_HEIGHT / 2, // 540 - center position with anchor 0.5
       width: PREVIEW_RECT_WIDTH,
       height: PREVIEW_RECT_HEIGHT,
       fill: "white",
@@ -34,50 +37,59 @@ const createAnimationRenderState = (animationProperties, includeAnimations = tru
 
   // Build transitions array from animation properties
   const transitions = [];
-  if (includeAnimations && animationProperties && Object.keys(animationProperties).length > 0) {
+  if (
+    includeAnimations &&
+    animationProperties &&
+    Object.keys(animationProperties).length > 0
+  ) {
     // Convert our animation properties to the correct format
     const formattedAnimationProperties = {};
-    
+
     for (const [property, config] of Object.entries(animationProperties)) {
       if (config.keyframes && config.keyframes.length > 0) {
         // Map property names to route-graphics format
         let propName = property;
-        if (property === 'scaleX') propName = 'scale.x';
-        else if (property === 'scaleY') propName = 'scale.y';
-        
+        if (property === "scaleX") propName = "scale.x";
+        else if (property === "scaleY") propName = "scale.y";
+
         // Get default values based on property
         let defaultValue = 0;
-        if (property === 'x') defaultValue = 960;
-        else if (property === 'y') defaultValue = 540;
-        else if (property === 'rotation') defaultValue = 0;
-        else if (property === 'alpha') defaultValue = 1;
-        else if (property === 'scaleX' || property === 'scaleY') defaultValue = 1;
-        
+        if (property === "x") defaultValue = 960;
+        else if (property === "y") defaultValue = 540;
+        else if (property === "rotation") defaultValue = 0;
+        else if (property === "alpha") defaultValue = 1;
+        else if (property === "scaleX" || property === "scaleY")
+          defaultValue = 1;
+
         // Parse initial value, use default if not set or invalid
-        const initialValue = config.initialValue !== undefined && config.initialValue !== '' 
-          ? parseFloat(config.initialValue)
-          : defaultValue;
-        
+        const initialValue =
+          config.initialValue !== undefined && config.initialValue !== ""
+            ? parseFloat(config.initialValue)
+            : defaultValue;
+
         // Convert rotation from degrees to radians
-        let processedInitialValue = isNaN(initialValue) ? defaultValue : initialValue;
-        if (property === 'rotation') {
+        let processedInitialValue = isNaN(initialValue)
+          ? defaultValue
+          : initialValue;
+        if (property === "rotation") {
           processedInitialValue = (processedInitialValue * Math.PI) / 180;
         }
-        
+
         formattedAnimationProperties[propName] = {
           initialValue: processedInitialValue,
-          keyframes: config.keyframes.map(kf => {
+          keyframes: config.keyframes.map((kf) => {
             let value = parseFloat(kf.value) || 0;
             // Convert rotation keyframe values from degrees to radians
-            if (property === 'rotation') {
+            if (property === "rotation") {
               value = (value * Math.PI) / 180;
             }
-            
+
             return {
               // Parse duration to milliseconds (remove 'ms' or 's' suffix)
-              duration: kf.duration.includes('s') && !kf.duration.includes('ms')
-                ? parseFloat(kf.duration) * 1000
-                : parseFloat(kf.duration) || 1000,
+              duration:
+                kf.duration.includes("s") && !kf.duration.includes("ms")
+                  ? parseFloat(kf.duration) * 1000
+                  : parseFloat(kf.duration) || 1000,
               value: value,
               easing: kf.easing || "linear",
               relative: kf.relative === true,
@@ -89,11 +101,11 @@ const createAnimationRenderState = (animationProperties, includeAnimations = tru
 
     if (Object.keys(formattedAnimationProperties).length > 0) {
       transitions.push({
-        id: 'animation-preview',
-        elementId: 'preview-element',
-        type: 'keyframes',
-        event: 'add',
-        animationProperties: formattedAnimationProperties
+        id: "animation-preview",
+        elementId: "preview-element",
+        type: "keyframes",
+        event: "add",
+        animationProperties: formattedAnimationProperties,
       });
     }
   }
@@ -154,7 +166,7 @@ export const handleAddAnimationClick = async (e, deps) => {
       canvas: canvas.elm,
     });
     drenderer.initialized = true;
-    
+
     // Render initial preview state WITHOUT animations
     const renderState = createAnimationRenderState({}, false);
     drenderer.render(renderState);
@@ -201,10 +213,13 @@ export const handleAnimationItemDoubleClick = async (e, deps) => {
         canvas: canvas.elm,
       });
       drenderer.initialized = true;
-      
+
       // Render initial preview WITHOUT animations (static preview)
       const animationProperties = itemData.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties, false);
+      const renderState = createAnimationRenderState(
+        animationProperties,
+        false,
+      );
       drenderer.render(renderState);
     }
   }
@@ -295,7 +310,7 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
   store.addProperty({ property, initialValue: finalInitialValue });
   store.closePopover();
   render();
-  
+
   // Update preview
   if (drenderer.initialized) {
     const formState = store.selectFormState();
@@ -344,7 +359,7 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
-  
+
   // Update preview
   if (drenderer.initialized) {
     const formState = store.selectFormState();
@@ -408,8 +423,11 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     // Update preview after deleting property
     if (drenderer.initialized) {
       const formState = store.selectFormState();
-    const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties, false);
+      const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(
+        animationProperties,
+        false,
+      );
       drenderer.render(renderState);
     }
   } else if (e.detail.item.value === "delete-keyframe") {
@@ -418,8 +436,11 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     // Update preview after deleting keyframe
     if (drenderer.initialized) {
       const formState = store.selectFormState();
-    const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties, false);
+      const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(
+        animationProperties,
+        false,
+      );
       drenderer.render(renderState);
     }
   } else if (e.detail.item.value === "add-right") {
@@ -448,8 +469,11 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     // Update preview after moving keyframe
     if (drenderer.initialized) {
       const formState = store.selectFormState();
-    const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties, false);
+      const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(
+        animationProperties,
+        false,
+      );
       drenderer.render(renderState);
     }
   } else if (e.detail.item.value === "move-left") {
@@ -458,8 +482,11 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     // Update preview after moving keyframe
     if (drenderer.initialized) {
       const formState = store.selectFormState();
-    const animationProperties = formState.animationProperties || {};
-      const renderState = createAnimationRenderState(animationProperties, false);
+      const animationProperties = formState.animationProperties || {};
+      const renderState = createAnimationRenderState(
+        animationProperties,
+        false,
+      );
       drenderer.render(renderState);
     }
   }
@@ -479,7 +506,7 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
-  
+
   // Update preview
   if (drenderer.initialized) {
     const formState = store.selectFormState();
@@ -556,17 +583,17 @@ export const handleEditInitialValueFormChange = (e, deps) => {
 export const handleReplayAnimation = async (e, deps) => {
   console.log("[REPLAY] Handler called");
   const { store, drenderer } = deps;
-  
+
   if (!drenderer.initialized) {
     console.log("[REPLAY] drenderer not initialized, returning");
     return;
   }
-  
+
   // Get current animation properties
   const formState = store.selectFormState();
   const animationProperties = formState.animationProperties || {};
   console.log("[REPLAY] Animation properties:", animationProperties);
-  
+
   // First render without the preview element to reset
   const resetState = {
     elements: [
@@ -582,15 +609,15 @@ export const handleReplayAnimation = async (e, deps) => {
     ],
     transitions: [],
   };
-  
+
   console.log("[REPLAY] Rendering reset state (removing element)");
   await drenderer.render(resetState);
-  
+
   // Then render with the element and animations after a small delay
   // The 'add' event will trigger the animation
   setTimeout(() => {
     console.log("[REPLAY] Rendering with animations (adding element back)");
-    const renderState = createAnimationRenderState(animationProperties, true);  // true = include animations for replay
+    const renderState = createAnimationRenderState(animationProperties, true); // true = include animations for replay
     console.log("[REPLAY] Render state:", renderState);
     drenderer.render(renderState);
     console.log("[REPLAY] Animation replay triggered");
@@ -628,7 +655,7 @@ export const handleEditInitialValueFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
-  
+
   // Update preview
   if (drenderer.initialized) {
     const formState = store.selectFormState();
