@@ -58,17 +58,31 @@ const createAnimationRenderState = (animationProperties, includeAnimations = tru
           ? parseFloat(config.initialValue)
           : defaultValue;
         
+        // Convert rotation from degrees to radians
+        let processedInitialValue = isNaN(initialValue) ? defaultValue : initialValue;
+        if (property === 'rotation') {
+          processedInitialValue = (processedInitialValue * Math.PI) / 180;
+        }
+        
         formattedAnimationProperties[propName] = {
-          initialValue: isNaN(initialValue) ? defaultValue : initialValue,
-          keyframes: config.keyframes.map(kf => ({
-            // Parse duration to milliseconds (remove 'ms' or 's' suffix)
-            duration: kf.duration.includes('s') && !kf.duration.includes('ms')
-              ? parseFloat(kf.duration) * 1000
-              : parseFloat(kf.duration) || 1000,
-            value: parseFloat(kf.value) || 0,
-            easing: kf.easing || "linear",
-            relative: kf.relative === true || kf.relative === "true",
-          })),
+          initialValue: processedInitialValue,
+          keyframes: config.keyframes.map(kf => {
+            let value = parseFloat(kf.value) || 0;
+            // Convert rotation keyframe values from degrees to radians
+            if (property === 'rotation') {
+              value = (value * Math.PI) / 180;
+            }
+            
+            return {
+              // Parse duration to milliseconds (remove 'ms' or 's' suffix)
+              duration: kf.duration.includes('s') && !kf.duration.includes('ms')
+                ? parseFloat(kf.duration) * 1000
+                : parseFloat(kf.duration) || 1000,
+              value: value,
+              easing: kf.easing || "linear",
+              relative: kf.relative === true || kf.relative === "true",
+            };
+          }),
         };
       }
     }
