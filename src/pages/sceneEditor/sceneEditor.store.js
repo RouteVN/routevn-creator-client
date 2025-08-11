@@ -297,6 +297,14 @@ export const selectRenderState = ({ state }) => {
   console.log("layouts", selectLayouts({ state }));
   console.log("characters", characters);
 
+  const resources = {
+    images: { ...selectImages({ state }), ...characterImages },
+    transforms: selectPlacements({ state }),
+    characters,
+    audio: selectAudios({ state }),
+    layouts: selectLayouts({ state }),
+  }
+
   const renderState = constructRenderState({
     presentationState,
     screen: {
@@ -305,13 +313,7 @@ export const selectRenderState = ({ state }) => {
       backgroundColor: "#cccccc",
     },
     resolveFile: (f) => `file:${f}`,
-    resources: {
-      images: { ...selectImages({ state }), ...characterImages },
-      transforms: selectPlacements({ state }),
-      characters,
-      audio: selectAudios({ state }),
-      layouts: selectLayouts({ state }),
-    },
+    resources,
     ui: {
       layouts: selectLayouts({ state }),
     },
@@ -354,31 +356,31 @@ export const toViewData = ({ state, props }, payload) => {
   // Form configuration for renaming
   const renameForm = currentSection
     ? {
-        fields: [
+      fields: [
+        {
+          name: "name",
+          inputType: "inputText",
+          label: "Section Name",
+          value: currentSection.name || "",
+          required: true,
+        },
+      ],
+      actions: {
+        layout: "",
+        buttons: [
           {
-            name: "name",
-            inputType: "inputText",
-            label: "Section Name",
-            value: currentSection.name || "",
-            required: true,
+            id: "submit",
+            variant: "pr",
+            content: "Rename",
+          },
+          {
+            id: "cancel",
+            variant: "se",
+            content: "Cancel",
           },
         ],
-        actions: {
-          layout: "",
-          buttons: [
-            {
-              id: "submit",
-              variant: "pr",
-              content: "Rename",
-            },
-            {
-              id: "cancel",
-              variant: "se",
-              content: "Cancel",
-            },
-          ],
-        },
-      }
+      },
+    }
     : null;
 
   const selectedLine = currentSection?.lines?.find(
@@ -701,8 +703,8 @@ export const selectPresentationData = ({ state }) => {
     );
     const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
       ? repositoryState.characters?.items?.[
-          selectedLine.presentation.dialogue.characterId
-        ]
+      selectedLine.presentation.dialogue.characterId
+      ]
       : null;
 
     presentationItems.push({
@@ -725,8 +727,8 @@ export const selectPresentationData = ({ state }) => {
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
-          (l) => l.id === choicesData.layoutId,
-        )
+        (l) => l.id === choicesData.layoutId,
+      )
       : null;
 
     presentationItems.push({
