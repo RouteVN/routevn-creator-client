@@ -297,6 +297,14 @@ export const selectRenderState = ({ state }) => {
   console.log("layouts", selectLayouts({ state }));
   console.log("characters", characters);
 
+  const resources = {
+    images: { ...selectImages({ state }), ...characterImages },
+    transforms: selectPlacements({ state }),
+    characters,
+    audio: selectAudios({ state }),
+    layouts: selectLayouts({ state }),
+  };
+
   const renderState = constructRenderState({
     presentationState,
     screen: {
@@ -305,13 +313,7 @@ export const selectRenderState = ({ state }) => {
       backgroundColor: "#cccccc",
     },
     resolveFile: (f) => `file:${f}`,
-    resources: {
-      images: { ...selectImages({ state }), ...characterImages },
-      transforms: selectPlacements({ state }),
-      characters,
-      audio: selectAudios({ state }),
-      layouts: selectLayouts({ state }),
-    },
+    resources,
     ui: {
       layouts: selectLayouts({ state }),
     },
