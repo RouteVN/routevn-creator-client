@@ -277,8 +277,8 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
 
   // Get default value for the property if using existing value
   const defaultValues = {
-    x: 0,
-    y: 0,
+    x: 960,
+    y: 540,
     alpha: 1,
     scaleX: 1,
     scaleY: 1,
@@ -607,8 +607,8 @@ export const handleEditInitialValueFormSubmit = (e, deps) => {
 
   // Get default value for the property if using existing value
   const defaultValues = {
-    x: 0,
-    y: 0,
+    x: 960,
+    y: 540,
     alpha: 1,
     scaleX: 1,
     scaleY: 1,

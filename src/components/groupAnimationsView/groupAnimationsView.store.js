@@ -99,6 +99,9 @@ const propertyOptions = [
   { label: "X", value: "x" },
   { label: "Y", value: "y" },
   { label: "Rotation", value: "rotation" },
+  { label: "Scale X", value: "scaleX" },
+  { label: "Scale Y", value: "scaleY" },
+  { label: "Alpha", value: "alpha" },
 ];
 
 const createAddPropertyForm = (propertyOptions) => {
