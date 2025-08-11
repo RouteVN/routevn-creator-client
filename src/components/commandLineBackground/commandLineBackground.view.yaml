@@ -104,7 +104,11 @@ template:
     - rtgl-breadcrumb#breadcumb .items=breadcrumb:
     - $if mode == 'current':
       - rtgl-form#form .form=dialogueForm.form .defaultValues=dialogueForm.defaultValues:
-        - rvn-file-image#background-image fileId=${dialogueForm.defaultValues.backgroundFileId} w=355 h=200 slot=background cur=p:
+        - $if dialogueForm.defaultValues.backgroundFileId:
+            - rvn-file-image#background-image fileId=${dialogueForm.defaultValues.backgroundFileId} w=355 h=200 slot=background cur=p:
+          $else:
+            - rtgl-view#background-image w=355 h=200 bgc=mu av=c ah=c cur=p slot=background:
+                - rtgl-text s=md c=mu-fg: Select Background
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:
         - rtgl-button#reset-button v=ol: Reset
