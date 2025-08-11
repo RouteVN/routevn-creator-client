@@ -28,6 +28,8 @@ refs:
     eventListeners:
       focus:
         handler: handleOnFocus
+      blur:
+        handler: handleLineBlur
       input:
         handler: handleOnInput
       # mousedown:

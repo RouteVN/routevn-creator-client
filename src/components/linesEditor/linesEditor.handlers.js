@@ -247,7 +247,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleContainerKeyDown = (e, deps) => {
-  const { store, render, props, dispatchEvent } = deps;
+  const { store, render, props, dispatchEvent, getRefIds } = deps;
   const mode = store.selectMode();
 
   // Only handle container keydown if the target is the container itself
@@ -266,22 +266,64 @@ export const handleContainerKeyDown = (e, deps) => {
         e.stopPropagation();
         if (!currentLineId && lines.length > 0) {
           // No selection, select the first line
-          dispatchEvent(
-            new CustomEvent("lineSelectionChanged", {
-              detail: { lineId: lines[0].id },
-            }),
-          );
+          const firstLineId = lines[0].id;
+          
+          requestAnimationFrame(() => {
+            const refIds = getRefIds();
+            const lineElement = refIds[`line-${firstLineId}`]?.elm;
+            let lineRect = null;
+            
+            if (lineElement) {
+              lineRect = lineElement.getBoundingClientRect();
+            }
+            
+            dispatchEvent(
+              new CustomEvent("lineSelectionChanged", {
+                detail: { 
+                  lineId: firstLineId,
+                  lineRect: lineRect ? {
+                    top: lineRect.top,
+                    bottom: lineRect.bottom,
+                    left: lineRect.left,
+                    right: lineRect.right,
+                    height: lineRect.height
+                  } : null
+                },
+              }),
+            );
+          });
         } else if (currentLineId) {
           const currentIndex = lines.findIndex(
             (line) => line.id === currentLineId,
           );
           if (currentIndex > 0) {
             const prevLineId = lines[currentIndex - 1].id;
-            dispatchEvent(
-              new CustomEvent("lineSelectionChanged", {
-                detail: { lineId: prevLineId },
-              }),
-            );
+            
+            // Get the line element's coordinates before dispatching
+            requestAnimationFrame(() => {
+              const refIds = getRefIds();
+              const lineElement = refIds[`line-${prevLineId}`]?.elm;
+              let lineRect = null;
+              
+              if (lineElement) {
+                lineRect = lineElement.getBoundingClientRect();
+              }
+              
+              dispatchEvent(
+                new CustomEvent("lineSelectionChanged", {
+                  detail: { 
+                    lineId: prevLineId,
+                    lineRect: lineRect ? {
+                      top: lineRect.top,
+                      bottom: lineRect.bottom,
+                      left: lineRect.left,
+                      right: lineRect.right,
+                      height: lineRect.height
+                    } : null
+                  },
+                }),
+              );
+            });
           }
         }
         break;
@@ -290,22 +332,64 @@ export const handleContainerKeyDown = (e, deps) => {
         e.stopPropagation();
         if (!currentLineId && lines.length > 0) {
           // No selection, select the first line
-          dispatchEvent(
-            new CustomEvent("lineSelectionChanged", {
-              detail: { lineId: lines[0].id },
-            }),
-          );
+          const firstLineId = lines[0].id;
+          
+          requestAnimationFrame(() => {
+            const refIds = getRefIds();
+            const lineElement = refIds[`line-${firstLineId}`]?.elm;
+            let lineRect = null;
+            
+            if (lineElement) {
+              lineRect = lineElement.getBoundingClientRect();
+            }
+            
+            dispatchEvent(
+              new CustomEvent("lineSelectionChanged", {
+                detail: { 
+                  lineId: firstLineId,
+                  lineRect: lineRect ? {
+                    top: lineRect.top,
+                    bottom: lineRect.bottom,
+                    left: lineRect.left,
+                    right: lineRect.right,
+                    height: lineRect.height
+                  } : null
+                },
+              }),
+            );
+          });
         } else if (currentLineId) {
           const currentIndex = lines.findIndex(
             (line) => line.id === currentLineId,
           );
           if (currentIndex < lines.length - 1) {
             const nextLineId = lines[currentIndex + 1].id;
-            dispatchEvent(
-              new CustomEvent("lineSelectionChanged", {
-                detail: { lineId: nextLineId },
-              }),
-            );
+            
+            // Get the line element's coordinates before dispatching
+            requestAnimationFrame(() => {
+              const refIds = getRefIds();
+              const lineElement = refIds[`line-${nextLineId}`]?.elm;
+              let lineRect = null;
+              
+              if (lineElement) {
+                lineRect = lineElement.getBoundingClientRect();
+              }
+              
+              dispatchEvent(
+                new CustomEvent("lineSelectionChanged", {
+                  detail: { 
+                    lineId: nextLineId,
+                    lineRect: lineRect ? {
+                      top: lineRect.top,
+                      bottom: lineRect.bottom,
+                      left: lineRect.left,
+                      right: lineRect.right,
+                      height: lineRect.height
+                    } : null
+                  },
+                }),
+              );
+            });
           }
         }
         break;
@@ -438,11 +522,32 @@ export const handleLineKeyDown = (e, deps) => {
         const currentIndex = props.lines.findIndex((line) => line.id === id);
         if (currentIndex > 0) {
           const prevLine = props.lines[currentIndex - 1];
-          dispatchEvent(
-            new CustomEvent("lineSelectionChanged", {
-              detail: { lineId: prevLine.id },
-            }),
-          );
+          
+          // Get the line element's coordinates before dispatching
+          requestAnimationFrame(() => {
+            const refIds = deps.getRefIds();
+            const lineElement = refIds[`line-${prevLine.id}`]?.elm;
+            let lineRect = null;
+            
+            if (lineElement) {
+              lineRect = lineElement.getBoundingClientRect();
+            }
+            
+            dispatchEvent(
+              new CustomEvent("lineSelectionChanged", {
+                detail: { 
+                  lineId: prevLine.id,
+                  lineRect: lineRect ? {
+                    top: lineRect.top,
+                    bottom: lineRect.bottom,
+                    left: lineRect.left,
+                    right: lineRect.right,
+                    height: lineRect.height
+                  } : null
+                },
+              }),
+            );
+          });
         }
       } else {
         // In text-editor mode, check if cursor is on first line
@@ -476,11 +581,32 @@ export const handleLineKeyDown = (e, deps) => {
         const currentIndex = props.lines.findIndex((line) => line.id === id);
         if (currentIndex < props.lines.length - 1) {
           const nextLine = props.lines[currentIndex + 1];
-          dispatchEvent(
-            new CustomEvent("lineSelectionChanged", {
-              detail: { lineId: nextLine.id },
-            }),
-          );
+          
+          // Get the line element's coordinates before dispatching
+          requestAnimationFrame(() => {
+            const refIds = deps.getRefIds();
+            const lineElement = refIds[`line-${nextLine.id}`]?.elm;
+            let lineRect = null;
+            
+            if (lineElement) {
+              lineRect = lineElement.getBoundingClientRect();
+            }
+            
+            dispatchEvent(
+              new CustomEvent("lineSelectionChanged", {
+                detail: { 
+                  lineId: nextLine.id,
+                  lineRect: lineRect ? {
+                    top: lineRect.top,
+                    bottom: lineRect.bottom,
+                    left: lineRect.left,
+                    right: lineRect.right,
+                    height: lineRect.height
+                  } : null
+                },
+              }),
+            );
+          });
         }
       } else {
         // In text-editor mode, check if cursor is on last line
@@ -710,11 +836,24 @@ export const updateSelectedLine = (lineId, deps) => {
 export const handleOnFocus = (e, deps) => {
   const { store, render, dispatchEvent } = deps;
   const lineId = e.currentTarget.id.replace(/^line-/, "");
+  
+  // Get the line element's coordinates
+  const lineElement = e.currentTarget;
+  const lineRect = lineElement.getBoundingClientRect();
 
-  // Always update the selected line ID
+  // Always update the selected line ID with coordinates
   dispatchEvent(
     new CustomEvent("lineSelectionChanged", {
-      detail: { lineId },
+      detail: { 
+        lineId,
+        lineRect: {
+          top: lineRect.top,
+          bottom: lineRect.bottom,
+          left: lineRect.left,
+          right: lineRect.right,
+          height: lineRect.height
+        }
+      },
     }),
   );
   store.setMode("text-editor"); // Switch to text-editor mode on focus
@@ -736,4 +875,60 @@ export const handleOnFocus = (e, deps) => {
   }, 10);
 
   render();
+};
+
+export const handleLineBlur = (e, deps) => {
+  const { store, render, getRefIds } = deps;
+  
+  // Capture element references before the timeout
+  const blurredLineId = e.currentTarget.id;
+  const blurredElement = e.currentTarget;
+  const shadowRoot = blurredElement.getRootNode();
+
+  console.log("[linesEditor] Blur event triggered on line:", blurredLineId);
+
+  // Check if we're navigating between lines - if so, don't switch to block mode
+  if (store.selectIsNavigating()) {
+    console.log("[linesEditor] Blur during navigation, skipping mode switch");
+    return;
+  }
+
+  // Small delay to check if focus is moving to another line or staying within the editor
+  setTimeout(() => {
+    const activeElement = document.activeElement;
+    const actualActiveElement = (shadowRoot && shadowRoot.activeElement) || activeElement;
+
+    console.log("[linesEditor] Blur check:", {
+      previousLineId: blurredLineId,
+      newActiveElement: actualActiveElement?.id || 'none',
+      isLineElement: actualActiveElement?.id?.startsWith('line-') || false,
+      currentMode: store.selectMode()
+    });
+
+    // Check if focus moved to another line within the editor
+    if (actualActiveElement && actualActiveElement.id && actualActiveElement.id.startsWith('line-')) {
+      // Focus moved to another line, stay in text-editor mode
+      console.log("[linesEditor] Focus moved to another line, staying in text-editor mode");
+      return;
+    }
+
+    const container = getRefIds()["container"]?.elm;
+    
+    // If focus moved to the container itself or left the editor, switch to block mode
+    // The container getting focus means the user clicked outside lines but within the editor area
+    if (actualActiveElement === container || !container?.contains(actualActiveElement)) {
+      console.log("[linesEditor] Focus left lines or moved to container, switching to block mode");
+      store.setMode("block");
+      
+      // Focus the container to enable block mode navigation
+      if (container) {
+        container.focus();
+      }
+      
+      render();
+    } else {
+      // Focus is somewhere else within the editor (not a line, not the container)
+      console.log("[linesEditor] Focus still within editor but not on a line");
+    }
+  }, 0);
 };

@@ -8,17 +8,6 @@ const form = {
       slot: "audio",
       description: "Background Music",
     },
-    {
-      name: "loopType",
-      label: "Loop Type",
-      inputType: "select",
-      options: [
-        { label: "No Loop", value: "none" },
-        { label: "Loop Once", value: "once" },
-        { label: "Loop Forever", value: "forever" },
-        { label: "Fade In/Out", value: "fade" },
-      ],
-    },
   ],
 };
 
@@ -118,23 +107,14 @@ export const toViewData = ({ state, props }) => {
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
 
-  const loopOptions = [
-    { label: "No Loop", value: "none" },
-    { label: "Loop Once", value: "once" },
-    { label: "Loop Forever", value: "forever" },
-    { label: "Fade In/Out", value: "fade" },
-  ];
-
   const defaultValues = {
     audioWaveformDataFileId: selectedResource?.item?.waveformDataFileId || "",
-    loopType: props?.line?.presentation?.bgm?.loopType || "none",
   };
 
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
-    loopOptions,
     tempSelectedResourceId: state.tempSelectedResourceId,
     breadcrumb,
     form,

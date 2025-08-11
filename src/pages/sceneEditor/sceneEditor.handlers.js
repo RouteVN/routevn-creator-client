@@ -53,24 +53,36 @@ async function renderSceneState(store, drenderer, getFileContent) {
 }
 
 export const handleBeforeMount = (deps) => {
-  const { store, router, repository } = deps;
+  const { store, router, repository, render } = deps;
   const { sceneId } = router.getPayload();
 
   store.setSceneId(sceneId);
   store.setRepositoryState(repository.getState());
 
-  // Get scene to set first section
+  // Get scene to set first section and first line
   const scene = store.selectScene();
   if (scene && scene.sections && scene.sections.length > 0) {
-    store.setSelectedSectionId(scene.sections[0].id);
+    const firstSection = scene.sections[0];
+    store.setSelectedSectionId(firstSection.id);
+    
+    // Also select the first line in the first section
+    if (firstSection.lines && firstSection.lines.length > 0) {
+      store.setSelectedLineId(firstSection.lines[0].id);
+    }
   }
+  
+  // Trigger render to update the view with selected line
+  render();
 };
 
 export const handleAfterMount = async (deps) => {
-  const { getRefIds, drenderer } = deps;
+  const { getRefIds, drenderer, store, getFileContent } = deps;
   // Initialize drenderer with canvas
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
+  
+  // Render the canvas with the initial selected line's presentation data
+  await renderSceneState(store, drenderer, getFileContent);
 };
 
 export const handleSectionTabClick = (e, deps) => {
@@ -289,6 +301,29 @@ export const handleSplitLine = (e, deps) => {
     rightLength: rightContent.length,
   });
 
+  // First, persist any temporary line changes from the store to the repository
+  // This ensures edits to other lines aren't lost when we update the repository
+  const storeState = store.selectRepositoryState();
+  const storeScene = toFlatItems(storeState.scenes)
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === sceneId);
+  
+  if (storeScene) {
+    toFlatItems(storeScene.sections).forEach(section => {
+      toFlatItems(section.lines).forEach(line => {
+        // Skip the line being split
+        if (line.id !== lineId && line.presentation?.dialogue?.content !== undefined) {
+          // Persist this line's content to the repository
+          repository.addAction({
+            actionType: "set",
+            target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.presentation.dialogue.content`,
+            value: line.presentation.dialogue.content,
+          });
+        }
+      });
+    });
+  }
+  
   // Get existing presentation data to preserve everything except dialogue content
   const { scenes } = repository.getState();
   const scene = toFlatItems(scenes)
@@ -354,9 +389,9 @@ export const handleSplitLine = (e, deps) => {
     },
   });
 
-  // Update store with new repository state IMMEDIATELY for UI responsiveness
+  // Update store with new repository state (pending updates were already flushed)
   store.setRepositoryState(repository.getState());
-
+  
   // Handle UI updates immediately for responsiveness
   // Pre-configure the linesEditor before rendering
   const refIds = getRefIds();
@@ -703,11 +738,63 @@ export const handlePopoverClickOverlay = (e, deps) => {
 };
 
 export const handleLineSelectionChanged = (e, deps) => {
-  const { store, render, drenderer, getFileContent } = deps;
-  const { lineId } = e.detail;
+  const { store, render, drenderer, getFileContent, getRefIds } = deps;
+  const { lineId, lineRect } = e.detail;
 
   store.setSelectedLineId(lineId);
   render();
+
+  // Check if we need to scroll the line into view using provided coordinates
+  if (lineRect) {
+    requestAnimationFrame(() => {
+      const refIds = getRefIds();
+      const linesEditorRef = refIds["lines-editor"];
+      
+      if (linesEditorRef && linesEditorRef.elm) {
+        const linesEditorElm = linesEditorRef.elm;
+        
+        // The scroll container is actually the parent of the lines-editor component
+        // It's the rtgl-view with 'sv' (scroll vertical) attribute
+        const scrollContainer = linesEditorElm.parentElement;
+        
+        const containerRect = scrollContainer?.getBoundingClientRect() || {};
+        
+        // Check if the line is fully visible in the viewport using provided coordinates
+        const isAboveViewport = lineRect.top < containerRect.top;
+        const isBelowViewport = lineRect.bottom > containerRect.bottom;
+        
+        // Only scroll if the line is not fully visible
+        if (isAboveViewport || isBelowViewport) {
+          // Query for the line element to scroll it
+          // The line elements are inside the lines-editor component
+          let lineElement = null;
+          
+          // First try shadow DOM
+          if (linesEditorElm.shadowRoot) {
+            lineElement = linesEditorElm.shadowRoot.querySelector(`#line-${lineId}`);
+          }
+          
+          // If not found, try regular DOM inside the component
+          if (!lineElement) {
+            lineElement = linesEditorElm.querySelector(`#line-${lineId}`);
+          }
+          
+          // Last resort: search in the whole document
+          if (!lineElement) {
+            lineElement = document.querySelector(`#line-${lineId}`);
+          }
+          
+          if (lineElement) {
+            lineElement.scrollIntoView({ 
+              behavior: 'auto',  // Immediate scroll, no animation
+              block: 'nearest',
+              inline: 'nearest' 
+            });
+          }
+        }
+      }
+    });
+  }
 
   // Render the canvas with the latest data
   setTimeout(async () => {
