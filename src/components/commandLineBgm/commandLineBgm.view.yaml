@@ -10,15 +10,6 @@ viewDataSchema:
       type: array
     groups:
       type: array
-    loopOptions:
-      type: array
-      items:
-        type: object
-        properties:
-          label:
-            type: string
-          value:
-            type: string
     tempSelectedResourceId:
       type: string
     breadcrumb:
@@ -36,8 +27,6 @@ viewDataSchema:
       type: object
       properties:
         audio:
-          type: string
-        loopType:
           type: string
 
 propsSchema:
@@ -103,7 +92,11 @@ template:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
           - rtgl-form#form .form=form .defaultValues=defaultValues:
-            - 'rvn-waveform-visualizer#audio-waveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 slot=audio style="cursor: pointer"':
+            - $if defaultValues.audioWaveformDataFileId:
+                - 'rvn-waveform-visualizer#audio-waveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 slot=audio style="cursor: pointer"':
+              $else:
+                - 'rtgl-view#audio-waveform w=355 h=200 bgc=mu av=c ah=c cur=p slot=audio':
+                    - rtgl-text s=md c=mu-fg: Select BGM
 
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:

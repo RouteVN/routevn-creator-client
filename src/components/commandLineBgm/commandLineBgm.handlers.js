@@ -139,7 +139,6 @@ export const handleSubmitClick = (e, deps) => {
       detail: {
         bgm: {
           audioId: selectedResource?.resourceId,
-          loopType: formValues.loopType || "none",
         },
       },
       bubbles: true,
