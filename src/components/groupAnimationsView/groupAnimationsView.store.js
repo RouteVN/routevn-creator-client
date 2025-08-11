@@ -448,7 +448,12 @@ export const updateKeyframe = (state, payload) => {
   console.log("state.animationProperties", state.animationProperties);
   const { property, index, keyframe } = payload;
   const keyframes = state.animationProperties[property].keyframes;
-  keyframes[index] = keyframe;
+  
+  // Convert relative from string to boolean
+  keyframes[index] = {
+    ...keyframe,
+    relative: keyframe.relative === "true",
+  };
 };
 
 export const updateInitialValue = (state, payload) => {

@@ -80,7 +80,7 @@ const createAnimationRenderState = (animationProperties, includeAnimations = tru
                 : parseFloat(kf.duration) || 1000,
               value: value,
               easing: kf.easing || "linear",
-              relative: kf.relative === true || kf.relative === "true",
+              relative: kf.relative === true,
             };
           }),
         };
