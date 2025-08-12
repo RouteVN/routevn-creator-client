@@ -211,7 +211,7 @@ export const toViewData = ({ state, props }, payload) => {
     sceneFormData: state.sceneFormData,
     sceneFormFields,
     folderOptions,
-    whiteboardCursor: state.isWaitingForPlacement ? "crosshair" : "default",
+    whiteboardCursor: state.isWaitingForPlacement ? "crosshair" : undefined,
     dropdownMenu: state.dropdownMenu,
   };
 };
