@@ -53,12 +53,19 @@ export const handleProjectImageUpdate = async (_, deps) => {
 };
 
 export const subscriptions = (deps) => {
-  const { subject } = deps;
+  const { subject, render } = deps;
   return [
     subject.pipe(
       filter(({ action, payload }) => action === "project-image-update"),
       tap(({ action, payload }) => {
         deps.handlers.handleProjectImageUpdate(payload, deps);
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "redirect"),
+      tap(() => {
+        // Small delay to ensure route has changed
+        render();
       }),
     ),
   ];
