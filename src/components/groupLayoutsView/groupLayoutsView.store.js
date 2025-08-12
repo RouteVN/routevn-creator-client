@@ -68,13 +68,24 @@ export const toViewData = ({ state, props }) => {
     isCollapsed: state.collapsedIds.includes(group.id),
     children: state.collapsedIds.includes(group.id)
       ? []
-      : (group.children || []).map((item) => ({
-          ...item,
-          selectedStyle:
-            item.id === selectedItemId
-              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-              : "",
-        })),
+      : (group.children || []).map((item) => {
+          const layoutTypeLabels = {
+            normal: "Normal",
+            dialogue: "Dialogue",
+            choice: "Choice",
+          };
+          
+          return {
+            ...item,
+            layoutTypeDisplay: item.layoutType 
+              ? layoutTypeLabels[item.layoutType] || item.layoutType
+              : "Layout",
+            selectedStyle:
+              item.id === selectedItemId
+                ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                : "",
+          };
+        }),
   }));
 
   return {
