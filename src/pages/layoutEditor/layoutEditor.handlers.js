@@ -6,7 +6,7 @@ import {
 import { parseAndRender } from "jempl";
 
 const renderLayoutPreview = async (deps) => {
-  const { store, repository, render, drenderer, getFileContent } = deps;
+  const { store, repository, drenderer, getFileContent } = deps;
   const layoutId = store.selectLayoutId();
 
   const {
@@ -23,9 +23,11 @@ const renderLayoutPreview = async (deps) => {
   const fontsItems = fontsData?.items || {};
   const layout = layouts.items[layoutId];
 
-  const choicesNum = store.selectChoiceDefaultValues().choicesNum;
+  // const choicesNum = store.selectChoiceDefaultValues().choicesNum;
+  const choicesData = store.selectChoicesData();
 
   const layoutTreeStructure = toTreeStructure(layout.elements);
+
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
@@ -76,12 +78,6 @@ const renderLayoutPreview = async (deps) => {
       };
     }
   }
-
-  // Clear the canvas before loading new assets
-  // drenderer.render({
-  //   elements: [],
-  //   transitions: [],
-  // });
 
   await drenderer.loadAssets(assets);
 
@@ -156,47 +152,17 @@ const renderLayoutPreview = async (deps) => {
   }
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
-  const choiceDefaultValues = store.selectChoiceDefaultValues();
   const data = {
     dialogue: {
       content: dialogueDefaultValues["dialogue-content"],
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
     },
-    choices: choiceDefaultValues.choices,
+    choices: choicesData,
   };
 
-  // Filter out choice containers where index >= choicesNum
-  // TODO: ideally this kind of filter should be done using jempl
-  const filterChoiceContainers = (elements) => {
-    return elements.reduce((acc, element) => {
-      // Check if this is a choice container
-      const choiceMatch =
-        element.containerType &&
-        element.containerType.match(/^choices\[(\d+)\]$/);
+  // const filteredElements = filterChoiceContainers(elementsToRender);
+  const finalElements = parseAndRender(elementsToRender, data);
 
-      if (choiceMatch) {
-        const choiceIndex = parseInt(choiceMatch[1], 10);
-        // Skip this container if its index is >= choicesNum
-        if (choiceIndex >= choicesNum) {
-          return acc;
-        }
-      }
-
-      // If element has children, recursively filter them
-      if (element.children && element.children.length > 0) {
-        element = {
-          ...element,
-          children: filterChoiceContainers(element.children),
-        };
-      }
-
-      acc.push(element);
-      return acc;
-    }, []);
-  };
-
-  const filteredElements = filterChoiceContainers(elementsToRender);
-  const finalElements = parseAndRender(filteredElements, data);
   // Render all elements including red dot
   drenderer.render({
     elements: finalElements,
@@ -347,17 +313,9 @@ export const handleFormChange = async (e, deps) => {
   if (e.detail.formValues.contentType === "dialogue.content") {
     updatedItem.text = "${dialogue.content}";
   }
-  if (
-    e.detail.formValues.contentType &&
-    e.detail.formValues.contentType.startsWith("choices[")
-  ) {
-    // TODO: those needs to update to proper set and get in future.
-    const choiceIndex = parseInt(
-      e.detail.formValues.contentType.match(/\d+/)[0],
-      10,
-    );
-    // TODO: those needs to update to proper set and get in future.
-    updatedItem.text = `\${choices[${choiceIndex}]}`;
+
+  if (e.detail.formValues?.contentType?.startsWith("choices[")) {
+    updatedItem.text = `\$\{${e.detail.formValues.contentType}\}`;
   }
 
   repository.addAction({
@@ -382,8 +340,8 @@ export const handleFormChange = async (e, deps) => {
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
-  const { repository, store, render } = deps;
-  const { trigger, eventType, name, value, fieldIndex } = e.detail;
+  const { store, render } = deps;
+  const { trigger, name, fieldIndex } = e.detail;
 
   if (
     !["imageId", "hoverImageId", "clickImageId", "typographyId"].includes(name)

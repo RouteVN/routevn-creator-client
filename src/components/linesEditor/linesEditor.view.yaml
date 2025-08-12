@@ -57,14 +57,14 @@ template:
   - 'rtgl-view#container w=f h=f tabindex=0 style="outline: none;"':
       - $for line, i in lines:
           - 'rtgl-view d=h w=f style="background-color: ${line.backgroundColor};"':
-              - rtgl-view h=f w=32 ah=e mr=md:
+              - rtgl-view h=f w=32 ah=e mr=md pt=sm:
                   - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
               - rtgl-view wh=16 br=f mr=md:
                   - $if line.characterFileId:
                       - rvn-file-image fileId=${line.characterFileId} w=16 h=16 br=f:
               - rtgl-view d=h w=f:
                   - rtgl-view w=f:
-                      - 'div#line-${line.id} style="width: 100%; margin-bottom: 4px;" contenteditable=true': ${line.presentation.dialogue.content}
+                      - 'div#line-${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=true': ${line.presentation.dialogue.content}
                       - $if line.sceneTransition:
                           - rtgl-view d=h:
                               - rtgl-svg svg="transition" wh=16:
