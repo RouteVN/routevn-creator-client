@@ -82,16 +82,16 @@ export const layoutTreeStructureToRenderState = (
       // Apply typography if selected
       if (node.typographyId && typographyData.items[node.typographyId]) {
         const typography = typographyData.items[node.typographyId];
-        const colorItem = colorsData.items[typography.colorId];
-        const fontItem = fontsData.items[typography.fontId];
+        const colorItem = colorsData.items?.[typography.colorId];
+        const fontItem = fontsData.items?.[typography.fontId];
 
         textStyle = {
-          fontSize: typography.fontSize,
-          fontFamily: fontItem.fontFamily,
-          fontWeight: typography.fontWeight,
-          fill: colorItem.hex,
-          lineHeight: typography.lineHeight * typography.fontSize,
-          fontFileId: fontItem.fileId ? `file:${fontItem.fileId}` : undefined,
+          fontSize: typography.fontSize || 24,
+          fontFamily: fontItem?.fontFamily || "sans-serif",
+          fontWeight: typography.fontWeight || "normal",
+          fill: colorItem?.hex || "white",
+          lineHeight: (typography.lineHeight || 1.5) * (typography.fontSize || 24),
+          fontFileId: fontItem?.fileId ? `file:${fontItem.fileId}` : undefined,
         };
       } else {
         // Use default settings
@@ -115,16 +115,16 @@ export const layoutTreeStructureToRenderState = (
       if (node.hoverTypographyId) {
         const hoverTypography = typographyData.items[node.hoverTypographyId];
         if (hoverTypography) {
-          const hoverColorItem = colorsData.items[hoverTypography.colorId];
-          const hoverFontItem = fontsData.items[hoverTypography.fontId];
+          const hoverColorItem = colorsData.items?.[hoverTypography.colorId];
+          const hoverFontItem = fontsData.items?.[hoverTypography.fontId];
 
           interactionStyles.hoverStyle = {
-            fontSize: hoverTypography.fontSize,
-            fontFamily: hoverFontItem.fontFamily,
-            fontWeight: hoverTypography.fontWeight,
-            fill: hoverColorItem.hex,
-            lineHeight: hoverTypography.lineHeight * hoverTypography.fontSize,
-            fontFileId: hoverFontItem.fileId
+            fontSize: hoverTypography.fontSize || 24,
+            fontFamily: hoverFontItem?.fontFamily || "sans-serif",
+            fontWeight: hoverTypography.fontWeight || "normal",
+            fill: hoverColorItem?.hex || "white",
+            lineHeight: (hoverTypography.lineHeight || 1.5) * (hoverTypography.fontSize || 24),
+            fontFileId: hoverFontItem?.fileId
               ? `file:${hoverFontItem.fileId}`
               : undefined,
           };
@@ -136,17 +136,17 @@ export const layoutTreeStructureToRenderState = (
         const clickedTypography =
           typographyData.items[node.clickedTypographyId];
         if (clickedTypography) {
-          const clickedColorItem = colorsData.items[clickedTypography.colorId];
-          const clickedFontItem = fontsData.items[clickedTypography.fontId];
+          const clickedColorItem = colorsData.items?.[clickedTypography.colorId];
+          const clickedFontItem = fontsData.items?.[clickedTypography.fontId];
 
           interactionStyles.clickedStyle = {
-            fontSize: clickedTypography.fontSize,
-            fontFamily: clickedFontItem.fontFamily,
-            fontWeight: clickedTypography.fontWeight,
-            fill: clickedColorItem.hex,
+            fontSize: clickedTypography.fontSize || 24,
+            fontFamily: clickedFontItem?.fontFamily || "sans-serif",
+            fontWeight: clickedTypography.fontWeight || "normal",
+            fill: clickedColorItem?.hex || "white",
             lineHeight:
-              clickedTypography.lineHeight * clickedTypography.fontSize,
-            fontFileId: clickedFontItem.fileId
+              (clickedTypography.lineHeight || 1.5) * (clickedTypography.fontSize || 24),
+            fontFileId: clickedFontItem?.fileId
               ? `file:${clickedFontItem.fileId}`
               : undefined,
           };

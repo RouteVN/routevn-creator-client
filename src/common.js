@@ -24,9 +24,9 @@ export class LayoutOptions {
 }
 
 export const matchPaths = (path, pattern) => {
-  // Normalize paths by removing trailing slashes
-  const normalizedPath = path.endsWith("/") ? path.slice(0, -1) : path;
-  const normalizedPattern = pattern.endsWith("/")
+  // Normalize paths by removing trailing slashes (unless it's just "/")
+  const normalizedPath = path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+  const normalizedPattern = pattern.length > 1 && pattern.endsWith("/")
     ? pattern.slice(0, -1)
     : pattern;
 

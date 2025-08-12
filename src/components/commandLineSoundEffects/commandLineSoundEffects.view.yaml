@@ -137,7 +137,7 @@ template:
                 - rtgl-text: ${group.name}
                 - rtgl-view d=h w=f fw=w g=lg:
                   - $for item in group.children:
-                    - rtgl-view#resource-item-${item.id} cur=p style="${item.selectedStyle}":
+                    - rtgl-view#resource-item-${item.id} cur=p bw=${item.bw} bc=${item.bc}:
                       - $if item.waveformDataFileId:
                         - rtgl-view:
                           - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
