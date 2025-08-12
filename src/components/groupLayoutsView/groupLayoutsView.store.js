@@ -74,10 +74,10 @@ export const toViewData = ({ state, props }) => {
             dialogue: "Dialogue",
             choice: "Choice",
           };
-          
+
           return {
             ...item,
-            layoutTypeDisplay: item.layoutType 
+            layoutTypeDisplay: item.layoutType
               ? layoutTypeLabels[item.layoutType] || item.layoutType
               : "Layout",
             selectedStyle:
