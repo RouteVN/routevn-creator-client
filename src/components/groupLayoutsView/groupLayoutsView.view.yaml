@@ -69,7 +69,7 @@ template:
                               - 'rtgl-view#layout-item-${item.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p style="${item.selectedStyle}"':
                                 - rtgl-view av=c ah=c:
                                   - rtgl-text s=md: ${item.name}
-                                  - rtgl-text s=sm c=mu-fg: Layout
+                                  - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
                       - 'rtgl-view#add-layout-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
                         - rtgl-text: Add Layout
         $elif searchQuery:
@@ -84,6 +84,6 @@ template:
       - $if flatGroups.length > 0:
           - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-layout-dialog ?open=${isDialogOpen}:
+  - rtgl-dialog#add-layout-dialog ?open=${isDialogOpen} s=md:
     - rtgl-view slot=content g=md:
       - rtgl-form#layout-form .defaultValues=defaultValues .form=form w=f:

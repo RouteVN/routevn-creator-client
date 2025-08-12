@@ -43,8 +43,11 @@ export const setProjectImageUrl = (state, imageUrl) => {
 };
 
 export const toViewData = ({ state }) => {
+  const currentPath =
+    typeof window !== "undefined" ? window.location.pathname : "";
   return {
     header: state.header,
     items: state.items,
+    selectedItemId: currentPath,
   };
 };
