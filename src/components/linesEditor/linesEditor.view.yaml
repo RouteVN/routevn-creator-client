@@ -82,7 +82,7 @@ template:
                                   - rtgl-text s=sm: "Choices:"
                               - $for choice in line.choices:
                                   - rtgl-view d=h ml=sm:
-                                      - rtgl-text s=sm: "• ${choice.text}"
+                                      - rtgl-text s=sm: "• ${choice.content}"
 
                   - rtgl-view d=h:
                       - $if line.backgroundFileId:

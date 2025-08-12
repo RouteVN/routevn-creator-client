@@ -166,9 +166,9 @@ template:
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-view d=v:
-                                      - rtgl-text s=sm: "Choices (${item.data.choicesData.choices.length} options)"
-                                      - $for choice in item.data.choicesData.choices:
-                                          - rtgl-text s=xs c=mu-fg: "• ${choice.text}"
+                                      - rtgl-text s=sm: "Choices"
+                                      - $for choice in item.data.choicesData.items:
+                                          - rtgl-text s=xs c=mu-fg: "• ${choice.content}"
                       - rtgl-button#add-presentation-button w=f v=ol: Add Action
   - rtgl-dialog#actions-dialog ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh:

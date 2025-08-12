@@ -112,7 +112,9 @@ export const selectLayouts = ({ state }) => {
     const layout = layouts[layoutId];
     if (layout.type === "layout") {
       processedLayouts[layoutId] = {
+        id: layoutId,
         name: layout.name,
+        layoutType: layout.layoutType,
         elements: layoutTreeStructureToRenderState(
           toTreeStructure(layout.elements),
           images,
@@ -287,15 +289,11 @@ export const selectRenderState = ({ state }) => {
   const presentationState = selectPresentationState({ state });
   if (!presentationState) return null;
 
-  console.log("presentationState", presentationState);
-
   const characterImages = {};
   const characters = selectCharacters({ state });
   Object.entries(characters).forEach(([id, character]) => {
     Object.assign(characterImages, character.sprites);
   });
-  console.log("layouts", selectLayouts({ state }));
-  console.log("characters", characters);
 
   const resources = {
     images: { ...selectImages({ state }), ...characterImages },
@@ -318,7 +316,6 @@ export const selectRenderState = ({ state }) => {
       layouts: selectLayouts({ state }),
     },
   });
-  console.log("renderState", renderState);
   return renderState;
 };
 
@@ -398,8 +395,6 @@ export const toViewData = ({ state, props }, payload) => {
 
   const repositoryState = selectRepositoryState({ state });
   const presentationState = selectPresentationState({ state });
-
-  console.log("selectedLine", selectedLine);
 
   return {
     scene: scene,
@@ -498,17 +493,8 @@ export const selectPresentationData = ({ state }) => {
   );
 
   if (!selectedLine?.presentation) {
-    console.log(
-      "[sceneEditor] No presentation data found for selected line:",
-      selectedLine,
-    );
     return [];
   }
-
-  console.log(
-    "[sceneEditor] Processing presentation data:",
-    selectedLine.presentation,
-  );
 
   const repositoryState = selectRepositoryState({ state });
   const images = selectImages({ state });
@@ -639,23 +625,13 @@ export const selectPresentationData = ({ state }) => {
     selectedLine.presentation.presentation?.sectionTransition;
   if (sectionTransitionData) {
     const transition = sectionTransitionData;
-    console.log("[sceneEditor] Found sectionTransition:", transition);
 
     if (transition.sceneId) {
       // Scene Transition
-      console.log(
-        "[sceneEditor] Processing scene transition with sceneId:",
-        transition.sceneId,
-      );
-      console.log(
-        "[sceneEditor] Available scenes:",
-        repositoryState.scenes?.items,
-      );
 
       const targetScene = toFlatItems(repositoryState.scenes || []).find(
         (scene) => scene.id === transition.sceneId,
       );
-      console.log("[sceneEditor] Found target scene:", targetScene);
 
       const sceneTransitionData = {
         ...transition,
@@ -671,7 +647,6 @@ export const selectPresentationData = ({ state }) => {
           sceneTransitionData,
         },
       });
-      console.log("[sceneEditor] Added scene transition to presentationItems");
     } else if (transition.sectionId) {
       // Section Transition
       const scene = selectScene({ state });
@@ -722,8 +697,8 @@ export const selectPresentationData = ({ state }) => {
   // Choices
   // Handle both nested and non-nested structures
   const choicesData =
-    selectedLine.presentation.choices ||
-    selectedLine.presentation.presentation?.choices;
+    selectedLine.presentation.choice ||
+    selectedLine.presentation.presentation?.choice;
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
@@ -743,7 +718,6 @@ export const selectPresentationData = ({ state }) => {
     });
   }
 
-  console.log("[sceneEditor] Final presentationItems:", presentationItems);
   return presentationItems;
 };
 

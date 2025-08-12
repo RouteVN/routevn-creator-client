@@ -58,7 +58,7 @@ refs:
     eventListeners:
       input:
         handler: handleChoiceFormInput
-      change:
+      form-change:
         handler: handleChoiceFormChange
   submit-button:
     eventListeners:
@@ -83,35 +83,34 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
-    - $if mode == "list":
-      - rtgl-view wh=f:
-        - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+      - $if mode == "list":
+          - rtgl-view wh=f:
+              - rtgl-view d=h g=md:
+                  - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-        # Form for choices and layout
-        - rtgl-view flex=1 sv w=f:
-          - rtgl-form#form .form=form .defaultValues=defaultValues .context=context:
-            - rtgl-view#choices-container slot=choices g=md w=f:
-              - $for choice, index in defaultValues.choices:
-                - rtgl-view#choice-${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=p:
-                  - rtgl-view flex=1 w=f:
-                    - rtgl-text: ${choice.text}
-                    - rtgl-text s=xs c=mu-fg: ${choice.actionLabel}
-              - rtgl-button#add-choice-button v=ol w=f mt=md: + Add Choice
+              # Form for choices and layout
+              - rtgl-view flex=1 sv w=f:
+                  - rtgl-form#form .form=form .defaultValues=defaultValues .context=context:
+                      - rtgl-view#choices-container slot=choices g=md w=f:
+                          - $for item, index in defaultValues.items:
+                              - rtgl-view#choice-${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=p:
+                                  - rtgl-view flex=1 w=f:
+                                      - rtgl-text: ${item.content}
+                          - rtgl-button#add-choice-button v=ol w=f mt=md: + Add Choice
 
-        - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#reset-button v=ol: Reset
-          - rtgl-button#submit-button: Submit
-      $elif mode == "editChoice":
-        - rtgl-view wh=f:
-          - rtgl-view d=h g=md:
-            - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+              - rtgl-view d=h av=c ah=e w=f g=lg:
+                  - rtgl-button#reset-button v=ol: Reset
+                  - rtgl-button#submit-button: Submit
+        $elif mode == "editChoice":
+          - rtgl-view wh=f:
+              - rtgl-view d=h g=md:
+                  - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-          - rtgl-form#choice-form .form=choiceFormTemplate:
+              - rtgl-form#choice-form .form=choiceFormTemplate .defaultValues=editForm:
 
-          - rtgl-view flex=1:
-          - rtgl-view d=h av=c ah=e w=f g=lg:
-            - rtgl-button#cancel-edit-button v=ol: Cancel
-            - rtgl-button#save-choice-button: Save Choice
+              - rtgl-view flex=1:
+              - rtgl-view d=h av=c ah=e w=f g=lg:
+                  - rtgl-button#cancel-edit-button v=ol: Cancel
+                  - rtgl-button#save-choice-button: Save Choice
 
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

@@ -128,10 +128,10 @@ export const toViewData = ({ state, props }) => {
 
     // Handle choices
     const choicesData =
-      line.presentation?.choices || line.presentation?.presentation?.choices;
-    if (choicesData && choicesData.choices && choicesData.choices.length > 0) {
+      line.presentation?.choice || line.presentation?.presentation?.choice;
+    if (choicesData && choicesData.items && choicesData.items.length > 0) {
       hasChoices = true;
-      choices = choicesData.choices;
+      choices = choicesData.items;
     }
 
     return {
