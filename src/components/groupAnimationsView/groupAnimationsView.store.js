@@ -384,6 +384,128 @@ export const selectIsDrendererInitialized = ({ state }) => {
   return state.isDrendererInitialized;
 };
 
+// Constants for preview rendering
+const CANVAS_WIDTH = 1920;
+const CANVAS_HEIGHT = 1080;
+const BG_COLOR = "#4a4a4a";
+const PREVIEW_RECT_WIDTH = 200;
+const PREVIEW_RECT_HEIGHT = 200;
+
+// Helper function to create render state with animations
+export const createAnimationRenderState = (
+  animationProperties,
+  includeAnimations = true,
+) => {
+  const elements = [
+    {
+      id: "bg",
+      type: "rect",
+      x: 0,
+      y: 0,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      fill: BG_COLOR,
+    },
+    {
+      id: "preview-element",
+      type: "rect",
+      x: CANVAS_WIDTH / 2, // 960 - center position with anchor 0.5
+      y: CANVAS_HEIGHT / 2, // 540 - center position with anchor 0.5
+      width: PREVIEW_RECT_WIDTH,
+      height: PREVIEW_RECT_HEIGHT,
+      fill: "white",
+      anchorX: 0.5,
+      anchorY: 0.5,
+    },
+  ];
+
+  // Build transitions array from animation properties
+  const transitions = [];
+  if (
+    includeAnimations &&
+    animationProperties &&
+    Object.keys(animationProperties).length > 0
+  ) {
+    // Convert our animation properties to the correct format
+    const formattedAnimationProperties = {};
+
+    for (const [property, config] of Object.entries(animationProperties)) {
+      if (config.keyframes && config.keyframes.length > 0) {
+        // Map property names to route-graphics format
+        let propName = property;
+        if (property === "scaleX") propName = "scale.x";
+        else if (property === "scaleY") propName = "scale.y";
+
+        // Get default values based on property
+        let defaultValue = 0;
+        if (property === "x") defaultValue = 960;
+        else if (property === "y") defaultValue = 540;
+        else if (property === "rotation") defaultValue = 0;
+        else if (property === "alpha") defaultValue = 1;
+        else if (property === "scaleX" || property === "scaleY")
+          defaultValue = 1;
+
+        // Parse initial value, use default if not set or invalid
+        const initialValue =
+          config.initialValue !== undefined && config.initialValue !== ""
+            ? parseFloat(config.initialValue)
+            : defaultValue;
+
+        // Convert rotation from degrees to radians
+        let processedInitialValue = isNaN(initialValue)
+          ? defaultValue
+          : initialValue;
+        if (property === "rotation") {
+          processedInitialValue = (processedInitialValue * Math.PI) / 180;
+        }
+
+        formattedAnimationProperties[propName] = {
+          initialValue: processedInitialValue,
+          keyframes: config.keyframes.map((kf) => {
+            let value = parseFloat(kf.value) || 0;
+            // Convert rotation keyframe values from degrees to radians
+            if (property === "rotation") {
+              value = (value * Math.PI) / 180;
+            }
+            console.log("kf", kf);
+            return {
+              duration: kf.duration,
+              value: value,
+              easing: kf.easing,
+              relative: kf.relative,
+            };
+          }),
+        };
+      }
+    }
+
+    if (Object.keys(formattedAnimationProperties).length > 0) {
+      transitions.push({
+        id: "animation-preview",
+        elementId: "preview-element",
+        type: "keyframes",
+        event: "add",
+        animationProperties: formattedAnimationProperties,
+      });
+    }
+  }
+
+  return {
+    elements,
+    transitions,
+  };
+};
+
+// Selector to get animation render state (without animations by default)
+export const selectAnimationRenderState = ({ state }) => {
+  return createAnimationRenderState(state.animationProperties, false);
+};
+
+// Selector to get animation render state with animations
+export const selectAnimationRenderStateWithAnimations = ({ state }) => {
+  return createAnimationRenderState(state.animationProperties, true);
+};
+
 export const addProperty = (state, payload) => {
   const { property, initialValue } = payload;
   if (state.animationProperties[property]) {
