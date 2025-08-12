@@ -401,7 +401,9 @@ export const selectChoicesData = ({ state }) => {
     });
   }
 
-  return choices;
+  return {
+    items: choices,
+  };
 };
 
 export const selectDropdownMenuFieldName = ({ state }) => {
@@ -555,27 +557,27 @@ export const toViewData = ({ state, props }, payload) => {
                       { label: "Custom Content", value: "custom" },
                       {
                         label: "Choice Content 1",
-                        value: "choices[0].content",
+                        value: "choice.items[0].content",
                       },
                       {
                         label: "Choice Content 2",
-                        value: "choices[1].content",
+                        value: "choice.items[1].content",
                       },
                       {
                         label: "Choice Content 3",
-                        value: "choices[2].content",
+                        value: "choice.items[2].content",
                       },
                       {
                         label: "Choice Content 4",
-                        value: "choices[3].content",
+                        value: "choice.items[3].content",
                       },
                       {
                         label: "Choice Content 5",
-                        value: "choices[4].content",
+                        value: "choice.items[4].content",
                       },
                       {
                         label: "Choice Content 6",
-                        value: "choices[5].content",
+                        value: "choice.items[5].content",
                       },
                     ],
                     required: true,
@@ -665,12 +667,12 @@ export const toViewData = ({ state, props }, payload) => {
                     description: "Container Type",
                     options: [
                       { label: "Custom Container", value: undefined },
-                      { label: "Choice Container 1", value: "choices[0]" },
-                      { label: "Choice Container 2", value: "choices[1]" },
-                      { label: "Choice Container 3", value: "choices[2]" },
-                      { label: "Choice Container 4", value: "choices[3]" },
-                      { label: "Choice Container 5", value: "choices[4]" },
-                      { label: "Choice Container 6", value: "choices[5]" },
+                      { label: "Choice Container 1", value: "choice.items[0]" },
+                      { label: "Choice Container 2", value: "choice.items[1]" },
+                      { label: "Choice Container 3", value: "choice.items[2]" },
+                      { label: "Choice Container 4", value: "choice.items[3]" },
+                      { label: "Choice Container 5", value: "choice.items[4]" },
+                      { label: "Choice Container 6", value: "choice.items[5]" },
                     ],
                     required: true,
                   },
