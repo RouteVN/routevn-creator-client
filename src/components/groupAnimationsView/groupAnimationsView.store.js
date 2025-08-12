@@ -467,7 +467,6 @@ export const createAnimationRenderState = (
             if (property === "rotation") {
               value = (value * Math.PI) / 180;
             }
-            console.log("kf", kf);
             return {
               duration: kf.duration,
               value: value,
@@ -676,7 +675,6 @@ export const toViewData = ({ state, props }) => {
   if (state.popover.mode === "addProperty") {
     addPropertyDefaultValues = state.popover.formValues || {};
     addPropertyContext = { ...addPropertyDefaultValues };
-    console.log("[AddProperty Context]", addPropertyContext);
   }
 
   if (state.popover.mode === "editKeyframe") {
@@ -718,8 +716,6 @@ export const toViewData = ({ state, props }) => {
       ...editInitialValueDefaultValues,
       ...state.popover.formValues,
     };
-
-    console.log("[EditInitialValue Context]", editInitialValueContext);
   }
 
   // TODO this is hacky way to work around limitation of passing props

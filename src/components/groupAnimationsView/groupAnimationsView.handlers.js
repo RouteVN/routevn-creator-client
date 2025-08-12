@@ -10,9 +10,20 @@ export const handleAfterMount = async (deps) => {
 };
 
 // Constants for preview rendering (used in handleReplayAnimation)
-const CANVAS_WIDTH = 1920;
-const CANVAS_HEIGHT = 1080;
-const BG_COLOR = "#4a4a4a";
+const resetState = {
+  elements: [
+    {
+      id: "bg",
+      type: "rect",
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      fill: "#4a4a4a",
+    },
+  ],
+  transitions: [],
+};
 
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
@@ -46,7 +57,7 @@ export const handleAnimationItemClick = (e, deps) => {
 };
 
 export const handleAddAnimationClick = async (e, deps) => {
-  const { store, render, drenderer, getRefIds } = deps;
+  const { store, render, drenderer } = deps;
   e.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
@@ -55,13 +66,8 @@ export const handleAddAnimationClick = async (e, deps) => {
 
   // Open dialog for adding
   store.openDialog();
+  drenderer.render(resetState)
   render();
-
-  if (store.selectIsDrendererInitialized()) {
-    // Render initial preview state WITHOUT animations
-    const renderState = store.selectAnimationRenderState();
-    drenderer.render(renderState);
-  }
 };
 
 export const handleCloseDialog = (e, deps) => {
@@ -79,7 +85,7 @@ export const handleClosePopover = (e, deps) => {
 };
 
 export const handleAnimationItemDoubleClick = async (e, deps) => {
-  const { store, render, props, drenderer, getRefIds } = deps;
+  const { store, render, props, drenderer } = deps;
   const itemId = e.currentTarget.id.replace("animation-item-", "");
 
   // Find the animation item data from props.flatGroups
@@ -94,14 +100,9 @@ export const handleAnimationItemDoubleClick = async (e, deps) => {
 
   if (itemData) {
     // Open dialog for editing
+    drenderer.render(resetState)
     store.openDialog({ editMode: true, itemId, itemData });
     render();
-
-    if (store.selectIsDrendererInitialized()) {
-      // Render initial preview WITHOUT animations (static preview)
-      const renderState = store.selectAnimationRenderState();
-      drenderer.render(renderState);
-    }
   }
 };
 
@@ -167,7 +168,7 @@ export const handleAddPropertiesClick = (e, deps) => {
 };
 
 export const handleAddPropertyFormSubmit = (e, deps) => {
-  const { store, render, drenderer } = deps;
+  const { store, render } = deps;
   const { property, initialValue, valueSource } = e.detail.formValues;
 
   // Get default value for the property if using existing value
@@ -190,12 +191,6 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
   store.addProperty({ property, initialValue: finalInitialValue });
   store.closePopover();
   render();
-
-  // Update preview
-  if (store.selectIsDrendererInitialized()) {
-    const renderState = store.selectAnimationRenderState();
-    drenderer.render(renderState);
-  }
 };
 
 export const handleInitialValueChange = (e, deps) => {
@@ -223,7 +218,7 @@ export const handleAddKeyframeInDialog = (e, deps) => {
 };
 
 export const handleAddKeyframeFormSubmit = (e, deps) => {
-  const { store, render, drenderer } = deps;
+  const { store, render } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
@@ -235,12 +230,6 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
-
-  // Update preview
-  if (store.selectIsDrendererInitialized()) {
-    const renderState = store.selectAnimationRenderState();
-    drenderer.render(renderState);
-  }
 };
 
 export const handleKeyframeRightClick = (e, deps) => {
@@ -271,7 +260,7 @@ export const handlePropertyNameRightClick = (e, deps) => {
 };
 
 export const handleKeyframeDropdownItemClick = (e, deps) => {
-  const { render, store, drenderer } = deps;
+  const { render, store } = deps;
   const popover = store.selectPopover();
   const { property, index } = popover.payload;
   // Use the stored x, y coordinates from popover state
@@ -291,19 +280,9 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "delete-property") {
     store.deleteProperty({ property });
     store.closePopover();
-    // Update preview after deleting property
-    if (store.selectIsDrendererInitialized()) {
-      const renderState = store.selectAnimationRenderState();
-      drenderer.render(renderState);
-    }
   } else if (e.detail.item.value === "delete-keyframe") {
     store.deleteKeyframe({ property, index });
     store.closePopover();
-    // Update preview after deleting keyframe
-    if (store.selectIsDrendererInitialized()) {
-      const renderState = store.selectAnimationRenderState();
-      drenderer.render(renderState);
-    }
   } else if (e.detail.item.value === "add-right") {
     store.setPopover({
       mode: "addKeyframe",
@@ -327,26 +306,16 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   } else if (e.detail.item.value === "move-right") {
     store.moveKeyframeRight({ property, index });
     store.closePopover();
-    // Update preview after moving keyframe
-    if (store.selectIsDrendererInitialized()) {
-      const renderState = store.selectAnimationRenderState();
-      drenderer.render(renderState);
-    }
   } else if (e.detail.item.value === "move-left") {
     store.moveKeyframeLeft({ property, index });
     store.closePopover();
-    // Update preview after moving keyframe
-    if (store.selectIsDrendererInitialized()) {
-      const renderState = store.selectAnimationRenderState();
-      drenderer.render(renderState);
-    }
   }
 
   render();
 };
 
 export const handleEditKeyframeFormSubmit = (e, deps) => {
-  const { store, render, drenderer } = deps;
+  const { store, render } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
@@ -357,12 +326,6 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
-
-  // Update preview
-  if (store.selectIsDrendererInitialized()) {
-    const renderState = store.selectAnimationRenderState();
-    drenderer.render(renderState);
-  }
 };
 
 export const handleInitialValueClick = (e, deps) => {
@@ -417,21 +380,6 @@ export const handleReplayAnimation = async (e, deps) => {
   if (!store.selectIsDrendererInitialized()) {
     return;
   }
-  // First render without the preview element to reset
-  const resetState = {
-    elements: [
-      {
-        id: "bg",
-        type: "rect",
-        x: 0,
-        y: 0,
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
-        fill: BG_COLOR,
-      },
-    ],
-    transitions: [],
-  };
 
   await drenderer.render(resetState);
 
@@ -444,7 +392,7 @@ export const handleReplayAnimation = async (e, deps) => {
 };
 
 export const handleEditInitialValueFormSubmit = (e, deps) => {
-  const { store, render, drenderer } = deps;
+  const { store, render } = deps;
   const {
     payload: { property },
   } = store.selectPopover();
@@ -474,10 +422,4 @@ export const handleEditInitialValueFormSubmit = (e, deps) => {
   });
   store.closePopover();
   render();
-
-  // Update preview
-  if (store.selectIsDrendererInitialized()) {
-    const renderState = store.selectAnimationRenderState();
-    drenderer.render(renderState);
-  }
 };
