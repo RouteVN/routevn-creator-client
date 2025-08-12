@@ -1,4 +1,13 @@
-import { nanoid } from "nanoid";
+export const handleAfterMount = async (deps) => {
+  const { store, drenderer, getRefIds } = deps;
+  const { canvas } = getRefIds();
+  if (canvas && canvas.elm && !store.selectIsDrendererInitialized()) {
+    await drenderer.init({
+      canvas: canvas.elm,
+    });
+    store.setDrendererInitialized(true);
+  }
+};
 
 // Constants for preview rendering
 const CANVAS_WIDTH = 1920;
@@ -155,14 +164,7 @@ export const handleAddAnimationClick = async (e, deps) => {
   store.openDialog();
   render();
 
-  // Initialize drenderer after dialog is opened and canvas is in DOM
-  const { canvas } = getRefIds();
-  if (canvas && canvas.elm && !store.selectIsDrendererInitialized()) {
-    await drenderer.init({
-      canvas: canvas.elm,
-    });
-    store.setDrendererInitialized(true);
-
+  if (store.selectIsDrendererInitialized()) {
     // Render initial preview state WITHOUT animations
     const renderState = createAnimationRenderState({}, false);
     drenderer.render(renderState);
@@ -202,16 +204,7 @@ export const handleAnimationItemDoubleClick = async (e, deps) => {
     store.openDialog({ editMode: true, itemId, itemData });
     render();
 
-    // Initialize drenderer after dialog is opened and canvas is in DOM
-    const { canvas } = getRefIds();
-    if (canvas && canvas.elm) {
-      if (!store.selectIsDrendererInitialized()) {
-        await drenderer.init({
-          canvas: canvas.elm,
-        });
-        store.setDrendererInitialized(true);
-      }
-
+    if (store.selectIsDrendererInitialized()) {
       // Render initial preview WITHOUT animations (static preview)
       const animationProperties = itemData.animationProperties || {};
       const renderState = createAnimationRenderState(
@@ -585,6 +578,8 @@ export const handleReplayAnimation = async (e, deps) => {
   if (!store.selectIsDrendererInitialized()) {
     console.log("[REPLAY] drenderer not initialized, returning");
     return;
+  } else {
+
   }
 
   // Get current animation properties
