@@ -2,40 +2,15 @@ export const INITIAL_STATE = Object.freeze({
   currentRoute: "/projects",
 });
 
+const routesWithoutNavbar = ["/projects"];
+
 export const selectShowSidebar = (state, props, payload) => {
   const currentRoutePattern = selectCurrentRoutePattern(state, props, payload);
-  const routesWithNavBar = [
-    "/project",
-    "/project/resources",
-    "/project/resources/images",
-    "/project/resources/characters",
-    "/project/resources/character-sprites",
-    "/project/resources/audio",
-    "/project/resources/animations",
-    "/project/resources/placements",
-    "/project/resources/videos",
-    "/project/resources/colors",
-    "/project/resources/components",
-    "/project/resources/screens",
-    "/project/resources/choices",
-    "/project/resources/dialogue",
-    "/project/resources/variables",
-    "/project/resources/presets",
-    "/project/scenes",
-    "/project/scene-editor",
-    "/project/settings/general",
-    "/project/settings/user",
-    "/project/resources/fonts",
-    "/project/resources/typography",
-    "/project/resources/layouts",
-    "/project/resources/layout-editor",
-    "/project/resources/component-editor",
-  ];
-  console.log({
-    currentRoutePattern,
-    routesWithNavBar,
-  });
-  return routesWithNavBar.includes(currentRoutePattern);
+  const normalizedPattern = currentRoutePattern?.replace(/\/$/, "");
+  const normalizedRoutesWithoutNavbar = routesWithoutNavbar.map((route) =>
+    route.replace(/\/$/, ""),
+  );
+  return !normalizedRoutesWithoutNavbar.includes(normalizedPattern);
 };
 
 export const selectCurrentRoutePattern = (state, props, payload) => {

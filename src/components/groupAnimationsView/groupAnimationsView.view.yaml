@@ -107,72 +107,77 @@ refs:
       click-item:
         handler: handleKeyframeDropdownItemClick
 
-
-
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
-    - rtgl-view g=lg w=f:
-      - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-        - rtgl-input#search-input s=sm placeholder="Search animations..." value=${searchQuery}:
-        # TODO implment zoom controls (increase/decrease animation size)
-      - $if flatGroups.length > 0:
-          - $for group in flatGroups:
-            - rtgl-view w=f ph=md:
-              - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
-                - $if group.isCollapsed:
-                    - rtgl-svg wh=16 svg=folderArrowRight:
-                  $else:
-                    - rtgl-svg wh=16 svg=folderArrowDown:
-                - rtgl-view d=h av=c g=md:
-                  - rtgl-svg wh=16 svg=folder:
-                  - rtgl-text: ${group.fullLabel}
-              - $if !group.isCollapsed:
-                  - rtgl-view w=f mb=md p=sm:
-                    - rtgl-view d=h fw=w w=f g=md:
-                      - $if group.hasChildren:
-                          - $for item in group.children:
-                              - 'rtgl-view#animation-item-${item.id} cur=p style="${item.selectedStyle}" w=f br=md':
-                                - rtgl-view flex=1 h=f w=f bw=xs br=md p=md bgc=bg:
-                                  - rtgl-text s=h4: ${item.name}
-                                  - rtgl-view h=12:
-                                  - rvn-keyframe-timeline .animationProperties=itemAnimationProperties[${item.id}]:
-                        $else:
-                          - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
-                            - rtgl-text: Add Animation
-                  - $if group.hasChildren:
-                      - rtgl-view w=f ph=md:
-                        - rtgl-view#add-animation-button-${group.id} w=200 h=60 av=c ah=c bw=xs cur=p br=md:
-                          - rtgl-text: Add Animation
-        $elif searchQuery:
-          - rtgl-view w=f h=400 av=c ah=c:
-            - rtgl-text s=lg c=mu-fg: No animations found matching "${searchQuery}"
-    - rtgl-view h=33vh:
+      - rtgl-view g=lg w=f h=f:
+          - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+              - rtgl-input#search-input s=sm placeholder="Search animations..." value=${searchQuery}:
+            # TODO implment zoom controls (increase/decrease animation size)
+          - $if flatGroups.length > 0:
+              - $for group in flatGroups:
+                  - rtgl-view w=f ph=md:
+                      - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
+                          - $if group.isCollapsed:
+                              - rtgl-svg wh=16 svg=folderArrowRight:
+                            $else:
+                              - rtgl-svg wh=16 svg=folderArrowDown:
+                          - rtgl-view d=h av=c g=md:
+                              - rtgl-svg wh=16 svg=folder:
+                              - rtgl-text: ${group.fullLabel}
+                      - $if !group.isCollapsed:
+                          - rtgl-view w=f mb=md p=sm:
+                              - rtgl-view d=h fw=w w=f g=md:
+                                  - $if group.hasChildren:
+                                      - $for item in group.children:
+                                          - 'rtgl-view#animation-item-${item.id} cur=p style="${item.selectedStyle}" w=f br=md':
+                                              - rtgl-view flex=1 h=f w=f bw=xs br=md p=md bgc=bg:
+                                                  - rtgl-text s=h4: ${item.name}
+                                                  - rtgl-view h=12:
+                                                  - rvn-keyframe-timeline .animationProperties=itemAnimationProperties[${item.id}]:
+                                    $else:
+                                      - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
+                                          - rtgl-text: Add Animation
+                          - $if group.hasChildren:
+                              - rtgl-view w=f ph=md:
+                                  - rtgl-view#add-animation-button-${group.id} w=200 h=60 av=c ah=c bw=xs cur=p br=md:
+                                      - rtgl-text: Add Animation
+            $elif searchQuery:
+              - rtgl-view w=f h=400 av=c ah=c:
+                  - rtgl-text s=lg c=mu-fg: No animations found matching "${searchQuery}"
+            $else:
+              - rtgl-view w=f h=f av=c ah=c:
+                  - rtgl-text s=lg c=mu-fg: No data
+
+                  - rtgl-view h=64:
+
+          - $if flatGroups.length > 0:
+              - rtgl-view h=33vh:
 
   - rtgl-dialog#add-animation-dialog ?open=${isDialogOpen} s=lg:
-    - rtgl-view slot=content d=h g=md:
-      - rtgl-view flex=5:
-        - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
-        - rtgl-view d=h g=md av=c mb=md:
-          - $if addPropertyButtonVisible:
-            - rtgl-button#add-properties-button v=se s=sm: Add Properties
-        - rtgl-view h=128:
-        - rvn-keyframe-timeline#dialog-timeline editable=true .animationProperties=animationProperties:
+      - rtgl-view slot=content d=h g=md:
+          - rtgl-view flex=5:
+              - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
+              - rtgl-view d=h g=md av=c mb=md:
+                  - $if addPropertyButtonVisible:
+                      - rtgl-button#add-properties-button v=se s=sm: Add Properties
+              - rtgl-view h=128:
+              - rvn-keyframe-timeline#dialog-timeline editable=true .animationProperties=animationProperties:
 
-      - rtgl-view flex=5:
-        - rtgl-view d=h av=c ah=sb mb=md:
-          - rtgl-text: Preview
-          - rtgl-button#replay-button s=sm ml=md: Play Animation
-        - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
-          - rtgl-view pos=abs cor=full:
-            - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
+          - rtgl-view flex=5:
+              - rtgl-view d=h av=c ah=sb mb=md:
+                  - rtgl-text: Preview
+                  - rtgl-button#replay-button s=sm ml=md: Play Animation
+              - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                  - rtgl-view pos=abs cor=full:
+                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
 
-      - rtgl-popover#add-property-popover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
-        - $if popover.mode == 'addProperty':
-          - rtgl-form#add-property-form slot=content .form=addPropertyForm .context=addPropertyContext:
-        - $if popover.mode == 'addKeyframe':
-          - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
-        - $if popover.mode == 'editKeyframe':
-          - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm .defaultValues=editKeyframeDefaultValues:
-        - $if popover.mode == 'editInitialValue':
-          - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm .defaultValues=editInitialValueDefaultValues .context=editInitialValueContext:
-      - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}:
+          - rtgl-popover#add-property-popover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
+              - $if popover.mode == 'addProperty':
+                  - rtgl-form#add-property-form slot=content .form=addPropertyForm .context=addPropertyContext:
+              - $if popover.mode == 'addKeyframe':
+                  - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
+              - $if popover.mode == 'editKeyframe':
+                  - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm .defaultValues=editKeyframeDefaultValues:
+              - $if popover.mode == 'editInitialValue':
+                  - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm .defaultValues=editInitialValueDefaultValues .context=editInitialValueContext:
+          - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}:

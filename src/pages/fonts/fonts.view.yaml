@@ -48,8 +48,12 @@ template:
       - rtgl-view flex=1 h=f:
         - rvn-group-fonts-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - $if selectedItemId:
-          - rtgl-form#detail-form key=${selectedItemId} slot="content" w=f h=f .form=form .defaultValues=defaultValues .context=context:
+        - rtgl-view wh=f slot="content":
+          - $if selectedItemId:
+            - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues .context=context:
+            $else:
+              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                  - rtgl-text s=md c=mu-fg: No selection
     - rtgl-dialog#font-dialog ?open=${isModalOpen} s=lg:
       - rtgl-view slot="content" p=xl:
         - $if selectedFontInfo:
