@@ -76,11 +76,12 @@ template:
       - $if selectedProperties.length > 0:
           - $for property in selectedProperties:
               - rtgl-view d=h w=f av=c:
-                  - rtgl-view w=48 av=c d=h:
-                      - rtgl-text#property-name-${property.name} s=xs cur=p: ${property.name}
+                  - rtgl-view w=72 av=c d=h:
+                      - rtgl-view w=48 av=c d=h ah=c:
+                        - rtgl-text#property-name-${property.name} s=xs cur=p: ${property.name}
                       - $if editable:
-                        - rtgl-button#add-keyframe-${property.name} s=sm wh=16 v=gh cur=p ml=xs: +
-                  - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm:
+                        - rtgl-button#add-keyframe-${property.name} s=sm w=16 v=gh cur=p ml=xs: +
+                  - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm ml=sm:
                       - rtgl-text#initial-value-${property.name} s=xs cur=p: ${property.initialValue}
                   - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
                       - $if property.keyframes:
