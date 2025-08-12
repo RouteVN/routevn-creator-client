@@ -190,6 +190,7 @@ const propertyNameDropdownItems = [
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
+  isDrendererInitialized: false, // Track drenderer initialization state locally
   targetGroupId: null,
   searchQuery: "",
   selectedProperties: [],
@@ -373,6 +374,14 @@ const editAnimationForm = {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
+};
+
+export const setDrendererInitialized = (state, initialized) => {
+  state.isDrendererInitialized = initialized;
+};
+
+export const selectIsDrendererInitialized = ({ state }) => {
+  return state.isDrendererInitialized;
 };
 
 export const addProperty = (state, payload) => {

@@ -161,11 +161,11 @@ export const handleAddAnimationClick = async (e, deps) => {
 
   // Initialize drenderer after dialog is opened and canvas is in DOM
   const { canvas } = getRefIds();
-  if (canvas && canvas.elm && !drenderer.initialized) {
+  if (canvas && canvas.elm && !store.selectIsDrendererInitialized()) {
     await drenderer.init({
       canvas: canvas.elm,
     });
-    drenderer.initialized = true;
+    store.setDrendererInitialized(true);
 
     // Render initial preview state WITHOUT animations
     const renderState = createAnimationRenderState({}, false);
@@ -209,10 +209,12 @@ export const handleAnimationItemDoubleClick = async (e, deps) => {
     // Initialize drenderer after dialog is opened and canvas is in DOM
     const { canvas } = getRefIds();
     if (canvas && canvas.elm) {
-      await drenderer.init({
-        canvas: canvas.elm,
-      });
-      drenderer.initialized = true;
+      if (!store.selectIsDrendererInitialized()) {
+        await drenderer.init({
+          canvas: canvas.elm,
+        });
+        store.setDrendererInitialized(true);
+      }
 
       // Render initial preview WITHOUT animations (static preview)
       const animationProperties = itemData.animationProperties || {};
@@ -312,7 +314,7 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
   render();
 
   // Update preview
-  if (drenderer.initialized) {
+  if (store.selectIsDrendererInitialized()) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
     const renderState = createAnimationRenderState(animationProperties, false);
@@ -361,7 +363,7 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
   render();
 
   // Update preview
-  if (drenderer.initialized) {
+  if (store.selectIsDrendererInitialized()) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
     const renderState = createAnimationRenderState(animationProperties, false);
@@ -467,7 +469,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     store.moveKeyframeRight({ property, index });
     store.closePopover();
     // Update preview after moving keyframe
-    if (drenderer.initialized) {
+    if (store.selectIsDrendererInitialized()) {
       const formState = store.selectFormState();
       const animationProperties = formState.animationProperties || {};
       const renderState = createAnimationRenderState(
@@ -480,7 +482,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     store.moveKeyframeLeft({ property, index });
     store.closePopover();
     // Update preview after moving keyframe
-    if (drenderer.initialized) {
+    if (store.selectIsDrendererInitialized()) {
       const formState = store.selectFormState();
       const animationProperties = formState.animationProperties || {};
       const renderState = createAnimationRenderState(
@@ -508,7 +510,7 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
   render();
 
   // Update preview
-  if (drenderer.initialized) {
+  if (store.selectIsDrendererInitialized()) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
     const renderState = createAnimationRenderState(animationProperties, false);
@@ -657,7 +659,7 @@ export const handleEditInitialValueFormSubmit = (e, deps) => {
   render();
 
   // Update preview
-  if (drenderer.initialized) {
+  if (store.selectIsDrendererInitialized()) {
     const formState = store.selectFormState();
     const animationProperties = formState.animationProperties || {};
     const renderState = createAnimationRenderState(animationProperties, false);
