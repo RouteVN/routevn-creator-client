@@ -157,7 +157,7 @@ const renderLayoutPreview = async (deps) => {
       content: dialogueDefaultValues["dialogue-content"],
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
     },
-    choices: choicesData,
+    choice: choicesData,
   };
 
   // const filteredElements = filterChoiceContainers(elementsToRender);
@@ -314,7 +314,7 @@ export const handleFormChange = async (e, deps) => {
     updatedItem.text = "${dialogue.content}";
   }
 
-  if (e.detail.formValues?.contentType?.startsWith("choices[")) {
+  if (e.detail.formValues?.contentType?.startsWith("choice.items[")) {
     updatedItem.text = `\$\{${e.detail.formValues.contentType}\}`;
   }
 

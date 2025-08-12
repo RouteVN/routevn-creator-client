@@ -55,10 +55,12 @@ export const toViewData = ({ state, props }, payload) => {
   const layouts = props.layouts || [];
   const characters = props.characters || [];
 
-  const layoutOptions = layouts.map((layout) => ({
-    value: layout.id,
-    label: layout.name,
-  }));
+  const layoutOptions = layouts
+    .filter((layout) => layout.layoutType === "dialogue")
+    .map((layout) => ({
+      value: layout.id,
+      label: layout.name,
+    }));
 
   const characterOptions = characters
     .filter((character) => character.type === "character")

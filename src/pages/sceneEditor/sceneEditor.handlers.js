@@ -293,14 +293,6 @@ export const handleSplitLine = (e, deps) => {
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = e.detail;
 
-  console.log("[handleSplitLine] Splitting line:", {
-    lineId,
-    leftContent,
-    rightContent,
-    leftLength: leftContent.length,
-    rightLength: rightContent.length,
-  });
-
   // First, persist any temporary line changes from the store to the repository
   // This ensures edits to other lines aren't lost when we update the repository
   const storeState = store.selectRepositoryState();

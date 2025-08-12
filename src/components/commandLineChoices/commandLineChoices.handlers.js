@@ -11,10 +11,6 @@ export const handleChoiceClick = (e, deps) => {
 
   try {
     const index = parseInt(e.currentTarget.getAttribute("data-index"));
-    console.log(
-      "[handleChoiceClick] Switching to editChoice mode, index:",
-      index,
-    );
 
     store.setMode("editChoice");
     store.setEditingIndex(index);
@@ -22,7 +18,6 @@ export const handleChoiceClick = (e, deps) => {
     // Validate state using selectors before rendering
     const mode = store.selectMode();
     const editForm = store.selectEditForm();
-    console.log("[handleChoiceClick] Mode:", mode, "EditForm:", editForm);
 
     if (mode === "editChoice" && editForm) {
       render();
@@ -73,19 +68,19 @@ export const handleSaveChoiceClick = (e, deps) => {
   render();
 };
 
-export const handleChoiceFormInput = (e, deps) => {
-  const { store, render } = deps;
-  const { field, value } = e.detail;
-
-  store.updateEditForm({ field, value });
-  render();
-};
+// export const handleChoiceFormInput = (e, deps) => {
+//   const { store, render } = deps;
+//   const { name, fieldValue } = e.detail;
+//
+//   store.updateEditForm({ field: name, value: fieldValue });
+//   render();
+// };
 
 export const handleChoiceFormChange = (e, deps) => {
   const { store, render } = deps;
-  const { field, value } = e.detail;
+  const { name, fieldValue } = e.detail;
 
-  store.updateEditForm({ field, value });
+  store.updateEditForm({ field: name, value: fieldValue });
   render();
 };
 
@@ -97,12 +92,12 @@ export const handleChoiceItemClick = (e, deps) => {
 
 export const handleSubmitClick = (e, deps) => {
   const { dispatchEvent, store } = deps;
-  const choices = store.selectChoices();
+  const items = store.selectItems();
   const selectedLayoutId = store.selectSelectedLayoutId();
 
-  // Create choices object with only non-empty values
+  // Create choices object with new structure
   const choicesData = {
-    choices: choices,
+    items: items.map((item) => ({ content: item.content })),
   };
   if (selectedLayoutId && selectedLayoutId !== "") {
     choicesData.layoutId = selectedLayoutId;
@@ -111,7 +106,7 @@ export const handleSubmitClick = (e, deps) => {
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        choices: choicesData,
+        choice: choicesData,
       },
     }),
   );
@@ -125,13 +120,13 @@ export const handleRemoveChoiceClick = (e, deps) => {
   render();
 };
 
-export const handleChoiceTextInput = (e, deps) => {
+export const handleChoiceContentInput = (e, deps) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace("choice-text-", ""));
+  const index = parseInt(e.currentTarget.id.replace("choice-content-", ""));
 
   store.updateChoice({
     index: index,
-    text: e.currentTarget.value,
+    content: e.currentTarget.value,
   });
   render();
 };
@@ -149,19 +144,19 @@ export const handleBeforeMount = (deps) => {
 
   // Initialize from existing line data if available
   const choicesData =
-    props?.line?.presentation?.choices ||
-    props?.line?.presentation?.presentation?.choices;
+    props?.line?.presentation?.choice ||
+    props?.line?.presentation?.presentation?.choice;
   if (choicesData) {
-    // Set existing choices by directly modifying choices array
-    if (choicesData.choices && choicesData.choices.length > 0) {
+    // Set existing items by directly modifying items array
+    if (choicesData.items && choicesData.items.length > 0) {
       // Note: We need to update the state directly here during initialization
       // This is acceptable during mount phase
-      const currentChoices = store.selectChoices();
-      currentChoices.length = 0; // Clear existing
-      choicesData.choices.forEach((choice) => {
-        currentChoices.push({
-          text: choice.text,
-          action: choice.action || { type: "continue" },
+      const currentItems = store.selectItems();
+      currentItems.length = 0; // Clear existing
+      choicesData.items.forEach((item) => {
+        currentItems.push({
+          content: item.content,
+          action: item.action || { type: "continue" },
         });
       });
     }
@@ -185,22 +180,22 @@ export const handlePropsChanged = (deps) => {
     props?.line?.presentation?.choices ||
     props?.line?.presentation?.presentation?.choices;
   if (choicesData) {
-    const currentChoices = store.selectChoices();
+    const currentItems = store.selectItems();
 
-    // Reset choices to initial state first
-    currentChoices.length = 0;
-    currentChoices.push(
-      { text: "Choice 1", action: { type: "continue" } },
-      { text: "Choice 2", action: { type: "continue" } },
+    // Reset items to initial state first
+    currentItems.length = 0;
+    currentItems.push(
+      { content: "Choice 1", action: { type: "continue" } },
+      { content: "Choice 2", action: { type: "continue" } },
     );
 
-    // Set existing choices
-    if (choicesData.choices && choicesData.choices.length > 0) {
-      currentChoices.length = 0; // Clear again
-      choicesData.choices.forEach((choice) => {
-        currentChoices.push({
-          text: choice.text,
-          action: choice.action || { type: "continue" },
+    // Set existing items
+    if (choicesData.items && choicesData.items.length > 0) {
+      currentItems.length = 0; // Clear again
+      choicesData.items.forEach((item) => {
+        currentItems.push({
+          content: item.content,
+          action: item.action || { type: "continue" },
         });
       });
     }
@@ -220,10 +215,10 @@ export const handleFormExtra = (e, deps) => {
 
 export const handleFormChange = (e, deps) => {
   const { store, render } = deps;
-  const { field, value } = e.detail;
+  const { name, fieldValue } = e.detail;
 
-  if (field === "layoutId") {
-    store.setSelectedLayoutId({ layoutId: value });
+  if (name === "layoutId") {
+    store.setSelectedLayoutId({ layoutId: fieldValue });
     render();
   }
 };
