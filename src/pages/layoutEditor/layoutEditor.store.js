@@ -131,7 +131,7 @@ export const INITIAL_STATE = Object.freeze({
   },
   choiceDefaultValues: {
     choicesNum: 2,
-    choices: ["Choice A", "Choice B", "", "", "", ""],
+    choices: ["ChoiceA", "ChoiceB"],
   },
   contextMenuItems: [
     {
@@ -392,6 +392,18 @@ export const hideDropdownMenu = (state) => {
   };
 };
 
+export const selectChoicesData = ({ state }) => {
+  const choices = [];
+
+  for (let i = 0; i < state.choiceDefaultValues.choicesNum; i++) {
+    choices.push({
+      content: state.choiceDefaultValues.choices[i],
+    });
+  }
+
+  return choices;
+};
+
 export const selectDropdownMenuFieldName = ({ state }) => {
   return state.dropdownMenu.fieldName;
 };
@@ -541,12 +553,30 @@ export const toViewData = ({ state, props }, payload) => {
                     description: "Content Type",
                     options: [
                       { label: "Custom Content", value: "custom" },
-                      { label: "Choice Content 1", value: "choices[0]" },
-                      { label: "Choice Content 2", value: "choices[1]" },
-                      { label: "Choice Content 3", value: "choices[2]" },
-                      { label: "Choice Content 4", value: "choices[3]" },
-                      { label: "Choice Content 5", value: "choices[4]" },
-                      { label: "Choice Content 6", value: "choices[5]" },
+                      {
+                        label: "Choice Content 1",
+                        value: "choices[0].content",
+                      },
+                      {
+                        label: "Choice Content 2",
+                        value: "choices[1].content",
+                      },
+                      {
+                        label: "Choice Content 3",
+                        value: "choices[2].content",
+                      },
+                      {
+                        label: "Choice Content 4",
+                        value: "choices[3].content",
+                      },
+                      {
+                        label: "Choice Content 5",
+                        value: "choices[4].content",
+                      },
+                      {
+                        label: "Choice Content 6",
+                        value: "choices[5].content",
+                      },
                     ],
                     required: true,
                   },
@@ -630,7 +660,7 @@ export const toViewData = ({ state, props }, payload) => {
                 },
                 {
                   '$if layoutType == "choice"': {
-                    name: "containerType",
+                    name: "$when",
                     inputType: "select",
                     description: "Container Type",
                     options: [

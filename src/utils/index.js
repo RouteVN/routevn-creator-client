@@ -72,6 +72,10 @@ export const layoutTreeStructureToRenderState = (
       rotation: parseInt(node.rotation || 0),
     };
 
+    if (node["$when"]) {
+      element["$when"] = node["$when"];
+    }
+
     if (node.type === "text") {
       let textStyle = {};
 
