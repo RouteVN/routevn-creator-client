@@ -10,8 +10,6 @@
     "nanoid": "^5.1.5",
     "route-engine-js": "0.0.2-rc12",
     "route-graphics": "0.0.2-rc18",
-    "route-engine-js": "0.0.2-rc10",
-    "route-graphics": "^0.0.2-rc18",
     "rxjs": "^7.8.2",
     "snabbdom": "^3.6.2",
     "snabbdom-to-html": "^7.1.0",
