@@ -263,6 +263,19 @@ export const handleContainerContextMenu = (e, deps) => {
   render();
 };
 
+export const handleEmptyMessageClick = (e, deps) => {
+  const { store, render, props } = deps;
+  e.preventDefault();
+
+  // Show dropdown menu when clicking on empty message
+  const rect = e.currentTarget.getBoundingClientRect();
+  store.showDropdownMenuFileExplorerEmpty({
+    position: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+    emptyContextMenuItems: props.emptyContextMenuItems,
+  });
+  render();
+};
+
 export const handleItemContextMenu = (e, deps) => {
   const { store, render, props } = deps;
   e.preventDefault();

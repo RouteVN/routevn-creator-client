@@ -46,7 +46,7 @@ refs:
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
-    - rtgl-view g=lg w=f:
+    - rtgl-view g=lg w=f h=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
         - rtgl-input#search-input s=sm placeholder="Search videos..." value=${searchQuery}: 
         # TODO implement zoom controls (increase/decrease video size)
@@ -74,7 +74,14 @@ template:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No videos found matching "${searchQuery}"
-    - rtgl-view h=33vh:
+        $else:
+          - rtgl-view w=f h=f av=c ah=c:
+              - rtgl-text s=lg c=mu-fg: No data
+
+              - rtgl-view h=64:
+
+      - $if flatGroups.length > 0:
+          - rtgl-view h=33vh:
   - $if videoVisible:
     - rtgl-view pos=fix cor=full ah=c z=9999:
       - 'rtgl-view#dialog-overlay pos=fix cor=full ah=c av=c bgc=bg op=0.5':
