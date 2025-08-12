@@ -70,7 +70,7 @@ refs:
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
-    - rtgl-view g=lg w=f:
+    - rtgl-view g=lg w=f h=f:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
         - rtgl-view d=h av=c g=xl w=f:
           - 'rtgl-input#search-input s=sm pl=xl placeholder="Search images..." value=${searchQuery} style="border:none;"':
@@ -102,7 +102,14 @@ template:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No images found matching "${searchQuery}"
-    - rtgl-view h=33vh:
+        $else:
+          - rtgl-view w=f h=f av=c ah=c:
+              - rtgl-text s=lg c=mu-fg: No data
+
+              - rtgl-view h=64:
+
+      - $if flatGroups.length > 0:
+          - rtgl-view h=33vh:
   - $if fullImagePreviewVisible:
       - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
         - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":

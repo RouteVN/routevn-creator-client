@@ -56,6 +56,10 @@ refs:
     eventListeners:
       contextmenu:
         handler: handleContainerContextMenu
+  empty-message:
+    eventListeners:
+      click:
+        handler: handleEmptyMessageClick
   dropdown-menu:
     eventListeners:
       close:
@@ -72,28 +76,32 @@ refs:
         handler: handleFormActionClick
 
 styles:
-  ':host':
-    '-webkit-user-select': 'none'
-    '-moz-user-select': 'none'
-    '-ms-user-select': 'none'
-    'user-select': 'none'
+  ":host":
+    "-webkit-user-select": "none"
+    "-moz-user-select": "none"
+    "-ms-user-select": "none"
+    "user-select": "none"
 
 template:
   - rtgl-view w=f h=f:
-    - 'rtgl-view w=f g=sm pos=rel':
-      - rtgl-view w=f h=f:
-        - $for item, i in items:
-            - 'rtgl-view#item-${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=p av=c bc=${item.bc} bw=xs':
-              - $if item.hasChildren:
-                  - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
+      - "rtgl-view w=f g=sm pos=rel":
+          - rtgl-view w=f h=f:
+              - $if items.length == 0:
+                  - "rtgl-view#empty-message w=f h=f d=f av=c ah=c p=xl cur=p":
+                      - "rtgl-text s=sm c=mu-fg ta=c": "No items. Click to create a folder."
                 $else:
-                  - rtgl-view wh=16:
-              - rtgl-view d=h g=md av=c w=f:
-                - rtgl-svg svg=${item.type} wh=16:
-                - 'rtgl-text s=sm ellipsis=true w=f flex=1 mr=xl style="min-width: 0"': "${item.name}"
-      - $if targetDragIndex != -2 && targetDropPosition != 'inside':
-          - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"':
-    - rtgl-view#container w=f h=f:
+                  - $for item, i in items:
+                      - 'rtgl-view#item-${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=p av=c bc=${item.bc} bw=xs':
+                          - $if item.hasChildren:
+                              - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
+                            $else:
+                              - rtgl-view wh=16:
+                          - rtgl-view d=h g=md av=c w=f:
+                              - rtgl-svg svg=${item.type} wh=16:
+                              - 'rtgl-text s=sm ellipsis=true w=f flex=1 mr=xl style="min-width: 0"': "${item.name}"
+          - $if targetDragIndex != -2 && targetDropPosition != 'inside':
+              - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"':
+      - rtgl-view#container w=f h=f:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
-    - rtgl-form#form slot=content .form=form:
+      - rtgl-form#form slot=content .form=form:
