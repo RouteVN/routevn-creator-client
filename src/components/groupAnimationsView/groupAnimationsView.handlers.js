@@ -83,16 +83,12 @@ const createAnimationRenderState = (
             if (property === "rotation") {
               value = (value * Math.PI) / 180;
             }
-
+            console.log('kf',kf)
             return {
-              // Parse duration to milliseconds (remove 'ms' or 's' suffix)
-              duration:
-                kf.duration.includes("s") && !kf.duration.includes("ms")
-                  ? parseFloat(kf.duration) * 1000
-                  : parseFloat(kf.duration) || 1000,
+              duration: kf.duration,
               value: value,
-              easing: kf.easing || "linear",
-              relative: kf.relative === true,
+              easing: kf.easing,
+              relative: kf.relative,
             };
           }),
         };
@@ -423,7 +419,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     store.deleteProperty({ property });
     store.closePopover();
     // Update preview after deleting property
-    if (drenderer.initialized) {
+    if (store.selectIsDrendererInitialized()) {
       const formState = store.selectFormState();
       const animationProperties = formState.animationProperties || {};
       const renderState = createAnimationRenderState(
@@ -436,7 +432,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
     store.deleteKeyframe({ property, index });
     store.closePopover();
     // Update preview after deleting keyframe
-    if (drenderer.initialized) {
+    if (store.selectIsDrendererInitialized()) {
       const formState = store.selectFormState();
       const animationProperties = formState.animationProperties || {};
       const renderState = createAnimationRenderState(
@@ -586,7 +582,7 @@ export const handleReplayAnimation = async (e, deps) => {
   console.log("[REPLAY] Handler called");
   const { store, drenderer } = deps;
 
-  if (!drenderer.initialized) {
+  if (!store.selectIsDrendererInitialized()) {
     console.log("[REPLAY] drenderer not initialized, returning");
     return;
   }

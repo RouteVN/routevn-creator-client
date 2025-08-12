@@ -18,8 +18,8 @@ const addKeyframeForm = {
       inputType: "select",
       label: "Relative",
       options: [
-        { label: "False", value: "false" },
-        { label: "True", value: "true" },
+        { label: "False", value: false },
+        { label: "True", value: true },
       ],
       defaultValue: "false",
       required: true,
@@ -402,16 +402,15 @@ export const addKeyframe = (state, keyframe) => {
 
   const keyframes = state.animationProperties[keyframe.property].keyframes;
   let index = keyframe.index;
-  console.log(index);
   if (keyframe.index === undefined) {
     index = keyframes.length;
   }
 
   keyframes.splice(index, 0, {
-    duration: keyframe.duration,
+    duration: parseInt(keyframe.duration),
     easing: keyframe.easing,
-    value: keyframe.value,
-    relative: keyframe.relative === "true",
+    value: parseFloat(keyframe.value),
+    relative: keyframe.relative,
   });
 };
 
@@ -456,15 +455,15 @@ export const moveKeyframeLeft = (state, payload) => {
 };
 
 export const updateKeyframe = (state, payload) => {
-  console.log("payload", payload);
-  console.log("state.animationProperties", state.animationProperties);
   const { property, index, keyframe } = payload;
   const keyframes = state.animationProperties[property].keyframes;
 
   // Convert relative from string to boolean
   keyframes[index] = {
     ...keyframe,
-    relative: keyframe.relative === "true",
+    duration: parseInt(keyframe.duration),
+    value: parseFloat(keyframe.value),
+    relative: keyframe.relative,
   };
 };
 
@@ -567,7 +566,7 @@ export const toViewData = ({ state, props }) => {
       duration: currentKeyframe.duration,
       value: currentKeyframe.value,
       easing: currentKeyframe.easing,
-      relative: currentKeyframe.relative ? "true" : "false",
+      relative: currentKeyframe.relative,
     };
   }
 
