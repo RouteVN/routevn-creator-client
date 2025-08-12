@@ -328,11 +328,21 @@ export const toViewData = ({ state, props }, payload) => {
       sections: [],
       currentLines: [],
       currentLine: null,
+      presentationData: [],
+      presentationState: null,
       mode: state.mode,
       dropdownMenu: state.dropdownMenu,
       popover: state.popover,
       selectedLineId: state.selectedLineId,
       sectionsGraphView: state.sectionsGraphView,
+      layouts: [],
+      allCharacters: [],
+      sectionsGraph: JSON.stringify(
+        { nodes: [], edges: [], adjacencyList: {} },
+        null,
+        2,
+      ),
+      isActionsDialogOpen: state.mode !== "lines-editor",
     };
   }
 

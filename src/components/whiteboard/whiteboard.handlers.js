@@ -309,7 +309,6 @@ export const handleWindowKeyDown = (event, deps) => {
 
   if (event.code === "Space" && !store.selectIsPanMode()) {
     event.preventDefault();
-    console.log("Pan mode activated");
     store.togglePanMode({ isPanMode: true });
     render();
   }
@@ -320,7 +319,6 @@ export const handleWindowKeyUp = (event, deps) => {
 
   if (event.code === "Space" && store.selectIsPanMode()) {
     event.preventDefault();
-    console.log("Pan mode deactivated");
     store.togglePanMode({ isPanMode: false });
     render();
   }

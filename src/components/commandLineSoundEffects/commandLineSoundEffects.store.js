@@ -172,9 +172,8 @@ export const toViewData = ({ state, props }) => {
         const isSelected = child.id === state.tempSelectedResourceId;
         return {
           ...child,
-          selectedStyle: isSelected
-            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-            : "",
+          bw: isSelected ? "md" : "",
+          bc: isSelected ? "fg" : "",
           waveformDataFileId: child.waveformDataFileId,
         };
       }),
