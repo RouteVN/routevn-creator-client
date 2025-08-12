@@ -18,8 +18,8 @@ const addKeyframeForm = {
       inputType: "select",
       label: "Relative",
       options: [
-        { label: "False", value: "false" },
-        { label: "True", value: "true" },
+        { label: "False", value: false },
+        { label: "True", value: true },
       ],
       defaultValue: "false",
       required: true,
@@ -99,6 +99,9 @@ const propertyOptions = [
   { label: "X", value: "x" },
   { label: "Y", value: "y" },
   { label: "Rotation", value: "rotation" },
+  { label: "Scale X", value: "scaleX" },
+  { label: "Scale Y", value: "scaleY" },
+  { label: "Alpha", value: "alpha" },
 ];
 
 const createAddPropertyForm = (propertyOptions) => {
@@ -187,6 +190,7 @@ const propertyNameDropdownItems = [
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   isDialogOpen: false,
+  isDrendererInitialized: false, // Track drenderer initialization state locally
   targetGroupId: null,
   searchQuery: "",
   selectedProperties: [],
@@ -372,6 +376,135 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
+export const setDrendererInitialized = (state, initialized) => {
+  state.isDrendererInitialized = initialized;
+};
+
+export const selectIsDrendererInitialized = ({ state }) => {
+  return state.isDrendererInitialized;
+};
+
+// Constants for preview rendering
+const CANVAS_WIDTH = 1920;
+const CANVAS_HEIGHT = 1080;
+const BG_COLOR = "#4a4a4a";
+const PREVIEW_RECT_WIDTH = 200;
+const PREVIEW_RECT_HEIGHT = 200;
+
+// Helper function to create render state with animations
+export const createAnimationRenderState = (
+  animationProperties,
+  includeAnimations = true,
+) => {
+  const elements = [
+    {
+      id: "bg",
+      type: "rect",
+      x: 0,
+      y: 0,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      fill: BG_COLOR,
+    },
+    {
+      id: "preview-element",
+      type: "rect",
+      x: CANVAS_WIDTH / 2, // 960 - center position with anchor 0.5
+      y: CANVAS_HEIGHT / 2, // 540 - center position with anchor 0.5
+      width: PREVIEW_RECT_WIDTH,
+      height: PREVIEW_RECT_HEIGHT,
+      fill: "white",
+      anchorX: 0.5,
+      anchorY: 0.5,
+    },
+  ];
+
+  // Build transitions array from animation properties
+  const transitions = [];
+  if (
+    includeAnimations &&
+    animationProperties &&
+    Object.keys(animationProperties).length > 0
+  ) {
+    // Convert our animation properties to the correct format
+    const formattedAnimationProperties = {};
+
+    for (const [property, config] of Object.entries(animationProperties)) {
+      if (config.keyframes && config.keyframes.length > 0) {
+        // Map property names to route-graphics format
+        let propName = property;
+        if (property === "scaleX") propName = "scale.x";
+        else if (property === "scaleY") propName = "scale.y";
+
+        // Get default values based on property
+        let defaultValue = 0;
+        if (property === "x") defaultValue = 960;
+        else if (property === "y") defaultValue = 540;
+        else if (property === "rotation") defaultValue = 0;
+        else if (property === "alpha") defaultValue = 1;
+        else if (property === "scaleX" || property === "scaleY")
+          defaultValue = 1;
+
+        // Parse initial value, use default if not set or invalid
+        const initialValue =
+          config.initialValue !== undefined && config.initialValue !== ""
+            ? parseFloat(config.initialValue)
+            : defaultValue;
+
+        // Convert rotation from degrees to radians
+        let processedInitialValue = isNaN(initialValue)
+          ? defaultValue
+          : initialValue;
+        if (property === "rotation") {
+          processedInitialValue = (processedInitialValue * Math.PI) / 180;
+        }
+
+        formattedAnimationProperties[propName] = {
+          initialValue: processedInitialValue,
+          keyframes: config.keyframes.map((kf) => {
+            let value = parseFloat(kf.value) || 0;
+            // Convert rotation keyframe values from degrees to radians
+            if (property === "rotation") {
+              value = (value * Math.PI) / 180;
+            }
+            return {
+              duration: kf.duration,
+              value: value,
+              easing: kf.easing,
+              relative: kf.relative,
+            };
+          }),
+        };
+      }
+    }
+
+    if (Object.keys(formattedAnimationProperties).length > 0) {
+      transitions.push({
+        id: "animation-preview",
+        elementId: "preview-element",
+        type: "keyframes",
+        event: "add",
+        animationProperties: formattedAnimationProperties,
+      });
+    }
+  }
+
+  return {
+    elements,
+    transitions,
+  };
+};
+
+// Selector to get animation render state (without animations by default)
+export const selectAnimationRenderState = ({ state }) => {
+  return createAnimationRenderState(state.animationProperties, false);
+};
+
+// Selector to get animation render state with animations
+export const selectAnimationRenderStateWithAnimations = ({ state }) => {
+  return createAnimationRenderState(state.animationProperties, true);
+};
+
 export const addProperty = (state, payload) => {
   const { property, initialValue } = payload;
   if (state.animationProperties[property]) {
@@ -390,16 +523,15 @@ export const addKeyframe = (state, keyframe) => {
 
   const keyframes = state.animationProperties[keyframe.property].keyframes;
   let index = keyframe.index;
-  console.log(index);
   if (keyframe.index === undefined) {
     index = keyframes.length;
   }
 
   keyframes.splice(index, 0, {
-    duration: keyframe.duration,
+    duration: parseInt(keyframe.duration),
     easing: keyframe.easing,
-    value: keyframe.value,
-    relative: keyframe.relative === "true",
+    value: parseFloat(keyframe.value),
+    relative: keyframe.relative,
   });
 };
 
@@ -444,11 +576,16 @@ export const moveKeyframeLeft = (state, payload) => {
 };
 
 export const updateKeyframe = (state, payload) => {
-  console.log("payload", payload);
-  console.log("state.animationProperties", state.animationProperties);
   const { property, index, keyframe } = payload;
   const keyframes = state.animationProperties[property].keyframes;
-  keyframes[index] = keyframe;
+
+  // Convert relative from string to boolean
+  keyframes[index] = {
+    ...keyframe,
+    duration: parseInt(keyframe.duration),
+    value: parseFloat(keyframe.value),
+    relative: keyframe.relative,
+  };
 };
 
 export const updateInitialValue = (state, payload) => {
@@ -538,7 +675,6 @@ export const toViewData = ({ state, props }) => {
   if (state.popover.mode === "addProperty") {
     addPropertyDefaultValues = state.popover.formValues || {};
     addPropertyContext = { ...addPropertyDefaultValues };
-    console.log("[AddProperty Context]", addPropertyContext);
   }
 
   if (state.popover.mode === "editKeyframe") {
@@ -550,7 +686,7 @@ export const toViewData = ({ state, props }) => {
       duration: currentKeyframe.duration,
       value: currentKeyframe.value,
       easing: currentKeyframe.easing,
-      relative: currentKeyframe.relative ? "true" : "false",
+      relative: currentKeyframe.relative,
     };
   }
 
@@ -580,8 +716,6 @@ export const toViewData = ({ state, props }) => {
       ...editInitialValueDefaultValues,
       ...state.popover.formValues,
     };
-
-    console.log("[EditInitialValue Context]", editInitialValueContext);
   }
 
   // TODO this is hacky way to work around limitation of passing props

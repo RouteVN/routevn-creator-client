@@ -1,4 +1,29 @@
-import { nanoid } from "nanoid";
+export const handleAfterMount = async (deps) => {
+  const { store, drenderer, getRefIds } = deps;
+  const { canvas } = getRefIds();
+  if (canvas && canvas.elm && !store.selectIsDrendererInitialized()) {
+    await drenderer.init({
+      canvas: canvas.elm,
+    });
+    store.setDrendererInitialized(true);
+  }
+};
+
+// Constants for preview rendering (used in handleReplayAnimation)
+const resetState = {
+  elements: [
+    {
+      id: "bg",
+      type: "rect",
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      fill: "#4a4a4a",
+    },
+  ],
+  transitions: [],
+};
 
 export const handleSearchInput = (e, deps) => {
   const { store, render } = deps;
@@ -31,8 +56,8 @@ export const handleAnimationItemClick = (e, deps) => {
   );
 };
 
-export const handleAddAnimationClick = (e, deps) => {
-  const { store, render } = deps;
+export const handleAddAnimationClick = async (e, deps) => {
+  const { store, render, drenderer } = deps;
   e.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
@@ -41,6 +66,7 @@ export const handleAddAnimationClick = (e, deps) => {
 
   // Open dialog for adding
   store.openDialog();
+  drenderer.render(resetState);
   render();
 };
 
@@ -58,8 +84,8 @@ export const handleClosePopover = (e, deps) => {
   render();
 };
 
-export const handleAnimationItemDoubleClick = (e, deps) => {
-  const { store, render, props } = deps;
+export const handleAnimationItemDoubleClick = async (e, deps) => {
+  const { store, render, props, drenderer } = deps;
   const itemId = e.currentTarget.id.replace("animation-item-", "");
 
   // Find the animation item data from props.flatGroups
@@ -74,6 +100,7 @@ export const handleAnimationItemDoubleClick = (e, deps) => {
 
   if (itemData) {
     // Open dialog for editing
+    drenderer.render(resetState);
     store.openDialog({ editMode: true, itemId, itemData });
     render();
   }
@@ -146,8 +173,8 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
 
   // Get default value for the property if using existing value
   const defaultValues = {
-    x: 0,
-    y: 0,
+    x: 960,
+    y: 540,
     alpha: 1,
     scaleX: 1,
     scaleY: 1,
@@ -177,7 +204,6 @@ export const handleInitialValueChange = (e, deps) => {
 export const handleAddKeyframeInDialog = (e, deps) => {
   const { store, render } = deps;
 
-  console.log("e.detail", e.detail);
   // store.showAddKeyframeForm();
   store.setPopover({
     mode: "addKeyframe",
@@ -197,7 +223,6 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
     payload: { property, index },
   } = store.selectPopover();
 
-  console.log("e.detail.formValues", e.detail.formValues);
   store.addKeyframe({
     ...e.detail.formValues,
     property,
@@ -208,7 +233,6 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
 };
 
 export const handleKeyframeRightClick = (e, deps) => {
-  console.log("xxxxxxxxxxxxxxxxxxx", e.detail);
   const { render, store } = deps;
   store.setPopover({
     mode: "keyframeMenu",
@@ -237,8 +261,6 @@ export const handlePropertyNameRightClick = (e, deps) => {
 
 export const handleKeyframeDropdownItemClick = (e, deps) => {
   const { render, store } = deps;
-
-  console.log("e.detail", e.detail);
   const popover = store.selectPopover();
   const { property, index } = popover.payload;
   // Use the stored x, y coordinates from popover state
@@ -325,19 +347,12 @@ export const handleAddPropertyFormChange = (e, deps) => {
   // Form-change event passes individual field changes
   const { name, fieldValue } = e.detail;
 
-  console.log("[AddProperty Form Change] Field:", name, "Value:", fieldValue);
-
   // Get current form values and update the changed field
   const currentFormValues = store.selectPopover().formValues || {};
   const updatedFormValues = {
     ...currentFormValues,
     [name]: fieldValue,
   };
-
-  console.log(
-    "[AddProperty Form Change] Updated FormValues:",
-    updatedFormValues,
-  );
   store.updatePopoverFormValues(updatedFormValues);
   render();
 };
@@ -348,13 +363,6 @@ export const handleEditInitialValueFormChange = (e, deps) => {
   // Form-change event passes individual field changes
   const { name, fieldValue } = e.detail;
 
-  console.log(
-    "[EditInitialValue Form Change] Field:",
-    name,
-    "Value:",
-    fieldValue,
-  );
-
   // Get current form values and update the changed field
   const currentFormValues = store.selectPopover().formValues || {};
   const updatedFormValues = {
@@ -362,12 +370,25 @@ export const handleEditInitialValueFormChange = (e, deps) => {
     [name]: fieldValue,
   };
 
-  console.log(
-    "[EditInitialValue Form Change] Updated FormValues:",
-    updatedFormValues,
-  );
   store.updatePopoverFormValues(updatedFormValues);
   render();
+};
+
+export const handleReplayAnimation = async (e, deps) => {
+  const { store, drenderer } = deps;
+
+  if (!store.selectIsDrendererInitialized()) {
+    return;
+  }
+
+  await drenderer.render(resetState);
+
+  // Then render with the element and animations after a small delay
+  // The 'add' event will trigger the animation
+  setTimeout(() => {
+    const renderState = store.selectAnimationRenderStateWithAnimations(); // Use selector with animations
+    drenderer.render(renderState);
+  }, 100);
 };
 
 export const handleEditInitialValueFormSubmit = (e, deps) => {
@@ -380,8 +401,8 @@ export const handleEditInitialValueFormSubmit = (e, deps) => {
 
   // Get default value for the property if using existing value
   const defaultValues = {
-    x: 0,
-    y: 0,
+    x: 960,
+    y: 540,
     alpha: 1,
     scaleX: 1,
     scaleY: 1,
