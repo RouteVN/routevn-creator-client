@@ -163,7 +163,9 @@ export const toViewData = ({ state, props }) => {
   }
 
   // Use framework cursor values: grab, grabbing, or undefined (for default)
-  const containerCursor = props.cursor || (state.isPanning ? "grabbing" : state.isPanMode ? "grab" : undefined);
+  const containerCursor =
+    props.cursor ||
+    (state.isPanning ? "grabbing" : state.isPanMode ? "grab" : undefined);
 
   return {
     items,
@@ -174,6 +176,6 @@ export const toViewData = ({ state, props }) => {
     zoomLevel: state.zoomLevel,
     zoomLevelPercent: Math.round(state.zoomLevel * 100),
     containerCursor: containerCursor,
-    itemCursor: state.isPanMode ? undefined : "m",  // Use "m" for move cursor
+    itemCursor: state.isPanMode ? undefined : "m", // Use "m" for move cursor
   };
 };

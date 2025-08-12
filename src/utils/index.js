@@ -90,7 +90,8 @@ export const layoutTreeStructureToRenderState = (
           fontFamily: fontItem?.fontFamily || "sans-serif",
           fontWeight: typography.fontWeight || "normal",
           fill: colorItem?.hex || "white",
-          lineHeight: (typography.lineHeight || 1.5) * (typography.fontSize || 24),
+          lineHeight:
+            (typography.lineHeight || 1.5) * (typography.fontSize || 24),
           fontFileId: fontItem?.fileId ? `file:${fontItem.fileId}` : undefined,
         };
       } else {
@@ -123,7 +124,9 @@ export const layoutTreeStructureToRenderState = (
             fontFamily: hoverFontItem?.fontFamily || "sans-serif",
             fontWeight: hoverTypography.fontWeight || "normal",
             fill: hoverColorItem?.hex || "white",
-            lineHeight: (hoverTypography.lineHeight || 1.5) * (hoverTypography.fontSize || 24),
+            lineHeight:
+              (hoverTypography.lineHeight || 1.5) *
+              (hoverTypography.fontSize || 24),
             fontFileId: hoverFontItem?.fileId
               ? `file:${hoverFontItem.fileId}`
               : undefined,
@@ -136,7 +139,8 @@ export const layoutTreeStructureToRenderState = (
         const clickedTypography =
           typographyData.items[node.clickedTypographyId];
         if (clickedTypography) {
-          const clickedColorItem = colorsData.items?.[clickedTypography.colorId];
+          const clickedColorItem =
+            colorsData.items?.[clickedTypography.colorId];
           const clickedFontItem = fontsData.items?.[clickedTypography.fontId];
 
           interactionStyles.clickedStyle = {
@@ -145,7 +149,8 @@ export const layoutTreeStructureToRenderState = (
             fontWeight: clickedTypography.fontWeight || "normal",
             fill: clickedColorItem?.hex || "white",
             lineHeight:
-              (clickedTypography.lineHeight || 1.5) * (clickedTypography.fontSize || 24),
+              (clickedTypography.lineHeight || 1.5) *
+              (clickedTypography.fontSize || 24),
             fontFileId: clickedFontItem?.fileId
               ? `file:${clickedFontItem.fileId}`
               : undefined,

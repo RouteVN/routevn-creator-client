@@ -337,7 +337,11 @@ export const toViewData = ({ state, props }, payload) => {
       sectionsGraphView: state.sectionsGraphView,
       layouts: [],
       allCharacters: [],
-      sectionsGraph: JSON.stringify({ nodes: [], edges: [], adjacencyList: {} }, null, 2),
+      sectionsGraph: JSON.stringify(
+        { nodes: [], edges: [], adjacencyList: {} },
+        null,
+        2,
+      ),
       isActionsDialogOpen: state.mode !== "lines-editor",
     };
   }

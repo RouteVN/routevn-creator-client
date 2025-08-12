@@ -45,9 +45,13 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
   const currentRoute = state.currentRoute;
   const matchPaths = (path, pattern) => {
     // Remove trailing slash if present (unless it's just "/")
-    const normalizedPath = path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
-    const normalizedPattern = pattern.length > 1 && pattern.endsWith("/") ? pattern.slice(0, -1) : pattern;
-    
+    const normalizedPath =
+      path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+    const normalizedPattern =
+      pattern.length > 1 && pattern.endsWith("/")
+        ? pattern.slice(0, -1)
+        : pattern;
+
     const pathParts = normalizedPath.split("/");
     const patternParts = normalizedPattern.split("/");
 
