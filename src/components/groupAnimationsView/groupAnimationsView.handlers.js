@@ -83,7 +83,7 @@ const createAnimationRenderState = (
             if (property === "rotation") {
               value = (value * Math.PI) / 180;
             }
-            console.log('kf',kf)
+            console.log("kf", kf);
             return {
               duration: kf.duration,
               value: value,
