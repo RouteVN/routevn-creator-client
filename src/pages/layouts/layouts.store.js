@@ -3,13 +3,11 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 const form = {
   fields: [
     { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
     {
       name: "layoutTypeDisplay",
       inputType: "read-only-text",
       description: "Layout Type",
     },
-    { name: "fullPath", inputType: "read-only-text", description: "Path" },
   ],
 };
 
@@ -64,9 +62,7 @@ export const toViewData = ({ state, props }, payload) => {
 
     defaultValues = {
       name: selectedItem.name,
-      typeDisplay: selectedItem.type === "layout" ? "Layout" : "Folder",
       layoutTypeDisplay: layoutTypeLabel,
-      fullPath: selectedItem.fullLabel || selectedItem.name || "",
     };
   }
 
