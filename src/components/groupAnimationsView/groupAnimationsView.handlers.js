@@ -66,7 +66,7 @@ export const handleAddAnimationClick = async (e, deps) => {
 
   // Open dialog for adding
   store.openDialog();
-  drenderer.render(resetState)
+  drenderer.render(resetState);
   render();
 };
 
@@ -100,7 +100,7 @@ export const handleAnimationItemDoubleClick = async (e, deps) => {
 
   if (itemData) {
     // Open dialog for editing
-    drenderer.render(resetState)
+    drenderer.render(resetState);
     store.openDialog({ editMode: true, itemId, itemData });
     render();
   }
