@@ -620,14 +620,14 @@ export const toViewData = ({ state, props }) => {
         children: state.collapsedIds.includes(group.id)
           ? []
           : filteredChildren.map((item) => {
-              return {
-                ...item,
-                selectedStyle:
-                  item.id === selectedItemId
-                    ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                    : "",
-              };
-            }),
+            return {
+              ...item,
+              selectedStyle:
+                item.id === selectedItemId
+                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                  : "",
+            };
+          }),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };

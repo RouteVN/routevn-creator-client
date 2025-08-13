@@ -129,7 +129,7 @@ template:
           - rtgl-tabs#tabs selected-tab=${tab} .items=tabs:
           - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
               - rtgl-view h=f flex=1 sv:
-                  - rvn-base-file-explorer#base-file-explorer .items=items:
+                  - rvn-base-file-explorer#base-file-explorer .items=items hide-empty-message=true:
               - rtgl-view h=f flex=2 sv g=lg:
                   - $if tab == 'image':
                       - rvn-image-selector .groups=groups .selectedImageId=tempSelectedResourceId:

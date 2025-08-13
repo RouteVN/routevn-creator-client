@@ -83,7 +83,7 @@ styles:
     "user-select": "none"
 
 template:
-  - rtgl-view w=f h=f:
+  - rtgl-view w=f h=f sv:
       - "rtgl-view w=f g=sm pos=rel":
           - rtgl-view w=f h=f:
               - $if items.length == 0:
