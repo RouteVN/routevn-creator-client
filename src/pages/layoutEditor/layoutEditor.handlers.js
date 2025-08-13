@@ -302,7 +302,22 @@ export const handleFormChange = async (e, deps) => {
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
-  const unflattenedUpdate = unflattenKey(e.detail.name, e.detail.fieldValue);
+  let unflattenedUpdate;
+
+  // Handle anchor selection specially
+  if (
+    e.detail.name === "anchor" &&
+    e.detail.fieldValue &&
+    typeof e.detail.fieldValue === "object"
+  ) {
+    // When anchor is selected, update both anchorX and anchorY
+    unflattenedUpdate = {
+      anchorX: e.detail.fieldValue.x,
+      anchorY: e.detail.fieldValue.y,
+    };
+  } else {
+    unflattenedUpdate = unflattenKey(e.detail.name, e.detail.fieldValue);
+  }
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
