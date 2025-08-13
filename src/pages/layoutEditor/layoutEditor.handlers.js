@@ -305,12 +305,15 @@ export const handleFormChange = async (e, deps) => {
   let unflattenedUpdate;
 
   // Handle anchor selection specially
-  if (e.detail.name === "anchor" && e.detail.fieldValue) {
-    // Parse the anchor value string (e.g., "0.5,0.5" -> {anchorX: 0.5, anchorY: 0.5})
-    const [x, y] = e.detail.fieldValue.split(",").map((v) => parseFloat(v));
+  if (
+    e.detail.name === "anchor" &&
+    e.detail.fieldValue &&
+    typeof e.detail.fieldValue === "object"
+  ) {
+    // When anchor is selected, update both anchorX and anchorY
     unflattenedUpdate = {
-      anchorX: x,
-      anchorY: y,
+      anchorX: e.detail.fieldValue.x,
+      anchorY: e.detail.fieldValue.y,
     };
   } else {
     unflattenedUpdate = unflattenKey(e.detail.name, e.detail.fieldValue);
