@@ -2,19 +2,20 @@ import { toFlatItems } from "../../deps/repository";
 
 export const handleBeforeMount = (deps) => {
   const { repository, store, props } = deps;
-  const { images, layouts, videos } = repository.getState();
+  const { images, layouts, videos, animations } = repository.getState();
 
   store.setRepositoryState({
     images,
     layouts,
     videos,
+    animations,
   });
 
   if (!props.line.presentation?.background) {
     return;
   }
 
-  const { resourceId, resourceType } = props.line.presentation.background;
+  const { resourceId, resourceType, animations: backgroundAnimations } = props.line.presentation.background;
   if (!resourceId || !resourceType) {
     return;
   }
@@ -23,6 +24,13 @@ export const handleBeforeMount = (deps) => {
     resourceId,
     resourceType,
   });
+
+  // Set the selected animation if it exists
+  if (backgroundAnimations?.in) {
+    store.setSelectedAnimation({
+      animationId: backgroundAnimations.in,
+    });
+  }
 };
 
 export const handleAfterMount = async (deps) => {
@@ -62,12 +70,26 @@ export const handleFormExtra = (e, deps) => {
   render();
 };
 
+export const handleFormInputChange = (e, deps) => {
+  const { store, render } = deps;
+  const { name, fieldValue } = e.detail;
+
+  if (name === 'animation') {
+    store.setSelectedAnimation({
+      animationId: fieldValue,
+    });
+    render();
+  }
+};
+
 export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
   const resourceId = e.currentTarget.id.replace("resource-item-", "");
+  const resourceType = store.selectTab();
 
   store.setTempSelectedResource({
     resourceId,
+    resourceType,
   });
   render();
 };
@@ -85,6 +107,7 @@ export const handleTabClick = (e, deps) => {
 export const handleSubmitClick = (e, deps) => {
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
+  const selectedAnimationId = store.selectSelectedAnimation();
 
   if (!selectedResource) {
     return;
@@ -94,6 +117,13 @@ export const handleSubmitClick = (e, deps) => {
     resourceId: selectedResource.resourceId,
     resourceType: selectedResource.resourceType,
   };
+
+  // Only add animations object if there's a valid animation selected
+  if (selectedAnimationId && selectedAnimationId !== 'none') {
+    backgroundData.animations = {
+      in: selectedAnimationId,
+    };
+  }
 
   dispatchEvent(
     new CustomEvent("submit", {
@@ -155,6 +185,12 @@ export const handleButtonSelectClick = (e, deps) => {
       (image) => image.id === tempSelectedResourceId,
     );
     fileId = tempSelectedImage?.fileId;
+  } else if (tempSelectedResourceType === "layout") {
+    const { layouts } = repository.getState();
+    const tempSelectedLayout = toFlatItems(layouts).find(
+      (layout) => layout.id === tempSelectedResourceId,
+    );
+    fileId = tempSelectedLayout?.thumbnailFileId;
   } else if (tempSelectedResourceType === "video") {
     const { videos } = repository.getState();
     const tempSelectedVideo = toFlatItems(videos).find(

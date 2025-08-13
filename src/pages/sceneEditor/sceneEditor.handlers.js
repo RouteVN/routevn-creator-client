@@ -86,7 +86,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleSectionTabClick = (e, deps) => {
-  const { store, render, drenderer, getFileContent } = deps;
+  const { store, render, subject } = deps;
   const id = e.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
 
@@ -101,14 +101,12 @@ export const handleSectionTabClick = (e, deps) => {
 
   render();
 
-  // Render the canvas with the latest data
-  setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
-  }, 10);
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleCommandLineSubmit = (e, deps) => {
-  const { store, render, repository, drenderer, getFileContent } = deps;
+  const { store, render, repository, subject } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -214,14 +212,12 @@ export const handleCommandLineSubmit = (e, deps) => {
 
   render();
 
-  // Render the canvas with the latest data
-  setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
-  }, 10);
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleEditorDataChanged = async (e, deps) => {
-  const { subject, store, drenderer, getFileContent } = deps;
+  const { subject, store } = deps;
 
   // Update local store immediately for UI responsiveness
   store.setLineTextContent({
@@ -236,9 +232,8 @@ export const handleEditorDataChanged = async (e, deps) => {
   });
 
   // Render the scene immediately with the updated content
-  setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
-  }, 10);
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleAddPresentationButtonClick = (e, deps) => {
@@ -285,8 +280,7 @@ export const handleSectionAddClick = (e, deps) => {
 };
 
 export const handleSplitLine = (e, deps) => {
-  const { repository, store, render, getRefIds, drenderer, getFileContent } =
-    deps;
+  const { repository, store, render, getRefIds, subject } = deps;
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
@@ -416,10 +410,8 @@ export const handleSplitLine = (e, deps) => {
     }
   });
 
-  // Render the canvas with the latest data
-  setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
-  }, 10);
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleNewLine = (e, deps) => {
@@ -446,7 +438,7 @@ export const handleNewLine = (e, deps) => {
 };
 
 export const handleMoveUp = (e, deps) => {
-  const { store, getRefIds, render, drenderer, getFileContent } = deps;
+  const { store, getRefIds, render, subject } = deps;
   const currentLineId = e.detail.lineId;
   const previousLineId = store.selectPreviousLineId({ lineId: currentLineId });
 
@@ -484,9 +476,8 @@ export const handleMoveUp = (e, deps) => {
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
 
-      setTimeout(async () => {
-        await renderSceneState(store, drenderer, getFileContent);
-      }, 10);
+      // Trigger debounced canvas render  
+      subject.dispatch("sceneEditor.renderCanvas", {});
     }, 0);
   }
 };
@@ -498,7 +489,7 @@ export const handleBackToActions = (e, deps) => {
 };
 
 export const handleMoveDown = (e, deps) => {
-  const { store, getRefIds, render, drenderer, getFileContent } = deps;
+  const { store, getRefIds, render, subject } = deps;
   const currentLineId = e.detail.lineId;
   const nextLineId = store.selectNextLineId({ lineId: currentLineId });
 
@@ -529,16 +520,14 @@ export const handleMoveDown = (e, deps) => {
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
 
-      setTimeout(async () => {
-        await renderSceneState(store, drenderer, getFileContent);
-      }, 10);
+      // Trigger debounced canvas render  
+      subject.dispatch("sceneEditor.renderCanvas", {});
     }, 0);
   }
 };
 
 export const handleMergeLines = (e, deps) => {
-  const { store, getRefIds, render, repository, drenderer, getFileContent } =
-    deps;
+  const { store, getRefIds, render, repository, subject } = deps;
   const { prevLineId, currentLineId, contentToAppend } = e.detail;
 
   const sceneId = store.selectSceneId();
@@ -613,10 +602,8 @@ export const handleMergeLines = (e, deps) => {
     }
   });
 
-  // Render the canvas with the latest data
-  setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
-  }, 10);
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleOpenCommandLine = (e, deps) => {
@@ -733,7 +720,7 @@ export const handlePopoverClickOverlay = (e, deps) => {
 };
 
 export const handleLineSelectionChanged = (e, deps) => {
-  const { store, render, drenderer, getFileContent, getRefIds } = deps;
+  const { store, render, getRefIds, subject } = deps;
   const { lineId, lineRect } = e.detail;
 
   store.setSelectedLineId(lineId);
@@ -793,10 +780,8 @@ export const handleLineSelectionChanged = (e, deps) => {
     });
   }
 
-  // Render the canvas with the latest data
-  setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
-  }, 10);
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleFormActionClick = (e, deps) => {
@@ -851,7 +836,7 @@ export const handleToggleSectionsGraphView = (e, deps) => {
 
 // Handler for throttled/debounced dialogue content updates
 export const handleUpdateDialogueContent = (payload, deps) => {
-  const { repository, store, drenderer, getFileContent } = deps;
+  const { repository, store, subject } = deps;
   const { lineId, content } = payload;
 
   const sceneId = store.selectSceneId();
@@ -891,10 +876,15 @@ export const handleUpdateDialogueContent = (payload, deps) => {
   // Note: store.setLineTextContent is already called immediately in handleEditorDataChanged
   // so we don't need to call it again here
 
-  setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
-  }, 10);
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
+
+// Handler for debounced canvas rendering
+async function handleRenderCanvas(payload, deps) {
+  const { store, drenderer, getFileContent } = deps;
+  await renderSceneState(store, drenderer, getFileContent);
+}
 
 // RxJS subscriptions for handling events with throttling/debouncing
 export const subscriptions = (deps) => {
@@ -907,6 +897,14 @@ export const subscriptions = (deps) => {
       debounceTime(2000),
       tap(({ payload }) => {
         deps.handlers.handleUpdateDialogueContent(payload, deps);
+      }),
+    ),
+    // Debounce canvas renders by 50ms to prevent multiple renders on rapid navigation
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.renderCanvas"),
+      debounceTime(50),
+      tap(async ({ payload }) => {
+        await handleRenderCanvas(payload, deps);
       }),
     ),
   ];

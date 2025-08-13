@@ -118,7 +118,7 @@ export const handleFormActionClick = (e, deps) => {
 
     // Get form state using selector
     const formState = store.selectFormState();
-    const { targetGroupId, editItemId, editMode, animationProperties } =
+    const { targetGroupId, editItemId, editMode, properties } =
       formState;
 
     if (editMode && editItemId) {
@@ -128,7 +128,7 @@ export const handleFormActionClick = (e, deps) => {
           detail: {
             itemId: editItemId,
             name: formData.name,
-            animationProperties,
+            properties,
           },
           bubbles: true,
           composed: true,
@@ -141,7 +141,7 @@ export const handleFormActionClick = (e, deps) => {
           detail: {
             groupId: targetGroupId,
             name: formData.name,
-            animationProperties,
+            properties,
           },
           bubbles: true,
           composed: true,

@@ -27,10 +27,10 @@ const getInitialValue = (property) => {
 export const toViewData = ({ state, props, attrs }) => {
   let selectedProperties = [];
 
-  // console.log("props.animationProperties", props.animationProperties);
+  // console.log("props.properties", props.properties);
 
-  if (props.animationProperties) {
-    // Main page usage: convert animationProperties object to array
+  if (props.properties) {
+    // Main page usage: convert properties object to array
     const defaultValues = {
       x: 0,
       y: 0,
@@ -40,14 +40,14 @@ export const toViewData = ({ state, props, attrs }) => {
       rotation: 0,
     };
 
-    selectedProperties = Object.keys(props.animationProperties).map(
+    selectedProperties = Object.keys(props.properties).map(
       (propertyName) => {
-        const value = props.animationProperties[propertyName].initialValue;
+        const value = props.properties[propertyName].initialValue;
         const isDefault = value === defaultValues[propertyName];
         return {
           name: propertyName,
           initialValue: isDefault ? "D" : value,
-          keyframes: props.animationProperties[propertyName].keyframes,
+          keyframes: props.properties[propertyName].keyframes,
         };
       },
     );

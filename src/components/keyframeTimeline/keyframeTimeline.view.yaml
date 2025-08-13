@@ -23,7 +23,7 @@ propsSchema:
             type: string
           initialValue:
             type: number
-    animationProperties:
+    properties:
       type: object
       description: Animation properties object with initialValue and keyframes
     tracks:
