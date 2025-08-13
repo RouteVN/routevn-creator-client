@@ -148,23 +148,27 @@ export const toViewData = ({ state }) => {
   const flatGroups = toFlatGroups(items).map((group) => {
     return {
       ...group,
-      children: group.children.filter((layout) => state.tab !== 'layout' || layout.layoutType === 'normal').map((child) => {
-        const isSelected = child.id === state.tempSelectedResourceId;
-        const layoutTypeLabels = {
-          normal: "Normal",
-          dialogue: "Dialogue",
-          choice: "Choice",
-        };
+      children: group.children
+        .filter(
+          (layout) => state.tab !== "layout" || layout.layoutType === "normal",
+        )
+        .map((child) => {
+          const isSelected = child.id === state.tempSelectedResourceId;
+          const layoutTypeLabels = {
+            normal: "Normal",
+            dialogue: "Dialogue",
+            choice: "Choice",
+          };
 
-        return {
-          ...child,
-          bw: isSelected ? "md" : "xs",
-          bc: isSelected ? "pr" : "mu",
-          layoutTypeDisplay: child.layoutType
-            ? layoutTypeLabels[child.layoutType] || child.layoutType
-            : "Layout",
-        };
-      }),
+          return {
+            ...child,
+            bw: isSelected ? "md" : "xs",
+            bc: isSelected ? "pr" : "mu",
+            layoutTypeDisplay: child.layoutType
+              ? layoutTypeLabels[child.layoutType] || child.layoutType
+              : "Layout",
+          };
+        }),
     };
   });
 
@@ -172,9 +176,10 @@ export const toViewData = ({ state }) => {
   const breadcrumb = selectBreadcrumb({ state });
 
   // Create animation options from repository animations using the same pattern as layouts
-  const flatAnimations = toFlatItems(state.animationItems || [])
-    .filter(item => item.type === 'animation');
-  const animationOptions = flatAnimations.map(animation => ({
+  const flatAnimations = toFlatItems(state.animationItems || []).filter(
+    (item) => item.type === "animation",
+  );
+  const animationOptions = flatAnimations.map((animation) => ({
     value: animation.id,
     label: animation.name || animation.id,
   }));

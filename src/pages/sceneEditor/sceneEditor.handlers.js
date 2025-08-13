@@ -476,7 +476,7 @@ export const handleMoveUp = (e, deps) => {
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
 
-      // Trigger debounced canvas render  
+      // Trigger debounced canvas render
       subject.dispatch("sceneEditor.renderCanvas", {});
     }, 0);
   }
@@ -520,7 +520,7 @@ export const handleMoveDown = (e, deps) => {
       // Also render the linesEditor to update line colors
       linesEditorRef.elm.render();
 
-      // Trigger debounced canvas render  
+      // Trigger debounced canvas render
       subject.dispatch("sceneEditor.renderCanvas", {});
     }, 0);
   }

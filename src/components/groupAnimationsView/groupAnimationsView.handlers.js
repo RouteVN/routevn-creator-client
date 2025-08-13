@@ -118,8 +118,7 @@ export const handleFormActionClick = (e, deps) => {
 
     // Get form state using selector
     const formState = store.selectFormState();
-    const { targetGroupId, editItemId, editMode, properties } =
-      formState;
+    const { targetGroupId, editItemId, editMode, properties } = formState;
 
     if (editMode && editItemId) {
       // Edit mode - dispatch animation update

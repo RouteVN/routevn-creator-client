@@ -421,11 +421,7 @@ export const createAnimationRenderState = (
 
   // Build transitions array from animation properties
   const transitions = [];
-  if (
-    includeAnimations &&
-    properties &&
-    Object.keys(properties).length > 0
-  ) {
+  if (includeAnimations && properties && Object.keys(properties).length > 0) {
     // Convert our animation properties to the correct format
     const formattedAnimationProperties = {};
 
@@ -679,8 +675,7 @@ export const toViewData = ({ state, props }) => {
 
   if (state.popover.mode === "editKeyframe") {
     const { property, index } = state.popover.payload;
-    const currentKeyframe =
-      state.properties[property].keyframes[index];
+    const currentKeyframe = state.properties[property].keyframes[index];
 
     editKeyframeDefaultValues = {
       duration: currentKeyframe.duration,
@@ -692,8 +687,7 @@ export const toViewData = ({ state, props }) => {
 
   if (state.popover.mode === "editInitialValue") {
     const { property } = state.popover.payload;
-    const currentInitialValue =
-      state.properties[property].initialValue;
+    const currentInitialValue = state.properties[property].initialValue;
 
     // Check if current value matches default
     const defaultValues = {

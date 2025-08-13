@@ -52,15 +52,17 @@ export const selectAudios = ({ state }) => {
 };
 
 export const selectAnimations = ({ state }) => {
-  const items = {}
-  Object.entries(state.repositoryState.animations?.items || {}).forEach(([id, item]) => {
-    if (item.type === "animation") {
-      items[id] = {
-        id,
-        properties: item.properties
-      };
-    }
-  });
+  const items = {};
+  Object.entries(state.repositoryState.animations?.items || {}).forEach(
+    ([id, item]) => {
+      if (item.type === "animation") {
+        items[id] = {
+          id,
+          properties: item.properties,
+        };
+      }
+    },
+  );
   return items;
 };
 
@@ -377,31 +379,31 @@ export const toViewData = ({ state, props }, payload) => {
   // Form configuration for renaming
   const renameForm = currentSection
     ? {
-      fields: [
-        {
-          name: "name",
-          inputType: "inputText",
-          label: "Section Name",
-          value: currentSection.name || "",
-          required: true,
-        },
-      ],
-      actions: {
-        layout: "",
-        buttons: [
+        fields: [
           {
-            id: "submit",
-            variant: "pr",
-            content: "Rename",
-          },
-          {
-            id: "cancel",
-            variant: "se",
-            content: "Cancel",
+            name: "name",
+            inputType: "inputText",
+            label: "Section Name",
+            value: currentSection.name || "",
+            required: true,
           },
         ],
-      },
-    }
+        actions: {
+          layout: "",
+          buttons: [
+            {
+              id: "submit",
+              variant: "pr",
+              content: "Rename",
+            },
+            {
+              id: "cancel",
+              variant: "se",
+              content: "Cancel",
+            },
+          ],
+        },
+      }
     : null;
 
   const selectedLine = currentSection?.lines?.find(
@@ -702,8 +704,8 @@ export const selectPresentationData = ({ state }) => {
     );
     const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
       ? repositoryState.characters?.items?.[
-      selectedLine.presentation.dialogue.characterId
-      ]
+          selectedLine.presentation.dialogue.characterId
+        ]
       : null;
 
     presentationItems.push({
@@ -726,8 +728,8 @@ export const selectPresentationData = ({ state }) => {
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
-        (l) => l.id === choicesData.layoutId,
-      )
+          (l) => l.id === choicesData.layoutId,
+        )
       : null;
 
     presentationItems.push({

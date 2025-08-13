@@ -15,7 +15,11 @@ export const handleBeforeMount = (deps) => {
     return;
   }
 
-  const { resourceId, resourceType, animations: backgroundAnimations } = props.line.presentation.background;
+  const {
+    resourceId,
+    resourceType,
+    animations: backgroundAnimations,
+  } = props.line.presentation.background;
   if (!resourceId || !resourceType) {
     return;
   }
@@ -74,7 +78,7 @@ export const handleFormInputChange = (e, deps) => {
   const { store, render } = deps;
   const { name, fieldValue } = e.detail;
 
-  if (name === 'animation') {
+  if (name === "animation") {
     store.setSelectedAnimation({
       animationId: fieldValue,
     });
@@ -119,7 +123,7 @@ export const handleSubmitClick = (e, deps) => {
   };
 
   // Only add animations object if there's a valid animation selected
-  if (selectedAnimationId && selectedAnimationId !== 'none') {
+  if (selectedAnimationId && selectedAnimationId !== "none") {
     backgroundData.animations = {
       in: selectedAnimationId,
     };
