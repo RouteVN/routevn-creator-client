@@ -51,6 +51,21 @@ export const selectAudios = ({ state }) => {
   return state.repositoryState.audio?.items || {};
 };
 
+export const selectAnimations = ({ state }) => {
+  const items = {};
+  Object.entries(state.repositoryState.animations?.items || {}).forEach(
+    ([id, item]) => {
+      if (item.type === "animation") {
+        items[id] = {
+          id,
+          properties: item.properties,
+        };
+      }
+    },
+  );
+  return items;
+};
+
 export const selectCharacters = ({ state }) => {
   const characters = state.repositoryState.characters?.items || {};
   const processedCharacters = {};
@@ -301,6 +316,7 @@ export const selectRenderState = ({ state }) => {
     characters,
     audio: selectAudios({ state }),
     layouts: selectLayouts({ state }),
+    animations: selectAnimations({ state }),
   };
 
   const renderState = constructRenderState({
