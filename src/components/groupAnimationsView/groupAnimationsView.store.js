@@ -195,7 +195,7 @@ export const INITIAL_STATE = Object.freeze({
   searchQuery: "",
   selectedProperties: [],
   initialValue: 0,
-  animationProperties: {}, // Store keyframes for each property
+  properties: {}, // Store keyframes for each property
 
   defaultValues: {
     name: "",
@@ -252,7 +252,7 @@ export const selectFormState = ({ state }) => {
     targetGroupId: state.targetGroupId,
     editItemId: state.editItemId,
     editMode: state.editMode,
-    animationProperties: state.animationProperties,
+    properties: state.properties,
   };
 };
 
@@ -296,7 +296,7 @@ export const openDialog = (
     };
 
     // Set animation properties
-    state.animationProperties = itemData.animationProperties || {};
+    state.properties = itemData.properties || {};
   } else {
     // Use add form
     state.form = addAnimationForm;
@@ -305,7 +305,7 @@ export const openDialog = (
       name: "",
     };
 
-    state.animationProperties = {};
+    state.properties = {};
   }
 };
 
@@ -317,7 +317,7 @@ export const closeDialog = (state) => {
   state.defaultValues = {
     name: "",
   };
-  state.animationProperties = {};
+  state.properties = {};
 };
 
 export const setTargetGroupId = (state, groupId) => {
@@ -393,7 +393,7 @@ const PREVIEW_RECT_HEIGHT = 200;
 
 // Helper function to create render state with animations
 export const createAnimationRenderState = (
-  animationProperties,
+  properties,
   includeAnimations = true,
 ) => {
   const elements = [
@@ -421,15 +421,11 @@ export const createAnimationRenderState = (
 
   // Build transitions array from animation properties
   const transitions = [];
-  if (
-    includeAnimations &&
-    animationProperties &&
-    Object.keys(animationProperties).length > 0
-  ) {
+  if (includeAnimations && properties && Object.keys(properties).length > 0) {
     // Convert our animation properties to the correct format
     const formattedAnimationProperties = {};
 
-    for (const [property, config] of Object.entries(animationProperties)) {
+    for (const [property, config] of Object.entries(properties)) {
       if (config.keyframes && config.keyframes.length > 0) {
         // Map property names to route-graphics format
         let propName = property;
@@ -484,7 +480,7 @@ export const createAnimationRenderState = (
         elementId: "preview-element",
         type: "keyframes",
         event: "add",
-        animationProperties: formattedAnimationProperties,
+        properties: formattedAnimationProperties,
       });
     }
   }
@@ -497,31 +493,31 @@ export const createAnimationRenderState = (
 
 // Selector to get animation render state (without animations by default)
 export const selectAnimationRenderState = ({ state }) => {
-  return createAnimationRenderState(state.animationProperties, false);
+  return createAnimationRenderState(state.properties, false);
 };
 
 // Selector to get animation render state with animations
 export const selectAnimationRenderStateWithAnimations = ({ state }) => {
-  return createAnimationRenderState(state.animationProperties, true);
+  return createAnimationRenderState(state.properties, true);
 };
 
 export const addProperty = (state, payload) => {
   const { property, initialValue } = payload;
-  if (state.animationProperties[property]) {
+  if (state.properties[property]) {
     return;
   }
-  state.animationProperties[property] = {
+  state.properties[property] = {
     initialValue,
     keyframes: [],
   };
 };
 
 export const addKeyframe = (state, keyframe) => {
-  if (!state.animationProperties[keyframe.property]) {
-    state.animationProperties[keyframe.property] = [];
+  if (!state.properties[keyframe.property]) {
+    state.properties[keyframe.property] = [];
   }
 
-  const keyframes = state.animationProperties[keyframe.property].keyframes;
+  const keyframes = state.properties[keyframe.property].keyframes;
   let index = keyframe.index;
   if (keyframe.index === undefined) {
     index = keyframes.length;
@@ -537,7 +533,7 @@ export const addKeyframe = (state, keyframe) => {
 
 export const deleteKeyframe = (state, payload) => {
   const { property, index } = payload;
-  const keyframes = state.animationProperties[property].keyframes;
+  const keyframes = state.properties[property].keyframes;
   keyframes.splice(index, 1);
 };
 
@@ -548,13 +544,13 @@ export const deleteProperty = (state, payload) => {
     (p) => p.name !== property,
   );
 
-  delete state.animationProperties[property];
+  delete state.properties[property];
 };
 
 export const moveKeyframeRight = (state, payload) => {
   const { property, index } = payload;
   const numIndex = Number(index);
-  const keyframes = state.animationProperties[property].keyframes;
+  const keyframes = state.properties[property].keyframes;
 
   if (numIndex < keyframes.length - 1) {
     const temp = keyframes[numIndex];
@@ -566,7 +562,7 @@ export const moveKeyframeRight = (state, payload) => {
 export const moveKeyframeLeft = (state, payload) => {
   const { property, index } = payload;
   const numIndex = Number(index);
-  const keyframes = state.animationProperties[property].keyframes;
+  const keyframes = state.properties[property].keyframes;
 
   if (numIndex > 0) {
     const temp = keyframes[numIndex];
@@ -577,7 +573,7 @@ export const moveKeyframeLeft = (state, payload) => {
 
 export const updateKeyframe = (state, payload) => {
   const { property, index, keyframe } = payload;
-  const keyframes = state.animationProperties[property].keyframes;
+  const keyframes = state.properties[property].keyframes;
 
   // Convert relative from string to boolean
   keyframes[index] = {
@@ -591,7 +587,7 @@ export const updateKeyframe = (state, payload) => {
 export const updateInitialValue = (state, payload) => {
   const { property, initialValue } = payload;
 
-  state.animationProperties[property].initialValue = initialValue;
+  state.properties[property].initialValue = initialValue;
 };
 
 export const toViewData = ({ state, props }) => {
@@ -639,7 +635,7 @@ export const toViewData = ({ state, props }) => {
     .filter((group) => group.shouldDisplay);
 
   const toAddProperties = propertyOptions.filter(
-    (item) => !Object.keys(state.animationProperties).includes(item.value),
+    (item) => !Object.keys(state.properties).includes(item.value),
   );
 
   const keyframeDropdownItems = (() => {
@@ -648,7 +644,7 @@ export const toViewData = ({ state, props }) => {
     }
 
     const { property, index } = state.popover.payload;
-    const keyframes = state.animationProperties[property].keyframes;
+    const keyframes = state.properties[property].keyframes;
     const currentIndex = Number(index);
     const isFirstKeyframe = currentIndex === 0;
     const isLastKeyframe = currentIndex === keyframes.length - 1;
@@ -679,8 +675,7 @@ export const toViewData = ({ state, props }) => {
 
   if (state.popover.mode === "editKeyframe") {
     const { property, index } = state.popover.payload;
-    const currentKeyframe =
-      state.animationProperties[property].keyframes[index];
+    const currentKeyframe = state.properties[property].keyframes[index];
 
     editKeyframeDefaultValues = {
       duration: currentKeyframe.duration,
@@ -692,8 +687,7 @@ export const toViewData = ({ state, props }) => {
 
   if (state.popover.mode === "editInitialValue") {
     const { property } = state.popover.payload;
-    const currentInitialValue =
-      state.animationProperties[property].initialValue;
+    const currentInitialValue = state.properties[property].initialValue;
 
     // Check if current value matches default
     const defaultValues = {
@@ -719,10 +713,10 @@ export const toViewData = ({ state, props }) => {
   }
 
   // TODO this is hacky way to work around limitation of passing props
-  const itemAnimationProperties = {};
+  const itemProperties = {};
   flatGroups.forEach((group) => {
     group.children.forEach((child) => {
-      itemAnimationProperties[child.id] = child.animationProperties;
+      itemProperties[child.id] = child.properties || {};
     });
   });
 
@@ -733,8 +727,8 @@ export const toViewData = ({ state, props }) => {
     defaultValues: state.defaultValues,
     form: state.form,
     isDialogOpen: state.isDialogOpen,
-    animationProperties: state.animationProperties,
-    itemAnimationProperties,
+    properties: state.properties,
+    itemProperties,
     initialValue: state.initialValue,
     addPropertyForm,
     addPropertyContext,

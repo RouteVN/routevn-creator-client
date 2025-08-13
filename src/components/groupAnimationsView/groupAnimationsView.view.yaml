@@ -133,7 +133,7 @@ template:
                                               - rtgl-view flex=1 h=f w=f bw=xs br=md p=md bgc=bg:
                                                   - rtgl-text s=h4: ${item.name}
                                                   - rtgl-view h=12:
-                                                  - rvn-keyframe-timeline .animationProperties=itemAnimationProperties[${item.id}]:
+                                                  - rvn-keyframe-timeline .properties=itemProperties[${item.id}]:
                                     $else:
                                       - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
                                           - rtgl-text: Add Animation
@@ -161,7 +161,7 @@ template:
                   - $if addPropertyButtonVisible:
                       - rtgl-button#add-properties-button v=se s=sm: Add Properties
               - rtgl-view h=128:
-              - rvn-keyframe-timeline#dialog-timeline editable=true .animationProperties=animationProperties:
+              - rvn-keyframe-timeline#dialog-timeline editable=true .properties=properties:
 
           - rtgl-view flex=5:
               - rtgl-view d=h av=c ah=sb mb=md:

@@ -38,7 +38,7 @@ export const handleAnimationItemClick = (e, deps) => {
 
 export const handleAnimationCreated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { groupId, name, animationProperties } = e.detail;
+  const { groupId, name, properties } = e.detail;
 
   // Add new animation to repository
   repository.addAction({
@@ -53,7 +53,7 @@ export const handleAnimationCreated = (e, deps) => {
         name: name,
         duration: "4s",
         keyframes: 3,
-        animationProperties,
+        properties,
       },
     },
   });
@@ -63,15 +63,15 @@ export const handleAnimationCreated = (e, deps) => {
   store.setItems(animations);
 
   console.log(
-    `Animation "${name}" created successfully in group ${groupId} with animationProperties:`,
-    animationProperties,
+    `Animation "${name}" created successfully in group ${groupId} with properties:`,
+    properties,
   );
   render();
 };
 
 export const handleAnimationUpdated = (e, deps) => {
   const { store, render, repository } = deps;
-  const { itemId, name, animationProperties } = e.detail;
+  const { itemId, name, properties } = e.detail;
 
   // Update existing animation in repository
   repository.addAction({
@@ -82,7 +82,7 @@ export const handleAnimationUpdated = (e, deps) => {
       replace: false,
       item: {
         name: name,
-        animationProperties,
+        properties,
       },
     },
   });
@@ -92,8 +92,8 @@ export const handleAnimationUpdated = (e, deps) => {
   store.setItems(animations);
 
   console.log(
-    `Animation "${name}" updated successfully with animationProperties:`,
-    animationProperties,
+    `Animation "${name}" updated successfully with properties:`,
+    properties,
   );
   render();
 };
