@@ -89,7 +89,7 @@ template:
                                           - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" br=md bw=xs p=md':
                                               - rvn-placement-thumbnail .item=items["${item.id}"]:
                                               - rtgl-view mt=md:
-                                                - rtgl-text: ${item.name}
+                                                  - rtgl-text: ${item.name}
                                   - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p:
                                       - rtgl-text: Add Placement
             $elif searchQuery:
@@ -106,12 +106,11 @@ template:
 
   - rtgl-dialog#add-placement-dialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h ah=c g=lg w=f:
-        - $if isDialogOpen:
-          - rtgl-view flex=4:
-            - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
-          - rtgl-view flex=6:
-              - rtgl-text: Preview
-              - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
-                - rtgl-view pos=abs cor=full:
-                  - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"':
-              - rtgl-button#preview-button mt=md: Select Preview Image
+          - $if isDialogOpen:
+              - rtgl-view flex=4:
+                  - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
+              - rtgl-view flex=6:
+                  - rtgl-text: Preview
+                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                      - rtgl-view pos=abs cor=full:
+                          - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"':
