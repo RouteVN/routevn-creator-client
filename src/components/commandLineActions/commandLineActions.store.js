@@ -36,12 +36,12 @@ export const INITIAL_STATE = Object.freeze({
       icon: "choices",
       mode: "choices",
     },
-    // {
-    //   id: "10",
-    //   label: "Transition",
-    //   icon: "transition",
-    //   mode: "sceneTransition",
-    // },
+    {
+      id: "10",
+      label: "Transition",
+      icon: "transition",
+      mode: "sceneTransition",
+    },
     // {
     //   id: "11",
     //   label: "Controls",

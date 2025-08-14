@@ -249,6 +249,11 @@ export const handleSectionAddClick = (e, deps) => {
   const newSectionId = nanoid();
   const newLineId = nanoid();
 
+  // Get current scene to count sections
+  const scene = store.selectScene();
+  const sectionCount = scene?.sections?.length || 0;
+  const newSectionName = `Section ${sectionCount + 1}`;
+
   repository.addAction({
     actionType: "treePush",
     target: `scenes.items.${sceneId}.sections`,
@@ -257,10 +262,12 @@ export const handleSectionAddClick = (e, deps) => {
       position: "last",
       item: {
         id: newSectionId,
-        name: "Section New",
+        name: newSectionName,
         lines: {
           items: {
-            presentation: {},
+            [newLineId]: {
+              presentation: {},
+            },
           },
           tree: [
             {
@@ -276,6 +283,7 @@ export const handleSectionAddClick = (e, deps) => {
   store.setRepositoryState(repository.getState());
 
   store.setSelectedSectionId(newSectionId);
+  store.setSelectedLineId(newLineId);
   render();
 };
 
