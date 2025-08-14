@@ -1,22 +1,5 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
-const flattenObject = (obj, prefix = "") => {
-  const result = {};
-
-  Object.keys(obj).forEach((key) => {
-    const value = obj[key];
-    const newKey = prefix ? `${prefix}_${key}` : key;
-
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      Object.assign(result, flattenObject(value, newKey));
-    } else {
-      result[newKey] = value;
-    }
-  });
-
-  return result;
-};
-
 // TODO: get global screen size from store
 const SCREEN_WIDTH = 1920;
 const SCREEN_HEIGHT = 1080;
@@ -685,7 +668,7 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Create default values for the form
   const defaultValues = selectedItem
-    ? flattenObject({
+    ? {
         name: selectedItem.name,
         type: selectedItem.type,
         x: selectedItem.x,
@@ -693,8 +676,6 @@ export const toViewData = ({ state, props }, payload) => {
         width: selectedItem.width,
         height: selectedItem.height,
         anchor: { x: selectedItem.anchorX, y: selectedItem.anchorY },
-        anchorX: selectedItem.anchorX,
-        anchorY: selectedItem.anchorY,
         scaleX: selectedItem.scaleX,
         scaleY: selectedItem.scaleY,
         rotation: selectedItem.rotation,
@@ -726,7 +707,7 @@ export const toViewData = ({ state, props }, payload) => {
               containerType: selectedItem.containerType,
             }
           : {}),
-      })
+      }
     : {};
 
   const context = {
