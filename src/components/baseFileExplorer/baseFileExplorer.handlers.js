@@ -282,11 +282,24 @@ export const handleItemContextMenu = (e, deps) => {
 
   const itemId = e.currentTarget.id.replace("item-", "");
 
+  // Find the item to get its type
+  const item = props.items?.find((item) => item.id === itemId);
+
+  // Filter context menu items based on item type
+  let filteredMenuItems = props.contextMenuItems;
+  if (item && (item.type === "sprite" || item.type === "text")) {
+    // For sprite and text items, only show Rename and Delete options
+    filteredMenuItems = props.contextMenuItems?.filter(
+      (menuItem) =>
+        menuItem.value === "rename-item" || menuItem.value === "delete-item",
+    );
+  }
+
   // Show dropdown menu for item
   store.showDropdownMenuFileExplorerItem({
     position: { x: e.clientX, y: e.clientY },
     id: itemId,
-    contextMenuItems: props.contextMenuItems,
+    contextMenuItems: filteredMenuItems,
   });
   render();
 };

@@ -1,4 +1,4 @@
-const assetItems = [
+export const assetItems = [
   {
     id: "images",
     name: "Images",
@@ -31,7 +31,7 @@ const assetItems = [
   },
 ];
 
-const userInterfaceItems = [
+export const userInterfaceItems = [
   {
     id: "colors",
     name: "Colors",
@@ -59,7 +59,7 @@ const userInterfaceItems = [
   },
 ];
 
-const systemConfigItems = [
+export const systemConfigItems = [
   {
     id: "variables",
     name: "Variables",
