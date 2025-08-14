@@ -17,7 +17,6 @@ async function createAssetsFromFileIds(
         projectId: "someprojectId",
       });
       let type;
-      let itemName;
 
       Object.entries(audios)
         .concat(Object.entries(images))
