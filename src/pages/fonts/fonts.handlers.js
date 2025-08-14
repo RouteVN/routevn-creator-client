@@ -78,7 +78,10 @@ export const handleFormExtraEvent = async (e, deps) => {
         fileId: uploadResult.fileId,
         name: uploadResult.file.name,
         fontFamily: uploadResult.fontName,
-        fileType: uploadResult.file.type,
+        fileType:
+          uploadResult.type === "font"
+            ? `font/${uploadResult.file.name.split(".").pop()?.toLowerCase() || "ttf"}`
+            : uploadResult.file.type,
         fileSize: uploadResult.file.size,
       },
     },
@@ -131,7 +134,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
       fileId: result.fileId,
       name: result.file.name,
       fontFamily: result.fontName,
-      fileType: result.file.type,
+      fileType:
+        result.type === "font"
+          ? `font/${result.file.name.split(".").pop()?.toLowerCase() || "ttf"}`
+          : result.file.type,
       fileSize: result.file.size,
     };
 

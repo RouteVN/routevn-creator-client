@@ -26,37 +26,18 @@ async function createAssetsFromFileIds(
           if (item.fileId === fileId) {
             type = item.fileType;
             itemName = item.name || key;
-            // Fix for font files with missing or empty fileType
-            if (!type && fonts[key] && fonts[key].fileId === fileId) {
-              // Determine font type from file extension
-              const fileName = item.fileName || item.name || key;
-              if (fileName.endsWith(".ttf")) {
-                type = "font/ttf";
-              } else if (fileName.endsWith(".otf")) {
-                type = "font/otf";
-              } else if (fileName.endsWith(".woff")) {
-                type = "font/woff";
-              } else if (fileName.endsWith(".woff2")) {
-                type = "font/woff2";
-              } else {
-                type = "font/ttf"; // Default to TTF
-              }
-            }
           }
         });
 
       // Handle font files differently - use fontFamily as key like in layoutEditor
-      if (type && type.startsWith("font/")) {
-        // Find the font item to get fontFamily
-        const fontItem = Object.values(fonts).find(
-          (font) => font.fileId === fileId,
-        );
-        if (fontItem && fontItem.fontFamily) {
-          assets[fontItem.fontFamily] = {
-            url,
-            type,
-          };
-        }
+      const fontItem = Object.values(fonts).find(
+        (font) => font.fileId === fileId,
+      );
+      if (fontItem && fontItem.fontFamily && type && type.startsWith("font/")) {
+        assets[fontItem.fontFamily] = {
+          url,
+          type,
+        };
         continue;
       }
 
