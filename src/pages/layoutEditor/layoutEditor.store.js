@@ -676,8 +676,6 @@ export const toViewData = ({ state, props }, payload) => {
         width: selectedItem.width,
         height: selectedItem.height,
         anchor: { x: selectedItem.anchorX, y: selectedItem.anchorY },
-        // anchorX: selectedItem.anchorX,
-        // anchorY: selectedItem.anchorY,
         scaleX: selectedItem.scaleX,
         scaleY: selectedItem.scaleY,
         rotation: selectedItem.rotation,
