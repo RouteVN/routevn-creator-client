@@ -52,7 +52,7 @@ refs:
         handler: handleClose
 
 template:
-  - rtgl-view w=f h=f bgc=mu bc=bo bw=xs:
+  - rtgl-view w=f h=f bgc=mu:
       - $if isLoading:
           - rtgl-view w=f av=c p=md h=f:
               - rtgl-text c=mu-fg: Loading audio...
@@ -76,4 +76,4 @@ template:
                           - rtgl-text s=sm c=mu-fg: ${currentTimeFormatted}
                           - rtgl-text s=sm c=mu-fg: /
                           - rtgl-text s=sm c=mu-fg: ${durationFormatted}
-                  - rtgl-svg#playerCloser svg=cross w=24 h=24:
+                  - rtgl-svg#playerCloser svg=cross w=24 h=24 cur=p:
