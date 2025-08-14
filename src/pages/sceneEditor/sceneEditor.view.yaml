@@ -95,13 +95,15 @@ template:
                       - rtgl-text: ${sectionsGraph}
             $else:
               - rtgl-view:
-                  - 'rtgl-view d=h sh w="calc((100vw - 64px) / 2)"':
-                      - $for section in sections:
-                          - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bw=sm bgc=${section.bgc} cur=p:
-                              - rtgl-text s=sm: ${section.name}
-                      # Section add button - commented out for now
-                      # - rtgl-view#section-add h=32 av=c ph=lg ah=c bw=sm cur=p:
-                      #     - rtgl-text s=sm: +
+                  - 'rtgl-view d=h g=xs w="calc((100vw - 64px) / 2)" h=f':
+                      - rtgl-view d=h sh:
+                          - rtgl-view d=h g=xs:
+                              - $for section in sections:
+                                  - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=p:
+                                      - rtgl-text s=sm: ${section.name}
+                      - rtgl-view#section-add h=32 av=c ph=lg ah=c cur=p bgc=mu:
+                          - rtgl-text s=sm: +
+
                       - rtgl-view flex=1:
                       # Toggle graph view button - commented out for now
                       # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:

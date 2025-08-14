@@ -194,13 +194,18 @@ export const setSelectedSectionId = (state, selectedSectionId) => {
 };
 
 export const showSectionDropdownMenu = (state, { position, sectionId }) => {
+  const scene = selectScene({ state });
+  const items = [{ label: "Rename", type: "item", value: "rename-section" }];
+
+  // Only show delete option if there's more than 1 section
+  if (scene && scene.sections && scene.sections.length > 1) {
+    items.push({ label: "Delete", type: "item", value: "delete-section" });
+  }
+
   state.dropdownMenu = {
     isOpen: true,
     position,
-    items: [
-      { label: "Rename", type: "item", value: "rename-section" },
-      { label: "Delete", type: "item", value: "delete-section" },
-    ],
+    items,
     sectionId,
     presentationType: null,
   };
@@ -365,7 +370,7 @@ export const toViewData = ({ state, props }, payload) => {
   const sections = scene.sections.map((section) => {
     return {
       ...section,
-      bgc: section.id === state.selectedSectionId ? "mu" : "",
+      bgc: section.id === state.selectedSectionId ? "" : "mu",
     };
   });
 
@@ -395,11 +400,6 @@ export const toViewData = ({ state, props }, payload) => {
               id: "submit",
               variant: "pr",
               content: "Rename",
-            },
-            {
-              id: "cancel",
-              variant: "se",
-              content: "Cancel",
             },
           ],
         },
