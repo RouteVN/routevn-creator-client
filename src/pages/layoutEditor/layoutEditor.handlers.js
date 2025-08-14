@@ -23,7 +23,6 @@ const renderLayoutPreview = async (deps) => {
   const fontsItems = fontsData?.items || {};
   const layout = layouts.items[layoutId];
 
-  // const choicesNum = store.selectChoiceDefaultValues().choicesNum;
   const choicesData = store.selectChoicesData();
 
   const layoutTreeStructure = toTreeStructure(layout.elements);
