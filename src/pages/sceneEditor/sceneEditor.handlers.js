@@ -17,6 +17,7 @@ async function createAssetsFromFileIds(
         projectId: "someprojectId",
       });
       let type;
+      let itemName;
 
       Object.entries(audios)
         .concat(Object.entries(images))
@@ -24,9 +25,42 @@ async function createAssetsFromFileIds(
         .forEach(([key, item]) => {
           if (item.fileId === fileId) {
             type = item.fileType;
+            itemName = item.name || key;
+            // Fix for font files with missing or empty fileType
+            if (!type && fonts[key] && fonts[key].fileId === fileId) {
+              // Determine font type from file extension
+              const fileName = item.fileName || item.name || key;
+              if (fileName.endsWith(".ttf")) {
+                type = "font/ttf";
+              } else if (fileName.endsWith(".otf")) {
+                type = "font/otf";
+              } else if (fileName.endsWith(".woff")) {
+                type = "font/woff";
+              } else if (fileName.endsWith(".woff2")) {
+                type = "font/woff2";
+              } else {
+                type = "font/ttf"; // Default to TTF
+              }
+            }
           }
         });
 
+      // Handle font files differently - use fontFamily as key like in layoutEditor
+      if (type && type.startsWith("font/")) {
+        // Find the font item to get fontFamily
+        const fontItem = Object.values(fonts).find(
+          (font) => font.fileId === fileId,
+        );
+        if (fontItem && fontItem.fontFamily) {
+          assets[fontItem.fontFamily] = {
+            url,
+            type,
+          };
+        }
+        continue;
+      }
+
+      // For non-font files, use file:${fileId} as key
       assets[`file:${fileId}`] = {
         url,
         type,
