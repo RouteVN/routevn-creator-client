@@ -194,13 +194,20 @@ export const setSelectedSectionId = (state, selectedSectionId) => {
 };
 
 export const showSectionDropdownMenu = (state, { position, sectionId }) => {
+  const scene = selectScene({ state });
+  const items = [
+    { label: "Rename", type: "item", value: "rename-section" },
+  ];
+
+  // Only show delete option if there's more than 1 section
+  if (scene && scene.sections && scene.sections.length > 1) {
+    items.push({ label: "Delete", type: "item", value: "delete-section" });
+  }
+
   state.dropdownMenu = {
     isOpen: true,
     position,
-    items: [
-      { label: "Rename", type: "item", value: "rename-section" },
-      { label: "Delete", type: "item", value: "delete-section" },
-    ],
+    items,
     sectionId,
     presentationType: null,
   };
@@ -365,7 +372,7 @@ export const toViewData = ({ state, props }, payload) => {
   const sections = scene.sections.map((section) => {
     return {
       ...section,
-      bgc: section.id === state.selectedSectionId ? "mu" : "",
+      bgc: section.id === state.selectedSectionId ? "" : "mu",
     };
   });
 
@@ -379,31 +386,26 @@ export const toViewData = ({ state, props }, payload) => {
   // Form configuration for renaming
   const renameForm = currentSection
     ? {
-        fields: [
+      fields: [
+        {
+          name: "name",
+          inputType: "inputText",
+          label: "Section Name",
+          value: currentSection.name || "",
+          required: true,
+        },
+      ],
+      actions: {
+        layout: "",
+        buttons: [
           {
-            name: "name",
-            inputType: "inputText",
-            label: "Section Name",
-            value: currentSection.name || "",
-            required: true,
+            id: "submit",
+            variant: "pr",
+            content: "Rename",
           },
         ],
-        actions: {
-          layout: "",
-          buttons: [
-            {
-              id: "submit",
-              variant: "pr",
-              content: "Rename",
-            },
-            {
-              id: "cancel",
-              variant: "se",
-              content: "Cancel",
-            },
-          ],
-        },
-      }
+      },
+    }
     : null;
 
   const selectedLine = currentSection?.lines?.find(
@@ -704,8 +706,8 @@ export const selectPresentationData = ({ state }) => {
     );
     const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
       ? repositoryState.characters?.items?.[
-          selectedLine.presentation.dialogue.characterId
-        ]
+      selectedLine.presentation.dialogue.characterId
+      ]
       : null;
 
     presentationItems.push({
@@ -728,8 +730,8 @@ export const selectPresentationData = ({ state }) => {
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
-          (l) => l.id === choicesData.layoutId,
-        )
+        (l) => l.id === choicesData.layoutId,
+      )
       : null;
 
     presentationItems.push({

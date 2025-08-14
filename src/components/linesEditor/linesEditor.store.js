@@ -120,9 +120,25 @@ export const toViewData = ({ state, props }) => {
         transitionTarget = targetScene?.name || "Unknown Scene";
       } else if (sectionTransitionData.sectionId) {
         sectionTransition = true;
-        // For sections, we would need section data from props/context
-        // For now, just use the section ID
-        transitionTarget = sectionTransitionData.sectionId;
+        // Get section name from the scene that contains this section
+        const allScenes = toFlatItems(state.repositoryState.scenes || []);
+        let sectionName = "Unknown Section";
+        
+        // Find the section across all scenes
+        for (const scene of allScenes) {
+          if (scene.sections) {
+            const sections = toFlatItems(scene.sections);
+            const targetSection = sections.find(
+              (section) => section.id === sectionTransitionData.sectionId
+            );
+            if (targetSection) {
+              sectionName = targetSection.name || sectionName;
+              break;
+            }
+          }
+        }
+        
+        transitionTarget = sectionName;
       }
     }
 
