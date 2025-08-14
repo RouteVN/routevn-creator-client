@@ -31,6 +31,15 @@ export const handleFontItemClick = (e, deps) => {
   render();
 };
 
+const getFileType = (result) => {
+  if (result.file.type) return result.file.type;
+  const ext = result.file.name.split(".").pop()?.toLowerCase();
+  if (result.type === "font" && ext) {
+    return `font/${ext}`;
+  }
+  throw new Error("Unknown file type");
+};
+
 export const handleFormExtraEvent = async (e, deps) => {
   const { repository, store, render, filePicker, uploadFontFiles } = deps;
 
@@ -78,10 +87,7 @@ export const handleFormExtraEvent = async (e, deps) => {
         fileId: uploadResult.fileId,
         name: uploadResult.file.name,
         fontFamily: uploadResult.fontName,
-        fileType:
-          uploadResult.type === "font"
-            ? `font/${uploadResult.file.name.split(".").pop()?.toLowerCase() || "ttf"}`
-            : uploadResult.file.type,
+        fileType: getFileType(uploadResult),
         fileSize: uploadResult.file.size,
       },
     },
@@ -134,10 +140,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
       fileId: result.fileId,
       name: result.file.name,
       fontFamily: result.fontName,
-      fileType:
-        result.type === "font"
-          ? `font/${result.file.name.split(".").pop()?.toLowerCase() || "ttf"}`
-          : result.file.type,
+      fileType: getFileType(result),
       fileSize: result.file.size,
     };
 

@@ -25,23 +25,9 @@ async function createAssetsFromFileIds(
         .forEach(([key, item]) => {
           if (item.fileId === fileId) {
             type = item.fileType;
-            itemName = item.name || key;
           }
         });
 
-      // Handle font files differently - use fontFamily as key like in layoutEditor
-      const fontItem = Object.values(fonts).find(
-        (font) => font.fileId === fileId,
-      );
-      if (fontItem && fontItem.fontFamily && type && type.startsWith("font/")) {
-        assets[fontItem.fontFamily] = {
-          url,
-          type,
-        };
-        continue;
-      }
-
-      // For non-font files, use file:${fileId} as key
       assets[`file:${fileId}`] = {
         url,
         type,
