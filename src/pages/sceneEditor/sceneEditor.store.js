@@ -195,9 +195,7 @@ export const setSelectedSectionId = (state, selectedSectionId) => {
 
 export const showSectionDropdownMenu = (state, { position, sectionId }) => {
   const scene = selectScene({ state });
-  const items = [
-    { label: "Rename", type: "item", value: "rename-section" },
-  ];
+  const items = [{ label: "Rename", type: "item", value: "rename-section" }];
 
   // Only show delete option if there's more than 1 section
   if (scene && scene.sections && scene.sections.length > 1) {
@@ -386,26 +384,26 @@ export const toViewData = ({ state, props }, payload) => {
   // Form configuration for renaming
   const renameForm = currentSection
     ? {
-      fields: [
-        {
-          name: "name",
-          inputType: "inputText",
-          label: "Section Name",
-          value: currentSection.name || "",
-          required: true,
-        },
-      ],
-      actions: {
-        layout: "",
-        buttons: [
+        fields: [
           {
-            id: "submit",
-            variant: "pr",
-            content: "Rename",
+            name: "name",
+            inputType: "inputText",
+            label: "Section Name",
+            value: currentSection.name || "",
+            required: true,
           },
         ],
-      },
-    }
+        actions: {
+          layout: "",
+          buttons: [
+            {
+              id: "submit",
+              variant: "pr",
+              content: "Rename",
+            },
+          ],
+        },
+      }
     : null;
 
   const selectedLine = currentSection?.lines?.find(
@@ -706,8 +704,8 @@ export const selectPresentationData = ({ state }) => {
     );
     const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
       ? repositoryState.characters?.items?.[
-      selectedLine.presentation.dialogue.characterId
-      ]
+          selectedLine.presentation.dialogue.characterId
+        ]
       : null;
 
     presentationItems.push({
@@ -730,8 +728,8 @@ export const selectPresentationData = ({ state }) => {
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
-        (l) => l.id === choicesData.layoutId,
-      )
+          (l) => l.id === choicesData.layoutId,
+        )
       : null;
 
     presentationItems.push({
