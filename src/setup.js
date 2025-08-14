@@ -14,6 +14,10 @@ import { createLegacyUploaders } from "./deps/fileUploaderCompat";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
+import {
+  templateProjectData,
+  mergeWithTemplates,
+} from "./utils/templateProjectData";
 
 const httpClient = createRouteVnHttpClient({
   baseUrl: "http://localhost:8788",
@@ -31,10 +35,10 @@ const initialData = {
     items: {},
     tree: [],
   },
-  animations: {
-    items: {},
-    tree: [],
-  },
+  animations: mergeWithTemplates(
+    { items: {}, tree: [] },
+    templateProjectData.animations,
+  ),
   audio: {
     items: {},
     tree: [],
@@ -51,10 +55,10 @@ const initialData = {
     items: {},
     tree: [],
   },
-  placements: {
-    items: {},
-    tree: [],
-  },
+  placements: mergeWithTemplates(
+    { items: {}, tree: [] },
+    templateProjectData.placements,
+  ),
   colors: {
     items: {},
     tree: [],
@@ -71,10 +75,10 @@ const initialData = {
     items: {},
     tree: [],
   },
-  layouts: {
-    items: {},
-    tree: [],
-  },
+  layouts: mergeWithTemplates(
+    { items: {}, tree: [] },
+    templateProjectData.layouts,
+  ),
   preset: {
     items: {},
     tree: [],
