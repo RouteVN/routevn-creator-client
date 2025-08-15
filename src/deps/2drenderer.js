@@ -48,5 +48,11 @@ export const create2dRenderer = async () => {
       await app.loadAssets(assetBufferManager.getBufferMap());
     },
     render: (payload) => app.render(payload),
+    destroy: () => {
+      if (!app) {
+        return;
+      }
+      app.destroy();
+    },
   };
 };

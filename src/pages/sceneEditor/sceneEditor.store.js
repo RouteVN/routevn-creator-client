@@ -659,18 +659,18 @@ export const selectPresentationData = ({ state }) => {
         (scene) => scene.id === transition.sceneId,
       );
 
-      const sceneTransitionData = {
+      const sectionTransitionData = {
         ...transition,
         scene: targetScene,
       };
 
       presentationItems.push({
-        type: "sceneTransition",
+        type: "sectionTransition",
         id: "presentation-action-scene",
         dataMode: "sectionTransition", // Use sectionTransition as the property name in presentation object
         icon: "scene",
         data: {
-          sceneTransitionData,
+          sectionTransitionData,
         },
       });
     } else if (transition.sectionId) {
@@ -688,7 +688,7 @@ export const selectPresentationData = ({ state }) => {
       presentationItems.push({
         type: "sectionTransition",
         id: "presentation-action-section",
-        dataMode: "sectiontransition",
+        dataMode: "sectionTransition",
         icon: "section",
         data: {
           sectionTransitionData,
@@ -711,7 +711,7 @@ export const selectPresentationData = ({ state }) => {
     presentationItems.push({
       type: "dialogue",
       id: "presentation-action-dialogue",
-      dataMode: "dialogue", // Use dialogue to match the property name in presentation object
+      dataMode: "dialogue", // Use singular to match the property name in presentation object
       icon: "dialogue",
       data: {
         dialogueData,
