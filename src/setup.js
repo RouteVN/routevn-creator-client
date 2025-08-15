@@ -82,7 +82,7 @@ async function fetchTemplateImages() {
     try {
       const fileName = url.split("/").pop();
       const imageId = `template-${fileName.replace(/\./g, "-")}`;
-      
+
       if (shouldUpload) {
         const response = await fetch(url);
         if (response.ok) {
@@ -128,7 +128,7 @@ async function fetchTemplateImages() {
       id: folderId,
       children: folderChildren,
     });
-    
+
     // Don't mark as uploaded here, wait for fonts to complete
   }
 
@@ -159,7 +159,7 @@ async function fetchTemplateFonts() {
     try {
       const fileName = url.split("/").pop();
       const fontId = `font-sample`;
-      
+
       if (shouldUpload) {
         const response = await fetch(url);
         if (response.ok) {
@@ -204,7 +204,7 @@ async function fetchTemplateFonts() {
       id: folderId,
       children: folderChildren,
     });
-    
+
     // Mark that we've uploaded template files
     localStorage.setItem("templateFilesUploaded", "true");
   }
@@ -216,7 +216,7 @@ async function fetchTemplateFonts() {
 const templateImagesData = await fetchTemplateImages();
 const templateFontsData = await fetchTemplateFonts();
 
-// Always create template data structure  
+// Always create template data structure
 const templateData = createTemplateProjectData(
   templateImagesData.fetchedImages,
   templateFontsData.fetchedFonts,
