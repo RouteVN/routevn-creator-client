@@ -436,6 +436,7 @@ export const handleConfirmImageSelection = async (e, deps) => {
     // Get the selected image object to access its fileId
     const { images } = repository.getState();
     const imageItems = images.items;
+    console.log(imageItems);
     const selectedImage = imageItems[selectedImageId];
 
     if (!selectedImage) {
@@ -443,14 +444,28 @@ export const handleConfirmImageSelection = async (e, deps) => {
       return;
     }
 
-    // Update the repository with the image's fileId
+    // Prepare the update object
+    const updateObject = { [fieldName]: selectedImageId };
+
+    if (
+      selectedItem.type === "sprite" &&
+      (selectedItem.width === 0 || selectedItem.height === 0)
+    ) {
+      const targetImage = Object.entries(images.items)
+        .map(([id, item]) => item)
+        .find((item) => item.fileId === selectedImage.fileId);
+      updateObject.width = targetImage?.width || 0;
+      updateObject.height = targetImage?.height || 0;
+    }
+
+    // Update the repository with the image's fileId and possibly dimensions
     repository.addAction({
       actionType: "treeUpdate",
       target: `layouts.items.${layoutId}.elements`,
       value: {
         id: selectedItemId,
         replace: false,
-        item: { [fieldName]: selectedImageId },
+        item: updateObject,
       },
     });
 
