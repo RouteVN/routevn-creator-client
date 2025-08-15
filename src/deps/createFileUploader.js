@@ -439,18 +439,10 @@ export const createFontFileUploader = ({ httpClient, fontManager }) => {
           await fontManager.load(fontName, fontUrl);
         } catch (loadError) {
           console.error("Font loading error:", file.name, loadError);
-          // Provide more user-friendly error message
-          let errorMessage = loadError.message;
-          if (loadError.message.includes("network error")) {
-            errorMessage =
-              "Font file appears to be corrupted or in an unsupported format";
-          } else if (loadError.message.includes("SyntaxError")) {
-            errorMessage = "Font file has invalid syntax";
-          }
           return {
             success: false,
             file,
-            error: errorMessage,
+            error: loadError.message,
           };
         }
 
