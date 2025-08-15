@@ -436,7 +436,6 @@ export const handleConfirmImageSelection = async (e, deps) => {
     // Get the selected image object to access its fileId
     const { images } = repository.getState();
     const imageItems = images.items;
-    console.log(imageItems);
     const selectedImage = imageItems[selectedImageId];
 
     if (!selectedImage) {
