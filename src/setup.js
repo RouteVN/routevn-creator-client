@@ -14,6 +14,7 @@ import { createLegacyUploaders } from "./deps/fileUploaderCompat";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
+import { createTemplateProjectData } from "./utils/templateProjectData";
 
 const httpClient = createRouteVnHttpClient({
   baseUrl: "http://localhost:8788",
@@ -22,75 +23,7 @@ const httpClient = createRouteVnHttpClient({
   },
 });
 
-const initialData = {
-  project: {
-    name: "Project 1",
-    description: "Project 1 description",
-  },
-  images: {
-    items: {},
-    tree: [],
-  },
-  animations: {
-    items: {},
-    tree: [],
-  },
-  audio: {
-    items: {},
-    tree: [],
-  },
-  videos: {
-    items: {},
-    tree: [],
-  },
-  characters: {
-    items: {},
-    tree: [],
-  },
-  fonts: {
-    items: {},
-    tree: [],
-  },
-  placements: {
-    items: {},
-    tree: [],
-  },
-  colors: {
-    items: {},
-    tree: [],
-  },
-  typography: {
-    items: {},
-    tree: [],
-  },
-  variables: {
-    items: {},
-    tree: [],
-  },
-  components: {
-    items: {},
-    tree: [],
-  },
-  layouts: {
-    items: {},
-    tree: [],
-  },
-  preset: {
-    items: {},
-    tree: [],
-  },
-  scenes: {
-    items: {},
-    tree: [],
-  },
-};
-
-const repository = createRepository(initialData, "repositoryEventStream");
-const userConfig = createUserConfig();
-
-const subject = new Subject();
-const router = new Router();
-const audioManager = new AudioManager();
+// Initialize async resources first
 const drenderer = await create2dRenderer();
 
 // Create font manager (needed by fileManager)
@@ -120,6 +53,177 @@ const {
   loadFontFile: loadFontFileFunc,
 } = createLegacyUploaders({ fileManager, httpClient, fontManager });
 
+// Fetch template images from static folder
+async function fetchTemplateImages() {
+  const templateImageUrls = [
+    // Import all template images
+    "/public/template/dialogue_box.png",
+    "/public/template/choice_box.png",
+    "/public/template/choice_box_activated.png",
+  ];
+
+  const fetchedImages = {};
+  const imageItems = {};
+  const imageTree = [];
+
+  // Create the Template UI folder
+  const folderId = "template-ui-folder";
+  imageItems[folderId] = {
+    type: "folder",
+    name: "Template UI",
+  };
+
+  const folderChildren = [];
+
+  for (const url of templateImageUrls) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const fileName = url.split("/").pop();
+        const file = new File([blob], fileName, { type: blob.type });
+
+        // Upload to local storage and get fileId
+        const results = await uploadImageFiles([file], "template-project");
+        if (results && results.length > 0) {
+          const result = results[0];
+          const imageId = `template-${fileName.replace(/\./g, "-")}`;
+
+          // Store the image ID for layout references
+          fetchedImages[fileName] = imageId;
+
+          // Create the image item for the repository
+          imageItems[imageId] = {
+            type: "image",
+            fileId: result.fileId,
+            name: fileName,
+            fileType: file.type || "image/png",
+            fileSize: file.size,
+            width: result.dimensions?.width || 1920,
+            height: result.dimensions?.height || 1080,
+          };
+
+          // Add to folder children
+          folderChildren.push({ id: imageId });
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch template image ${url}:`, error);
+    }
+  }
+
+  // Create the tree structure with folder
+  imageTree.push({
+    id: folderId,
+    children: folderChildren,
+  });
+
+  return { fetchedImages, imageItems, imageTree };
+}
+
+// Fetch template fonts from static folder
+async function fetchTemplateFonts() {
+  const templateFontUrls = [
+    // Add template font URLs here
+    // Example: "/public/template/custom-font.ttf",
+  ];
+
+  const fetchedFonts = {};
+
+  for (const url of templateFontUrls) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const fileName = url.split("/").pop();
+        const file = new File([blob], fileName, { type: blob.type });
+
+        // Upload to local storage and get fileId
+        const results = await uploadFontFiles([file], "template-project");
+        if (results && results.length > 0) {
+          fetchedFonts[fileName] = results[0].fileId;
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch template font ${url}:`, error);
+    }
+  }
+
+  return fetchedFonts;
+}
+
+// Fetch template resources before creating template data
+const templateImagesData = await fetchTemplateImages();
+const templateFonts = await fetchTemplateFonts();
+
+console.log("Template images loaded:", templateImagesData);
+
+// Now create template data with the fetched file IDs
+const templateData = createTemplateProjectData(
+  templateImagesData.fetchedImages,
+  templateFonts,
+);
+
+const initialData = {
+  project: {
+    name: "Project 1",
+    description: "Project 1 description",
+  },
+  images: {
+    items: templateImagesData.imageItems,
+    tree: templateImagesData.imageTree,
+  },
+  animations: templateData.animations,
+  audio: {
+    items: {},
+    tree: [],
+  },
+  videos: {
+    items: {},
+    tree: [],
+  },
+  characters: {
+    items: {},
+    tree: [],
+  },
+  fonts: {
+    items: {},
+    tree: [],
+  },
+  placements: templateData.placements,
+  colors: {
+    items: {},
+    tree: [],
+  },
+  typography: {
+    items: {},
+    tree: [],
+  },
+  variables: {
+    items: {},
+    tree: [],
+  },
+  components: {
+    items: {},
+    tree: [],
+  },
+  layouts: templateData.layouts,
+  preset: {
+    items: {},
+    tree: [],
+  },
+  scenes: {
+    items: {},
+    tree: [],
+  },
+};
+
+const repository = createRepository(initialData, "repositoryEventStream");
+const userConfig = createUserConfig();
+
+const subject = new Subject();
+const router = new Router();
+const audioManager = new AudioManager();
 const filePicker = createFilePicker();
 
 const componentDependencies = {
