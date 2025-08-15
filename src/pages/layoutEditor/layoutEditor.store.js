@@ -686,12 +686,10 @@ export const toViewData = ({ state, props }, payload) => {
               typographyId: selectedItem.typographyId ?? "",
               hoverTypographyId: selectedItem.hoverTypographyId ?? "",
               clickedTypographyId: selectedItem.clickedTypographyId ?? "",
-              style: {
-                align: selectedItem.style?.align ?? "left",
-                wordWrapWidth: parseInt(
-                  selectedItem.style?.wordWrapWidth ?? 300,
-                ),
-              },
+              style_align: selectedItem.style?.align ?? "left",
+              style_wordWrapWidth: parseInt(
+                selectedItem.style?.wordWrapWidth ?? 300,
+              ),
             }
           : {}),
         ...(selectedItem.type === "sprite"
