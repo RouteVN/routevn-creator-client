@@ -53,7 +53,7 @@ async function renderSceneState(store, drenderer, getFileContent) {
 }
 
 export const handleBeforeMount = (deps) => {
-  const { store, router, repository, render } = deps;
+  const { drenderer, store, router, repository, render } = deps;
   const { sceneId } = router.getPayload();
 
   store.setSceneId(sceneId);
@@ -73,6 +73,9 @@ export const handleBeforeMount = (deps) => {
 
   // Trigger render to update the view with selected line
   render();
+  return () => {
+    drenderer.destroy();
+  }
 };
 
 export const handleAfterMount = async (deps) => {
@@ -84,6 +87,7 @@ export const handleAfterMount = async (deps) => {
   // Render the canvas with the initial selected line's presentation data
   await renderSceneState(store, drenderer, getFileContent);
 };
+
 
 export const handleSectionTabClick = (e, deps) => {
   const { store, render, subject } = deps;
@@ -341,10 +345,10 @@ export const handleSplitLine = (e, deps) => {
   // New line should have empty presentation except for dialogue.content
   const newLinePresentation = rightContent
     ? {
-        dialogue: {
-          content: rightContent,
-        },
-      }
+      dialogue: {
+        content: rightContent,
+      },
+    }
     : {};
 
   repository.addAction({
