@@ -66,6 +66,9 @@ async function fetchTemplateImages() {
   const imageItems = {};
   const imageTree = [];
 
+  // Check if we should skip uploading (files might already exist)
+  const shouldUpload = !localStorage.getItem("templateFilesUploaded");
+
   // Create the Template UI folder
   const folderId = "template-ui-folder";
   imageItems[folderId] = {
@@ -77,46 +80,57 @@ async function fetchTemplateImages() {
 
   for (const url of templateImageUrls) {
     try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const blob = await response.blob();
-        const fileName = url.split("/").pop();
-        const file = new File([blob], fileName, { type: blob.type });
+      const fileName = url.split("/").pop();
+      const imageId = `template-${fileName.replace(/\./g, "-")}`;
+      
+      if (shouldUpload) {
+        const response = await fetch(url);
+        if (response.ok) {
+          const blob = await response.blob();
+          const file = new File([blob], fileName, { type: blob.type });
 
-        // Upload to local storage and get fileId
-        const results = await uploadImageFiles([file], "template-project");
-        if (results && results.length > 0) {
-          const result = results[0];
-          const imageId = `template-${fileName.replace(/\./g, "-")}`;
+          // Upload to local storage and get fileId
+          const results = await uploadImageFiles([file], "template-project");
+          if (results && results.length > 0) {
+            const result = results[0];
 
-          // Store the image ID for layout references
-          fetchedImages[fileName] = imageId;
+            // Store the image ID for layout references
+            fetchedImages[fileName] = imageId;
 
-          // Create the image item for the repository
-          imageItems[imageId] = {
-            type: "image",
-            fileId: result.fileId,
-            name: fileName,
-            fileType: file.type || "image/png",
-            fileSize: file.size,
-            width: result.dimensions?.width || 1920,
-            height: result.dimensions?.height || 1080,
-          };
+            // Create the image item for the repository
+            imageItems[imageId] = {
+              type: "image",
+              fileId: result.fileId,
+              name: fileName,
+              fileType: file.type || "image/png",
+              fileSize: file.size,
+              width: result.dimensions?.width || 1920,
+              height: result.dimensions?.height || 1080,
+            };
 
-          // Add to folder children
-          folderChildren.push({ id: imageId });
+            // Add to folder children
+            folderChildren.push({ id: imageId });
+          }
         }
+      } else {
+        // Files already uploaded, just create references
+        // These will be overwritten by action stream data anyway
+        fetchedImages[fileName] = imageId;
       }
     } catch (error) {
       console.warn(`Failed to fetch template image ${url}:`, error);
     }
   }
 
-  // Create the tree structure with folder
-  imageTree.push({
-    id: folderId,
-    children: folderChildren,
-  });
+  // Only create tree if we actually uploaded files
+  if (shouldUpload && folderChildren.length > 0) {
+    imageTree.push({
+      id: folderId,
+      children: folderChildren,
+    });
+    
+    // Don't mark as uploaded here, wait for fonts to complete
+  }
 
   return { fetchedImages, imageItems, imageTree };
 }
@@ -129,6 +143,9 @@ async function fetchTemplateFonts() {
   const fontItems = {};
   const fontTree = [];
 
+  // Check if we should skip uploading (files might already exist)
+  const shouldUpload = !localStorage.getItem("templateFilesUploaded");
+
   // Create the Template Fonts folder
   const folderId = "template-fonts-folder";
   fontItems[folderId] = {
@@ -140,61 +157,73 @@ async function fetchTemplateFonts() {
 
   for (const url of templateFontUrls) {
     try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const blob = await response.blob();
-        const fileName = url.split("/").pop();
-        const file = new File([blob], fileName, { type: "font/ttf" });
+      const fileName = url.split("/").pop();
+      const fontId = `font-sample`;
+      
+      if (shouldUpload) {
+        const response = await fetch(url);
+        if (response.ok) {
+          const blob = await response.blob();
+          const file = new File([blob], fileName, { type: "font/ttf" });
 
-        // Upload to local storage and get fileId
-        const results = await uploadFontFiles([file], "template-project");
-        if (results && results.length > 0) {
-          const result = results[0];
-          const fontId = `font-sample`;
+          // Upload to local storage and get fileId
+          const results = await uploadFontFiles([file], "template-project");
+          if (results && results.length > 0) {
+            const result = results[0];
 
-          // Store the file ID for layout references
-          fetchedFonts[fileName] = result.fileId;
+            // Store the file ID for layout references
+            fetchedFonts[fileName] = result.fileId;
 
-          // Create the font item for the repository
-          fontItems[fontId] = {
-            type: "font",
-            fileId: result.fileId,
-            name: "Sample Font",
-            fontFamily: result.fontName || "SampleFont",
-            fileType: "font/ttf",
-            fileSize: file.size,
-          };
+            // Create the font item for the repository
+            fontItems[fontId] = {
+              type: "font",
+              fileId: result.fileId,
+              name: "Sample Font",
+              fontFamily: result.fontName || "SampleFont",
+              fileType: "font/ttf",
+              fileSize: file.size,
+            };
 
-          // Add to folder children
-          folderChildren.push({ id: fontId });
+            // Add to folder children
+            folderChildren.push({ id: fontId });
+          }
         }
+      } else {
+        // Files already uploaded, just create references
+        // These will be overwritten by action stream data anyway
+        fetchedFonts[fileName] = fontId;
       }
     } catch (error) {
       console.warn(`Failed to fetch template font ${url}:`, error);
     }
   }
 
-  // Create the tree structure with folder only if we have fonts
-  if (folderChildren.length > 0) {
+  // Only create tree if we actually uploaded files
+  if (shouldUpload && folderChildren.length > 0) {
     fontTree.push({
       id: folderId,
       children: folderChildren,
     });
+    
+    // Mark that we've uploaded template files
+    localStorage.setItem("templateFilesUploaded", "true");
   }
 
   return { fetchedFonts, fontItems, fontTree };
 }
 
-// Fetch template resources before creating template data
+// Always fetch template resources (files only uploaded once)
 const templateImagesData = await fetchTemplateImages();
 const templateFontsData = await fetchTemplateFonts();
 
-// Now create template data with the fetched file IDs
+// Always create template data structure  
 const templateData = createTemplateProjectData(
   templateImagesData.fetchedImages,
   templateFontsData.fetchedFonts,
 );
 
+// Use the same initial data structure whether new or existing
+// The action stream will override any changes for existing projects
 const initialData = {
   project: {
     name: "Project 1",
@@ -243,7 +272,9 @@ const initialData = {
   },
 };
 
-const repository = createRepository(initialData, "repositoryEventStream");
+const localStorageKey = "repositoryEventStream";
+
+const repository = createRepository(initialData, localStorageKey);
 const userConfig = createUserConfig();
 
 const subject = new Subject();
