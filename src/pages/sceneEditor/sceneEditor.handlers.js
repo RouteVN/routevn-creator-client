@@ -53,7 +53,7 @@ async function renderSceneState(store, drenderer, getFileContent) {
 }
 
 export const handleBeforeMount = (deps) => {
-  const { store, router, repository, render } = deps;
+  const { drenderer, store, router, repository, render } = deps;
   const { sceneId } = router.getPayload();
 
   store.setSceneId(sceneId);
@@ -73,6 +73,9 @@ export const handleBeforeMount = (deps) => {
 
   // Trigger render to update the view with selected line
   render();
+  return () => {
+    drenderer.destroy();
+  };
 };
 
 export const handleAfterMount = async (deps) => {
