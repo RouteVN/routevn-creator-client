@@ -66,9 +66,6 @@ async function fetchTemplateImages() {
   const imageItems = {};
   const imageTree = [];
 
-  // Check if we should skip uploading (files might already exist)
-  const shouldUpload = !localStorage.getItem("templateFilesUploaded");
-
   // Create the Template UI folder
   const folderId = "template-ui-folder";
   imageItems[folderId] = {
@@ -80,57 +77,46 @@ async function fetchTemplateImages() {
 
   for (const url of templateImageUrls) {
     try {
-      const fileName = url.split("/").pop();
-      const imageId = `template-${fileName.replace(/\./g, "-")}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const fileName = url.split("/").pop();
+        const file = new File([blob], fileName, { type: blob.type });
 
-      if (shouldUpload) {
-        const response = await fetch(url);
-        if (response.ok) {
-          const blob = await response.blob();
-          const file = new File([blob], fileName, { type: blob.type });
+        // Upload to local storage and get fileId
+        const results = await uploadImageFiles([file], "template-project");
+        if (results && results.length > 0) {
+          const result = results[0];
+          const imageId = `template-${fileName.replace(/\./g, "-")}`;
 
-          // Upload to local storage and get fileId
-          const results = await uploadImageFiles([file], "template-project");
-          if (results && results.length > 0) {
-            const result = results[0];
+          // Store the image ID for layout references
+          fetchedImages[fileName] = imageId;
 
-            // Store the image ID for layout references
-            fetchedImages[fileName] = imageId;
+          // Create the image item for the repository
+          imageItems[imageId] = {
+            type: "image",
+            fileId: result.fileId,
+            name: fileName,
+            fileType: file.type || "image/png",
+            fileSize: file.size,
+            width: result.dimensions?.width || 1920,
+            height: result.dimensions?.height || 1080,
+          };
 
-            // Create the image item for the repository
-            imageItems[imageId] = {
-              type: "image",
-              fileId: result.fileId,
-              name: fileName,
-              fileType: file.type || "image/png",
-              fileSize: file.size,
-              width: result.dimensions?.width || 1920,
-              height: result.dimensions?.height || 1080,
-            };
-
-            // Add to folder children
-            folderChildren.push({ id: imageId });
-          }
+          // Add to folder children
+          folderChildren.push({ id: imageId });
         }
-      } else {
-        // Files already uploaded, just create references
-        // These will be overwritten by action stream data anyway
-        fetchedImages[fileName] = imageId;
       }
     } catch (error) {
       console.warn(`Failed to fetch template image ${url}:`, error);
     }
   }
 
-  // Only create tree if we actually uploaded files
-  if (shouldUpload && folderChildren.length > 0) {
-    imageTree.push({
-      id: folderId,
-      children: folderChildren,
-    });
-
-    // Don't mark as uploaded here, wait for fonts to complete
-  }
+  // Create the tree structure with folder
+  imageTree.push({
+    id: folderId,
+    children: folderChildren,
+  });
 
   return { fetchedImages, imageItems, imageTree };
 }
@@ -143,9 +129,6 @@ async function fetchTemplateFonts() {
   const fontItems = {};
   const fontTree = [];
 
-  // Check if we should skip uploading (files might already exist)
-  const shouldUpload = !localStorage.getItem("templateFilesUploaded");
-
   // Create the Template Fonts folder
   const folderId = "template-fonts-folder";
   fontItems[folderId] = {
@@ -157,120 +140,176 @@ async function fetchTemplateFonts() {
 
   for (const url of templateFontUrls) {
     try {
-      const fileName = url.split("/").pop();
-      const fontId = `font-sample`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const fileName = url.split("/").pop();
+        const file = new File([blob], fileName, { type: "font/ttf" });
 
-      if (shouldUpload) {
-        const response = await fetch(url);
-        if (response.ok) {
-          const blob = await response.blob();
-          const file = new File([blob], fileName, { type: "font/ttf" });
+        // Upload to local storage and get fileId
+        const results = await uploadFontFiles([file], "template-project");
+        if (results && results.length > 0) {
+          const result = results[0];
+          const fontId = `font-sample`;
 
-          // Upload to local storage and get fileId
-          const results = await uploadFontFiles([file], "template-project");
-          if (results && results.length > 0) {
-            const result = results[0];
+          // Store the file ID for layout references
+          fetchedFonts[fileName] = result.fileId;
 
-            // Store the file ID for layout references
-            fetchedFonts[fileName] = result.fileId;
+          // Create the font item for the repository
+          fontItems[fontId] = {
+            type: "font",
+            fileId: result.fileId,
+            name: "Sample Font",
+            fontFamily: result.fontName || "SampleFont",
+            fileType: "font/ttf",
+            fileSize: file.size,
+          };
 
-            // Create the font item for the repository
-            fontItems[fontId] = {
-              type: "font",
-              fileId: result.fileId,
-              name: "Sample Font",
-              fontFamily: result.fontName || "SampleFont",
-              fileType: "font/ttf",
-              fileSize: file.size,
-            };
-
-            // Add to folder children
-            folderChildren.push({ id: fontId });
-          }
+          // Add to folder children
+          folderChildren.push({ id: fontId });
         }
-      } else {
-        // Files already uploaded, just create references
-        // These will be overwritten by action stream data anyway
-        fetchedFonts[fileName] = fontId;
       }
     } catch (error) {
       console.warn(`Failed to fetch template font ${url}:`, error);
     }
   }
 
-  // Only create tree if we actually uploaded files
-  if (shouldUpload && folderChildren.length > 0) {
+  // Create the tree structure with folder only if we have fonts
+  if (folderChildren.length > 0) {
     fontTree.push({
       id: folderId,
       children: folderChildren,
     });
-
-    // Mark that we've uploaded template files
-    localStorage.setItem("templateFilesUploaded", "true");
   }
+
+  // Mark that template files have been uploaded
+  localStorage.setItem("templateFilesUploaded", "true");
 
   return { fetchedFonts, fontItems, fontTree };
 }
 
-// Always fetch template resources (files only uploaded once)
-const templateImagesData = await fetchTemplateImages();
-const templateFontsData = await fetchTemplateFonts();
+// Check if template has been created
+const templateCreated = localStorage.getItem("templateFilesUploaded");
 
-// Always create template data structure
-const templateData = createTemplateProjectData(
-  templateImagesData.fetchedImages,
-  templateFontsData.fetchedFonts,
-);
+let initialData;
 
-// Use the same initial data structure whether new or existing
-// The action stream will override any changes for existing projects
-const initialData = {
-  project: {
-    name: "Project 1",
-    description: "Project 1 description",
-  },
-  images: {
-    items: templateImagesData.imageItems,
-    tree: templateImagesData.imageTree,
-  },
-  animations: templateData.animations,
-  audio: {
-    items: {},
-    tree: [],
-  },
-  videos: {
-    items: {},
-    tree: [],
-  },
-  characters: {
-    items: {},
-    tree: [],
-  },
-  fonts: {
-    items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
-    tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-  },
-  placements: templateData.placements,
-  colors: templateData.colors,
-  typography: templateData.typography,
-  variables: {
-    items: {},
-    tree: [],
-  },
-  components: {
-    items: {},
-    tree: [],
-  },
-  layouts: templateData.layouts,
-  preset: {
-    items: {},
-    tree: [],
-  },
-  scenes: {
-    items: {},
-    tree: [],
-  },
-};
+if (!templateCreated) {
+  // First time - create everything
+  console.log("First time user - creating template data...");
+
+  // Fetch and upload template resources
+  const templateImagesData = await fetchTemplateImages();
+  const templateFontsData = await fetchTemplateFonts();
+
+  // Create template data structure
+  const templateData = createTemplateProjectData(
+    templateImagesData.fetchedImages,
+    templateFontsData.fetchedFonts,
+  );
+
+  // Set initial data with templates
+  initialData = {
+    project: {
+      name: "Project 1",
+      description: "Project 1 description",
+    },
+    images: {
+      items: templateImagesData.imageItems,
+      tree: templateImagesData.imageTree,
+    },
+    animations: templateData.animations,
+    audio: {
+      items: {},
+      tree: [],
+    },
+    videos: {
+      items: {},
+      tree: [],
+    },
+    characters: {
+      items: {},
+      tree: [],
+    },
+    fonts: {
+      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
+      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
+    },
+    placements: templateData.placements,
+    colors: templateData.colors,
+    typography: templateData.typography,
+    variables: {
+      items: {},
+      tree: [],
+    },
+    components: {
+      items: {},
+      tree: [],
+    },
+    layouts: templateData.layouts,
+    preset: {
+      items: {},
+      tree: [],
+    },
+    scenes: {
+      items: {},
+      tree: [],
+    },
+  };
+} else {
+  // Template already created - still need to provide template structure for action stream
+  console.log("Template already exists - providing template structure...");
+
+  // Create empty template data structure (no files, just structure)
+  const templateData = createTemplateProjectData({}, {});
+
+  initialData = {
+    project: {
+      name: "Project 1",
+      description: "Project 1 description",
+    },
+    images: {
+      items: {},
+      tree: [],
+    },
+    animations: templateData.animations,
+    audio: {
+      items: {},
+      tree: [],
+    },
+    videos: {
+      items: {},
+      tree: [],
+    },
+    characters: {
+      items: {},
+      tree: [],
+    },
+    fonts: {
+      items: {},
+      tree: [],
+    },
+    placements: templateData.placements,
+    colors: templateData.colors,
+    typography: templateData.typography,
+    variables: {
+      items: {},
+      tree: [],
+    },
+    components: {
+      items: {},
+      tree: [],
+    },
+    layouts: templateData.layouts,
+    preset: {
+      items: {},
+      tree: [],
+    },
+    scenes: {
+      items: {},
+      tree: [],
+    },
+  };
+}
 
 const localStorageKey = "repositoryEventStream";
 
