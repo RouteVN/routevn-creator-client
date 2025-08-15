@@ -324,6 +324,8 @@ export const selectRenderState = ({ state }) => {
     animations: selectAnimations({ state }),
   };
 
+  console.log("presentationState", presentationState);
+
   const renderState = constructRenderState({
     presentationState,
     screen: {
@@ -337,6 +339,9 @@ export const selectRenderState = ({ state }) => {
       layouts: selectLayouts({ state }),
     },
   });
+
+  console.log("renderState", renderState);
+
   return renderState;
 };
 
