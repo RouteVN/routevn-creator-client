@@ -40,7 +40,7 @@ export const INITIAL_STATE = Object.freeze({
       id: "10",
       label: "Transition",
       icon: "transition",
-      mode: "sceneTransition",
+      mode: "sectionTransition",
     },
     // {
     //   id: "11",
