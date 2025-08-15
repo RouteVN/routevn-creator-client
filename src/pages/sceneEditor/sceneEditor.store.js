@@ -341,7 +341,7 @@ export const selectRenderState = ({ state }) => {
 };
 
 export const toViewData = ({ state, props }) => {
-  const currentLine = selectSelectedLine({ state, props })
+  const currentLine = selectSelectedLine({ state, props });
   const scene = selectScene({ state });
   if (!scene) {
     return {
@@ -384,26 +384,26 @@ export const toViewData = ({ state, props }) => {
   // Form configuration for renaming
   const renameForm = currentSection
     ? {
-      fields: [
-        {
-          name: "name",
-          inputType: "inputText",
-          label: "Section Name",
-          value: currentSection.name || "",
-          required: true,
-        },
-      ],
-      actions: {
-        layout: "",
-        buttons: [
+        fields: [
           {
-            id: "submit",
-            variant: "pr",
-            content: "Rename",
+            name: "name",
+            inputType: "inputText",
+            label: "Section Name",
+            value: currentSection.name || "",
+            required: true,
           },
         ],
-      },
-    }
+        actions: {
+          layout: "",
+          buttons: [
+            {
+              id: "submit",
+              variant: "pr",
+              content: "Rename",
+            },
+          ],
+        },
+      }
     : null;
 
   const selectedLine = currentSection?.lines?.find(
@@ -635,7 +635,7 @@ export const selectPresentationData = ({ state }) => {
     presentationItems.push({
       type: "characters",
       id: "presentation-action-characters",
-      dataMode: "character",  // Use singular to match the property name in presentation object
+      dataMode: "character", // Use singular to match the property name in presentation object
       icon: "character",
       data: {
         charactersData,
@@ -667,7 +667,7 @@ export const selectPresentationData = ({ state }) => {
       presentationItems.push({
         type: "sceneTransition",
         id: "presentation-action-scene",
-        dataMode: "sectionTransition",  // Use sectionTransition as the property name in presentation object
+        dataMode: "sectionTransition", // Use sectionTransition as the property name in presentation object
         icon: "scene",
         data: {
           sceneTransitionData,
@@ -704,14 +704,14 @@ export const selectPresentationData = ({ state }) => {
     );
     const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
       ? repositoryState.characters?.items?.[
-      selectedLine.presentation.dialogue.characterId
-      ]
+          selectedLine.presentation.dialogue.characterId
+        ]
       : null;
 
     presentationItems.push({
       type: "dialogue",
       id: "presentation-action-dialogue",
-      dataMode: "dialogue",  // Use dialogue to match the property name in presentation object
+      dataMode: "dialogue", // Use dialogue to match the property name in presentation object
       icon: "dialogue",
       data: {
         dialogueData,
@@ -728,14 +728,14 @@ export const selectPresentationData = ({ state }) => {
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
-        (l) => l.id === choicesData.layoutId,
-      )
+          (l) => l.id === choicesData.layoutId,
+        )
       : null;
 
     presentationItems.push({
       type: "choices",
       id: "presentation-action-choices",
-      dataMode: "choice",  // Use singular to match the property name in presentation object
+      dataMode: "choice", // Use singular to match the property name in presentation object
       icon: "choices",
       data: {
         choicesData,

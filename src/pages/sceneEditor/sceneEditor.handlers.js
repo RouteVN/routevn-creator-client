@@ -106,7 +106,8 @@ export const handleSectionTabClick = (e, deps) => {
 };
 
 export const handleCommandLineSubmit = (e, deps) => {
-  const { store, render, repository, subject, drenderer, getFileContent } = deps;
+  const { store, render, repository, subject, drenderer, getFileContent } =
+    deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -340,10 +341,10 @@ export const handleSplitLine = (e, deps) => {
   // New line should have empty presentation except for dialogue.content
   const newLinePresentation = rightContent
     ? {
-      dialogue: {
-        content: rightContent,
-      },
-    }
+        dialogue: {
+          content: rightContent,
+        },
+      }
     : {};
 
   repository.addAction({
@@ -686,14 +687,17 @@ export const handleDropdownMenuClickItem = (e, deps) => {
       // Special handling for dialogue - keep content, remove only layoutId and characterId
       if (presentationType === "dialogue") {
         const stateBefore = repository.getState();
-        const currentPresentation = stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[selectedSectionId]?.lines?.items?.[selectedLineId]?.presentation;
-        
+        const currentPresentation =
+          stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
+            selectedSectionId
+          ]?.lines?.items?.[selectedLineId]?.presentation;
+
         if (currentPresentation?.dialogue) {
           // Keep content if it exists, remove layoutId and characterId
           const updatedDialogue = {
-            content: currentPresentation.dialogue.content || ""
+            content: currentPresentation.dialogue.content || "",
           };
-          
+
           repository.addAction({
             actionType: "set",
             target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.dialogue`,
@@ -707,9 +711,9 @@ export const handleDropdownMenuClickItem = (e, deps) => {
           target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
         });
       }
-      
+
       store.setRepositoryState(repository.getState());
-      
+
       // Trigger re-render to update the view
       subject.dispatch("sceneEditor.renderCanvas", {});
     }
