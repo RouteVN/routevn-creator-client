@@ -4,7 +4,7 @@ export const INITIAL_STATE = Object.freeze({
       id: "2",
       label: "Dialogue Box",
       icon: "dialogue",
-      mode: "dialoguebox",
+      mode: "dialogue",
     },
     {
       id: "4",
@@ -28,13 +28,13 @@ export const INITIAL_STATE = Object.freeze({
       id: "7",
       label: "Characters",
       icon: "character",
-      mode: "characters",
+      mode: "character",
     },
     {
       id: "3",
       label: "Choices",
       icon: "choices",
-      mode: "choices",
+      mode: "choice",
     },
     {
       id: "10",
