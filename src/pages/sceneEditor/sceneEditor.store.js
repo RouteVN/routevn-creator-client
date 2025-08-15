@@ -340,8 +340,8 @@ export const selectRenderState = ({ state }) => {
   return renderState;
 };
 
-export const toViewData = ({ state, props }, payload) => {
-  // const currentLine = selectSelectedLine(state, props, payload)
+export const toViewData = ({ state, props }) => {
+  const currentLine = selectSelectedLine({ state, props });
   const scene = selectScene({ state });
   if (!scene) {
     return {
@@ -497,7 +497,7 @@ export const selectNextLineId = ({ state, props }, payload) => {
   return currentLines[lineIndex + 1]?.id;
 };
 
-export const selectSelectedLine = (state, props, payload) => {
+export const selectSelectedLine = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) return null;
 
@@ -635,7 +635,7 @@ export const selectPresentationData = ({ state }) => {
     presentationItems.push({
       type: "characters",
       id: "presentation-action-characters",
-      dataMode: "characters",
+      dataMode: "character", // Use singular to match the property name in presentation object
       icon: "character",
       data: {
         charactersData,
@@ -667,7 +667,7 @@ export const selectPresentationData = ({ state }) => {
       presentationItems.push({
         type: "sceneTransition",
         id: "presentation-action-scene",
-        dataMode: "sceneTransition",
+        dataMode: "sectionTransition", // Use sectionTransition as the property name in presentation object
         icon: "scene",
         data: {
           sceneTransitionData,
@@ -711,7 +711,7 @@ export const selectPresentationData = ({ state }) => {
     presentationItems.push({
       type: "dialogue",
       id: "presentation-action-dialogue",
-      dataMode: "dialoguebox",
+      dataMode: "dialogue", // Use dialogue to match the property name in presentation object
       icon: "dialogue",
       data: {
         dialogueData,
@@ -735,7 +735,7 @@ export const selectPresentationData = ({ state }) => {
     presentationItems.push({
       type: "choices",
       id: "presentation-action-choices",
-      dataMode: "choices",
+      dataMode: "choice", // Use singular to match the property name in presentation object
       icon: "choices",
       data: {
         choicesData,
@@ -787,7 +787,6 @@ export const selectSectionTransitionsDAG = ({ state }) => {
               from: section.id,
               to: sectionTransition.sectionId,
               type: "section",
-              animation: sectionTransition.animation || "fade",
               lineId: line.id,
             });
           }

@@ -150,9 +150,9 @@ template:
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg="transition" wh=24:
                                   - rtgl-svg svg=${item.icon} wh=24:
-                                  - rtgl-text s=sm: "Transition to: ${item.data.sceneTransitionData.scene.name} (${item.data.sceneTransitionData.animation})"
+                                  - rtgl-text s=sm: "Transition to: ${item.data.sceneTransitionData.scene.name}"
                             $elif item.type == "sectionTransition":
-                              - rtgl-view#${item.id} data-mode="sceneTransition" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                              - rtgl-view#${item.id} data-mode="sectionTransition" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg="transition" wh=24:
                                   - rtgl-svg svg=${item.icon} wh=24:
                                   - rtgl-text s=sm: "Section to: ${item.data.sectionTransitionData.section.name} (${item.data.sectionTransitionData.animation})"

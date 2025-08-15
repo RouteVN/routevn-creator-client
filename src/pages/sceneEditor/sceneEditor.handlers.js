@@ -106,39 +106,13 @@ export const handleSectionTabClick = (e, deps) => {
 };
 
 export const handleCommandLineSubmit = (e, deps) => {
-  const { store, render, repository, subject } = deps;
+  const { store, render, repository, subject, drenderer, getFileContent } =
+    deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
 
-  // Handle scene transitions specially - they don't require a lineId
-  if (e.detail.sceneTransition) {
-    if (!lineId) {
-      console.warn("Scene transition requires a selected line");
-      return;
-    }
-
-    repository.addAction({
-      actionType: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
-      value: {
-        replace: false,
-        item: e.detail,
-      },
-    });
-
-    store.setRepositoryState(repository.getState());
-    store.setMode("lines-editor");
-    render();
-
-    // Render the canvas with the latest data
-    setTimeout(async () => {
-      await renderSceneState(store, drenderer, getFileContent);
-    }, 10);
-    return;
-  }
-
-  // Handle section transitions
+  // Handle section/scene transitions
   if (e.detail.sectionTransition) {
     if (!lineId) {
       console.warn("Section transition requires a selected line");
@@ -668,7 +642,7 @@ export const handleDropdownMenuClickOverlay = (e, deps) => {
 };
 
 export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render, repository, subject } = deps;
   const action = e.detail.item.value; // Access value from item object
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
@@ -710,11 +684,38 @@ export const handleDropdownMenuClickItem = (e, deps) => {
     const selectedSectionId = store.selectSelectedSectionId();
 
     if (presentationType && selectedLineId && selectedSectionId) {
-      repository.addAction({
-        actionType: "unset",
-        target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
-      });
+      // Special handling for dialogue - keep content, remove only layoutId and characterId
+      if (presentationType === "dialogue") {
+        const stateBefore = repository.getState();
+        const currentPresentation =
+          stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
+            selectedSectionId
+          ]?.lines?.items?.[selectedLineId]?.presentation;
+
+        if (currentPresentation?.dialogue) {
+          // Keep content if it exists, remove layoutId and characterId
+          const updatedDialogue = {
+            content: currentPresentation.dialogue.content || "",
+          };
+
+          repository.addAction({
+            actionType: "set",
+            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.dialogue`,
+            value: updatedDialogue,
+          });
+        }
+      } else {
+        // For all other presentation types, use unset to remove completely
+        repository.addAction({
+          actionType: "unset",
+          target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
+        });
+      }
+
       store.setRepositoryState(repository.getState());
+
+      // Trigger re-render to update the view
+      subject.dispatch("sceneEditor.renderCanvas", {});
     }
   }
 
