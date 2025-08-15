@@ -340,8 +340,8 @@ export const selectRenderState = ({ state }) => {
   return renderState;
 };
 
-export const toViewData = ({ state, props }, payload) => {
-  // const currentLine = selectSelectedLine(state, props, payload)
+export const toViewData = ({ state, props }) => {
+  const currentLine = selectSelectedLine({ state, props })
   const scene = selectScene({ state });
   if (!scene) {
     return {
@@ -384,26 +384,26 @@ export const toViewData = ({ state, props }, payload) => {
   // Form configuration for renaming
   const renameForm = currentSection
     ? {
-        fields: [
+      fields: [
+        {
+          name: "name",
+          inputType: "inputText",
+          label: "Section Name",
+          value: currentSection.name || "",
+          required: true,
+        },
+      ],
+      actions: {
+        layout: "",
+        buttons: [
           {
-            name: "name",
-            inputType: "inputText",
-            label: "Section Name",
-            value: currentSection.name || "",
-            required: true,
+            id: "submit",
+            variant: "pr",
+            content: "Rename",
           },
         ],
-        actions: {
-          layout: "",
-          buttons: [
-            {
-              id: "submit",
-              variant: "pr",
-              content: "Rename",
-            },
-          ],
-        },
-      }
+      },
+    }
     : null;
 
   const selectedLine = currentSection?.lines?.find(
@@ -497,7 +497,7 @@ export const selectNextLineId = ({ state, props }, payload) => {
   return currentLines[lineIndex + 1]?.id;
 };
 
-export const selectSelectedLine = (state, props, payload) => {
+export const selectSelectedLine = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) return null;
 
@@ -635,7 +635,7 @@ export const selectPresentationData = ({ state }) => {
     presentationItems.push({
       type: "characters",
       id: "presentation-action-characters",
-      dataMode: "characters",
+      dataMode: "character",  // Use singular to match the property name in presentation object
       icon: "character",
       data: {
         charactersData,
@@ -667,7 +667,7 @@ export const selectPresentationData = ({ state }) => {
       presentationItems.push({
         type: "sceneTransition",
         id: "presentation-action-scene",
-        dataMode: "sceneTransition",
+        dataMode: "sectionTransition",  // Use sectionTransition as the property name in presentation object
         icon: "scene",
         data: {
           sceneTransitionData,
@@ -704,14 +704,14 @@ export const selectPresentationData = ({ state }) => {
     );
     const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
       ? repositoryState.characters?.items?.[
-          selectedLine.presentation.dialogue.characterId
-        ]
+      selectedLine.presentation.dialogue.characterId
+      ]
       : null;
 
     presentationItems.push({
       type: "dialogue",
       id: "presentation-action-dialogue",
-      dataMode: "dialoguebox",
+      dataMode: "dialogue",  // Use dialogue to match the property name in presentation object
       icon: "dialogue",
       data: {
         dialogueData,
@@ -728,14 +728,14 @@ export const selectPresentationData = ({ state }) => {
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
-          (l) => l.id === choicesData.layoutId,
-        )
+        (l) => l.id === choicesData.layoutId,
+      )
       : null;
 
     presentationItems.push({
       type: "choices",
       id: "presentation-action-choices",
-      dataMode: "choices",
+      dataMode: "choice",  // Use singular to match the property name in presentation object
       icon: "choices",
       data: {
         choicesData,
@@ -787,7 +787,6 @@ export const selectSectionTransitionsDAG = ({ state }) => {
               from: section.id,
               to: sectionTransition.sectionId,
               type: "section",
-              animation: sectionTransition.animation || "fade",
               lineId: line.id,
             });
           }
