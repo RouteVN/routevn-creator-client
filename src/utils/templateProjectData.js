@@ -360,84 +360,153 @@ export const templatePlacements = {
   },
 };
 
-// Template Layouts with correct structure
-export const templateLayouts = {
-  tree: [
-    {
-      id: "default-layouts-group",
-      children: [
-        { id: "simple-dialogue" },
-        { id: "choice-menu" },
-        { id: "full-screen-text" },
-        { id: "narrator-box" },
+// Function to create template layouts with image and font references
+const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
+  // Helper to create simple dialogue layout with dialogue box, character name and content
+  const createDialogueLayoutElements = () => {
+    const containerId = nanoid();
+    const dialogueBoxId = nanoid();
+    const characterNameId = nanoid();
+    const dialogueContentId = nanoid();
+
+    return {
+      items: {
+        [containerId]: {
+          type: "container",
+          name: "Dialogue Container",
+          x: 960,
+          y: 850,
+          width: 1600,
+          height: 250,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+        },
+        [dialogueBoxId]: {
+          type: "sprite",
+          name: "Dialogue Box",
+          x: 0,
+          y: 0,
+          width: 1600,
+          height: 250,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          imageId: imageFileIds["dialogue_box.png"] || null,
+        },
+        [characterNameId]: {
+          type: "text",
+          name: "Character Name",
+          x: 80,
+          y: 30,
+          width: 400,
+          height: 40,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          contentType: "dialogue.character.name",
+          text: "${dialogue.character.name}",
+          style: {
+            wordWrapWidth: 400,
+            align: "left",
+          },
+        },
+        [dialogueContentId]: {
+          type: "text",
+          name: "Dialogue Content",
+          x: 80,
+          y: 80,
+          width: 1440,
+          height: 140,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          contentType: "dialogue.content",
+          text: "${dialogue.content}",
+          style: {
+            wordWrapWidth: 1440,
+            align: "left",
+          },
+        },
+      },
+      tree: [
+        {
+          id: containerId,
+          children: [
+            { id: dialogueBoxId },
+            { id: characterNameId },
+            { id: dialogueContentId },
+          ],
+        },
       ],
-    },
-  ],
-  items: {
-    "default-layouts-group": {
-      type: "folder",
-      name: "Template Layouts",
-    },
-    "simple-dialogue": {
-      type: "layout",
-      name: "Simple Dialogue",
-      layoutType: "dialogue",
-      elements: {
-        items: {},
-        tree: [],
-      },
-    },
-    "choice-menu": {
-      type: "layout",
-      name: "Choice Menu",
-      layoutType: "choice",
-      elements: {
-        items: {},
-        tree: [],
-      },
-    },
-    "full-screen-text": {
-      type: "layout",
-      name: "Full Screen Text",
-      layoutType: "normal",
-      elements: {
-        items: {},
-        tree: [],
-      },
-    },
-    "narrator-box": {
-      type: "layout",
-      name: "Narrator Box",
-      layoutType: "normal",
-      elements: {
-        items: {},
-        tree: [],
-      },
-    },
-  },
-};
+    };
+  };
 
-// Helper function to merge template data with existing data
-export const mergeWithTemplates = (existingData, templateData) => {
-  // Check if templates already exist
-  const hasTemplates = existingData.tree?.some((group) =>
-    group.id?.startsWith("default-"),
-  );
+  // Helper to create layout elements with image references
+  const createLayoutElements = (imageFileId) => {
+    if (!imageFileId) {
+      return {
+        items: {},
+        tree: [],
+      };
+    }
 
-  if (hasTemplates) {
-    return existingData;
-  }
+    const elementId = nanoid();
+    return {
+      items: {
+        [elementId]: {
+          type: "image",
+          name: "Background",
+          imageId: imageFileId,
+          placement: "center",
+        },
+      },
+      tree: [{ id: elementId }],
+    };
+  };
 
   return {
-    ...existingData,
-    tree: [...templateData.tree, ...(existingData.tree || [])],
-    items: { ...templateData.items, ...(existingData.items || {}) },
+    tree: [
+      {
+        id: "default-layouts-group",
+        children: [{ id: "simple-dialogue" }, { id: "choice-menu" }],
+      },
+    ],
+    items: {
+      "default-layouts-group": {
+        type: "folder",
+        name: "Template Layouts",
+      },
+      "simple-dialogue": {
+        type: "layout",
+        name: "Simple Dialogue",
+        layoutType: "dialogue",
+        elements: createDialogueLayoutElements(),
+      },
+      "choice-menu": {
+        type: "layout",
+        name: "Simple Choice",
+        layoutType: "choice",
+        elements: createLayoutElements(imageFileIds["choice-bg.png"]),
+      },
+    },
   };
 };
 
-// Export all template project data
-export const templateProjectData = {
+// Function to create template project data
+export const createTemplateProjectData = (
+  imageFileIds = {},
+  fontFileIds = {},
+) => ({
   animations: templateAnimations,
   placements: templatePlacements,
-  layouts: templateLayouts,
-};
+  layouts: createTemplateLayouts(imageFileIds, fontFileIds),
+});
