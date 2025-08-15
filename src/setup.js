@@ -123,12 +123,20 @@ async function fetchTemplateImages() {
 
 // Fetch template fonts from static folder
 async function fetchTemplateFonts() {
-  const templateFontUrls = [
-    // Add template font URLs here
-    // Example: "/public/template/custom-font.ttf",
-  ];
+  const templateFontUrls = ["/public/template/sample_font.ttf"];
 
   const fetchedFonts = {};
+  const fontItems = {};
+  const fontTree = [];
+
+  // Create the Template Fonts folder
+  const folderId = "template-fonts-folder";
+  fontItems[folderId] = {
+    type: "folder",
+    name: "Template Fonts",
+  };
+
+  const folderChildren = [];
 
   for (const url of templateFontUrls) {
     try {
@@ -136,12 +144,29 @@ async function fetchTemplateFonts() {
       if (response.ok) {
         const blob = await response.blob();
         const fileName = url.split("/").pop();
-        const file = new File([blob], fileName, { type: blob.type });
+        const file = new File([blob], fileName, { type: "font/ttf" });
 
         // Upload to local storage and get fileId
         const results = await uploadFontFiles([file], "template-project");
         if (results && results.length > 0) {
-          fetchedFonts[fileName] = results[0].fileId;
+          const result = results[0];
+          const fontId = `font-sample`;
+
+          // Store the file ID for layout references
+          fetchedFonts[fileName] = result.fileId;
+
+          // Create the font item for the repository
+          fontItems[fontId] = {
+            type: "font",
+            fileId: result.fileId,
+            name: "Sample Font",
+            fontFamily: result.fontName || "SampleFont",
+            fileType: "font/ttf",
+            fileSize: file.size,
+          };
+
+          // Add to folder children
+          folderChildren.push({ id: fontId });
         }
       }
     } catch (error) {
@@ -149,76 +174,146 @@ async function fetchTemplateFonts() {
     }
   }
 
-  return fetchedFonts;
+  // Create the tree structure with folder only if we have fonts
+  if (folderChildren.length > 0) {
+    fontTree.push({
+      id: folderId,
+      children: folderChildren,
+    });
+  }
+
+  // Mark that template files have been uploaded
+  localStorage.setItem("templateFilesUploaded", "true");
+
+  return { fetchedFonts, fontItems, fontTree };
 }
 
-// Fetch template resources before creating template data
-const templateImagesData = await fetchTemplateImages();
-const templateFonts = await fetchTemplateFonts();
+// Check if template has been created
+const templateCreated = localStorage.getItem("templateFilesUploaded");
 
-console.log("Template images loaded:", templateImagesData);
+let initialData;
 
-// Now create template data with the fetched file IDs
-const templateData = createTemplateProjectData(
-  templateImagesData.fetchedImages,
-  templateFonts,
-);
+if (!templateCreated) {
+  // First time - create everything
+  console.log("First time user - creating template data...");
 
-const initialData = {
-  project: {
-    name: "Project 1",
-    description: "Project 1 description",
-  },
-  images: {
-    items: templateImagesData.imageItems,
-    tree: templateImagesData.imageTree,
-  },
-  animations: templateData.animations,
-  audio: {
-    items: {},
-    tree: [],
-  },
-  videos: {
-    items: {},
-    tree: [],
-  },
-  characters: {
-    items: {},
-    tree: [],
-  },
-  fonts: {
-    items: {},
-    tree: [],
-  },
-  placements: templateData.placements,
-  colors: {
-    items: {},
-    tree: [],
-  },
-  typography: {
-    items: {},
-    tree: [],
-  },
-  variables: {
-    items: {},
-    tree: [],
-  },
-  components: {
-    items: {},
-    tree: [],
-  },
-  layouts: templateData.layouts,
-  preset: {
-    items: {},
-    tree: [],
-  },
-  scenes: {
-    items: {},
-    tree: [],
-  },
-};
+  // Fetch and upload template resources
+  const templateImagesData = await fetchTemplateImages();
+  const templateFontsData = await fetchTemplateFonts();
 
-const repository = createRepository(initialData, "repositoryEventStream");
+  // Create template data structure
+  const templateData = createTemplateProjectData(
+    templateImagesData.fetchedImages,
+    templateFontsData.fetchedFonts,
+  );
+
+  // Set initial data with templates
+  initialData = {
+    project: {
+      name: "Project 1",
+      description: "Project 1 description",
+    },
+    images: {
+      items: templateImagesData.imageItems,
+      tree: templateImagesData.imageTree,
+    },
+    animations: templateData.animations,
+    audio: {
+      items: {},
+      tree: [],
+    },
+    videos: {
+      items: {},
+      tree: [],
+    },
+    characters: {
+      items: {},
+      tree: [],
+    },
+    fonts: {
+      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
+      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
+    },
+    placements: templateData.placements,
+    colors: templateData.colors,
+    typography: templateData.typography,
+    variables: {
+      items: {},
+      tree: [],
+    },
+    components: {
+      items: {},
+      tree: [],
+    },
+    layouts: templateData.layouts,
+    preset: {
+      items: {},
+      tree: [],
+    },
+    scenes: {
+      items: {},
+      tree: [],
+    },
+  };
+} else {
+  // Template already created - still need to provide template structure for action stream
+  console.log("Template already exists - providing template structure...");
+
+  // Create empty template data structure (no files, just structure)
+  const templateData = createTemplateProjectData({}, {});
+
+  initialData = {
+    project: {
+      name: "Project 1",
+      description: "Project 1 description",
+    },
+    images: {
+      items: {},
+      tree: [],
+    },
+    animations: templateData.animations,
+    audio: {
+      items: {},
+      tree: [],
+    },
+    videos: {
+      items: {},
+      tree: [],
+    },
+    characters: {
+      items: {},
+      tree: [],
+    },
+    fonts: {
+      items: {},
+      tree: [],
+    },
+    placements: templateData.placements,
+    colors: templateData.colors,
+    typography: templateData.typography,
+    variables: {
+      items: {},
+      tree: [],
+    },
+    components: {
+      items: {},
+      tree: [],
+    },
+    layouts: templateData.layouts,
+    preset: {
+      items: {},
+      tree: [],
+    },
+    scenes: {
+      items: {},
+      tree: [],
+    },
+  };
+}
+
+const localStorageKey = "repositoryEventStream";
+
+const repository = createRepository(initialData, localStorageKey);
 const userConfig = createUserConfig();
 
 const subject = new Subject();

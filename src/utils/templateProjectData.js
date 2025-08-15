@@ -253,14 +253,9 @@ export const templatePlacements = {
     {
       id: "default-placements-group",
       children: [
-        { id: "center" },
-        { id: "top-left" },
-        { id: "top-right" },
         { id: "bottom-left" },
-        { id: "bottom-right" },
         { id: "bottom-center" },
-        { id: "left-center" },
-        { id: "right-center" },
+        { id: "bottom-right" },
       ],
     },
   ],
@@ -269,58 +264,14 @@ export const templatePlacements = {
       type: "folder",
       name: "Template Placements",
     },
-    center: {
-      type: "placement",
-      name: "Center",
-      x: "960",
-      y: "540",
-      scaleX: "1",
-      scaleY: "1",
-      anchorX: 0.5,
-      anchorY: 0.5,
-      rotation: "0",
-    },
-    "top-left": {
-      type: "placement",
-      name: "Top Left",
-      x: "100",
-      y: "100",
-      scaleX: "1",
-      scaleY: "1",
-      anchorX: 0,
-      anchorY: 0,
-      rotation: "0",
-    },
-    "top-right": {
-      type: "placement",
-      name: "Top Right",
-      x: "1820",
-      y: "100",
-      scaleX: "1",
-      scaleY: "1",
-      anchorX: 1,
-      anchorY: 0,
-      rotation: "0",
-    },
     "bottom-left": {
       type: "placement",
       name: "Bottom Left",
-      x: "100",
-      y: "980",
+      x: "300",
+      y: "1080",
       scaleX: "1",
       scaleY: "1",
-      anchorX: 0,
-      anchorY: 1,
-      rotation: "0",
-    },
-    "bottom-right": {
-      type: "placement",
-      name: "Bottom Right",
-      x: "1820",
-      y: "980",
-      scaleX: "1",
-      scaleY: "1",
-      anchorX: 1,
+      anchorX: 0.5,
       anchorY: 1,
       rotation: "0",
     },
@@ -328,33 +279,22 @@ export const templatePlacements = {
       type: "placement",
       name: "Bottom Center",
       x: "960",
-      y: "980",
+      y: "1080",
       scaleX: "1",
       scaleY: "1",
       anchorX: 0.5,
       anchorY: 1,
       rotation: "0",
     },
-    "left-center": {
+    "bottom-right": {
       type: "placement",
-      name: "Left Center",
-      x: "100",
-      y: "540",
+      name: "Bottom Right",
+      x: "1620",
+      y: "1080",
       scaleX: "1",
       scaleY: "1",
-      anchorX: 0,
-      anchorY: 0.5,
-      rotation: "0",
-    },
-    "right-center": {
-      type: "placement",
-      name: "Right Center",
-      x: "1820",
-      y: "540",
-      scaleX: "1",
-      scaleY: "1",
-      anchorX: 1,
-      anchorY: 0.5,
+      anchorX: 0.5,
+      anchorY: 1,
       rotation: "0",
     },
   },
@@ -368,6 +308,9 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
     const dialogueBoxId = nanoid();
     const characterNameId = nanoid();
     const dialogueContentId = nanoid();
+
+    // Check if we have the sample font to apply typography
+    const hasSampleFont = fontFileIds["sample_font.ttf"];
 
     return {
       items: {
@@ -402,7 +345,7 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
           type: "text",
           name: "Character Name",
           x: -850,
-          y: -350,
+          y: -360,
           width: 400,
           height: 40,
           anchorX: 0,
@@ -412,8 +355,9 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
           rotation: 0,
           contentType: "dialogue.character.name",
           text: "${dialogue.character.name}",
+          typographyId: hasSampleFont ? "typography-character-name" : null,
           style: {
-            wordWrapWidth: 400,
+            wordWrapWidth: 600,
             align: "left",
           },
         },
@@ -431,8 +375,9 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
           rotation: 0,
           contentType: "dialogue.content",
           text: "${dialogue.content}",
+          typographyId: hasSampleFont ? "typography-text-view" : null,
           style: {
-            wordWrapWidth: 1440,
+            wordWrapWidth: 1700,
             align: "left",
           },
         },
@@ -451,25 +396,156 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
   };
 
   // Helper to create layout elements with image references
-  const createLayoutElements = (imageFileId) => {
-    if (!imageFileId) {
-      return {
-        items: {},
-        tree: [],
-      };
-    }
+  const createChoiceLayoutElements = () => {
+    const choiceListId = nanoid();
+    const choiceContainer1Id = nanoid();
+    const choiceContainer2Id = nanoid();
+    const choiceContainer3Id = nanoid();
+    const choiceContainer4Id = nanoid();
+    const choiceContainer5Id = nanoid();
+    const choiceContainer6Id = nanoid();
+    const choiceBox1Id = nanoid();
+    const choiceBox2Id = nanoid();
+    const choiceBox3Id = nanoid();
+    const choiceBox4Id = nanoid();
+    const choiceBox5Id = nanoid();
+    const choiceBox6Id = nanoid();
+    const choiceText1Id = nanoid();
+    const choiceText2Id = nanoid();
+    const choiceText3Id = nanoid();
+    const choiceText4Id = nanoid();
+    const choiceText5Id = nanoid();
+    const choiceText6Id = nanoid();
 
-    const elementId = nanoid();
     return {
       items: {
-        [elementId]: {
-          type: "image",
-          name: "Background",
-          imageId: imageFileId,
-          placement: "center",
+        [choiceListId]: {
+          type: "container",
+          name: "Choice Container",
+          x: 960,
+          y: 540,
+          width: 1920,
+          height: 1080,
+          anchorX: 0,
+          anchorY: 0.5,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          direction: "vertical",
         },
+        ...[
+          choiceContainer1Id,
+          choiceContainer2Id,
+          choiceContainer3Id,
+          choiceContainer4Id,
+          choiceContainer5Id,
+          choiceContainer6Id,
+        ].reduce((acc, id, index) => {
+          acc[id] = {
+            type: "container",
+            name: `Choice Container ${index + 1}`,
+            x: 0,
+            y: 0,
+            width: 100,
+            height: 120,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            $when: `choice.items[${index}]`,
+          };
+          return acc;
+        }, {}),
+        ...[
+          choiceBox1Id,
+          choiceBox2Id,
+          choiceBox3Id,
+          choiceBox4Id,
+          choiceBox5Id,
+          choiceBox6Id,
+        ].reduce((acc, id, index) => {
+          acc[id] = {
+            type: "sprite",
+            name: `Choice Box ${index + 1}`,
+            x: 0,
+            y: 0,
+            width: 1400,
+            height: 100,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            imageId: imageFileIds["choice_box.png"] || null,
+            hoverImageId: imageFileIds["choice_box_activated.png"] || null,
+          };
+          return acc;
+        }, {}),
+        ...[
+          choiceText1Id,
+          choiceText2Id,
+          choiceText3Id,
+          choiceText4Id,
+          choiceText5Id,
+          choiceText6Id,
+        ].reduce((acc, id, index) => {
+          acc[id] = {
+            type: "text",
+            name: `Choice Text ${index + 1}`,
+            x: 0,
+            y: 0,
+            width: 1300,
+            height: 80,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            contentType: `choice.items[${index}].content`,
+            text: `\${choice.items[${index}].content}`,
+            typographyId: fontFileIds["sample_font.ttf"]
+              ? "typography-text-view"
+              : null,
+            style: {
+              wordWrapWidth: 1300,
+              align: "center",
+            },
+          };
+          return acc;
+        }, {}),
       },
-      tree: [{ id: elementId }],
+      tree: [
+        {
+          id: choiceListId,
+          children: [
+            {
+              id: choiceContainer1Id,
+              children: [{ id: choiceBox1Id }, { id: choiceText1Id }],
+            },
+            {
+              id: choiceContainer2Id,
+              children: [{ id: choiceBox2Id }, { id: choiceText2Id }],
+            },
+            {
+              id: choiceContainer3Id,
+              children: [{ id: choiceBox3Id }, { id: choiceText3Id }],
+            },
+            {
+              id: choiceContainer4Id,
+              children: [{ id: choiceBox4Id }, { id: choiceText4Id }],
+            },
+            {
+              id: choiceContainer5Id,
+              children: [{ id: choiceBox5Id }, { id: choiceText5Id }],
+            },
+            {
+              id: choiceContainer6Id,
+              children: [{ id: choiceBox6Id }, { id: choiceText6Id }],
+            },
+          ],
+        },
+      ],
     };
   };
 
@@ -477,7 +553,7 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
     tree: [
       {
         id: "default-layouts-group",
-        children: [{ id: "simple-dialogue" }, { id: "choice-menu" }],
+        children: [{ id: "simple-dialogue" }, { id: "simple-choice" }],
       },
     ],
     items: {
@@ -491,11 +567,88 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
         layoutType: "dialogue",
         elements: createDialogueLayoutElements(),
       },
-      "choice-menu": {
+      "simple-choice": {
         type: "layout",
         name: "Simple Choice",
         layoutType: "choice",
-        elements: createLayoutElements(imageFileIds["choice-bg.png"]),
+        elements: createChoiceLayoutElements(),
+      },
+    },
+  };
+};
+
+// Template Colors with correct structure
+export const templateColors = {
+  tree: [
+    {
+      id: "default-colors-group",
+      children: [{ id: "color-white" }, { id: "color-black" }],
+    },
+  ],
+  items: {
+    "default-colors-group": {
+      type: "folder",
+      name: "Common Colors",
+    },
+    "color-white": {
+      type: "color",
+      name: "White",
+      hex: "#FFFFFF",
+    },
+    "color-black": {
+      type: "color",
+      name: "Black",
+      hex: "#000000",
+    },
+  },
+};
+
+// Function to create empty template fonts structure
+// Actual fonts are loaded directly in setup.js
+const createTemplateFonts = () => {
+  return {
+    tree: [],
+    items: {},
+  };
+};
+
+// Template Typography with correct structure
+const createTemplateTypography = (fontFileIds = {}) => {
+  // Create typography even without custom font - will use system fonts
+  return {
+    tree: [
+      {
+        id: "default-typography-group",
+        children: [
+          { id: "typography-character-name" },
+          { id: "typography-text-view" },
+        ],
+      },
+    ],
+    items: {
+      "default-typography-group": {
+        type: "folder",
+        name: "Template Typography",
+      },
+      "typography-character-name": {
+        type: "typography",
+        name: "Character Name",
+        fontSize: 48,
+        lineHeight: 1.5,
+        colorId: "color-white",
+        fontId: null, // Will use default system font
+        fontWeight: "400",
+        previewText: "Character Name",
+      },
+      "typography-text-view": {
+        type: "typography",
+        name: "Text View",
+        fontSize: 36,
+        lineHeight: 1.5,
+        colorId: "color-white",
+        fontId: null, // Will use default system font
+        fontWeight: "400",
+        previewText: "Text View",
       },
     },
   };
@@ -509,4 +662,7 @@ export const createTemplateProjectData = (
   animations: templateAnimations,
   placements: templatePlacements,
   layouts: createTemplateLayouts(imageFileIds, fontFileIds),
+  colors: templateColors,
+  fonts: createTemplateFonts(),
+  typography: createTemplateTypography(fontFileIds),
 });
