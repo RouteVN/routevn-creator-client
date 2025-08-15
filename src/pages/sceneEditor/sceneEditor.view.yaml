@@ -146,16 +146,14 @@ template:
                                               - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
                                                   - rtgl-text s=xs: No Sprite
                                   - rtgl-text s=sm: ${item.data.charactersNames}
-                            $elif item.type == "sceneTransition":
+                            $elif item.type == "sectionTransition":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg="transition" wh=24:
                                   - rtgl-svg svg=${item.icon} wh=24:
-                                  - rtgl-text s=sm: "Transition to: ${item.data.sceneTransitionData.scene.name}"
-                            $elif item.type == "sectionTransition":
-                              - rtgl-view#${item.id} data-mode="sectionTransition" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                                  - rtgl-svg svg="transition" wh=24:
-                                  - rtgl-svg svg=${item.icon} wh=24:
-                                  - rtgl-text s=sm: "Section to: ${item.data.sectionTransitionData.section.name} (${item.data.sectionTransitionData.animation})"
+                                  - $if item.data.sectionTransitionData.scene:
+                                      - rtgl-text s=sm: "Transition to scene: ${item.data.sectionTransitionData.scene.name} section: ${item.data.sectionTransitionData.section.name}"
+                                    $else:
+                                      - rtgl-text s=sm: "Transition to section: ${item.data.sectionTransitionData.section.name}"
                             $elif item.type == "dialogue":
                               - $if item.data.dialogueCharacterData || item.data.dialogueData:
                                   - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
@@ -176,9 +174,9 @@ template:
       - rtgl-view slot=content w=800 h=80vh:
           - $if mode == "actions":
               - rvn-command-line-actions#command-line-actions:
-            $elif mode == "dialoguebox":
+            $elif mode == "dialogue":
               - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .line=selectedLine:
-            $elif mode == "choices":
+            $elif mode == "choice":
               - rvn-command-line-choices#command-line-choices .layouts=layouts .line=selectedLine:
             $elif mode == "background":
               - rvn-command-line-background#command-line-background data-mode="background" .line=selectedLine:
@@ -186,9 +184,9 @@ template:
               - rvn-command-line-bgm#command-line-bgm .line=selectedLine:
             $elif mode == "sfx":
               - rvn-command-line-sound-effects#command-line-sound-effects .line=selectedLine:
-            $elif mode == "characters":
+            $elif mode == "character":
               - rvn-command-line-characters#command-line-characters .line=selectedLine .presentationState=presentationState:
-            $elif mode == "sceneTransition":
+            $elif mode == "sectionTransition":
               - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections:
             $elif mode == "controls":
               - rvn-command-line-controls#command-line-controls .line=selectedLine:
