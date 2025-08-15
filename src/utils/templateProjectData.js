@@ -357,7 +357,7 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
           text: "${dialogue.character.name}",
           typographyId: hasSampleFont ? "typography-character-name" : null,
           style: {
-            wordWrapWidth: 400,
+            wordWrapWidth: 600,
             align: "left",
           },
         },
@@ -377,7 +377,7 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
           text: "${dialogue.content}",
           typographyId: hasSampleFont ? "typography-text-view" : null,
           style: {
-            wordWrapWidth: 1440,
+            wordWrapWidth: 1700,
             align: "left",
           },
         },
@@ -396,33 +396,14 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
   };
 
   // Helper to create layout elements with image references
-  const createLayoutElements = (imageFileId) => {
-    if (!imageFileId) {
-      return {
-        items: {},
-        tree: [],
-      };
-    }
-
-    const elementId = nanoid();
-    return {
-      items: {
-        [elementId]: {
-          type: "image",
-          name: "Background",
-          imageId: imageFileId,
-          placement: "center",
-        },
-      },
-      tree: [{ id: elementId }],
-    };
-  };
+  const createChoiceLayoutElements = () => {
+  }
 
   return {
     tree: [
       {
         id: "default-layouts-group",
-        children: [{ id: "simple-dialogue" }, { id: "choice-menu" }],
+        children: [{ id: "simple-dialogue" }, { id: "simple-choice" }],
       },
     ],
     items: {
@@ -436,11 +417,11 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
         layoutType: "dialogue",
         elements: createDialogueLayoutElements(),
       },
-      "choice-menu": {
+      "simple-choice": {
         type: "layout",
         name: "Simple Choice",
         layoutType: "choice",
-        elements: createLayoutElements(imageFileIds["choice-bg.png"]),
+        elements: createChoiceLayoutElements(),
       },
     },
   };
