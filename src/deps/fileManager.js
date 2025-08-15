@@ -114,12 +114,7 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
         const fontUrl = URL.createObjectURL(file);
 
         // Validate font by trying to load it
-        try {
-          await fontManager.load(fontName, fontUrl);
-        } catch (loadError) {
-          URL.revokeObjectURL(fontUrl);
-          throw new Error(`Invalid font file: ${loadError.message}`);
-        }
+        await fontManager.load(fontName, fontUrl);
 
         // Store the font file
         const { fileId, downloadUrl } = await storageAdapter.storeFile(
@@ -135,7 +130,6 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
           type: "font",
         };
       } catch (error) {
-        console.error("Font processing error:", error);
         throw error;
       }
     },
@@ -176,8 +170,6 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
           ...result,
         };
       } catch (error) {
-        console.error(`Failed to upload ${file.name}:`, error);
-
         return {
           success: false,
           file,

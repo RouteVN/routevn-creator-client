@@ -123,12 +123,20 @@ async function fetchTemplateImages() {
 
 // Fetch template fonts from static folder
 async function fetchTemplateFonts() {
-  const templateFontUrls = [
-    // Add template font URLs here
-    // Example: "/public/template/custom-font.ttf",
-  ];
+  const templateFontUrls = ["/public/template/sample_font.ttf"];
 
   const fetchedFonts = {};
+  const fontItems = {};
+  const fontTree = [];
+
+  // Create the Template Fonts folder
+  const folderId = "template-fonts-folder";
+  fontItems[folderId] = {
+    type: "folder",
+    name: "Template Fonts",
+  };
+
+  const folderChildren = [];
 
   for (const url of templateFontUrls) {
     try {
@@ -136,12 +144,29 @@ async function fetchTemplateFonts() {
       if (response.ok) {
         const blob = await response.blob();
         const fileName = url.split("/").pop();
-        const file = new File([blob], fileName, { type: blob.type });
+        const file = new File([blob], fileName, { type: "font/ttf" });
 
         // Upload to local storage and get fileId
         const results = await uploadFontFiles([file], "template-project");
         if (results && results.length > 0) {
-          fetchedFonts[fileName] = results[0].fileId;
+          const result = results[0];
+          const fontId = `font-sample`;
+
+          // Store the file ID for layout references
+          fetchedFonts[fileName] = result.fileId;
+
+          // Create the font item for the repository
+          fontItems[fontId] = {
+            type: "font",
+            fileId: result.fileId,
+            name: "Sample Font",
+            fontFamily: result.fontName || "SampleFont",
+            fileType: "font/ttf",
+            fileSize: file.size,
+          };
+
+          // Add to folder children
+          folderChildren.push({ id: fontId });
         }
       }
     } catch (error) {
@@ -149,19 +174,25 @@ async function fetchTemplateFonts() {
     }
   }
 
-  return fetchedFonts;
+  // Create the tree structure with folder only if we have fonts
+  if (folderChildren.length > 0) {
+    fontTree.push({
+      id: folderId,
+      children: folderChildren,
+    });
+  }
+
+  return { fetchedFonts, fontItems, fontTree };
 }
 
 // Fetch template resources before creating template data
 const templateImagesData = await fetchTemplateImages();
-const templateFonts = await fetchTemplateFonts();
-
-console.log("Template images loaded:", templateImagesData);
+const templateFontsData = await fetchTemplateFonts();
 
 // Now create template data with the fetched file IDs
 const templateData = createTemplateProjectData(
   templateImagesData.fetchedImages,
-  templateFonts,
+  templateFontsData.fetchedFonts,
 );
 
 const initialData = {
@@ -187,18 +218,12 @@ const initialData = {
     tree: [],
   },
   fonts: {
-    items: {},
-    tree: [],
+    items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
+    tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
   },
   placements: templateData.placements,
-  colors: {
-    items: {},
-    tree: [],
-  },
-  typography: {
-    items: {},
-    tree: [],
-  },
+  colors: templateData.colors,
+  typography: templateData.typography,
   variables: {
     items: {},
     tree: [],
