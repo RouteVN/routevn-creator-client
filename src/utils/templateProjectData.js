@@ -397,7 +397,157 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
 
   // Helper to create layout elements with image references
   const createChoiceLayoutElements = () => {
-  }
+    const choiceListId = nanoid();
+    const choiceContainer1Id = nanoid();
+    const choiceContainer2Id = nanoid();
+    const choiceContainer3Id = nanoid();
+    const choiceContainer4Id = nanoid();
+    const choiceContainer5Id = nanoid();
+    const choiceContainer6Id = nanoid();
+    const choiceBox1Id = nanoid();
+    const choiceBox2Id = nanoid();
+    const choiceBox3Id = nanoid();
+    const choiceBox4Id = nanoid();
+    const choiceBox5Id = nanoid();
+    const choiceBox6Id = nanoid();
+    const choiceText1Id = nanoid();
+    const choiceText2Id = nanoid();
+    const choiceText3Id = nanoid();
+    const choiceText4Id = nanoid();
+    const choiceText5Id = nanoid();
+    const choiceText6Id = nanoid();
+
+    return {
+      items: {
+        [choiceListId]: {
+          type: "container",
+          name: "Choice Container",
+          x: 960,
+          y: 540,
+          width: 1920,
+          height: 1080,
+          anchorX: 0,
+          anchorY: 0.5,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          direction: "vertical",
+        },
+        ...[
+          choiceContainer1Id,
+          choiceContainer2Id,
+          choiceContainer3Id,
+          choiceContainer4Id,
+          choiceContainer5Id,
+          choiceContainer6Id,
+        ].reduce((acc, id, index) => {
+          acc[id] = {
+            type: "container",
+            name: `Choice Container ${index + 1}`,
+            x: 0,
+            y: 0,
+            width: 100,
+            height: 120,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            $when: `choice.items[${index}]`,
+          };
+          return acc;
+        }, {}),
+        ...[
+          choiceBox1Id,
+          choiceBox2Id,
+          choiceBox3Id,
+          choiceBox4Id,
+          choiceBox5Id,
+          choiceBox6Id,
+        ].reduce((acc, id, index) => {
+          acc[id] = {
+            type: "sprite",
+            name: `Choice Box ${index + 1}`,
+            x: 0,
+            y: 0,
+            width: 1400,
+            height: 100,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            imageId: imageFileIds["choice_box.png"] || null,
+            hoverImageId: imageFileIds["choice_box_activated.png"] || null,
+          };
+          return acc;
+        }, {}),
+        ...[
+          choiceText1Id,
+          choiceText2Id,
+          choiceText3Id,
+          choiceText4Id,
+          choiceText5Id,
+          choiceText6Id,
+        ].reduce((acc, id, index) => {
+          acc[id] = {
+            type: "text",
+            name: `Choice Text ${index + 1}`,
+            x: 0,
+            y: 0,
+            width: 1300,
+            height: 80,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            contentType: `choice.items[${index}].content`,
+            text: `\${choice.items[${index}].content}`,
+            typographyId: fontFileIds["sample_font.ttf"]
+              ? "typography-text-view"
+              : null,
+            style: {
+              wordWrapWidth: 1300,
+              align: "center",
+            },
+          };
+          return acc;
+        }, {}),
+      },
+      tree: [
+        {
+          id: choiceListId,
+          children: [
+            {
+              id: choiceContainer1Id,
+              children: [{ id: choiceBox1Id }, { id: choiceText1Id }],
+            },
+            {
+              id: choiceContainer2Id,
+              children: [{ id: choiceBox2Id }, { id: choiceText2Id }],
+            },
+            {
+              id: choiceContainer3Id,
+              children: [{ id: choiceBox3Id }, { id: choiceText3Id }],
+            },
+            {
+              id: choiceContainer4Id,
+              children: [{ id: choiceBox4Id }, { id: choiceText4Id }],
+            },
+            {
+              id: choiceContainer5Id,
+              children: [{ id: choiceBox5Id }, { id: choiceText5Id }],
+            },
+            {
+              id: choiceContainer6Id,
+              children: [{ id: choiceBox6Id }, { id: choiceText6Id }],
+            },
+          ],
+        },
+      ],
+    };
+  };
 
   return {
     tree: [
