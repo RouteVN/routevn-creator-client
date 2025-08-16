@@ -255,31 +255,31 @@ export const toViewData = ({ state, props, attrs }, payload) => {
   // Form configuration for renaming
   const renameForm = currentItem
     ? {
-      fields: [
-        {
-          name: "name",
-          inputType: "inputText",
-          label: "Name",
-          value: currentItem.name || "",
-          required: true,
-        },
-      ],
-      actions: {
-        layout: "",
-        buttons: [
+        fields: [
           {
-            id: "submit",
-            variant: "pr",
-            content: "Rename",
-          },
-          {
-            id: "cancel",
-            variant: "se",
-            content: "Cancel",
+            name: "name",
+            inputType: "inputText",
+            label: "Name",
+            value: currentItem.name || "",
+            required: true,
           },
         ],
-      },
-    }
+        actions: {
+          layout: "",
+          buttons: [
+            {
+              id: "submit",
+              variant: "pr",
+              content: "Rename",
+            },
+            {
+              id: "cancel",
+              variant: "se",
+              content: "Cancel",
+            },
+          ],
+        },
+      }
     : null;
 
   const viewData = {
@@ -294,7 +294,7 @@ export const toViewData = ({ state, props, attrs }, payload) => {
     popover: state.popover,
     form: renameForm,
     attrs,
-    noEmptyMessage: attrs['no-empty-message']
+    noEmptyMessage: attrs["no-empty-message"],
   };
 
   return viewData;

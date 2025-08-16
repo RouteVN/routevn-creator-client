@@ -325,7 +325,7 @@ export const selectRenderState = ({ state }) => {
   };
 
   console.log("presentationState", presentationState);
-  console.log('resources', resources)
+  console.log("resources", resources);
 
   const renderState = constructRenderState({
     presentationState,
@@ -390,26 +390,26 @@ export const toViewData = ({ state, props }) => {
   // Form configuration for renaming
   const renameForm = currentSection
     ? {
-      fields: [
-        {
-          name: "name",
-          inputType: "inputText",
-          label: "Section Name",
-          value: currentSection.name || "",
-          required: true,
-        },
-      ],
-      actions: {
-        layout: "",
-        buttons: [
+        fields: [
           {
-            id: "submit",
-            variant: "pr",
-            content: "Rename",
+            name: "name",
+            inputType: "inputText",
+            label: "Section Name",
+            value: currentSection.name || "",
+            required: true,
           },
         ],
-      },
-    }
+        actions: {
+          layout: "",
+          buttons: [
+            {
+              id: "submit",
+              variant: "pr",
+              content: "Rename",
+            },
+          ],
+        },
+      }
     : null;
 
   const selectedLine = currentSection?.lines?.find(
@@ -710,8 +710,8 @@ export const selectPresentationData = ({ state }) => {
     );
     const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
       ? repositoryState.characters?.items?.[
-      selectedLine.presentation.dialogue.characterId
-      ]
+          selectedLine.presentation.dialogue.characterId
+        ]
       : null;
 
     presentationItems.push({
@@ -734,8 +734,8 @@ export const selectPresentationData = ({ state }) => {
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
-        (l) => l.id === choicesData.layoutId,
-      )
+          (l) => l.id === choicesData.layoutId,
+        )
       : null;
 
     presentationItems.push({

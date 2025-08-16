@@ -62,7 +62,6 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-
 export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
   const resourceId = e.currentTarget.id.replace("resource-item-", "");

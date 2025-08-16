@@ -263,7 +263,6 @@ export const handleButtonSelectClick = (e, deps) => {
   render();
 };
 
-
 export const handleDropdownMenuClose = (e, deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();

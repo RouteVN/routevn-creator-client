@@ -92,7 +92,6 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-
 export const handleTabClick = (e, deps) => {
   const { render } = deps;
   render();
