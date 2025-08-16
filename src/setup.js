@@ -259,8 +259,17 @@ if (!templateCreated) {
   // Template already created - still need to provide template structure for action stream
   console.log("Template already exists - providing template structure...");
 
+  // Fetch and upload template resources
+  const templateImagesData = await fetchTemplateImages();
+  const templateFontsData = await fetchTemplateFonts();
+
+  // Create template data structure
+  const templateData = createTemplateProjectData(
+    templateImagesData.fetchedImages,
+    templateFontsData.fetchedFonts,
+  );
   // Create empty template data structure (no files, just structure)
-  const templateData = createTemplateProjectData({}, {});
+  // const templateData = createTemplateProjectData({}, {});
 
   initialData = {
     project: {
@@ -268,8 +277,8 @@ if (!templateCreated) {
       description: "Project 1 description",
     },
     images: {
-      items: {},
-      tree: [],
+      items: templateImagesData.imageItems,
+      tree: templateImagesData.imageTree,
     },
     animations: templateData.animations,
     audio: {

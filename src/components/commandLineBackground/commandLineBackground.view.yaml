@@ -122,7 +122,6 @@ template:
                       - rtgl-text s=md c=mu-fg: Select Background
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#reset-button v=ol: Reset
               - rtgl-button#submit-button: Submit
 
       - $if mode == 'gallery':

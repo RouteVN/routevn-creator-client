@@ -43,10 +43,6 @@ refs:
     eventListeners:
       click:
         handler: handleButtonSelectClick
-  reset-button:
-    eventListeners:
-      click:
-        handler: handleResetClick
   form:
     eventListeners:
       extra-event:
