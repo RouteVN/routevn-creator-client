@@ -294,6 +294,7 @@ export const toViewData = ({ state, props, attrs }, payload) => {
     popover: state.popover,
     form: renameForm,
     attrs,
+    noEmptyMessage: attrs["no-empty-message"],
   };
 
   return viewData;

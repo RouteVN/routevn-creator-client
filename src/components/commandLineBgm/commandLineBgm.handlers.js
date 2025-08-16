@@ -62,16 +62,6 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleResetClick = (e, deps) => {
-  const { store, render } = deps;
-
-  store.setSelectedResource({
-    resourceId: undefined,
-  });
-
-  render();
-};
-
 export const handleResourceItemClick = (e, deps) => {
   const { store, render } = deps;
   const resourceId = e.currentTarget.id.replace("resource-item-", "");

@@ -108,44 +108,44 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
-    - $if mode == 'current':
-        - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-        - rtgl-text: Sound Effects
+      - $if mode == 'current':
+          - rtgl-view d=h g=md:
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+          - rtgl-text: Sound Effects
 
-        # Form for sound effects
-        - rtgl-form#form .form=form .defaultValues=defaultValues:
-            - rtgl-view#sfx-container slot=sfx g=md:
-                - $for sfx in defaultValues.sfx:
-                    - rtgl-view g=sm:
-                        - rvn-waveform-visualizer#sfx-${sfx.id} waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150 style="cursor: pointer"
-                        - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
-                - rtgl-button#add-new-button v=ol w=f mt=md: + Add New Sound Effect
+          # Form for sound effects
+          - rtgl-form#form .form=form .defaultValues=defaultValues:
+              - rtgl-view#sfx-container slot=sfx g=md:
+                  - $for sfx in defaultValues.sfx:
+                      - rtgl-view g=sm:
+                          - rvn-waveform-visualizer#sfx-${sfx.id} waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150 style="cursor: pointer"
+                          - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
+                  - rtgl-button#add-new-button v=ol w=f mt=md: + Add New Sound Effect
 
-        - rtgl-view flex=1:
-        - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button: Submit
-      $elif mode == 'gallery':
-        - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-        - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-          - rtgl-view h=f flex=1 sv:
-            - rvn-base-file-explorer#base-file-explorer .items=items:
-          - rtgl-view h=f flex=2 sv g=lg:
-            - $for group in groups:
-              - rtgl-view g=md:
-                - rtgl-text: ${group.name}
-                - rtgl-view d=h w=f fw=w g=lg:
-                  - $for item in group.children:
-                    - rtgl-view#resource-item-${item.id} cur=p bw=${item.bw} bc=${item.bc}:
-                      - $if item.waveformDataFileId:
-                        - rtgl-view:
-                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
-                          - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
-                        $else:
-                        - rtgl-view w=225 h=150 av=c ah=c bgc=ac:
-                          - rtgl-text s=sm c=mu-fg: No waveform
-        - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#button-select: Select
+          - rtgl-view flex=1:
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+              - rtgl-button#submit-button: Submit
+        $elif mode == 'gallery':
+          - rtgl-view d=h g=md:
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
+              - rtgl-view h=f flex=1 sv:
+                  - rvn-base-file-explorer#base-file-explorer .items=items no-empty-message:
+              - rtgl-view h=f flex=2 sv g=lg:
+                  - $for group in groups:
+                      - rtgl-view g=md:
+                          - rtgl-text: ${group.name}
+                          - rtgl-view d=h w=f fw=w g=lg:
+                              - $for item in group.children:
+                                  - rtgl-view#resource-item-${item.id} cur=p bw=${item.bw} bc=${item.bc}:
+                                      - $if item.waveformDataFileId:
+                                          - rtgl-view:
+                                              - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
+                                              - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
+                                        $else:
+                                          - rtgl-view w=225 h=150 av=c ah=c bgc=ac:
+                                              - rtgl-text s=sm c=mu-fg: No waveform
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+              - rtgl-button#button-select: Select
 
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

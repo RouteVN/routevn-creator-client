@@ -68,10 +68,6 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-  reset-button:
-    eventListeners:
-      click:
-        handler: handleResetClick
   breadcumb:
     eventListeners:
       item-click:
@@ -92,15 +88,14 @@ template:
           - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
           - rtgl-form#form .form=form .defaultValues=defaultValues:
-            - $if defaultValues.audioWaveformDataFileId:
-                - 'rvn-waveform-visualizer#audio-waveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 slot=audio style="cursor: pointer"':
-              $else:
-                - 'rtgl-view#audio-waveform w=355 h=200 bgc=mu av=c ah=c cur=p slot=audio':
-                    - rtgl-text s=md c=mu-fg: Select BGM
+              - $if defaultValues.audioWaveformDataFileId:
+                  - 'rvn-waveform-visualizer#audio-waveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 slot=audio style="cursor: pointer"':
+                $else:
+                  - "rtgl-view#audio-waveform w=355 h=200 bgc=mu av=c ah=c cur=p slot=audio":
+                      - rtgl-text s=md c=mu-fg: Select BGM
 
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#reset-button v=ol: Reset
               - rtgl-button#submit-button: Submit
 
       - $if mode == 'gallery':
@@ -108,7 +103,7 @@ template:
               - rtgl-breadcrumb#breadcumb .items=breadcrumb:
           - 'rtgl-view d=h w=f g=lg style="min-height: 0;"':
               - rtgl-view h=f flex=1 sv:
-                  - rvn-base-file-explorer#base-file-explorer .items=items:
+                  - rvn-base-file-explorer#base-file-explorer .items=items no-empty-message:
               - rtgl-view h=f flex=2 sv g=lg:
                   - $for group in groups:
                       - rtgl-view g=md:

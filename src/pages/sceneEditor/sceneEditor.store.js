@@ -325,6 +325,7 @@ export const selectRenderState = ({ state }) => {
   };
 
   console.log("presentationState", presentationState);
+  console.log("resources", resources);
 
   const renderState = constructRenderState({
     presentationState,

@@ -92,19 +92,6 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleResetClick = (e, deps) => {
-  const { store, render } = deps;
-
-  store.setFormValues({
-    sameScene: "this_scene",
-    sceneId: undefined,
-    sectionId: undefined,
-    animation: "fade",
-  });
-
-  render();
-};
-
 export const handleTabClick = (e, deps) => {
   const { render } = deps;
   render();

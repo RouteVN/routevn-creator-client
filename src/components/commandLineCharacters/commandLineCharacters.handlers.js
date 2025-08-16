@@ -263,13 +263,6 @@ export const handleButtonSelectClick = (e, deps) => {
   render();
 };
 
-export const handleResetClick = (payload, deps) => {
-  const { store, render } = deps;
-
-  store.clearCharacters();
-  render();
-};
-
 export const handleDropdownMenuClose = (e, deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();

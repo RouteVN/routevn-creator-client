@@ -13,6 +13,13 @@ viewDataSchema:
           type:
             type: string
 
+attrsSchema:
+  type: object
+  properties:
+    no-empty-message:
+      type: boolean
+      description: Whether to show the empty message when there are no items
+
 propsSchema:
   type: object
   properties:
@@ -86,7 +93,7 @@ template:
   - rtgl-view w=f h=f sv:
       - "rtgl-view w=f g=sm pos=rel":
           - rtgl-view w=f h=f:
-              - $if items.length == 0:
+              - $if items.length == 0 && !noEmptyMessage:
                   - "rtgl-view#empty-message w=f h=f d=f av=c ah=c p=xl cur=p":
                       - "rtgl-text s=sm c=mu-fg ta=c": "No items. Click to create a folder."
                 $else:

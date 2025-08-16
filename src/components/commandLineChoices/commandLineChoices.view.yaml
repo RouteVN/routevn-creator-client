@@ -99,7 +99,6 @@ template:
                           - rtgl-button#add-choice-button v=ol w=f mt=md: + Add Choice
 
               - rtgl-view d=h av=c ah=e w=f g=lg:
-                  - rtgl-button#reset-button v=ol: Reset
                   - rtgl-button#submit-button: Submit
         $elif mode == "editChoice":
           - rtgl-view wh=f:
