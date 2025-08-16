@@ -294,8 +294,8 @@ if (!templateCreated) {
       tree: [],
     },
     fonts: {
-      items: {},
-      tree: [],
+      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
+      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
     },
     placements: templateData.placements,
     colors: templateData.colors,
