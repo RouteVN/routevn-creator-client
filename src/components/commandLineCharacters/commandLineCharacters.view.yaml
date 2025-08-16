@@ -66,65 +66,65 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
-    - $if mode == 'current':
-        - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-        # Form for characters
-        - rtgl-view flex=1 sv w=f:
-          - rtgl-form#form .form=form .defaultValues=defaultValues:
-            - rtgl-view#characters-container slot=characters g=md w=f:
-              - $for character, index in defaultValues.characters:
-                - rtgl-view d=h g=md av=t bgc=ac p=md br=md w=f:
-                  - rtgl-view g=sm:
-                    - $if character.spriteFileId:
-                        - rvn-file-image#character-${character.id}-${index} fileId=${character.spriteFileId} w=120 h=120 cur=p br=sm:
-                      $else:
-                        - rtgl-view#character-${character.id}-${index} w=120 h=120 av=c ah=c bgc=mu br=sm cur=p:
-                          - rtgl-text s=sm c=mu-fg: No Sprite
-                    - rtgl-text s=sm w=120 ah=c ellipsis=true: ${character.displayName}
-                  - rtgl-view flex=1 g=sm:
-                    - rtgl-text s=sm c=mu-fg: Transform
-                    - rtgl-select#transform-${index} .options=defaultValues.transformOptions .selectedValue=character.transformId w=f:
-              - rtgl-button#add-character-button v=ol w=f mt=md: + Add Character
+      - $if mode == 'current':
+          - rtgl-view d=h g=md:
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+          # Form for characters
+          - rtgl-view flex=1 sv w=f:
+              - rtgl-form#form .form=form .defaultValues=defaultValues:
+                  - rtgl-view#characters-container slot=characters g=md w=f:
+                      - $for character, index in defaultValues.characters:
+                          - rtgl-view d=h g=md av=t bgc=ac p=md br=md w=f:
+                              - rtgl-view g=sm:
+                                  - $if character.spriteFileId:
+                                      - rvn-file-image#character-${character.id}-${index} fileId=${character.spriteFileId} w=120 h=120 cur=p br=sm:
+                                    $else:
+                                      - rtgl-view#character-${character.id}-${index} w=120 h=120 av=c ah=c bgc=mu br=sm cur=p:
+                                          - rtgl-text s=sm c=mu-fg: No Sprite
+                                  - rtgl-text s=sm w=120 ah=c ellipsis=true: ${character.displayName}
+                              - rtgl-view flex=1 g=sm:
+                                  - rtgl-text s=sm c=mu-fg: Transform
+                                  - rtgl-select#transform-${index} .options=defaultValues.transformOptions .selectedValue=character.transformId w=f:
+                      - rtgl-button#add-character-button v=ol w=f mt=md: + Add Character
 
-        - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button: Submit
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+              - rtgl-button#submit-button: Submit
 
-    - $if mode == 'character-select':
-      - rtgl-view d=h g=md:
-        - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-      - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-        - rtgl-view h=f flex=1 sv:
-          - rvn-base-file-explorer#base-file-explorer .items=items:
-        - rtgl-view h=f flex=2 sv g=lg:
-          - $for group, i in groups:
-            - rtgl-view g=md:
-              - rtgl-text: ${group.name}
-              - rtgl-view d=h w=f fw=w g=lg:
-                - $for item, j in group.children:
-                  - rtgl-view#character-item-${item.id} w=200 h=150 p=sm bgc=mu br=md cur=p key=${item.bw} bw=${item.bw}:
-                    - rtgl-view w=f h=f av=c ah=c g=sm:
-                      - $if item.fileId:
-                          - rvn-file-image fileId=${item.fileId} w=80 h=80 br=f:
-                        $else:
-                          - rtgl-view w=80 h=80 bgc=ac av=c ah=c br=f:
-                            - rtgl-text s=sm: No Avatar
-                      - rtgl-text: ${item.name}
+      - $if mode == 'character-select':
+          - rtgl-view d=h g=md:
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
+              - rtgl-view h=f flex=1 sv:
+                  - rvn-base-file-explorer#base-file-explorer .items=items no-empty-message:
+              - rtgl-view h=f flex=2 sv g=lg:
+                  - $for group, i in groups:
+                      - rtgl-view g=md:
+                          - rtgl-text: ${group.name}
+                          - rtgl-view d=h w=f fw=w g=lg:
+                              - $for item, j in group.children:
+                                  - rtgl-view#character-item-${item.id} w=200 h=150 p=sm bgc=mu br=md cur=p key=${item.bw} bw=${item.bw}:
+                                      - rtgl-view w=f h=f av=c ah=c g=sm:
+                                          - $if item.fileId:
+                                              - rvn-file-image fileId=${item.fileId} w=80 h=80 br=f:
+                                            $else:
+                                              - rtgl-view w=80 h=80 bgc=ac av=c ah=c br=f:
+                                                  - rtgl-text s=sm: No Avatar
+                                          - rtgl-text: ${item.name}
 
-    - $if mode == 'sprite-select':
-      - rtgl-view d=h g=md:
-        - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-      - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-        - rtgl-view h=f flex=1 sv:
-          - rvn-base-file-explorer#base-file-explorer .items=spriteItems:
-        - rtgl-view h=f flex=2 sv g=lg:
-          - $for group, i in spriteGroups:
-            - rtgl-view g=md:
-              - rtgl-text: ${group.name}
-              - rtgl-view d=h w=f fw=w g=lg:
-                - $for item, j in group.children:
-                  - rvn-file-image#sprite-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:
-      - rtgl-view d=h av=c ah=e w=f g=lg:
-        - rtgl-button#button-select: Select
+      - $if mode == 'sprite-select':
+          - rtgl-view d=h g=md:
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
+              - rtgl-view h=f flex=1 sv:
+                  - rvn-base-file-explorer#base-file-explorer .items=spriteItems:
+              - rtgl-view h=f flex=2 sv g=lg:
+                  - $for group, i in spriteGroups:
+                      - rtgl-view g=md:
+                          - rtgl-text: ${group.name}
+                          - rtgl-view d=h w=f fw=w g=lg:
+                              - $for item, j in group.children:
+                                  - rvn-file-image#sprite-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+              - rtgl-button#button-select: Select
 
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
