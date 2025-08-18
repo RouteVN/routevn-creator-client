@@ -182,147 +182,124 @@ async function fetchTemplateFonts() {
     });
   }
 
-  // Mark that template files have been uploaded
-  localStorage.setItem("templateFilesUploaded", "true");
+  // No longer needed - we use actionStream.length to check
 
   return { fetchedFonts, fontItems, fontTree };
 }
 
-// Check if template has been created
-const templateCreated = localStorage.getItem("templateFilesUploaded");
-
-let initialData;
-
-if (!templateCreated) {
-  // First time - create everything
-  console.log("First time user - creating template data...");
-
-  // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages();
-  const templateFontsData = await fetchTemplateFonts();
-
-  // Create template data structure
-  const templateData = createTemplateProjectData(
-    templateImagesData.fetchedImages,
-    templateFontsData.fetchedFonts,
-  );
-
-  // Set initial data with templates
-  initialData = {
-    project: {
-      name: "Project 1",
-      description: "Project 1 description",
-    },
-    images: {
-      items: templateImagesData.imageItems,
-      tree: templateImagesData.imageTree,
-    },
-    animations: templateData.animations,
-    audio: {
-      items: {},
-      tree: [],
-    },
-    videos: {
-      items: {},
-      tree: [],
-    },
-    characters: {
-      items: {},
-      tree: [],
-    },
-    fonts: {
-      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
-      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-    },
-    placements: templateData.placements,
-    colors: templateData.colors,
-    typography: templateData.typography,
-    variables: {
-      items: {},
-      tree: [],
-    },
-    components: {
-      items: {},
-      tree: [],
-    },
-    layouts: templateData.layouts,
-    preset: {
-      items: {},
-      tree: [],
-    },
-    scenes: {
-      items: {},
-      tree: [],
-    },
-  };
-} else {
-  // Template already created - still need to provide template structure for action stream
-  console.log("Template already exists - providing template structure...");
-
-  // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages();
-  const templateFontsData = await fetchTemplateFonts();
-
-  // Create template data structure
-  const templateData = createTemplateProjectData(
-    templateImagesData.fetchedImages,
-    templateFontsData.fetchedFonts,
-  );
-  // Create empty template data structure (no files, just structure)
-  // const templateData = createTemplateProjectData({}, {});
-
-  initialData = {
-    project: {
-      name: "Project 1",
-      description: "Project 1 description",
-    },
-    images: {
-      items: templateImagesData.imageItems,
-      tree: templateImagesData.imageTree,
-    },
-    animations: templateData.animations,
-    audio: {
-      items: {},
-      tree: [],
-    },
-    videos: {
-      items: {},
-      tree: [],
-    },
-    characters: {
-      items: {},
-      tree: [],
-    },
-    fonts: {
-      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
-      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-    },
-    placements: templateData.placements,
-    colors: templateData.colors,
-    typography: templateData.typography,
-    variables: {
-      items: {},
-      tree: [],
-    },
-    components: {
-      items: {},
-      tree: [],
-    },
-    layouts: templateData.layouts,
-    preset: {
-      items: {},
-      tree: [],
-    },
-    scenes: {
-      items: {},
-      tree: [],
-    },
-  };
-}
+// Empty initial data structure
+const initialData = {
+  project: {
+    name: "Project 1",
+    description: "Project 1 description",
+  },
+  images: {
+    items: {},
+    tree: [],
+  },
+  animations: {
+    items: {},
+    tree: [],
+  },
+  audio: {
+    items: {},
+    tree: [],
+  },
+  videos: {
+    items: {},
+    tree: [],
+  },
+  characters: {
+    items: {},
+    tree: [],
+  },
+  fonts: {
+    items: {},
+    tree: [],
+  },
+  placements: {
+    items: {},
+    tree: [],
+  },
+  colors: {
+    items: {},
+    tree: [],
+  },
+  typography: {
+    items: {},
+    tree: [],
+  },
+  variables: {
+    items: {},
+    tree: [],
+  },
+  components: {
+    items: {},
+    tree: [],
+  },
+  layouts: {
+    items: {},
+    tree: [],
+  },
+  preset: {
+    items: {},
+    tree: [],
+  },
+  scenes: {
+    items: {},
+    tree: [],
+  },
+};
 
 const localStorageKey = "repositoryEventStream";
 
 const repository = createRepository(initialData, localStorageKey);
+
+// Check if we need to add template data
+const actionStream = repository.getActionStream();
+
+if (actionStream.length === 0) {
+  // First time - action stream is empty, add template data
+  console.log("First time user - adding template data to repository...");
+
+  // Fetch and upload template resources
+  const templateImagesData = await fetchTemplateImages();
+  const templateFontsData = await fetchTemplateFonts();
+
+  // Create template data structure
+  const templateData = createTemplateProjectData(
+    templateImagesData.fetchedImages,
+    templateFontsData.fetchedFonts,
+  );
+
+  // Prepare the complete initialization data
+  const initData = {
+    images: {
+      items: templateImagesData.imageItems,
+      tree: templateImagesData.imageTree,
+    },
+    fonts: {
+      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
+      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
+    },
+    animations: templateData.animations,
+    placements: templateData.placements,
+    colors: templateData.colors,
+    typography: templateData.typography,
+    layouts: templateData.layouts,
+  };
+
+  // Use the new init action to set all template data at once
+  repository.addAction({
+    actionType: "init",
+    target: null,
+    value: initData,
+  });
+
+  // Immediately save to localStorage using flush method
+  repository.flush();
+  console.log("Template data added to repository and saved to localStorage");
+}
 const userConfig = createUserConfig();
 
 const subject = new Subject();
