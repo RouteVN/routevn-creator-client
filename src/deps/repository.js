@@ -328,19 +328,27 @@ export const createRepository = (initialState, localStorageKey) => {
 
     const repository = createRepositoryInternal(initialState, actionStream);
 
-    // Auto-save to localStorage every 5 seconds
-    setInterval(() => {
+    // Add flush method to manually save to localStorage
+    repository.flush = () => {
       localStorage.setItem(
         localStorageKey,
         JSON.stringify(repository.getActionStream()),
       );
+    };
+
+    // Auto-save to localStorage every 5 seconds
+    setInterval(() => {
+      repository.flush();
     }, 5000);
 
     return repository;
   }
 
   // Original behavior for backward compatibility
-  return createRepositoryInternal(initialState, []);
+  const repository = createRepositoryInternal(initialState, []);
+  // Add no-op flush for consistency
+  repository.flush = () => {};
+  return repository;
 };
 const createRepositoryInternal = (initialState, initialActionSteams) => {
   const actionStream = initialActionSteams || [];
@@ -381,6 +389,16 @@ const createRepositoryInternal = (initialState, initialActionSteams) => {
         return treeUpdate(acc, target, value);
       } else if (actionType === "treeMove") {
         return treeMove(acc, target, value);
+      } else if (actionType === "init") {
+        // Initialize entire state sections with provided data
+        // value should be an object with keys matching state sections
+        const newState = structuredClone(acc);
+        for (const [key, data] of Object.entries(value)) {
+          if (newState[key]) {
+            newState[key] = data;
+          }
+        }
+        return newState;
       }
       return acc;
     }, structuredClone(initialState));
