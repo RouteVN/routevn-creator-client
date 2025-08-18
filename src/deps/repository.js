@@ -326,15 +326,11 @@ export const createRepository = (initialState, localStorageKey) => {
     const storedEventStream = localStorage.getItem(localStorageKey);
     const actionStream = storedEventStream ? JSON.parse(storedEventStream) : [];
 
-    const repository = createRepositoryInternal(initialState, actionStream);
-
-    // Add flush method to manually save to localStorage
-    repository.flush = () => {
-      localStorage.setItem(
-        localStorageKey,
-        JSON.stringify(repository.getActionStream()),
-      );
-    };
+    const repository = createRepositoryInternal(
+      initialState,
+      actionStream,
+      localStorageKey,
+    );
 
     // Auto-save to localStorage every 5 seconds
     setInterval(() => {
@@ -345,12 +341,13 @@ export const createRepository = (initialState, localStorageKey) => {
   }
 
   // Original behavior for backward compatibility
-  const repository = createRepositoryInternal(initialState, []);
-  // Add no-op flush for consistency
-  repository.flush = () => {};
-  return repository;
+  return createRepositoryInternal(initialState, [], null);
 };
-const createRepositoryInternal = (initialState, initialActionSteams) => {
+const createRepositoryInternal = (
+  initialState,
+  initialActionSteams,
+  localStorageKey,
+) => {
   const actionStream = initialActionSteams || [];
 
   // Cache variables
@@ -414,10 +411,17 @@ const createRepositoryInternal = (initialState, initialActionSteams) => {
     return actionStream;
   };
 
+  const flush = () => {
+    if (localStorageKey) {
+      localStorage.setItem(localStorageKey, JSON.stringify(actionStream));
+    }
+  };
+
   return {
     addAction,
     getState,
     getActionStream,
+    flush,
   };
 };
 
