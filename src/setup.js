@@ -188,141 +188,323 @@ async function fetchTemplateFonts() {
   return { fetchedFonts, fontItems, fontTree };
 }
 
-// Check if template has been created
-const templateCreated = localStorage.getItem("templateFilesUploaded");
-
-let initialData;
-
-if (!templateCreated) {
-  // First time - create everything
-  console.log("First time user - creating template data...");
-
-  // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages();
-  const templateFontsData = await fetchTemplateFonts();
-
-  // Create template data structure
-  const templateData = createTemplateProjectData(
-    templateImagesData.fetchedImages,
-    templateFontsData.fetchedFonts,
-  );
-
-  // Set initial data with templates
-  initialData = {
-    project: {
-      name: "Project 1",
-      description: "Project 1 description",
-    },
-    images: {
-      items: templateImagesData.imageItems,
-      tree: templateImagesData.imageTree,
-    },
-    animations: templateData.animations,
-    audio: {
-      items: {},
-      tree: [],
-    },
-    videos: {
-      items: {},
-      tree: [],
-    },
-    characters: {
-      items: {},
-      tree: [],
-    },
-    fonts: {
-      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
-      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-    },
-    placements: templateData.placements,
-    colors: templateData.colors,
-    typography: templateData.typography,
-    variables: {
-      items: {},
-      tree: [],
-    },
-    components: {
-      items: {},
-      tree: [],
-    },
-    layouts: templateData.layouts,
-    preset: {
-      items: {},
-      tree: [],
-    },
-    scenes: {
-      items: {},
-      tree: [],
-    },
-  };
-} else {
-  // Template already created - still need to provide template structure for action stream
-  console.log("Template already exists - providing template structure...");
-
-  // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages();
-  const templateFontsData = await fetchTemplateFonts();
-
-  // Create template data structure
-  const templateData = createTemplateProjectData(
-    templateImagesData.fetchedImages,
-    templateFontsData.fetchedFonts,
-  );
-  // Create empty template data structure (no files, just structure)
-  // const templateData = createTemplateProjectData({}, {});
-
-  initialData = {
-    project: {
-      name: "Project 1",
-      description: "Project 1 description",
-    },
-    images: {
-      items: templateImagesData.imageItems,
-      tree: templateImagesData.imageTree,
-    },
-    animations: templateData.animations,
-    audio: {
-      items: {},
-      tree: [],
-    },
-    videos: {
-      items: {},
-      tree: [],
-    },
-    characters: {
-      items: {},
-      tree: [],
-    },
-    fonts: {
-      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
-      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-    },
-    placements: templateData.placements,
-    colors: templateData.colors,
-    typography: templateData.typography,
-    variables: {
-      items: {},
-      tree: [],
-    },
-    components: {
-      items: {},
-      tree: [],
-    },
-    layouts: templateData.layouts,
-    preset: {
-      items: {},
-      tree: [],
-    },
-    scenes: {
-      items: {},
-      tree: [],
-    },
-  };
-}
+// Empty initial data structure
+const initialData = {
+  project: {
+    name: "Project 1",
+    description: "Project 1 description",
+  },
+  images: {
+    items: {},
+    tree: [],
+  },
+  animations: {
+    items: {},
+    tree: [],
+  },
+  audio: {
+    items: {},
+    tree: [],
+  },
+  videos: {
+    items: {},
+    tree: [],
+  },
+  characters: {
+    items: {},
+    tree: [],
+  },
+  fonts: {
+    items: {},
+    tree: [],
+  },
+  placements: {
+    items: {},
+    tree: [],
+  },
+  colors: {
+    items: {},
+    tree: [],
+  },
+  typography: {
+    items: {},
+    tree: [],
+  },
+  variables: {
+    items: {},
+    tree: [],
+  },
+  components: {
+    items: {},
+    tree: [],
+  },
+  layouts: {
+    items: {},
+    tree: [],
+  },
+  preset: {
+    items: {},
+    tree: [],
+  },
+  scenes: {
+    items: {},
+    tree: [],
+  },
+};
 
 const localStorageKey = "repositoryEventStream";
 
 const repository = createRepository(initialData, localStorageKey);
+
+// Check if we need to add template data
+const actionStream = repository.getActionStream();
+const templateCreated = localStorage.getItem("templateFilesUploaded");
+
+if (actionStream.length === 0 && !templateCreated) {
+  // First time - action stream is empty, add template data
+  console.log("First time user - adding template data to repository...");
+
+  // Fetch and upload template resources
+  const templateImagesData = await fetchTemplateImages();
+  const templateFontsData = await fetchTemplateFonts();
+
+  // Create template data structure
+  const templateData = createTemplateProjectData(
+    templateImagesData.fetchedImages,
+    templateFontsData.fetchedFonts,
+  );
+
+  // Add template data using repository actions
+  // Add images - folders first, then images
+  for (const [id, item] of Object.entries(templateImagesData.imageItems)) {
+    if (item.type === "folder") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "images",
+        value: {
+          parent: "_root",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  for (const [id, item] of Object.entries(templateImagesData.imageItems)) {
+    if (item.type === "image") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "images",
+        value: {
+          parent: "template-ui-folder",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Add fonts - folders first, then fonts
+  for (const [id, item] of Object.entries(templateFontsData.fontItems)) {
+    if (item.type === "folder") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "fonts",
+        value: {
+          parent: "_root",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  for (const [id, item] of Object.entries(templateFontsData.fontItems)) {
+    if (item.type === "font") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "fonts",
+        value: {
+          parent: "template-fonts-folder",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Add template fonts from templateData
+  for (const [id, item] of Object.entries(templateData.fonts.items)) {
+    repository.addAction({
+      actionType: "treePush",
+      target: "fonts",
+      value: {
+        parent: "_root",
+        item: { id, ...item },
+        position: "last",
+      },
+    });
+  }
+
+  // Add animations - folders first, then animations
+  // First add folders
+  for (const [id, item] of Object.entries(templateData.animations.items)) {
+    if (item.type === "folder") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "animations",
+        value: {
+          parent: "_root",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+  // Then add animation items
+  for (const [id, item] of Object.entries(templateData.animations.items)) {
+    if (item.type === "animation") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "animations",
+        value: {
+          parent: "default-animations-group",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Add placements - folders first, then placements
+  // First add folders
+  for (const [id, item] of Object.entries(templateData.placements.items)) {
+    if (item.type === "folder") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "placements",
+        value: {
+          parent: "_root",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+  // Then add placement items
+  for (const [id, item] of Object.entries(templateData.placements.items)) {
+    if (item.type === "placement") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "placements",
+        value: {
+          parent: "default-placements-group",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Add colors - folders first, then colors
+  // First add folders
+  for (const [id, item] of Object.entries(templateData.colors.items)) {
+    if (item.type === "folder") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "colors",
+        value: {
+          parent: "_root",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+  // Then add color items
+  for (const [id, item] of Object.entries(templateData.colors.items)) {
+    if (item.type === "color") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "colors",
+        value: {
+          parent: "default-colors-group",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Add typography - folders first, then typography items
+  // First add folders
+  for (const [id, item] of Object.entries(templateData.typography.items)) {
+    if (item.type === "folder") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "typography",
+        value: {
+          parent: "_root",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+  // Then add typography items
+  for (const [id, item] of Object.entries(templateData.typography.items)) {
+    if (item.type === "typography") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "typography",
+        value: {
+          parent: "default-typography-group",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Add layouts - folders first, then layout items
+  // First add folders
+  for (const [id, item] of Object.entries(templateData.layouts.items)) {
+    if (item.type === "folder") {
+      repository.addAction({
+        actionType: "treePush",
+        target: "layouts",
+        value: {
+          parent: "_root",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Then add layout items to their parent folders
+  for (const [id, item] of Object.entries(templateData.layouts.items)) {
+    if (item.type === "layout") {
+      // Layouts contain nested elements structure - preserve it
+      repository.addAction({
+        actionType: "treePush",
+        target: "layouts",
+        value: {
+          parent: "default-layouts-group",
+          item: { id, ...item },
+          position: "last",
+        },
+      });
+    }
+  }
+
+  // Immediately save to localStorage after adding all template data
+  localStorage.setItem(
+    localStorageKey,
+    JSON.stringify(repository.getActionStream()),
+  );
+  console.log("Template data added to repository and saved to localStorage");
+}
 const userConfig = createUserConfig();
 
 const subject = new Subject();
