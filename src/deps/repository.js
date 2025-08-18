@@ -326,23 +326,28 @@ export const createRepository = (initialState, localStorageKey) => {
     const storedEventStream = localStorage.getItem(localStorageKey);
     const actionStream = storedEventStream ? JSON.parse(storedEventStream) : [];
 
-    const repository = createRepositoryInternal(initialState, actionStream);
+    const repository = createRepositoryInternal(
+      initialState,
+      actionStream,
+      localStorageKey,
+    );
 
     // Auto-save to localStorage every 5 seconds
     setInterval(() => {
-      localStorage.setItem(
-        localStorageKey,
-        JSON.stringify(repository.getActionStream()),
-      );
+      repository.flush();
     }, 5000);
 
     return repository;
   }
 
   // Original behavior for backward compatibility
-  return createRepositoryInternal(initialState, []);
+  return createRepositoryInternal(initialState, [], null);
 };
-const createRepositoryInternal = (initialState, initialActionSteams) => {
+const createRepositoryInternal = (
+  initialState,
+  initialActionSteams,
+  localStorageKey,
+) => {
   const actionStream = initialActionSteams || [];
 
   // Cache variables
@@ -381,6 +386,16 @@ const createRepositoryInternal = (initialState, initialActionSteams) => {
         return treeUpdate(acc, target, value);
       } else if (actionType === "treeMove") {
         return treeMove(acc, target, value);
+      } else if (actionType === "init") {
+        // Initialize entire state sections with provided data
+        // value should be an object with keys matching state sections
+        const newState = structuredClone(acc);
+        for (const [key, data] of Object.entries(value)) {
+          if (newState[key]) {
+            newState[key] = data;
+          }
+        }
+        return newState;
       }
       return acc;
     }, structuredClone(initialState));
@@ -396,10 +411,17 @@ const createRepositoryInternal = (initialState, initialActionSteams) => {
     return actionStream;
   };
 
+  const flush = () => {
+    if (localStorageKey) {
+      localStorage.setItem(localStorageKey, JSON.stringify(actionStream));
+    }
+  };
+
   return {
     addAction,
     getState,
     getActionStream,
+    flush,
   };
 };
 
