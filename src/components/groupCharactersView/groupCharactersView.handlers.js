@@ -44,6 +44,9 @@ export const handleAddCharacterClick = (e, deps) => {
   const groupId = e.currentTarget.id.replace("add-character-button-", "");
   store.setTargetGroupId(groupId);
 
+  // Clear any previous form state
+  store.clearFormState();
+
   // Toggle dialog open
   store.toggleDialog();
   render();
@@ -63,32 +66,68 @@ export const handleFormActionClick = (e, deps) => {
   // Check which button was clicked
   const actionId = e.detail.actionId;
 
+  if (actionId === "cancel") {
+    // Close dialog and clear state
+    store.clearFormState();
+    store.toggleDialog();
+    render();
+    return;
+  }
+
   if (actionId === "submit") {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get the target group ID from store - access the internal state properly
+    // Get the target group ID and avatar file from store - access the internal state properly
     const storeState = store.getState
       ? store.getState()
       : store._state || store.state;
     const targetGroupId = storeState.targetGroupId;
+    const avatarFile = storeState.selectedAvatarFile;
 
-    // Forward character creation to parent
+    // Forward character creation to parent with avatar file
     dispatchEvent(
       new CustomEvent("character-created", {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
           description: formData.description,
+          avatarFile: avatarFile,
         },
         bubbles: true,
         composed: true,
       }),
     );
 
-    // Close dialog
+    // Close dialog and clear state
+    store.clearFormState();
     store.toggleDialog();
     render();
+  }
+};
+
+export const handleAvatarClick = async (e, deps) => {
+  const { store, render, filePicker } = deps;
+
+  try {
+    // Open file picker for image selection
+    const files = await filePicker.open({
+      accept: "image/*",
+      multiple: false,
+    });
+
+    if (files.length > 0) {
+      const file = files[0];
+
+      // Create preview URL for the selected image
+      const previewUrl = URL.createObjectURL(file);
+
+      // Update the store with the file and preview
+      store.setAvatarFile({ file, previewUrl });
+      render();
+    }
+  } catch (error) {
+    console.error("Error selecting file:", error);
   }
 };
 
@@ -98,25 +137,4 @@ export const handleSearchInput = (e, deps) => {
 
   store.setSearchQuery(searchQuery);
   render();
-};
-
-export const handleDragDropFileSelected = async (e, deps) => {
-  const { dispatchEvent } = deps;
-  const { files } = e.detail;
-  const targetGroupId = e.currentTarget.id
-    .replace("drag-drop-bar-", "")
-    .replace("drag-drop-item-", "");
-
-  // Forward file uploads to parent (parent will handle the actual upload logic)
-  dispatchEvent(
-    new CustomEvent("files-uploaded", {
-      detail: {
-        files,
-        targetGroupId,
-        originalEvent: e,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
 };

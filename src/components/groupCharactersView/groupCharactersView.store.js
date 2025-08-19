@@ -3,6 +3,8 @@ export const INITIAL_STATE = Object.freeze({
   isDialogOpen: false,
   targetGroupId: null,
   searchQuery: "",
+  selectedAvatarFile: null,
+  avatarPreviewUrl: null,
 
   defaultValues: {
     name: "",
@@ -13,6 +15,11 @@ export const INITIAL_STATE = Object.freeze({
     title: "Add Character",
     description: "Create a new character",
     fields: [
+      {
+        inputType: "slot",
+        slot: "avatar-slot",
+        description: "Character Avatar (click to upload)",
+      },
       {
         name: "name",
         inputType: "inputText",
@@ -35,6 +42,11 @@ export const INITIAL_STATE = Object.freeze({
           id: "submit",
           variant: "pr",
           content: "Add Character",
+        },
+        {
+          id: "cancel",
+          variant: "se",
+          content: "Cancel",
         },
       ],
     },
@@ -60,6 +72,21 @@ export const setTargetGroupId = (state, groupId) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
+};
+
+export const setAvatarFile = (state, payload) => {
+  const { file, previewUrl } = payload || {};
+  state.selectedAvatarFile = file;
+  state.avatarPreviewUrl = previewUrl;
+};
+
+export const clearFormState = (state) => {
+  state.selectedAvatarFile = null;
+  state.avatarPreviewUrl = null;
+  state.defaultValues = {
+    name: "",
+    description: "",
+  };
 };
 
 export const toViewData = ({ state, props }) => {
@@ -120,5 +147,6 @@ export const toViewData = ({ state, props }) => {
     defaultValues: state.defaultValues,
     form: state.form,
     searchQuery: state.searchQuery,
+    avatarPreviewUrl: state.avatarPreviewUrl,
   };
 };

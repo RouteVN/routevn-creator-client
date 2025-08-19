@@ -21,14 +21,6 @@ refs:
     eventListeners:
       input-change:
         handler: handleSearchInput
-  drag-drop-item-*:
-    eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
-  drag-drop-bar-*:
-    eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
   group-*:
     eventListeners:
       click:
@@ -49,12 +41,18 @@ refs:
     eventListeners:
       close:
         handler: handleCloseDialog
-      submit-form:
-        handler: handleSubmitForm
   character-form:
     eventListeners:
       action-click:
         handler: handleFormActionClick
+  avatar-image:
+    eventListeners:
+      click:
+        handler: handleAvatarClick
+  avatar-placeholder:
+    eventListeners:
+      click:
+        handler: handleAvatarClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -84,11 +82,15 @@ template:
                                 - rtgl-text c=mu-fg: ${item.description}
                               - rtgl-view h=f av=c:
                                 - rtgl-button#sprites-button-${item.id}: Sprites
-                        - rtgl-view mt=lg:
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                        - rtgl-view mt=lg w=f:
+                          - 'rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p':
+                            - rtgl-svg wh=24 svg=character c=pr:
+                            - rtgl-text s=md c=pr fw=500: Add Character
                       $else:
-                        - rtgl-view mt=lg:
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                        - rtgl-view mt=lg w=f:
+                          - 'rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p':
+                            - rtgl-svg wh=24 svg=character c=pr:
+                            - rtgl-text s=md c=pr fw=500: Add Character
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No characters found matching "${searchQuery}"
@@ -101,6 +103,11 @@ template:
       - $if flatGroups.length > 0:
           - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-character-dialog ?open=${isDialogOpen}:
+  - rtgl-dialog#add-character-dialog ?open=${isDialogOpen} s=md:
     - rtgl-view slot=content g=md:
       - rtgl-form#character-form .defaultValues=defaultValues .form=form w=f:
+        - $if avatarPreviewUrl:
+            - rtgl-image#avatar-image src=${avatarPreviewUrl} wh=120 slot=avatar-slot cur=p br=md of=con:
+          $else:
+            - rtgl-view#avatar-placeholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p:
+              - rtgl-text c=mu-fg: Click to upload

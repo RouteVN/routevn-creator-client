@@ -36,57 +36,45 @@ export const handleCharacterItemClick = async (e, deps) => {
   render();
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, fileManager, uploadImageFiles, repository } = deps;
-  const { files, targetGroupId } = e.detail; // Extract from forwarded event
-  const id = targetGroupId;
+export const handleCharacterCreated = async (e, deps) => {
+  const { store, render, repository, fileManager, uploadImageFiles } = deps;
+  const { groupId, name, description, avatarFile } = e.detail;
 
-  // Use fileManager if available, otherwise fall back to uploadImageFiles
-  const uploader = fileManager || { upload: uploadImageFiles };
+  let characterData = {
+    id: nanoid(),
+    type: "character",
+    name: name,
+    description: description,
+    sprites: {
+      items: {},
+      tree: [],
+    },
+  };
 
-  // Upload all files
-  const uploadResults = await uploader.upload(files, "someprojectId");
+  // If avatar file is provided, upload it first
+  if (avatarFile) {
+    try {
+      // Use fileManager if available, otherwise fall back to uploadImageFiles
+      const uploader = fileManager || { upload: uploadImageFiles };
 
-  // Add successfully uploaded files to repository
-  const successfulUploads = uploadResults;
+      // Upload the avatar file
+      const uploadResults = await uploader.upload(
+        [avatarFile],
+        "someprojectId",
+      );
 
-  successfulUploads.forEach((result) => {
-    repository.addAction({
-      actionType: "treePush",
-      target: "characters",
-      value: {
-        parent: id,
-        position: "last",
-        item: {
-          id: nanoid(),
-          type: "character",
-          fileId: result.fileId,
-          name: result.file.name,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-          sprites: {
-            items: {},
-            tree: [],
-          },
-        },
-      },
-    });
-  });
-
-  if (successfulUploads.length > 0) {
-    const { characters } = repository.getState();
-    store.setItems(characters);
+      if (uploadResults && uploadResults.length > 0) {
+        const result = uploadResults[0];
+        // Add file information to character data
+        characterData.fileId = result.fileId;
+        characterData.fileType = avatarFile.type;
+        characterData.fileSize = avatarFile.size;
+      }
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+      // Continue creating character without avatar
+    }
   }
-
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
-  render();
-};
-
-export const handleCharacterCreated = (e, deps) => {
-  const { store, render, repository } = deps;
-  const { groupId, name, description } = e.detail;
 
   // Add character to repository
   repository.addAction({
@@ -95,17 +83,7 @@ export const handleCharacterCreated = (e, deps) => {
     value: {
       parent: groupId,
       position: "last",
-      item: {
-        id: nanoid(),
-        type: "character",
-        name: name,
-        description: description,
-        sprites: {
-          items: {},
-          tree: [],
-        },
-        // No fileId for now - this will be a text-based character
-      },
+      item: characterData,
     },
   });
 
