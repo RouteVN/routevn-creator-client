@@ -145,7 +145,6 @@ template:
                                             $else:
                                               - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
                                                   - rtgl-text s=xs: No Sprite
-                                  - rtgl-text s=sm: ${item.data.charactersNames}
                             $elif item.type == "sectionTransition":
                               - rtgl-view#${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                                   - rtgl-svg svg="transition" wh=24:
