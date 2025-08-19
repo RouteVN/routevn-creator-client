@@ -422,50 +422,157 @@ export const handleNewLine = (e, deps) => {
   render();
 };
 
-export const handleMoveUp = (e, deps) => {
+export const handleLineNavigation = (e, deps) => {
   const { store, getRefIds, render, subject, drenderer } = deps;
-  const currentLineId = e.detail.lineId;
-  const previousLineId = store.selectPreviousLineId({ lineId: currentLineId });
+  const { targetLineId, mode, direction, targetCursorPosition, lineRect } =
+    e.detail;
 
-  // Only move if we have a different previous line
-  if (previousLineId && previousLineId !== currentLineId) {
+  // For block mode, just update the selection and handle scrolling
+  if (mode === "block") {
+    const currentLineId = store.selectSelectedLineId();
+
+    console.log({
+      currentLineId,
+      targetLineId,
+      direction,
+    });
+
+    // Check if we're trying to move up from the first line
+    if (direction === "up" && currentLineId === targetLineId) {
+      // First line - show animation effects
+      drenderer.render({
+        elements: [],
+        transitions: [],
+      });
+      subject.dispatch("sceneEditor.renderCanvas", {});
+      return;
+    }
+
+    store.setSelectedLineId(targetLineId);
+    render();
+
+    // Check if we need to scroll the line into view using provided coordinates
+    if (lineRect) {
+      requestAnimationFrame(() => {
+        const refIds = getRefIds();
+        const linesEditorRef = refIds["lines-editor"];
+
+        if (linesEditorRef && linesEditorRef.elm) {
+          const linesEditorElm = linesEditorRef.elm;
+
+          // The scroll container is actually the parent of the lines-editor component
+          // It's the rtgl-view with 'sv' (scroll vertical) attribute
+          const scrollContainer = linesEditorElm.parentElement;
+
+          const containerRect = scrollContainer?.getBoundingClientRect() || {};
+
+          // Check if the line is fully visible in the viewport using provided coordinates
+          const isAboveViewport = lineRect.top < containerRect.top;
+          const isBelowViewport = lineRect.bottom > containerRect.bottom;
+
+          // Only scroll if the line is not fully visible
+          if (isAboveViewport || isBelowViewport) {
+            // Query for the line element to scroll it
+            // The line elements are inside the lines-editor component
+            let lineElement = null;
+
+            // First try shadow DOM
+            if (linesEditorElm.shadowRoot) {
+              lineElement = linesEditorElm.shadowRoot.querySelector(
+                `#line-${targetLineId}`,
+              );
+            }
+
+            // If not found, try regular DOM inside the component
+            if (!lineElement) {
+              lineElement = linesEditorElm.querySelector(
+                `#line-${targetLineId}`,
+              );
+            }
+
+            // Last resort: search in the whole document
+            if (!lineElement) {
+              lineElement = document.querySelector(`#line-${targetLineId}`);
+            }
+
+            if (lineElement) {
+              lineElement.scrollIntoView({
+                behavior: "auto", // Immediate scroll, no animation
+                block: "nearest",
+                inline: "nearest",
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // Trigger debounced canvas render
+    subject.dispatch("sceneEditor.renderCanvas", {});
+    return;
+  }
+
+  // For text-editor mode, handle cursor navigation
+  const currentLineId = store.selectSelectedLineId();
+  let nextLineId = targetLineId;
+
+  // Determine next line based on direction if targetLineId is current line
+  if (targetLineId === currentLineId) {
+    if (direction === "up") {
+      nextLineId = store.selectPreviousLineId({ lineId: currentLineId });
+    } else if (direction === "down") {
+      nextLineId = store.selectNextLineId({ lineId: currentLineId });
+    }
+  }
+
+  // Handle navigation to different line
+  if (nextLineId && nextLineId !== currentLineId) {
     const refIds = getRefIds();
     const linesEditorRef = refIds["lines-editor"];
 
     // Update selectedLineId through the store
-    store.setSelectedLineId(previousLineId);
+    store.setSelectedLineId(nextLineId);
 
-    // Pass cursor position from event detail
-    if (e.detail.cursorPosition !== undefined) {
-      if (e.detail.cursorPosition === -1) {
-        // Special value: position at end of target line (for ArrowLeft navigation)
-        const targetLineRef = refIds[`line-${previousLineId}`];
-        const targetTextLength = targetLineRef?.elm?.textContent?.length || 0;
-        linesEditorRef.elm.store.setCursorPosition(targetTextLength);
-        linesEditorRef.elm.store.setGoalColumn(targetTextLength);
-        linesEditorRef.elm.store.setNavigationDirection("end"); // Special direction for end positioning
-      } else {
-        linesEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
-        // Set direction flag in store before calling updateSelectedLine
-        linesEditorRef.elm.store.setNavigationDirection("up");
+    // Handle cursor positioning based on direction
+    if (linesEditorRef) {
+      if (targetCursorPosition !== undefined) {
+        if (targetCursorPosition === -1) {
+          // Special value: position at end of target line (for ArrowLeft navigation)
+          const targetLineRef = refIds[`line-${nextLineId}`];
+          const targetTextLength = targetLineRef?.elm?.textContent?.length || 0;
+          linesEditorRef.elm.store.setCursorPosition(targetTextLength);
+          linesEditorRef.elm.store.setGoalColumn(targetTextLength);
+          linesEditorRef.elm.store.setNavigationDirection("end"); // Special direction for end positioning
+        } else {
+          linesEditorRef.elm.store.setCursorPosition(targetCursorPosition);
+          if (targetCursorPosition === 0) {
+            // When moving to beginning, set goal column to 0 as well
+            linesEditorRef.elm.store.setGoalColumn(0);
+          }
+        }
       }
-    } else {
+
       // Set direction flag in store before calling updateSelectedLine
-      linesEditorRef.elm.store.setNavigationDirection("up");
+      if (direction) {
+        linesEditorRef.elm.store.setNavigationDirection(direction);
+      }
+
+      linesEditorRef.elm.transformedHandlers.updateSelectedLine(nextLineId);
     }
-    linesEditorRef.elm.transformedHandlers.updateSelectedLine(previousLineId);
 
     // Force a render to update line colors after navigation
     setTimeout(() => {
       render();
       // Also render the linesEditor to update line colors
-      linesEditorRef.elm.render();
+      if (linesEditorRef) {
+        linesEditorRef.elm.render();
+      }
 
       // Trigger debounced canvas render
       subject.dispatch("sceneEditor.renderCanvas", {});
     }, 0);
-  } else {
-    // show animation effects for 1st line
+  } else if (direction === "up" && currentLineId === targetLineId) {
+    // First line - show animation effects
     drenderer.render({
       elements: [],
       transitions: [],
@@ -478,44 +585,6 @@ export const handleBackToActions = (e, deps) => {
   const { store, render } = deps;
   store.setMode("actions");
   render();
-};
-
-export const handleMoveDown = (e, deps) => {
-  const { store, getRefIds, render, subject } = deps;
-  const currentLineId = e.detail.lineId;
-  const nextLineId = store.selectNextLineId({ lineId: currentLineId });
-
-  // Only move if we have a different next line
-  if (nextLineId && nextLineId !== currentLineId) {
-    const refIds = getRefIds();
-    const linesEditorRef = refIds["lines-editor"];
-
-    // Update selectedLineId through the store
-    store.setSelectedLineId(nextLineId);
-
-    // Pass cursor position from event detail
-    if (e.detail.cursorPosition !== undefined) {
-      linesEditorRef.elm.store.setCursorPosition(e.detail.cursorPosition);
-      if (e.detail.cursorPosition === 0) {
-        // When moving to beginning, set goal column to 0 as well
-        linesEditorRef.elm.store.setGoalColumn(0);
-      }
-    }
-
-    // Set direction flag in store before calling updateSelectedLine
-    linesEditorRef.elm.store.setNavigationDirection("down");
-    linesEditorRef.elm.transformedHandlers.updateSelectedLine(nextLineId);
-
-    // Force a render to update line colors after navigation
-    setTimeout(() => {
-      render();
-      // Also render the linesEditor to update line colors
-      linesEditorRef.elm.render();
-
-      // Trigger debounced canvas render
-      subject.dispatch("sceneEditor.renderCanvas", {});
-    }, 0);
-  }
 };
 
 export const handleMergeLines = (e, deps) => {
@@ -736,71 +805,6 @@ export const handlePopoverClickOverlay = (e, deps) => {
   const { store, render } = deps;
   store.hidePopover();
   render();
-};
-
-export const handleLineSelectionChanged = (e, deps) => {
-  const { store, render, getRefIds, subject } = deps;
-  const { lineId, lineRect } = e.detail;
-
-  store.setSelectedLineId(lineId);
-  render();
-
-  // Check if we need to scroll the line into view using provided coordinates
-  if (lineRect) {
-    requestAnimationFrame(() => {
-      const refIds = getRefIds();
-      const linesEditorRef = refIds["lines-editor"];
-
-      if (linesEditorRef && linesEditorRef.elm) {
-        const linesEditorElm = linesEditorRef.elm;
-
-        // The scroll container is actually the parent of the lines-editor component
-        // It's the rtgl-view with 'sv' (scroll vertical) attribute
-        const scrollContainer = linesEditorElm.parentElement;
-
-        const containerRect = scrollContainer?.getBoundingClientRect() || {};
-
-        // Check if the line is fully visible in the viewport using provided coordinates
-        const isAboveViewport = lineRect.top < containerRect.top;
-        const isBelowViewport = lineRect.bottom > containerRect.bottom;
-
-        // Only scroll if the line is not fully visible
-        if (isAboveViewport || isBelowViewport) {
-          // Query for the line element to scroll it
-          // The line elements are inside the lines-editor component
-          let lineElement = null;
-
-          // First try shadow DOM
-          if (linesEditorElm.shadowRoot) {
-            lineElement = linesEditorElm.shadowRoot.querySelector(
-              `#line-${lineId}`,
-            );
-          }
-
-          // If not found, try regular DOM inside the component
-          if (!lineElement) {
-            lineElement = linesEditorElm.querySelector(`#line-${lineId}`);
-          }
-
-          // Last resort: search in the whole document
-          if (!lineElement) {
-            lineElement = document.querySelector(`#line-${lineId}`);
-          }
-
-          if (lineElement) {
-            lineElement.scrollIntoView({
-              behavior: "auto", // Immediate scroll, no animation
-              block: "nearest",
-              inline: "nearest",
-            });
-          }
-        }
-      }
-    });
-  }
-
-  // Trigger debounced canvas render
-  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleFormActionClick = (e, deps) => {

@@ -202,6 +202,9 @@ export const handleSceneFormAction = (e, deps) => {
     const sectionId = nanoid();
     const stepId = nanoid();
 
+    // Generate 31 additional line IDs
+    const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
+
     // Get layouts from repository to find first dialogue layout
     const { layouts } = repository.getState();
     let dialogueLayoutId = null;
@@ -225,6 +228,26 @@ export const handleSceneFormAction = (e, deps) => {
         }
       : {};
 
+    // Create items object with first line having presentation, rest with empty presentation
+    const lineItems = {
+      [stepId]: {
+        presentation: presentation,
+      },
+    };
+
+    // Add 31 lines with empty presentation
+    additionalLineIds.forEach((lineId) => {
+      lineItems[lineId] = {
+        presentation: {},
+      };
+    });
+
+    // Create tree array with all line IDs in order
+    const lineTree = [
+      { id: stepId },
+      ...additionalLineIds.map((id) => ({ id })),
+    ];
+
     // Add new scene to repository
     const repositoryAction = {
       actionType: "treePush",
@@ -246,16 +269,8 @@ export const handleSceneFormAction = (e, deps) => {
               [sectionId]: {
                 name: "Section New",
                 lines: {
-                  items: {
-                    [stepId]: {
-                      presentation: presentation,
-                    },
-                  },
-                  tree: [
-                    {
-                      id: stepId,
-                    },
-                  ],
+                  items: lineItems,
+                  tree: lineTree,
                 },
               },
             },

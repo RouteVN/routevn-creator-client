@@ -20,14 +20,10 @@ refs:
         handler: handleNewLine
       splitLine:
         handler: handleSplitLine
-      moveUp:
-        handler: handleMoveUp
-      moveDown:
-        handler: handleMoveDown
+      line-navigation:
+        handler: handleLineNavigation
       mergeLines:
         handler: handleMergeLines
-      lineSelectionChanged:
-        handler: handleLineSelectionChanged
   presentation-action-*:
     eventListeners:
       click:
