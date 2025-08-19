@@ -158,6 +158,20 @@ export const handleWhiteboardClick = (e, deps) => {
   }
 };
 
+export const handleWhiteboardCanvasContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  const { formX, formY, whiteboardX, whiteboardY } = e.detail;
+
+  // Reset form data
+  store.setSceneFormData({ name: "", folderId: "_root" });
+
+  // Show the form at the right-clicked position
+  store.setSceneFormPosition({ x: formX, y: formY });
+  store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
+  store.setShowSceneForm(true);
+  render();
+};
+
 export const handleSceneFormClose = (e, deps) => {
   const { store, render } = deps;
   store.resetSceneForm();
@@ -187,6 +201,30 @@ export const handleSceneFormAction = (e, deps) => {
 
     const sectionId = nanoid();
     const stepId = nanoid();
+
+    // Get layouts from repository to find first dialogue layout
+    const { layouts } = repository.getState();
+    let dialogueLayoutId = null;
+
+    if (layouts && layouts.items) {
+      // Find first layout with layoutType: "dialogue"
+      for (const [layoutId, layout] of Object.entries(layouts.items)) {
+        if (layout.layoutType === "dialogue") {
+          dialogueLayoutId = layoutId;
+          break;
+        }
+      }
+    }
+
+    // Create presentation object with dialogue layout if found
+    const presentation = dialogueLayoutId
+      ? {
+          dialogue: {
+            layoutId: dialogueLayoutId,
+          },
+        }
+      : {};
+
     // Add new scene to repository
     const repositoryAction = {
       actionType: "treePush",
@@ -210,7 +248,7 @@ export const handleSceneFormAction = (e, deps) => {
                 lines: {
                   items: {
                     [stepId]: {
-                      presentation: {},
+                      presentation: presentation,
                     },
                   },
                   tree: [
