@@ -15,8 +15,6 @@ refs:
         handler: handleCharacterItemClick
       sprites-button-click:
         handler: handleSpritesButtonClick
-      files-uploaded:
-        handler: handleDragDropFileSelected
       character-created:
         handler: handleCharacterCreated
   detail-form:
