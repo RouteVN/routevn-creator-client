@@ -2,6 +2,34 @@ import { fromEvent, tap } from "rxjs";
 
 let dragOffset = { x: 0, y: 0 };
 
+export const handleContainerContextMenu = (event, deps) => {
+  event.preventDefault();
+  const { store, getRefIds, dispatchEvent } = deps;
+
+  // Calculate click position in canvas coordinates
+  const container = getRefIds().container.elm;
+  const containerRect = container.getBoundingClientRect();
+  const pan = store.selectPan();
+  const zoomLevel = store.selectZoomLevel();
+
+  const canvasX = (event.clientX - containerRect.left - pan.x) / zoomLevel;
+  const canvasY = (event.clientY - containerRect.top - pan.y) / zoomLevel;
+
+  // Emit canvas right-click event
+  dispatchEvent(
+    new CustomEvent("canvas-context-menu", {
+      detail: {
+        formX: event.clientX,
+        formY: event.clientY,
+        whiteboardX: canvasX,
+        whiteboardY: canvasY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleContainerMouseDown = (event, deps) => {
   const { store, getRefIds } = deps;
 

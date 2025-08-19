@@ -181,11 +181,6 @@ export const toViewData = ({ state, props }, payload) => {
       layout: "",
       buttons: [
         {
-          id: "cancel",
-          variant: "se",
-          content: "Cancel",
-        },
-        {
           id: "submit",
           variant: "pr",
           content: "Create Scene",

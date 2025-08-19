@@ -65,6 +65,8 @@ refs:
         handler: handleContainerWheel
       mousedown:
         handler: handleContainerMouseDown
+      contextmenu:
+        handler: handleContainerContextMenu
   item-*:
     eventListeners:
       mousedown:
