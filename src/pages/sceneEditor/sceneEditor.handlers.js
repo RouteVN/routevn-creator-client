@@ -423,7 +423,7 @@ export const handleNewLine = (e, deps) => {
 };
 
 export const handleMoveUp = (e, deps) => {
-  const { store, getRefIds, render, subject } = deps;
+  const { store, getRefIds, render, subject, drenderer } = deps;
   const currentLineId = e.detail.lineId;
   const previousLineId = store.selectPreviousLineId({ lineId: currentLineId });
 
@@ -464,6 +464,13 @@ export const handleMoveUp = (e, deps) => {
       // Trigger debounced canvas render
       subject.dispatch("sceneEditor.renderCanvas", {});
     }, 0);
+  } else {
+    // show animation effects for 1st line
+    drenderer.render({
+      elements: [],
+      transitions: [],
+    });
+    subject.dispatch("sceneEditor.renderCanvas", {});
   }
 };
 

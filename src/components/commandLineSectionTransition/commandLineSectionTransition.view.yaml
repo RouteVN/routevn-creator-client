@@ -27,6 +27,8 @@ propsSchema:
             type: string
           name:
             type: string
+    currentSceneId:
+      type: string
 
 viewDataSchema:
   type: object

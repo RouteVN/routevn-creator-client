@@ -122,11 +122,16 @@ export const toViewData = ({ state, props }, payload) => {
     }));
   }
 
-  const context = {
-    sceneOptions: allScenes.map((scene) => ({
+  // Filter out the current scene from sceneOptions when in "other_scene" mode
+  const sceneOptions = allScenes
+    .filter((scene) => scene.id !== props?.currentSceneId)
+    .map((scene) => ({
       value: scene.id,
       label: scene.name,
-    })),
+    }));
+
+  const context = {
+    sceneOptions,
     sectionOptions,
     sameScene: state.formValues?.sameScene,
   };
