@@ -278,9 +278,12 @@ export const handleContainerKeyDown = (e, deps) => {
             }
 
             dispatchEvent(
-              new CustomEvent("lineSelectionChanged", {
+              new CustomEvent("line-navigation", {
                 detail: {
-                  lineId: firstLineId,
+                  targetLineId: firstLineId,
+                  mode: "block",
+                  direction: null,
+                  targetCursorPosition: null,
                   lineRect: lineRect
                     ? {
                         top: lineRect.top,
@@ -312,9 +315,12 @@ export const handleContainerKeyDown = (e, deps) => {
               }
 
               dispatchEvent(
-                new CustomEvent("lineSelectionChanged", {
+                new CustomEvent("line-navigation", {
                   detail: {
-                    lineId: prevLineId,
+                    targetLineId: prevLineId,
+                    mode: "block",
+                    direction: null,
+                    targetCursorPosition: null,
                     lineRect: lineRect
                       ? {
                           top: lineRect.top,
@@ -328,6 +334,19 @@ export const handleContainerKeyDown = (e, deps) => {
                 }),
               );
             });
+          } else {
+            // On first line, still emit event for animation
+            dispatchEvent(
+              new CustomEvent("line-navigation", {
+                detail: {
+                  targetLineId: currentLineId,
+                  mode: "block",
+                  direction: "up",
+                  targetCursorPosition: null,
+                  lineRect: null,
+                },
+              }),
+            );
           }
         }
         break;
@@ -348,9 +367,12 @@ export const handleContainerKeyDown = (e, deps) => {
             }
 
             dispatchEvent(
-              new CustomEvent("lineSelectionChanged", {
+              new CustomEvent("line-navigation", {
                 detail: {
-                  lineId: firstLineId,
+                  targetLineId: firstLineId,
+                  mode: "block",
+                  direction: null,
+                  targetCursorPosition: null,
                   lineRect: lineRect
                     ? {
                         top: lineRect.top,
@@ -382,9 +404,12 @@ export const handleContainerKeyDown = (e, deps) => {
               }
 
               dispatchEvent(
-                new CustomEvent("lineSelectionChanged", {
+                new CustomEvent("line-navigation", {
                   detail: {
-                    lineId: nextLineId,
+                    targetLineId: nextLineId,
+                    mode: "block",
+                    direction: null,
+                    targetCursorPosition: null,
                     lineRect: lineRect
                       ? {
                           top: lineRect.top,
@@ -542,9 +567,12 @@ export const handleLineKeyDown = (e, deps) => {
             }
 
             dispatchEvent(
-              new CustomEvent("lineSelectionChanged", {
+              new CustomEvent("line-navigation", {
                 detail: {
-                  lineId: prevLine.id,
+                  targetLineId: prevLine.id,
+                  mode: "block",
+                  direction: null,
+                  targetCursorPosition: null,
                   lineRect: lineRect
                     ? {
                         top: lineRect.top,
@@ -558,6 +586,19 @@ export const handleLineKeyDown = (e, deps) => {
               }),
             );
           });
+        } else {
+          // On first line in block mode, still emit event for animation
+          dispatchEvent(
+            new CustomEvent("line-navigation", {
+              detail: {
+                targetLineId: id,
+                mode: "block",
+                direction: "up",
+                targetCursorPosition: null,
+                lineRect: null,
+              },
+            }),
+          );
         }
       } else {
         // In text-editor mode, check if cursor is on first line
@@ -573,10 +614,13 @@ export const handleLineKeyDown = (e, deps) => {
           store.setIsNavigating(true);
 
           dispatchEvent(
-            new CustomEvent("moveUp", {
+            new CustomEvent("line-navigation", {
               detail: {
-                lineId: e.currentTarget.id.replace(/^line-/, ""),
-                cursorPosition: goalColumn,
+                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                mode: "text-editor",
+                direction: "up",
+                targetCursorPosition: goalColumn,
+                lineRect: null,
               },
             }),
           );
@@ -603,9 +647,12 @@ export const handleLineKeyDown = (e, deps) => {
             }
 
             dispatchEvent(
-              new CustomEvent("lineSelectionChanged", {
+              new CustomEvent("line-navigation", {
                 detail: {
-                  lineId: nextLine.id,
+                  targetLineId: nextLine.id,
+                  mode: "block",
+                  direction: null,
+                  targetCursorPosition: null,
                   lineRect: lineRect
                     ? {
                         top: lineRect.top,
@@ -645,10 +692,13 @@ export const handleLineKeyDown = (e, deps) => {
           store.setNavigationDirection("down");
 
           dispatchEvent(
-            new CustomEvent("moveDown", {
+            new CustomEvent("line-navigation", {
               detail: {
-                lineId: e.currentTarget.id.replace(/^line-/, ""),
-                cursorPosition: goalColumn,
+                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                mode: "text-editor",
+                direction: "down",
+                targetCursorPosition: goalColumn,
+                lineRect: null,
               },
             }),
           );
@@ -671,10 +721,13 @@ export const handleLineKeyDown = (e, deps) => {
           store.setIsNavigating(true);
 
           dispatchEvent(
-            new CustomEvent("moveDown", {
+            new CustomEvent("line-navigation", {
               detail: {
-                lineId: e.currentTarget.id.replace(/^line-/, ""),
-                cursorPosition: 0, // Go to beginning of next line
+                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                mode: "text-editor",
+                direction: "down",
+                targetCursorPosition: 0, // Go to beginning of next line
+                lineRect: null,
               },
             }),
           );
@@ -696,10 +749,13 @@ export const handleLineKeyDown = (e, deps) => {
           store.setIsNavigating(true);
 
           dispatchEvent(
-            new CustomEvent("moveUp", {
+            new CustomEvent("line-navigation", {
               detail: {
-                lineId: e.currentTarget.id.replace(/^line-/, ""),
-                cursorPosition: -1, // Special value to indicate "go to end"
+                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                mode: "text-editor",
+                direction: "up",
+                targetCursorPosition: -1, // Special value to indicate "go to end"
+                lineRect: null,
               },
             }),
           );
@@ -855,9 +911,12 @@ export const handleOnFocus = (e, deps) => {
 
   // Always update the selected line ID with coordinates
   dispatchEvent(
-    new CustomEvent("lineSelectionChanged", {
+    new CustomEvent("line-navigation", {
       detail: {
-        lineId,
+        targetLineId: lineId,
+        mode: "block",
+        direction: null,
+        targetCursorPosition: null,
         lineRect: {
           top: lineRect.top,
           bottom: lineRect.bottom,
