@@ -52,7 +52,8 @@ export const handleAddCharacterClick = (e, deps) => {
 export const handleCloseDialog = (e, deps) => {
   const { store, render } = deps;
 
-  // Close dialog
+  // Clear avatar state and close dialog
+  store.clearAvatarState();
   store.toggleDialog();
   render();
 };
@@ -67,28 +68,61 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get the target group ID from store - access the internal state properly
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const targetGroupId = storeState.targetGroupId;
+    // Get the target group ID and avatar fileId from store
+    const targetGroupId = store.selectTargetGroupId();
+    const avatarFileId = store.selectAvatarFileId();
 
-    // Forward character creation to parent
+    // Forward character creation to parent with avatar fileId
     dispatchEvent(
       new CustomEvent("character-created", {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
           description: formData.description,
+          avatarFileId: avatarFileId,
         },
         bubbles: true,
         composed: true,
       }),
     );
 
-    // Close dialog
+    // Clear avatar state and close dialog (form will auto-reset due to key attribute)
+    store.clearAvatarState();
     store.toggleDialog();
     render();
+  }
+};
+
+export const handleAvatarClick = async (e, deps) => {
+  const { store, render, filePicker, fileManager, uploadImageFiles, subject } =
+    deps;
+
+  try {
+    // Open file picker for image selection
+    const files = await filePicker.open({
+      accept: "image/*",
+      multiple: false,
+    });
+
+    if (files.length > 0) {
+      const file = files[0];
+
+      // Upload the file immediately
+      const uploader = fileManager || { upload: uploadImageFiles };
+      const uploadResults = await uploader.upload([file], "someprojectId");
+
+      if (!uploadResults || uploadResults.length === 0) {
+        throw new Error("Failed to upload avatar image");
+      }
+
+      const result = uploadResults[0];
+
+      // Store the fileId instead of blob URL
+      store.setAvatarFileId(result.fileId);
+      render();
+    }
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
   }
 };
 
@@ -98,25 +132,4 @@ export const handleSearchInput = (e, deps) => {
 
   store.setSearchQuery(searchQuery);
   render();
-};
-
-export const handleDragDropFileSelected = async (e, deps) => {
-  const { dispatchEvent } = deps;
-  const { files } = e.detail;
-  const targetGroupId = e.currentTarget.id
-    .replace("drag-drop-bar-", "")
-    .replace("drag-drop-item-", "");
-
-  // Forward file uploads to parent (parent will handle the actual upload logic)
-  dispatchEvent(
-    new CustomEvent("files-uploaded", {
-      detail: {
-        files,
-        targetGroupId,
-        originalEvent: e,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
 };

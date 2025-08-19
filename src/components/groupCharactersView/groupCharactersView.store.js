@@ -3,6 +3,7 @@ export const INITIAL_STATE = Object.freeze({
   isDialogOpen: false,
   targetGroupId: null,
   searchQuery: "",
+  avatarFileId: null,
 
   defaultValues: {
     name: "",
@@ -11,20 +12,22 @@ export const INITIAL_STATE = Object.freeze({
 
   form: {
     title: "Add Character",
-    description: "Create a new character",
     fields: [
+      {
+        inputType: "slot",
+        slot: "avatar-slot",
+        label: "Avatar",
+      },
       {
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the character name",
         required: true,
       },
       {
         name: "description",
         inputType: "inputText",
         label: "Description",
-        description: "Enter the character description",
         required: false,
       },
     ],
@@ -61,6 +64,25 @@ export const setTargetGroupId = (state, groupId) => {
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
+
+export const setAvatarFileId = (state, fileId) => {
+  state.avatarFileId = fileId;
+};
+
+export const clearFormState = (state) => {
+  state.avatarFileId = null;
+  state.defaultValues = {
+    name: "",
+    description: "",
+  };
+};
+
+export const clearAvatarState = (state) => {
+  state.avatarFileId = null;
+};
+
+export const selectTargetGroupId = ({ state }) => state.targetGroupId;
+export const selectAvatarFileId = ({ state }) => state.avatarFileId;
 
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
@@ -120,5 +142,6 @@ export const toViewData = ({ state, props }) => {
     defaultValues: state.defaultValues,
     form: state.form,
     searchQuery: state.searchQuery,
+    avatarFileId: state.avatarFileId,
   };
 };
