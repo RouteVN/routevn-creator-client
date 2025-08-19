@@ -3,6 +3,10 @@ html {
   margin: 0;
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
+  overscroll-behavior: none;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
 
 :root {
@@ -39,12 +43,17 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
   height: 100%;
+  width: 100%;
   margin: 0;
   font-family: Roboto, -apple-system, "Helvetica Neue", sans-serif;
   display: flex;
   flex-direction: column;
   background-color: var(--background);
   color: var(--foreground);
+  overscroll-behavior: none;
+  overflow: auto;
+  position: fixed;
+  -webkit-overflow-scrolling: touch;
 }
 
 :root {
