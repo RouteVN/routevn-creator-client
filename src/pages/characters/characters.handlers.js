@@ -37,60 +37,50 @@ export const handleCharacterItemClick = async (e, deps) => {
 };
 
 export const handleCharacterCreated = async (e, deps) => {
-  const { store, render, repository, fileManager, uploadImageFiles } = deps;
-  const { groupId, name, description, avatarFile } = e.detail;
+  const { store, render, repository, subject } = deps;
+  const { groupId, name, description, avatarFileId } = e.detail;
 
-  let characterData = {
-    id: nanoid(),
-    type: "character",
-    name: name,
-    description: description,
-    sprites: {
-      items: {},
-      tree: [],
-    },
-  };
+  try {
+    let characterData = {
+      id: nanoid(),
+      type: "character",
+      name: name,
+      description: description,
+      sprites: {
+        items: {},
+        tree: [],
+      },
+    };
 
-  // If avatar file is provided, upload it first
-  if (avatarFile) {
-    try {
-      // Use fileManager if available, otherwise fall back to uploadImageFiles
-      const uploader = fileManager || { upload: uploadImageFiles };
-
-      // Upload the avatar file
-      const uploadResults = await uploader.upload(
-        [avatarFile],
-        "someprojectId",
-      );
-
-      if (uploadResults && uploadResults.length > 0) {
-        const result = uploadResults[0];
-        // Add file information to character data
-        characterData.fileId = result.fileId;
-        characterData.fileType = avatarFile.type;
-        characterData.fileSize = avatarFile.size;
-      }
-    } catch (error) {
-      console.error("Failed to upload avatar:", error);
-      // Continue creating character without avatar
+    // If avatar fileId is provided, add it to character data
+    if (avatarFileId) {
+      characterData.fileId = avatarFileId;
     }
+
+    // Add character to repository
+    repository.addAction({
+      actionType: "treePush",
+      target: "characters",
+      value: {
+        parent: groupId,
+        position: "last",
+        item: characterData,
+      },
+    });
+
+    // Update store with new data
+    const { characters } = repository.getState();
+    store.setItems(characters);
+    render();
+  } catch (error) {
+    console.error("Failed to create character:", error);
+    // Notify user of the error
+    subject.dispatch("notification", {
+      type: "error",
+      message: "Failed to create character. Please try again.",
+    });
+    throw error; // Re-throw to prevent silent failure
   }
-
-  // Add character to repository
-  repository.addAction({
-    actionType: "treePush",
-    target: "characters",
-    value: {
-      parent: groupId,
-      position: "last",
-      item: characterData,
-    },
-  });
-
-  // Update store with new data
-  const { characters } = repository.getState();
-  store.setItems(characters);
-  render();
 };
 
 export const handleSpritesButtonClick = (e, deps) => {

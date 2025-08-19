@@ -68,18 +68,18 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get the target group ID and avatar file from store
+    // Get the target group ID and avatar fileId from store
     const targetGroupId = store.selectTargetGroupId();
-    const avatarFile = store.selectSelectedAvatarFile();
+    const avatarFileId = store.selectAvatarFileId();
 
-    // Forward character creation to parent with avatar file
+    // Forward character creation to parent with avatar fileId
     dispatchEvent(
       new CustomEvent("character-created", {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
           description: formData.description,
-          avatarFile: avatarFile,
+          avatarFileId: avatarFileId,
         },
         bubbles: true,
         composed: true,
@@ -94,7 +94,8 @@ export const handleFormActionClick = (e, deps) => {
 };
 
 export const handleAvatarClick = async (e, deps) => {
-  const { store, render, filePicker } = deps;
+  const { store, render, filePicker, fileManager, uploadImageFiles, subject } =
+    deps;
 
   try {
     // Open file picker for image selection
@@ -106,15 +107,27 @@ export const handleAvatarClick = async (e, deps) => {
     if (files.length > 0) {
       const file = files[0];
 
-      // Create preview URL for the selected image
-      const previewUrl = URL.createObjectURL(file);
+      // Upload the file immediately
+      const uploader = fileManager || { upload: uploadImageFiles };
+      const uploadResults = await uploader.upload([file], "someprojectId");
 
-      // Update the store with the file and preview
-      store.setAvatarFile({ file, previewUrl });
+      if (!uploadResults || uploadResults.length === 0) {
+        throw new Error("Failed to upload avatar image");
+      }
+
+      const result = uploadResults[0];
+
+      // Store the fileId instead of blob URL
+      store.setAvatarFileId(result.fileId);
       render();
     }
   } catch (error) {
-    console.error("Error selecting file:", error);
+    console.error("Error uploading avatar:", error);
+    // Notify user of the error
+    subject.dispatch("notification", {
+      type: "error",
+      message: "Failed to upload avatar image. Please try again.",
+    });
   }
 };
 

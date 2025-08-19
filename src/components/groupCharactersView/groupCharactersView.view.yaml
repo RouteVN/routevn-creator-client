@@ -106,8 +106,8 @@ template:
   - rtgl-dialog#add-character-dialog ?open=${isDialogOpen} s=md:
     - rtgl-view slot=content g=md:
       - rtgl-form#character-form key=${isDialogOpen} .defaultValues=defaultValues .form=form w=f:
-        - $if avatarPreviewUrl:
-            - rtgl-image#avatar-image src=${avatarPreviewUrl} wh=120 slot=avatar-slot cur=p br=md of=con:
+        - $if avatarFileId:
+            - rvn-file-image#avatar-image fileId=${avatarFileId} wh=120 slot=avatar-slot cur=p br=md:
           $else:
             - rtgl-view#avatar-placeholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p:
               - rtgl-text c=mu-fg s=sm: Click to Upload

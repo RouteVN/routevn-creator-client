@@ -3,8 +3,7 @@ export const INITIAL_STATE = Object.freeze({
   isDialogOpen: false,
   targetGroupId: null,
   searchQuery: "",
-  selectedAvatarFile: null,
-  avatarPreviewUrl: null,
+  avatarFileId: null,
 
   defaultValues: {
     name: "",
@@ -66,15 +65,12 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-export const setAvatarFile = (state, payload) => {
-  const { file, previewUrl } = payload || {};
-  state.selectedAvatarFile = file;
-  state.avatarPreviewUrl = previewUrl;
+export const setAvatarFileId = (state, fileId) => {
+  state.avatarFileId = fileId;
 };
 
 export const clearFormState = (state) => {
-  state.selectedAvatarFile = null;
-  state.avatarPreviewUrl = null;
+  state.avatarFileId = null;
   state.defaultValues = {
     name: "",
     description: "",
@@ -82,12 +78,11 @@ export const clearFormState = (state) => {
 };
 
 export const clearAvatarState = (state) => {
-  state.selectedAvatarFile = null;
-  state.avatarPreviewUrl = null;
+  state.avatarFileId = null;
 };
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
-export const selectSelectedAvatarFile = ({ state }) => state.selectedAvatarFile;
+export const selectAvatarFileId = ({ state }) => state.avatarFileId;
 
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
@@ -147,6 +142,6 @@ export const toViewData = ({ state, props }) => {
     defaultValues: state.defaultValues,
     form: state.form,
     searchQuery: state.searchQuery,
-    avatarPreviewUrl: state.avatarPreviewUrl,
+    avatarFileId: state.avatarFileId,
   };
 };
