@@ -66,14 +66,6 @@ export const handleFormActionClick = (e, deps) => {
   // Check which button was clicked
   const actionId = e.detail.actionId;
 
-  if (actionId === "cancel") {
-    // Close dialog and clear state
-    store.clearFormState();
-    store.toggleDialog();
-    render();
-    return;
-  }
-
   if (actionId === "submit") {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;

@@ -13,25 +13,22 @@ export const INITIAL_STATE = Object.freeze({
 
   form: {
     title: "Add Character",
-    description: "Create a new character",
     fields: [
       {
         inputType: "slot",
         slot: "avatar-slot",
-        description: "Character Avatar (click to upload)",
+        label: "Avatar",
       },
       {
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the character name",
         required: true,
       },
       {
         name: "description",
         inputType: "inputText",
         label: "Description",
-        description: "Enter the character description",
         required: false,
       },
     ],
@@ -42,11 +39,6 @@ export const INITIAL_STATE = Object.freeze({
           id: "submit",
           variant: "pr",
           content: "Add Character",
-        },
-        {
-          id: "cancel",
-          variant: "se",
-          content: "Cancel",
         },
       ],
     },

@@ -110,4 +110,4 @@ template:
             - rtgl-image#avatar-image src=${avatarPreviewUrl} wh=120 slot=avatar-slot cur=p br=md of=con:
           $else:
             - rtgl-view#avatar-placeholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p:
-              - rtgl-text c=mu-fg: Click to upload
+              - rtgl-text c=mu-fg s=sm: Click to Upload
