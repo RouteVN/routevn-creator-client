@@ -45,15 +45,6 @@ export const addCharacter = (state, payload) => {
   const defaultTransform =
     transformItems.length > 0 ? transformItems[0].id : undefined;
 
-  console.log("[addCharacter] Adding character:", {
-    characterId: payload.id,
-    availableTransforms: transformItems.map((t) => ({
-      id: t.id,
-      name: t.name,
-    })),
-    defaultTransform,
-  });
-
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
     id: payload.id,
@@ -68,18 +59,8 @@ export const removeCharacter = (state, index) => {
 };
 
 export const updateCharacterTransform = (state, { index, transform }) => {
-  console.log("[updateCharacterTransform] Before update:", {
-    index,
-    transform,
-    currentTransformId: state.selectedCharacters[index]?.transformId,
-    character: state.selectedCharacters[index],
-  });
-
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].transformId = transform;
-    console.log("[updateCharacterTransform] After update:", {
-      newTransformId: state.selectedCharacters[index].transformId,
-    });
   }
 };
 
@@ -250,17 +231,6 @@ export const toViewData = ({ state, props }, payload) => {
     displayName: character.name || "Unnamed Character",
   }));
 
-  // Debug logging for transform selector
-  console.log("[commandLineCharacters] Transform options:", transformOptions);
-  console.log(
-    "[commandLineCharacters] Selected characters with transformId:",
-    processedSelectedCharacters.map((c) => ({
-      id: c.id,
-      transformId: c.transformId,
-      name: c.displayName,
-    })),
-  );
-
   // Get sprite data for the selected character (after processedSelectedCharacters is defined)
   if (
     state.mode === "sprite-select" &&
@@ -326,19 +296,15 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Create default values with character data and options
   const defaultValues = {
-    characters: processedSelectedCharacters,
+    characters: processedSelectedCharacters.map((char) => ({
+      ...char,
+      // Ensure transformId is set, use first transform as fallback if needed
+      transformId:
+        char.transformId ||
+        (transformOptions.length > 0 ? transformOptions[0].value : undefined),
+    })),
     transformOptions,
   };
-
-  // More detailed logging
-  console.log("[commandLineCharacters] defaultValues:", {
-    characters: defaultValues.characters.map((c) => ({
-      id: c.id,
-      transformId: c.transformId,
-      displayName: c.displayName,
-    })),
-    transformOptions: defaultValues.transformOptions,
-  });
 
   return {
     mode: state.mode,

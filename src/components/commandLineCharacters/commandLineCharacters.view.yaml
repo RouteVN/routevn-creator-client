@@ -73,18 +73,18 @@ template:
           - rtgl-view flex=1 sv w=f:
               - rtgl-form#form .form=form .defaultValues=defaultValues:
                   - rtgl-view#characters-container slot=characters g=md w=f:
-                      - $for character, index in defaultValues.characters:
+                      - $for character, i in defaultValues.characters:
                           - rtgl-view d=h g=md av=t bgc=ac p=md br=md w=f:
                               - rtgl-view g=sm:
                                   - $if character.spriteFileId:
-                                      - rvn-file-image#character-${character.id}-${index} fileId=${character.spriteFileId} w=120 h=120 cur=p br=sm:
+                                      - rvn-file-image#character-${character.id}-${i} fileId=${character.spriteFileId} w=120 h=120 cur=p br=sm:
                                     $else:
-                                      - rtgl-view#character-${character.id}-${index} w=120 h=120 av=c ah=c bgc=mu br=sm cur=p:
+                                      - rtgl-view#character-${character.id}-${i} w=120 h=120 av=c ah=c bgc=mu br=sm cur=p:
                                           - rtgl-text s=sm c=mu-fg: No Sprite
                                   - rtgl-text s=sm w=120 ah=c ellipsis=true: ${character.displayName}
                               - rtgl-view flex=1 g=sm:
                                   - rtgl-text s=sm c=mu-fg: Transform
-                                  - rtgl-select#transform-${index} .options=defaultValues.transformOptions .selectedValue=character.transformId w=f:
+                                  - rtgl-select#transform-${i} .options=defaultValues.transformOptions .selectedValue=defaultValues.characters[${i}].transformId w=f:
                       - rtgl-button#add-character-button v=ol w=f mt=md: + Add Character
 
           - rtgl-view d=h av=c ah=e w=f g=lg:
