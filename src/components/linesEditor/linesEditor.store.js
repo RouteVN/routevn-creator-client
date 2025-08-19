@@ -64,29 +64,51 @@ export const toViewData = ({ state, props }) => {
       backgroundFileId = state.repositoryState.images.items[resourceId]?.fileId;
     }
 
-    let characterFileId;
-    // Check if line has character presentation with sprites
+    // Character sprites for display (characters shown on screen)
+    let characterSprites = [];
     if (
       line.presentation?.character?.items &&
       line.presentation.character.items.length > 0
     ) {
-      const firstCharacter = line.presentation.character.items[0];
-      // Check if character has sprites array
-      if (firstCharacter.sprites && firstCharacter.sprites.length > 0) {
-        const firstSprite = firstCharacter.sprites[0];
-        // Get the image file ID from the images repository
-        if (
-          firstSprite.imageId &&
-          state.repositoryState.images?.items?.[firstSprite.imageId]
-        ) {
-          characterFileId =
-            state.repositoryState.images.items[firstSprite.imageId].fileId;
-        }
-      }
+      // Collect all character sprites
+      characterSprites = line.presentation.character.items
+        .map((char) => {
+          const character = state.repositoryState.characters?.items?.[char.id];
+          let spriteFileId = null;
+
+          if (char.sprites && char.sprites.length > 0 && character?.sprites) {
+            const firstSprite = char.sprites[0];
+            if (firstSprite.imageId) {
+              // First try to get from character sprites
+              const flatSprites = toFlatItems(character.sprites);
+              const sprite = flatSprites.find(
+                (s) => s.id === firstSprite.imageId,
+              );
+              if (sprite?.fileId) {
+                spriteFileId = sprite.fileId;
+              } else if (
+                state.repositoryState.images?.items?.[firstSprite.imageId]
+              ) {
+                // Fallback to images repository
+                spriteFileId =
+                  state.repositoryState.images.items[firstSprite.imageId]
+                    .fileId;
+              }
+            }
+          }
+
+          return {
+            characterId: char.id,
+            characterName: character?.name || "Unknown",
+            fileId: spriteFileId,
+          };
+        })
+        .filter((char) => char.fileId); // Only keep characters with valid sprites
     }
 
-    // Also check for dialogue character data
-    if (!characterFileId && line.presentation?.dialogue?.characterId) {
+    // Dialogue character icon (who is speaking)
+    let characterFileId;
+    if (line.presentation?.dialogue?.characterId) {
       // Get character data from repository
       const characters = toFlatItems(state.repositoryState.characters || []);
       const character = characters.find(
@@ -103,6 +125,27 @@ export const toViewData = ({ state, props }) => {
     let transitionTarget;
     let hasChoices;
     let choices;
+    let hasBgm = false;
+    let hasSfx = false;
+    let hasDialogueLayout = false;
+
+    // Check for BGM
+    if (line.presentation?.bgm?.audioId) {
+      hasBgm = true;
+    }
+
+    // Check for SFX
+    if (
+      line.presentation?.sfx?.items &&
+      line.presentation.sfx.items.length > 0
+    ) {
+      hasSfx = true;
+    }
+
+    // Check for Dialogue Layout
+    if (line.presentation?.dialogue?.layoutId) {
+      hasDialogueLayout = true;
+    }
 
     // Handle both nested and non-nested structures
     const sectionTransitionData =
@@ -158,11 +201,15 @@ export const toViewData = ({ state, props }) => {
         isSelected && isBlockMode ? "var(--muted)" : "transparent",
       backgroundFileId,
       characterFileId,
+      characterSprites,
       sceneTransition,
       sectionTransition,
       transitionTarget,
       hasChoices,
       choices,
+      hasBgm,
+      hasSfx,
+      hasDialogueLayout,
     };
   });
 

@@ -86,7 +86,14 @@ template:
 
                   - rtgl-view d=h:
                       - $if line.backgroundFileId:
-                          - rvn-file-image w=36 h=24 fileId=${line.backgroundFileId}:
-                    # - $else:
-                    #   - rtgl-view w=36 h=24 bgc=mu av=c ah=c:
-                    #     - rtgl-text s=xs: No Background
+                          - rvn-file-image w=36 h=24 fileId=${line.backgroundFileId} mr=sm:
+                      - $if line.characterSprites.length > 0:
+                          - rtgl-view d=h mr=sm:
+                              - $for sprite in line.characterSprites:
+                                  - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
+                      - $if line.hasDialogueLayout:
+                          - rtgl-svg svg="dialogue" wh=24 mr=sm:
+                      - $if line.hasBgm:
+                          - rtgl-svg svg="music" wh=24 mr=sm:
+                      - $if line.hasSfx:
+                          - rtgl-svg svg="audio" wh=24:
