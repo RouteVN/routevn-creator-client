@@ -37,7 +37,7 @@ export const handleCharacterItemClick = async (e, deps) => {
 };
 
 export const handleCharacterCreated = async (e, deps) => {
-  const { store, render, repository, subject } = deps;
+  const { store, render, repository } = deps;
   const { groupId, name, description, avatarFileId } = e.detail;
 
   try {
@@ -74,12 +74,8 @@ export const handleCharacterCreated = async (e, deps) => {
     render();
   } catch (error) {
     console.error("Failed to create character:", error);
-    // Notify user of the error
-    subject.dispatch("notification", {
-      type: "error",
-      message: "Failed to create character. Please try again.",
-    });
-    throw error; // Re-throw to prevent silent failure
+
+    throw error;
   }
 };
 

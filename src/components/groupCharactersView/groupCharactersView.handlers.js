@@ -44,7 +44,7 @@ export const handleAddCharacterClick = (e, deps) => {
   const groupId = e.currentTarget.id.replace("add-character-button-", "");
   store.setTargetGroupId(groupId);
 
-  // Toggle dialog open (form will auto-reset due to key attribute)
+  // Toggle dialog open
   store.toggleDialog();
   render();
 };
@@ -123,11 +123,6 @@ export const handleAvatarClick = async (e, deps) => {
     }
   } catch (error) {
     console.error("Error uploading avatar:", error);
-    // Notify user of the error
-    subject.dispatch("notification", {
-      type: "error",
-      message: "Failed to upload avatar image. Please try again.",
-    });
   }
 };
 
