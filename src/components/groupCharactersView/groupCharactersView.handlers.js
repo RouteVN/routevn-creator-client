@@ -70,12 +70,9 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail - it's in formValues
     const formData = e.detail.formValues;
 
-    // Get the target group ID and avatar file from store - access the internal state properly
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const targetGroupId = storeState.targetGroupId;
-    const avatarFile = storeState.selectedAvatarFile;
+    // Get the target group ID and avatar file from store
+    const targetGroupId = store.selectTargetGroupId();
+    const avatarFile = store.selectSelectedAvatarFile();
 
     // Forward character creation to parent with avatar file
     dispatchEvent(

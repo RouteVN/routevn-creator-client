@@ -81,6 +81,9 @@ export const clearFormState = (state) => {
   };
 };
 
+export const selectTargetGroupId = ({ state }) => state.targetGroupId;
+export const selectSelectedAvatarFile = ({ state }) => state.selectedAvatarFile;
+
 export const toViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase().trim();
