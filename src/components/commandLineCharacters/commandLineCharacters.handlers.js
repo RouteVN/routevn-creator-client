@@ -15,21 +15,12 @@ export const handleBeforeMount = (deps) => {
   let characterItems = null;
 
   if (props?.presentationState?.character?.items) {
-    console.log(
-      "[commandLineCharacters] Using presentationState for defaults:",
-      props.presentationState.character,
-    );
     characterItems = props.presentationState.character.items;
   } else if (props?.line?.presentation?.character?.items) {
-    console.log(
-      "[commandLineCharacters] Falling back to line.presentation for defaults:",
-      props.line.presentation.character,
-    );
     characterItems = props.line.presentation.character.items;
   }
 
   if (!characterItems) {
-    console.log("[commandLineCharacters] No existing character data found");
     return;
   }
 
@@ -95,17 +86,6 @@ export const handleTransformChange = (e, deps) => {
 
   // Extract index from ID (format: transform-{index})
   const index = parseInt(id.replace("transform-", ""));
-
-  console.log("[handleTransformChange] Transform change event:", {
-    id,
-    value,
-    index,
-    eventType: e.type,
-    detail: e.detail,
-    currentTarget: e.currentTarget,
-    target: e.target,
-    selectedCharacters: store.selectSelectedCharacters(),
-  });
 
   store.updateCharacterTransform({ index, transform: value });
   render();
