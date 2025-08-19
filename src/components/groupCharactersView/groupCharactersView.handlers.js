@@ -44,10 +44,7 @@ export const handleAddCharacterClick = (e, deps) => {
   const groupId = e.currentTarget.id.replace("add-character-button-", "");
   store.setTargetGroupId(groupId);
 
-  // Clear any previous form state
-  store.clearFormState();
-
-  // Toggle dialog open
+  // Toggle dialog open (form will auto-reset due to key attribute)
   store.toggleDialog();
   render();
 };
@@ -55,7 +52,8 @@ export const handleAddCharacterClick = (e, deps) => {
 export const handleCloseDialog = (e, deps) => {
   const { store, render } = deps;
 
-  // Close dialog
+  // Clear avatar state and close dialog
+  store.clearAvatarState();
   store.toggleDialog();
   render();
 };
@@ -88,8 +86,8 @@ export const handleFormActionClick = (e, deps) => {
       }),
     );
 
-    // Close dialog and clear state
-    store.clearFormState();
+    // Clear avatar state and close dialog (form will auto-reset due to key attribute)
+    store.clearAvatarState();
     store.toggleDialog();
     render();
   }

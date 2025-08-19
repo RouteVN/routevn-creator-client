@@ -81,6 +81,11 @@ export const clearFormState = (state) => {
   };
 };
 
+export const clearAvatarState = (state) => {
+  state.selectedAvatarFile = null;
+  state.avatarPreviewUrl = null;
+};
+
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 export const selectSelectedAvatarFile = ({ state }) => state.selectedAvatarFile;
 
