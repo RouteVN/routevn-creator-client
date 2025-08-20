@@ -348,6 +348,7 @@ export const handleAddTypographyClick = (e, deps) => {
 
   store.setTargetGroupId(groupId);
   store.clearEditMode();
+  store.resetFormValues(); // Reset form values for new typography
   store.toggleDialog();
   render();
 };
@@ -505,8 +506,8 @@ export const handleAddColorFormAction = (e, deps) => {
     const { colors } = repository.getState();
     store.setColorsData(colors);
 
-    // Set the new color as selected in the typography form
-    store.setNewColorIdToForm(newColorId);
+    // Don't update the form values - keep preview consistent with form state
+    // The user can manually select the new color from the dropdown
 
     // Close the add color dialog
     store.closeAddColorDialog();

@@ -206,10 +206,6 @@ export const updateNewColorData = (state, data) => {
   state.newColorData = { ...state.newColorData, ...data };
 };
 
-export const setNewColorIdToForm = (state, colorId) => {
-  state.currentFormValues.fontColor = colorId;
-};
-
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.typographyData);
@@ -218,7 +214,7 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const toViewData = ({ state, props }, payload) => {
+export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
   const flatGroups = toFlatGroups(state.typographyData);
 
