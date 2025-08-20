@@ -15,7 +15,7 @@ export const handleBeforeMount = (deps) => {
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
+export const handleDataChanged = (_, deps) => {
   const { store, render, repository } = deps;
   syncRepositoryToStore(store, repository);
   render();
@@ -131,10 +131,9 @@ export const handleTypographyItemClick = (e, deps) => {
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
     try {
-      const state = store.getState
-        ? store.getState()
-        : store._state || store.state;
-      const { colorsData, fontsData } = state;
+      // Use selectors instead of getState
+      const colorsData = store.selectColorsData();
+      const fontsData = store.selectFontsData();
 
       const previewImage = generateTypographyPreview(
         selectedItem,
@@ -295,10 +294,9 @@ export const handleFormChange = (e, deps) => {
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
     try {
-      const state = store.getState
-        ? store.getState()
-        : store._state || store.state;
-      const { colorsData, fontsData } = state;
+      // Use selectors instead of getState
+      const colorsData = store.selectColorsData();
+      const fontsData = store.selectFontsData();
 
       const previewImage = generateTypographyPreview(
         selectedItem,
@@ -324,7 +322,7 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = (e, deps) => {
+export const handleFormExtraEvent = (_, deps) => {
   const { store, render } = deps;
 
   // Handle typography preview click
@@ -348,6 +346,7 @@ export const handleAddTypographyClick = (e, deps) => {
 
   store.setTargetGroupId(groupId);
   store.clearEditMode();
+  store.resetFormValues(); // Reset form values for new typography
   store.toggleDialog();
   render();
 };
@@ -386,10 +385,18 @@ export const handleCloseDialog = (e, deps) => {
 };
 
 export const handleFormActionClick = (e, deps) => {
-  const { store, render, dispatchEvent, repository } = deps;
+  const { store, render } = deps;
 
   // Check which button was clicked
   const actionId = e.detail.actionId;
+
+  // Handle add option for color selector
+  if (actionId === "select-options-add" && e.detail.name === "fontColor") {
+    // Open the add color dialog
+    store.openAddColorDialog();
+    render();
+    return;
+  }
 
   if (actionId === "submit") {
     // Get form values from the event detail
@@ -459,6 +466,48 @@ export const handleFormActionClick = (e, deps) => {
     store.resetFormValues();
     store.clearEditMode();
     store.toggleDialog();
+    render();
+  }
+};
+
+// Add color dialog handlers
+export const handleAddColorDialogClose = (_, deps) => {
+  const { store, render } = deps;
+  store.closeAddColorDialog();
+  render();
+};
+
+export const handleAddColorFormAction = (e, deps) => {
+  const { store, render, repository } = deps;
+
+  if (e.detail.actionId === "submit") {
+    const formData = e.detail.formValues;
+    const newColorId = nanoid();
+
+    // Create the color in the repository
+    repository.addAction({
+      actionType: "treePush",
+      target: "colors",
+      value: {
+        parent: formData.folderId || "_root",
+        position: "last",
+        item: {
+          id: newColorId,
+          type: "color",
+          name: formData.name,
+          hex: formData.hex,
+        },
+      },
+    });
+
+    // Sync repository to store to ensure all data is updated
+    syncRepositoryToStore(store, repository);
+
+    // Don't update the form values - keep preview consistent with form state
+    // The user can manually select the new color from the dropdown
+
+    // Close the add color dialog
+    store.closeAddColorDialog();
     render();
   }
 };
