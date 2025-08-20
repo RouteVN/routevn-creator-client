@@ -287,6 +287,10 @@ if (actionStream.length === 0) {
     colors: templateData.colors,
     typography: templateData.typography,
     layouts: templateData.layouts,
+    scenes: templateData.scenes,
+    audio: templateData.audio,
+    videos: templateData.videos,
+    characters: templateData.characters,
   };
 
   // Use the new init action to set all template data at once

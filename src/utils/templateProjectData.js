@@ -423,10 +423,10 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
           type: "container",
           name: "Choice Container",
           x: 960,
-          y: 540,
+          y: 400,
           width: 1920,
           height: 1080,
-          anchorX: 0,
+          anchorX: 0.5,
           anchorY: 0.5,
           scaleX: 1,
           scaleY: 1,
@@ -654,6 +654,46 @@ const createTemplateTypography = (fontFileIds = {}) => {
   };
 };
 
+// Template Scenes with default Prologue scene
+export const templateScenes = {
+  tree: [
+    {
+      id: "default-scenes-folder",
+      children: [{ id: "scene-prologue" }],
+    },
+  ],
+  items: {
+    "default-scenes-folder": {
+      type: "folder",
+      name: "Scenes",
+    },
+    "scene-prologue": {
+      type: "scene",
+      name: "Prologue",
+      sections: {
+        items: {},
+        tree: [],
+      },
+    },
+  },
+};
+
+// Template structure for pages with empty folders
+export const createEmptyPageStructure = (pageName) => ({
+  tree: [
+    {
+      id: `default-${pageName}-folder`,
+      children: [],
+    },
+  ],
+  items: {
+    [`default-${pageName}-folder`]: {
+      type: "folder",
+      name: "Default " + pageName.charAt(0).toUpperCase() + pageName.slice(1),
+    },
+  },
+});
+
 // Function to create template project data
 export const createTemplateProjectData = (
   imageFileIds = {},
@@ -665,4 +705,8 @@ export const createTemplateProjectData = (
   colors: templateColors,
   fonts: createTemplateFonts(),
   typography: createTemplateTypography(fontFileIds),
+  scenes: templateScenes,
+  audio: createEmptyPageStructure("audio"),
+  videos: createEmptyPageStructure("videos"),
+  characters: createEmptyPageStructure("characters"),
 });
