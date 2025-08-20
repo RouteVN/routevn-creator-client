@@ -131,10 +131,9 @@ export const handleTypographyItemClick = (e, deps) => {
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
     try {
-      const state = store.getState
-        ? store.getState()
-        : store._state || store.state;
-      const { colorsData, fontsData } = state;
+      // Use selectors instead of getState
+      const colorsData = store.selectColorsData();
+      const fontsData = store.selectFontsData();
 
       const previewImage = generateTypographyPreview(
         selectedItem,
@@ -295,10 +294,9 @@ export const handleFormChange = (e, deps) => {
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
     try {
-      const state = store.getState
-        ? store.getState()
-        : store._state || store.state;
-      const { colorsData, fontsData } = state;
+      // Use selectors instead of getState
+      const colorsData = store.selectColorsData();
+      const fontsData = store.selectFontsData();
 
       const previewImage = generateTypographyPreview(
         selectedItem,
@@ -502,9 +500,8 @@ export const handleAddColorFormAction = (e, deps) => {
       },
     });
 
-    // Update the colors data in the store
-    const { colors } = repository.getState();
-    store.setColorsData(colors);
+    // Sync repository to store to ensure all data is updated
+    syncRepositoryToStore(store, repository);
 
     // Don't update the form values - keep preview consistent with form state
     // The user can manually select the new color from the dropdown

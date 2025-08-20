@@ -214,6 +214,10 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectColorsData = ({ state }) => state.colorsData;
+
+export const selectFontsData = ({ state }) => state.fontsData;
+
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
   const flatGroups = toFlatGroups(state.typographyData);
