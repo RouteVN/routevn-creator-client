@@ -40,7 +40,8 @@ export const toViewData = ({ state, props }, payload) => {
 
   const getColorHex = (colorId) => {
     if (!colorId) return "#000000";
-    const color = toFlatItems(state.colorsData)
+    // Use props.colorsData instead of state.colorsData to get live updates
+    const color = toFlatItems(props.colorsData || state.colorsData)
       .filter((item) => item.type === "color")
       .find((color) => color.id === colorId);
     return color ? color.hex : "#000000";
@@ -48,7 +49,8 @@ export const toViewData = ({ state, props }, payload) => {
 
   const getFontData = (fontId) => {
     if (!fontId) return { fontFamily: null, fileId: null };
-    const font = toFlatItems(state.fontsData)
+    // Use props.fontsData instead of state.fontsData to get live updates
+    const font = toFlatItems(props.fontsData || state.fontsData)
       .filter((item) => item.type === "font")
       .find((font) => font.id === fontId);
     return font

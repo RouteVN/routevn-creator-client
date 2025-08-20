@@ -1,5 +1,45 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
+// Helper function to create add color form
+const createAddColorForm = (colorFolderOptions) => ({
+  title: "Add New Color",
+  description: "Create a new color for typography",
+  fields: [
+    {
+      name: "name",
+      inputType: "inputText",
+      label: "Color Name",
+      description: "Enter the color name",
+      required: true,
+    },
+    {
+      name: "hex",
+      inputType: "colorPicker",
+      label: "Hex Value",
+      description: "Choose or enter a hex color value",
+      required: true,
+    },
+    {
+      name: "folderId",
+      inputType: "select",
+      label: "Folder",
+      description: "Choose where to save the color",
+      options: colorFolderOptions,
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Color",
+      },
+    ],
+  },
+});
+
 const form = {
   fields: [
     {
@@ -49,6 +89,14 @@ export const INITIAL_STATE = Object.freeze({
   targetGroupId: null,
   editMode: false,
   editingItemId: null,
+
+  // Add color dialog state
+  isAddColorDialogOpen: false,
+  newColorData: {
+    name: "",
+    hex: "#ff0000",
+    folderId: "_root",
+  },
 
   // Form values for preview
   currentFormValues: {
@@ -140,6 +188,24 @@ export const setFormValuesFromItem = (state, item) => {
   };
 };
 
+// Add color dialog management
+export const openAddColorDialog = (state) => {
+  state.isAddColorDialogOpen = true;
+};
+
+export const closeAddColorDialog = (state) => {
+  state.isAddColorDialogOpen = false;
+  state.newColorData = {
+    name: "",
+    hex: "#ff0000",
+    folderId: "_root",
+  };
+};
+
+export const updateNewColorData = (state, data) => {
+  state.newColorData = { ...state.newColorData, ...data };
+};
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.typographyData);
@@ -148,7 +214,11 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectColorsData = ({ state }) => state.colorsData;
+
+export const selectFontsData = ({ state }) => state.fontsData;
+
+export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
   const flatGroups = toFlatGroups(state.typographyData);
 
@@ -204,7 +274,6 @@ export const toViewData = ({ state, props }, payload) => {
     ? toFlatItems(state.colorsData)
         .filter((item) => item.type === "color")
         .map((color) => ({
-          id: color.id,
           label: color.name,
           value: color.id,
         }))
@@ -215,11 +284,21 @@ export const toViewData = ({ state, props }, payload) => {
     ? toFlatItems(state.fontsData)
         .filter((item) => item.type === "font")
         .map((font) => ({
-          id: font.id,
           label: font.fontFamily,
           value: font.id,
         }))
     : [];
+
+  // Generate folder options for add color dialog
+  const colorFolderOptions = [
+    { value: "_root", label: "Root Folder" },
+    ...toFlatItems(state.colorsData)
+      .filter((item) => item.type === "folder")
+      .map((folder) => ({
+        value: folder.id,
+        label: folder.name || folder.id,
+      })),
+  ];
 
   // Get editing item data if in edit mode
   const editingItem =
@@ -248,6 +327,7 @@ export const toViewData = ({ state, props }, payload) => {
         label: "Color",
         placeholder: "Choose a color",
         options: colorOptions,
+        addOption: { label: "Add new color" },
         required: true,
       },
       {
@@ -283,15 +363,15 @@ export const toViewData = ({ state, props }, payload) => {
         label: "Font Weight",
         placeholder: "Choose font weight",
         options: [
-          { id: "100", label: "100 - Thin", value: "100" },
-          { id: "200", label: "200 - Extra Light", value: "200" },
-          { id: "300", label: "300 - Light", value: "300" },
-          { id: "400", label: "400 - Normal", value: "400" },
-          { id: "500", label: "500 - Medium", value: "500" },
-          { id: "600", label: "600 - Semi Bold", value: "600" },
-          { id: "700", label: "700 - Bold", value: "700" },
-          { id: "800", label: "800 - Extra Bold", value: "800" },
-          { id: "900", label: "900 - Black", value: "900" },
+          { label: "100 - Thin", value: "100" },
+          { label: "200 - Extra Light", value: "200" },
+          { label: "300 - Light", value: "300" },
+          { label: "400 - Normal", value: "400" },
+          { label: "500 - Medium", value: "500" },
+          { label: "600 - Semi Bold", value: "600" },
+          { label: "700 - Bold", value: "700" },
+          { label: "800 - Extra Bold", value: "800" },
+          { label: "900 - Black", value: "900" },
         ],
         required: true,
       },
@@ -327,6 +407,9 @@ export const toViewData = ({ state, props }, payload) => {
           previewText: editingItem.previewText,
         }
       : state.defaultValues;
+
+  // Add color dialog form
+  const addColorForm = createAddColorForm(colorFolderOptions);
 
   // Get preview values based on current form values
   const getPreviewColor = () => {
@@ -400,6 +483,11 @@ export const toViewData = ({ state, props }, payload) => {
     dialogForm: dialogForm,
     dialogDefaultValues: dialogDefaultValues,
     formKey: state.editMode ? `edit-${state.editingItemId}` : "add-typography",
+
+    // Add color dialog data
+    isAddColorDialogOpen: state.isAddColorDialogOpen,
+    addColorForm: addColorForm,
+    addColorDefaultValues: state.newColorData,
 
     // Preview values for dialog
     previewText: state.currentFormValues.previewText,

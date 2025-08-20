@@ -39,6 +39,14 @@ refs:
         handler: handleFormActionClick
       form-change:
         handler: handleDialogFormChange
+  add-color-dialog:
+    eventListeners:
+      close:
+        handler: handleAddColorDialogClose
+  add-color-form:
+    eventListeners:
+      action-click:
+        handler: handleAddColorFormAction
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -66,3 +74,7 @@ template:
         - rtgl-text s=lg fw=b mb=md: Preview
         - $if isDialogOpen:
           - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
+
+  - rtgl-dialog#add-color-dialog ?open=${isAddColorDialogOpen} s=sm:
+    - $if isAddColorDialogOpen:
+      - rtgl-form#add-color-form slot=content .defaultValues=addColorDefaultValues .form=addColorForm w=f:
