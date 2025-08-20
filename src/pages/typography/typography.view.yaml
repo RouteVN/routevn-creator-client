@@ -76,4 +76,5 @@ template:
           - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
 
   - rtgl-dialog#add-color-dialog ?open=${isAddColorDialogOpen} s=sm:
-    - rtgl-form#add-color-form slot=content .defaultValues=addColorDefaultValues .form=addColorForm w=f:
+    - $if isAddColorDialogOpen:
+      - rtgl-form#add-color-form slot=content .defaultValues=addColorDefaultValues .form=addColorForm w=f:
