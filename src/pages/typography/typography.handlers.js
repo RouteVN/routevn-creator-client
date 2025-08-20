@@ -370,17 +370,6 @@ export const handleTypographyItemDoubleClick = (e, deps) => {
 export const handleDialogFormChange = (e, deps) => {
   const { store, render } = deps;
 
-  // Check if "Add..." was selected in the color dropdown
-  if (
-    e.detail.name === "fontColor" &&
-    e.detail.fieldValue === "__add_new_color__"
-  ) {
-    // Open the add color dialog
-    store.openAddColorDialog();
-    render();
-    return;
-  }
-
   // Update form values for preview
   store.updateFormValues(e.detail.formValues);
   render();
@@ -397,10 +386,18 @@ export const handleCloseDialog = (e, deps) => {
 };
 
 export const handleFormActionClick = (e, deps) => {
-  const { store, render, dispatchEvent, repository } = deps;
+  const { store, render, repository } = deps;
 
   // Check which button was clicked
   const actionId = e.detail.actionId;
+
+  // Handle add option for color selector
+  if (actionId === "select-options-add" && e.detail.name === "fontColor") {
+    // Open the add color dialog
+    store.openAddColorDialog();
+    render();
+    return;
+  }
 
   if (actionId === "submit") {
     // Get form values from the event detail
@@ -421,12 +418,6 @@ export const handleFormActionClick = (e, deps) => {
       !formData.fontWeight
     ) {
       alert("Please fill in all required fields");
-      return;
-    }
-
-    // Don't allow "__add_new_color__" as a valid color selection
-    if (formData.fontColor === "__add_new_color__") {
-      alert("Please select a valid color or add a new one");
       return;
     }
 
@@ -481,7 +472,7 @@ export const handleFormActionClick = (e, deps) => {
 };
 
 // Add color dialog handlers
-export const handleAddColorDialogClose = (e, deps) => {
+export const handleAddColorDialogClose = (_, deps) => {
   const { store, render } = deps;
   store.closeAddColorDialog();
   render();

@@ -229,29 +229,16 @@ export const toViewData = ({ state, props }, payload) => {
     return { fontFamily: font.fontFamily, fileId: font.fileId };
   };
 
-  // Generate color options for dialog form with "Add..." option
+  // Generate color options for dialog form
   const colorOptions = state.colorsData
-    ? [
-        ...toFlatItems(state.colorsData)
-          .filter((item) => item.type === "color")
-          .map((color) => ({
-            id: color.id,
-            label: color.name,
-            value: color.id,
-          })),
-        {
-          id: "__add_new_color__",
-          label: "Add...",
-          value: "__add_new_color__",
-        },
-      ]
-    : [
-        {
-          id: "__add_new_color__",
-          label: "Add...",
-          value: "__add_new_color__",
-        },
-      ];
+    ? toFlatItems(state.colorsData)
+        .filter((item) => item.type === "color")
+        .map((color) => ({
+          id: color.id,
+          label: color.name,
+          value: color.id,
+        }))
+    : [];
 
   // Generate font options for dialog form
   const fontOptions = state.fontsData
@@ -304,6 +291,7 @@ export const toViewData = ({ state, props }, payload) => {
         label: "Color",
         placeholder: "Choose a color",
         options: colorOptions,
+        addOption: { label: "Add new color" },
         required: true,
       },
       {
@@ -427,7 +415,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Get preview values based on current form values
   const getPreviewColor = () => {
     const colorId = state.currentFormValues.fontColor;
-    if (!colorId || colorId === "__add_new_color__") return null;
+    if (!colorId) return null;
     try {
       return getColorHex(colorId);
     } catch (error) {
