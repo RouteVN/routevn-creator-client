@@ -15,7 +15,7 @@ export const handleBeforeMount = (deps) => {
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
+export const handleDataChanged = (_, deps) => {
   const { store, render, repository } = deps;
   syncRepositoryToStore(store, repository);
   render();
@@ -324,7 +324,7 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = (e, deps) => {
+export const handleFormExtraEvent = (_, deps) => {
   const { store, render } = deps;
 
   // Handle typography preview click
@@ -386,7 +386,7 @@ export const handleCloseDialog = (e, deps) => {
 };
 
 export const handleFormActionClick = (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render } = deps;
 
   // Check which button was clicked
   const actionId = e.detail.actionId;
