@@ -50,6 +50,14 @@ export const INITIAL_STATE = Object.freeze({
   editMode: false,
   editingItemId: null,
 
+  // Add color dialog state
+  isAddColorDialogOpen: false,
+  newColorData: {
+    name: "",
+    hex: "#ff0000",
+    folderId: "_root",
+  },
+
   // Form values for preview
   currentFormValues: {
     name: "",
@@ -140,6 +148,28 @@ export const setFormValuesFromItem = (state, item) => {
   };
 };
 
+// Add color dialog management
+export const openAddColorDialog = (state) => {
+  state.isAddColorDialogOpen = true;
+};
+
+export const closeAddColorDialog = (state) => {
+  state.isAddColorDialogOpen = false;
+  state.newColorData = {
+    name: "",
+    hex: "#ff0000",
+    folderId: "_root",
+  };
+};
+
+export const updateNewColorData = (state, data) => {
+  state.newColorData = { ...state.newColorData, ...data };
+};
+
+export const setNewColorIdToForm = (state, colorId) => {
+  state.currentFormValues.fontColor = colorId;
+};
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.typographyData);
@@ -199,16 +229,29 @@ export const toViewData = ({ state, props }, payload) => {
     return { fontFamily: font.fontFamily, fileId: font.fileId };
   };
 
-  // Generate color options for dialog form
+  // Generate color options for dialog form with "Add..." option
   const colorOptions = state.colorsData
-    ? toFlatItems(state.colorsData)
-        .filter((item) => item.type === "color")
-        .map((color) => ({
-          id: color.id,
-          label: color.name,
-          value: color.id,
-        }))
-    : [];
+    ? [
+        ...toFlatItems(state.colorsData)
+          .filter((item) => item.type === "color")
+          .map((color) => ({
+            id: color.id,
+            label: color.name,
+            value: color.id,
+          })),
+        {
+          id: "__add_new_color__",
+          label: "Add...",
+          value: "__add_new_color__",
+        },
+      ]
+    : [
+        {
+          id: "__add_new_color__",
+          label: "Add...",
+          value: "__add_new_color__",
+        },
+      ];
 
   // Generate font options for dialog form
   const fontOptions = state.fontsData
@@ -220,6 +263,19 @@ export const toViewData = ({ state, props }, payload) => {
           value: font.id,
         }))
     : [];
+
+  // Generate folder options for add color dialog
+  const colorFolderOptions = [
+    { id: "_root", name: "Root Folder", value: "_root", label: "Root Folder" },
+    ...toFlatItems(state.colorsData)
+      .filter((item) => item.type === "folder")
+      .map((folder) => ({
+        id: folder.id,
+        name: folder.name || folder.id,
+        value: folder.id,
+        label: folder.name || folder.id,
+      })),
+  ];
 
   // Get editing item data if in edit mode
   const editingItem =
@@ -328,10 +384,50 @@ export const toViewData = ({ state, props }, payload) => {
         }
       : state.defaultValues;
 
+  // Add color dialog form
+  const addColorForm = {
+    title: "Add New Color",
+    description: "Create a new color for typography",
+    fields: [
+      {
+        name: "name",
+        inputType: "inputText",
+        label: "Color Name",
+        description: "Enter the color name",
+        required: true,
+      },
+      {
+        name: "hex",
+        inputType: "colorPicker",
+        label: "Hex Value",
+        description: "Choose or enter a hex color value",
+        required: true,
+      },
+      {
+        name: "folderId",
+        inputType: "select",
+        label: "Folder",
+        description: "Choose where to save the color",
+        options: colorFolderOptions,
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Add Color",
+        },
+      ],
+    },
+  };
+
   // Get preview values based on current form values
   const getPreviewColor = () => {
     const colorId = state.currentFormValues.fontColor;
-    if (!colorId) return null;
+    if (!colorId || colorId === "__add_new_color__") return null;
     try {
       return getColorHex(colorId);
     } catch (error) {
@@ -400,6 +496,11 @@ export const toViewData = ({ state, props }, payload) => {
     dialogForm: dialogForm,
     dialogDefaultValues: dialogDefaultValues,
     formKey: state.editMode ? `edit-${state.editingItemId}` : "add-typography",
+
+    // Add color dialog data
+    isAddColorDialogOpen: state.isAddColorDialogOpen,
+    addColorForm: addColorForm,
+    addColorDefaultValues: state.newColorData,
 
     // Preview values for dialog
     previewText: state.currentFormValues.previewText,

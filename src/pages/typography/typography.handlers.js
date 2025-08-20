@@ -370,6 +370,17 @@ export const handleTypographyItemDoubleClick = (e, deps) => {
 export const handleDialogFormChange = (e, deps) => {
   const { store, render } = deps;
 
+  // Check if "Add..." was selected in the color dropdown
+  if (
+    e.detail.name === "fontColor" &&
+    e.detail.fieldValue === "__add_new_color__"
+  ) {
+    // Open the add color dialog
+    store.openAddColorDialog();
+    render();
+    return;
+  }
+
   // Update form values for preview
   store.updateFormValues(e.detail.formValues);
   render();
@@ -410,6 +421,12 @@ export const handleFormActionClick = (e, deps) => {
       !formData.fontWeight
     ) {
       alert("Please fill in all required fields");
+      return;
+    }
+
+    // Don't allow "__add_new_color__" as a valid color selection
+    if (formData.fontColor === "__add_new_color__") {
+      alert("Please select a valid color or add a new one");
       return;
     }
 
@@ -459,6 +476,49 @@ export const handleFormActionClick = (e, deps) => {
     store.resetFormValues();
     store.clearEditMode();
     store.toggleDialog();
+    render();
+  }
+};
+
+// Add color dialog handlers
+export const handleAddColorDialogClose = (e, deps) => {
+  const { store, render } = deps;
+  store.closeAddColorDialog();
+  render();
+};
+
+export const handleAddColorFormAction = (e, deps) => {
+  const { store, render, repository } = deps;
+
+  if (e.detail.actionId === "submit") {
+    const formData = e.detail.formValues;
+    const newColorId = nanoid();
+
+    // Create the color in the repository
+    repository.addAction({
+      actionType: "treePush",
+      target: "colors",
+      value: {
+        parent: formData.folderId || "_root",
+        position: "last",
+        item: {
+          id: newColorId,
+          type: "color",
+          name: formData.name,
+          hex: formData.hex,
+        },
+      },
+    });
+
+    // Update the colors data in the store
+    const { colors } = repository.getState();
+    store.setColorsData(colors);
+
+    // Set the new color as selected in the typography form
+    store.setNewColorIdToForm(newColorId);
+
+    // Close the add color dialog
+    store.closeAddColorDialog();
     render();
   }
 };
