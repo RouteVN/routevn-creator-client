@@ -156,12 +156,13 @@ template:
   - rtgl-dialog#add-animation-dialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h g=md:
           - rtgl-view flex=5:
-              - rtgl-form#animation-form .defaultValues=defaultValues .form=form w=f:
-              - rtgl-view d=h g=md av=c mb=md:
-                  - $if addPropertyButtonVisible:
-                      - rtgl-button#add-properties-button v=se s=sm: Add Properties
+              - rtgl-form#animation-form key=${isDialogOpen} .defaultValues=defaultValues .form=form w=f:
+                  - rtgl-view slot=timeline w=f:
+                      - rvn-keyframe-timeline#dialog-timeline editable=true .properties=properties:
+                      - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
+                          - $if addPropertyButtonVisible:
+                              - rtgl-button#add-properties-button w=f v=se s=sm: + Add animation property
               - rtgl-view h=128:
-              - rvn-keyframe-timeline#dialog-timeline editable=true .properties=properties:
 
           - rtgl-view flex=5:
               - rtgl-view d=h av=c ah=sb mb=md:
@@ -175,7 +176,7 @@ template:
               - $if popover.mode == 'addProperty':
                   - rtgl-form#add-property-form slot=content .form=addPropertyForm .context=addPropertyContext:
               - $if popover.mode == 'addKeyframe':
-                  - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm:
+                  - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm .defaultValues=addKeyframeDefaultValues:
               - $if popover.mode == 'editKeyframe':
                   - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm .defaultValues=editKeyframeDefaultValues:
               - $if popover.mode == 'editInitialValue':
