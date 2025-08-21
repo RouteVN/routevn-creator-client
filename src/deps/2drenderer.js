@@ -54,5 +54,8 @@ export const create2dRenderer = async () => {
       }
       app.destroy();
     },
+    getStageElementBounds: () => {
+      return app.getStageElementBounds();
+    }
   };
 };

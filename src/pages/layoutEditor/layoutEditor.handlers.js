@@ -6,6 +6,51 @@ import {
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
+// Calculate absolute position by traversing the hierarchy
+const calculateAbsolutePosition = (
+  elements,
+  targetId,
+  parentX = 0,
+  parentY = 0,
+) => {
+  for (const element of elements) {
+    if (element.id === targetId) {
+      // Simple absolute position: parent position + element relative position
+      const absoluteX = parentX + element.x;
+      const absoluteY = parentY + element.y;
+
+      let startX = absoluteX - (element.width ?? 0) * (element.anchorX ?? 0);
+      let startY = absoluteY - (element.height ?? 0) * (element.anchorY ?? 0);
+
+      return {
+        x: absoluteX,
+        y: absoluteY,
+        width: element.width,
+        height: element.height,
+        startX,
+        startY,
+      };
+    }
+
+    if (element.children && element.children.length > 0) {
+      // Container's absolute position for its children
+      const containerAbsoluteX = parentX + element.x;
+      const containerAbsoluteY = parentY + element.y;
+
+      const found = calculateAbsolutePosition(
+        element.children,
+        targetId,
+        containerAbsoluteX,
+        containerAbsoluteY,
+      );
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+
+
 const renderLayoutPreview = async (deps) => {
   const { store, repository, drenderer, getFileContent } = deps;
   const layoutId = store.selectLayoutId();
@@ -84,71 +129,8 @@ const renderLayoutPreview = async (deps) => {
   let elementsToRender = renderStateElements;
 
   if (selectedItem) {
-    // Calculate absolute position by traversing the hierarchy
-    const calculateAbsolutePosition = (
-      elements,
-      targetId,
-      parentX = 0,
-      parentY = 0,
-    ) => {
-      for (const element of elements) {
-        if (element.id === targetId) {
-          // Simple absolute position: parent position + element relative position
-          const absoluteX = parentX + element.x;
-          const absoluteY = parentY + element.y;
 
-          return { x: absoluteX, y: absoluteY, element };
-        }
 
-        if (element.children && element.children.length > 0) {
-          // Container's absolute position for its children
-          const containerAbsoluteX = parentX + element.x;
-          const containerAbsoluteY = parentY + element.y;
-
-          const found = calculateAbsolutePosition(
-            element.children,
-            targetId,
-            containerAbsoluteX,
-            containerAbsoluteY,
-          );
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const result = calculateAbsolutePosition(
-      renderStateElements,
-      selectedItem.id,
-    );
-
-    if (result) {
-      const redDot = {
-        id: "selected-anchor",
-        type: "rect",
-        x: result.x - 12,
-        y: result.y - 12,
-        width: 25,
-        height: 25,
-        fill: "red",
-      };
-
-      // Wrap red dot in a container to ensure it's on top
-      const redDotContainer = {
-        id: "red-dot-container",
-        type: "container",
-        x: 0,
-        y: 0,
-        width: 1920,
-        height: 1080,
-        anchorX: 0,
-        anchorY: 0,
-        children: [redDot],
-      };
-
-      // Add container as the LAST top-level element
-      elementsToRender = [...renderStateElements, redDotContainer];
-    }
   }
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
@@ -168,6 +150,64 @@ const renderLayoutPreview = async (deps) => {
     elements: finalElements,
     transitions: [],
   });
+
+  setTimeout(() => {
+    const bounds = drenderer.getStageElementBounds();
+    console.log('bounds', bounds);
+    const result = calculateAbsolutePosition(
+      renderStateElements,
+      selectedItem.id,
+    );
+
+    if (result) {
+      const redDot = {
+        id: "selected-anchor",
+        type: "rect",
+        x: result.x - 12,
+        y: result.y - 12,
+        width: 25,
+        height: 25,
+        fill: "red",
+      };
+
+      const border = {
+        id: 'selected-border',
+        type: "rect",
+        x: bounds[selectedItem.id].x,
+        y: bounds[selectedItem.id].y,
+        // x: result.startX ?? 0,
+        // y: result.startY ?? 0,
+        fill: 'transparent',
+        width: result.width ?? 0,
+        height: result.height ?? 0,
+        border: {
+          color: 'red',
+          width: 2,
+          alpha: 1
+        }
+      }
+
+      // Wrap red dot in a container to ensure it's on top
+      const redDotContainer = {
+        id: "red-dot-container",
+        type: "container",
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080,
+        anchorX: 0,
+        anchorY: 0,
+        children: [redDot, border],
+      };
+
+      // Add container as the LAST top-level element
+
+      drenderer.render({
+        elements: [...finalElements, redDotContainer],
+        transitions: [],
+      });
+    }
+  }, 100)
 };
 
 export const handleBeforeMount = (deps) => {
