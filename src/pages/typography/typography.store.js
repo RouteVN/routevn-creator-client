@@ -40,6 +40,39 @@ const createAddColorForm = (colorFolderOptions) => ({
   },
 });
 
+// Helper function to create add font form
+const createAddFontForm = (fontFolderOptions) => ({
+  title: "Add New Font",
+  description: "Upload a new font for typography",
+  fields: [
+    {
+      name: "folderId",
+      inputType: "select",
+      label: "Folder",
+      description: "Choose where to save the font",
+      options: fontFolderOptions,
+      required: true,
+    },
+    {
+      slot: "font-upload",
+      inputType: "slot",
+      label: "Font File",
+      description: "Click or drag and drop a font file here",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Font",
+      },
+    ],
+  },
+});
+
 const form = {
   fields: [
     {
@@ -95,6 +128,16 @@ export const INITIAL_STATE = Object.freeze({
   newColorData: {
     name: "",
     hex: "#ff0000",
+    folderId: "_root",
+  },
+
+  // Add font dialog state
+  isAddFontDialogOpen: false,
+  selectedFontFile: null,
+  hasSelectedFont: false,
+  selectedFontFileName: "",
+  dragDropText: "Click or drag font file here",
+  newFontData: {
     folderId: "_root",
   },
 
@@ -206,6 +249,42 @@ export const updateNewColorData = (state, data) => {
   state.newColorData = { ...state.newColorData, ...data };
 };
 
+// Add font dialog management
+export const openAddFontDialog = (state) => {
+  state.isAddFontDialogOpen = true;
+};
+
+export const closeAddFontDialog = (state) => {
+  state.isAddFontDialogOpen = false;
+  state.selectedFontFile = null;
+  state.hasSelectedFont = false;
+  state.selectedFontFileName = "";
+  state.dragDropText = "Click or drag font file here";
+  state.newFontData = {
+    folderId: "_root",
+  };
+};
+
+export const updateNewFontData = (state, data) => {
+  state.newFontData = { ...state.newFontData, ...data };
+};
+
+export const setSelectedFontFile = (state, data) => {
+  state.selectedFontFile = data.file;
+  state.hasSelectedFont = true;
+  state.selectedFontFileName = data.fileName;
+  state.selectedFontUploadResult = data.uploadResult;
+  state.dragDropText = "Replace font file";
+};
+
+export const clearSelectedFontFile = (state) => {
+  state.selectedFontFile = null;
+  state.hasSelectedFont = false;
+  state.selectedFontFileName = "";
+  state.selectedFontUploadResult = null;
+  state.dragDropText = "Drop font file here or click to browse";
+};
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.typographyData);
@@ -217,6 +296,22 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 export const selectColorsData = ({ state }) => state.colorsData;
 
 export const selectFontsData = ({ state }) => state.fontsData;
+
+export const selectTypographyData = ({ state }) => state.typographyData;
+
+export const selectDialogState = ({ state }) => ({
+  targetGroupId: state.targetGroupId,
+  editMode: state.editMode,
+  editingItemId: state.editingItemId,
+});
+
+export const selectSelectedFontFile = ({ state }) => state.selectedFontFile;
+
+export const selectSelectedFontData = ({ state }) => ({
+  file: state.selectedFontFile,
+  fileName: state.selectedFontFileName,
+  uploadResult: state.selectedFontUploadResult,
+});
 
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
@@ -300,6 +395,17 @@ export const toViewData = ({ state }) => {
       })),
   ];
 
+  // Generate folder options for add font dialog
+  const fontFolderOptions = [
+    { value: "_root", label: "Root Folder" },
+    ...toFlatItems(state.fontsData)
+      .filter((item) => item.type === "folder")
+      .map((folder) => ({
+        value: folder.id,
+        label: folder.name || folder.id,
+      })),
+  ];
+
   // Get editing item data if in edit mode
   const editingItem =
     state.editMode && state.editingItemId
@@ -336,6 +442,7 @@ export const toViewData = ({ state }) => {
         label: "Font Style",
         placeholder: "Choose a font",
         options: fontOptions,
+        addOption: { label: "Add new font" },
         required: true,
       },
       {
@@ -410,6 +517,9 @@ export const toViewData = ({ state }) => {
 
   // Add color dialog form
   const addColorForm = createAddColorForm(colorFolderOptions);
+
+  // Add font dialog form
+  const addFontForm = createAddFontForm(fontFolderOptions);
 
   // Get preview values based on current form values
   const getPreviewColor = () => {
@@ -488,6 +598,16 @@ export const toViewData = ({ state }) => {
     isAddColorDialogOpen: state.isAddColorDialogOpen,
     addColorForm: addColorForm,
     addColorDefaultValues: state.newColorData,
+
+    // Add font dialog data
+    isAddFontDialogOpen: state.isAddFontDialogOpen,
+    addFontForm: addFontForm,
+    addFontDefaultValues: state.newFontData,
+    selectedFontFile: state.selectedFontFile,
+    hasSelectedFont: state.hasSelectedFont,
+    selectedFontFileName: state.selectedFontFileName,
+    dragDropText: state.dragDropText,
+    fontFileTypes: [".ttf", ".otf", ".woff", ".woff2"],
 
     // Preview values for dialog
     previewText: state.currentFormValues.previewText,

@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
+import { getFileType } from "../../utils/getFileType";
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = (store, repository) => {
@@ -160,15 +161,12 @@ export const handleTypographyItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, fileManager, uploadImageFiles, repository } = deps;
+  const { store, render, uploadFontFiles, repository } = deps;
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Use fileManager if available, otherwise fall back to uploadImageFiles
-  const uploader = fileManager || { upload: uploadImageFiles };
-
-  // Upload all files
-  const uploadResults = await uploader.upload(files, "someprojectId");
+  // Upload all files using uploadFontFiles
+  const uploadResults = await uploadFontFiles(files, "someprojectId");
 
   // uploadResults already contains only successful uploads
   const successfulUploads = uploadResults;
@@ -327,7 +325,8 @@ export const handleFormExtraEvent = (_, deps) => {
 
   // Handle typography preview click
   const selectedItemId = store.selectSelectedItemId();
-  const flatItems = toFlatItems(store.getState().typographyData);
+  const typographyData = store.selectTypographyData();
+  const flatItems = toFlatItems(typographyData);
   const selectedItem = flatItems.find((item) => item.id === selectedItemId);
 
   if (selectedItem) {
@@ -374,7 +373,7 @@ export const handleDialogFormChange = (e, deps) => {
   render();
 };
 
-export const handleCloseDialog = (e, deps) => {
+export const handleCloseDialog = (_, deps) => {
   const { store, render } = deps;
 
   // Reset form values, clear edit mode, and close dialog
@@ -398,15 +397,21 @@ export const handleFormActionClick = (e, deps) => {
     return;
   }
 
+  // Handle add option for font selector
+  if (actionId === "select-options-add" && e.detail.name === "fontStyle") {
+    // Open the add font dialog
+    store.openAddFontDialog();
+    render();
+    return;
+  }
+
   if (actionId === "submit") {
     // Get form values from the event detail
     const formData = e.detail.formValues;
 
-    // Get the store state
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const { targetGroupId, editMode, editingItemId } = storeState;
+    // Get the store state using selector
+    const { targetGroupId, editMode, editingItemId } =
+      store.selectDialogState();
 
     // Validate required fields (dropdowns ensure valid color and font selections)
     if (
@@ -508,6 +513,91 @@ export const handleAddColorFormAction = (e, deps) => {
 
     // Close the add color dialog
     store.closeAddColorDialog();
+    render();
+  }
+};
+
+// Add font dialog handlers
+export const handleAddFontDialogClose = (_, deps) => {
+  const { store, render } = deps;
+  store.closeAddFontDialog();
+  render();
+};
+
+export const handleFontFileSelected = async (e, deps) => {
+  const { store, render, uploadImageFiles } = deps;
+  const { files } = e.detail;
+
+  if (files && files.length > 0) {
+    const file = files[0];
+    // Extract font name from file name (remove extension)
+    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
+
+    try {
+      // Upload the file immediately when selected
+      const uploadResults = await uploadImageFiles([file], "someprojectId");
+
+      if (uploadResults.length === 0) {
+        alert("Failed to upload font file");
+        return;
+      }
+
+      const uploadResult = uploadResults[0];
+      store.setSelectedFontFile({
+        file,
+        fileName: fontName,
+        uploadResult, // Store the upload result for later use
+      });
+      render();
+    } catch (error) {
+      console.error("Failed to upload font file:", error);
+      alert("Failed to upload font file");
+    }
+  }
+};
+
+export const handleAddFontFormAction = async (e, deps) => {
+  const { store, render, repository } = deps;
+
+  if (e.detail.actionId === "submit") {
+    const formData = e.detail.formValues;
+    const fontData = store.selectSelectedFontData();
+
+    // Check if a font file was selected and uploaded
+    if (!fontData || !fontData.uploadResult) {
+      alert("Please select a font file");
+      return;
+    }
+
+    const fontName = fontData.fileName;
+    const newFontId = nanoid();
+
+    // Create the font in the repository using the already uploaded file
+    repository.addAction({
+      actionType: "treePush",
+      target: "fonts",
+      value: {
+        parent: formData.folderId || "_root",
+        position: "last",
+        item: {
+          id: newFontId,
+          type: "font",
+          name: fontName,
+          fontFamily: fontName,
+          fileId: fontData.uploadResult.fileId,
+          fileName: fontData.file.name,
+          fileType: getFileType(fontData.uploadResult),
+          fileSize: fontData.file.size,
+        },
+      },
+    });
+
+    // Sync repository to store to ensure all data is updated
+    syncRepositoryToStore(store, repository);
+
+    // Clear selected font data and close dialog
+    store.clearSelectedFontFile();
+    store.closeAddFontDialog();
     render();
   }
 };
