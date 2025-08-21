@@ -12,25 +12,10 @@ export const hideTimelineLine = (state) => {
   state.showHoverLine = false;
 };
 
-const getInitialValue = (property) => {
-  const defaultValues = {
-    x: 0,
-    y: 0,
-    alpha: 1,
-    scaleX: 1,
-    scaleY: 1,
-    rotation: 0,
-  };
-  return defaultValues[property] || 0;
-};
-
 export const toViewData = ({ state, props, attrs }) => {
   let selectedProperties = [];
 
-  // console.log("props.properties", props.properties);
-
   if (props.properties) {
-    // Main page usage: convert properties object to array
     const defaultValues = {
       x: 0,
       y: 0,
@@ -83,10 +68,14 @@ export const toViewData = ({ state, props, attrs }) => {
           0,
         );
 
-        // Calculate width percentage for each keyframe
+        // Calculate property's total width percentage relative to max duration
+        const propertyWidthPercent =
+          (propertyTotalDuration / maxDuration) * 100;
+
+        // Calculate width percentage for each keyframe based on max duration
         const keyframesWithWidth = property.keyframes.map((keyframe) => {
           const duration = parseFloat(keyframe.duration) || 1000;
-          const widthPercent = (duration / propertyTotalDuration) * 100;
+          const widthPercent = (duration / maxDuration) * 100;
           // Add prefix for relative values
           let displayValue = keyframe.value;
           if (keyframe.relative) {
@@ -94,7 +83,7 @@ export const toViewData = ({ state, props, attrs }) => {
             const numValue = parseFloat(keyframe.value);
             if (!isNaN(numValue)) {
               displayValue =
-                numValue >= 0 ? `[+${keyframe.value}]` : `[${keyframe.value}]`;
+                numValue >= 0 ? `Δ+${keyframe.value}` : `Δ${keyframe.value}`;
             }
           }
           return {
@@ -107,6 +96,8 @@ export const toViewData = ({ state, props, attrs }) => {
         return {
           ...property,
           keyframes: keyframesWithWidth,
+          propertyWidthPercent: propertyWidthPercent.toFixed(2),
+          fillerWidthPercent: (100 - propertyWidthPercent).toFixed(2),
         };
       }
       return property;

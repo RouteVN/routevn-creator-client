@@ -4,34 +4,42 @@ const addKeyframeForm = {
     {
       name: "duration",
       inputType: "inputText",
-      label: "Duration",
+      label: "Duration (ms)",
       required: true,
+      placeholder: "Duration in milliseconds",
+      tooltip: {
+        content:
+          "The time it takes for the animation keyframe to move from previous value to next value",
+      },
     },
     {
       name: "value",
       inputType: "inputText",
       label: "Value",
       required: true,
+      tooltip: {
+        content: "The final value of the property at the end of the animation",
+      },
     },
     {
       name: "relative",
       inputType: "select",
-      label: "Relative",
+      label: "Value type",
       options: [
-        { label: "False", value: false },
-        { label: "True", value: true },
+        { label: "Absolute", value: false },
+        { label: "Relative", value: true },
       ],
-      defaultValue: "false",
       required: true,
+      tooltip: {
+        content:
+          "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value",
+      },
     },
     {
       name: "easing",
       inputType: "select",
       label: "Easing",
-      options: [
-        { label: "Linear", value: "linear" },
-        { label: "Ease In", value: "easein" },
-      ],
+      options: [{ label: "Linear", value: "linear" }],
       required: true,
     },
   ],
@@ -45,6 +53,11 @@ const addKeyframeForm = {
       },
     ],
   },
+};
+
+const addKeyframeDefaultValues = {
+  relative: false,
+  easing: "linear",
 };
 
 const updateKeyframeForm = {
@@ -96,17 +109,17 @@ const editInitialValueForm = {
 };
 
 const propertyOptions = [
-  { label: "X", value: "x" },
-  { label: "Y", value: "y" },
-  { label: "Rotation", value: "rotation" },
+  { label: "Alpha", value: "alpha" },
+  { label: "Position X", value: "x" },
+  { label: "Position Y", value: "y" },
   { label: "Scale X", value: "scaleX" },
   { label: "Scale Y", value: "scaleY" },
-  { label: "Alpha", value: "alpha" },
+  { label: "Rotation", value: "rotation" },
 ];
 
 const createAddPropertyForm = (propertyOptions) => {
   return {
-    title: "Add Property",
+    title: "Add animation property",
     fields: [
       {
         name: "property",
@@ -116,21 +129,13 @@ const createAddPropertyForm = (propertyOptions) => {
         required: true,
       },
       {
-        name: "valueSource",
-        inputType: "select",
-        label: "Initial Value Source",
-        options: [
-          { label: "Use Default Value", value: "default" },
-          { label: "Custom Value", value: "custom" },
-        ],
-        defaultValue: "default",
-        required: true,
-      },
-      {
-        $when: "valueSource == 'custom'",
         name: "initialValue",
         inputType: "inputText",
-        label: "Custom Initial Value",
+        label: "Initial value",
+        tooltip: {
+          content:
+            "The initial value of the property at the start of the animation. Can leave blank to use the element's current value at start of animation",
+        },
       },
     ],
     actions: {
@@ -148,32 +153,32 @@ const createAddPropertyForm = (propertyOptions) => {
 
 const baseKeyframeDropdownItems = [
   {
-    label: "edit",
+    label: "Edit keyframe",
     type: "item",
     value: "edit",
   },
   {
-    label: "Add to right",
+    label: "Add keyframe to right",
     type: "item",
     value: "add-right",
   },
   {
-    label: "Add to left",
+    label: "Add keyframe to left",
     type: "item",
     value: "add-left",
   },
   {
-    label: "Move to right",
+    label: "Move keyframe to right",
     type: "item",
     value: "move-right",
   },
   {
-    label: "Move to left",
+    label: "Move keyframe to left",
     type: "item",
     value: "move-left",
   },
   {
-    label: "Delete",
+    label: "Delete keyframe",
     type: "item",
     value: "delete-keyframe",
   },
@@ -203,14 +208,18 @@ export const INITIAL_STATE = Object.freeze({
 
   form: {
     title: "Add Animation",
-    description: "Create a new animation",
     fields: [
       {
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the animation name",
         required: true,
+      },
+      {
+        name: "properties",
+        inputType: "slot",
+        slot: "timeline",
+        label: "Animation timeline",
       },
     ],
     actions: {
@@ -326,14 +335,18 @@ export const setTargetGroupId = (state, groupId) => {
 
 const addAnimationForm = {
   title: "Add Animation",
-  description: "Create a new animation",
   fields: [
     {
       name: "name",
       inputType: "inputText",
       label: "Name",
-      description: "Enter the animation name",
       required: true,
+    },
+    {
+      name: "properties",
+      inputType: "slot",
+      slot: "timeline",
+      label: "Animation timeline",
     },
   ],
   actions: {
@@ -350,14 +363,18 @@ const addAnimationForm = {
 
 const editAnimationForm = {
   title: "Edit Animation",
-  description: "Edit the animation",
   fields: [
     {
       name: "name",
       inputType: "inputText",
       label: "Name",
-      description: "Enter the animation name",
       required: true,
+    },
+    {
+      name: "properties",
+      inputType: "slot",
+      slot: "timeline",
+      label: "Animation timeline",
     },
   ],
   actions: {
@@ -733,6 +750,7 @@ export const toViewData = ({ state, props }) => {
     addPropertyForm,
     addPropertyContext,
     addKeyframeForm,
+    addKeyframeDefaultValues,
     updateKeyframeForm,
     editInitialValueForm,
     editInitialValueContext,
