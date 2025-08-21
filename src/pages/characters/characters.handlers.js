@@ -95,7 +95,14 @@ export const handleSpritesButtonClick = (e, deps) => {
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
-  const { repository, store, render, filePicker, uploadImageFiles, getFileContent } = deps;
+  const {
+    repository,
+    store,
+    render,
+    filePicker,
+    uploadImageFiles,
+    getFileContent,
+  } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -147,13 +154,13 @@ export const handleFormExtraEvent = async (e, deps) => {
 
       // Update the store with the new repository state and get new file URL
       const { characters } = repository.getState();
-      
+
       // Get the new file URL
       const { url } = await getFileContent({
         fileId: uploadedFile.fileId,
         projectId: "someprojectId",
       });
-      
+
       store.setContext({
         fileId: {
           src: url,

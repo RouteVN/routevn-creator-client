@@ -21,7 +21,6 @@ export const handleCharacterItemClick = (e, deps) => {
   );
 };
 
-
 export const handleSpritesButtonClick = (e, deps) => {
   const { dispatchEvent } = deps;
   e.stopPropagation(); // Prevent character item click
