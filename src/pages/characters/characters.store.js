@@ -1,5 +1,4 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-import { formatFileSize } from "../../utils/index.js";
 
 const form = {
   fields: [
@@ -8,23 +7,14 @@ const form = {
       inputType: "image",
       src: "${fileId.src}",
       width: 240,
+      clickable: true,
+      extraEvent: true,
     },
     { name: "name", inputType: "popover-input", description: "Name" },
     {
       name: "description",
       inputType: "popover-input",
       description: "Description",
-    },
-    { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
-    {
-      name: "displayFileType",
-      inputType: "read-only-text",
-      description: "File Type",
-    },
-    {
-      name: "displayFileSize",
-      inputType: "read-only-text",
-      description: "File Size",
     },
   ],
 };
@@ -78,14 +68,6 @@ export const toViewData = ({ state, props }, payload) => {
     defaultValues = {
       name: selectedItem.name,
       description: selectedItem.description || "No description provided",
-      typeDisplay: selectedItem.type === "character" ? "Character" : "Folder",
-      displayFileType:
-        selectedItem.fileType ||
-        (selectedItem.type === "character" ? "PNG" : ""),
-      displayFileSize: selectedItem.fileSize
-        ? formatFileSize(selectedItem.fileSize)
-        : "",
-      fullPath: selectedItem.fullLabel || selectedItem.name || "",
     };
   }
 
