@@ -530,11 +530,11 @@ export const handleAddFontDialogClose = (_, deps) => {
 export const handleFontFileSelected = (e, deps) => {
   const { store, render } = deps;
   const { files } = e.detail;
-  
+
   if (files && files.length > 0) {
     const file = files[0];
     // Extract font name from file name (remove extension)
-    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
     store.setSelectedFontFile({ file, fileName: fontName });
     render();
   }
@@ -545,9 +545,11 @@ export const handleAddFontFormAction = async (e, deps) => {
 
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;
-    const storeState = store.getState ? store.getState() : store._state || store.state;
+    const storeState = store.getState
+      ? store.getState()
+      : store._state || store.state;
     const fontFile = storeState.selectedFontFile;
-    
+
     // Check if a font file was selected
     if (!fontFile) {
       alert("Please select a font file");
@@ -555,16 +557,16 @@ export const handleAddFontFormAction = async (e, deps) => {
     }
 
     // Extract font name from file name (remove extension)
-    const fontName = fontFile.name.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+    const fontName = fontFile.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
     const newFontId = nanoid();
 
     try {
       // Use fileManager if available, otherwise fall back to uploadImageFiles
       const uploader = fileManager || { upload: uploadImageFiles };
-      
+
       // Upload the font file
       const uploadResults = await uploader.upload([fontFile], "someprojectId");
-      
+
       if (uploadResults.length === 0) {
         alert("Failed to upload font file");
         return;

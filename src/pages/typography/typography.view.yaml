@@ -91,7 +91,7 @@ template:
     - $if isAddColorDialogOpen:
       - rtgl-form#add-color-form slot=content .defaultValues=addColorDefaultValues .form=addColorForm w=f:
 
-  - rtgl-dialog#add-font-dialog ?open=${isAddFontDialogOpen} s=md:
+  - rtgl-dialog#add-font-dialog ?open=${isAddFontDialogOpen}:
     - $if isAddFontDialogOpen:
       - rtgl-form#add-font-form slot=content .defaultValues=addFontDefaultValues .form=addFontForm w=f:
         - rtgl-view slot=font-upload d=v g=sm:
