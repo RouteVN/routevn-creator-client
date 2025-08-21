@@ -8,7 +8,7 @@ export const handleBeforeMount = (deps) => {
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
+export const handleDataChanged = (_, deps) => {
   const { store, render, repository } = deps;
   const { characters } = repository.getState();
   store.setItems(characters);
@@ -41,14 +41,27 @@ export const handleCharacterCreated = async (e, deps) => {
   const { groupId, name, description, avatarFileId } = e.detail;
 
   try {
+    // Create default sprites folder with proper structure
+    const defaultSpritesFolderId = nanoid();
+
     let characterData = {
       id: nanoid(),
       type: "character",
       name: name,
       description: description,
       sprites: {
-        items: {},
-        tree: [],
+        tree: [
+          {
+            id: defaultSpritesFolderId,
+            children: [],
+          },
+        ],
+        items: {
+          [defaultSpritesFolderId]: {
+            type: "folder",
+            name: "Default Sprites",
+          },
+        },
       },
     };
 
@@ -94,7 +107,7 @@ export const handleSpritesButtonClick = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
+export const handleFormExtraEvent = async (_, deps) => {
   const {
     repository,
     store,
