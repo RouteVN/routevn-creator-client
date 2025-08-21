@@ -47,6 +47,18 @@ refs:
     eventListeners:
       action-click:
         handler: handleAddColorFormAction
+  add-font-dialog:
+    eventListeners:
+      close:
+        handler: handleAddFontDialogClose
+  font-drag-drop:
+    eventListeners:
+      file-selected:
+        handler: handleFontFileSelected
+  add-font-form:
+    eventListeners:
+      action-click:
+        handler: handleAddFontFormAction
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -78,3 +90,12 @@ template:
   - rtgl-dialog#add-color-dialog ?open=${isAddColorDialogOpen} s=sm:
     - $if isAddColorDialogOpen:
       - rtgl-form#add-color-form slot=content .defaultValues=addColorDefaultValues .form=addColorForm w=f:
+
+  - rtgl-dialog#add-font-dialog ?open=${isAddFontDialogOpen} s=md:
+    - $if isAddFontDialogOpen:
+      - rtgl-form#add-font-form slot=content .defaultValues=addFontDefaultValues .form=addFontForm w=f:
+        - rtgl-view slot=font-upload d=v g=sm:
+          - rvn-drag-drop#font-drag-drop uploadText="${dragDropText}" .acceptedFileTypes=fontFileTypes: 
+          - $if hasSelectedFont:
+            - rtgl-view d=h g=sm av=c mt=sm:
+              - rtgl-text s=sm c=success: "Font selected: ${selectedFontFileName}"
