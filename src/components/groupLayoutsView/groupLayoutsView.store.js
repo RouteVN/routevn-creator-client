@@ -18,8 +18,9 @@ const layoutForm = {
         { value: "choice", label: "Choice" },
       ],
       tooltip: {
-        content: "Normal is layout that can be used for background or menu pages. Dialogue is used for text dialogue layout. Choices is used for the choices."
-      }
+        content:
+          "Normal is layout that can be used for background or menu pages. Dialogue is used for text dialogue layout. Choices is used for the choices.",
+      },
     },
   ],
   actions: {
@@ -32,7 +33,7 @@ const layoutForm = {
       },
     ],
   },
-}
+};
 
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
@@ -89,10 +90,10 @@ export const toViewData = ({ state, props }) => {
 
         return shouldIncludeGroup
           ? {
-            ...group,
-            children: filteredChildren,
-            hasChildren: filteredChildren.length > 0,
-          }
+              ...group,
+              children: filteredChildren,
+              hasChildren: filteredChildren.length > 0,
+            }
           : null;
       })
       .filter(Boolean); // Remove null groups
@@ -105,23 +106,23 @@ export const toViewData = ({ state, props }) => {
     children: state.collapsedIds.includes(group.id)
       ? []
       : (group.children || []).map((item) => {
-        const layoutTypeLabels = {
-          normal: "Normal",
-          dialogue: "Dialogue",
-          choice: "Choice",
-        };
+          const layoutTypeLabels = {
+            normal: "Normal",
+            dialogue: "Dialogue",
+            choice: "Choice",
+          };
 
-        return {
-          ...item,
-          layoutTypeDisplay: item.layoutType
-            ? layoutTypeLabels[item.layoutType] || item.layoutType
-            : "Layout",
-          selectedStyle:
-            item.id === selectedItemId
-              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-              : "",
-        };
-      }),
+          return {
+            ...item,
+            layoutTypeDisplay: item.layoutType
+              ? layoutTypeLabels[item.layoutType] || item.layoutType
+              : "Layout",
+            selectedStyle:
+              item.id === selectedItemId
+                ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                : "",
+          };
+        }),
   }));
 
   return {
@@ -132,6 +133,6 @@ export const toViewData = ({ state, props }) => {
     defaultValues: {
       name: "",
     },
-    form: layoutForm
+    form: layoutForm,
   };
 };

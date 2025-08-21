@@ -597,11 +597,11 @@ export const handleChoiceFormChange = async (e, deps) => {
 };
 
 export const handleArrowKeyDown = async (e, deps) => {
-  const { store, repository, render, } = deps;
+  const { store, repository, render } = deps;
 
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
-    return
+    return;
   }
 
   const unit = e.shiftKey ? 10 : 1;
@@ -609,45 +609,45 @@ export const handleArrowKeyDown = async (e, deps) => {
 
   const layoutId = store.selectLayoutId();
 
-  if (e.key === 'ArrowUp') {
+  if (e.key === "ArrowUp") {
     if (e.metaKey) {
       change = {
-        height: currentItem.height - unit
-      }
+        height: currentItem.height - unit,
+      };
     } else {
       change = {
-        y: currentItem.y - unit
-      }
+        y: currentItem.y - unit,
+      };
     }
-  } else if (e.key === 'ArrowDown') {
+  } else if (e.key === "ArrowDown") {
     if (e.metaKey) {
       change = {
-        height: currentItem.height + unit
-      }
+        height: currentItem.height + unit,
+      };
     } else {
       change = {
-        y: currentItem.y + unit
-      }
+        y: currentItem.y + unit,
+      };
     }
-  } else if (e.key === 'ArrowLeft') {
+  } else if (e.key === "ArrowLeft") {
     if (e.metaKey) {
       change = {
-        width: currentItem.width - unit
-      }
+        width: currentItem.width - unit,
+      };
     } else {
       change = {
-        x: currentItem.x - unit
-      }
+        x: currentItem.x - unit,
+      };
     }
-  } else if (e.key === 'ArrowRight') {
+  } else if (e.key === "ArrowRight") {
     if (e.metaKey) {
       change = {
-        width: currentItem.width + unit
-      }
+        width: currentItem.width + unit,
+      };
     } else {
       change = {
-        x: currentItem.x + unit
-      }
+        x: currentItem.x + unit,
+      };
     }
   }
 
@@ -657,7 +657,7 @@ export const handleArrowKeyDown = async (e, deps) => {
     value: {
       id: currentItem.id,
       replace: false,
-      item: change
+      item: change,
     },
   });
 
@@ -669,13 +669,15 @@ export const handleArrowKeyDown = async (e, deps) => {
   render();
 
   await renderLayoutPreview(deps);
-}
+};
 
 export const subscriptions = (deps) => {
   return [
     fromEvent(window, "keydown").pipe(
       filter((e) => {
-        return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+        return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
+          e.key,
+        );
       }),
       tap((e) => {
         handleArrowKeyDown(e, deps);
@@ -683,4 +685,3 @@ export const subscriptions = (deps) => {
     ),
   ];
 };
-
