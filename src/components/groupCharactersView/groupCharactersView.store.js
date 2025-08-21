@@ -14,11 +14,6 @@ export const INITIAL_STATE = Object.freeze({
     title: "Add Character",
     fields: [
       {
-        inputType: "slot",
-        slot: "avatar-slot",
-        label: "Avatar",
-      },
-      {
         name: "name",
         inputType: "inputText",
         label: "Name",
@@ -29,6 +24,11 @@ export const INITIAL_STATE = Object.freeze({
         inputType: "inputText",
         label: "Description",
         required: false,
+      },
+      {
+        inputType: "slot",
+        slot: "avatar-slot",
+        label: "Avatar",
       },
     ],
     actions: {
