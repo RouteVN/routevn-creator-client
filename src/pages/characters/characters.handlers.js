@@ -8,7 +8,7 @@ export const handleBeforeMount = (deps) => {
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
+export const handleDataChanged = (_, deps) => {
   const { store, render, repository } = deps;
   const { characters } = repository.getState();
   store.setItems(characters);
@@ -41,14 +41,27 @@ export const handleCharacterCreated = async (e, deps) => {
   const { groupId, name, description, avatarFileId } = e.detail;
 
   try {
+    // Create default sprites folder with proper structure
+    const defaultSpritesFolderId = nanoid();
+
     let characterData = {
       id: nanoid(),
       type: "character",
       name: name,
       description: description,
       sprites: {
-        items: {},
-        tree: [],
+        tree: [
+          {
+            id: defaultSpritesFolderId,
+            children: [],
+          },
+        ],
+        items: {
+          [defaultSpritesFolderId]: {
+            type: "folder",
+            name: "Default Sprites",
+          },
+        },
       },
     };
 
@@ -94,8 +107,15 @@ export const handleSpritesButtonClick = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
-  const { repository, store, render, filePicker, httpClient } = deps;
+export const handleFormExtraEvent = async (_, deps) => {
+  const {
+    repository,
+    store,
+    render,
+    filePicker,
+    uploadImageFiles,
+    getFileContent,
+  } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -116,25 +136,15 @@ export const handleFormExtraEvent = async (e, deps) => {
   const file = files[0];
 
   try {
-    // Upload the new avatar file
-    const { downloadUrl, uploadUrl, fileId } =
-      await httpClient.creator.uploadFile({
-        projectId: "someprojectId",
-      });
+    // Upload the new avatar file using uploadImageFiles
+    const uploadedFiles = await uploadImageFiles([file], "someprojectId");
 
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (response.ok) {
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      const uploadedFile = uploadedFiles[0];
       console.log("Character avatar uploaded successfully:", file.name);
 
       const updateData = {
-        fileId: fileId,
+        fileId: uploadedFile.fileId,
         fileType: file.type,
         fileSize: file.size,
         // Update name only if character doesn't have one or if it's the generic filename
@@ -155,17 +165,24 @@ export const handleFormExtraEvent = async (e, deps) => {
         },
       });
 
-      // Update the store with the new repository state
+      // Update the store with the new repository state and get new file URL
       const { characters } = repository.getState();
+
+      // Get the new file URL
+      const { url } = await getFileContent({
+        fileId: uploadedFile.fileId,
+        projectId: "someprojectId",
+      });
+
       store.setContext({
         fileId: {
-          src: downloadUrl,
+          src: url,
         },
       });
       store.setItems(characters);
       render();
     } else {
-      console.error("Avatar upload failed:", file.name, response.statusText);
+      console.error("Avatar upload failed:", file.name);
     }
   } catch (error) {
     console.error("Avatar upload error:", file.name, error);
