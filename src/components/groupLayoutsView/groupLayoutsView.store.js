@@ -1,3 +1,39 @@
+const layoutForm = {
+  title: "Add Layout",
+  fields: [
+    {
+      name: "name",
+      inputType: "inputText",
+      label: "Layout Name",
+      required: true,
+    },
+    {
+      name: "layoutType",
+      inputType: "select",
+      label: "Layout Type",
+      required: true,
+      options: [
+        { value: "normal", label: "Normal" },
+        { value: "dialogue", label: "Dialogue" },
+        { value: "choice", label: "Choice" },
+      ],
+      tooltip: {
+        content: "Normal is layout that can be used for background or menu pages. Dialogue is used for text dialogue layout. Choices is used for the choices."
+      }
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Layout",
+      },
+    ],
+  },
+}
+
 export const INITIAL_STATE = Object.freeze({
   collapsedIds: [],
   searchQuery: "",
@@ -53,10 +89,10 @@ export const toViewData = ({ state, props }) => {
 
         return shouldIncludeGroup
           ? {
-              ...group,
-              children: filteredChildren,
-              hasChildren: filteredChildren.length > 0,
-            }
+            ...group,
+            children: filteredChildren,
+            hasChildren: filteredChildren.length > 0,
+          }
           : null;
       })
       .filter(Boolean); // Remove null groups
@@ -69,23 +105,23 @@ export const toViewData = ({ state, props }) => {
     children: state.collapsedIds.includes(group.id)
       ? []
       : (group.children || []).map((item) => {
-          const layoutTypeLabels = {
-            normal: "Normal",
-            dialogue: "Dialogue",
-            choice: "Choice",
-          };
+        const layoutTypeLabels = {
+          normal: "Normal",
+          dialogue: "Dialogue",
+          choice: "Choice",
+        };
 
-          return {
-            ...item,
-            layoutTypeDisplay: item.layoutType
-              ? layoutTypeLabels[item.layoutType] || item.layoutType
-              : "Layout",
-            selectedStyle:
-              item.id === selectedItemId
-                ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                : "",
-          };
-        }),
+        return {
+          ...item,
+          layoutTypeDisplay: item.layoutType
+            ? layoutTypeLabels[item.layoutType] || item.layoutType
+            : "Layout",
+          selectedStyle:
+            item.id === selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        };
+      }),
   }));
 
   return {
@@ -96,39 +132,6 @@ export const toViewData = ({ state, props }) => {
     defaultValues: {
       name: "",
     },
-    form: {
-      title: "Add Layout",
-      fields: [
-        {
-          name: "name",
-          inputType: "inputText",
-          label: "Layout Name",
-          description: "Enter the layout name",
-          required: true,
-        },
-        {
-          name: "layoutType",
-          inputType: "select",
-          label: "Layout Type",
-          description: "Select the layout type",
-          required: true,
-          options: [
-            { value: "normal", label: "Normal" },
-            { value: "dialogue", label: "Dialogue" },
-            { value: "choice", label: "Choice" },
-          ],
-        },
-      ],
-      actions: {
-        layout: "",
-        buttons: [
-          {
-            id: "submit",
-            variant: "pr",
-            content: "Add Layout",
-          },
-        ],
-      },
-    },
+    form: layoutForm
   };
 };
