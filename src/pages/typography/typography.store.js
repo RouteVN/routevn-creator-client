@@ -273,7 +273,16 @@ export const setSelectedFontFile = (state, data) => {
   state.selectedFontFile = data.file;
   state.hasSelectedFont = true;
   state.selectedFontFileName = data.fileName;
+  state.selectedFontUploadResult = data.uploadResult;
   state.dragDropText = "Replace font file";
+};
+
+export const clearSelectedFontFile = (state) => {
+  state.selectedFontFile = null;
+  state.hasSelectedFont = false;
+  state.selectedFontFileName = "";
+  state.selectedFontUploadResult = null;
+  state.dragDropText = "Drop font file here or click to browse";
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -297,6 +306,12 @@ export const selectDialogState = ({ state }) => ({
 });
 
 export const selectSelectedFontFile = ({ state }) => state.selectedFontFile;
+
+export const selectSelectedFontData = ({ state }) => ({
+  file: state.selectedFontFile,
+  fileName: state.selectedFontFileName,
+  uploadResult: state.selectedFontUploadResult,
+});
 
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
