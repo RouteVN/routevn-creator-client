@@ -288,6 +288,16 @@ export const selectColorsData = ({ state }) => state.colorsData;
 
 export const selectFontsData = ({ state }) => state.fontsData;
 
+export const selectTypographyData = ({ state }) => state.typographyData;
+
+export const selectDialogState = ({ state }) => ({
+  targetGroupId: state.targetGroupId,
+  editMode: state.editMode,
+  editingItemId: state.editingItemId,
+});
+
+export const selectSelectedFontFile = ({ state }) => state.selectedFontFile;
+
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
   const flatGroups = toFlatGroups(state.typographyData);

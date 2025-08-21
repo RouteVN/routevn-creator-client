@@ -327,7 +327,8 @@ export const handleFormExtraEvent = (_, deps) => {
 
   // Handle typography preview click
   const selectedItemId = store.selectSelectedItemId();
-  const flatItems = toFlatItems(store.getState().typographyData);
+  const typographyData = store.selectTypographyData();
+  const flatItems = toFlatItems(typographyData);
   const selectedItem = flatItems.find((item) => item.id === selectedItemId);
 
   if (selectedItem) {
@@ -374,7 +375,7 @@ export const handleDialogFormChange = (e, deps) => {
   render();
 };
 
-export const handleCloseDialog = (e, deps) => {
+export const handleCloseDialog = (_, deps) => {
   const { store, render } = deps;
 
   // Reset form values, clear edit mode, and close dialog
@@ -410,11 +411,9 @@ export const handleFormActionClick = (e, deps) => {
     // Get form values from the event detail
     const formData = e.detail.formValues;
 
-    // Get the store state
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const { targetGroupId, editMode, editingItemId } = storeState;
+    // Get the store state using selector
+    const { targetGroupId, editMode, editingItemId } =
+      store.selectDialogState();
 
     // Validate required fields (dropdowns ensure valid color and font selections)
     if (
@@ -545,10 +544,7 @@ export const handleAddFontFormAction = async (e, deps) => {
 
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
-    const fontFile = storeState.selectedFontFile;
+    const fontFile = store.selectSelectedFontFile();
 
     // Check if a font file was selected
     if (!fontFile) {
