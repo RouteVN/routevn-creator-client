@@ -1,3 +1,4 @@
+import { filter, fromEvent, tap } from "rxjs";
 import { toTreeStructure } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
@@ -593,4 +594,94 @@ export const handleChoiceFormChange = async (e, deps) => {
   render();
 
   await renderLayoutPreview(deps);
+};
+
+export const handleArrowKeyDown = async (e, deps) => {
+  const { store, repository, render } = deps;
+
+  const currentItem = store.selectSelectedItem();
+  if (!currentItem) {
+    return;
+  }
+
+  const unit = e.shiftKey ? 10 : 1;
+  let change = {};
+
+  const layoutId = store.selectLayoutId();
+
+  if (e.key === "ArrowUp") {
+    if (e.metaKey) {
+      change = {
+        height: currentItem.height - unit,
+      };
+    } else {
+      change = {
+        y: currentItem.y - unit,
+      };
+    }
+  } else if (e.key === "ArrowDown") {
+    if (e.metaKey) {
+      change = {
+        height: currentItem.height + unit,
+      };
+    } else {
+      change = {
+        y: currentItem.y + unit,
+      };
+    }
+  } else if (e.key === "ArrowLeft") {
+    if (e.metaKey) {
+      change = {
+        width: currentItem.width - unit,
+      };
+    } else {
+      change = {
+        x: currentItem.x - unit,
+      };
+    }
+  } else if (e.key === "ArrowRight") {
+    if (e.metaKey) {
+      change = {
+        width: currentItem.width + unit,
+      };
+    } else {
+      change = {
+        x: currentItem.x + unit,
+      };
+    }
+  }
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `layouts.items.${layoutId}.elements`,
+    value: {
+      id: currentItem.id,
+      replace: false,
+      item: change,
+    },
+  });
+
+  // Sync store with updated repository data
+  const { layouts } = repository.getState();
+  const layout = layouts.items[layoutId];
+  //
+  store.setItems(layout?.elements || { items: {}, tree: [] });
+  render();
+
+  await renderLayoutPreview(deps);
+};
+
+export const subscriptions = (deps) => {
+  return [
+    fromEvent(window, "keydown").pipe(
+      filter((e) => {
+        return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
+          e.key,
+        );
+      }),
+      tap((e) => {
+        handleArrowKeyDown(e, deps);
+      }),
+    ),
+  ];
 };
