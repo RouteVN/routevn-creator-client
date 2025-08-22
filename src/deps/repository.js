@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 const set = (state, path, value) => {
   const newState = structuredClone(state);
   const keys = path.split(".");
@@ -223,39 +225,24 @@ const treeCopy = (state, target, value) => {
 
   const { node, parent } = nodeInfo;
 
-  // Create a deterministic suffix based on existing copies
-  // Count how many copies of this item already exist
-  let copyCount = 0;
-  const originalName = targetData.items[id]?.name || "";
-
-  // Count existing copies in the parent's children or root
-  const siblings = parent ? parent.children : targetData.tree;
-  for (let sibling of siblings) {
-    const siblingItem = targetData.items[sibling.id];
-    if (
-      siblingItem &&
-      siblingItem.name &&
-      siblingItem.name.startsWith(originalName)
-    ) {
-      copyCount++;
-    }
+  // Check if this action already has generated IDs (from a previous execution)
+  // If so, use them; otherwise generate new ones and store them
+  // This allows us to use random IDs but keep them consistent across replays
+  if (!value._generatedIds) {
+    value._generatedIds = {};
   }
 
   // Helper function to recursively duplicate nodes and their items
-  const duplicateNode = (originalNode, suffix = "") => {
+  const duplicateNode = (originalNode, path = "", isRoot = false) => {
     const newNode = structuredClone(originalNode);
-    // Generate a deterministic ID based on the original ID and suffix
-    // Use a simple deterministic transformation instead of random
-    newNode.id = `${originalNode.id}_copy${suffix}`;
 
-    // If this ID already exists, append a number
-    let finalId = newNode.id;
-    let counter = 1;
-    while (targetData.items[finalId]) {
-      finalId = `${newNode.id}_${counter}`;
-      counter++;
+    // Use stored ID if available, otherwise generate and store
+    if (value._generatedIds[path]) {
+      newNode.id = value._generatedIds[path];
+    } else {
+      newNode.id = nanoid();
+      value._generatedIds[path] = newNode.id;
     }
-    newNode.id = finalId;
 
     // Copy the item data
     if (targetData.items[originalNode.id]) {
@@ -263,13 +250,19 @@ const treeCopy = (state, target, value) => {
         targetData.items[originalNode.id],
       );
       delete targetData.items[newNode.id].id; // Remove id from item data
+
+      // Add " (copy)" suffix to the name for the root node only
+      if (isRoot && targetData.items[newNode.id].name) {
+        targetData.items[newNode.id].name += " (copy)";
+      }
     }
 
-    // Recursively duplicate children with their own suffix
+    // Recursively duplicate children with their path (isRoot = false for children)
     if (originalNode.children && originalNode.children.length > 0) {
-      newNode.children = originalNode.children.map((child, index) =>
-        duplicateNode(child, `${suffix}_${index}`),
-      );
+      newNode.children = originalNode.children.map((child, index) => {
+        const childPath = path ? `${path}.${index}` : `${index}`;
+        return duplicateNode(child, childPath, false);
+      });
     } else {
       newNode.children = [];
     }
@@ -278,7 +271,7 @@ const treeCopy = (state, target, value) => {
   };
 
   // Duplicate the node and all its descendants
-  const newNode = duplicateNode(node, copyCount > 0 ? `_${copyCount}` : "");
+  const newNode = duplicateNode(node, "root", true);
 
   if (parent) {
     // Add the new node to the parent's children
@@ -287,6 +280,7 @@ const treeCopy = (state, target, value) => {
     // If no parent, add to root level
     targetData.tree.push(newNode);
   }
+
   return newState;
 };
 
