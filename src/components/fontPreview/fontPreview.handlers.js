@@ -14,10 +14,9 @@ export const handleAfterMount = async (deps) => {
     try {
       // Create a font item object for loadFontFile
       const fontItem = {
-        fontFamily: fontFamily,
+        fontName: fontFamily,
         fileId: fileId,
       };
-
       await loadFontFile(fontItem);
     } catch (error) {
       console.warn(`Failed to load font: ${fontFamily}`, error);
