@@ -5,6 +5,11 @@ import { getFileType } from "../../utils/getFileType";
 // Helper function to sync repository state to store
 const syncRepositoryToStore = (store, repository) => {
   const { typography, colors, fonts } = repository.getState();
+  console.log("Syncing repository to store:", {
+    typography,
+    colors,
+    fonts,
+  });
   store.setItems(typography);
   store.setColorsData(colors);
   store.setFontsData(fonts);

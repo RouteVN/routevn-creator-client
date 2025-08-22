@@ -173,76 +173,14 @@ export const handleFileAction = (e, deps) => {
       return;
     }
 
-    // Find parent ID by traversing the tree
-    const findParentId = (nodes, targetId, parentId = "_root") => {
-      for (const node of nodes) {
-        if (node.id === targetId) return parentId;
-        if (node.children?.length) {
-          const found = findParentId(node.children, targetId, node.id);
-          if (found) return found;
-        }
-      }
-      return "_root";
-    };
-
-    const parentId = targetData.tree
-      ? findParentId(targetData.tree, itemId)
-      : "_root";
-
-    // Create duplicated item with new ID and name
-    const duplicatedItem = {
-      ...currentItem,
-      id: nanoid(),
-      name: `${currentItem.name} (copy)`,
-    };
-
     // Add the duplicated item
     repository.addAction({
-      actionType: "treePush",
+      actionType: "treeCopy",
       target: repositoryTarget,
       value: {
-        parent: parentId,
-        position: { after: itemId },
-        item: duplicatedItem,
+        id: itemId,
       },
     });
-
-    // If it's a folder, duplicate its children recursively
-    if (currentItem.type === "folder" && targetData.tree) {
-      const findNode = (nodes, id) => {
-        for (const node of nodes) {
-          if (node.id === id) return node;
-          const found = node.children && findNode(node.children, id);
-          if (found) return found;
-        }
-      };
-
-      const duplicateNode = (nodeId, newParentId) => {
-        const node = findNode(targetData.tree, nodeId);
-        if (!node?.children) return;
-
-        node.children.forEach((child) => {
-          const childItem = targetData.items[child.id];
-          if (!childItem) return;
-
-          const newChildId = nanoid();
-          repository.addAction({
-            actionType: "treePush",
-            target: repositoryTarget,
-            value: {
-              parent: newParentId,
-              position: "last",
-              item: { ...childItem, id: newChildId },
-            },
-          });
-
-          // Recursively duplicate grandchildren
-          duplicateNode(child.id, newChildId);
-        });
-      };
-
-      duplicateNode(itemId, duplicatedItem.id);
-    }
   }
 
   // Emit data-changed event after any repository action

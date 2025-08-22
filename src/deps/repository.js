@@ -198,6 +198,98 @@ const treeDelete = (state, target, value) => {
   return newState;
 };
 
+/**
+ * Copy a node under its parent in the tree structure
+ * @param {*} state - The current state object
+ * @param {*} target - Path to the target data (e.g., 'fileExplorer')
+ * @param {Object} value - Copy operation parameters
+ * @param {string} value.id - ID of the node to copy
+ * @returns {Object} New state with the node moved to its new position
+ * @example
+ * // Copy node 'file1' under its parent
+ * const newState = treeCopy(state, 'fileExplorer', {
+ *  id: 'file1'
+ * });
+ */
+const treeCopy = (state, target, value) => {
+  const newState = structuredClone(state);
+  const targetData = get(newState, target);
+  const { id } = value;
+  const nodeInfo = findNodeInTree(targetData.tree, id);
+
+  if (!nodeInfo) {
+    return newState; // Node not found, return unchanged state
+  }
+
+  const { node, parent } = nodeInfo;
+
+  // Create a deterministic suffix based on existing copies
+  // Count how many copies of this item already exist
+  let copyCount = 0;
+  const originalName = targetData.items[id]?.name || "";
+
+  // Count existing copies in the parent's children or root
+  const siblings = parent ? parent.children : targetData.tree;
+  for (let sibling of siblings) {
+    const siblingItem = targetData.items[sibling.id];
+    if (
+      siblingItem &&
+      siblingItem.name &&
+      siblingItem.name.startsWith(originalName)
+    ) {
+      copyCount++;
+    }
+  }
+
+  // Helper function to recursively duplicate nodes and their items
+  const duplicateNode = (originalNode, suffix = "") => {
+    const newNode = structuredClone(originalNode);
+    // Generate a deterministic ID based on the original ID and suffix
+    // Use a simple deterministic transformation instead of random
+    newNode.id = `${originalNode.id}_copy${suffix}`;
+
+    // If this ID already exists, append a number
+    let finalId = newNode.id;
+    let counter = 1;
+    while (targetData.items[finalId]) {
+      finalId = `${newNode.id}_${counter}`;
+      counter++;
+    }
+    newNode.id = finalId;
+
+    // Copy the item data
+    if (targetData.items[originalNode.id]) {
+      targetData.items[newNode.id] = structuredClone(
+        targetData.items[originalNode.id],
+      );
+      delete targetData.items[newNode.id].id; // Remove id from item data
+    }
+
+    // Recursively duplicate children with their own suffix
+    if (originalNode.children && originalNode.children.length > 0) {
+      newNode.children = originalNode.children.map((child, index) =>
+        duplicateNode(child, `${suffix}_${index}`),
+      );
+    } else {
+      newNode.children = [];
+    }
+
+    return newNode;
+  };
+
+  // Duplicate the node and all its descendants
+  const newNode = duplicateNode(node, copyCount > 0 ? `_${copyCount}` : "");
+
+  if (parent) {
+    // Add the new node to the parent's children
+    parent.children.push(newNode);
+  } else {
+    // If no parent, add to root level
+    targetData.tree.push(newNode);
+  }
+  return newState;
+};
+
 const treeUpdate = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
@@ -386,6 +478,8 @@ const createRepositoryInternal = (
         return treeUpdate(acc, target, value);
       } else if (actionType === "treeMove") {
         return treeMove(acc, target, value);
+      } else if (actionType === "treeCopy") {
+        return treeCopy(acc, target, value);
       } else if (actionType === "init") {
         // Initialize entire state sections with provided data
         // value should be an object with keys matching state sections
