@@ -226,6 +226,11 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
 
   // Load font file (for font manager)
   const loadFontFile = async ({ fontName, fileId, projectId }) => {
+    if (!fontName || !fileId || fileId === "undefined") {
+      throw new Error(
+        "Invalid font parameters: fontName and fileId are required.",
+      );
+    }
     try {
       const { url } = await getFileContent({ fileId, projectId });
       await fontManager.load(fontName, url);
