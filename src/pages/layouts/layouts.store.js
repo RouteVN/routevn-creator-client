@@ -15,6 +15,15 @@ export const INITIAL_STATE = Object.freeze({
   layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   fieldResources: {},
+  contextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+    { label: "Duplicate", type: "item", value: "duplicate-item" },
+    { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
+  ],
+  emptyContextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+  ],
 });
 
 export const setFieldResources = (state, resources) => {
@@ -73,6 +82,8 @@ export const toViewData = ({ state, props }, payload) => {
     selectedResourceId: "layouts",
     selectedItemId: state.selectedItemId,
     repositoryTarget: "layouts",
+    contextMenuItems: state.contextMenuItems,
+    emptyContextMenuItems: state.emptyContextMenuItems,
     form,
     defaultValues,
     fieldResources: state.fieldResources,
