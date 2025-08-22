@@ -150,10 +150,6 @@ export const handleFileAction = (e, deps) => {
       });
     }
   } else if (item.value.action === "new-child-item") {
-    const repositoryState = repository.getState();
-    const targetData = lodashGet(repositoryState, repositoryTarget);
-    const currentItem =
-      targetData && targetData.items ? targetData.items[itemId] : null;
     const { action, ...restItem } = item.value;
     repository.addAction({
       actionType: "treePush",
@@ -165,6 +161,25 @@ export const handleFileAction = (e, deps) => {
           ...restItem,
           id: nanoid(),
         },
+      },
+    });
+  } else if (item.value === "duplicate-item") {
+    const repositoryState = repository.getState();
+    const targetData = lodashGet(repositoryState, repositoryTarget);
+    const currentItem =
+      targetData && targetData.items ? targetData.items[itemId] : null;
+
+    if (!currentItem) {
+      return;
+    }
+
+    // Add the duplicated item with random number as seed
+    repository.addAction({
+      actionType: "treeCopy",
+      target: repositoryTarget,
+      value: {
+        id: itemId,
+        seed: Math.floor(Math.random() * 0x7fffffff), // Max 31-bit integer
       },
     });
   }

@@ -1,3 +1,5 @@
+import { nanoid, customRandom } from "nanoid";
+
 const set = (state, path, value) => {
   const newState = structuredClone(state);
   const keys = path.split(".");
@@ -198,6 +200,104 @@ const treeDelete = (state, target, value) => {
   return newState;
 };
 
+// Helper function to create seeded ID generator
+const createSeededIdGenerator = (seed) => {
+  let currentSeed = seed;
+
+  const random = (size) => {
+    const bytes = new Uint8Array(size);
+    for (let i = 0; i < size; i++) {
+      // Linear congruential generator with better distribution
+      currentSeed = (currentSeed * 1103515245 + 12345) & 0x7fffffff;
+      // Use different bits for each byte to avoid patterns
+      bytes[i] = (currentSeed >>> ((i % 4) * 8)) & 0xff;
+    }
+    return bytes;
+  };
+
+  const alphabet =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-";
+  return customRandom(alphabet, 21, random);
+};
+
+/**
+ * Copy a node under its parent in the tree structure
+ * @param {*} state - The current state object
+ * @param {*} target - Path to the target data (e.g., 'fileExplorer')
+ * @param {Object} value - Copy operation parameters
+ * @param {string} value.id - ID of the node to copy
+ * @returns {Object} New state with the node moved to its new position
+ * @example
+ * // Copy node 'file1' under its parent
+ * const newState = treeCopy(state, 'fileExplorer', {
+ *  id: 'file1'
+ * });
+ */
+const treeCopy = (state, target, value) => {
+  const newState = structuredClone(state);
+  const targetData = get(newState, target);
+  const { id, seed } = value;
+  const nodeInfo = findNodeInTree(targetData.tree, id);
+
+  if (!nodeInfo) {
+    return newState; // Node not found, return unchanged state
+  }
+
+  if (!seed) {
+    throw new Error("Seed is required for deterministic ID generation.");
+  }
+
+  const { node, parent } = nodeInfo;
+
+  // Create deterministic ID generator based on seed
+  const generateId = createSeededIdGenerator(seed);
+
+  // Helper function to recursively duplicate nodes and their items
+  const duplicateNode = (originalNode, isRoot = false) => {
+    const newNode = structuredClone(originalNode);
+
+    // Generate deterministic ID based on seed
+    newNode.id = generateId();
+
+    // Copy the item data - this must happen for EVERY node, not just root
+    if (targetData.items[originalNode.id]) {
+      targetData.items[newNode.id] = structuredClone(
+        targetData.items[originalNode.id],
+      );
+      delete targetData.items[newNode.id].id; // Remove id from item data
+
+      // Add " (copy)" suffix to the name for the root node only
+      if (isRoot && targetData.items[newNode.id].name) {
+        targetData.items[newNode.id].name += " (copy)";
+      }
+    }
+
+    // Recursively duplicate children (isRoot = false for children)
+    if (originalNode.children && originalNode.children.length > 0) {
+      newNode.children = originalNode.children.map((child) =>
+        duplicateNode(child, false),
+      );
+    } else {
+      newNode.children = [];
+    }
+
+    return newNode;
+  };
+
+  // Duplicate the node and all its descendants
+  const newNode = duplicateNode(node, true);
+
+  if (parent) {
+    // Add the new node to the parent's children
+    parent.children.push(newNode);
+  } else {
+    // If no parent, add to root level
+    targetData.tree.push(newNode);
+  }
+
+  return newState;
+};
+
 const treeUpdate = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
@@ -386,6 +486,8 @@ const createRepositoryInternal = (
         return treeUpdate(acc, target, value);
       } else if (actionType === "treeMove") {
         return treeMove(acc, target, value);
+      } else if (actionType === "treeCopy") {
+        return treeCopy(acc, target, value);
       } else if (actionType === "init") {
         // Initialize entire state sections with provided data
         // value should be an object with keys matching state sections
