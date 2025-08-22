@@ -195,7 +195,9 @@ export const handleFileAction = (e, deps) => {
       return "_root";
     };
 
-    const parentId = targetData.tree ? findParentId(targetData.tree, itemId) : "_root";
+    const parentId = targetData.tree
+      ? findParentId(targetData.tree, itemId)
+      : "_root";
     const duplicatedItem = duplicateItem(currentItem);
 
     // Add the duplicated item
@@ -214,7 +216,7 @@ export const handleFileAction = (e, deps) => {
       const duplicateChildren = (nodes, oldParentId, newParentId) => {
         for (const node of nodes) {
           if (node.id === oldParentId && node.children) {
-            node.children.forEach(child => {
+            node.children.forEach((child) => {
               const childItem = targetData.items[child.id];
               if (childItem) {
                 const newChildId = nanoid();
