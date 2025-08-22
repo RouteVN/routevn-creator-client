@@ -17,6 +17,15 @@ const form = {
 export const INITIAL_STATE = Object.freeze({
   placementData: { tree: [], items: {} },
   selectedItemId: null,
+  contextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+    { label: "Duplicate", type: "item", value: "duplicate-item" },
+    { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
+  ],
+  emptyContextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+  ],
 });
 
 export const setItems = (state, placementData) => {
@@ -61,6 +70,8 @@ export const toViewData = ({ state, props }, payload) => {
     selectedResourceId: "placements",
     repositoryTarget: "placements",
     selectedItemId: state.selectedItemId,
+    contextMenuItems: state.contextMenuItems,
+    emptyContextMenuItems: state.emptyContextMenuItems,
     form,
     defaultValues,
   };

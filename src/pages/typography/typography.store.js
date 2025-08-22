@@ -159,6 +159,17 @@ export const INITIAL_STATE = Object.freeze({
     fontWeight: null,
     previewText: null,
   },
+
+  // Context menu items
+  contextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+    { label: "Duplicate", type: "item", value: "duplicate-item" },
+    { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
+  ],
+  emptyContextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+  ],
 });
 
 export const setItems = (state, typographyData) => {
@@ -582,6 +593,8 @@ export const toViewData = ({ state }) => {
     selectedResourceId: "typography",
     selectedItemId: state.selectedItemId,
     repositoryTarget: "typography",
+    contextMenuItems: state.contextMenuItems,
+    emptyContextMenuItems: state.emptyContextMenuItems,
     colorsData: state.colorsData,
     fontsData: state.fontsData,
     form,
