@@ -173,12 +173,13 @@ export const handleFileAction = (e, deps) => {
       return;
     }
 
-    // Add the duplicated item
+    // Add the duplicated item with timestamp as seed
     repository.addAction({
       actionType: "treeCopy",
       target: repositoryTarget,
       value: {
         id: itemId,
+        seed: Date.now(),
       },
     });
   }

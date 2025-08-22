@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { nanoid, customRandom } from "nanoid";
 
 const set = (state, path, value) => {
   const newState = structuredClone(state);
@@ -200,6 +200,26 @@ const treeDelete = (state, target, value) => {
   return newState;
 };
 
+// Helper function to create seeded ID generator
+const createSeededIdGenerator = (seed) => {
+  let currentSeed = seed;
+
+  const random = (size) => {
+    const bytes = new Uint8Array(size);
+    for (let i = 0; i < size; i++) {
+      // Linear congruential generator with better distribution
+      currentSeed = (currentSeed * 1103515245 + 12345) & 0x7fffffff;
+      // Use different bits for each byte to avoid patterns
+      bytes[i] = (currentSeed >>> ((i % 4) * 8)) & 0xff;
+    }
+    return bytes;
+  };
+
+  const alphabet =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-";
+  return customRandom(alphabet, 21, random);
+};
+
 /**
  * Copy a node under its parent in the tree structure
  * @param {*} state - The current state object
@@ -216,35 +236,30 @@ const treeDelete = (state, target, value) => {
 const treeCopy = (state, target, value) => {
   const newState = structuredClone(state);
   const targetData = get(newState, target);
-  const { id } = value;
+  const { id, seed } = value;
   const nodeInfo = findNodeInTree(targetData.tree, id);
 
   if (!nodeInfo) {
     return newState; // Node not found, return unchanged state
   }
 
-  const { node, parent } = nodeInfo;
-
-  // Check if this action already has generated IDs (from a previous execution)
-  // If so, use them; otherwise generate new ones and store them
-  // This allows us to use random IDs but keep them consistent across replays
-  if (!value._generatedIds) {
-    value._generatedIds = {};
+  if (!seed) {
+    throw new Error("Seed is required for deterministic ID generation.");
   }
 
+  const { node, parent } = nodeInfo;
+
+  // Create deterministic ID generator based on seed
+  const generateId = createSeededIdGenerator(seed);
+
   // Helper function to recursively duplicate nodes and their items
-  const duplicateNode = (originalNode, path = "", isRoot = false) => {
+  const duplicateNode = (originalNode, isRoot = false) => {
     const newNode = structuredClone(originalNode);
 
-    // Use stored ID if available, otherwise generate and store
-    if (value._generatedIds[path]) {
-      newNode.id = value._generatedIds[path];
-    } else {
-      newNode.id = nanoid();
-      value._generatedIds[path] = newNode.id;
-    }
+    // Generate deterministic ID based on seed
+    newNode.id = generateId();
 
-    // Copy the item data
+    // Copy the item data - this must happen for EVERY node, not just root
     if (targetData.items[originalNode.id]) {
       targetData.items[newNode.id] = structuredClone(
         targetData.items[originalNode.id],
@@ -257,12 +272,11 @@ const treeCopy = (state, target, value) => {
       }
     }
 
-    // Recursively duplicate children with their path (isRoot = false for children)
+    // Recursively duplicate children (isRoot = false for children)
     if (originalNode.children && originalNode.children.length > 0) {
-      newNode.children = originalNode.children.map((child, index) => {
-        const childPath = path ? `${path}.${index}` : `${index}`;
-        return duplicateNode(child, childPath, false);
-      });
+      newNode.children = originalNode.children.map((child) =>
+        duplicateNode(child, false),
+      );
     } else {
       newNode.children = [];
     }
@@ -271,7 +285,7 @@ const treeCopy = (state, target, value) => {
   };
 
   // Duplicate the node and all its descendants
-  const newNode = duplicateNode(node, "root", true);
+  const newNode = duplicateNode(node, true);
 
   if (parent) {
     // Add the new node to the parent's children
