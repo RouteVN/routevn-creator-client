@@ -49,8 +49,6 @@ const calculateAbsolutePosition = (
   return null;
 };
 
-
-
 const renderLayoutPreview = async (deps) => {
   const { store, repository, drenderer, getFileContent } = deps;
   const layoutId = store.selectLayoutId();
@@ -129,8 +127,6 @@ const renderLayoutPreview = async (deps) => {
   let elementsToRender = renderStateElements;
 
   if (selectedItem) {
-
-
   }
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
@@ -152,8 +148,11 @@ const renderLayoutPreview = async (deps) => {
   });
 
   setTimeout(() => {
+    if (!selectedItem) {
+      return;
+    }
     const bounds = drenderer.getStageElementBounds();
-    console.log('bounds', bounds);
+    console.log("bounds", bounds);
     const result = calculateAbsolutePosition(
       renderStateElements,
       selectedItem.id,
@@ -165,27 +164,26 @@ const renderLayoutPreview = async (deps) => {
         type: "rect",
         x: result.x - 12,
         y: result.y - 12,
+        radius: 12,
         width: 25,
         height: 25,
         fill: "red",
       };
 
       const border = {
-        id: 'selected-border',
+        id: "selected-border",
         type: "rect",
         x: bounds[selectedItem.id].x,
         y: bounds[selectedItem.id].y,
-        // x: result.startX ?? 0,
-        // y: result.startY ?? 0,
-        fill: 'transparent',
+        fill: "transparent",
         width: result.width ?? 0,
         height: result.height ?? 0,
         border: {
-          color: 'red',
+          color: "red",
           width: 2,
-          alpha: 1
-        }
-      }
+          alpha: 1,
+        },
+      };
 
       // Wrap red dot in a container to ensure it's on top
       const redDotContainer = {
@@ -197,7 +195,7 @@ const renderLayoutPreview = async (deps) => {
         height: 1080,
         anchorX: 0,
         anchorY: 0,
-        children: [redDot, border],
+        children: [border, redDot],
       };
 
       // Add container as the LAST top-level element
@@ -207,7 +205,7 @@ const renderLayoutPreview = async (deps) => {
         transitions: [],
       });
     }
-  }, 100)
+  }, 100);
 };
 
 export const handleBeforeMount = (deps) => {
