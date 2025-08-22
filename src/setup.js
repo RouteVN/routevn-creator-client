@@ -23,8 +23,6 @@ const httpClient = createRouteVnHttpClient({
   },
 });
 
-// Initialize async resources first
-const drenderer = await create2dRenderer();
 
 // Create font manager (needed by fileManager)
 const fontManager = createFontManager();
@@ -310,6 +308,9 @@ const subject = new Subject();
 const router = new Router();
 const audioManager = new AudioManager();
 const filePicker = createFilePicker();
+
+// Initialize async resources first
+const drenderer = await create2dRenderer({ subject });
 
 const componentDependencies = {
   httpClient,

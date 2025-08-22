@@ -183,6 +183,9 @@ const renderLayoutPreview = async (deps) => {
           width: 2,
           alpha: 1,
         },
+        pointerDown: `layout-editor-pointer-down-${selectedItem.id}`,
+        pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
+        pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
       };
 
       // Wrap red dot in a container to ensure it's on top
@@ -709,7 +712,62 @@ export const handleArrowKeyDown = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
+export const handle2dRenderEvent = async (e, deps) => {
+
+  const { store, repository, render } = deps;
+  const { eventName, payload } = e;
+
+  const { isDragging, dragOffset } = store.selectDragging();
+
+  const currentItem = store.selectSelectedItem();
+  if (!currentItem) {
+    return;
+  }
+
+  if (eventName.startsWith('layout-editor-pointer-down')) {
+    store.startDragging({
+      x: payload.x - currentItem.x,
+      y: payload.y - currentItem.y
+    });
+  } else if (eventName.startsWith('layout-editor-pointer-up')) {
+    store.stopDragging(false);
+  } else if (eventName.startsWith('layout-editor-pointer-move')) {
+
+    if (!isDragging) {
+      return;
+    }
+
+    let change = {
+      x: payload.x - dragOffset.x,
+      y: payload.y - dragOffset.y
+    };
+
+    const layoutId = store.selectLayoutId();
+
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: `layouts.items.${layoutId}.elements`,
+      value: {
+        id: currentItem.id,
+        replace: false,
+        item: change,
+      },
+    });
+
+    // Sync store with updated repository data
+    const { layouts } = repository.getState();
+    const layout = layouts.items[layoutId];
+    //
+    store.setItems(layout?.elements || { items: {}, tree: [] });
+    render();
+
+    await renderLayoutPreview(deps);
+  }
+
+}
+
 export const subscriptions = (deps) => {
+  const { subject } = deps;
   return [
     fromEvent(window, "keydown").pipe(
       filter((e) => {
@@ -719,6 +777,12 @@ export const subscriptions = (deps) => {
       }),
       tap((e) => {
         handleArrowKeyDown(e, deps);
+      }),
+    ),
+    subject.pipe(
+      filter(({ action, payload }) => action === "2drendererEvent"),
+      tap(({ action, payload }) => {
+        handle2dRenderEvent(payload, deps)
       }),
     ),
   ];
