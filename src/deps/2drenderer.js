@@ -23,10 +23,10 @@ export const create2dRenderer = async ({ subject }) => {
         width: 1920,
         height: 1080,
         eventHandler: (eventName, payload) => {
-          subject.dispatch('2drendererEvent', {
+          subject.dispatch("2drendererEvent", {
             eventName,
-            payload
-          })
+            payload,
+          });
         },
         plugins: [
           new SpriteRendererPlugin(),

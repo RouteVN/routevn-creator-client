@@ -23,7 +23,6 @@ const httpClient = createRouteVnHttpClient({
   },
 });
 
-
 // Create font manager (needed by fileManager)
 const fontManager = createFontManager();
 

@@ -713,7 +713,6 @@ export const handleArrowKeyDown = async (e, deps) => {
 };
 
 export const handle2dRenderEvent = async (e, deps) => {
-
   const { store, repository, render } = deps;
   const { eventName, payload } = e;
 
@@ -724,22 +723,21 @@ export const handle2dRenderEvent = async (e, deps) => {
     return;
   }
 
-  if (eventName.startsWith('layout-editor-pointer-down')) {
+  if (eventName.startsWith("layout-editor-pointer-down")) {
     store.startDragging({
       x: payload.x - currentItem.x,
-      y: payload.y - currentItem.y
+      y: payload.y - currentItem.y,
     });
-  } else if (eventName.startsWith('layout-editor-pointer-up')) {
+  } else if (eventName.startsWith("layout-editor-pointer-up")) {
     store.stopDragging(false);
-  } else if (eventName.startsWith('layout-editor-pointer-move')) {
-
+  } else if (eventName.startsWith("layout-editor-pointer-move")) {
     if (!isDragging) {
       return;
     }
 
     let change = {
       x: payload.x - dragOffset.x,
-      y: payload.y - dragOffset.y
+      y: payload.y - dragOffset.y,
     };
 
     const layoutId = store.selectLayoutId();
@@ -763,8 +761,7 @@ export const handle2dRenderEvent = async (e, deps) => {
 
     await renderLayoutPreview(deps);
   }
-
-}
+};
 
 export const subscriptions = (deps) => {
   const { subject } = deps;
@@ -782,7 +779,7 @@ export const subscriptions = (deps) => {
     subject.pipe(
       filter(({ action, payload }) => action === "2drendererEvent"),
       tap(({ action, payload }) => {
-        handle2dRenderEvent(payload, deps)
+        handle2dRenderEvent(payload, deps);
       }),
     ),
   ];
