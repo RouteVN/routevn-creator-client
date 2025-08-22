@@ -173,13 +173,13 @@ export const handleFileAction = (e, deps) => {
       return;
     }
 
-    // Add the duplicated item with timestamp as seed
+    // Add the duplicated item with random number as seed
     repository.addAction({
       actionType: "treeCopy",
       target: repositoryTarget,
       value: {
         id: itemId,
-        seed: Date.now(),
+        seed: Math.floor(Math.random() * 0x7fffffff), // Max 31-bit integer
       },
     });
   }
