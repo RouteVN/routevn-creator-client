@@ -150,10 +150,6 @@ export const handleFileAction = (e, deps) => {
       });
     }
   } else if (item.value.action === "new-child-item") {
-    const repositoryState = repository.getState();
-    const targetData = lodashGet(repositoryState, repositoryTarget);
-    const currentItem =
-      targetData && targetData.items ? targetData.items[itemId] : null;
     const { action, ...restItem } = item.value;
     repository.addAction({
       actionType: "treePush",
@@ -173,106 +169,77 @@ export const handleFileAction = (e, deps) => {
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
 
-    if (currentItem) {
-      // Find the parent of the current item by traversing the tree structure
-      const findParentId = (nodes, targetId, parentId = "_root") => {
-        for (const node of nodes) {
-          if (node.id === targetId) {
-            return parentId;
-          }
-          if (node.children && node.children.length > 0) {
-            const found = findParentId(node.children, targetId, node.id);
-            if (found !== null) {
-              return found;
-            }
-          }
-        }
-        return null;
+    if (!currentItem) {
+      return;
+    }
+
+    // Simple solution: Clone the item with a new ID and name
+    const duplicateItem = (originalItem) => {
+      const newId = nanoid();
+      return {
+        ...originalItem,
+        id: newId,
+        name: `${originalItem.name} (copy)`,
       };
+    };
 
-      const parentId = targetData.tree
-        ? findParentId(targetData.tree, itemId)
-        : "_root";
-
-      // Helper function to duplicate an item and its children recursively
-      const duplicateItemRecursive = (itemToDuplicate, isRoot = true) => {
-        const newId = nanoid();
-        const newItem = {
-          ...itemToDuplicate,
-          id: newId,
-          name: isRoot
-            ? `${itemToDuplicate.name} (copy)`
-            : itemToDuplicate.name,
-        };
-
-        // If it's a folder, duplicate its children
-        if (itemToDuplicate.type === "folder" && targetData.tree) {
-          // Find the node in the tree and get its children
-          const findNodeChildren = (nodes, targetId) => {
-            for (const node of nodes) {
-              if (node.id === targetId) {
-                return node.children || [];
-              }
-              if (node.children && node.children.length > 0) {
-                const found = findNodeChildren(node.children, targetId);
-                if (found) {
-                  return found;
-                }
-              }
-            }
-            return [];
-          };
-
-          const children = findNodeChildren(
-            targetData.tree,
-            itemToDuplicate.id,
-          );
-          const duplicatedChildren = [];
-
-          for (const child of children) {
-            const childItem = targetData.items[child.id];
-            if (childItem) {
-              const duplicatedChild = duplicateItemRecursive(childItem, false);
-              duplicatedChildren.push({
-                item: duplicatedChild.item,
-                parentId: newId,
-              });
-            }
-          }
-
-          return { item: newItem, children: duplicatedChildren };
-        }
-
-        return { item: newItem, children: [] };
-      };
-
-      const duplicated = duplicateItemRecursive(currentItem);
-
-      // Add the duplicated item to the same parent folder as the original
-      repository.addAction({
-        actionType: "treePush",
-        target: repositoryTarget,
-        value: {
-          parent: parentId,
-          position: { after: itemId },
-          item: duplicated.item,
-        },
-      });
-
-      // Add all children if any
-      if (duplicated.children.length > 0) {
-        for (const child of duplicated.children) {
-          repository.addAction({
-            actionType: "treePush",
-            target: repositoryTarget,
-            value: {
-              parent: child.parentId,
-              position: "last",
-              item: child.item,
-            },
-          });
+    // Find parent ID by traversing the tree
+    const findParentId = (nodes, targetId, parentId = "_root") => {
+      for (const node of nodes) {
+        if (node.id === targetId) return parentId;
+        if (node.children?.length) {
+          const found = findParentId(node.children, targetId, node.id);
+          if (found) return found;
         }
       }
+      return "_root";
+    };
+
+    const parentId = targetData.tree ? findParentId(targetData.tree, itemId) : "_root";
+    const duplicatedItem = duplicateItem(currentItem);
+
+    // Add the duplicated item
+    repository.addAction({
+      actionType: "treePush",
+      target: repositoryTarget,
+      value: {
+        parent: parentId,
+        position: { after: itemId },
+        item: duplicatedItem,
+      },
+    });
+
+    // If it's a folder, duplicate its children
+    if (currentItem.type === "folder" && targetData.tree) {
+      const duplicateChildren = (nodes, oldParentId, newParentId) => {
+        for (const node of nodes) {
+          if (node.id === oldParentId && node.children) {
+            node.children.forEach(child => {
+              const childItem = targetData.items[child.id];
+              if (childItem) {
+                const newChildId = nanoid();
+                repository.addAction({
+                  actionType: "treePush",
+                  target: repositoryTarget,
+                  value: {
+                    parent: newParentId,
+                    position: "last",
+                    item: { ...childItem, id: newChildId },
+                  },
+                });
+                // Recursively duplicate children of this child
+                duplicateChildren(nodes, child.id, newChildId);
+              }
+            });
+            return;
+          }
+          if (node.children) {
+            duplicateChildren(node.children, oldParentId, newParentId);
+          }
+        }
+      };
+
+      duplicateChildren(targetData.tree, itemId, duplicatedItem.id);
     }
   }
 
