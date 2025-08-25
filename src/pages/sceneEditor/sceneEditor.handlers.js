@@ -231,6 +231,29 @@ export const handleSectionAddClick = (e, deps) => {
   const sectionCount = scene?.sections?.length || 0;
   const newSectionName = `Section ${sectionCount + 1}`;
 
+  // Get layouts from repository to find first dialogue layout
+  const { layouts } = repository.getState();
+  let dialogueLayoutId = null;
+
+  if (layouts && layouts.items) {
+    // Find first layout with layoutType: "dialogue"
+    for (const [layoutId, layout] of Object.entries(layouts.items)) {
+      if (layout.layoutType === "dialogue") {
+        dialogueLayoutId = layoutId;
+        break;
+      }
+    }
+  }
+
+  // Create presentation object with dialogue layout if found
+  const presentation = dialogueLayoutId
+    ? {
+        dialogue: {
+          layoutId: dialogueLayoutId,
+        },
+      }
+    : {};
+
   repository.addAction({
     actionType: "treePush",
     target: `scenes.items.${sceneId}.sections`,
@@ -243,7 +266,7 @@ export const handleSectionAddClick = (e, deps) => {
         lines: {
           items: {
             [newLineId]: {
-              presentation: {},
+              presentation: presentation,
             },
           },
           tree: [
