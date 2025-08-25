@@ -31,6 +31,172 @@ const fileContentCache = new Map();
 // Track keyboard navigation timeout
 let keyboardNavigationTimeout = null;
 
+/**
+ * Schedule a final save after keyboard navigation stops
+ * @param {Object} deps - Component dependencies
+ * @param {string} itemId - The item ID being edited
+ * @param {string} layoutId - The layout ID
+ */
+const scheduleKeyboardSave = (deps, itemId, layoutId) => {
+  // Clear existing timeout if still navigating
+  if (keyboardNavigationTimeout) {
+    clearTimeout(keyboardNavigationTimeout);
+  }
+
+  keyboardNavigationTimeout = setTimeout(() => {
+    const { store, subject } = deps;
+    
+    // Check if the selected item has changed
+    if (store.selectSelectedItemId() !== itemId) {
+      keyboardNavigationTimeout = null;
+      return;
+    }
+
+    // Final render to ensure bounds are properly updated
+    renderLayoutPreview(deps, { skipAssetLoading: true });
+
+    // Save final position to repository
+    const finalItem = store.selectSelectedItem();
+    if (finalItem) {
+      subject.dispatch("layoutEditor.updateElement", {
+        layoutId,
+        selectedItemId: itemId,
+        updatedItem: finalItem,
+        replace: true,
+      });
+    }
+
+    keyboardNavigationTimeout = null;
+  }, DEBOUNCE_DELAYS.KEYBOARD);
+};
+
+/**
+ * Cancel any pending keyboard save
+ */
+const cancelKeyboardSave = () => {
+  if (keyboardNavigationTimeout) {
+    clearTimeout(keyboardNavigationTimeout);
+    keyboardNavigationTimeout = null;
+  }
+};
+
+// ============================================================================  
+// Asset Loading
+// ============================================================================
+
+/**
+ * Load assets (images and fonts) for rendering
+ * @param {Object} deps - Component dependencies
+ * @param {Array} fileIds - File IDs to load
+ * @param {Object} fontsItems - Font items from repository
+ * @returns {Promise<Object>} Loaded assets
+ */
+const loadAssets = async (deps, fileIds, fontsItems) => {
+  const { getFileContent } = deps;
+  const assets = {};
+
+  for (const fileId of fileIds) {
+    // Check cache first
+    let url;
+    const cacheKey = `${fileId}_someprojectId`;
+    
+    if (fileContentCache.has(cacheKey)) {
+      url = fileContentCache.get(cacheKey);
+    } else {
+      // Fetch from API if not in cache
+      const result = await getFileContent({
+        fileId: fileId,
+        projectId: "someprojectId",
+      });
+      url = result.url;
+      // Store in cache for future use
+      fileContentCache.set(cacheKey, url);
+    }
+
+    // Determine file type
+    let type = "image/png"; // default for images
+
+    // Check if this is a font file by looking in fonts data
+    const fontItem = Object.values(fontsItems).find(
+      (font) => font.fileId === fileId,
+    );
+    
+    if (fontItem) {
+      // This is a font file, determine MIME type
+      const fileName = fontItem.name || "";
+      if (fileName.endsWith(".woff2")) type = "font/woff2";
+      else if (fileName.endsWith(".woff")) type = "font/woff";
+      else if (fileName.endsWith(".ttf")) type = "font/ttf";
+      else if (fileName.endsWith(".otf")) type = "font/otf";
+      else type = "font/ttf"; // default font type
+
+      // For fonts, use fontFamily as the key instead of fileId
+      assets[fontItem.fontFamily] = {
+        url: url,
+        type: type,
+      };
+    } else {
+      // For non-fonts (like images), use the file reference
+      assets[`file:${fileId}`] = {
+        url: url,
+        type: type,
+      };
+    }
+  }
+
+  return assets;
+};
+
+// ============================================================================
+// Render State Management
+// ============================================================================
+
+/**
+ * Get render state from repository and store data
+ * @param {Object} deps - Component dependencies
+ * @returns {Object} Render state data
+ */
+const getRenderState = (deps) => {
+  const { store, repository } = deps;
+  
+  const {
+    layouts,
+    images: { items: imageItems },
+    typography: typographyData,
+    colors: colorsData,
+    fonts: fontsData,
+  } = repository.getState();
+
+  // Extract items from structured data
+  const typographyItems = typographyData?.items || {};
+  const colorsItems = colorsData?.items || {};
+  const fontsItems = fontsData?.items || {};
+
+  // Use store's elements which have optimistic updates, fallback to repository data
+  const layoutId = store.selectLayoutId();
+  const storeElements = store.selectItems();
+  const layoutElements = storeElements || layouts.items[layoutId]?.elements;
+
+  const layoutTreeStructure = toTreeStructure(layoutElements);
+
+  const renderStateElements = layoutTreeStructureToRenderState(
+    layoutTreeStructure,
+    imageItems,
+    { items: typographyItems },
+    { items: colorsItems },
+    { items: fontsItems },
+  );
+
+  return {
+    renderStateElements,
+    layoutTreeStructure,
+    fontsItems,
+    imageItems,
+    typographyItems,
+    colorsItems,
+  };
+};
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -111,97 +277,27 @@ const calculateAbsolutePosition = (
 };
 
 const renderLayoutPreview = async (deps, options = {}) => {
-  const { store, repository, drenderer, getFileContent } = deps;
-  const { skipAssetLoading = false, isKeyboardUpdate = false } = options;
-  const layoutId = store.selectLayoutId();
+  const { store, drenderer } = deps;
+  const { skipAssetLoading = false } = options;
 
+  // Get consolidated render state
   const {
-    layouts,
-    images: { items: imageItems },
-    typography: typographyData,
-    colors: colorsData,
-    fonts: fontsData,
-  } = repository.getState();
-
-  // Extract items from structured data
-  const typographyItems = typographyData?.items || {};
-  const colorsItems = colorsData?.items || {};
-  const fontsItems = fontsData?.items || {};
-
-  // Use store's elements which have optimistic updates, fallback to repository data
-  const storeElements = store.selectItems();
-  const layoutElements = storeElements || layouts.items[layoutId]?.elements;
+    renderStateElements,
+    layoutTreeStructure,
+    fontsItems,
+    imageItems,
+    typographyItems,
+    colorsItems,
+  } = getRenderState(deps);
 
   const choicesData = store.selectChoicesData();
 
-  const layoutTreeStructure = toTreeStructure(layoutElements);
-
-  const renderStateElements = layoutTreeStructureToRenderState(
-    layoutTreeStructure,
-    imageItems,
-    { items: typographyItems },
-    { items: colorsItems },
-    { items: fontsItems },
-  );
-
   const selectedItem = store.selectSelectedItem();
-  const { isDragging, dragOffset } = store.selectDragging();
 
   // Skip asset loading during drag for better performance
   if (!skipAssetLoading) {
-    // Extract all file IDs from render state (includes both images and fonts)
     const fileIds = extractFileIdsFromRenderState(renderStateElements);
-
-    const assets = {};
-
-    for (const fileId of fileIds) {
-      // Check cache first
-      let url;
-      const cacheKey = `${fileId}_someprojectId`;
-
-      if (fileContentCache.has(cacheKey)) {
-        url = fileContentCache.get(cacheKey);
-      } else {
-        // Fetch from API if not in cache
-        const result = await getFileContent({
-          fileId: fileId,
-          projectId: "someprojectId",
-        });
-        url = result.url;
-        // Store in cache for future use
-        fileContentCache.set(cacheKey, url);
-      }
-
-      // Determine file type
-      let type = "image/png"; // default for images
-
-      // Check if this is a font file by looking in fonts data
-      const fontItem = Object.values(fontsItems).find(
-        (font) => font.fileId === fileId,
-      );
-      if (fontItem) {
-        // This is a font file, determine MIME type
-        const fileName = fontItem.name || "";
-        if (fileName.endsWith(".woff2")) type = "font/woff2";
-        else if (fileName.endsWith(".woff")) type = "font/woff";
-        else if (fileName.endsWith(".ttf")) type = "font/ttf";
-        else if (fileName.endsWith(".otf")) type = "font/otf";
-        else type = "font/ttf"; // default font type
-
-        // For fonts, use fontFamily as the key instead of fileId
-        assets[fontItem.fontFamily] = {
-          url: url,
-          type: type,
-        };
-      } else {
-        // For non-fonts (like images), use the file reference
-        assets[`file:${fileId}`] = {
-          url: url,
-          type: type,
-        };
-      }
-    }
-
+    const assets = await loadAssets(deps, fileIds, fontsItems);
     await drenderer.loadAssets(assets);
   }
 
@@ -241,11 +337,11 @@ const renderLayoutPreview = async (deps, options = {}) => {
     const redDot = {
       id: "selected-anchor",
       type: "rect",
-      x: result.x - 12,
-      y: result.y - 12,
-      radius: 12,
-      width: 25,
-      height: 25,
+      x: result.x - 6,
+      y: result.y - 6,
+      radius: 6,
+      width: 12,
+      height: 12,
       fill: "white",
     };
 
@@ -330,10 +426,8 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleTargetChanged = (payload, deps) => {
-  const { render } = deps;
-  render();
-};
+// Simple render handler for events that only need to trigger a re-render
+export const handleRenderOnly = (payload, deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (e, deps) => {
   const { store, render, getFileContent, repository } = deps;
@@ -379,10 +473,9 @@ export const handleFileExplorerItemClick = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleAddLayoutClick = (e, deps) => {
-  const { render } = deps;
-  render();
-};
+// Use the generic render handler
+export const handleTargetChanged = handleRenderOnly;
+export const handleAddLayoutClick = handleRenderOnly;
 
 export const handleDataChanged = async (e, deps) => {
   const { router, store, repository, render } = deps;
@@ -732,12 +825,7 @@ export const handleChoiceFormChange = async (e, deps) => {
 };
 
 export const handleArrowKeyDown = async (e, deps) => {
-  const { store, repository, render } = deps;
-
-  // Clear existing timeout if still navigating
-  if (keyboardNavigationTimeout) {
-    clearTimeout(keyboardNavigationTimeout);
-  }
+  const { store, render } = deps;
 
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
@@ -746,7 +834,6 @@ export const handleArrowKeyDown = async (e, deps) => {
 
   const unit = e.shiftKey ? KEYBOARD_UNITS.FAST : KEYBOARD_UNITS.NORMAL;
   let change = {};
-
   const layoutId = store.selectLayoutId();
 
   if (e.key === "ArrowUp") {
@@ -796,38 +883,11 @@ export const handleArrowKeyDown = async (e, deps) => {
   store.updateSelectedItem(updatedItem);
   render();
 
-  // Render preview immediately for user feedback with keyboard flag
-  await renderLayoutPreview(deps, { isKeyboardUpdate: true });
+  // Render preview immediately for user feedback
+  await renderLayoutPreview(deps, { skipAssetLoading: true });
 
-  // Capture the current item ID for the timeout
-  const itemIdAtStart = currentItem.id;
-
-  // Set timeout for when keyboard navigation is finished (similar to pointer-up)
-  keyboardNavigationTimeout = setTimeout(() => {
-    // Check if the selected item has changed - if so, skip the save
-    const currentSelectedId = store.selectSelectedItemId();
-    if (currentSelectedId !== itemIdAtStart) {
-      keyboardNavigationTimeout = null;
-      return;
-    }
-
-    // Final render to ensure bounds are properly updated
-    renderLayoutPreview(deps, { skipAssetLoading: true });
-
-    // Dispatch update action to save to repository
-    const { subject } = deps;
-    const finalItem = store.selectSelectedItem();
-    if (finalItem) {
-      subject.dispatch("layoutEditor.updateElement", {
-        layoutId,
-        selectedItemId: itemIdAtStart,
-        updatedItem: finalItem, // Get the final accumulated changes
-        replace: true,
-      });
-    }
-
-    keyboardNavigationTimeout = null;
-  }, DEBOUNCE_DELAYS.KEYBOARD);
+  // Schedule final save after navigation stops
+  scheduleKeyboardSave(deps, currentItem.id, layoutId);
 };
 
 export const handle2dRenderEvent = async (e, deps) => {
@@ -842,11 +902,8 @@ export const handle2dRenderEvent = async (e, deps) => {
   }
 
   if (eventName.startsWith("layout-editor-pointer-down")) {
-    // Clear keyboard navigation timeout if user starts dragging
-    if (keyboardNavigationTimeout) {
-      clearTimeout(keyboardNavigationTimeout);
-      keyboardNavigationTimeout = null;
-    }
+    // Cancel any pending keyboard save when starting drag
+    cancelKeyboardSave();
 
     store.startDragging({
       x: Math.round(payload.x - currentItem.x),
@@ -877,11 +934,17 @@ export const handle2dRenderEvent = async (e, deps) => {
   }
 };
 
-// Handler for debounced element updates
-async function handleUpdateElement(payload, deps) {
+/**
+ * Handler for debounced element updates (saves to repository)
+ * @param {Object} payload - Update payload
+ * @param {Object} deps - Component dependencies
+ * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
+ */
+async function handleDebouncedUpdate(payload, deps, skipUIUpdate = false) {
   const { repository, store, render } = deps;
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
+  // Save to repository
   repository.addAction({
     actionType: "treeUpdate",
     target: `layouts.items.${layoutId}.elements`,
@@ -892,7 +955,10 @@ async function handleUpdateElement(payload, deps) {
     },
   });
 
-  // Sync store with updated repository data
+  // For drag operations, UI is already updated optimistically
+  if (skipUIUpdate) return;
+
+  // For form/keyboard updates, sync store with repository
   const { layouts, images } = repository.getState();
   const layout = layouts.items[layoutId];
 
@@ -901,25 +967,6 @@ async function handleUpdateElement(payload, deps) {
   render();
 
   await renderLayoutPreview(deps);
-}
-
-// Handler for debounced drag updates (saves to repository only, no UI update)
-async function handleUpdateElementDrag(payload, deps) {
-  const { repository } = deps;
-  const { layoutId, selectedItemId, updatedItem, replace } = payload;
-
-  // Only save to repository, don't update UI (already updated optimistically)
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `layouts.items.${layoutId}.elements`,
-    value: {
-      id: selectedItemId,
-      replace: replace,
-      item: updatedItem,
-    },
-  });
-
-  // Don't sync store or re-render - UI is already updated
 }
 
 export const subscriptions = (deps) => {
@@ -946,7 +993,7 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "layoutEditor.updateElement"),
       debounceTime(DEBOUNCE_DELAYS.UPDATE),
       tap(async ({ payload }) => {
-        await handleUpdateElement(payload, deps);
+        await handleDebouncedUpdate(payload, deps, false);
       }),
     ),
     // Debounce drag saves to repository (UI already updated immediately)
@@ -954,7 +1001,7 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "layoutEditor.updateElementDrag"),
       debounceTime(DEBOUNCE_DELAYS.DRAG),
       tap(async ({ payload }) => {
-        await handleUpdateElementDrag(payload, deps);
+        await handleDebouncedUpdate(payload, deps, true);
       }),
     ),
   ];
