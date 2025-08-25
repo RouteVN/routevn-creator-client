@@ -6,10 +6,6 @@ import {
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const DEBOUNCE_DELAYS = {
   UPDATE: 500, // Regular updates (forms, etc)
   DRAG: 1000, // Drag operations
@@ -20,10 +16,6 @@ const KEYBOARD_UNITS = {
   NORMAL: 1,
   FAST: 10, // With shift key
 };
-
-// ============================================================================
-// Caches
-// ============================================================================
 
 // File content cache to avoid redundant API calls
 const fileContentCache = new Map();
@@ -79,10 +71,6 @@ const cancelKeyboardSave = () => {
     keyboardNavigationTimeout = null;
   }
 };
-
-// ============================================================================
-// Asset Loading
-// ============================================================================
 
 /**
  * Load assets (images and fonts) for rendering
@@ -147,10 +135,6 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
   return assets;
 };
 
-// ============================================================================
-// Render State Management
-// ============================================================================
-
 /**
  * Get render state from repository and store data
  * @param {Object} deps - Component dependencies
@@ -196,10 +180,6 @@ const getRenderState = (deps) => {
     colorsItems,
   };
 };
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
 
 /**
  * Update element properties with optimistic UI updates and debounced saves
