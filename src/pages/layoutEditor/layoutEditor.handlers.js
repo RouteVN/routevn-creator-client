@@ -6,8 +6,66 @@ import {
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+const DEBOUNCE_DELAYS = {
+  UPDATE: 500, // Regular updates (forms, etc)
+  DRAG: 1000, // Drag operations
+  KEYBOARD: 1000, // Keyboard final save
+};
+
+const KEYBOARD_UNITS = {
+  NORMAL: 1,
+  FAST: 10, // With shift key
+};
+
+// ============================================================================
+// Caches
+// ============================================================================
+
 // File content cache to avoid redundant API calls
 const fileContentCache = new Map();
+
+// Track keyboard navigation timeout
+let keyboardNavigationTimeout = null;
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Update element properties with optimistic UI updates and debounced saves
+ * @param {Object} deps - Component dependencies
+ * @param {Object} changes - Properties to update
+ * @param {string} source - Update source: 'form', 'keyboard', 'drag'
+ */
+const updateElementOptimistically = (deps, changes, source = "form") => {
+  const { store, subject } = deps;
+  const currentItem = store.selectSelectedItem();
+  if (!currentItem) return;
+
+  const layoutId = store.selectLayoutId();
+
+  // Update store immediately for UI feedback
+  const updatedItem = { ...currentItem, ...changes };
+  store.updateSelectedItem(updatedItem);
+
+  // Determine which action to dispatch based on source
+  const action =
+    source === "drag"
+      ? "layoutEditor.updateElementDrag"
+      : "layoutEditor.updateElement";
+
+  // Dispatch debounced save
+  subject.dispatch(action, {
+    layoutId,
+    selectedItemId: currentItem.id,
+    updatedItem: changes,
+    replace: source === "form",
+  });
+};
 
 // Calculate absolute position by traversing the hierarchy
 const calculateAbsolutePosition = (
@@ -191,18 +249,10 @@ const renderLayoutPreview = async (deps, options = {}) => {
       fill: "white",
     };
 
-    // For keyboard updates, use the calculated position directly (result.startX/startY)
-    // For dragging, use the isDragging logic with bounds
-    const borderX = isKeyboardUpdate
-      ? result.startX
-      : isDragging
-        ? result.startX
-        : bounds[selectedItem.id].x;
-    const borderY = isKeyboardUpdate
-      ? result.startY
-      : isDragging
-        ? result.startY
-        : bounds[selectedItem.id].y;
+    // Always use calculated position for consistency
+    // This ensures immediate updates for all changes (form, keyboard, drag)
+    const borderX = result.startX;
+    const borderY = result.startY;
 
     const border = {
       id: "selected-border",
@@ -433,8 +483,8 @@ export const handleFormChange = async (e, deps) => {
     replace: true,
   });
 
-  // Render preview immediately for user feedback
-  await renderLayoutPreview(deps);
+  // Render preview immediately for user feedback (skip asset loading for speed)
+  await renderLayoutPreview(deps, { skipAssetLoading: true });
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
@@ -681,9 +731,6 @@ export const handleChoiceFormChange = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-// Track keyboard navigation timeout
-let keyboardNavigationTimeout = null;
-
 export const handleArrowKeyDown = async (e, deps) => {
   const { store, repository, render } = deps;
 
@@ -697,7 +744,7 @@ export const handleArrowKeyDown = async (e, deps) => {
     return;
   }
 
-  const unit = e.shiftKey ? 10 : 1;
+  const unit = e.shiftKey ? KEYBOARD_UNITS.FAST : KEYBOARD_UNITS.NORMAL;
   let change = {};
 
   const layoutId = store.selectLayoutId();
@@ -780,7 +827,7 @@ export const handleArrowKeyDown = async (e, deps) => {
     }
 
     keyboardNavigationTimeout = null;
-  }, 1000);
+  }, DEBOUNCE_DELAYS.KEYBOARD);
 };
 
 export const handle2dRenderEvent = async (e, deps) => {
@@ -807,45 +854,26 @@ export const handle2dRenderEvent = async (e, deps) => {
     });
   } else if (eventName.startsWith("layout-editor-pointer-up")) {
     store.stopDragging(false);
+    // Final render after drag ends
     setTimeout(() => {
       renderLayoutPreview(deps, { skipAssetLoading: true });
-      // Dispatch debounced update action for repository save only
-      const { subject } = deps;
-      subject.dispatch("layoutEditor.updateElementDrag", {
-        layoutId,
-        selectedItemId: currentItem.id,
-        updatedItem: change,
-        replace: false,
-      });
     }, 100);
   } else if (eventName.startsWith("layout-editor-pointer-move")) {
     if (!isDragging) {
       return;
     }
 
-    let change = {
+    const change = {
       x: Math.round(payload.x - dragOffset.x),
       y: Math.round(payload.y - dragOffset.y),
     };
 
-    const layoutId = store.selectLayoutId();
+    // Update element with optimistic UI (includes dispatch)
+    updateElementOptimistically(deps, change, "drag");
 
-    // Update store optimistically for immediate UI feedback during drag
-    const updatedItem = { ...currentItem, ...change };
-    store.updateSelectedItem(updatedItem);
-
-    // Render immediately for smooth dragging (no debounce for UI)
+    // Render immediately for smooth dragging
     // Skip asset loading during drag since assets don't change
     renderLayoutPreview(deps, { skipAssetLoading: true });
-
-    // Dispatch debounced update action for repository save only
-    const { subject } = deps;
-    subject.dispatch("layoutEditor.updateElementDrag", {
-      layoutId,
-      selectedItemId: currentItem.id,
-      updatedItem: change,
-      replace: false,
-    });
   }
 };
 
@@ -913,18 +941,18 @@ export const subscriptions = (deps) => {
         handle2dRenderEvent(payload, deps);
       }),
     ),
-    // Debounce regular element updates by 500ms
+    // Debounce regular element updates
     subject.pipe(
       filter(({ action }) => action === "layoutEditor.updateElement"),
-      debounceTime(500),
+      debounceTime(DEBOUNCE_DELAYS.UPDATE),
       tap(async ({ payload }) => {
         await handleUpdateElement(payload, deps);
       }),
     ),
-    // Debounce drag saves to repository by 1000ms (UI already updated immediately)
+    // Debounce drag saves to repository (UI already updated immediately)
     subject.pipe(
       filter(({ action }) => action === "layoutEditor.updateElementDrag"),
-      debounceTime(1000),
+      debounceTime(DEBOUNCE_DELAYS.DRAG),
       tap(async ({ payload }) => {
         await handleUpdateElementDrag(payload, deps);
       }),
