@@ -56,7 +56,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
           type: "video",
           fileId: result.fileId,
           thumbnailFileId: result.thumbnailFileId,
-          name: result.file.name,
+          name: result.displayName,
           fileType: result.file.type,
           fileSize: result.file.size,
         },

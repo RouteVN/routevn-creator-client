@@ -130,7 +130,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
       id: nanoid(),
       type: "font",
       fileId: result.fileId,
-      name: result.file.name,
+      name: result.displayName,
       fontFamily: result.fontName,
       fileType: getFileType(result),
       fileSize: result.file.size,
@@ -154,7 +154,13 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store.setItems(fonts);
 
     // Load the newly uploaded fonts to ensure they're available
-    const loadPromises = newFontItems.map((item) => loadFontFile(item));
+    const loadPromises = newFontItems.map((item) =>
+      loadFontFile({
+        fontName: item.fontFamily,
+        fileId: item.fileId,
+        projectId: "someprojectId",
+      }),
+    );
     await Promise.all(loadPromises);
   }
 

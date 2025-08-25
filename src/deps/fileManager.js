@@ -173,6 +173,7 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
         return {
           success: true,
           file,
+          displayName: file.name.replace(/\.[^.]+$/, ""),
           ...result,
         };
       } catch (error) {
