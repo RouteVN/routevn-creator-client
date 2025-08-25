@@ -85,7 +85,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
             id: nanoid(),
             type: "image",
             fileId: result.fileId,
-            name: result.file.name,
+            name: result.displayName,
             fileType: result.file.type,
             fileSize: result.file.size,
           },
