@@ -81,31 +81,33 @@ const fontInfoForm = {
       inputType: "read-only-text",
       description: "Format",
     },
-    {
-      name: "weightClass",
-      inputType: "read-only-text",
-      description: "Weight Class",
-    },
-    {
-      name: "isVariableFont",
-      inputType: "read-only-text",
-      description: "Variable Font",
-    },
-    {
-      name: "supportsItalics",
-      inputType: "read-only-text",
-      description: "Italic Support",
-    },
-    {
-      name: "glyphCount",
-      inputType: "read-only-text",
-      description: "Glyph Count",
-    },
-    {
-      name: "languageSupport",
-      inputType: "read-only-text",
-      description: "Languages",
-    },
+    // NOTE: The following fields are commented out because the current implementation
+    // does not accurately extract this information from font files
+    // {
+    //   name: "weightClass",
+    //   inputType: "read-only-text",
+    //   description: "Weight Class",
+    // },
+    // {
+    //   name: "isVariableFont",
+    //   inputType: "read-only-text",
+    //   description: "Variable Font",
+    // },
+    // {
+    //   name: "supportsItalics",
+    //   inputType: "read-only-text",
+    //   description: "Italic Support",
+    // },
+    // {
+    //   name: "glyphCount",
+    //   inputType: "read-only-text",
+    //   description: "Glyph Count",
+    // },
+    // {
+    //   name: "languageSupport",
+    //   inputType: "read-only-text",
+    //   description: "Languages",
+    // },
   ],
 };
 

@@ -168,7 +168,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleFontItemDoubleClick = async (e, deps) => {
-  const { store, render, repository, httpClient, fontManager } = deps;
+  const { store, render, repository, getFileContent, fontManager } = deps;
   const { itemId } = e.detail;
 
   // Find the font item
@@ -183,7 +183,7 @@ export const handleFontItemDoubleClick = async (e, deps) => {
 
   // Extract font information
   const fontInfoExtractor = createFontInfoExtractor({
-    httpClient,
+    getFileContent,
     fontManager,
   });
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
