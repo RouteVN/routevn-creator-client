@@ -17,14 +17,14 @@ export const INITIAL_STATE = Object.freeze({
   },
 
   form: {
-    title: "Add Placement",
-    description: "Create a new placement configuration",
+    title: "Add Transform",
+    description: "Create a new transform configuration",
     fields: [
       {
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the placement name",
+        description: "Enter the transform name",
         required: true,
       },
       {
@@ -128,7 +128,7 @@ export const INITIAL_STATE = Object.freeze({
         {
           id: "submit",
           variant: "pr",
-          content: "Add Placement",
+          content: "Add Transform",
         },
       ],
     },
@@ -148,7 +148,7 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-export const openPlacementFormDialog = (state, options = {}) => {
+export const openTransformFormDialog = (state, options = {}) => {
   const {
     editMode = false,
     itemId = null,
@@ -163,13 +163,13 @@ export const openPlacementFormDialog = (state, options = {}) => {
 
   // Update form based on edit mode
   if (editMode) {
-    state.form.title = "Edit Placement";
-    state.form.description = "Edit the placement configuration";
-    state.form.actions.buttons[0].content = "Update Placement";
+    state.form.title = "Edit Transform";
+    state.form.description = "Edit the transform configuration";
+    state.form.actions.buttons[0].content = "Update Transform";
   } else {
-    state.form.title = "Add Placement";
-    state.form.description = "Create a new placement configuration";
-    state.form.actions.buttons[0].content = "Add Placement";
+    state.form.title = "Add Transform";
+    state.form.description = "Create a new transform configuration";
+    state.form.actions.buttons[0].content = "Add Transform";
   }
 
   // Set default values based on item data
@@ -199,7 +199,7 @@ export const openPlacementFormDialog = (state, options = {}) => {
   state.isDialogOpen = true;
 };
 
-export const closePlacementFormDialog = (state) => {
+export const closeTransformFormDialog = (state) => {
   // Close dialog
   state.isDialogOpen = false;
 
@@ -220,9 +220,9 @@ export const closePlacementFormDialog = (state) => {
   };
 
   // Reset form to add mode
-  state.form.title = "Add Placement";
-  state.form.description = "Create a new placement configuration";
-  state.form.actions.buttons[0].content = "Add Placement";
+  state.form.title = "Add Transform";
+  state.form.description = "Create a new transform configuration";
+  state.form.actions.buttons[0].content = "Add Transform";
 };
 
 export const selectTargetGroupId = ({ state }) => {

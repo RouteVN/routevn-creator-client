@@ -27,13 +27,13 @@ export const handleWindowPop = (payload, deps) => {
   deps.render();
 };
 
-export const handleUpdatePlacement = (payload, deps) => {
+export const handleUpdateTransform = (payload, deps) => {
   const { repository } = deps;
   const { itemId, updates } = payload;
 
   repository.addAction({
     actionType: "treeUpdate",
-    target: "placements",
+    target: "transforms",
     value: {
       id: itemId,
       replace: false,

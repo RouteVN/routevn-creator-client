@@ -21,9 +21,9 @@ export const INITIAL_STATE = Object.freeze({
       route: "/project/resources/animations",
     },
     {
-      id: "placements",
-      label: "Placements",
-      route: "/project/resources/placements",
+      id: "transforms",
+      label: "Transforms",
+      route: "/project/resources/transforms",
     },
     {
       id: "videos",

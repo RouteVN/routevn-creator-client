@@ -23,7 +23,7 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
     "/project/resources/character-sprites",
     "/project/resources/audio",
     "/project/resources/animations",
-    "/project/resources/placements",
+    "/project/resources/transforms",
     "/project/resources/videos",
     "/project/resources/colors",
     "/project/resources/typography",

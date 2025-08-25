@@ -1,4 +1,4 @@
-elementName: rvn-placement-thumbnail
+elementName: rvn-transform-thumbnail
 
 handleBeforeMountonUpdate:
   handler: handleOnUpdate
@@ -8,11 +8,11 @@ attrsSchema:
   properties:
     w: 
       type: string
-      description: Width of the placement thumbnail
+      description: Width of the transform thumbnail
       default: '320'
     h:
       type: string
-      description: Height of the placement thumbnail
+      description: Height of the transform thumbnail
       default: '180'
 
 propsSchema:
@@ -20,27 +20,27 @@ propsSchema:
   properties:
     item:
       type: object
-      description: Placement item data
+      description: Transform item data
       properties:
         x:
           type: string
-          description: Width of the placement thumbnail
+          description: Width of the transform thumbnail
           default: 0
         y:
           type: string
-          description: Height of the placement thumbnail
+          description: Height of the transform thumbnail
           default: 0
         scaleX:
           type: string
-          description: Horizontal scale factor for the placement thumbnail
+          description: Horizontal scale factor for the transform thumbnail
           default: 1
         scaleY:
           type: string
-          description: Vertical scale factor for the placement thumbnail
+          description: Vertical scale factor for the transform thumbnail
           default: 1
         rotation:
           type: string
-          description: Rotation angle in degrees for the placement thumbnail
+          description: Rotation angle in degrees for the transform thumbnail
           default: 0
         anchorX:
           type: string
