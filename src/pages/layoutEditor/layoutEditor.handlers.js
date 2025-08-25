@@ -45,7 +45,7 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
 
   keyboardNavigationTimeout = setTimeout(() => {
     const { store, subject } = deps;
-    
+
     // Check if the selected item has changed
     if (store.selectSelectedItemId() !== itemId) {
       keyboardNavigationTimeout = null;
@@ -80,7 +80,7 @@ const cancelKeyboardSave = () => {
   }
 };
 
-// ============================================================================  
+// ============================================================================
 // Asset Loading
 // ============================================================================
 
@@ -99,7 +99,7 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
     // Check cache first
     let url;
     const cacheKey = `${fileId}_someprojectId`;
-    
+
     if (fileContentCache.has(cacheKey)) {
       url = fileContentCache.get(cacheKey);
     } else {
@@ -120,7 +120,7 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
     const fontItem = Object.values(fontsItems).find(
       (font) => font.fileId === fileId,
     );
-    
+
     if (fontItem) {
       // This is a font file, determine MIME type
       const fileName = fontItem.name || "";
@@ -158,7 +158,7 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
  */
 const getRenderState = (deps) => {
   const { store, repository } = deps;
-  
+
   const {
     layouts,
     images: { items: imageItems },
