@@ -8,7 +8,7 @@ export const INITIAL_STATE = Object.freeze({
    * Array of raw character objects with the following structure (same as props):
    * {
    *   id: string,              // Character ID from repository
-   *   transformId: string,     // Transform/placement ID
+   *   transformId: string,     // Transform ID
    *   sprites: array,          // Array of sprites with imageId
    *   spriteName: string       // Display name for sprite
    * }
@@ -40,7 +40,7 @@ export const setTransforms = (state, payload) => {
 export const addCharacter = (state, payload) => {
   // Get the first available transform as default
   const transformItems = toFlatItems(state.transforms).filter(
-    (item) => item.type === "placement",
+    (item) => item.type === "transform",
   );
   const defaultTransform =
     transformItems.length > 0 ? transformItems[0].id : undefined;
@@ -217,7 +217,7 @@ export const toViewData = ({ state, props }, payload) => {
 
   // Get transform options from repository instead of hardcoded values
   const transformItems = toFlatItems(state.transforms).filter(
-    (item) => item.type === "placement",
+    (item) => item.type === "transform",
   );
   const transformOptions = transformItems.map((transform) => ({
     label: transform.name,

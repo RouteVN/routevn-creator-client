@@ -12,7 +12,7 @@ export const INITIAL_STATE = Object.freeze({
   scenesData: { tree: [], items: {} },
   selectedItemId: null,
   whiteboardItems: [],
-  isWaitingForPlacement: false,
+  isWaitingForTransform: false,
   showSceneForm: false,
   sceneFormPosition: { x: 0, y: 0 },
   sceneWhiteboardPosition: { x: 0, y: 0 },
@@ -54,8 +54,8 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setWaitingForPlacement = (state, isWaiting) => {
-  state.isWaitingForPlacement = isWaiting;
+export const setWaitingForTransform = (state, isWaiting) => {
+  state.isWaitingForTransform = isWaiting;
 };
 
 export const setShowSceneForm = (state, show) => {
@@ -76,7 +76,7 @@ export const setSceneFormData = (state, data) => {
 
 export const resetSceneForm = (state) => {
   state.showSceneForm = false;
-  state.isWaitingForPlacement = false;
+  state.isWaitingForTransform = false;
   state.sceneFormPosition = { x: 0, y: 0 };
   state.sceneFormData = { name: "", folderId: "_root" };
 };
@@ -196,17 +196,17 @@ export const toViewData = ({ state, props }, payload) => {
     selectedResourceId: "scenes",
     repositoryTarget: "scenes",
     selectedItemId: state.selectedItemId,
-    addSceneButtonVariant: state.isWaitingForPlacement ? "pr" : "se",
+    addSceneButtonVariant: state.isWaitingForTransform ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
     form,
     defaultValues,
-    isWaitingForPlacement: state.isWaitingForPlacement,
+    isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,
     sceneFormPosition: state.sceneFormPosition,
     sceneFormData: state.sceneFormData,
     sceneFormFields,
     folderOptions,
-    whiteboardCursor: state.isWaitingForPlacement ? "crosshair" : undefined,
+    whiteboardCursor: state.isWaitingForTransform ? "crosshair" : undefined,
     dropdownMenu: state.dropdownMenu,
   };
 };

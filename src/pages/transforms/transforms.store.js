@@ -15,7 +15,7 @@ const form = {
 };
 
 export const INITIAL_STATE = Object.freeze({
-  placementData: { tree: [], items: {} },
+  transformData: { tree: [], items: {} },
   selectedItemId: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
@@ -28,8 +28,8 @@ export const INITIAL_STATE = Object.freeze({
   ],
 });
 
-export const setItems = (state, placementData) => {
-  state.placementData = placementData;
+export const setItems = (state, transformData) => {
+  state.transformData = transformData;
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -41,8 +41,8 @@ export const selectSelectedItemId = ({ state }) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  const flatItems = toFlatItems(state.placementData);
-  const flatGroups = toFlatGroups(state.placementData);
+  const flatItems = toFlatItems(state.transformData);
+  const flatGroups = toFlatGroups(state.transformData);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -67,8 +67,8 @@ export const toViewData = ({ state, props }, payload) => {
     flatItems,
     flatGroups,
     resourceCategory: "assets",
-    selectedResourceId: "placements",
-    repositoryTarget: "placements",
+    selectedResourceId: "transforms",
+    repositoryTarget: "transforms",
     selectedItemId: state.selectedItemId,
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,

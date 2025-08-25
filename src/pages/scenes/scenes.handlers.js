@@ -114,8 +114,8 @@ export const handleWhiteboardItemDoubleClick = (e, deps) => {
 export const handleAddSceneClick = (e, deps) => {
   const { store, render } = deps;
 
-  // Start waiting for placement
-  store.setWaitingForPlacement(true);
+  // Start waiting for transform
+  store.setWaitingForTransform(true);
   render();
 };
 
@@ -142,7 +142,7 @@ export const handleWhiteboardClick = (e, deps) => {
   const { store, render } = deps;
   const currentState = store.getState();
 
-  if (currentState.isWaitingForPlacement) {
+  if (currentState.isWaitingForTransform) {
     // Get click position relative to whiteboard
     const { formX, formY, whiteboardX, whiteboardY } = e.detail;
 
@@ -152,7 +152,7 @@ export const handleWhiteboardClick = (e, deps) => {
     // Show the form at the clicked position
     store.setSceneFormPosition({ x: formX, y: formY });
     store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
-    store.setWaitingForPlacement(false);
+    store.setWaitingForTransform(false);
     store.setShowSceneForm(true);
     render();
   }

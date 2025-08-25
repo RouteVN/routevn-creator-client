@@ -20,9 +20,9 @@ export const assetItems = [
     path: "/project/resources/characters",
   },
   {
-    id: "placements",
-    name: "Placements",
-    path: "/project/resources/placements",
+    id: "transforms",
+    name: "Transforms",
+    path: "/project/resources/transforms",
   },
   {
     id: "animations",
