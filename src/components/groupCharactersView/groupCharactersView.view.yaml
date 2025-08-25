@@ -84,12 +84,12 @@ template:
                                 - rtgl-button#sprites-button-${item.id}: Sprites
                         - rtgl-view mt=lg w=f:
                           - 'rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p':
-                            - rtgl-svg wh=24 svg=character c=pr:
+                            - rtgl-svg wh=24 svg=plus c=pr:
                             - rtgl-text s=md c=pr fw=500: Add Character
                       $else:
                         - rtgl-view mt=lg w=f:
                           - 'rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p':
-                            - rtgl-svg wh=24 svg=character c=pr:
+                            - rtgl-svg wh=24 svg=plus c=pr:
                             - rtgl-text s=md c=pr fw=500: Add Character
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:

@@ -135,12 +135,14 @@ template:
                                                   - rtgl-view h=12:
                                                   - rvn-keyframe-timeline .properties=itemProperties[${item.id}]:
                                     $else:
-                                      - rtgl-view#add-animation-button-${group.id} w=200 h=150 av=c ah=c bw=xs cur=p br=md:
-                                          - rtgl-text: Add Animation
+                                      - rtgl-view#add-animation-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
+                                          - rtgl-svg svg=plus wh=24 c=pr:
+                                          - rtgl-text s=md c=pr fw=500: Add Animation
                           - $if group.hasChildren:
                               - rtgl-view w=f ph=md:
-                                  - rtgl-view#add-animation-button-${group.id} w=200 h=60 av=c ah=c bw=xs cur=p br=md:
-                                      - rtgl-text: Add Animation
+                                  - rtgl-view#add-animation-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
+                                      - rtgl-svg svg=plus wh=24 c=pr:
+                                      - rtgl-text s=md c=pr fw=500: Add Animation
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No animations found matching "${searchQuery}"
