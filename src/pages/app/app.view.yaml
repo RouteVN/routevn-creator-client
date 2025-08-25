@@ -40,8 +40,8 @@ template:
               - rvn-audio: []
             $elif currentRoutePattern == "/project/resources/animations":
               - rvn-animations: []
-            $elif currentRoutePattern == "/project/resources/placements":
-              - rvn-placements: []
+            $elif currentRoutePattern == "/project/resources/transforms":
+              - rvn-transforms: []
             $elif currentRoutePattern == "/project/resources/visuals":
               - rvn-visuals: []
             $elif currentRoutePattern == "/project/resources/videos":

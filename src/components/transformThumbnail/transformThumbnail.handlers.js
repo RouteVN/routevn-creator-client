@@ -16,7 +16,7 @@ export const handleBeforeMount = (deps) => {
 
   const canvas = getRefIds().canvas?.elm;
   if (canvas) {
-    renderPlacement(config, canvas);
+    renderTransform(config, canvas);
   }
 
   render();
@@ -41,13 +41,13 @@ export const handleOnUpdate = (changes, deps) => {
 
   const canvas = getRefIds().canvas?.elm;
   if (canvas) {
-    renderPlacement(config, canvas);
+    renderTransform(config, canvas);
   }
 
   render();
 };
 
-function renderPlacement(config, canvas) {
+function renderTransform(config, canvas) {
   const ctx = canvas.getContext("2d");
 
   // Get the actual display size of the canvas
@@ -76,16 +76,16 @@ function renderPlacement(config, canvas) {
   const canvasX = config.x * scaleX;
   const canvasY = config.y * scaleY;
 
-  // Calculate placement dimensions and position (scaled to canvas)
-  const placementWidth = 300 * config.scaleX * scaleX;
-  const placementHeight = 300 * config.scaleY * scaleY;
+  // Calculate transform dimensions and position (scaled to canvas)
+  const transformWidth = 300 * config.scaleX * scaleX;
+  const transformHeight = 300 * config.scaleY * scaleY;
   const anchorSize = 50 * Math.min(scaleX, scaleY);
 
   // Calculate actual anchor position using anchorX and anchorY (0-1 normalized values)
-  const anchorOffsetX = placementWidth * config.anchorX;
-  const anchorOffsetY = placementHeight * config.anchorY;
+  const anchorOffsetX = transformWidth * config.anchorX;
+  const anchorOffsetY = transformHeight * config.anchorY;
 
-  // Position where the placement should be drawn (top-left corner)
+  // Position where the transform should be drawn (top-left corner)
   const anchorX = canvasX - anchorOffsetX;
   const anchorY = canvasY - anchorOffsetY;
 
@@ -99,14 +99,14 @@ function renderPlacement(config, canvas) {
     ctx.translate(-canvasX, -canvasY);
   }
 
-  // Draw main placement body (larger gray square)
+  // Draw main transform body (larger gray square)
   ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(anchorX, anchorY, placementWidth, placementHeight);
+  ctx.fillRect(anchorX, anchorY, transformWidth, transformHeight);
 
   // Draw border for the main body
   ctx.strokeStyle = "#666666";
   ctx.lineWidth = 1;
-  ctx.strokeRect(anchorX, anchorY, placementWidth, placementHeight);
+  ctx.strokeRect(anchorX, anchorY, transformWidth, transformHeight);
 
   // Restore context
   ctx.restore();

@@ -1,4 +1,4 @@
-elementName: rvn-placements
+elementName: rvn-transforms
 
 viewDataSchema:
   type: object
@@ -11,12 +11,12 @@ refs:
         handler: handleDataChanged
   groupview:
     eventListeners:
-      placement-item-click:
-        handler: handlePlacementItemClick
-      placement-created:
-        handler: handlePlacementCreated
-      placement-edited:
-        handler: handlePlacementEdited
+      transform-item-click:
+        handler: handleTransformItemClick
+      transform-created:
+        handler: handleTransformCreated
+      transform-edited:
+        handler: handleTransformEdited
   detail-form:
     eventListeners:
       form-change:
@@ -30,7 +30,7 @@ template:
           - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
           - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
       - rtgl-view flex=1 h=f:
-        - rvn-group-placements-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
+        - rvn-group-transforms-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - rtgl-view wh=f slot="content":
           - $if selectedItemId:

@@ -2,8 +2,8 @@ import { nanoid } from "nanoid";
 
 export const handleBeforeMount = (deps) => {
   const { store, repository } = deps;
-  const { placements } = repository.getState();
-  store.setItems(placements || { tree: [], items: {} });
+  const { transforms } = repository.getState();
+  store.setItems(transforms || { tree: [], items: {} });
 
   return () => {};
 };
@@ -12,22 +12,22 @@ export const handleDataChanged = (e, deps) => {
   const { store, render, repository } = deps;
 
   const repositoryState = repository.getState();
-  const { placements } = repositoryState;
+  const { transforms } = repositoryState;
 
-  const placementData = placements || { tree: [], items: {} };
+  const transformData = transforms || { tree: [], items: {} };
 
-  store.setItems(placementData);
+  store.setItems(transformData);
   render();
 };
 
-export const handlePlacementItemClick = (e, deps) => {
+export const handleTransformItemClick = (e, deps) => {
   const { store, render } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
   render();
 };
 
-export const handlePlacementCreated = (e, deps) => {
+export const handleTransformCreated = (e, deps) => {
   const { store, render, repository } = deps;
   const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     e.detail;
@@ -36,13 +36,13 @@ export const handlePlacementCreated = (e, deps) => {
 
   repository.addAction({
     actionType: "treePush",
-    target: "placements",
+    target: "transforms",
     value: {
       parent: groupId,
       position: "last",
       item: {
         id: nanoid(),
-        type: "placement",
+        type: "transform",
         name: name,
         x,
         y,
@@ -55,8 +55,8 @@ export const handlePlacementCreated = (e, deps) => {
     },
   });
 
-  const { placements } = repository.getState();
-  store.setItems(placements);
+  const { transforms } = repository.getState();
+  store.setItems(transforms);
   render();
 };
 
@@ -64,7 +64,7 @@ export const handleFormChange = (e, deps) => {
   const { repository, render, store } = deps;
   repository.addAction({
     actionType: "treeUpdate",
-    target: "placements",
+    target: "transforms",
     value: {
       id: store.selectSelectedItemId(),
       replace: false,
@@ -74,12 +74,12 @@ export const handleFormChange = (e, deps) => {
     },
   });
 
-  const { placements } = repository.getState();
-  store.setItems(placements);
+  const { transforms } = repository.getState();
+  store.setItems(transforms);
   render();
 };
 
-export const handlePlacementEdited = (e, deps) => {
+export const handleTransformEdited = (e, deps) => {
   const { store, render, repository } = deps;
   const { itemId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     e.detail;
@@ -87,7 +87,7 @@ export const handlePlacementEdited = (e, deps) => {
   // Update repository directly
   repository.addAction({
     actionType: "treeUpdate",
-    target: "placements",
+    target: "transforms",
     value: {
       id: itemId,
       replace: false,
@@ -105,7 +105,7 @@ export const handlePlacementEdited = (e, deps) => {
   });
 
   // Update local state and render immediately
-  const { placements } = repository.getState();
-  store.setItems(placements);
+  const { transforms } = repository.getState();
+  store.setItems(transforms);
   render();
 };

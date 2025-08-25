@@ -98,18 +98,18 @@ export const selectCharacters = ({ state }) => {
   return processedCharacters;
 };
 
-export const selectPlacements = ({ state }) => {
-  const placements = state.repositoryState.placements?.items || {};
-  const processedPlacements = {};
+export const selectTransforms = ({ state }) => {
+  const transforms = state.repositoryState.transforms?.items || {};
+  const processedTransforms = {};
 
-  Object.keys(placements).forEach((placementId) => {
-    const placement = placements[placementId];
-    if (placement.type === "placement") {
-      processedPlacements[placementId] = placement;
+  Object.keys(transforms).forEach((transformId) => {
+    const transform = transforms[transformId];
+    if (transform.type === "transform") {
+      processedTransforms[transformId] = transform;
     }
   });
 
-  return processedPlacements;
+  return processedTransforms;
 };
 
 export const selectLayouts = ({ state }) => {
@@ -317,7 +317,7 @@ export const selectRenderState = ({ state }) => {
 
   const resources = {
     images: { ...selectImages({ state }), ...characterImages },
-    transforms: selectPlacements({ state }),
+    transforms: selectTransforms({ state }),
     characters,
     audio: selectAudios({ state }),
     layouts: selectLayouts({ state }),

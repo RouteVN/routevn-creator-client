@@ -1,4 +1,4 @@
-elementName: rvn-group-placements-view
+elementName: rvn-group-transforms-view
 
 viewDataSchema:
   type: object
@@ -23,7 +23,7 @@ propsSchema:
   properties:
     flatGroups:
       type: array
-      description: Array of placement groups to display
+      description: Array of transform groups to display
     selectedItemId:
       type: string
       description: ID of currently selected item
@@ -37,23 +37,23 @@ refs:
     eventListeners:
       click:
         handler: handleGroupClick
-  placement-item-*:
+  transform-item-*:
     eventListeners:
       click:
-        handler: handlePlacementItemClick
+        handler: handleTransformItemClick
       dblclick:
-        handler: handlePlacementItemDoubleClick
-  add-placement-button-*:
+        handler: handleTransformItemDoubleClick
+  add-transform-button-*:
     eventListeners:
       click:
-        handler: handleAddPlacementClick
-  add-placement-dialog:
+        handler: handleAddTransformClick
+  add-transform-dialog:
     eventListeners:
       close:
         handler: handleCloseDialog
       submit-form:
         handler: handleSubmitForm
-  placement-form:
+  transform-form:
     eventListeners:
       action-click:
         handler: handleFormActionClick
@@ -68,8 +68,8 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
       - rtgl-view g=lg w=f h=f:
           - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-              - rtgl-input#search-input s=sm placeholder="Search placements..." value=${searchQuery}:
-            # TODO implement zoom controls (increase/decrease placement size)
+              - rtgl-input#search-input s=sm placeholder="Search transforms..." value=${searchQuery}:
+            # TODO implement zoom controls (increase/decrease transform size)
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md:
@@ -86,16 +86,16 @@ template:
                               - rtgl-view d=h fw=w w=f g=md:
                                   - $if group.hasChildren:
                                       - $for item, j in group.children:
-                                          - 'rtgl-view#placement-item-${item.id} cur=p style="${item.selectedStyle}" br=md bw=xs p=md':
-                                              - rvn-placement-thumbnail .item=items["${item.id}"]:
+                                          - 'rtgl-view#transform-item-${item.id} cur=p style="${item.selectedStyle}" br=md bw=xs p=md':
+                                              - rvn-transform-thumbnail .item=items["${item.id}"]:
                                               - rtgl-view mt=md:
                                                   - rtgl-text: ${item.name}
-                                  - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs br=md g=md cur=p:
+                                  - rtgl-view#add-transform-button-${group.id} w=200 h=150 av=c ah=c bw=xs br=md g=md cur=p:
                                       - rtgl-svg svg=plus wh=24:
-                                      - rtgl-text: Add Placement
+                                      - rtgl-text: Add Transform
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: No placements found matching "${searchQuery}"
+                  - rtgl-text s=lg c=mu-fg: No transforms found matching "${searchQuery}"
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
@@ -105,11 +105,11 @@ template:
           - $if flatGroups.length > 0:
               - rtgl-view h=33vh:
 
-  - rtgl-dialog#add-placement-dialog ?open=${isDialogOpen} s=lg:
+  - rtgl-dialog#add-transform-dialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h ah=c g=lg w=f:
           - $if isDialogOpen:
               - rtgl-view flex=4:
-                  - rtgl-form#placement-form .defaultValues=defaultValues .form=form w=f:
+                  - rtgl-form#transform-form .defaultValues=defaultValues .form=form w=f:
               - rtgl-view flex=6:
                   - rtgl-text: Preview
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':

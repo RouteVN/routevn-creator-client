@@ -3,12 +3,12 @@ import { nanoid } from "nanoid";
 
 export const handleBeforeMount = (deps) => {
   const { repository, store, props } = deps;
-  const { characters, placements, animations } = repository.getState();
+  const { characters, transforms, animations } = repository.getState();
   store.setItems({
     items: characters || { tree: [], items: {} },
   });
   store.setTransforms({
-    transforms: placements || { tree: [], items: {} },
+    transforms: transforms || { tree: [], items: {} },
   });
 
   // Use presentationState if available, otherwise fall back to line.presentation

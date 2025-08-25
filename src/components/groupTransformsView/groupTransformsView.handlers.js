@@ -69,13 +69,13 @@ export const handleGroupClick = (e, deps) => {
   render();
 };
 
-export const handlePlacementItemClick = (e, deps) => {
+export const handleTransformItemClick = (e, deps) => {
   const { dispatchEvent } = deps;
-  const itemId = e.currentTarget.id.replace("placement-item-", "");
+  const itemId = e.currentTarget.id.replace("transform-item-", "");
 
-  // Forward placement item selection to parent
+  // Forward transform item selection to parent
   dispatchEvent(
-    new CustomEvent("placement-item-click", {
+    new CustomEvent("transform-item-click", {
       detail: { itemId },
       bubbles: true,
       composed: true,
@@ -83,9 +83,9 @@ export const handlePlacementItemClick = (e, deps) => {
   );
 };
 
-export const handlePlacementItemDoubleClick = async (e, deps) => {
+export const handleTransformItemDoubleClick = async (e, deps) => {
   const { store, render, props, drenderer, getRefIds } = deps;
-  const itemId = e.currentTarget.id.replace("placement-item-", "");
+  const itemId = e.currentTarget.id.replace("transform-item-", "");
 
   // Find the item data from props
   const flatGroups = props.flatGroups || [];
@@ -101,7 +101,7 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
 
   if (itemData) {
     // Open dialog in edit mode with item data
-    store.openPlacementFormDialog({
+    store.openTransformFormDialog({
       editMode: true,
       itemId: itemId,
       itemData: itemData,
@@ -137,15 +137,15 @@ export const handlePlacementItemDoubleClick = async (e, deps) => {
   }
 };
 
-export const handleAddPlacementClick = async (e, deps) => {
+export const handleAddTransformClick = async (e, deps) => {
   const { store, render, drenderer, getRefIds } = deps;
   e.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
-  const groupId = e.currentTarget.id.replace("add-placement-button-", "");
+  const groupId = e.currentTarget.id.replace("add-transform-button-", "");
 
   // Open dialog in add mode
-  store.openPlacementFormDialog({
+  store.openTransformFormDialog({
     editMode: false,
     itemId: null,
     itemData: null,
@@ -179,7 +179,7 @@ export const handleCloseDialog = (_, deps) => {
   const { store, render } = deps;
 
   // Close dialog and reset all state
-  store.closePlacementFormDialog();
+  store.closeTransformFormDialog();
   render();
 };
 
@@ -199,9 +199,9 @@ export const handleFormActionClick = (e, deps) => {
     const editItemId = store.selectEditItemId();
 
     if (editMode && editItemId) {
-      // Forward placement edit to parent
+      // Forward transform edit to parent
       dispatchEvent(
-        new CustomEvent("placement-edited", {
+        new CustomEvent("transform-edited", {
           detail: {
             itemId: editItemId,
             name: formData.name,
@@ -221,9 +221,9 @@ export const handleFormActionClick = (e, deps) => {
       // Force immediate render to update thumbnails
       render();
     } else {
-      // Forward placement creation to parent
+      // Forward transform creation to parent
       dispatchEvent(
-        new CustomEvent("placement-created", {
+        new CustomEvent("transform-created", {
           detail: {
             groupId: targetGroupId,
             name: formData.name,
@@ -242,7 +242,7 @@ export const handleFormActionClick = (e, deps) => {
     }
 
     // Close dialog and reset all state
-    store.closePlacementFormDialog();
+    store.closeTransformFormDialog();
 
     // Force a render after the event dispatch completes
     render();

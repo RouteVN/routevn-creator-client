@@ -249,11 +249,11 @@ export const templateAnimations = {
   },
 };
 
-// Template Placements with correct structure
-export const templatePlacements = {
+// Template Transforms with correct structure
+export const templateTransforms = {
   tree: [
     {
-      id: "default-placements-group",
+      id: "default-transforms-group",
       children: [
         { id: "bottom-left" },
         { id: "bottom-center" },
@@ -262,12 +262,12 @@ export const templatePlacements = {
     },
   ],
   items: {
-    "default-placements-group": {
+    "default-transforms-group": {
       type: "folder",
-      name: "Template Placements",
+      name: "Template Transforms",
     },
     "bottom-left": {
-      type: "placement",
+      type: "transform",
       name: "Bottom Left",
       x: "300",
       y: "1080",
@@ -278,7 +278,7 @@ export const templatePlacements = {
       rotation: "0",
     },
     "bottom-center": {
-      type: "placement",
+      type: "transform",
       name: "Bottom Center",
       x: "960",
       y: "1080",
@@ -289,7 +289,7 @@ export const templatePlacements = {
       rotation: "0",
     },
     "bottom-right": {
-      type: "placement",
+      type: "transform",
       name: "Bottom Right",
       x: "1620",
       y: "1080",
@@ -749,7 +749,7 @@ export const createTemplateProjectData = (
   fontFileIds = {},
 ) => ({
   animations: templateAnimations,
-  placements: templatePlacements,
+  transforms: templateTransforms,
   layouts: createTemplateLayouts(imageFileIds, fontFileIds),
   colors: templateColors,
   fonts: createTemplateFonts(),

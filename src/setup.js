@@ -214,7 +214,7 @@ const initialData = {
     items: {},
     tree: [],
   },
-  placements: {
+  transforms: {
     items: {},
     tree: [],
   },
@@ -280,7 +280,7 @@ if (actionStream.length === 0) {
       tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
     },
     animations: templateData.animations,
-    placements: templateData.placements,
+    transforms: templateData.transforms,
     colors: templateData.colors,
     typography: templateData.typography,
     layouts: templateData.layouts,
