@@ -66,8 +66,9 @@ template:
                               - 'rtgl-view#typography-item-${item.id} w=f bw=xs cur=p style="${item.selectedStyle}"':
                                 - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false:
                                 - rtgl-text s=xs c=mu-fg m=sm ellipsis w="calc(700px - 2 * var(--spacing-md))": ${item.name}
-                      - 'rtgl-view#add-typography-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
-                        - rtgl-text: Add Typography
+                      - 'rtgl-view#add-typography-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p':
+                        - rtgl-svg svg=plus wh=24 c=pr:
+                        - rtgl-text s=md c=pr fw=500: Add Typography
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: No typography found matching "${searchQuery}"
