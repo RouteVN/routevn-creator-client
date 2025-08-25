@@ -70,7 +70,8 @@ template:
                                 - rtgl-view av=c ah=c:
                                   - rtgl-text s=md: ${item.name}
                                   - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
-                      - 'rtgl-view#add-layout-button-${group.id} w=200 h=150 ah=c av=c bw=xs br=sm cur=p':
+                      - 'rtgl-view#add-layout-button-${group.id} w=200 h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p':
+                        - rtgl-svg svg=plus wh=24:
                         - rtgl-text: Add Layout
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
