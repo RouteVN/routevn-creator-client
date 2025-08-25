@@ -1,4 +1,4 @@
-import { filter, fromEvent, tap } from "rxjs";
+import { filter, fromEvent, tap, debounceTime } from "rxjs";
 import { toTreeStructure } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
@@ -6,48 +6,100 @@ import {
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
-const renderLayoutPreview = async (deps) => {
-  const { store, repository, drenderer, getFileContent } = deps;
-  const layoutId = store.selectLayoutId();
+const DEBOUNCE_DELAYS = {
+  UPDATE: 500, // Regular updates (forms, etc)
+  DRAG: 1000, // Drag operations
+  KEYBOARD: 1000, // Keyboard final save
+};
 
-  const {
-    layouts,
-    images: { items: imageItems },
-    typography: typographyData,
-    colors: colorsData,
-    fonts: fontsData,
-  } = repository.getState();
+const KEYBOARD_UNITS = {
+  NORMAL: 1,
+  FAST: 10, // With shift key
+};
 
-  // Extract items from structured data
-  const typographyItems = typographyData?.items || {};
-  const colorsItems = colorsData?.items || {};
-  const fontsItems = fontsData?.items || {};
-  const layout = layouts.items[layoutId];
+// File content cache to avoid redundant API calls
+const fileContentCache = new Map();
 
-  const choicesData = store.selectChoicesData();
+// Track keyboard navigation timeout
+let keyboardNavigationTimeout = null;
 
-  const layoutTreeStructure = toTreeStructure(layout.elements);
+/**
+ * Schedule a final save after keyboard navigation stops
+ * @param {Object} deps - Component dependencies
+ * @param {string} itemId - The item ID being edited
+ * @param {string} layoutId - The layout ID
+ */
+const scheduleKeyboardSave = (deps, itemId, layoutId) => {
+  // Clear existing timeout if still navigating
+  if (keyboardNavigationTimeout) {
+    clearTimeout(keyboardNavigationTimeout);
+  }
 
-  const renderStateElements = layoutTreeStructureToRenderState(
-    layoutTreeStructure,
-    imageItems,
-    { items: typographyItems },
-    { items: colorsItems },
-    { items: fontsItems },
-  );
+  keyboardNavigationTimeout = setTimeout(() => {
+    const { store, subject } = deps;
 
-  const selectedItem = store.selectSelectedItem();
+    // Check if the selected item has changed
+    if (store.selectSelectedItemId() !== itemId) {
+      keyboardNavigationTimeout = null;
+      return;
+    }
 
-  // Extract all file IDs from render state (includes both images and fonts)
-  const fileIds = extractFileIdsFromRenderState(renderStateElements);
+    // Final render to ensure bounds are properly updated
+    renderLayoutPreview(deps, { skipAssetLoading: true });
 
+    // Save final position to repository
+    const finalItem = store.selectSelectedItem();
+    if (finalItem) {
+      subject.dispatch("layoutEditor.updateElement", {
+        layoutId,
+        selectedItemId: itemId,
+        updatedItem: finalItem,
+        replace: true,
+      });
+    }
+
+    keyboardNavigationTimeout = null;
+  }, DEBOUNCE_DELAYS.KEYBOARD);
+};
+
+/**
+ * Cancel any pending keyboard save
+ */
+const cancelKeyboardSave = () => {
+  if (keyboardNavigationTimeout) {
+    clearTimeout(keyboardNavigationTimeout);
+    keyboardNavigationTimeout = null;
+  }
+};
+
+/**
+ * Load assets (images and fonts) for rendering
+ * @param {Object} deps - Component dependencies
+ * @param {Array} fileIds - File IDs to load
+ * @param {Object} fontsItems - Font items from repository
+ * @returns {Promise<Object>} Loaded assets
+ */
+const loadAssets = async (deps, fileIds, fontsItems) => {
+  const { getFileContent } = deps;
   const assets = {};
 
   for (const fileId of fileIds) {
-    const { url } = await getFileContent({
-      fileId: fileId,
-      projectId: "someprojectId",
-    });
+    // Check cache first
+    let url;
+    const cacheKey = `${fileId}_someprojectId`;
+
+    if (fileContentCache.has(cacheKey)) {
+      url = fileContentCache.get(cacheKey);
+    } else {
+      // Fetch from API if not in cache
+      const result = await getFileContent({
+        fileId: fileId,
+        projectId: "someprojectId",
+      });
+      url = result.url;
+      // Store in cache for future use
+      fileContentCache.set(cacheKey, url);
+    }
 
     // Determine file type
     let type = "image/png"; // default for images
@@ -56,6 +108,7 @@ const renderLayoutPreview = async (deps) => {
     const fontItem = Object.values(fontsItems).find(
       (font) => font.fileId === fileId,
     );
+
     if (fontItem) {
       // This is a font file, determine MIME type
       const fileName = fontItem.name || "";
@@ -79,76 +132,158 @@ const renderLayoutPreview = async (deps) => {
     }
   }
 
-  await drenderer.loadAssets(assets);
+  return assets;
+};
+
+/**
+ * Get render state from repository and store data
+ * @param {Object} deps - Component dependencies
+ * @returns {Object} Render state data
+ */
+const getRenderState = (deps) => {
+  const { store, repository } = deps;
+
+  const {
+    layouts,
+    images: { items: imageItems },
+    typography: typographyData,
+    colors: colorsData,
+    fonts: fontsData,
+  } = repository.getState();
+
+  // Extract items from structured data
+  const typographyItems = typographyData?.items || {};
+  const colorsItems = colorsData?.items || {};
+  const fontsItems = fontsData?.items || {};
+
+  // Use store's elements which have optimistic updates, fallback to repository data
+  const layoutId = store.selectLayoutId();
+  const storeElements = store.selectItems();
+  const layoutElements = storeElements || layouts.items[layoutId]?.elements;
+
+  const layoutTreeStructure = toTreeStructure(layoutElements);
+
+  const renderStateElements = layoutTreeStructureToRenderState(
+    layoutTreeStructure,
+    imageItems,
+    { items: typographyItems },
+    { items: colorsItems },
+    { items: fontsItems },
+  );
+
+  return {
+    renderStateElements,
+    layoutTreeStructure,
+    fontsItems,
+    imageItems,
+    typographyItems,
+    colorsItems,
+  };
+};
+
+/**
+ * Update element properties with optimistic UI updates and debounced saves
+ * @param {Object} deps - Component dependencies
+ * @param {Object} changes - Properties to update
+ * @param {string} source - Update source: 'form', 'keyboard', 'drag'
+ */
+const updateElementOptimistically = (deps, changes, source = "form") => {
+  const { store, subject } = deps;
+  const currentItem = store.selectSelectedItem();
+  if (!currentItem) return;
+
+  const layoutId = store.selectLayoutId();
+
+  // Update store immediately for UI feedback
+  const updatedItem = { ...currentItem, ...changes };
+  store.updateSelectedItem(updatedItem);
+
+  // Determine which action to dispatch based on source
+  const action =
+    source === "drag"
+      ? "layoutEditor.updateElementDrag"
+      : "layoutEditor.updateElement";
+
+  // Dispatch debounced save
+  subject.dispatch(action, {
+    layoutId,
+    selectedItemId: currentItem.id,
+    updatedItem: changes,
+    replace: source === "form",
+  });
+};
+
+// Calculate absolute position by traversing the hierarchy
+const calculateAbsolutePosition = (
+  elements,
+  targetId,
+  parentX = 0,
+  parentY = 0,
+) => {
+  for (const element of elements) {
+    if (element.id === targetId) {
+      // Simple absolute position: parent position + element relative position
+      const absoluteX = parentX + element.x;
+      const absoluteY = parentY + element.y;
+
+      let startX = absoluteX - (element.width ?? 0) * (element.anchorX ?? 0);
+      let startY = absoluteY - (element.height ?? 0) * (element.anchorY ?? 0);
+
+      return {
+        x: absoluteX,
+        y: absoluteY,
+        width: element.width,
+        height: element.height,
+        startX,
+        startY,
+      };
+    }
+
+    if (element.children && element.children.length > 0) {
+      // Container's absolute position for its children
+      const containerAbsoluteX = parentX + element.x;
+      const containerAbsoluteY = parentY + element.y;
+
+      const found = calculateAbsolutePosition(
+        element.children,
+        targetId,
+        containerAbsoluteX,
+        containerAbsoluteY,
+      );
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+const renderLayoutPreview = async (deps, options = {}) => {
+  const { store, drenderer } = deps;
+  const { skipAssetLoading = false } = options;
+
+  // Get consolidated render state
+  const {
+    renderStateElements,
+    layoutTreeStructure,
+    fontsItems,
+    imageItems,
+    typographyItems,
+    colorsItems,
+  } = getRenderState(deps);
+
+  const choicesData = store.selectChoicesData();
+
+  const selectedItem = store.selectSelectedItem();
+
+  // Skip asset loading during drag for better performance
+  if (!skipAssetLoading) {
+    const fileIds = extractFileIdsFromRenderState(renderStateElements);
+    const assets = await loadAssets(deps, fileIds, fontsItems);
+    await drenderer.loadAssets(assets);
+  }
 
   let elementsToRender = renderStateElements;
 
   if (selectedItem) {
-    // Calculate absolute position by traversing the hierarchy
-    const calculateAbsolutePosition = (
-      elements,
-      targetId,
-      parentX = 0,
-      parentY = 0,
-    ) => {
-      for (const element of elements) {
-        if (element.id === targetId) {
-          // Simple absolute position: parent position + element relative position
-          const absoluteX = parentX + element.x;
-          const absoluteY = parentY + element.y;
-
-          return { x: absoluteX, y: absoluteY, element };
-        }
-
-        if (element.children && element.children.length > 0) {
-          // Container's absolute position for its children
-          const containerAbsoluteX = parentX + element.x;
-          const containerAbsoluteY = parentY + element.y;
-
-          const found = calculateAbsolutePosition(
-            element.children,
-            targetId,
-            containerAbsoluteX,
-            containerAbsoluteY,
-          );
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const result = calculateAbsolutePosition(
-      renderStateElements,
-      selectedItem.id,
-    );
-
-    if (result) {
-      const redDot = {
-        id: "selected-anchor",
-        type: "rect",
-        x: result.x - 12,
-        y: result.y - 12,
-        width: 25,
-        height: 25,
-        fill: "red",
-      };
-
-      // Wrap red dot in a container to ensure it's on top
-      const redDotContainer = {
-        id: "red-dot-container",
-        type: "container",
-        x: 0,
-        y: 0,
-        width: 1920,
-        height: 1080,
-        anchorX: 0,
-        anchorY: 0,
-        children: [redDot],
-      };
-
-      // Add container as the LAST top-level element
-      elementsToRender = [...renderStateElements, redDotContainer];
-    }
   }
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
@@ -168,6 +303,84 @@ const renderLayoutPreview = async (deps) => {
     elements: finalElements,
     transitions: [],
   });
+
+  if (!selectedItem) {
+    return;
+  }
+  const bounds = drenderer.getStageElementBounds();
+  const result = calculateAbsolutePosition(
+    renderStateElements,
+    selectedItem.id,
+  );
+
+  if (result) {
+    const redDot = {
+      id: "selected-anchor",
+      type: "rect",
+      x: result.x - 6,
+      y: result.y - 6,
+      radius: 6,
+      width: 12,
+      height: 12,
+      fill: "white",
+    };
+
+    // Always use calculated position for consistency
+    // This ensures immediate updates for all changes (form, keyboard, drag)
+    const borderX = result.startX;
+    const borderY = result.startY;
+
+    const border = {
+      id: "selected-border",
+      type: "rect",
+      x: borderX,
+      y: borderY,
+      fill: "transparent",
+      width: result.width ?? 0,
+      height: result.height ?? 0,
+      border: {
+        color: "white",
+        width: 2,
+        alpha: 1,
+      },
+      pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
+      pointerDown: `layout-editor-pointer-down-${selectedItem.id}`,
+      pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
+      cursor: "all-scroll",
+    };
+
+    const baseContainer = {
+      id: "selected-border",
+      type: "rect",
+      x: 0,
+      y: 0,
+      fill: "transparent",
+      width: 1920,
+      height: 1080,
+      pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
+      pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
+    };
+
+    // Wrap red dot in a container to ensure it's on top
+    const redDotContainer = {
+      id: "red-dot-container",
+      type: "container",
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      anchorX: 0,
+      anchorY: 0,
+      children: [baseContainer, border, redDot],
+    };
+
+    // Add container as the LAST top-level element
+
+    drenderer.render({
+      elements: [...finalElements, redDotContainer],
+      transitions: [],
+    });
+  }
 };
 
 export const handleBeforeMount = (deps) => {
@@ -193,10 +406,8 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleTargetChanged = (payload, deps) => {
-  const { render } = deps;
-  render();
-};
+// Simple render handler for events that only need to trigger a re-render
+export const handleRenderOnly = (payload, deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (e, deps) => {
   const { store, render, getFileContent, repository } = deps;
@@ -242,10 +453,9 @@ export const handleFileExplorerItemClick = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleAddLayoutClick = (e, deps) => {
-  const { render } = deps;
-  render();
-};
+// Use the generic render handler
+export const handleTargetChanged = handleRenderOnly;
+export const handleAddLayoutClick = handleRenderOnly;
 
 export const handleDataChanged = async (e, deps) => {
   const { router, store, repository, render } = deps;
@@ -333,25 +543,21 @@ export const handleFormChange = async (e, deps) => {
     updatedItem.text = `\$\{${e.detail.formValues.contentType}\}`;
   }
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `layouts.items.${layoutId}.elements`,
-    value: {
-      id: selectedItemId,
-      replace: true,
-      item: updatedItem,
-    },
-  });
-
-  // Sync store with updated repository data
-  const { layouts, images } = repository.getState();
-  const layout = layouts.items[layoutId];
-
-  store.setItems(layout?.elements || { items: {}, tree: [] });
-  store.setImages(images);
+  // Update store optimistically for immediate UI feedback
+  store.updateSelectedItem(updatedItem);
   render();
 
-  await renderLayoutPreview(deps);
+  // Dispatch debounced update action to repository
+  const { subject } = deps;
+  subject.dispatch("layoutEditor.updateElement", {
+    layoutId,
+    selectedItemId,
+    updatedItem,
+    replace: true,
+  });
+
+  // Render preview immediately for user feedback (skip asset loading for speed)
+  await renderLayoutPreview(deps, { skipAssetLoading: true });
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
@@ -458,23 +664,22 @@ export const handleConfirmImageSelection = async (e, deps) => {
       updateObject.height = targetImage?.height || 0;
     }
 
-    // Update the repository with the image's fileId and possibly dimensions
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: `layouts.items.${layoutId}.elements`,
-      value: {
-        id: selectedItemId,
-        replace: false,
-        item: updateObject,
-      },
+    // Update store optimistically for immediate UI feedback
+    const currentItems = store.selectItems();
+    const updatedItemData = {
+      ...currentItems.items[selectedItemId],
+      ...updateObject,
+    };
+    store.updateSelectedItem(updatedItemData);
+
+    // Dispatch debounced update action to repository
+    const { subject } = deps;
+    subject.dispatch("layoutEditor.updateElement", {
+      layoutId,
+      selectedItemId,
+      updatedItem: updateObject,
+      replace: false,
     });
-
-    // Sync store with updated repository data
-    const { layouts, images: updatedImages } = repository.getState();
-    const layout = layouts.items[layoutId];
-
-    store.setItems(layout?.elements || { items: {}, tree: [] });
-    store.setImages(updatedImages);
 
     // Update fieldResources with the new image URL
     try {
@@ -540,21 +745,24 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     const layoutId = store.selectLayoutId();
     const selectedItemId = store.selectSelectedItemId();
 
-    // Update the repository to remove the image
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: `layouts.items.${layoutId}.elements`,
-      value: {
-        id: selectedItemId,
-        replace: false,
-        item: { [fieldName]: null },
-      },
+    // Update store optimistically for immediate UI feedback
+    const currentItems = store.selectItems();
+    const updatedItemData = { ...currentItems.items[selectedItemId] };
+    updatedItemData[fieldName] = null;
+    store.updateSelectedItem(updatedItemData);
+
+    // Dispatch debounced update action to repository
+    const { subject } = deps;
+    subject.dispatch("layoutEditor.updateElement", {
+      layoutId,
+      selectedItemId,
+      updatedItem: { [fieldName]: null },
+      replace: false,
     });
 
-    // Sync store with updated repository data
+    // Sync store with updated data
     const { layouts, images } = repository.getState();
     const layout = layouts.items[layoutId];
-
     store.setItems(layout?.elements || { items: {}, tree: [] });
     store.setImages(images);
 
@@ -597,81 +805,152 @@ export const handleChoiceFormChange = async (e, deps) => {
 };
 
 export const handleArrowKeyDown = async (e, deps) => {
-  const { store, repository, render } = deps;
+  const { store, render } = deps;
 
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
     return;
   }
 
-  const unit = e.shiftKey ? 10 : 1;
+  const unit = e.shiftKey ? KEYBOARD_UNITS.FAST : KEYBOARD_UNITS.NORMAL;
   let change = {};
-
   const layoutId = store.selectLayoutId();
 
   if (e.key === "ArrowUp") {
     if (e.metaKey) {
       change = {
-        height: currentItem.height - unit,
+        height: Math.round(currentItem.height - unit),
       };
     } else {
       change = {
-        y: currentItem.y - unit,
+        y: Math.round(currentItem.y - unit),
       };
     }
   } else if (e.key === "ArrowDown") {
     if (e.metaKey) {
       change = {
-        height: currentItem.height + unit,
+        height: Math.round(currentItem.height + unit),
       };
     } else {
       change = {
-        y: currentItem.y + unit,
+        y: Math.round(currentItem.y + unit),
       };
     }
   } else if (e.key === "ArrowLeft") {
     if (e.metaKey) {
       change = {
-        width: currentItem.width - unit,
+        width: Math.round(currentItem.width - unit),
       };
     } else {
       change = {
-        x: currentItem.x - unit,
+        x: Math.round(currentItem.x - unit),
       };
     }
   } else if (e.key === "ArrowRight") {
     if (e.metaKey) {
       change = {
-        width: currentItem.width + unit,
+        width: Math.round(currentItem.width + unit),
       };
     } else {
       change = {
-        x: currentItem.x + unit,
+        x: Math.round(currentItem.x + unit),
       };
     }
   }
 
+  // Update store optimistically for immediate UI feedback
+  const updatedItem = { ...currentItem, ...change };
+  store.updateSelectedItem(updatedItem);
+  render();
+
+  // Render preview immediately for user feedback
+  await renderLayoutPreview(deps, { skipAssetLoading: true });
+
+  // Schedule final save after navigation stops
+  scheduleKeyboardSave(deps, currentItem.id, layoutId);
+};
+
+export const handle2dRenderEvent = async (e, deps) => {
+  const { store, repository, render } = deps;
+  const { eventName, payload } = e;
+
+  const { isDragging, dragOffset } = store.selectDragging();
+
+  const currentItem = store.selectSelectedItem();
+  if (!currentItem) {
+    return;
+  }
+
+  if (eventName.startsWith("layout-editor-pointer-down")) {
+    // Cancel any pending keyboard save when starting drag
+    cancelKeyboardSave();
+
+    store.startDragging({
+      x: Math.round(payload.x - currentItem.x),
+      y: Math.round(payload.y - currentItem.y),
+    });
+  } else if (eventName.startsWith("layout-editor-pointer-up")) {
+    store.stopDragging(false);
+    // Final render after drag ends
+    setTimeout(() => {
+      renderLayoutPreview(deps, { skipAssetLoading: true });
+    }, 100);
+  } else if (eventName.startsWith("layout-editor-pointer-move")) {
+    if (!isDragging) {
+      return;
+    }
+
+    const change = {
+      x: Math.round(payload.x - dragOffset.x),
+      y: Math.round(payload.y - dragOffset.y),
+    };
+
+    // Update element with optimistic UI (includes dispatch)
+    updateElementOptimistically(deps, change, "drag");
+
+    // Render immediately for smooth dragging
+    // Skip asset loading during drag since assets don't change
+    renderLayoutPreview(deps, { skipAssetLoading: true });
+  }
+};
+
+/**
+ * Handler for debounced element updates (saves to repository)
+ * @param {Object} payload - Update payload
+ * @param {Object} deps - Component dependencies
+ * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
+ */
+async function handleDebouncedUpdate(payload, deps, skipUIUpdate = false) {
+  const { repository, store, render } = deps;
+  const { layoutId, selectedItemId, updatedItem, replace } = payload;
+
+  // Save to repository
   repository.addAction({
     actionType: "treeUpdate",
     target: `layouts.items.${layoutId}.elements`,
     value: {
-      id: currentItem.id,
-      replace: false,
-      item: change,
+      id: selectedItemId,
+      replace: replace,
+      item: updatedItem,
     },
   });
 
-  // Sync store with updated repository data
-  const { layouts } = repository.getState();
+  // For drag operations, UI is already updated optimistically
+  if (skipUIUpdate) return;
+
+  // For form/keyboard updates, sync store with repository
+  const { layouts, images } = repository.getState();
   const layout = layouts.items[layoutId];
-  //
+
   store.setItems(layout?.elements || { items: {}, tree: [] });
+  store.setImages(images);
   render();
 
   await renderLayoutPreview(deps);
-};
+}
 
 export const subscriptions = (deps) => {
+  const { subject } = deps;
   return [
     fromEvent(window, "keydown").pipe(
       filter((e) => {
@@ -681,6 +960,28 @@ export const subscriptions = (deps) => {
       }),
       tap((e) => {
         handleArrowKeyDown(e, deps);
+      }),
+    ),
+    subject.pipe(
+      filter(({ action, payload }) => action === "2drendererEvent"),
+      tap(({ action, payload }) => {
+        handle2dRenderEvent(payload, deps);
+      }),
+    ),
+    // Debounce regular element updates
+    subject.pipe(
+      filter(({ action }) => action === "layoutEditor.updateElement"),
+      debounceTime(DEBOUNCE_DELAYS.UPDATE),
+      tap(async ({ payload }) => {
+        await handleDebouncedUpdate(payload, deps, false);
+      }),
+    ),
+    // Debounce drag saves to repository (UI already updated immediately)
+    subject.pipe(
+      filter(({ action }) => action === "layoutEditor.updateElementDrag"),
+      debounceTime(DEBOUNCE_DELAYS.DRAG),
+      tap(async ({ payload }) => {
+        await handleDebouncedUpdate(payload, deps, true);
       }),
     ),
   ];

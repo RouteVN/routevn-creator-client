@@ -10,7 +10,7 @@ import RouteGraphics, {
   KeyframeTransitionPlugin,
 } from "route-graphics";
 
-export const create2dRenderer = async () => {
+export const create2dRenderer = async ({ subject }) => {
   let app;
   let assetBufferManager;
 
@@ -22,8 +22,11 @@ export const create2dRenderer = async () => {
       await app.init({
         width: 1920,
         height: 1080,
-        eventHandler: (eventType, payload) => {
-          //
+        eventHandler: (eventName, payload) => {
+          subject.dispatch("2drendererEvent", {
+            eventName,
+            payload,
+          });
         },
         plugins: [
           new SpriteRendererPlugin(),
@@ -53,6 +56,9 @@ export const create2dRenderer = async () => {
         return;
       }
       app.destroy();
+    },
+    getStageElementBounds: () => {
+      return app.getStageElementBounds();
     },
   };
 };
