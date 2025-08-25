@@ -257,18 +257,11 @@ const calculateAbsolutePosition = (
 };
 
 const renderLayoutPreview = async (deps, options = {}) => {
-  const { store, drenderer } = deps;
+  const { store, drenderer, render } = deps;
   const { skipAssetLoading = false } = options;
 
   // Get consolidated render state
-  const {
-    renderStateElements,
-    layoutTreeStructure,
-    fontsItems,
-    imageItems,
-    typographyItems,
-    colorsItems,
-  } = getRenderState(deps);
+  const { renderStateElements, fontsItems } = getRenderState(deps);
 
   const choicesData = store.selectChoicesData();
 
@@ -381,6 +374,8 @@ const renderLayoutPreview = async (deps, options = {}) => {
       transitions: [],
     });
   }
+  store.incrementFormKeyCheckpoint();
+  render();
 };
 
 export const handleBeforeMount = (deps) => {
