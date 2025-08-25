@@ -656,74 +656,75 @@ const createTemplateTypography = (fontFileIds = {}) => {
 };
 
 // Template Scenes with default Prologue scene
+export const templateScenes = () => {
+  const stepId = nanoid();
+  const sectionId = nanoid();
 
-const stepId = nanoid();
-const sectionId = nanoid();
-
-// Create presentation object with dialogue layout if found
-const presentation = {
-  dialogue: {
-    layoutId: "simple-dialogue",
-  },
-};
-
-// Create items object with first line having presentation, rest with empty presentation
-const lineItems = {
-  [stepId]: {
-    presentation: presentation,
-  },
-};
-
-const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
-
-// Add 31 lines with empty presentation
-additionalLineIds.forEach((lineId) => {
-  lineItems[lineId] = {
-    presentation: {},
+  // Create presentation object with dialogue layout if found
+  const presentation = {
+    dialogue: {
+      layoutId: "simple-dialogue",
+    },
   };
-});
 
-// Create tree array with all line IDs in order
-const lineTree = [{ id: stepId }, ...additionalLineIds.map((id) => ({ id }))];
+  // Create items object with first line having presentation, rest with empty presentation
+  const lineItems = {
+    [stepId]: {
+      presentation: presentation,
+    },
+  };
 
-export const templateScenes = {
-  tree: [
-    {
-      id: "default-scenes-folder",
-      children: [{ id: "scene-prologue" }],
-    },
-  ],
-  items: {
-    "default-scenes-folder": {
-      type: "folder",
-      name: "Scenes",
-    },
-    "scene-prologue": {
-      type: "scene",
-      name: "Prologue",
-      createdAt: new Date().toISOString(),
-      position: {
-        x: 0,
-        y: 0,
+  const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
+
+  // Add 31 lines with empty presentation
+  additionalLineIds.forEach((lineId) => {
+    lineItems[lineId] = {
+      presentation: {},
+    };
+  });
+
+  // Create tree array with all line IDs in order
+  const lineTree = [{ id: stepId }, ...additionalLineIds.map((id) => ({ id }))];
+
+  return {
+    tree: [
+      {
+        id: "default-scenes-folder",
+        children: [{ id: "scene-prologue" }],
       },
-      sections: {
-        items: {
-          [sectionId]: {
-            name: "Section New",
-            lines: {
-              items: lineItems,
-              tree: lineTree,
+    ],
+    items: {
+      "default-scenes-folder": {
+        type: "folder",
+        name: "Scenes",
+      },
+      "scene-prologue": {
+        type: "scene",
+        name: "Prologue",
+        createdAt: new Date().toISOString(),
+        position: {
+          x: 0,
+          y: 0,
+        },
+        sections: {
+          items: {
+            [sectionId]: {
+              name: "Section New",
+              lines: {
+                items: lineItems,
+                tree: lineTree,
+              },
             },
           },
+          tree: [
+            {
+              id: sectionId,
+            },
+          ],
         },
-        tree: [
-          {
-            id: sectionId,
-          },
-        ],
       },
     },
-  },
+  };
 };
 
 // Template structure for pages with empty folders
@@ -753,7 +754,7 @@ export const createTemplateProjectData = (
   colors: templateColors,
   fonts: createTemplateFonts(),
   typography: createTemplateTypography(fontFileIds),
-  scenes: templateScenes,
+  scenes: templateScenes(),
   audio: createEmptyPageStructure("audio"),
   videos: createEmptyPageStructure("videos"),
   characters: createEmptyPageStructure("characters"),
