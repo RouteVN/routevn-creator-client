@@ -85,6 +85,12 @@ const settingsItems = [
   },
 ];
 
+// Map sub-resource IDs to their parent resource IDs for menu highlighting
+const resourceParentMapping = {
+  "character-sprites": "characters",
+  "layout-editor": "layouts",
+};
+
 const resourceCategoryNames = {
   assets: {
     label: "Assets",
@@ -116,10 +122,14 @@ export const selectResourceItem = ({ props }, id) => {
 export const toViewData = ({ props }) => {
   const { resourceCategory, selectedResourceId } = props;
 
+  // Get the actual resource ID to highlight (use parent mapping if exists)
+  const actualSelectedId =
+    resourceParentMapping[selectedResourceId] || selectedResourceId;
+
   const resourceItems = resourceCategoryNames[resourceCategory].resources;
 
   const items = resourceItems.map((item) => {
-    const isSelected = selectedResourceId === item.id;
+    const isSelected = actualSelectedId === item.id;
     return {
       id: item.id,
       name: item.name,
