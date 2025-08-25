@@ -195,10 +195,14 @@ const renderLayoutPreview = async (deps, options = {}) => {
     // For dragging, use the isDragging logic with bounds
     const borderX = isKeyboardUpdate
       ? result.startX
-      : (isDragging ? result.startX : bounds[selectedItem.id].x);
+      : isDragging
+        ? result.startX
+        : bounds[selectedItem.id].x;
     const borderY = isKeyboardUpdate
       ? result.startY
-      : (isDragging ? result.startY : bounds[selectedItem.id].y);
+      : isDragging
+        ? result.startY
+        : bounds[selectedItem.id].y;
 
     const border = {
       id: "selected-border",
@@ -209,14 +213,14 @@ const renderLayoutPreview = async (deps, options = {}) => {
       width: result.width ?? 0,
       height: result.height ?? 0,
       border: {
-        color: 'white',
+        color: "white",
         width: 2,
         alpha: 1,
       },
       pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
       pointerDown: `layout-editor-pointer-down-${selectedItem.id}`,
       pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
-      cursor: 'all-scroll',
+      cursor: "all-scroll",
     };
 
     const baseContainer = {
@@ -229,7 +233,7 @@ const renderLayoutPreview = async (deps, options = {}) => {
       height: 1080,
       pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
       pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
-    }
+    };
 
     // Wrap red dot in a container to ensure it's on top
     const redDotContainer = {
@@ -539,7 +543,10 @@ export const handleConfirmImageSelection = async (e, deps) => {
 
     // Update store optimistically for immediate UI feedback
     const currentItems = store.selectItems();
-    const updatedItemData = { ...currentItems.items[selectedItemId], ...updateObject };
+    const updatedItemData = {
+      ...currentItems.items[selectedItemId],
+      ...updateObject,
+    };
     store.updateSelectedItem(updatedItemData);
 
     // Dispatch debounced update action to repository
@@ -745,10 +752,9 @@ export const handleArrowKeyDown = async (e, deps) => {
   // Render preview immediately for user feedback with keyboard flag
   await renderLayoutPreview(deps, { isKeyboardUpdate: true });
 
-
   // Capture the current item ID for the timeout
   const itemIdAtStart = currentItem.id;
-  
+
   // Set timeout for when keyboard navigation is finished (similar to pointer-up)
   keyboardNavigationTimeout = setTimeout(() => {
     // Check if the selected item has changed - if so, skip the save
@@ -757,7 +763,7 @@ export const handleArrowKeyDown = async (e, deps) => {
       keyboardNavigationTimeout = null;
       return;
     }
-    
+
     // Final render to ensure bounds are properly updated
     renderLayoutPreview(deps, { skipAssetLoading: true });
 
@@ -794,7 +800,7 @@ export const handle2dRenderEvent = async (e, deps) => {
       clearTimeout(keyboardNavigationTimeout);
       keyboardNavigationTimeout = null;
     }
-    
+
     store.startDragging({
       x: Math.round(payload.x - currentItem.x),
       y: Math.round(payload.y - currentItem.y),
@@ -811,7 +817,7 @@ export const handle2dRenderEvent = async (e, deps) => {
         updatedItem: change,
         replace: false,
       });
-    }, 100)
+    }, 100);
   } else if (eventName.startsWith("layout-editor-pointer-move")) {
     if (!isDragging) {
       return;
