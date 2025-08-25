@@ -91,7 +91,7 @@ template:
                                               - rtgl-view mt=md:
                                                   - rtgl-text: ${item.name}
                                   - rtgl-view#add-placement-button-${group.id} w=200 h=150 av=c ah=c bw=xs br=md g=md cur=p:
-                                      - rtgl-svg svg=plus wh=32:
+                                      - rtgl-svg svg=plus wh=24:
                                       - rtgl-text: Add Placement
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:

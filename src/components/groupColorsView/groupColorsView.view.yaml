@@ -71,11 +71,11 @@ template:
                                               - 'rtgl-view w=200 h=150 style="background-color: ${item.hex}"':
                                               - rtgl-text s=sm c=mu-fg m=md ellipsis w="calc(200px - 2 * var(--spacing-md))": ${item.name}
                                       - "rtgl-view#add-color-button-${group.id} w=200 h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
-                                          - rtgl-svg svg=plus wh=32:
+                                          - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Color
                                     $else:
                                       - "rtgl-view#add-color-button-${group.id} w=200 h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
-                                          - rtgl-svg svg=plus wh=32:
+                                          - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Color
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
