@@ -5,8 +5,8 @@ const SCREEN_WIDTH = 1920;
 const SCREEN_HEIGHT = 1080;
 
 const dialogueForm = {
-  title: 'Preview',
-  description: 'Edit to see how the layout will look like with different data',
+  title: "Preview",
+  description: "Edit to see how the layout will look like with different data",
   fields: [
     {
       name: "dialogue-character-name",
@@ -22,8 +22,8 @@ const dialogueForm = {
 };
 
 const choiceForm = {
-  title: 'Preview',
-  description: 'Edit to see how the layout will look like with different data',
+  title: "Preview",
+  description: "Edit to see how the layout will look like with different data",
   fields: [
     {
       name: "choicesNum",
@@ -249,7 +249,7 @@ export const INITIAL_STATE = Object.freeze({
 
 export const incrementFormKeyCheckpoint = (state) => {
   state.formKeyCheckpoint = state.formKeyCheckpoint + 1;
-}
+};
 
 export const setItems = (state, layoutData) => {
   state.layoutData = layoutData;
@@ -467,275 +467,275 @@ export const toViewData = ({ state, props }, payload) => {
   // Create form configuration based on selected item type
   const form = selectedItem
     ? {
-      fields: [
-        { name: "name", inputType: "popover-input", description: "Name" },
-        { name: "type", inputType: "read-only-text", description: "Type" },
-        {
-          name: "x",
-          inputType: "slider-input",
-          description: "X Position",
-          max: SCREEN_WIDTH,
-        },
-        {
-          name: "y",
-          inputType: "slider-input",
-          description: "Y Position",
-          max: SCREEN_HEIGHT,
-        },
-        {
-          name: "width",
-          inputType: "slider-input",
-          description: "Width",
-          max: SCREEN_WIDTH,
-        },
-        {
-          name: "height",
-          inputType: "slider-input",
-          description: "Height",
-          max: SCREEN_HEIGHT,
-        },
-        {
-          name: "scaleX",
-          inputType: "slider-input",
-          description: "Scale X",
-          min: 0.1,
-          max: 4,
-          step: 0.1,
-        },
-        {
-          name: "scaleY",
-          inputType: "slider-input",
-          description: "Scale Y",
-          min: 0.1,
-          max: 4,
-          step: 0.1,
-        },
-        {
-          name: "rotation",
-          inputType: "slider-input",
-          description: "Rotation",
-          min: -360,
-          max: 360,
-          step: 1,
-        },
-        {
-          name: "anchor",
-          inputType: "select",
-          description: "Anchor Point",
-          options: [
-            { label: "Top Left", value: { x: 0, y: 0 } },
-            { label: "Top Center", value: { x: 0.5, y: 0 } },
-            { label: "Top Right", value: { x: 1, y: 0 } },
-            { label: "Center Left", value: { x: 0, y: 0.5 } },
-            { label: "Center", value: { x: 0.5, y: 0.5 } },
-            { label: "Center Right", value: { x: 1, y: 0.5 } },
-            { label: "Bottom Left", value: { x: 0, y: 1 } },
-            { label: "Bottom Center", value: { x: 0.5, y: 1 } },
-            { label: "Bottom Right", value: { x: 1, y: 1 } },
-          ],
-        },
-        ...(selectedItem.type === "text"
-          ? [
-            {
-              '$if layoutType == "normal"': {
-                name: "contentType",
-                inputType: "select",
-                description: "Content Type",
-                options: [{ label: "Custom Content", value: "custom" }],
-                required: true,
-              },
-            },
-            {
-              '$if layoutType == "dialogue"': {
-                name: "contentType",
-                inputType: "select",
-                description: "Content Type",
-                options: [
-                  { label: "Custom Content", value: "custom" },
-                  { label: "Dialogue Content", value: "dialogue.content" },
-                  {
-                    label: "Character Name",
-                    value: "dialogue.character.name",
+        fields: [
+          { name: "name", inputType: "popover-input", description: "Name" },
+          { name: "type", inputType: "read-only-text", description: "Type" },
+          {
+            name: "x",
+            inputType: "slider-input",
+            description: "X Position",
+            max: SCREEN_WIDTH,
+          },
+          {
+            name: "y",
+            inputType: "slider-input",
+            description: "Y Position",
+            max: SCREEN_HEIGHT,
+          },
+          {
+            name: "width",
+            inputType: "slider-input",
+            description: "Width",
+            max: SCREEN_WIDTH,
+          },
+          {
+            name: "height",
+            inputType: "slider-input",
+            description: "Height",
+            max: SCREEN_HEIGHT,
+          },
+          {
+            name: "scaleX",
+            inputType: "slider-input",
+            description: "Scale X",
+            min: 0.1,
+            max: 4,
+            step: 0.1,
+          },
+          {
+            name: "scaleY",
+            inputType: "slider-input",
+            description: "Scale Y",
+            min: 0.1,
+            max: 4,
+            step: 0.1,
+          },
+          {
+            name: "rotation",
+            inputType: "slider-input",
+            description: "Rotation",
+            min: -360,
+            max: 360,
+            step: 1,
+          },
+          {
+            name: "anchor",
+            inputType: "select",
+            description: "Anchor Point",
+            options: [
+              { label: "Top Left", value: { x: 0, y: 0 } },
+              { label: "Top Center", value: { x: 0.5, y: 0 } },
+              { label: "Top Right", value: { x: 1, y: 0 } },
+              { label: "Center Left", value: { x: 0, y: 0.5 } },
+              { label: "Center", value: { x: 0.5, y: 0.5 } },
+              { label: "Center Right", value: { x: 1, y: 0.5 } },
+              { label: "Bottom Left", value: { x: 0, y: 1 } },
+              { label: "Bottom Center", value: { x: 0.5, y: 1 } },
+              { label: "Bottom Right", value: { x: 1, y: 1 } },
+            ],
+          },
+          ...(selectedItem.type === "text"
+            ? [
+                {
+                  '$if layoutType == "normal"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [{ label: "Custom Content", value: "custom" }],
+                    required: true,
                   },
-                ],
-                required: true,
-              },
-            },
-            {
-              '$if layoutType == "choice"': {
-                name: "contentType",
-                inputType: "select",
-                description: "Content Type",
-                options: [
-                  { label: "Custom Content", value: "custom" },
-                  {
-                    label: "Choice Content 1",
-                    value: "choice.items[0].content",
+                },
+                {
+                  '$if layoutType == "dialogue"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [
+                      { label: "Custom Content", value: "custom" },
+                      { label: "Dialogue Content", value: "dialogue.content" },
+                      {
+                        label: "Character Name",
+                        value: "dialogue.character.name",
+                      },
+                    ],
+                    required: true,
                   },
-                  {
-                    label: "Choice Content 2",
-                    value: "choice.items[1].content",
+                },
+                {
+                  '$if layoutType == "choice"': {
+                    name: "contentType",
+                    inputType: "select",
+                    description: "Content Type",
+                    options: [
+                      { label: "Custom Content", value: "custom" },
+                      {
+                        label: "Choice Content 1",
+                        value: "choice.items[0].content",
+                      },
+                      {
+                        label: "Choice Content 2",
+                        value: "choice.items[1].content",
+                      },
+                      {
+                        label: "Choice Content 3",
+                        value: "choice.items[2].content",
+                      },
+                      {
+                        label: "Choice Content 4",
+                        value: "choice.items[3].content",
+                      },
+                      {
+                        label: "Choice Content 5",
+                        value: "choice.items[4].content",
+                      },
+                      {
+                        label: "Choice Content 6",
+                        value: "choice.items[5].content",
+                      },
+                    ],
+                    required: true,
                   },
-                  {
-                    label: "Choice Content 3",
-                    value: "choice.items[2].content",
+                },
+                {
+                  '$if contentType == "custom"': {
+                    name: "text",
+                    inputType: "popover-input",
+                    description: "Text Content",
                   },
-                  {
-                    label: "Choice Content 4",
-                    value: "choice.items[3].content",
+                },
+                {
+                  name: "typographyId",
+                  inputType: "select",
+                  description: "Typography Style",
+                  options: [...typographyItems],
+                },
+                {
+                  name: "style_wordWrapWidth",
+                  inputType: "popover-input",
+                  description: "Word Wrap Width",
+                },
+                {
+                  name: "style_align",
+                  inputType: "select",
+                  description: "Text Alignment",
+                  options: [
+                    { label: "Left", value: "left" },
+                    { label: "Center", value: "center" },
+                    { label: "Right", value: "right" },
+                  ],
+                },
+                {
+                  name: "hoverTypographyId",
+                  inputType: "select",
+                  description: "Hover Style",
+                  options: [{ label: "None", value: "" }, ...typographyItems],
+                },
+                {
+                  name: "clickedTypographyId",
+                  inputType: "select",
+                  description: "Clicked Style",
+                  options: [{ label: "None", value: "" }, ...typographyItems],
+                },
+              ]
+            : []),
+          ...(selectedItem.type === "sprite"
+            ? [
+                {
+                  name: "imageId",
+                  inputType: "image",
+                  description: "Image",
+                  src: state.fieldResources.imageId?.src,
+                },
+                {
+                  name: "hoverImageId",
+                  inputType: "image",
+                  description: "Hover Image",
+                  src: state.fieldResources.hoverImageId?.src,
+                },
+                {
+                  name: "clickImageId",
+                  inputType: "image",
+                  description: "Click Image",
+                  src: state.fieldResources.clickImageId?.src,
+                },
+              ]
+            : []),
+          ...(selectedItem.type === "container"
+            ? [
+                {
+                  name: "direction",
+                  inputType: "select",
+                  description: "Direction",
+                  options: [
+                    { label: "None", value: undefined },
+                    { label: "Horizontal", value: "horizontal" },
+                    { label: "Vertical", value: "vertical" },
+                  ],
+                  required: true,
+                },
+                {
+                  '$if layoutType == "choice"': {
+                    name: "$when",
+                    inputType: "select",
+                    description: "Container Type",
+                    options: [
+                      { label: "Custom Container", value: undefined },
+                      { label: "Choice Container 1", value: "choice.items[0]" },
+                      { label: "Choice Container 2", value: "choice.items[1]" },
+                      { label: "Choice Container 3", value: "choice.items[2]" },
+                      { label: "Choice Container 4", value: "choice.items[3]" },
+                      { label: "Choice Container 5", value: "choice.items[4]" },
+                      { label: "Choice Container 6", value: "choice.items[5]" },
+                    ],
+                    required: true,
                   },
-                  {
-                    label: "Choice Content 5",
-                    value: "choice.items[4].content",
-                  },
-                  {
-                    label: "Choice Content 6",
-                    value: "choice.items[5].content",
-                  },
-                ],
-                required: true,
-              },
-            },
-            {
-              '$if contentType == "custom"': {
-                name: "text",
-                inputType: "popover-input",
-                description: "Text Content",
-              },
-            },
-            {
-              name: "typographyId",
-              inputType: "select",
-              description: "Typography Style",
-              options: [...typographyItems],
-            },
-            {
-              name: "style_wordWrapWidth",
-              inputType: "popover-input",
-              description: "Word Wrap Width",
-            },
-            {
-              name: "style_align",
-              inputType: "select",
-              description: "Text Alignment",
-              options: [
-                { label: "Left", value: "left" },
-                { label: "Center", value: "center" },
-                { label: "Right", value: "right" },
-              ],
-            },
-            {
-              name: "hoverTypographyId",
-              inputType: "select",
-              description: "Hover Style",
-              options: [{ label: "None", value: "" }, ...typographyItems],
-            },
-            {
-              name: "clickedTypographyId",
-              inputType: "select",
-              description: "Clicked Style",
-              options: [{ label: "None", value: "" }, ...typographyItems],
-            },
-          ]
-          : []),
-        ...(selectedItem.type === "sprite"
-          ? [
-            {
-              name: "imageId",
-              inputType: "image",
-              description: "Image",
-              src: state.fieldResources.imageId?.src,
-            },
-            {
-              name: "hoverImageId",
-              inputType: "image",
-              description: "Hover Image",
-              src: state.fieldResources.hoverImageId?.src,
-            },
-            {
-              name: "clickImageId",
-              inputType: "image",
-              description: "Click Image",
-              src: state.fieldResources.clickImageId?.src,
-            },
-          ]
-          : []),
-        ...(selectedItem.type === "container"
-          ? [
-            {
-              name: "direction",
-              inputType: "select",
-              description: "Direction",
-              options: [
-                { label: "None", value: undefined },
-                { label: "Horizontal", value: "horizontal" },
-                { label: "Vertical", value: "vertical" },
-              ],
-              required: true,
-            },
-            {
-              '$if layoutType == "choice"': {
-                name: "$when",
-                inputType: "select",
-                description: "Container Type",
-                options: [
-                  { label: "Custom Container", value: undefined },
-                  { label: "Choice Container 1", value: "choice.items[0]" },
-                  { label: "Choice Container 2", value: "choice.items[1]" },
-                  { label: "Choice Container 3", value: "choice.items[2]" },
-                  { label: "Choice Container 4", value: "choice.items[3]" },
-                  { label: "Choice Container 5", value: "choice.items[4]" },
-                  { label: "Choice Container 6", value: "choice.items[5]" },
-                ],
-                required: true,
-              },
-            },
-          ]
-          : []),
-      ],
-    }
+                },
+              ]
+            : []),
+        ],
+      }
     : null;
 
   // Create default values for the form
   const defaultValues = selectedItem
     ? {
-      name: selectedItem.name,
-      type: selectedItem.type,
-      x: selectedItem.x,
-      y: selectedItem.y,
-      width: selectedItem.width,
-      height: selectedItem.height,
-      anchor: { x: selectedItem.anchorX, y: selectedItem.anchorY },
-      scaleX: selectedItem.scaleX,
-      scaleY: selectedItem.scaleY,
-      rotation: selectedItem.rotation,
-      ...(selectedItem.type === "text"
-        ? {
-          contentType: selectedItem.contentType,
-          text: selectedItem.text,
-          typographyId: selectedItem.typographyId ?? "",
-          hoverTypographyId: selectedItem.hoverTypographyId ?? "",
-          clickedTypographyId: selectedItem.clickedTypographyId ?? "",
-          style_align: selectedItem.style?.align ?? "left",
-          style_wordWrapWidth: parseInt(
-            selectedItem.style?.wordWrapWidth ?? 300,
-          ),
-        }
-        : {}),
-      ...(selectedItem.type === "sprite"
-        ? {
-          imageId: selectedItem.imageId ?? "",
-          hoverImageId: selectedItem.hoverImageId ?? "",
-          clickImageId: selectedItem.clickImageId ?? "",
-        }
-        : {}),
-      ...(selectedItem.type === "container"
-        ? {
-          direction: selectedItem.direction,
-          containerType: selectedItem.containerType,
-        }
-        : {}),
-    }
+        name: selectedItem.name,
+        type: selectedItem.type,
+        x: selectedItem.x,
+        y: selectedItem.y,
+        width: selectedItem.width,
+        height: selectedItem.height,
+        anchor: { x: selectedItem.anchorX, y: selectedItem.anchorY },
+        scaleX: selectedItem.scaleX,
+        scaleY: selectedItem.scaleY,
+        rotation: selectedItem.rotation,
+        ...(selectedItem.type === "text"
+          ? {
+              contentType: selectedItem.contentType,
+              text: selectedItem.text,
+              typographyId: selectedItem.typographyId ?? "",
+              hoverTypographyId: selectedItem.hoverTypographyId ?? "",
+              clickedTypographyId: selectedItem.clickedTypographyId ?? "",
+              style_align: selectedItem.style?.align ?? "left",
+              style_wordWrapWidth: parseInt(
+                selectedItem.style?.wordWrapWidth ?? 300,
+              ),
+            }
+          : {}),
+        ...(selectedItem.type === "sprite"
+          ? {
+              imageId: selectedItem.imageId ?? "",
+              hoverImageId: selectedItem.hoverImageId ?? "",
+              clickImageId: selectedItem.clickImageId ?? "",
+            }
+          : {}),
+        ...(selectedItem.type === "container"
+          ? {
+              direction: selectedItem.direction,
+              containerType: selectedItem.containerType,
+            }
+          : {}),
+      }
     : {};
 
   const context = {
