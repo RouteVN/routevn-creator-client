@@ -5,6 +5,8 @@ const SCREEN_WIDTH = 1920;
 const SCREEN_HEIGHT = 1080;
 
 const dialogueForm = {
+  title: "Preview",
+  description: "Edit to see how the layout will look like with different data",
   fields: [
     {
       name: "dialogue-character-name",
@@ -20,6 +22,8 @@ const dialogueForm = {
 };
 
 const choiceForm = {
+  title: "Preview",
+  description: "Edit to see how the layout will look like with different data",
   fields: [
     {
       name: "choicesNum",
@@ -87,6 +91,7 @@ const choiceForm = {
 };
 
 export const INITIAL_STATE = Object.freeze({
+  formKeyCheckpoint: 0,
   isDragging: false,
   dragOffset: { x: 0, y: 0 },
   imageSelectorDialog: {
@@ -241,6 +246,10 @@ export const INITIAL_STATE = Object.freeze({
     },
   ],
 });
+
+export const incrementFormKeyCheckpoint = (state) => {
+  state.formKeyCheckpoint = state.formKeyCheckpoint + 1;
+};
 
 export const setItems = (state, layoutData) => {
   state.layoutData = layoutData;
@@ -465,33 +474,25 @@ export const toViewData = ({ state, props }, payload) => {
             name: "x",
             inputType: "slider-input",
             description: "X Position",
-            min: -SCREEN_WIDTH,
             max: SCREEN_WIDTH,
-            step: SCREEN_HEIGHT / 30,
           },
           {
             name: "y",
             inputType: "slider-input",
             description: "Y Position",
-            min: -SCREEN_HEIGHT,
             max: SCREEN_HEIGHT,
-            step: SCREEN_HEIGHT / 30,
           },
           {
             name: "width",
             inputType: "slider-input",
             description: "Width",
-            min: 0,
             max: SCREEN_WIDTH,
-            step: 10,
           },
           {
             name: "height",
             inputType: "slider-input",
             description: "Height",
-            min: 0,
             max: SCREEN_HEIGHT,
-            step: 10,
           },
           {
             name: "scaleX",
@@ -515,7 +516,7 @@ export const toViewData = ({ state, props }, payload) => {
             description: "Rotation",
             min: -360,
             max: 360,
-            step: 5,
+            step: 1,
           },
           {
             name: "anchor",
@@ -776,5 +777,6 @@ export const toViewData = ({ state, props }, payload) => {
       selectedImageId: state.imageSelectorDialog.selectedImageId,
     },
     dropdownMenu: state.dropdownMenu,
+    formKey: `${state.selectedItemId}-${state.formKeyCheckpoint}`,
   };
 };
