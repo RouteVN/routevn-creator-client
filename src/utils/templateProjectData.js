@@ -1,5 +1,7 @@
 import { nanoid } from "nanoid";
 
+const dialogueBoxId = nanoid();
+
 // Template Animations with correct structure
 export const templateAnimations = {
   tree: [
@@ -305,7 +307,6 @@ const createTemplateLayouts = (imageFileIds = {}, fontFileIds = {}) => {
   // Helper to create simple dialogue layout with dialogue box, character name and content
   const createDialogueLayoutElements = () => {
     const containerId = nanoid();
-    const dialogueBoxId = nanoid();
     const characterNameId = nanoid();
     const dialogueContentId = nanoid();
 
@@ -655,6 +656,36 @@ const createTemplateTypography = (fontFileIds = {}) => {
 };
 
 // Template Scenes with default Prologue scene
+
+const stepId = nanoid();
+const sectionId = nanoid();
+
+// Create presentation object with dialogue layout if found
+const presentation = {
+  dialogue: {
+    layoutId: "simple-dialogue",
+  },
+};
+
+// Create items object with first line having presentation, rest with empty presentation
+const lineItems = {
+  [stepId]: {
+    presentation: presentation,
+  },
+};
+
+const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
+
+// Add 31 lines with empty presentation
+additionalLineIds.forEach((lineId) => {
+  lineItems[lineId] = {
+    presentation: {},
+  };
+});
+
+// Create tree array with all line IDs in order
+const lineTree = [{ id: stepId }, ...additionalLineIds.map((id) => ({ id }))];
+
 export const templateScenes = {
   tree: [
     {
@@ -670,9 +701,26 @@ export const templateScenes = {
     "scene-prologue": {
       type: "scene",
       name: "Prologue",
+      createdAt: new Date().toISOString(),
+      position: {
+        x: 0,
+        y: 0,
+      },
       sections: {
-        items: {},
-        tree: [],
+        items: {
+          [sectionId]: {
+            name: "Section New",
+            lines: {
+              items: lineItems,
+              tree: lineTree,
+            },
+          },
+        },
+        tree: [
+          {
+            id: sectionId,
+          },
+        ],
       },
     },
   },
