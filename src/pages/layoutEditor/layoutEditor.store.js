@@ -87,6 +87,8 @@ const choiceForm = {
 };
 
 export const INITIAL_STATE = Object.freeze({
+  isDragging: false,
+  dragOffset: { x: 0, y: 0 },
   imageSelectorDialog: {
     isOpen: false,
     fieldIndex: -1,
@@ -256,12 +258,32 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
 
+export const updateSelectedItem = (state, updatedItem) => {
+  // Update the selected item in the layoutData
+  if (state.selectedItemId && state.layoutData && state.layoutData.items) {
+    state.layoutData.items[state.selectedItemId] = updatedItem;
+  }
+};
+
 export const setImages = (state, images) => {
   state.images = images;
 };
 
 export const setTypographyData = (state, typographyData) => {
   state.typographyData = typographyData;
+};
+
+export const startDragging = (state, payload) => {
+  state.isDragging = true;
+  state.dragOffset = {
+    x: payload.x,
+    y: payload.y,
+  };
+};
+
+export const stopDragging = (state, isDragging) => {
+  state.isDragging = isDragging;
+  state.dragOffset = { x: 0, y: 0 };
 };
 
 export const setColorsData = (state, colorsData) => {
@@ -287,6 +309,13 @@ export const setChoiceDefaultValue = (state, { name, fieldValue }) => {
   } else {
     state.choiceDefaultValues[name] = fieldValue;
   }
+};
+
+export const selectDragging = ({ state }) => {
+  return {
+    isDragging: state.isDragging,
+    dragOffset: state.dragOffset,
+  };
 };
 
 export const selectLayoutId = ({ state }) => {
