@@ -59,7 +59,7 @@ export const getFileType = (result) => {
   }
 
   // Fallback to extension-based detection
-  const ext = result.file.name.split(".").pop()?.toLowerCase();
+  const ext = result.displayName.split(".").pop()?.toLowerCase();
   if (result.type === "font" && ext) {
     return `font/${ext}`;
   }

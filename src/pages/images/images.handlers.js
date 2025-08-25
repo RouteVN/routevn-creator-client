@@ -50,7 +50,7 @@ export const handleFormExtraEvent = async (e, deps) => {
       replace: false,
       item: {
         fileId: uploadResult.fileId,
-        name: uploadResult.file.name,
+        name: uploadResult.displayName,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
         width: uploadResult.dimensions.width,
@@ -96,6 +96,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
   const successfulUploads = await uploadImageFiles(files, "someprojectId");
   successfulUploads.forEach((result) => {
+    console.log("Uploaded file:", result);
     repository.addAction({
       actionType: "treePush",
       target: "images",
@@ -106,7 +107,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
           id: nanoid(),
           type: "image",
           fileId: result.fileId,
-          name: result.file.name,
+          name: result.displayName,
           fileType: result.file.type,
           fileSize: result.file.size,
           width: result.dimensions.width,
