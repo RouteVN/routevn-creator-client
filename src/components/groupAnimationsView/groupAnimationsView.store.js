@@ -1,58 +1,94 @@
-const addKeyframeForm = {
-  title: "Add Keyframe",
-  fields: [
-    {
-      name: "duration",
-      inputType: "inputText",
-      label: "Duration (ms)",
-      required: true,
-      placeholder: "Duration in milliseconds",
-      tooltip: {
-        content:
-          "The time it takes for the animation keyframe to move from previous value to next value",
-      },
+const createAddKeyframeForm = (property) => {
+  if (!property) {
+    return {};
+  }
+  const sliderConfig = {
+    x: {
+      min: 0,
+      max: 1920,
     },
-    {
-      name: "value",
-      inputType: "inputText",
-      label: "Value",
-      required: true,
-      tooltip: {
-        content: "The final value of the property at the end of the animation",
-      },
+    y: {
+      min: 0,
+      max: 1920,
     },
-    {
-      name: "relative",
-      inputType: "select",
-      label: "Value type",
-      options: [
-        { label: "Absolute", value: false },
-        { label: "Relative", value: true },
-      ],
-      required: true,
-      tooltip: {
-        content:
-          "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value",
-      },
+    alpha: {
+      min: 0,
+      max: 1,
+      step: 0.01,
     },
-    {
-      name: "easing",
-      inputType: "select",
-      label: "Easing",
-      options: [{ label: "Linear", value: "linear" }],
-      required: true,
+    scaleX: {
+      min: 0.1,
+      max: 5,
+      step: 0.1,
     },
-  ],
-  actions: {
-    layout: "",
-    buttons: [
+    scaleY: {
+      min: 0.1,
+      max: 5,
+      step: 0.1,
+    },
+    rotation: {
+      min: -360,
+      max: 360,
+    },
+  };
+  return {
+    title: "Add Keyframe",
+    fields: [
       {
-        id: "submit",
-        variant: "pr",
-        content: "Add Keyframe",
+        name: "duration",
+        inputType: "inputText",
+        label: "Duration (ms)",
+        required: true,
+        placeholder: "Duration in milliseconds",
+        tooltip: {
+          content:
+            "The time it takes for the animation keyframe to move from previous value to next value",
+        },
+      },
+      {
+        name: "value",
+        inputType: "slider-input",
+        ...sliderConfig[property],
+        label: "Value",
+        required: true,
+        tooltip: {
+          content:
+            "The final value of the property at the end of the animation",
+        },
+      },
+      {
+        name: "relative",
+        inputType: "select",
+        label: "Value type",
+        options: [
+          { label: "Absolute", value: false },
+          { label: "Relative", value: true },
+        ],
+        required: true,
+        tooltip: {
+          content:
+            "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value",
+        },
+      },
+      {
+        name: "easing",
+        inputType: "select",
+        label: "Easing",
+        options: [{ label: "Linear", value: "linear" }],
+        required: true,
       },
     ],
-  },
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Add Keyframe",
+        },
+      ],
+    },
+  };
 };
 
 const addKeyframeDefaultValues = {
@@ -60,19 +96,21 @@ const addKeyframeDefaultValues = {
   easing: "linear",
 };
 
-const updateKeyframeForm = {
-  ...addKeyframeForm,
-  title: "Edit Keyframe",
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        content: "Update Keyframe",
-      },
-    ],
-  },
+const createUpdateKeyframeForm = (property) => {
+  return {
+    ...createAddKeyframeForm(property),
+    title: "Edit Keyframe",
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Update Keyframe",
+        },
+      ],
+    },
+  };
 };
 
 const editInitialValueForm = {
@@ -129,13 +167,70 @@ const createAddPropertyForm = (propertyOptions) => {
         required: true,
       },
       {
-        name: "initialValue",
-        inputType: "inputText",
-        label: "Initial value",
+        name: "useInitialValue",
+        inputType: "select",
+        label: "Use initial value",
         tooltip: {
           content:
-            "The initial value of the property at the start of the animation. Can leave blank to use the element's current value at start of animation",
+            "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
         },
+        options: [
+          {
+            label: "No",
+            value: false,
+          },
+          {
+            label: "Yes",
+            value: true,
+          },
+        ],
+      },
+      {
+        "$if useInitialValue == true": [
+          {
+            $when: 'property == "x"',
+            name: "initialValue",
+            inputType: "slider-input",
+            min: 0,
+            max: 1920,
+            label: "Initial value",
+          },
+          {
+            $when: 'property == "y"',
+            name: "initialValue",
+            inputType: "slider-input",
+            min: 0,
+            max: 1080,
+            label: "Initial value",
+          },
+          {
+            $when: 'property == "alpha"',
+            name: "initialValue",
+            inputType: "slider-input",
+            step: 0.01,
+            min: 0,
+            max: 1,
+            label: "Initial value",
+          },
+          {
+            $when: 'property == "scaleX" || property == "scaleY"',
+            name: "initialValue",
+            inputType: "slider-input",
+            min: 0.1,
+            max: 5,
+            step: 0.1,
+            label: "Initial value",
+          },
+          {
+            $when: 'property == "rotation"',
+            name: "initialValue",
+            inputType: "slider-input",
+            min: -360,
+            max: 360,
+            step: 1,
+            label: "Initial value",
+          },
+        ],
       },
     ],
     actions: {
@@ -293,27 +388,15 @@ export const openDialog = (
   state.editItemId = itemId;
 
   if (editMode && itemData) {
-    // Set groupId to support form submission
     state.targetGroupId = itemData.parent || null;
-
-    // Use edit form
     state.form = editAnimationForm;
-
-    // Set default values
     state.defaultValues = {
-      name: itemData.name || "",
+      name: itemData.name,
     };
-
-    // Set animation properties
     state.properties = itemData.properties || {};
   } else {
-    // Use add form
     state.form = addAnimationForm;
-
-    state.defaultValues = {
-      name: "",
-    };
-
+    state.defaultValues = {};
     state.properties = {};
   }
 };
@@ -749,9 +832,11 @@ export const toViewData = ({ state, props }) => {
     initialValue: state.initialValue,
     addPropertyForm,
     addPropertyContext,
-    addKeyframeForm,
+    addKeyframeForm: createAddKeyframeForm(state?.popover?.payload?.property),
     addKeyframeDefaultValues,
-    updateKeyframeForm,
+    updateKeyframeForm: createUpdateKeyframeForm(
+      state?.popover?.payload?.property,
+    ),
     editInitialValueForm,
     editInitialValueContext,
     editKeyframeDefaultValues,
@@ -769,6 +854,9 @@ export const toViewData = ({ state, props }) => {
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
       ),
+    },
+    addPropertyFormDefaultValues: {
+      useInitialValue: false,
     },
   };
 };
