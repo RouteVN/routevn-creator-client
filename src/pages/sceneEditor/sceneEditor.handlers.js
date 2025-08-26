@@ -219,8 +219,9 @@ export const handleAddPresentationButtonClick = (e, deps) => {
   render();
 };
 
-export const handleSectionAddClick = (e, deps) => {
-  const { store, repository, render } = deps;
+export const handleSectionAddClick = async (e, deps) => {
+  const { store, repository, render, subject, drenderer, getFileContent } =
+    deps;
 
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
@@ -285,6 +286,11 @@ export const handleSectionAddClick = (e, deps) => {
   store.setSelectedSectionId(newSectionId);
   store.setSelectedLineId(newLineId);
   render();
+
+  // Render the canvas with the new section's data
+  setTimeout(async () => {
+    await renderSceneState(store, drenderer, getFileContent);
+  }, 10);
 };
 
 export const handleSplitLine = (e, deps) => {
