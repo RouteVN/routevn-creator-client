@@ -176,7 +176,7 @@ template:
 
           - rtgl-popover#add-property-popover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
               - $if popover.mode == 'addProperty':
-                  - rtgl-form#add-property-form slot=content .form=addPropertyForm .context=addPropertyContext:
+                  - rtgl-form#add-property-form slot=content .form=addPropertyForm .context=addPropertyContext .defaultValues=addPropertyFormDefaultValues:
               - $if popover.mode == 'addKeyframe':
                   - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm .defaultValues=addKeyframeDefaultValues:
               - $if popover.mode == 'editKeyframe':
