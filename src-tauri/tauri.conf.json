@@ -2,12 +2,13 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "RouteVN Creator",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.routevn.creator",
   "build": {
     "frontendDist": "../_site",
     "devUrl": "http://localhost:3001",
     "beforeDevCommand": "bun run watch",
-    "beforeBuildCommand": "bun run build"
+    "beforeBuildCommand": "bun run build",
+    "runner": "cargo"
   },
   "app": {
     "windows": [
