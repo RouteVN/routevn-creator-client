@@ -22,9 +22,13 @@
     "serve": "bunx serve _site -p 3001",
     "lint": "bunx prettier --check src",
     "lint:fix": "bunx prettier --check --write src",
-    "prepare": "husky"
+    "prepare": "husky",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.8.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2"
   },
