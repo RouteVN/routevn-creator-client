@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../_site",
     "devUrl": "http://localhost:3001",
-    "beforeDevCommand": "bun run watch",
-    "beforeBuildCommand": "bun run build",
+    "beforeDevCommand": "bun run watch:tauri",
+    "beforeBuildCommand": "bun run build:tauri",
     "runner": "cargo"
   },
   "app": {
