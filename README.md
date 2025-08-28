@@ -82,6 +82,8 @@ bun run lint:fix
 
 This will automatically fix most linting errors. After fixing, you can commit the changes and push again.
 
+### Web Development
+
 Run the project in watch mode:
 ```shell
 bun run watch
@@ -95,3 +97,63 @@ bunx serve _site
 ```
 
 Open: http://localhost:3000/project
+
+### Desktop Application (Tauri)
+
+RouteVN Creator also supports running as a native desktop application using [Tauri](https://tauri.app/), providing better performance and system integration.
+
+**Prerequisites:**
+
+Install Rust and system dependencies:
+```shell
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Linux users need additional system dependencies
+# Ubuntu/Debian:
+sudo apt update
+sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+# Fedora/RHEL:
+sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel
+
+# macOS and Windows: No additional system dependencies needed
+```
+
+**Development:**
+
+Run the Tauri app in development mode:
+```shell
+bun run tauri:dev
+```
+
+For cross-compilation to Windows from Linux/macOS:
+```shell
+bun run tauri:dev:win
+```
+
+**Building:**
+
+Build the desktop application:
+```shell
+bun run tauri:build
+```
+
+Cross-compile for Windows:
+```shell
+bun run tauri:build:win
+```
+
+The built application will be available in `src-tauri/target/release/` with platform-specific installers in `src-tauri/target/release/bundle/`.
+
+**Platform Support:**
+- **Windows**: `.exe` installer and `.msi` package
+- **macOS**: `.app` bundle and `.dmg` installer  
+- **Linux**: `.AppImage`, `.deb`, and `.rpm` packages
+
+**Features:**
+- Native file system access
+- Better performance than web version
+- Offline-first with local storage
+- System tray integration (planned)
+- Auto-updates support (planned)
