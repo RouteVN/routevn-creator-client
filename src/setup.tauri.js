@@ -19,11 +19,11 @@ const tauriConfig = {
 // Log Tauri detection
 if (isTauri) {
   console.log("Running in Tauri environment");
-  
+
   // Example: Access Tauri APIs if needed
   // const { invoke } = window.__TAURI__.core;
   // const { fs } = window.__TAURI__;
-  
+
   // Could set up Tauri-specific event listeners
   // window.__TAURI__.event.listen('tauri://file-drop', (event) => {
   //   console.log('Files dropped:', event.payload);
