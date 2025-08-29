@@ -420,42 +420,21 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-export const createRepository = (
-  initialState,
-  localStorageKey,
-  storageAdapter,
-) => {
-  // If localStorageKey is provided, handle localStorage integration
-  if (localStorageKey && typeof localStorageKey === "string") {
-    const storedEventStream = localStorage.getItem(localStorageKey);
-    const actionStream = storedEventStream ? JSON.parse(storedEventStream) : [];
-
-    const repository = createRepositoryInternal(
-      initialState,
-      actionStream,
-      localStorageKey,
-      storageAdapter,
-    );
-
-    // Auto-save to localStorage every 5 seconds
-    setInterval(() => {
-      repository.flush();
-    }, 5000);
-
-    return repository;
+export const createRepository = (initialState, storageAdapter) => {
+  // storageAdapter is required for persistence
+  if (!storageAdapter) {
+    throw new Error("Storage adapter is required");
   }
 
-  // Original behavior for backward compatibility
-  return createRepositoryInternal(initialState, [], null, storageAdapter);
+  return createRepositoryInternal(initialState, [], storageAdapter);
 };
 
 const createRepositoryInternal = (
   initialState,
   initialActionSteams,
-  localStorageKey,
   storageAdapter,
 ) => {
-  const actionStream = initialActionSteams || [];
+  let actionStream = initialActionSteams || [];
 
   // Cache variables
   let cachedState = null;
@@ -466,6 +445,14 @@ const createRepositoryInternal = (
     actionStream.push(action);
     // Invalidate cache when new action is added
     isCacheValid = false;
+
+    // Persist to storage if adapter is provided (fire-and-forget)
+    if (storageAdapter && storageAdapter.addAction) {
+      // Don't await - let it save in the background
+      storageAdapter.addAction(action).catch((error) => {
+        console.error("Failed to persist action to storage:", error);
+      });
+    }
   };
 
   const getState = () => {
@@ -520,13 +507,27 @@ const createRepositoryInternal = (
     return actionStream;
   };
 
-  const flush = () => {
-    if (localStorageKey) {
-      localStorage.setItem(localStorageKey, JSON.stringify(actionStream));
+  const flush = async () => {
+    // Save all actions to storage adapter
+    if (storageAdapter && storageAdapter.saveAllActions) {
+      await storageAdapter.saveAllActions(actionStream);
+    }
+  };
+
+  const init = async () => {
+    // Load all events from storage adapter
+    if (storageAdapter && storageAdapter.getAllEvents) {
+      const storedEvents = await storageAdapter.getAllEvents();
+      if (storedEvents && storedEvents.length > 0) {
+        actionStream = storedEvents;
+        // Invalidate cache to force recomputation with loaded events
+        isCacheValid = false;
+      }
     }
   };
 
   return {
+    init,
     addAction,
     getState,
     getActionStream,

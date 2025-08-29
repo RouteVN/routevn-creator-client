@@ -15,6 +15,7 @@ import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createTemplateProjectData } from "./utils/templateProjectData";
+import Database from "@tauri-apps/plugin-sql";
 
 // Check if running in Tauri
 const isTauri = window.__TAURI__ !== undefined;
@@ -123,8 +124,61 @@ const initialData = {
   },
 };
 
-const localStorageKey = "repositoryEventStream";
-const repository = createRepository(initialData, localStorageKey);
+// Create Tauri SQLite Repository Adapter
+const createTauriSQLiteRepositoryAdapter = async () => {
+  // Initialize SQLite database
+  const db = await Database.load("sqlite:repository.db");
+
+  // Create actions table if it doesn't exist
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS actions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action_type TEXT NOT NULL,
+      target TEXT,
+      value TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  return {
+    async addAction(action) {
+      await db.execute(
+        "INSERT INTO actions (action_type, target, value) VALUES ($1, $2, $3)",
+        [action.actionType, action.target, JSON.stringify(action.value)],
+      );
+    },
+
+    async getAllEvents() {
+      const results = await db.select(
+        "SELECT action_type, target, value FROM actions ORDER BY id",
+      );
+      return results.map((row) => ({
+        actionType: row.action_type,
+        target: row.target,
+        value: row.value ? JSON.parse(row.value) : null,
+      }));
+    },
+
+    async saveAllActions(actions) {
+      // Clear existing actions and insert new ones in a transaction
+      await db.execute("DELETE FROM actions");
+
+      for (const action of actions) {
+        await db.execute(
+          "INSERT INTO actions (action_type, target, value) VALUES ($1, $2, $3)",
+          [action.actionType, action.target, JSON.stringify(action.value)],
+        );
+      }
+    },
+  };
+};
+
+// Initialize adapter and repository
+const repositoryAdapter = await createTauriSQLiteRepositoryAdapter();
+const repository = createRepository(initialData, repositoryAdapter);
+
+// Initialize repository with stored data
+await repository.init();
 
 // Fetch template images from static folder
 async function fetchTemplateImages() {
