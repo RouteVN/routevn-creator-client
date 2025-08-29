@@ -441,18 +441,14 @@ const createRepositoryInternal = (
   let isCacheValid = false;
   let lastActionCount = 0;
 
-  const addAction = (action) => {
+  const addAction = async (action) => {
+    // Persist to storage first
+    await storageAdapter.addAction(action);
+
+    // Only update memory after successful persistence
     actionStream.push(action);
     // Invalidate cache when new action is added
     isCacheValid = false;
-
-    // Persist to storage if adapter is provided (fire-and-forget)
-    if (storageAdapter && storageAdapter.addAction) {
-      // Don't await - let it save in the background
-      storageAdapter.addAction(action).catch((error) => {
-        console.error("Failed to persist action to storage:", error);
-      });
-    }
   };
 
   const getState = () => {
@@ -507,22 +503,13 @@ const createRepositoryInternal = (
     return actionStream;
   };
 
-  const flush = async () => {
-    // Save all actions to storage adapter
-    if (storageAdapter && storageAdapter.saveAllActions) {
-      await storageAdapter.saveAllActions(actionStream);
-    }
-  };
-
   const init = async () => {
     // Load all events from storage adapter
-    if (storageAdapter && storageAdapter.getAllEvents) {
-      const storedEvents = await storageAdapter.getAllEvents();
-      if (storedEvents && storedEvents.length > 0) {
-        actionStream = storedEvents;
-        // Invalidate cache to force recomputation with loaded events
-        isCacheValid = false;
-      }
+    const storedEvents = await storageAdapter.getAllEvents();
+    if (storedEvents && storedEvents.length > 0) {
+      actionStream = storedEvents;
+      // Invalidate cache to force recomputation with loaded events
+      isCacheValid = false;
     }
   };
 
@@ -531,7 +518,6 @@ const createRepositoryInternal = (
     addAction,
     getState,
     getActionStream,
-    flush,
   };
 };
 

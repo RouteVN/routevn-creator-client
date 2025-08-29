@@ -15,7 +15,8 @@ import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createTemplateProjectData } from "./utils/templateProjectData";
-import Database from "@tauri-apps/plugin-sql";
+import { createTauriSQLiteRepositoryAdapter } from "./deps/repositoryAdapters";
+import { fetchTemplateImages, fetchTemplateFonts } from "./utils/templateSetup";
 
 // Check if running in Tauri
 const isTauri = window.__TAURI__ !== undefined;
@@ -124,191 +125,12 @@ const initialData = {
   },
 };
 
-// Create Tauri SQLite Repository Adapter
-const createTauriSQLiteRepositoryAdapter = async () => {
-  // Initialize SQLite database
-  const db = await Database.load("sqlite:repository.db");
-
-  // Create actions table if it doesn't exist
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS actions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      action_type TEXT NOT NULL,
-      target TEXT,
-      value TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  return {
-    async addAction(action) {
-      await db.execute(
-        "INSERT INTO actions (action_type, target, value) VALUES ($1, $2, $3)",
-        [action.actionType, action.target, JSON.stringify(action.value)],
-      );
-    },
-
-    async getAllEvents() {
-      const results = await db.select(
-        "SELECT action_type, target, value FROM actions ORDER BY id",
-      );
-      return results.map((row) => ({
-        actionType: row.action_type,
-        target: row.target,
-        value: row.value ? JSON.parse(row.value) : null,
-      }));
-    },
-
-    async saveAllActions(actions) {
-      // Clear existing actions and insert new ones in a transaction
-      await db.execute("DELETE FROM actions");
-
-      for (const action of actions) {
-        await db.execute(
-          "INSERT INTO actions (action_type, target, value) VALUES ($1, $2, $3)",
-          [action.actionType, action.target, JSON.stringify(action.value)],
-        );
-      }
-    },
-  };
-};
-
 // Initialize adapter and repository
 const repositoryAdapter = await createTauriSQLiteRepositoryAdapter();
 const repository = createRepository(initialData, repositoryAdapter);
 
 // Initialize repository with stored data
 await repository.init();
-
-// Fetch template images from static folder
-async function fetchTemplateImages() {
-  const templateImageUrls = [
-    "/public/template/dialogue_box.png",
-    "/public/template/choice_box.png",
-    "/public/template/choice_box_activated.png",
-  ];
-
-  const fetchedImages = {};
-  const imageItems = {};
-  const imageTree = [];
-
-  // Create the Template Images folder
-  const folderId = "template-images-folder";
-  imageItems[folderId] = {
-    type: "folder",
-    name: "Template Images",
-  };
-
-  const folderChildren = [];
-
-  for (const url of templateImageUrls) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const blob = await response.blob();
-        const fileName = url.split("/").pop();
-        const file = new File([blob], fileName, { type: blob.type });
-
-        // Upload to local storage and get fileId
-        const results = await uploadImageFiles([file], "template-project");
-        if (results && results.length > 0) {
-          const result = results[0];
-          const imageId = `image-${fileName.replace(".png", "")}`;
-
-          // Store the file ID for layout references
-          fetchedImages[fileName] = result.fileId;
-
-          // Create the image item for the repository
-          imageItems[imageId] = {
-            type: "image",
-            fileId: result.fileId,
-            name: fileName.replace(".png", "").replace(/_/g, " "),
-            src: result.downloadUrl,
-            width: result.dimensions?.width || 100,
-            height: result.dimensions?.height || 100,
-          };
-
-          // Add to folder children
-          folderChildren.push({ id: imageId });
-        }
-      }
-    } catch (error) {
-      console.warn(`Failed to fetch template image ${url}:`, error);
-    }
-  }
-
-  // Create the tree structure with folder
-  imageTree.push({
-    id: folderId,
-    children: folderChildren,
-  });
-
-  return { fetchedImages, imageItems, imageTree };
-}
-
-// Fetch template fonts from static folder
-async function fetchTemplateFonts() {
-  const templateFontUrls = ["/public/template/sample_font.ttf"];
-
-  const fetchedFonts = {};
-  const fontItems = {};
-  const fontTree = [];
-
-  // Create the Template Fonts folder
-  const folderId = "template-fonts-folder";
-  fontItems[folderId] = {
-    type: "folder",
-    name: "Template Fonts",
-  };
-
-  const folderChildren = [];
-
-  for (const url of templateFontUrls) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const blob = await response.blob();
-        const fileName = url.split("/").pop();
-        const file = new File([blob], fileName, { type: "font/ttf" });
-
-        // Upload to local storage and get fileId
-        const results = await uploadFontFiles([file], "template-project");
-        if (results && results.length > 0) {
-          const result = results[0];
-          const fontId = `font-sample`;
-
-          // Store the file ID for layout references
-          fetchedFonts[fileName] = result.fileId;
-
-          // Create the font item for the repository
-          fontItems[fontId] = {
-            type: "font",
-            fileId: result.fileId,
-            name: "Sample Font",
-            fontFamily: result.fontName || "SampleFont",
-            fileType: "font/ttf",
-            fileSize: file.size,
-          };
-
-          // Add to folder children
-          folderChildren.push({ id: fontId });
-        }
-      }
-    } catch (error) {
-      console.warn(`Failed to fetch template font ${url}:`, error);
-    }
-  }
-
-  // Create the tree structure with folder only if we have fonts
-  if (folderChildren.length > 0) {
-    fontTree.push({
-      id: folderId,
-      children: folderChildren,
-    });
-  }
-
-  return { fetchedFonts, fontItems, fontTree };
-}
 
 // Check if we need to add template data
 const actionStream = repository.getActionStream();
@@ -317,8 +139,8 @@ if (actionStream.length === 0) {
   console.log("First time user - adding template data to repository...");
 
   // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages();
-  const templateFontsData = await fetchTemplateFonts();
+  const templateImagesData = await fetchTemplateImages(uploadImageFiles);
+  const templateFontsData = await fetchTemplateFonts(uploadFontFiles);
 
   // Create template data structure
   const templateData = createTemplateProjectData(
