@@ -15,7 +15,8 @@ import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createTemplateProjectData } from "./utils/templateProjectData";
-import { fetchTemplateImages, fetchTemplateFonts } from "./utils/template";
+import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
+import { fetchTemplateImages, fetchTemplateFonts } from "./utils/templateSetup";
 
 // Web-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -112,8 +113,11 @@ const initialData = {
   },
 };
 
-const localStorageKey = "repositoryEventStream";
-const repository = createRepository(initialData, localStorageKey);
+const repositoryAdapter = createIndexeddbRepositoryAdapter();
+const repository = createRepository(initialData, repositoryAdapter);
+
+// Initialize repository with stored data
+await repository.init();
 
 // Check if we need to add template data
 const actionStream = repository.getActionStream();
@@ -121,37 +125,9 @@ const actionStream = repository.getActionStream();
 if (actionStream.length === 0) {
   console.log("First time user - adding template data to repository...");
 
-  // Create parent nodes for uploaded assets
-  const uploadedImages = {
-    id: "uploadedImages",
-    parent: null,
-    title: "Uploaded Images",
-    type: "FOLDER",
-    expanded: true,
-    children: [],
-  };
-
-  const uploadedFonts = {
-    id: "uploadedFonts",
-    parent: null,
-    title: "Uploaded Fonts",
-    type: "FOLDER",
-    expanded: true,
-    children: [],
-  };
-
   // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages({
-    uploadImageFiles,
-    repository,
-    uploadedImages,
-  });
-
-  const templateFontsData = await fetchTemplateFonts({
-    uploadFontFiles,
-    repository,
-    uploadedFonts,
-  });
+  const templateImagesData = await fetchTemplateImages(uploadImageFiles);
+  const templateFontsData = await fetchTemplateFonts(uploadFontFiles);
 
   // Create template data structure
   const templateData = createTemplateProjectData(

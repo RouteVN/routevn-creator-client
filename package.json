@@ -2,6 +2,7 @@
   "type": "module",
   "dependencies": {
     "@rettangoli/fe": "^0.0.7-rc11",
+    "@tauri-apps/plugin-sql": "~2",
     "esbuild": "^0.25.5",
     "immer": "^10.1.1",
     "jempl": "0.2.0-rc1",
