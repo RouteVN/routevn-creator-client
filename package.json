@@ -16,9 +16,12 @@
     "vite": "^6.3.5"
   },
   "scripts": {
-    "build:dev": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build -d",
-    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build",
-    "watch": "rtgl fe watch",
+    "build:dev": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build -d -s src/setup.web.js",
+    "build": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build -s src/setup.web.js",
+    "build:web": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build -s src/setup.web.js",
+    "build:tauri": "rm -rf _site && mkdir _site && cp -rf static/* _site/ && rtgl ui build-svg && rtgl fe build -s src/setup.tauri.js",
+    "watch": "rtgl fe watch -s src/setup.web.js",
+    "watch:tauri": "rtgl fe watch -s src/setup.tauri.js",
     "serve": "bunx serve _site -p 3001",
     "lint": "bunx prettier --check src",
     "lint:fix": "bunx prettier --check --write src",
@@ -26,8 +29,8 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:dev:win": "tauri dev --target x86_64-pc-windows-gnu",
-    "tauri:build": "tauri build",
-    "tauri:build:win": "tauri build --target x86_64-pc-windows-gnu"
+    "tauri:build": "bun run build:tauri && tauri build",
+    "tauri:build:win": "bun run build:tauri && tauri build --target x86_64-pc-windows-gnu"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.3",

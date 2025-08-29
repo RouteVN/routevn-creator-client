@@ -27,8 +27,14 @@ Folder structure
 <!-- TODO better differenciate component and pages -->
 - `src/pages/` - Global components with their own state
 - `src/deps/` - Custom utilities that will be accessible via deps
+- `src/setup.common.js` - Shared setup logic for both web and desktop
+- `src/setup.web.js` - Web-specific configuration
+- `src/setup.tauri.js` - Tauri desktop-specific configuration
+- `scripts/` - Build and utility scripts
 - `static/` - Static HTML files and assets
 - `_site/` - Build output directory
+
+**Note:** `src/setup.js` is auto-generated during build and should not be edited directly.
 
 ## Adding Routes
 
@@ -84,6 +90,8 @@ This will automatically fix most linting errors. After fixing, you can commit th
 
 ### Web Development
 
+The project uses platform-specific entry points that are automatically configured during build:
+
 Run the project in watch mode:
 ```shell
 bun run watch
@@ -92,11 +100,15 @@ bun run watch
 Or build project and serve without watch mode:
 
 ```shell
-bun run build
-bunx serve _site
+bun run build:web
+bunx serve _site -p 3001
 ```
 
-Open: http://localhost:3000/project
+Open: http://localhost:3001/project
+
+**Build Commands:**
+- `bun run build` or `bun run build:web` - Build for web platform
+- `bun run watch` - Watch mode for web development
 
 ### Desktop Application (Tauri)
 
@@ -122,6 +134,8 @@ sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicato
 
 **Development:**
 
+The Tauri build automatically uses the desktop-specific configuration (`src/setup.tauri.js`):
+
 Run the Tauri app in development mode:
 ```shell
 bun run tauri:dev
@@ -146,6 +160,11 @@ bun run tauri:build:win
 
 The built application will be available in `src-tauri/target/release/` with platform-specific installers in `src-tauri/target/release/bundle/`.
 
+**Build Commands:**
+- `bun run build:tauri` - Build frontend for Tauri platform
+- `bun run watch:tauri` - Watch mode for Tauri development
+- `bun run tauri:build` - Build complete desktop application
+
 **Platform Support:**
 - **Windows**: `.exe` installer and `.msi` package
 - **macOS**: `.app` bundle and `.dmg` installer  
@@ -155,5 +174,6 @@ The built application will be available in `src-tauri/target/release/` with plat
 - Native file system access
 - Better performance than web version
 - Offline-first with local storage
+- Platform-specific optimizations via separate entry points
 - System tray integration (planned)
 - Auto-updates support (planned)

@@ -9,3 +9,6 @@ vt/static/public/main.js
 vt/static/public/main.js.map
 static/public/rtgl-icons.js
 /task
+
+# Generated setup file
+src/setup.js
