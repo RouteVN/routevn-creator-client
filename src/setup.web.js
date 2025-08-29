@@ -15,7 +15,7 @@ import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createTemplateProjectData } from "./utils/templateProjectData";
-import { createIndexeddbRepositoryAdapter } from "./deps/repositoryAdapters";
+import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
 import { fetchTemplateImages, fetchTemplateFonts } from "./utils/templateSetup";
 
 // Web-specific configuration

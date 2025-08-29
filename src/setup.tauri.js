@@ -15,7 +15,7 @@ import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createTemplateProjectData } from "./utils/templateProjectData";
-import { createTauriSQLiteRepositoryAdapter } from "./deps/repositoryAdapters";
+import { createTauriSQLiteRepositoryAdapter } from "./deps/tauriRepositoryAdapter";
 import { fetchTemplateImages, fetchTemplateFonts } from "./utils/templateSetup";
 
 // Check if running in Tauri
