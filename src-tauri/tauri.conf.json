@@ -6,16 +6,16 @@
   "build": {
     "frontendDist": "../_site",
     "devUrl": "http://localhost:3001",
-    "beforeDevCommand": "bun run watch",
-    "beforeBuildCommand": "bun run build",
+    "beforeDevCommand": "bun run watch:tauri",
+    "beforeBuildCommand": "bun run build:tauri",
     "runner": "cargo"
   },
   "app": {
     "windows": [
       {
         "title": "RouteVN Creator",
-        "width": 800,
-        "height": 600,
+        "width": 1600,
+        "height": 900,
         "resizable": true,
         "fullscreen": false,
         "devtools": true
