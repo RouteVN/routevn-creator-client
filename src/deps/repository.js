@@ -420,42 +420,32 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-export const createRepository = (initialState, localStorageKey) => {
-  // If localStorageKey is provided, handle localStorage integration
-  if (localStorageKey && typeof localStorageKey === "string") {
-    const storedEventStream = localStorage.getItem(localStorageKey);
-    const actionStream = storedEventStream ? JSON.parse(storedEventStream) : [];
-
-    const repository = createRepositoryInternal(
-      initialState,
-      actionStream,
-      localStorageKey,
-    );
-
-    // Auto-save to localStorage every 5 seconds
-    setInterval(() => {
-      repository.flush();
-    }, 5000);
-
-    return repository;
+export const createRepository = (initialState, storageAdapter) => {
+  // storageAdapter is required for persistence
+  if (!storageAdapter) {
+    throw new Error("Storage adapter is required");
   }
 
-  // Original behavior for backward compatibility
-  return createRepositoryInternal(initialState, [], null);
+  return createRepositoryInternal(initialState, [], storageAdapter);
 };
+
 const createRepositoryInternal = (
   initialState,
   initialActionSteams,
-  localStorageKey,
+  storageAdapter,
 ) => {
-  const actionStream = initialActionSteams || [];
+  let actionStream = initialActionSteams || [];
 
   // Cache variables
   let cachedState = null;
   let isCacheValid = false;
   let lastActionCount = 0;
 
-  const addAction = (action) => {
+  const addAction = async (action) => {
+    // Persist to storage first
+    await storageAdapter.addAction(action);
+
+    // Only update memory after successful persistence
     actionStream.push(action);
     // Invalidate cache when new action is added
     isCacheValid = false;
@@ -513,17 +503,21 @@ const createRepositoryInternal = (
     return actionStream;
   };
 
-  const flush = () => {
-    if (localStorageKey) {
-      localStorage.setItem(localStorageKey, JSON.stringify(actionStream));
+  const init = async () => {
+    // Load all events from storage adapter
+    const storedEvents = await storageAdapter.getAllEvents();
+    if (storedEvents && storedEvents.length > 0) {
+      actionStream = storedEvents;
+      // Invalidate cache to force recomputation with loaded events
+      isCacheValid = false;
     }
   };
 
   return {
+    init,
     addAction,
     getState,
     getActionStream,
-    flush,
   };
 };
 
