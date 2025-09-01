@@ -26,7 +26,7 @@ export const handleClickItem = (e, deps) => {
   );
 };
 
-export const handleFileAction = (e, deps) => {
+export const handleFileAction = async (e, deps) => {
   const { dispatchEvent, repository, props } = deps;
   const detail = e.detail;
   const repositoryTarget = props.repositoryTarget;
@@ -121,6 +121,22 @@ export const handleFileAction = (e, deps) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
+      // If the item has a fileId, delete the actual file from storage
+      if (currentItem.fileId && deps.fileManager) {
+        //console.log(`[FileExplorer] Deleting file with fileId: ${currentItem.fileId}`);
+        try {
+          // Use fileManager's deleteFile method which calls storageAdapter.deleteFile
+          await deps.fileManager.deleteFile(currentItem.fileId);
+          //console.log(`[FileExplorer] File deleted successfully: ${currentItem.fileId}`);
+        } catch (error) {
+          console.error(
+            `[FileExplorer] Failed to delete file: ${currentItem.fileId}`,
+            error,
+          );
+          // Continue with tree deletion even if file deletion fails
+        }
+      }
+
       repository.addAction({
         actionType: "treeDelete",
         target: repositoryTarget,
