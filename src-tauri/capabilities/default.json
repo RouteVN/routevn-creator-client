@@ -15,10 +15,23 @@
     "core:webview:allow-set-webview-size",
     "core:webview:allow-set-webview-position",
     "core:webview:allow-webview-close",
+    "core:path:default",
     "sql:default",
     "sql:allow-load",
     "sql:allow-execute",
     "sql:allow-select",
-    "sql:allow-close"
+    "sql:allow-close",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-create",
+    "fs:allow-remove",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    {
+      "identifier": "fs:scope",
+      "allow": ["$APPDATA/**", "$APPDATA/routevn-creator/**"]
+    }
   ]
 }

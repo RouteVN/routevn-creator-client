@@ -9,7 +9,7 @@ import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
 // File management imports
 import { createFileManager } from "./deps/fileManager";
-import { createIndexedDBStorageAdapter } from "./deps/indexedDBStorageAdapter";
+import { createTauriFileSystemStorageAdapter } from "./deps/tauriFileSystemStorageAdapter";
 import { createLegacyUploaders } from "./deps/fileUploaderCompat";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
@@ -17,16 +17,6 @@ import { createFilePicker } from "./deps/filePicker";
 import { createTemplateProjectData } from "./utils/templateProjectData";
 import { createTauriSQLiteRepositoryAdapter } from "./deps/tauriRepositoryAdapter";
 import { fetchTemplateImages, fetchTemplateFonts } from "./utils/templateSetup";
-
-// Check if running in Tauri
-const isTauri = window.__TAURI__ !== undefined;
-
-// Log Tauri detection
-if (isTauri) {
-  console.log("Running in Tauri environment");
-} else {
-  console.warn("Tauri API not detected, but using Tauri configuration");
-}
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -40,9 +30,7 @@ const httpClient = createRouteVnHttpClient({
 const fontManager = createFontManager();
 
 // File management setup
-// For now, use IndexedDB for Tauri as well, but this could be replaced
-// with a Tauri-specific storage adapter that uses the file system
-const storageAdapter = createIndexedDBStorageAdapter();
+const storageAdapter = createTauriFileSystemStorageAdapter();
 
 // Create the unified file manager
 const fileManager = createFileManager({
@@ -176,9 +164,7 @@ if (actionStream.length === 0) {
     value: initData,
   });
 
-  // Immediately save to localStorage using flush method
-  repository.flush();
-  console.log("Template data added to repository and saved to localStorage");
+  console.log("Template data added to repository and saved to database");
 }
 
 const userConfig = createUserConfig();
@@ -233,18 +219,6 @@ const pageDependencies = {
   // Platform-specific info
   platform: "tauri",
 };
-
-// Add Tauri-specific utilities if available
-if (isTauri) {
-  // Add Tauri API access to dependencies
-  componentDependencies.tauriApi = window.__TAURI__;
-  pageDependencies.tauriApi = window.__TAURI__;
-
-  // Could set up Tauri-specific event listeners here
-  // window.__TAURI__.event.listen('tauri://file-drop', (event) => {
-  //   console.log('Files dropped:', event.payload);
-  // });
-}
 
 const deps = {
   components: componentDependencies,
