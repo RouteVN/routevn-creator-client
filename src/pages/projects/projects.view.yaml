@@ -38,6 +38,10 @@ refs:
     eventListeners:
       close:
         handler: handleCloseDialogue
+  form:
+    eventListeners:
+      action-click:
+        handler: handleFormSubmit
 
 template:
   - rtgl-view h=100vh w=100vw ah=c:

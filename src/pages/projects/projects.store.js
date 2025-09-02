@@ -1,18 +1,7 @@
 export const INITIAL_STATE = Object.freeze({
   title: "Projects",
   createButtonText: "Create Project",
-  projects: [
-    {
-      id: "1",
-      name: "Project 1",
-      description: "Project 1 description",
-    },
-    {
-      id: "2",
-      name: "Project 2",
-      description: "Project 2 description",
-    },
-  ],
+  projects: [],
   isOpen: false,
 
   defaultValues: {
@@ -32,8 +21,8 @@ export const INITIAL_STATE = Object.freeze({
         required: true,
         validations: [
           {
-            rule: /^\w+@\w+\.\w+$/,
-            message: "Must be a valid email",
+            rule: /^.+$/,
+            message: "Name is required",
           },
         ],
       },
@@ -45,8 +34,8 @@ export const INITIAL_STATE = Object.freeze({
         required: true,
         validations: [
           {
-            rule: /^\w+$/,
-            message: "Must be a valid password",
+            rule: /^.+$/,
+            message: "Description is required",
           },
         ],
       },
@@ -58,6 +47,7 @@ export const INITIAL_STATE = Object.freeze({
           id: "submit",
           variant: "pr",
           content: "Submit",
+          type: "submit",
         },
       ],
     },
@@ -66,6 +56,15 @@ export const INITIAL_STATE = Object.freeze({
 
 export const toggleDialog = (state) => {
   state.isOpen = !state.isOpen;
+  // Reset form when closing
+  if (!state.isOpen) {
+    state.defaultValues.name = "";
+    state.defaultValues.description = "";
+  }
+};
+
+export const setProjects = (state, projects) => {
+  state.projects = projects;
 };
 
 export const toViewData = ({ state, props }, payload) => {
