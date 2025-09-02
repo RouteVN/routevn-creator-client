@@ -2,7 +2,6 @@
   "type": "module",
   "dependencies": {
     "@rettangoli/fe": "^0.0.7-rc11",
-    "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-fs": "^2.4.2",
     "@tauri-apps/plugin-sql": "~2",
     "esbuild": "^0.25.5",
