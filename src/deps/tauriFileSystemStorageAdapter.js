@@ -10,14 +10,7 @@ import {
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
 import { detectFileType } from "./fileProcessors";
-
-// Generate unique file ID
-const generateFileId = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
+import { nanoid } from "nanoid";
 
 // Get file extension from filename
 const getExtension = (filename) => {
@@ -122,7 +115,7 @@ export const createTauriFileSystemStorageAdapter = () => {
         const subdir = getFileSubdir(file);
         await ensureDirectories(subdir);
 
-        const fileId = generateFileId();
+        const fileId = nanoid();
         const ext = getExtension(file.name);
         const fileName = `${fileId}.${ext}`;
 
