@@ -9,12 +9,12 @@ import {
   remove,
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { appDataDir } from "@tauri-apps/api/path";
 import { nanoid } from "nanoid";
 
 // Create the Tauri File System storage adapter
 export const createTauriFileSystemStorageAdapter = () => {
-  const urlCache = new Map();
-
   const PROJECT_PATH = "routevn-creator/projects/default";
   const FILES_PATH = `${PROJECT_PATH}/files`;
 
@@ -49,10 +49,11 @@ export const createTauriFileSystemStorageAdapter = () => {
           baseDir: BaseDirectory.AppData,
         });
 
-        const downloadUrl = URL.createObjectURL(file);
-
-        // Cache the URL
-        urlCache.set(fileId, downloadUrl);
+        // Use Tauri's asset protocol instead of blob URLs
+        // This serves files directly from disk without loading into memory
+        const appDataPath = await appDataDir();
+        const fullPath = `${appDataPath}/${filePath}`;
+        const downloadUrl = convertFileSrc(fullPath);
 
         return { fileId, downloadUrl };
       } catch (error) {
@@ -64,12 +65,6 @@ export const createTauriFileSystemStorageAdapter = () => {
     // Get file URL from file system
     async getFileUrl(fileId) {
       try {
-        // Check cache first
-        if (urlCache.has(fileId)) {
-          return { url: urlCache.get(fileId) };
-        }
-
-        // Read file from disk and create blob URL
         const filePath = `${FILES_PATH}/${fileId}`;
 
         // Check if file exists
@@ -81,17 +76,9 @@ export const createTauriFileSystemStorageAdapter = () => {
           throw new Error(`File not found: ${fileId}`);
         }
 
-        const fileContent = await readFile(filePath, {
-          baseDir: BaseDirectory.AppData,
-        });
-
-        // Create blob from file content
-        // Since we don't store the mime type, use a generic one
-        const blob = new Blob([fileContent]);
-        const url = URL.createObjectURL(blob);
-
-        // Cache for future use
-        urlCache.set(fileId, url);
+        const appDataPath = await appDataDir();
+        const fullPath = `${appDataPath}/${filePath}`;
+        const url = convertFileSrc(fullPath);
 
         return { url };
       } catch (error) {
@@ -124,15 +111,6 @@ export const createTauriFileSystemStorageAdapter = () => {
     },
 
     async deleteFile(fileId) {
-      if (urlCache.has(fileId)) {
-        const url = urlCache.get(fileId);
-        // Clean up blob URL if it exists
-        if (url && url.startsWith("blob:")) {
-          URL.revokeObjectURL(url);
-        }
-        urlCache.delete(fileId);
-      }
-
       console.log(
         `[TauriFS] File ${fileId} marked as deleted but preserved on disk for versioning`,
       );
@@ -140,15 +118,6 @@ export const createTauriFileSystemStorageAdapter = () => {
 
     async listFiles(projectId) {
       return [];
-    },
-
-    cleanup() {
-      for (const url of urlCache.values()) {
-        if (url && url.startsWith("blob:")) {
-          URL.revokeObjectURL(url);
-        }
-      }
-      urlCache.clear();
     },
   };
 };
