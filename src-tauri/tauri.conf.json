@@ -22,8 +22,8 @@
       }
     ],
     "security": {
-      "csp": null,
-      "dangerousDisableAssetCspModification": true,
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost; media-src 'self' asset: http://asset.localhost; font-src 'self' asset: http://asset.localhost",
+      "dangerousDisableAssetCspModification": false,
       "devCsp": null,
       "assetProtocol": {
         "enable": true,
