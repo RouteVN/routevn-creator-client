@@ -121,9 +121,6 @@ export const handleFileAction = (e, deps) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
-      // Don't delete the actual file - keep it for versioning/time travel
-      // Similar to git, files are never truly deleted
-
       repository.addAction({
         actionType: "treeDelete",
         target: repositoryTarget,

@@ -15,7 +15,6 @@ import { nanoid } from "nanoid";
 export const createTauriFileSystemStorageAdapter = () => {
   const urlCache = new Map();
 
-  // For now use hard coded path, in the future this func can receive parameter like `projectManager` to handle more paths
   const PROJECT_PATH = "routevn-creator/projects/default";
   const FILES_PATH = `${PROJECT_PATH}/files`;
 
@@ -38,7 +37,6 @@ export const createTauriFileSystemStorageAdapter = () => {
         await ensureDirectories();
 
         const fileId = nanoid();
-        // Store without extension for simplicity
         const fileName = fileId;
 
         // Convert file to Uint8Array
@@ -51,7 +49,6 @@ export const createTauriFileSystemStorageAdapter = () => {
           baseDir: BaseDirectory.AppData,
         });
 
-        // Generate access URL - use blob URL for now to match indexedDBStorageAdapter
         const downloadUrl = URL.createObjectURL(file);
 
         // Cache the URL
@@ -126,11 +123,7 @@ export const createTauriFileSystemStorageAdapter = () => {
       }
     },
 
-    // Delete file from file system - NO LONGER DELETES FILES
-    // Files are kept for versioning/time travel (like git)
     async deleteFile(fileId) {
-      // Don't actually delete the file
-      // Just remove from cache
       if (urlCache.has(fileId)) {
         const url = urlCache.get(fileId);
         // Clean up blob URL if it exists
@@ -140,23 +133,16 @@ export const createTauriFileSystemStorageAdapter = () => {
         urlCache.delete(fileId);
       }
 
-      // Log for debugging
       console.log(
         `[TauriFS] File ${fileId} marked as deleted but preserved on disk for versioning`,
       );
     },
 
-    // List all files for a project
     async listFiles(projectId) {
-      // Since we don't have a manifest, we can't really list files
-      // This would require scanning the filesystem or maintaining state elsewhere
-      // For now, return empty array as the web version doesn't use centralized manifest either
       return [];
     },
 
-    // Clean up all cached URLs
     cleanup() {
-      // Clean up any blob URLs if they exist
       for (const url of urlCache.values()) {
         if (url && url.startsWith("blob:")) {
           URL.revokeObjectURL(url);
