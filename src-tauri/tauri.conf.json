@@ -24,7 +24,11 @@
     "security": {
       "csp": null,
       "dangerousDisableAssetCspModification": true,
-      "devCsp": null
+      "devCsp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/**", "**"]
+      }
     }
   },
   "bundle": {

@@ -1,5 +1,7 @@
 // IndexedDB storage adapter - implements storage operations locally in browser
 
+import { nanoid } from "nanoid";
+
 const DB_NAME = "RouteVNCreatorFiles";
 const DB_VERSION = 1;
 const STORE_NAME = "files";
@@ -128,17 +130,6 @@ const listFilesInIndexedDB = async (projectId) => {
   });
 };
 
-// Generate unique file ID
-const generateFileId = () => {
-  // Use crypto.randomUUID if available, otherwise fallback
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-
-  // Fallback to timestamp + random
-  return `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
 // Create the IndexedDB storage adapter
 export const createIndexedDBStorageAdapter = () => {
   // Track blob URLs to clean them up when needed
@@ -148,7 +139,7 @@ export const createIndexedDBStorageAdapter = () => {
     // Store a file locally in IndexedDB
     storeFile: async (file, projectId) => {
       try {
-        const fileId = generateFileId();
+        const fileId = nanoid();
 
         // Store the file
         await storeInIndexedDB(fileId, file, projectId, {
