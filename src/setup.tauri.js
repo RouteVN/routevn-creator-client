@@ -16,6 +16,7 @@ import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createTauriSQLiteRepositoryAdapter } from "./deps/tauriRepositoryAdapter";
 import { createKeyValueStore } from "./deps/keyValueStore";
+import { createTauriDialog } from "./deps/tauriDialog";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -129,6 +130,7 @@ const subject = new Subject();
 const router = new Router();
 const audioManager = new AudioManager();
 const filePicker = createFilePicker();
+const tauriDialog = createTauriDialog();
 
 // Initialize async resources first
 const drenderer = await create2dRenderer({ subject });
@@ -152,6 +154,7 @@ const componentDependencies = {
   getFileContent,
   fileManager,
   keyValueStore,
+  tauriDialog,
   // Platform-specific info
   platform: "tauri",
 };
@@ -175,6 +178,7 @@ const pageDependencies = {
   getFileContent,
   fileManager,
   keyValueStore,
+  tauriDialog,
   // Platform-specific info
   platform: "tauri",
 };

@@ -1,13 +1,12 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
+export const handleAfterMount = async (deps) => {
   const { keyValueStore, store, render } = deps;
 
-  // Load projects from key-value store (async but don't await)
-  keyValueStore.get("projects").then((projects) => {
-    store.setProjects(projects || []);
-    render();
-  });
+  // Load projects from key-value store
+  const projects = await keyValueStore.get("projects");
+  store.setProjects(projects || []);
+  render();
 };
 
 // const createSubscriptions = (deps) => {
@@ -47,16 +46,11 @@ export const handleProjectsClick = async (e, deps) => {
 };
 
 export const handleBrowseFolder = async (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, tauriDialog } = deps;
 
   try {
-    // Import Tauri dialog API
-    const { open } = await import("@tauri-apps/plugin-dialog");
-
-    // Open folder selection dialog
-    const selected = await open({
-      directory: true,
-      multiple: false,
+    // Open folder selection dialog using tauriDialog from deps
+    const selected = await tauriDialog.openFolderDialog({
       title: "Select Project Location",
     });
 
@@ -67,6 +61,7 @@ export const handleBrowseFolder = async (e, deps) => {
     }
   } catch (error) {
     console.error("Error selecting folder:", error);
+    alert(`Error selecting folder: ${error.message || error}`);
   }
 };
 
@@ -88,12 +83,13 @@ export const handleFormSubmit = async (e, deps) => {
       return;
     }
 
-    // Generate a simple ID
-    const projectId = "project_" + nanoid();
+    // Generate a unique device-local project ID
+    // This is only for local app storage, not for backend
+    const deviceProjectId = nanoid();
 
     // Create new project
     const newProject = {
-      id: projectId,
+      id: deviceProjectId,
       name,
       description,
       projectPath,
