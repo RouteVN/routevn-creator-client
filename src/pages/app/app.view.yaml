@@ -20,9 +20,9 @@ template:
       - $if showSidebar:
           - rvn-sidebar: []
       - rtgl-view w=f h=f:
-          # - $if currentRoutePattern == "/projects":
-          #     - rvn-projects: []
-          - $if currentRoutePattern == "/project":
+          - $if currentRoutePattern == "/projects":
+              - rvn-projects: []
+            $elif currentRoutePattern == "/project":
               - rvn-project: []
             $elif currentRoutePattern == "/project/resources":
               - rvn-resources: []

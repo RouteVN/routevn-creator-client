@@ -22,6 +22,9 @@ viewDataSchema:
           description:
             type: string
             default: Project 1 description
+    projectPath:
+      type: string
+      default: ""
 
 refs:
   createButton:
@@ -38,6 +41,14 @@ refs:
     eventListeners:
       close:
         handler: handleCloseDialogue
+  form:
+    eventListeners:
+      action-click:
+        handler: handleFormSubmit
+  browseButton:
+    eventListeners:
+      click:
+        handler: handleBrowseFolder
 
 template:
   - rtgl-view h=100vh w=100vw ah=c:
@@ -48,10 +59,14 @@ template:
         - rtgl-button#createButton: ${createButtonText}
       - rtgl-view w=f g=md:
         - $for project, i in projects:
-            - rtgl-view#project-${project.id} h=64 w=f bw=xs p=md cur=p:
+            - rtgl-view#project-${project.id} h=auto w=f bw=xs p=md cur=p:
               - rtgl-text s=lg: "${project.name}"
-              - rtgl-text s=sm: "${project.description}"
+              #- rtgl-text s=sm: "${project.description}"
+              - rtgl-text s=sm: "${project.projectPath}"
 
-  - rtgl-dialog#create-project-dialog ?open=${isOpen}:
+  - rtgl-dialog#create-project-dialog ?open=${isOpen} s=md:
     - rtgl-view slot=content g=md:
       - rtgl-form#form .defaultValues=defaultValues .form=form w=f:
+        - rtgl-view w=f slot=project-path-selector d=h g=sm av=c:
+          - rtgl-input#pathInput w=f .value=projectPathDisplay disabled=true placeholder="No folder selected":
+          - rtgl-button#browseButton variant=se: Browse

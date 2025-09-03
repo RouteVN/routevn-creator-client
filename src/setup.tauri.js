@@ -14,9 +14,9 @@ import { createLegacyUploaders } from "./deps/fileUploaderCompat";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
-import { createTemplateProjectData } from "./utils/templateProjectData";
 import { createTauriSQLiteRepositoryAdapter } from "./deps/tauriRepositoryAdapter";
-import { fetchTemplateImages, fetchTemplateFonts } from "./utils/templateSetup";
+import { createKeyValueStore } from "./deps/keyValueStore";
+import { createTauriDialog } from "./deps/tauriDialog";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -113,65 +113,24 @@ const initialData = {
   },
 };
 
+// Initialize key-value store
+const keyValueStore = await createKeyValueStore();
+
 // Initialize adapter and repository
+// TODO: This should be moved to project opening logic
+// Currently creates repository.db in AppData, should be in project folder
 const repositoryAdapter = await createTauriSQLiteRepositoryAdapter();
 const repository = createRepository(initialData, repositoryAdapter);
 
 // Initialize repository with stored data
 await repository.init();
 
-// Check if we need to add template data
-const actionStream = repository.getActionStream();
-
-if (actionStream.length === 0) {
-  console.log("First time user - adding template data to repository...");
-
-  // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages(uploadImageFiles);
-  const templateFontsData = await fetchTemplateFonts(uploadFontFiles);
-
-  // Create template data structure
-  const templateData = createTemplateProjectData(
-    templateImagesData.fetchedImages,
-    templateFontsData.fetchedFonts,
-  );
-
-  // Prepare the complete initialization data
-  const initData = {
-    images: {
-      items: templateImagesData.imageItems,
-      tree: templateImagesData.imageTree,
-    },
-    fonts: {
-      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
-      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-    },
-    animations: templateData.animations,
-    transforms: templateData.transforms,
-    colors: templateData.colors,
-    typography: templateData.typography,
-    layouts: templateData.layouts,
-    scenes: templateData.scenes,
-    audio: templateData.audio,
-    videos: templateData.videos,
-    characters: templateData.characters,
-  };
-
-  // Use the new init action to set all template data at once
-  repository.addAction({
-    actionType: "init",
-    target: null,
-    value: initData,
-  });
-
-  console.log("Template data added to repository and saved to database");
-}
-
 const userConfig = createUserConfig();
 const subject = new Subject();
 const router = new Router();
 const audioManager = new AudioManager();
 const filePicker = createFilePicker();
+const tauriDialog = createTauriDialog();
 
 // Initialize async resources first
 const drenderer = await create2dRenderer({ subject });
@@ -194,6 +153,8 @@ const componentDependencies = {
   filePicker,
   getFileContent,
   fileManager,
+  keyValueStore,
+  tauriDialog,
   // Platform-specific info
   platform: "tauri",
 };
@@ -216,6 +177,8 @@ const pageDependencies = {
   filePicker,
   getFileContent,
   fileManager,
+  keyValueStore,
+  tauriDialog,
   // Platform-specific info
   platform: "tauri",
 };
