@@ -1,8 +1,13 @@
-// const handleBeforeMount = (deps) => {
-//   deps.store.increment()
-//   deps.httpClient.get('...').then(response => {})
-//   deps.setSubscriptions([])
-// }
+import { nanoid } from "nanoid";
+
+export const handleAfterMount = async (deps) => {
+  const { keyValueStore, store, render } = deps;
+
+  // Load projects from key-value store
+  const projects = await keyValueStore.get("projects");
+  store.setProjects(projects || []);
+  render();
+};
 
 // const createSubscriptions = (deps) => {
 //   const { subject } = deps;
@@ -27,9 +32,110 @@ export const handleCloseDialogue = (payload, deps) => {
   render();
 };
 
-export const handleProjectsClick = (e, deps) => {
-  const id = e.currentTarget.id;
-  deps.subject.dispatch("redirect", {
+export const handleProjectsClick = async (e, deps) => {
+  const { keyValueStore, subject } = deps;
+  const id = e.currentTarget.id.replace("project-", "");
+
+  // Save last opened project
+  await keyValueStore.set("lastOpenedProjectId", id);
+
+  // Navigate to project page
+  subject.dispatch("redirect", {
     path: `/project`,
   });
+};
+
+export const handleBrowseFolder = async (e, deps) => {
+  const { store, render, tauriDialog } = deps;
+
+  try {
+    // Open folder selection dialog using tauriDialog from deps
+    const selected = await tauriDialog.openFolderDialog({
+      title: "Select Project Location",
+    });
+
+    if (selected) {
+      // Update the form's default value for projectPath
+      store.setProjectPath(selected);
+      render();
+    }
+  } catch (error) {
+    console.error("Error selecting folder:", error);
+    alert(`Error selecting folder: ${error.message || error}`);
+  }
+};
+
+export const handleFormSubmit = async (e, deps) => {
+  const { keyValueStore, store, render } = deps;
+
+  try {
+    // Check if it's the submit button
+    if (e.detail.actionId !== "submit") {
+      return;
+    }
+
+    const { name, description, template } = e.detail.formValues;
+    // Slot fields need to be retrieved from store using select function
+    const projectPath = store.selectProjectPath();
+
+    // Validate input
+    if (!name || !description || !projectPath) {
+      return;
+    }
+
+    // Generate a unique device-local project ID
+    // This is only for local app storage, not for backend
+    const deviceProjectId = nanoid();
+
+    // Create new project
+    const newProject = {
+      id: deviceProjectId,
+      name,
+      description,
+      projectPath,
+      createdAt: Date.now(),
+      lastOpenedAt: null,
+    };
+
+    // TODO: Create project folder structure
+    // - Create project folder at projectPath/projectId
+    // - Create project.db in project folder
+    // - Create files/ subfolder for assets
+    // - Initialize project with template data
+
+    // Get existing projects
+    const projects = (await keyValueStore.get("projects")) || [];
+
+    // Add new project
+    projects.push(newProject);
+
+    // Save to key-value store
+    await keyValueStore.set("projects", projects);
+
+    // Update store and close dialog
+    store.setProjects(projects);
+    store.toggleDialog();
+
+    render();
+  } catch (error) {
+    console.error("Error in handleFormSubmit:", error);
+  }
+};
+
+export const handleDeleteProject = async (projectId, deps) => {
+  const { keyValueStore, store, render } = deps;
+
+  // Get existing projects
+  const projects = (await keyValueStore.get("projects")) || [];
+
+  // Filter out the deleted project
+  const updatedProjects = projects.filter((p) => p.id !== projectId);
+
+  // Save to key-value store
+  await keyValueStore.set("projects", updatedProjects);
+
+  // Update store
+  store.setProjects(updatedProjects);
+
+  render();
 };

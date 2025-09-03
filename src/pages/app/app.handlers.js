@@ -5,8 +5,8 @@ export const handleBeforeMount = (deps) => {
   const currentPath = deps.router.getPathName();
 
   if (currentPath === "/") {
-    deps.router.redirect("/project");
-    deps.store.setCurrentRoute("/project");
+    deps.router.redirect("/projects");
+    deps.store.setCurrentRoute("/projects");
   } else {
     deps.store.setCurrentRoute(currentPath);
   }
