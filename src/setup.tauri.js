@@ -116,6 +116,8 @@ const initialData = {
 const keyValueStore = await createKeyValueStore();
 
 // Initialize adapter and repository
+// TODO: This should be moved to project opening logic
+// Currently creates repository.db in AppData, should be in project folder
 const repositoryAdapter = await createTauriSQLiteRepositoryAdapter();
 const repository = createRepository(initialData, repositoryAdapter);
 

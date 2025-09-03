@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 export const handleBeforeMount = (deps) => {
   const { keyValueStore, store, render } = deps;
 
@@ -44,6 +46,30 @@ export const handleProjectsClick = async (e, deps) => {
   });
 };
 
+export const handleBrowseFolder = async (e, deps) => {
+  const { store, render } = deps;
+
+  try {
+    // Import Tauri dialog API
+    const { open } = await import("@tauri-apps/plugin-dialog");
+
+    // Open folder selection dialog
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Select Project Location",
+    });
+
+    if (selected) {
+      // Update the form's default value for projectPath
+      store.setProjectPath(selected);
+      render();
+    }
+  } catch (error) {
+    console.error("Error selecting folder:", error);
+  }
+};
+
 export const handleFormSubmit = async (e, deps) => {
   const { keyValueStore, store, render } = deps;
 
@@ -53,24 +79,33 @@ export const handleFormSubmit = async (e, deps) => {
       return;
     }
 
-    const { name, description } = e.detail.formValues;
+    const { name, description, template } = e.detail.formValues;
+    // Slot fields need to be retrieved from store using select function
+    const projectPath = store.selectProjectPath();
 
     // Validate input
-    if (!name || !description) {
+    if (!name || !description || !projectPath) {
       return;
     }
 
     // Generate a simple ID
-    const projectId = "project_" + Date.now();
+    const projectId = "project_" + nanoid();
 
     // Create new project
     const newProject = {
       id: projectId,
       name,
       description,
+      projectPath,
       createdAt: Date.now(),
       lastOpenedAt: null,
     };
+
+    // TODO: Create project folder structure
+    // - Create project folder at projectPath/projectId
+    // - Create project.db in project folder
+    // - Create files/ subfolder for assets
+    // - Initialize project with template data
 
     // Get existing projects
     const projects = (await keyValueStore.get("projects")) || [];
