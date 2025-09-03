@@ -29,9 +29,12 @@
     "fs:allow-mkdir",
     "fs:allow-read-file",
     "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:allow-copy-file",
+    "fs:write-all",
     {
       "identifier": "fs:scope",
-      "allow": ["$APPDATA/**", "$APPDATA/routevn-creator/**"]
+      "allow": ["$APPDATA/**", "$APPDATA/routevn-creator/**", "**"]
     },
     "dialog:default",
     "dialog:allow-open"

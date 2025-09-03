@@ -1,5 +1,8 @@
 use tauri::Manager;
 
+mod project_db;
+use project_db::ProjectDbManager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Enable WebKit inspector for WSL
@@ -14,6 +17,13 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_devtools::init())
+        .manage(ProjectDbManager::new())
+        .invoke_handler(tauri::generate_handler![
+            project_db::open_project_db,
+            project_db::close_project_db,
+            project_db::add_project_action,
+            project_db::get_project_events
+        ])
         .setup(|app| {
             #[cfg(debug_assertions)]
             if let Some(window) = app.get_webview_window("main") {

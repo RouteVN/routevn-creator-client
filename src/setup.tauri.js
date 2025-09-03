@@ -1,7 +1,6 @@
 import { createWebPatch } from "@rettangoli/fe";
 import { h } from "snabbdom/build/h";
 
-import { createRepository } from "./deps/repository";
 import { createUserConfig } from "./deps/userConfig";
 import Subject from "./deps/subject";
 import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
@@ -14,7 +13,6 @@ import { createLegacyUploaders } from "./deps/fileUploaderCompat";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
-import { createTauriSQLiteRepositoryAdapter } from "./deps/tauriRepositoryAdapter";
 import { createKeyValueStore } from "./deps/keyValueStore";
 import { createTauriDialog } from "./deps/tauriDialog";
 
@@ -116,14 +114,13 @@ const initialData = {
 // Initialize key-value store
 const keyValueStore = await createKeyValueStore();
 
-// Initialize adapter and repository
-// TODO: This should be moved to project opening logic
-// Currently creates repository.db in AppData, should be in project folder
-const repositoryAdapter = await createTauriSQLiteRepositoryAdapter();
-const repository = createRepository(initialData, repositoryAdapter);
-
-// Initialize repository with stored data
-await repository.init();
+// Create a placeholder repository - will be initialized when entering a project page
+const repository = {
+  init: async () => {},
+  addAction: () => {},
+  getAllEvents: () => [],
+  getState: () => initialData,
+};
 
 const userConfig = createUserConfig();
 const subject = new Subject();
