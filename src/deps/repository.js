@@ -1,4 +1,5 @@
-import { nanoid, customRandom } from "nanoid";
+import { customRandom } from "nanoid";
+import { createTauriSQLiteRepositoryAdapter } from "./tauriRepositoryAdapter";
 
 const set = (state, path, value) => {
   const newState = structuredClone(state);
@@ -420,49 +421,73 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-export const createRepository = (initialState, storageAdapter) => {
-  // storageAdapter is required for persistence
-  if (!storageAdapter) {
-    throw new Error("Storage adapter is required");
-  }
+// Store project paths
+const projectPaths = new Map();
 
-  return createRepositoryInternal(initialState, [], storageAdapter);
+// Register a project path for a projectId
+export const registerProject = (projectId, projectPath) => {
+  projectPaths.set(projectId, projectPath);
 };
 
-const createRepositoryInternal = (
-  initialState,
-  initialActionSteams,
-  storageAdapter,
-) => {
-  let actionStream = initialActionSteams || [];
+export const createRepository = (initialState) => {
+  return createRepositoryInternal(initialState);
+};
 
-  // Cache variables
-  let cachedState = null;
-  let isCacheValid = false;
-  let lastActionCount = 0;
+const createRepositoryInternal = (initialState) => {
+  // Store all project data in one place
+  const projects = new Map();
 
-  const addAction = async (action) => {
-    // Persist to storage first
-    await storageAdapter.addAction(action);
-
-    // Only update memory after successful persistence
-    actionStream.push(action);
-    // Invalidate cache when new action is added
-    isCacheValid = false;
-  };
-
-  const getState = () => {
-    // Check if cache is valid
-    if (
-      isCacheValid &&
-      actionStream.length === lastActionCount &&
-      cachedState !== null
-    ) {
-      return structuredClone(cachedState);
+  const init = async (projectId) => {
+    if (!projectId) {
+      throw new Error("projectId is required for repository operations");
     }
 
-    // Compute new state and update cache
-    cachedState = actionStream.reduce((acc, action) => {
+    const projectPath = projectPaths.get(projectId);
+    if (!projectPath) {
+      throw new Error(
+        `No project path found for projectId: ${projectId}. Call registerProject first.`,
+      );
+    }
+
+    if (!projects.has(projectId)) {
+      const adapter = await createTauriSQLiteRepositoryAdapter(projectPath);
+      const storedEvents = await adapter.getAllEvents();
+
+      projects.set(projectId, {
+        adapter,
+        actionStream: storedEvents || [],
+      });
+    }
+  };
+
+  const addAction = async (projectId, action) => {
+    if (!projectId) {
+      throw new Error("projectId is required for repository operations");
+    }
+
+    const project = projects.get(projectId);
+    if (!project) {
+      throw new Error(
+        `Repository not initialized for projectId: ${projectId}. Call init first.`,
+      );
+    }
+
+    await project.adapter.addAction(action);
+    project.actionStream.push(action);
+  };
+
+  const getState = (projectId) => {
+    if (!projectId) {
+      throw new Error("projectId is required for repository operations");
+    }
+
+    const project = projects.get(projectId);
+    if (!project) {
+      return initialState;
+    }
+
+    // Compute state from action stream
+    return project.actionStream.reduce((acc, action) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);
@@ -479,8 +504,6 @@ const createRepositoryInternal = (
       } else if (actionType === "treeCopy") {
         return treeCopy(acc, target, value);
       } else if (actionType === "init") {
-        // Initialize entire state sections with provided data
-        // value should be an object with keys matching state sections
         const newState = structuredClone(acc);
         for (const [key, data] of Object.entries(value)) {
           if (newState[key]) {
@@ -491,33 +514,23 @@ const createRepositoryInternal = (
       }
       return acc;
     }, structuredClone(initialState));
-
-    // Update cache metadata
-    isCacheValid = true;
-    lastActionCount = actionStream.length;
-
-    return structuredClone(cachedState);
   };
 
-  const getActionStream = () => {
-    return actionStream;
-  };
-
-  const init = async () => {
-    // Load all events from storage adapter
-    const storedEvents = await storageAdapter.getAllEvents();
-    if (storedEvents && storedEvents.length > 0) {
-      actionStream = storedEvents;
-      // Invalidate cache to force recomputation with loaded events
-      isCacheValid = false;
+  const getAllEvents = async (projectId) => {
+    if (!projectId) {
+      throw new Error("projectId is required for repository operations");
     }
+
+    const project = projects.get(projectId);
+    return project ? project.actionStream : [];
   };
 
   return {
     init,
     addAction,
     getState,
-    getActionStream,
+    getAllEvents,
+    registerProject,
   };
 };
 

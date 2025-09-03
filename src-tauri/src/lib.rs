@@ -21,8 +21,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             project_db::open_project_db,
             project_db::close_project_db,
-            project_db::add_project_action,
-            project_db::get_project_events
+            project_db::execute_project_sql,
+            project_db::query_project_sql
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

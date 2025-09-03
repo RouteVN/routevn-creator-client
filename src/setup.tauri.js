@@ -15,6 +15,8 @@ import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createKeyValueStore } from "./deps/keyValueStore";
 import { createTauriDialog } from "./deps/tauriDialog";
+import { initializeProject } from "./deps/tauriRepositoryAdapter";
+import { createRepository, registerProject } from "./deps/repository";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -114,13 +116,8 @@ const initialData = {
 // Initialize key-value store
 const keyValueStore = await createKeyValueStore();
 
-// Create a placeholder repository - will be initialized when entering a project page
-const repository = {
-  init: async () => {},
-  addAction: () => {},
-  getAllEvents: () => [],
-  getState: () => initialData,
-};
+// Create repository with multi-project support
+const repository = createRepository(initialData);
 
 const userConfig = createUserConfig();
 const subject = new Subject();
@@ -152,6 +149,8 @@ const componentDependencies = {
   fileManager,
   keyValueStore,
   tauriDialog,
+  initializeProject,
+  registerProject,
   // Platform-specific info
   platform: "tauri",
 };
@@ -176,6 +175,8 @@ const pageDependencies = {
   fileManager,
   keyValueStore,
   tauriDialog,
+  initializeProject,
+  registerProject,
   // Platform-specific info
   platform: "tauri",
 };

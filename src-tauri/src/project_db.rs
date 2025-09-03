@@ -1,18 +1,9 @@
-use rusqlite::{params, Connection, Result};
-use serde::{Deserialize, Serialize};
+use rusqlite::{Connection, Result};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Action {
-    pub id: Option<i64>,
-    pub action_type: String,
-    pub target: Option<String>,
-    pub value: Option<String>,
-    pub created_at: Option<String>,
-}
 
 pub struct ProjectDbManager {
     connections: Mutex<HashMap<String, Connection>>,
@@ -38,17 +29,6 @@ impl ProjectDbManager {
         
         let conn = Connection::open(db_path)?;
         
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS actions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                action_type TEXT NOT NULL,
-                target TEXT,
-                value TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-            [],
-        )?;
-        
         conns.insert(project_path.to_string(), conn);
         Ok(())
     }
@@ -59,44 +39,45 @@ impl ProjectDbManager {
         Ok(())
     }
 
-    pub fn add_action(&self, project_path: &str, action: Action) -> Result<()> {
+    pub fn execute_sql(&self, project_path: &str, sql: &str, params: Vec<Value>) -> Result<()> {
         let conns = self.connections.lock().unwrap();
         let conn = conns.get(project_path)
             .ok_or(rusqlite::Error::InvalidPath(PathBuf::from(project_path)))?;
         
-        conn.execute(
-            "INSERT INTO actions (action_type, target, value) VALUES (?1, ?2, ?3)",
-            params![action.action_type, action.target, action.value],
-        )?;
+        let params: Vec<_> = params.iter().map(|v| v.to_string()).collect();
+        conn.execute(sql, rusqlite::params_from_iter(params))?;
         
         Ok(())
     }
 
-    pub fn get_all_events(&self, project_path: &str) -> Result<Vec<Action>> {
+    pub fn query_sql(&self, project_path: &str, sql: &str, params: Vec<Value>) -> Result<Vec<HashMap<String, Value>>> {
         let conns = self.connections.lock().unwrap();
         let conn = conns.get(project_path)
             .ok_or(rusqlite::Error::InvalidPath(PathBuf::from(project_path)))?;
         
-        let mut stmt = conn.prepare(
-            "SELECT id, action_type, target, value, created_at FROM actions ORDER BY id"
-        )?;
+        let params: Vec<_> = params.iter().map(|v| v.to_string()).collect();
+        let mut stmt = conn.prepare(sql)?;
         
-        let action_iter = stmt.query_map([], |row| {
-            Ok(Action {
-                id: row.get(0)?,
-                action_type: row.get(1)?,
-                target: row.get(2)?,
-                value: row.get(3)?,
-                created_at: row.get(4)?,
-            })
+        let column_count = stmt.column_count();
+        let column_names: Vec<String> = (0..column_count)
+            .map(|i| stmt.column_name(i).unwrap().to_string())
+            .collect();
+        
+        let rows = stmt.query_map(rusqlite::params_from_iter(params), |row| {
+            let mut result = HashMap::new();
+            for (i, name) in column_names.iter().enumerate() {
+                let value: Option<String> = row.get(i)?;
+                result.insert(name.clone(), value.map_or(Value::Null, |v| Value::String(v)));
+            }
+            Ok(result)
         })?;
         
-        let mut actions = Vec::new();
-        for action in action_iter {
-            actions.push(action?);
+        let mut results = Vec::new();
+        for row in rows {
+            results.push(row?);
         }
         
-        Ok(actions)
+        Ok(results)
     }
 }
 
@@ -119,20 +100,23 @@ pub async fn close_project_db(
 }
 
 #[tauri::command]
-pub async fn add_project_action(
+pub async fn execute_project_sql(
     project_path: String,
-    action: Action,
+    sql: String,
+    params: Vec<Value>,
     state: State<'_, ProjectDbManager>
 ) -> std::result::Result<(), String> {
-    state.add_action(&project_path, action)
+    state.execute_sql(&project_path, &sql, params)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn get_project_events(
+pub async fn query_project_sql(
     project_path: String,
+    sql: String,
+    params: Vec<Value>,
     state: State<'_, ProjectDbManager>
-) -> std::result::Result<Vec<Action>, String> {
-    state.get_all_events(&project_path)
+) -> std::result::Result<Vec<HashMap<String, Value>>, String> {
+    state.query_sql(&project_path, &sql, params)
         .map_err(|e| e.to_string())
 }
