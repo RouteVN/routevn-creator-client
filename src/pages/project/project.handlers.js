@@ -1,11 +1,15 @@
 export const handleBeforeMount = (deps) => {
-  const { repository, store } = deps;
+  const { repositoryFactory, store, router } = deps;
+  const { p } = router.getPayload();
+  const repository = repositoryFactory.getByProject(p);
   const { project } = repository.getState();
   store.setProject(project);
 };
 
 export const handleFormChange = (e, deps) => {
-  const { repository } = deps;
+  const { repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "set",
     target: `project.${e.detail.name}`,
@@ -14,8 +18,18 @@ export const handleFormChange = (e, deps) => {
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
-  const { filePicker, uploadImageFiles, repository, subject, render, store } =
-    deps;
+  const {
+    filePicker,
+    uploadImageFiles,
+    repositoryFactory,
+    router,
+    subject,
+    render,
+    store,
+  } = deps;
+
+  const { p } = router.getPayload();
+  const repository = repositoryFactory.getByProject(p);
 
   try {
     const files = await filePicker.open({
@@ -33,7 +47,7 @@ export const handleFormExtraEvent = async (e, deps) => {
     // TODO better handle failed uploads
     if (successfulUploads.length > 0) {
       const result = successfulUploads[0];
-      repository.addAction({
+      await repository.addAction({
         actionType: "set",
         target: "project.iconFileId",
         value: result.fileId,

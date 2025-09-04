@@ -39,6 +39,10 @@ export const initializeProject = async ({
 
     // Prepare init data
     const initData = {
+      project: {
+        name,
+        description,
+      },
       images: {
         items: templateImagesData.imageItems,
         tree: templateImagesData.imageTree,

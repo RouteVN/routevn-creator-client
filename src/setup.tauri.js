@@ -16,7 +16,7 @@ import { createFilePicker } from "./deps/filePicker";
 import { createKeyValueStore } from "./deps/keyValueStore";
 import { createTauriDialog } from "./deps/tauriDialog";
 import { initializeProject } from "./deps/tauriRepositoryAdapter";
-import { createRepository, registerProject } from "./deps/repository";
+import { createRepositoryFactory } from "./deps/repository";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -116,8 +116,7 @@ const initialData = {
 // Initialize key-value store
 const keyValueStore = await createKeyValueStore();
 
-// Create repository with multi-project support
-const repository = createRepository(initialData);
+const repositoryFactory = createRepositoryFactory(initialData, keyValueStore);
 
 const userConfig = createUserConfig();
 const subject = new Subject();
@@ -133,7 +132,7 @@ const componentDependencies = {
   httpClient,
   subject,
   router,
-  repository,
+  repositoryFactory,
   userConfig,
   audioManager,
   uploadImageFiles,
@@ -150,8 +149,6 @@ const componentDependencies = {
   keyValueStore,
   tauriDialog,
   initializeProject,
-  registerProject,
-  // Platform-specific info
   platform: "tauri",
 };
 
@@ -159,7 +156,7 @@ const pageDependencies = {
   httpClient,
   subject,
   router,
-  repository,
+  repositoryFactory,
   userConfig,
   audioManager,
   uploadImageFiles,
@@ -176,8 +173,6 @@ const pageDependencies = {
   keyValueStore,
   tauriDialog,
   initializeProject,
-  registerProject,
-  // Platform-specific info
   platform: "tauri",
 };
 
