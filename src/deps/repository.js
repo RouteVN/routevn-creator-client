@@ -421,6 +421,12 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
+export const createRepository = (initialState, store) => {
+  const repository = createRepositoryInternal(initialState, store);
+  repository.getActionStream = repository.getAllEvents;
+  return repository;
+};
+
 export const createRepositoryFactory = (initialState, keyValueStore) => {
   const repositoryFactory = {
     getByProject: async (projectId) => {

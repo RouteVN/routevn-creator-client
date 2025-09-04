@@ -162,9 +162,6 @@ if (actionStream.length === 0) {
     target: null,
     value: initData,
   });
-
-  // Immediately save to localStorage using flush method
-  repository.flush();
   console.log("Template data added to repository and saved to localStorage");
 }
 
