@@ -421,12 +421,7 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-export const createRepository = (initialState, store) => {
-  const repository = createRepositoryInternal(initialState, store);
-  repository.getActionStream = repository.getAllEvents;
-  return repository;
-};
-
+// For Tauri version - repository factory
 export const createRepositoryFactory = (initialState, keyValueStore) => {
   const repositoryFactory = {
     getByProject: async (projectId) => {
@@ -502,6 +497,9 @@ const createRepositoryInternal = (initialState, store) => {
     getAllEvents,
   };
 };
+
+// For web version - direct repository creation
+export const createRepository = createRepositoryInternal;
 
 export const toFlatItems = (data) => {
   const { items, tree } = data;

@@ -120,7 +120,7 @@ const repository = createRepository(initialData, repositoryAdapter);
 await repository.init();
 
 // Check if we need to add template data
-const actionStream = repository.getActionStream();
+const actionStream = repository.getAllEvents();
 
 if (actionStream.length === 0) {
   console.log("First time user - adding template data to repository...");
