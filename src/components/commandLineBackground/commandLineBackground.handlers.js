@@ -1,7 +1,9 @@
 import { toFlatItems } from "../../deps/repository";
 
-export const handleBeforeMount = (deps) => {
-  const { repository, store, props } = deps;
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, router, store, props } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { images, layouts, videos, animations } = repository.getState();
 
   store.setRepositoryState({
@@ -37,12 +39,10 @@ export const handleBeforeMount = (deps) => {
   }
 };
 
-export const handleAfterMount = async (deps) => {
-  // No longer needed since we use form slot instead of context
-};
-
 export const handleImageSelected = async (e, deps) => {
-  const { store, render, getFileContent, repository } = deps;
+  const { store, render, getFileContent, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { images } = repository.getState();
 
   const { imageId } = e.detail;
@@ -173,8 +173,10 @@ export const handleBreadcumbActionsClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClick = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleButtonSelectClick = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
   const tempSelectedResourceType = store.selectTab();
 

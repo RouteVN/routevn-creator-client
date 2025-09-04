@@ -31,7 +31,7 @@
     "fs:allow-write-file",
     {
       "identifier": "fs:scope",
-      "allow": ["$APPDATA/**", "$APPDATA/routevn-creator/**"]
+      "allow": ["$APPDATA/**", "$APPDATA/routevn-creator/**", "**"]
     },
     "dialog:default",
     "dialog:allow-open"

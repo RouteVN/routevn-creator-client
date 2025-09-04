@@ -40,7 +40,16 @@ const componentLayoutTreeStructureToRenderState = (layout, imageItems) => {
 };
 
 const renderComponentPreview = async (deps) => {
-  const { store, repository, render, drenderer, getFileContent } = deps;
+  const {
+    store,
+    repositoryFactory,
+    router,
+    render,
+    drenderer,
+    getFileContent,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const componentId = store.selectComponentId();
 
   const {
@@ -97,19 +106,18 @@ const renderComponentPreview = async (deps) => {
   });
 };
 
-export const handleBeforeMount = (deps) => {
-  const { router, store, repository } = deps;
-  const { componentId } = router.getPayload();
+export const handleAfterMount = async (deps) => {
+  const { router, store, repositoryFactory, render, getRefIds, drenderer } =
+    deps;
+  const { componentId, p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const { components, images } = repository.getState();
   const component = components.items[componentId];
   store.setComponentId(componentId);
   store.setItems(component?.elements || { items: {}, tree: [] });
   store.setImages({ images });
-};
 
-export const handleAfterMount = async (deps) => {
-  const { render, getRefIds, drenderer } = deps;
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
   await renderComponentPreview(deps);
@@ -134,9 +142,10 @@ export const handleAddComponentClick = (e, deps) => {
   render();
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { router, store, repository, render } = deps;
-  const { componentId } = router.getPayload();
+export const handleDataChanged = async (e, deps) => {
+  const { router, store, repositoryFactory, render } = deps;
+  const { componentId, p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { components } = repository.getState();
   const component = components.items[componentId];
   store.setItems(component?.elements || { items: {}, tree: [] });

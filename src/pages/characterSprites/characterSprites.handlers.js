@@ -1,24 +1,25 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { router, store, repository } = deps;
-  const { characterId } = router.getPayload();
+export const handleAfterMount = async (deps) => {
+  const { router, store, repositoryFactory, render } = deps;
+  const { characterId, p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   const character = characters.items[characterId];
 
   if (!character) {
     alert("Character not found");
-    return () => {};
   }
 
   store.setCharacterId(characterId);
   store.setItems(character.sprites);
-  return () => {};
+  render();
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { router, render, store, repository } = deps;
-  const { characterId } = router.getPayload();
+export const handleDataChanged = async (e, deps) => {
+  const { router, render, store, repositoryFactory } = deps;
+  const { characterId, p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   const character = characters.items[characterId];
 
@@ -51,7 +52,16 @@ export const handleImageItemClick = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, fileManager, uploadImageFiles, repository } = deps;
+  const {
+    router,
+    store,
+    render,
+    fileManager,
+    uploadImageFiles,
+    repositoryFactory,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -105,8 +115,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { router, repositoryFactory, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const characterId = store.selectCharacterId();
   const selectedItemId = store.selectSelectedItemId();
@@ -129,8 +141,17 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
-  const { repository, store, render, filePicker, uploadImageFiles } = deps;
+export const handleFormExtraEvent = async (_, deps) => {
+  const {
+    router,
+    repositoryFactory,
+    store,
+    render,
+    filePicker,
+    uploadImageFiles,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();

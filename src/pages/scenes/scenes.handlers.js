@@ -1,7 +1,9 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository, render } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { scenes } = repository.getState();
   const scenesData = scenes || { tree: [], items: {} };
 
@@ -26,8 +28,10 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { scenes } = repository.getState();
   const sceneData = scenes || { tree: [], items: {} };
 
@@ -70,8 +74,10 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const handleWhiteboardItemPositionChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleWhiteboardItemPositionChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { itemId, x, y } = e.detail;
 
   // Update position in repository using 'set' action
@@ -119,8 +125,10 @@ export const handleAddSceneClick = (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "scenes",
@@ -178,8 +186,10 @@ export const handleSceneFormClose = (e, deps) => {
   render();
 };
 
-export const handleSceneFormAction = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleSceneFormAction = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const actionId = e.detail.actionId;
 
   if (actionId === "cancel") {
@@ -308,8 +318,10 @@ export const handleSceneFormAction = (e, deps) => {
   }
 };
 
-export const handleWhiteboardItemDelete = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleWhiteboardItemDelete = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { itemId } = e.detail;
 
   // Remove from repository
@@ -359,8 +371,10 @@ export const handleDropdownMenuClose = (e, deps) => {
   render();
 };
 
-export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDropdownMenuClickItem = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const detail = e.detail;
   const itemId = store.selectDropdownMenuItemId();
 

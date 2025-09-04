@@ -46,12 +46,16 @@ export const handleAddLayoutClick = (e, deps) => {
 };
 
 export const handleLayoutItemDoubleClick = (e, deps) => {
-  const { subject } = deps;
+  const { subject, router } = deps;
   const itemId = e.currentTarget.id.replace("layout-item-", "");
+
+  // Get current payload to preserve projectId
+  const currentPayload = router ? router.getPayload() : {};
 
   subject.dispatch("redirect", {
     path: "/project/resources/layout-editor",
     payload: {
+      ...currentPayload, // Preserve existing payload (including p for projectId)
       layoutId: itemId,
     },
   });

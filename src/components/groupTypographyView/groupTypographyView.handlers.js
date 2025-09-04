@@ -6,8 +6,10 @@ export const handleSearchInput = (e, deps) => {
   render();
 };
 
-export const handleBeforeMount = (deps) => {
-  const { render, store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { render, store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { colors, fonts } = repository.getState();
   store.setColorsData(colors);
   store.setFontsData(fonts);

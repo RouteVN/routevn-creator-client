@@ -26,10 +26,12 @@ export const INITIAL_STATE = Object.freeze({
     description: "",
     iconFileId: undefined,
   },
+  dataLoaded: false,
 });
 
 export const setProject = (state, project) => {
   state.project = project;
+  state.dataLoaded = true;
 };
 
 export const setIconFileId = (state, iconFileId) => {
@@ -40,5 +42,6 @@ export const toViewData = ({ state }) => {
   return {
     defaultValues: state.project,
     form,
+    dataLoaded: state.dataLoaded,
   };
 };

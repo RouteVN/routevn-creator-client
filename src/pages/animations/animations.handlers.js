@@ -1,15 +1,18 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { animations } = repository.getState();
   store.setItems(animations || { tree: [], items: {} });
-
-  return () => {};
+  render();
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   console.log("🎬 Animations handleDataChanged received event:", e.detail);
 
   const repositoryState = repository.getState();
@@ -36,8 +39,10 @@ export const handleAnimationItemClick = (e, deps) => {
   render();
 };
 
-export const handleAnimationCreated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleAnimationCreated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, properties } = e.detail;
 
   // Add new animation to repository
@@ -69,8 +74,10 @@ export const handleAnimationCreated = (e, deps) => {
   render();
 };
 
-export const handleAnimationUpdated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleAnimationUpdated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { itemId, name, properties } = e.detail;
 
   // Update existing animation in repository
@@ -110,8 +117,10 @@ const getInitialValue = (property) => {
   return defaultValues[property] || 0;
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "animations",

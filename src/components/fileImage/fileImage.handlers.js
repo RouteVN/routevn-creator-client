@@ -1,6 +1,8 @@
 import { toFlatItems } from "../../deps/repository";
 
-const getFileIdFromProps = (attrs, repository) => {
+const getFileIdFromProps = async (attrs, repositoryFactory, router) => {
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   // Validate that both fileId and imageId are not passed
   if (attrs.fileId && attrs.imageId) {
     throw new Error(
@@ -32,9 +34,10 @@ const getFileIdFromProps = (attrs, repository) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, getFileContent, render, repository } = deps;
+  const { store, attrs, getFileContent, render, repositoryFactory, router } =
+    deps;
 
-  const fileId = getFileIdFromProps(attrs, repository);
+  const fileId = await getFileIdFromProps(attrs, repositoryFactory, router);
 
   if (!fileId) {
     return;
@@ -57,9 +60,10 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleOnUpdate = async (changes, deps) => {
-  const { store, attrs, getFileContent, render, repository } = deps;
+  const { store, attrs, getFileContent, render, repositoryFactory, router } =
+    deps;
 
-  const fileId = getFileIdFromProps(attrs, repository);
+  const fileId = await getFileIdFromProps(attrs, repositoryFactory, router);
 
   if (!fileId) {
     store.setIsLoading(false);

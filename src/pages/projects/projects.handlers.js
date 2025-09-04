@@ -9,17 +9,6 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-// const createSubscriptions = (deps) => {
-//   const { subject } = deps;
-//   return [
-//     windowPop$(window, deps.handleWindowPop),
-//     filter$(subject, [Actions.router.redirect, Actions.router.replace], deps._redirect),
-//     filter$(subject, Actions.router.back, deps._handleBack),
-//     filter$(subject, Actions.notification.notify, deps._toastNotify),
-//     windowResize$(window, deps._handleWindowResize),
-//   ]
-// }
-
 export const handleCreateButtonClick = async (payload, deps) => {
   const { render, store } = deps;
   store.toggleDialog();
@@ -33,15 +22,13 @@ export const handleCloseDialogue = (payload, deps) => {
 };
 
 export const handleProjectsClick = async (e, deps) => {
-  const { keyValueStore, subject } = deps;
+  const { subject } = deps;
   const id = e.currentTarget.id.replace("project-", "");
-
-  // Save last opened project
-  await keyValueStore.set("lastOpenedProjectId", id);
-
-  // Navigate to project page
   subject.dispatch("redirect", {
     path: `/project`,
+    payload: {
+      p: id,
+    },
   });
 };
 
@@ -93,15 +80,34 @@ export const handleFormSubmit = async (e, deps) => {
       name,
       description,
       projectPath,
+      template,
       createdAt: Date.now(),
       lastOpenedAt: null,
     };
 
-    // TODO: Create project folder structure
-    // - Create project folder at projectPath/projectId
-    // - Create project.db in project folder
-    // - Create files/ subfolder for assets
-    // - Initialize project with template data
+    // Initialize project using the service from deps
+    try {
+      const { initializeProject, uploadImageFiles, uploadFontFiles } = deps;
+
+      // TODO: improve initializeProject
+      // there should be tempalte management system, where we get the template data from a templateId
+      // clean way to copy all files to project
+      // clean way to write all repository data for the template
+      await initializeProject({
+        name,
+        description,
+        projectPath,
+        template,
+        uploadImageFiles,
+        uploadFontFiles,
+      });
+
+      console.log(`Project created at: ${projectPath}`);
+    } catch (error) {
+      console.error("Failed to create project:", error);
+      alert(`Failed to create project: ${error.message}`);
+      return;
+    }
 
     // Get existing projects
     const projects = (await keyValueStore.get("projects")) || [];
@@ -125,16 +131,9 @@ export const handleFormSubmit = async (e, deps) => {
 export const handleDeleteProject = async (projectId, deps) => {
   const { keyValueStore, store, render } = deps;
 
-  // Get existing projects
   const projects = (await keyValueStore.get("projects")) || [];
-
-  // Filter out the deleted project
   const updatedProjects = projects.filter((p) => p.id !== projectId);
-
-  // Save to key-value store
   await keyValueStore.set("projects", updatedProjects);
-
-  // Update store
   store.setProjects(updatedProjects);
 
   render();

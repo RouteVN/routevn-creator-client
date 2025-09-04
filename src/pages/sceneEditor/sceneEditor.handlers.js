@@ -52,9 +52,10 @@ async function renderSceneState(store, drenderer, getFileContent) {
   drenderer.render(renderState);
 }
 
-export const handleBeforeMount = (deps) => {
-  const { drenderer, store, router, repository, render } = deps;
-  const { sceneId } = router.getPayload();
+export const handleBeforeMount = async (deps) => {
+  const { drenderer, store, router, repositoryFactory, render } = deps;
+  const { sceneId, p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   store.setSceneId(sceneId);
   store.setRepositoryState(repository.getState());
@@ -108,9 +109,18 @@ export const handleSectionTabClick = (e, deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleCommandLineSubmit = (e, deps) => {
-  const { store, render, repository, subject, drenderer, getFileContent } =
-    deps;
+export const handleCommandLineSubmit = async (e, deps) => {
+  const {
+    store,
+    render,
+    repositoryFactory,
+    router,
+    subject,
+    drenderer,
+    getFileContent,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -220,8 +230,17 @@ export const handleAddPresentationButtonClick = (e, deps) => {
 };
 
 export const handleSectionAddClick = async (e, deps) => {
-  const { store, repository, render, subject, drenderer, getFileContent } =
-    deps;
+  const {
+    store,
+    repositoryFactory,
+    router,
+    render,
+    subject,
+    drenderer,
+    getFileContent,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
@@ -293,8 +312,10 @@ export const handleSectionAddClick = async (e, deps) => {
   }, 10);
 };
 
-export const handleSplitLine = (e, deps) => {
-  const { repository, store, render, getRefIds, subject } = deps;
+export const handleSplitLine = async (e, deps) => {
+  const { repositoryFactory, router, store, render, getRefIds, subject } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
@@ -428,8 +449,10 @@ export const handleSplitLine = (e, deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleNewLine = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleNewLine = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
@@ -616,8 +639,10 @@ export const handleBackToActions = (e, deps) => {
   render();
 };
 
-export const handleMergeLines = (e, deps) => {
-  const { store, getRefIds, render, repository, subject } = deps;
+export const handleMergeLines = async (e, deps) => {
+  const { store, getRefIds, render, repositoryFactory, router, subject } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { prevLineId, currentLineId, contentToAppend } = e.detail;
 
   const sceneId = store.selectSceneId();
@@ -749,8 +774,10 @@ export const handleDropdownMenuClickOverlay = (e, deps) => {
   render();
 };
 
-export const handleDropdownMenuClickItem = (e, deps) => {
-  const { store, render, repository, subject } = deps;
+export const handleDropdownMenuClickItem = async (e, deps) => {
+  const { store, render, repositoryFactory, router, subject } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const action = e.detail.item.value; // Access value from item object
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
@@ -836,8 +863,10 @@ export const handlePopoverClickOverlay = (e, deps) => {
   render();
 };
 
-export const handleFormActionClick = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleFormActionClick = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const detail = e.detail;
 
   // Extract action and values from detail
@@ -887,8 +916,10 @@ export const handleToggleSectionsGraphView = (e, deps) => {
 };
 
 // Handler for throttled/debounced dialogue content updates
-export const handleUpdateDialogueContent = (payload, deps) => {
-  const { repository, store, subject } = deps;
+export const handleUpdateDialogueContent = async (payload, deps) => {
+  const { repositoryFactory, router, store, subject } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { lineId, content } = payload;
 
   const sceneId = store.selectSceneId();

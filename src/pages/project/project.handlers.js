@@ -1,21 +1,36 @@
-export const handleBeforeMount = (deps) => {
-  const { repository, store } = deps;
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, store, render, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { project } = repository.getState();
   store.setProject(project);
+  render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository } = deps;
-  repository.addAction({
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  await repository.addAction({
     actionType: "set",
     target: `project.${e.detail.name}`,
     value: e.detail.fieldValue,
   });
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
-  const { filePicker, uploadImageFiles, repository, subject, render, store } =
-    deps;
+export const handleFormExtraEvent = async (_, deps) => {
+  const {
+    filePicker,
+    uploadImageFiles,
+    repositoryFactory,
+    router,
+    subject,
+    render,
+    store,
+  } = deps;
+
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   try {
     const files = await filePicker.open({
@@ -33,7 +48,7 @@ export const handleFormExtraEvent = async (e, deps) => {
     // TODO better handle failed uploads
     if (successfulUploads.length > 0) {
       const result = successfulUploads[0];
-      repository.addAction({
+      await repository.addAction({
         actionType: "set",
         target: "project.iconFileId",
         value: result.fileId,
