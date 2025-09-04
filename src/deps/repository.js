@@ -443,20 +443,20 @@ export const createRepositoryFactory = (initialState, keyValueStore) => {
 };
 
 const createRepositoryInternal = (initialState, store) => {
-  let chachedActionStreams = [];
+  let cachedActionStreams = [];
 
   const init = async () => {
-    chachedActionStreams = (await store.getAllEvents()) || [];
+    cachedActionStreams = (await store.getAllEvents()) || [];
   };
 
   const addAction = async (action) => {
-    chachedActionStreams.push(action);
+    cachedActionStreams.push(action);
     await store.addAction(action);
   };
 
   const getState = () => {
     // Compute state from action stream
-    return chachedActionStreams.reduce((acc, action) => {
+    return cachedActionStreams.reduce((acc, action) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);
@@ -486,7 +486,7 @@ const createRepositoryInternal = (initialState, store) => {
   };
 
   const getAllEvents = () => {
-    return chachedActionStreams;
+    return cachedActionStreams;
   };
 
   return {

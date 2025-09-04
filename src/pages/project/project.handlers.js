@@ -1,23 +1,29 @@
 export const handleBeforeMount = (deps) => {
-  const { repositoryFactory, store, router } = deps;
-  const { p } = router.getPayload();
-  const repository = repositoryFactory.getByProject(p);
-  const { project } = repository.getState();
-  store.setProject(project);
+  // handleBeforeMount must be synchronous
+  // Async logic will be handled in handleAfterMount
 };
 
-export const handleFormChange = (e, deps) => {
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, store, render, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const { project } = repository.getState();
+  store.setProject(project);
+  render();
+};
+
+export const handleFormChange = async (e, deps) => {
   const { repositoryFactory, router } = deps;
   const { p } = router.getPayload();
-  const repository = repositoryFactory.getByProject(p);
-  repository.addAction({
+  const repository = await repositoryFactory.getByProject(p);
+  await repository.addAction({
     actionType: "set",
     target: `project.${e.detail.name}`,
     value: e.detail.fieldValue,
   });
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
+export const handleFormExtraEvent = async (_, deps) => {
   const {
     filePicker,
     uploadImageFiles,
@@ -29,7 +35,7 @@ export const handleFormExtraEvent = async (e, deps) => {
   } = deps;
 
   const { p } = router.getPayload();
-  const repository = repositoryFactory.getByProject(p);
+  const repository = await repositoryFactory.getByProject(p);
 
   try {
     const files = await filePicker.open({
