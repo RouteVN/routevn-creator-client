@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { router, store, repositoryFactory } = deps;
+  const { router, store, repositoryFactory, render } = deps;
   const { characterId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
@@ -13,6 +13,7 @@ export const handleAfterMount = async (deps) => {
 
   store.setCharacterId(characterId);
   store.setItems(character.sprites);
+  render();
 };
 
 export const handleDataChanged = async (e, deps) => {

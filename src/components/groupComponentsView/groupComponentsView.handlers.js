@@ -30,13 +30,17 @@ export const handleComponentItemClick = (e, deps) => {
 };
 
 export const handleComponentItemDoubleClick = (e, deps) => {
-  const { subject } = deps;
+  const { subject, router } = deps;
   const itemId = e.currentTarget.id.replace("component-item-", "");
+
+  // Get current payload to preserve projectId
+  const currentPayload = router ? router.getPayload() : {};
 
   // Redirect to component editor with componentId payload
   subject.dispatch("redirect", {
     path: "/project/resources/component-editor",
     payload: {
+      ...currentPayload, // Preserve existing payload (including p for projectId)
       componentId: itemId,
     },
   });
