@@ -4,11 +4,12 @@ import { toFlatItems } from "../../deps/repository.js";
 import { getFileType } from "../../utils/getFileType";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router } = deps;
+  const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { fonts } = repository.getState();
   store.setItems(fonts);
+  render();
 };
 
 export const handleDataChanged = async (e, deps) => {

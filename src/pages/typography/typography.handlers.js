@@ -11,11 +11,11 @@ const syncRepositoryToStore = (store, repository) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router } = deps;
+  const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   syncRepositoryToStore(store, repository);
-  return () => {};
+  render();
 };
 
 export const handleDataChanged = async (_, deps) => {

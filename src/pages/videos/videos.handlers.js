@@ -2,13 +2,12 @@ import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router } = deps;
+  const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { videos } = repository.getState();
   store.setItems(videos);
-
-  return () => {};
+  render();
 };
 
 export const handleDataChanged = async (e, deps) => {

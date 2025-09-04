@@ -32,6 +32,9 @@ viewDataSchema:
                 type: boolean
               slot:
                 type: string
+    dataLoaded:
+      type: boolean
+      default: false
 
 refs:
   form:
@@ -46,5 +49,6 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
     - rtgl-text s=h4: Project
-    - rtgl-form#form .form=form .context=context w=240 .defaultValues=defaultValues:
-      - rvn-file-image#icon-image fileId=${defaultValues.iconFileId} wh=128 slot=icon-file-id cur=p:
+    - $if dataLoaded:
+        - rtgl-form#form .form=form .context=context w=240 .defaultValues=defaultValues:
+          - rvn-file-image#icon-image fileId=${defaultValues.iconFileId} wh=128 slot=icon-file-id cur=p:

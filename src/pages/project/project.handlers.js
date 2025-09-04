@@ -1,8 +1,3 @@
-export const handleBeforeMount = (deps) => {
-  // handleBeforeMount must be synchronous
-  // Async logic will be handled in handleAfterMount
-};
-
 export const handleAfterMount = async (deps) => {
   const { repositoryFactory, store, render, router } = deps;
   const { p } = router.getPayload();

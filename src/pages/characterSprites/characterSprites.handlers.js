@@ -9,12 +9,10 @@ export const handleAfterMount = async (deps) => {
 
   if (!character) {
     alert("Character not found");
-    return () => {};
   }
 
   store.setCharacterId(characterId);
   store.setItems(character.sprites);
-  return () => {};
 };
 
 export const handleDataChanged = async (e, deps) => {

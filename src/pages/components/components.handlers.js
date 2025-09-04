@@ -1,13 +1,12 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router } = deps;
+  const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { components } = repository.getState();
   store.setItems(components);
-
-  return () => {};
+  render();
 };
 
 export const handleDataChanged = async (e, deps) => {
