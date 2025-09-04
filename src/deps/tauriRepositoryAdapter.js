@@ -22,9 +22,6 @@ export const initializeProject = async ({
   const filesPath = await join(projectPath, "files");
   await mkdir(filesPath, { recursive: true });
 
-  const templatesPath = await join(projectPath, "templates");
-  await mkdir(templatesPath, { recursive: true });
-
   // Initialize database
   if (template === "default") {
     // Directly create adapter and use it to initialize database
