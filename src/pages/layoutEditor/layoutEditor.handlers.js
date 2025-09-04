@@ -140,8 +140,10 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
  * @param {Object} deps - Component dependencies
  * @returns {Object} Render state data
  */
-const getRenderState = (deps) => {
-  const { store, repository } = deps;
+const getRenderState = async (deps) => {
+  const { store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const {
     layouts,
@@ -261,7 +263,7 @@ const renderLayoutPreview = async (deps, options = {}) => {
   const { skipAssetLoading = false } = options;
 
   // Get consolidated render state
-  const { renderStateElements, fontsItems } = getRenderState(deps);
+  const { renderStateElements, fontsItems } = await getRenderState(deps);
 
   const choicesData = store.selectChoicesData();
 
@@ -378,9 +380,11 @@ const renderLayoutPreview = async (deps, options = {}) => {
   render();
 };
 
-export const handleBeforeMount = (deps) => {
-  const { router, store, repository } = deps;
-  const { layoutId } = router.getPayload();
+export const handleAfterMount = async (deps) => {
+  const { router, store, repositoryFactory, render, getRefIds, drenderer } =
+    deps;
+  const { layoutId, p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { layouts, images, typography, colors, fonts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setLayoutId(layoutId);
@@ -390,10 +394,7 @@ export const handleBeforeMount = (deps) => {
   store.setTypographyData(typography || { items: {}, tree: [] });
   store.setColorsData(colors || { items: {}, tree: [] });
   store.setFontsData(fonts || { items: {}, tree: [] });
-};
 
-export const handleAfterMount = async (deps) => {
-  const { render, getRefIds, drenderer } = deps;
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
 
@@ -405,7 +406,9 @@ export const handleAfterMount = async (deps) => {
 export const handleRenderOnly = (payload, deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (e, deps) => {
-  const { store, render, getFileContent, repository } = deps;
+  const { store, render, getFileContent, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const itemId = e.detail.id;
   store.setSelectedItemId(itemId);
   render();
@@ -453,8 +456,9 @@ export const handleTargetChanged = handleRenderOnly;
 export const handleAddLayoutClick = handleRenderOnly;
 
 export const handleDataChanged = async (e, deps) => {
-  const { router, store, repository, render } = deps;
-  const { layoutId } = router.getPayload();
+  const { router, store, repositoryFactory, render } = deps;
+  const { layoutId, p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setItems(layout?.elements || { items: {}, tree: [] });
@@ -503,7 +507,9 @@ const deepMerge = (target, source) => {
 };
 
 export const handleFormChange = async (e, deps) => {
-  const { repository, store, render } = deps;
+  const { repositoryFactory, router, store, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
@@ -620,7 +626,9 @@ export const handleImageSelectorSelection = (e, deps) => {
 };
 
 export const handleConfirmImageSelection = async (e, deps) => {
-  const { store, render, repository, getFileContent } = deps;
+  const { store, render, repositoryFactory, router, getFileContent } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const state = store.getState ? store.getState() : store._state || store.state;
   const fieldIndex = state.imageSelectorDialog.fieldIndex;
@@ -726,7 +734,9 @@ export const handleDropdownMenuClose = (e, deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const detail = e.detail;
   const item = detail.item || detail;
   const fieldName = store.selectDropdownMenuFieldName();
@@ -866,7 +876,9 @@ export const handleArrowKeyDown = async (e, deps) => {
 };
 
 export const handle2dRenderEvent = async (e, deps) => {
-  const { store, repository, render } = deps;
+  const { store, repositoryFactory, router, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { eventName, payload } = e;
 
   const { isDragging, dragOffset } = store.selectDragging();
@@ -916,7 +928,9 @@ export const handle2dRenderEvent = async (e, deps) => {
  * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
  */
 async function handleDebouncedUpdate(payload, deps, skipUIUpdate = false) {
-  const { repository, store, render } = deps;
+  const { repositoryFactory, router, store, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
   // Save to repository

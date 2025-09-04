@@ -27,8 +27,10 @@ export const handleWindowPop = (payload, deps) => {
   deps.render();
 };
 
-export const handleUpdateTransform = (payload, deps) => {
-  const { repository } = deps;
+export const handleUpdateTransform = async (payload, deps) => {
+  const { repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { itemId, updates } = payload;
 
   repository.addAction({
@@ -42,8 +44,10 @@ export const handleUpdateTransform = (payload, deps) => {
   });
 };
 
-export const handleUpdateColor = (payload, deps) => {
-  const { repository } = deps;
+export const handleUpdateColor = async (payload, deps) => {
+  const { repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { itemId, updates } = payload;
 
   repository.addAction({

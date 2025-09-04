@@ -1,7 +1,7 @@
 import { createWebPatch } from "@rettangoli/fe";
 import { h } from "snabbdom/build/h";
 
-import { createRepository } from "./deps/repository";
+import { createWebRepositoryFactory } from "./deps/repository";
 import { createUserConfig } from "./deps/userConfig";
 import Subject from "./deps/subject";
 import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
@@ -114,10 +114,13 @@ const initialData = {
 };
 
 const repositoryAdapter = createIndexeddbRepositoryAdapter();
-const repository = createRepository(initialData, repositoryAdapter);
+const repositoryFactory = createWebRepositoryFactory(
+  initialData,
+  repositoryAdapter,
+);
 
-// Initialize repository with stored data
-await repository.init();
+// Get the single repository for web
+const repository = await repositoryFactory.getByProject();
 
 // Check if we need to add template data
 const actionStream = repository.getAllEvents();
@@ -178,7 +181,7 @@ const componentDependencies = {
   httpClient,
   subject,
   router,
-  repository,
+  repositoryFactory,
   userConfig,
   audioManager,
   uploadImageFiles,
@@ -200,7 +203,7 @@ const pageDependencies = {
   httpClient,
   subject,
   router,
-  repository,
+  repositoryFactory,
   userConfig,
   audioManager,
   uploadImageFiles,

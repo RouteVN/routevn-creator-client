@@ -1,15 +1,19 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { variables } = repository.getState();
   store.setItems(variables || { tree: [], items: {} });
 
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const repositoryState = repository.getState();
   const { variables } = repositoryState;
@@ -27,8 +31,10 @@ export const handleVariableItemClick = (e, deps) => {
   render();
 };
 
-export const handleVariableCreated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleVariableCreated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, type, defaultValue, readonly } = e.detail;
 
   // Add new variable to repository
@@ -55,8 +61,10 @@ export const handleVariableCreated = (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "variables",

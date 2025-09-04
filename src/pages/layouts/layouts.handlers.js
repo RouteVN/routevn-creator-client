@@ -1,15 +1,19 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { layouts } = repository.getState();
   store.setItems(layouts);
 
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { layouts } = repository.getState();
   store.setItems(layouts);
   render();
@@ -22,8 +26,10 @@ export const handleImageItemClick = (e, deps) => {
   render();
 };
 
-export const handleLayoutCreated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleLayoutCreated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, layoutType } = e.detail;
 
   repository.addAction({
@@ -51,7 +57,16 @@ export const handleLayoutCreated = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, fileManager, uploadImageFiles, repository } = deps;
+  const {
+    store,
+    render,
+    fileManager,
+    uploadImageFiles,
+    repositoryFactory,
+    router,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -98,8 +113,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "layouts",

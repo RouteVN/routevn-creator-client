@@ -421,7 +421,23 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-// For Tauri version - repository factory
+// For web version - creates a simple factory with a single repository
+export const createWebRepositoryFactory = (initialState, store) => {
+  let repository = null;
+
+  return {
+    async getByProject(_projectId) {
+      // Web version ignores projectId - always returns the same repository
+      if (!repository) {
+        repository = createRepositoryInternal(initialState, store);
+        await repository.init();
+      }
+      return repository;
+    },
+  };
+};
+
+// For Tauri version - creates a factory with multi-project support
 export const createRepositoryFactory = (initialState, keyValueStore) => {
   const repositoryFactory = {
     getByProject: async (projectId) => {
@@ -476,7 +492,7 @@ const createRepositoryInternal = (initialState, store) => {
       } else if (actionType === "init") {
         const newState = structuredClone(acc);
         for (const [key, data] of Object.entries(value)) {
-          if (newState[key]) {
+          if (newState[key] !== undefined) {
             newState[key] = data;
           }
         }
@@ -497,9 +513,6 @@ const createRepositoryInternal = (initialState, store) => {
     getAllEvents,
   };
 };
-
-// For web version - direct repository creation
-export const createRepository = createRepositoryInternal;
 
 export const toFlatItems = (data) => {
   const { items, tree } = data;

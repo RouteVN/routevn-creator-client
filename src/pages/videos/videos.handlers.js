@@ -1,16 +1,20 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { videos } = repository.getState();
   store.setItems(videos);
 
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { videos } = repository.getState();
   store.setItems(videos);
   render();
@@ -38,7 +42,9 @@ export const handleVideoItemClick = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, repository, uploadVideoFiles } = deps;
+  const { store, render, repositoryFactory, router, uploadVideoFiles } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -73,7 +79,16 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
-  const { repository, store, render, filePicker, uploadVideoFiles } = deps;
+  const {
+    repositoryFactory,
+    router,
+    store,
+    render,
+    filePicker,
+    uploadVideoFiles,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -128,8 +143,10 @@ export const handleFormExtraEvent = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "videos",

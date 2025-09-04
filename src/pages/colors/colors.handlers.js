@@ -19,16 +19,20 @@ const hexToBase64Image = (hex) => {
   return canvas.toDataURL("image/png");
 };
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { colors } = repository.getState();
   store.setItems(colors);
 
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { colors } = repository.getState();
   store.setItems(colors);
   render();
@@ -50,8 +54,10 @@ export const handleColorItemClick = (e, deps) => {
   render();
 };
 
-export const handleColorCreated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleColorCreated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, hex } = e.detail;
 
   repository.addAction({
@@ -75,7 +81,7 @@ export const handleColorCreated = (e, deps) => {
 };
 
 export const handleColorEdited = (e, deps) => {
-  const { store, render, repository, subject } = deps;
+  const { store, render, subject } = deps;
   const { itemId, name, hex } = e.detail;
 
   // Dispatch to app handlers for repository update
@@ -88,8 +94,10 @@ export const handleColorEdited = (e, deps) => {
   });
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "colors",
@@ -137,8 +145,10 @@ export const handleEditDialogClose = (e, deps) => {
   render();
 };
 
-export const handleEditFormAction = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleEditFormAction = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;
@@ -194,8 +204,10 @@ export const handleAddDialogClose = (e, deps) => {
   render();
 };
 
-export const handleAddFormAction = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleAddFormAction = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;

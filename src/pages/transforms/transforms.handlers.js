@@ -1,15 +1,19 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { transforms } = repository.getState();
   store.setItems(transforms || { tree: [], items: {} });
 
   return () => {};
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const repositoryState = repository.getState();
   const { transforms } = repositoryState;
@@ -27,8 +31,10 @@ export const handleTransformItemClick = (e, deps) => {
   render();
 };
 
-export const handleTransformCreated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleTransformCreated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     e.detail;
 
@@ -60,8 +66,10 @@ export const handleTransformCreated = (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "transforms",
@@ -79,8 +87,10 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleTransformEdited = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleTransformEdited = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { itemId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     e.detail;
 

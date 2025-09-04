@@ -1,8 +1,10 @@
 import { toFlatItems } from "../../deps/repository";
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { repository, store, props } = deps;
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, router, store, props } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { characters, transforms, animations } = repository.getState();
   store.setItems({
     items: characters || { tree: [], items: {} },
@@ -28,18 +30,6 @@ export const handleBeforeMount = (deps) => {
   store.setExistingCharacters({
     characters: characterItems,
   });
-};
-
-export const handleAfterMount = async (deps) => {
-  // No longer needed since we use form slot instead of context
-};
-
-export const handleFormExtra = (e, deps) => {
-  // No longer needed since we use direct handlers on slot elements
-};
-
-export const handleFormChange = (e, deps) => {
-  // No longer needed since we use direct select handlers
 };
 
 export const handleCharacterClick = (e, deps) => {

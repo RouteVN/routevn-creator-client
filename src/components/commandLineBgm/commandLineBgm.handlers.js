@@ -1,7 +1,9 @@
 import { toFlatItems } from "../../deps/repository";
 
-export const handleBeforeMount = (deps) => {
-  const { repository, store, props } = deps;
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, router, store, props } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { audio } = repository.getState();
 
   store.setRepositoryState({
@@ -15,10 +17,6 @@ export const handleBeforeMount = (deps) => {
       resourceId: audioId,
     });
   }
-};
-
-export const handleAfterMount = async (deps) => {
-  // No longer needed since we use form slot instead of context
 };
 
 export const handleAudioWaveformClick = (e, deps) => {
@@ -74,7 +72,10 @@ export const handleResourceItemClick = (e, deps) => {
 };
 
 export const handleFileExplorerItemClick = async (e, deps) => {
-  const { store, render, downloadWaveformData, repository } = deps;
+  const { store, render, downloadWaveformData, repositoryFactory, router } =
+    deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const itemId = e.detail.id;
   const { audio } = repository.getState();
 
@@ -154,8 +155,10 @@ export const handleBreadcumbActionsClick = (e, deps) => {
   }
 };
 
-export const handleButtonSelectClick = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleButtonSelectClick = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { audio } = repository.getState();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
 

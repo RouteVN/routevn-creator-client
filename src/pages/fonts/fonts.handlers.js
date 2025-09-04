@@ -3,14 +3,18 @@ import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { toFlatItems } from "../../deps/repository.js";
 import { getFileType } from "../../utils/getFileType";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { fonts } = repository.getState();
   store.setItems(fonts);
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { fonts } = repository.getState();
   store.setItems(fonts);
   render();
@@ -33,7 +37,16 @@ export const handleFontItemClick = (e, deps) => {
 };
 
 export const handleFormExtraEvent = async (e, deps) => {
-  const { repository, store, render, filePicker, uploadFontFiles } = deps;
+  const {
+    repositoryFactory,
+    router,
+    store,
+    render,
+    filePicker,
+    uploadFontFiles,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -101,11 +114,14 @@ export const handleDragDropFileSelected = async (e, deps) => {
     store,
     render,
     uploadFontFiles,
-    repository,
+    repositoryFactory,
+    router,
     httpClient,
     fontManager,
     loadFontFile,
   } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -168,7 +184,16 @@ export const handleDragDropFileSelected = async (e, deps) => {
 };
 
 export const handleFontItemDoubleClick = async (e, deps) => {
-  const { store, render, repository, getFileContent, fontManager } = deps;
+  const {
+    store,
+    render,
+    repositoryFactory,
+    router,
+    getFileContent,
+    fontManager,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { itemId } = e.detail;
 
   // Find the font item
@@ -202,8 +227,10 @@ export const handleCloseModal = (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "fonts",

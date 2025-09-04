@@ -56,6 +56,8 @@ export const initializeProject = async ({
       },
       animations: templateData.animations,
       transforms: templateData.transforms,
+      colors: templateData.colors,
+      typography: templateData.typography,
       layouts: templateData.layouts,
       scenes: templateData.scenes,
     };
