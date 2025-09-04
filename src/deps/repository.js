@@ -421,73 +421,42 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-// Store project paths
-const projectPaths = new Map();
+export const createRepositoryFactory = (initialState, keyValueStore) => {
+  const repositoryFactory = {
+    getByProject: async (projectId) => {
+      const projects = (await keyValueStore.get("projects")) || [];
+      const project = projects.find((project) => project.id === projectId);
+      if (!project) {
+        throw new Error("project not found");
+      }
 
-// Register a project path for a projectId
-export const registerProject = (projectId, projectPath) => {
-  projectPaths.set(projectId, projectPath);
-};
-
-export const createRepository = (initialState) => {
-  return createRepositoryInternal(initialState);
-};
-
-const createRepositoryInternal = (initialState) => {
-  // Store all project data in one place
-  const projects = new Map();
-
-  const init = async (projectId) => {
-    if (!projectId) {
-      throw new Error("projectId is required for repository operations");
-    }
-
-    const projectPath = projectPaths.get(projectId);
-    if (!projectPath) {
-      throw new Error(
-        `No project path found for projectId: ${projectId}. Call registerProject first.`,
+      const store = await createTauriSQLiteRepositoryAdapter(
+        project.projectPath,
       );
-    }
-
-    if (!projects.has(projectId)) {
-      const adapter = await createTauriSQLiteRepositoryAdapter(projectPath);
-      const storedEvents = await adapter.getAllEvents();
-
-      projects.set(projectId, {
-        adapter,
-        actionStream: storedEvents || [],
-      });
-    }
+      const repository = createRepositoryInternal(initialState, store);
+      await repository.init();
+      return repository;
+    },
   };
 
-  const addAction = async (projectId, action) => {
-    if (!projectId) {
-      throw new Error("projectId is required for repository operations");
-    }
+  return repositoryFactory;
+};
 
-    const project = projects.get(projectId);
-    if (!project) {
-      throw new Error(
-        `Repository not initialized for projectId: ${projectId}. Call init first.`,
-      );
-    }
+const createRepositoryInternal = (initialState, store) => {
+  let chachedActionStreams = [];
 
-    await project.adapter.addAction(action);
-    project.actionStream.push(action);
+  const init = async () => {
+    chachedActionStreams = (await store.getAllEvents()) || [];
   };
 
-  const getState = (projectId) => {
-    if (!projectId) {
-      throw new Error("projectId is required for repository operations");
-    }
+  const addAction = async (action) => {
+    chachedActionStreams.push(action);
+    await store.addAction(action);
+  };
 
-    const project = projects.get(projectId);
-    if (!project) {
-      return initialState;
-    }
-
+  const getState = () => {
     // Compute state from action stream
-    return project.actionStream.reduce((acc, action) => {
+    return chachedActionStreams.reduce((acc, action) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);
@@ -516,13 +485,8 @@ const createRepositoryInternal = (initialState) => {
     }, structuredClone(initialState));
   };
 
-  const getAllEvents = async (projectId) => {
-    if (!projectId) {
-      throw new Error("projectId is required for repository operations");
-    }
-
-    const project = projects.get(projectId);
-    return project ? project.actionStream : [];
+  const getAllEvents = () => {
+    return chachedActionStreams;
   };
 
   return {
@@ -530,7 +494,6 @@ const createRepositoryInternal = (initialState) => {
     addAction,
     getState,
     getAllEvents,
-    registerProject,
   };
 };
 
