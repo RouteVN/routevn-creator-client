@@ -1,7 +1,9 @@
 import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
-  const { repository, store, getFileContent, render } = deps;
+  const { repositoryFactory, router, store, getFileContent, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const state = repository.getState();
   const project = state.project;
 
@@ -20,21 +22,27 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleItemClick = async (payload, deps) => {
-  const { subject } = deps;
+  const { subject, router } = deps;
+  const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
     path: payload.detail.item.id,
+    payload: currentPayload, // Pass through current payload (including projectId)
   });
 };
 
 export const handleHeaderClick = (payload, deps) => {
-  const { subject } = deps;
+  const { subject, router } = deps;
+  const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
     path: "/project",
+    payload: currentPayload, // Pass through current payload (including projectId)
   });
 };
 
 export const handleProjectImageUpdate = async (_, deps) => {
-  const { repository, store, render, getFileContent } = deps;
+  const { repositoryFactory, router, store, render, getFileContent } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const state = repository.getState();
   const project = state.project;
 

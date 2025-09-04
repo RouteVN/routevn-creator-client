@@ -232,8 +232,10 @@ const isCursorOnLastLine = (element) => {
   return isOnLastLine;
 };
 
-export const handleBeforeMount = (deps) => {
-  const { store, getRefIds, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, getRefIds, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   store.setRepositoryState(repository.getState());
 

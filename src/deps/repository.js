@@ -1,4 +1,5 @@
-import { nanoid, customRandom } from "nanoid";
+import { customRandom } from "nanoid";
+import { createTauriSQLiteRepositoryAdapter } from "./tauriRepositoryAdapter";
 
 const set = (state, path, value) => {
   const newState = structuredClone(state);
@@ -420,49 +421,59 @@ const treeMove = (state, target, value) => {
   return newState;
 };
 
-export const createRepository = (initialState, storageAdapter) => {
-  // storageAdapter is required for persistence
-  if (!storageAdapter) {
-    throw new Error("Storage adapter is required");
-  }
+// For web version - creates a simple factory with a single repository
+export const createWebRepositoryFactory = (initialState, store) => {
+  let repository = null;
 
-  return createRepositoryInternal(initialState, [], storageAdapter);
+  return {
+    async getByProject(_projectId) {
+      // Web version ignores projectId - always returns the same repository
+      if (!repository) {
+        repository = createRepositoryInternal(initialState, store);
+        await repository.init();
+      }
+      return repository;
+    },
+  };
 };
 
-const createRepositoryInternal = (
-  initialState,
-  initialActionSteams,
-  storageAdapter,
-) => {
-  let actionStream = initialActionSteams || [];
+// For Tauri version - creates a factory with multi-project support
+export const createRepositoryFactory = (initialState, keyValueStore) => {
+  const repositoryFactory = {
+    getByProject: async (projectId) => {
+      const projects = (await keyValueStore.get("projects")) || [];
+      const project = projects.find((project) => project.id === projectId);
+      if (!project) {
+        throw new Error("project not found");
+      }
 
-  // Cache variables
-  let cachedState = null;
-  let isCacheValid = false;
-  let lastActionCount = 0;
+      const store = await createTauriSQLiteRepositoryAdapter(
+        project.projectPath,
+      );
+      const repository = createRepositoryInternal(initialState, store);
+      await repository.init();
+      return repository;
+    },
+  };
+
+  return repositoryFactory;
+};
+
+const createRepositoryInternal = (initialState, store) => {
+  let cachedActionStreams = [];
+
+  const init = async () => {
+    cachedActionStreams = (await store.getAllEvents()) || [];
+  };
 
   const addAction = async (action) => {
-    // Persist to storage first
-    await storageAdapter.addAction(action);
-
-    // Only update memory after successful persistence
-    actionStream.push(action);
-    // Invalidate cache when new action is added
-    isCacheValid = false;
+    cachedActionStreams.push(action);
+    await store.addAction(action);
   };
 
   const getState = () => {
-    // Check if cache is valid
-    if (
-      isCacheValid &&
-      actionStream.length === lastActionCount &&
-      cachedState !== null
-    ) {
-      return structuredClone(cachedState);
-    }
-
-    // Compute new state and update cache
-    cachedState = actionStream.reduce((acc, action) => {
+    // Compute state from action stream
+    return cachedActionStreams.reduce((acc, action) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);
@@ -479,11 +490,9 @@ const createRepositoryInternal = (
       } else if (actionType === "treeCopy") {
         return treeCopy(acc, target, value);
       } else if (actionType === "init") {
-        // Initialize entire state sections with provided data
-        // value should be an object with keys matching state sections
         const newState = structuredClone(acc);
         for (const [key, data] of Object.entries(value)) {
-          if (newState[key]) {
+          if (newState[key] !== undefined) {
             newState[key] = data;
           }
         }
@@ -491,33 +500,17 @@ const createRepositoryInternal = (
       }
       return acc;
     }, structuredClone(initialState));
-
-    // Update cache metadata
-    isCacheValid = true;
-    lastActionCount = actionStream.length;
-
-    return structuredClone(cachedState);
   };
 
-  const getActionStream = () => {
-    return actionStream;
-  };
-
-  const init = async () => {
-    // Load all events from storage adapter
-    const storedEvents = await storageAdapter.getAllEvents();
-    if (storedEvents && storedEvents.length > 0) {
-      actionStream = storedEvents;
-      // Invalidate cache to force recomputation with loaded events
-      isCacheValid = false;
-    }
+  const getAllEvents = () => {
+    return cachedActionStreams;
   };
 
   return {
     init,
     addAction,
     getState,
-    getActionStream,
+    getAllEvents,
   };
 };
 

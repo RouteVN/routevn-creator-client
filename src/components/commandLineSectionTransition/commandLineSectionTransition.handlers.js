@@ -1,5 +1,7 @@
-export const handleBeforeMount = (deps) => {
-  const { repository, store, props } = deps;
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, router, store, props } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { scenes } = repository.getState();
 
   store.setItems({

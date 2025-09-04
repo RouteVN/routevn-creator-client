@@ -1,15 +1,18 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { preset } = repository.getState();
   store.setItems(preset || { tree: [], items: {} });
-
-  return () => {};
+  render();
 };
 
-export const handleDataChanged = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const repositoryState = repository.getState();
   const { preset } = repositoryState;
@@ -27,8 +30,10 @@ export const handlePresetItemClick = (e, deps) => {
   render();
 };
 
-export const handlePresetCreated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handlePresetCreated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, description } = e.detail;
 
   repository.addAction({
@@ -51,8 +56,10 @@ export const handlePresetCreated = (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "preset",

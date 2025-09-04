@@ -10,14 +10,18 @@ const syncRepositoryToStore = (store, repository) => {
   store.setFontsData(fonts);
 };
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   syncRepositoryToStore(store, repository);
-  return () => {};
+  render();
 };
 
-export const handleDataChanged = (_, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (_, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   syncRepositoryToStore(store, repository);
   render();
 };
@@ -161,7 +165,9 @@ export const handleTypographyItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, uploadFontFiles, repository } = deps;
+  const { store, render, uploadFontFiles, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -200,8 +206,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleTypographyCreated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleTypographyCreated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const {
     groupId,
     name,
@@ -237,8 +245,10 @@ export const handleTypographyCreated = (e, deps) => {
   render();
 };
 
-export const handleTypographyUpdated = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleTypographyUpdated = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const {
     itemId,
     name,
@@ -272,8 +282,10 @@ export const handleTypographyUpdated = (e, deps) => {
   render();
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "typography",
@@ -482,8 +494,10 @@ export const handleAddColorDialogClose = (_, deps) => {
   render();
 };
 
-export const handleAddColorFormAction = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleAddColorFormAction = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;
@@ -557,7 +571,9 @@ export const handleFontFileSelected = async (e, deps) => {
 };
 
 export const handleAddFontFormAction = async (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   if (e.detail.actionId === "submit") {
     const formData = e.detail.formValues;

@@ -1,15 +1,18 @@
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { store, repository } = deps;
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   store.setItems(characters);
-
-  return () => {};
+  render();
 };
 
-export const handleDataChanged = (_, deps) => {
-  const { store, render, repository } = deps;
+export const handleDataChanged = async (_, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   store.setItems(characters);
   render();
@@ -37,7 +40,9 @@ export const handleCharacterItemClick = async (e, deps) => {
 };
 
 export const handleCharacterCreated = async (e, deps) => {
-  const { store, render, repository } = deps;
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, description, avatarFileId } = e.detail;
 
   try {
@@ -109,13 +114,16 @@ export const handleSpritesButtonClick = (e, deps) => {
 
 export const handleFormExtraEvent = async (_, deps) => {
   const {
-    repository,
+    repositoryFactory,
+    router,
     store,
     render,
     filePicker,
     uploadImageFiles,
     getFileContent,
   } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -189,8 +197,10 @@ export const handleFormExtraEvent = async (_, deps) => {
   }
 };
 
-export const handleFormChange = (e, deps) => {
-  const { repository, render, store } = deps;
+export const handleFormChange = async (e, deps) => {
+  const { repositoryFactory, router, render, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   repository.addAction({
     actionType: "treeUpdate",
     target: "characters",

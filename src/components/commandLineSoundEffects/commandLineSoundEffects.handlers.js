@@ -1,31 +1,31 @@
 import { toFlatItems } from "../../deps/repository";
 import { nanoid } from "nanoid";
 
-export const handleBeforeMount = (deps) => {
-  const { repository, store, props } = deps;
+export const handleAfterMount = async (deps) => {
+  const {
+    repositoryFactory,
+    router,
+    store,
+    props,
+    render,
+    downloadWaveformData,
+  } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const { audio } = repository.getState();
 
   store.setRepositoryState({
     audio,
   });
 
-  if (!props?.line?.presentation?.sfx?.items) {
-    return;
+  if (props?.line?.presentation?.sfx?.items) {
+    const { items } = props.line.presentation.sfx;
+    if (items && items.length > 0) {
+      store.setExistingSfx({
+        sfx: items,
+      });
+    }
   }
-
-  const { items } = props.line.presentation.sfx;
-
-  if (!items || items.length === 0) {
-    return;
-  }
-
-  store.setExistingSfx({
-    sfx: items,
-  });
-};
-
-export const handleAfterMount = async (deps) => {
-  const { store, render, downloadWaveformData } = deps;
 
   const sfx = store.selectSfxWithAudioData();
 
@@ -202,8 +202,10 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   render();
 };
 
-export const handleButtonSelectClick = (e, deps) => {
-  const { store, render, repository } = deps;
+export const handleButtonSelectClick = async (e, deps) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
 
   const { audio } = repository.getState();
 

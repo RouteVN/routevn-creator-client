@@ -26,8 +26,10 @@ export const handleClickItem = (e, deps) => {
   );
 };
 
-export const handleFileAction = (e, deps) => {
-  const { dispatchEvent, repository, props } = deps;
+export const handleFileAction = async (e, deps) => {
+  const { dispatchEvent, repositoryFactory, router, props } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const detail = e.detail;
   const repositoryTarget = props.repositoryTarget;
 
@@ -194,8 +196,10 @@ export const handleFileAction = (e, deps) => {
   );
 };
 
-export const handleTargetChanged = (e, deps) => {
-  const { dispatchEvent, repository, props } = deps;
+export const handleTargetChanged = async (e, deps) => {
+  const { dispatchEvent, repositoryFactory, router, props } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
   const repositoryTarget = props.repositoryTarget;
 
   if (!repositoryTarget) {
