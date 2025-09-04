@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { mkdir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
+import Database from "@tauri-apps/plugin-sql";
 import {
   fetchTemplateImages,
   fetchTemplateFonts,
@@ -65,13 +65,19 @@ export const initializeProject = async ({
       target: null,
       value: initData,
     });
-
-    // Close the adapter
-    await adapter.close();
   } else {
     // Just initialize empty database
-    await invoke("open_project_db", { projectPath });
-    await invoke("close_project_db", { projectPath });
+    const dbPath = await join(projectPath, "repository.db");
+    const db = await Database.load(`sqlite:${dbPath}`);
+
+    // Create actions table
+    await db.execute(`CREATE TABLE IF NOT EXISTS actions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action_type TEXT NOT NULL,
+      target TEXT,
+      value TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
   }
 };
 
@@ -86,50 +92,38 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
     );
   }
 
-  // Use custom Rust commands for project-specific database
-  await invoke("open_project_db", { projectPath });
+  const dbPath = await join(projectPath, "repository.db");
+  const db = await Database.load(`sqlite:${dbPath}`);
 
-  // Create actions table
-  await invoke("execute_project_sql", {
-    projectPath,
-    sql: `CREATE TABLE IF NOT EXISTS actions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      action_type TEXT NOT NULL,
-      target TEXT,
-      value TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`,
-    params: [],
-  });
+  await db.execute(`CREATE TABLE IF NOT EXISTS actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_type TEXT NOT NULL,
+    target TEXT,
+    value TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
 
   return {
     async addAction(action) {
-      await invoke("execute_project_sql", {
-        projectPath,
-        sql: "INSERT INTO actions (action_type, target, value) VALUES (?, ?, ?)",
-        params: [
+      await db.execute(
+        "INSERT INTO actions (action_type, target, value) VALUES (?, ?, ?)",
+        [
           action.actionType,
           action.target || null,
           JSON.stringify(action.value),
         ],
-      });
+      );
     },
 
     async getAllEvents() {
-      const results = await invoke("query_project_sql", {
-        projectPath,
-        sql: "SELECT action_type, target, value FROM actions ORDER BY id",
-        params: [],
-      });
+      const results = await db.select(
+        "SELECT action_type, target, value FROM actions ORDER BY id",
+      );
       return results.map((row) => ({
         actionType: row.action_type,
         target: row.target,
         value: row.value ? JSON.parse(row.value) : null,
       }));
-    },
-
-    async close() {
-      await invoke("close_project_db", { projectPath });
     },
   };
 };
