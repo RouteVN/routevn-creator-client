@@ -1,10 +1,70 @@
 {
+  "project": {
+    "name": "Template Project",
+    "description": "Template project description"
+  },
+  "images": {
+    "items": {
+      "zZO4u50ZEEt1WIugqEiW4": {
+        "type": "folder",
+        "name": "Template Images"
+      },
+      "w4D_3F43eaKETNbBaAIaJ": {
+        "type": "image",
+        "fileId": "dFVjRAgExl3smbbTHf2Yf",
+        "name": "choice_box",
+        "fileType": "image/png",
+        "fileSize": 2120,
+        "width": 1400,
+        "height": 100
+      },
+      "sY5qgcGzlgoXC3Nf88tGa": {
+        "type": "image",
+        "fileId": "pmR6Jl5Tk3FthCYe7QEQ5",
+        "name": "choice_box_activated",
+        "fileType": "image/png",
+        "fileSize": 862,
+        "width": 1400,
+        "height": 100
+      },
+      "iN20__bg4TaS80gh7-XcL": {
+        "type": "image",
+        "fileId": "iXuoDMU56sb6F4x6xrNqa",
+        "name": "dialogue_box",
+        "fileType": "image/png",
+        "fileSize": 4468,
+        "width": 1850,
+        "height": 350
+      }
+    },
+    "tree": [
+      {
+        "id": "zZO4u50ZEEt1WIugqEiW4",
+        "children": [
+          {
+            "id": "w4D_3F43eaKETNbBaAIaJ",
+            "children": []
+          },
+          {
+            "id": "sY5qgcGzlgoXC3Nf88tGa",
+            "children": []
+          },
+          {
+            "id": "iN20__bg4TaS80gh7-XcL",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
   "animations": {
     "tree": [
       {
         "id": "default-animations-group",
         "children": [
-          {"id": "fade-in"}
+          {
+            "id": "fade-in"
+          }
         ]
       }
     ],
@@ -34,14 +94,89 @@
       }
     }
   },
+  "audio": {
+    "tree": [
+      {
+        "id": "default-audio-folder",
+        "children": []
+      }
+    ],
+    "items": {
+      "default-audio-folder": {
+        "type": "folder",
+        "name": "Default Audio"
+      }
+    }
+  },
+  "videos": {
+    "tree": [
+      {
+        "id": "default-videos-folder",
+        "children": []
+      }
+    ],
+    "items": {
+      "default-videos-folder": {
+        "type": "folder",
+        "name": "Default Videos"
+      }
+    }
+  },
+  "characters": {
+    "tree": [
+      {
+        "id": "default-characters-folder",
+        "children": []
+      }
+    ],
+    "items": {
+      "default-characters-folder": {
+        "type": "folder",
+        "name": "Default Characters"
+      }
+    }
+  },
+  "fonts": {
+    "items": {
+      "QOvDORIGgH_YCsh3xw94R": {
+        "type": "folder",
+        "name": "Template Fonts"
+      },
+      "-hpZD817Q_lRDt-vjl4UN": {
+        "type": "font",
+        "fileId": "0CuKeuNPATcuH0EDcsoJd",
+        "name": "sample_font",
+        "fontFamily": "sample_font",
+        "fileType": "font/sample_font",
+        "fileSize": 857712
+      }
+    },
+    "tree": [
+      {
+        "id": "QOvDORIGgH_YCsh3xw94R",
+        "children": [
+          {
+            "id": "-hpZD817Q_lRDt-vjl4UN",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
   "transforms": {
     "tree": [
       {
         "id": "default-transforms-group",
         "children": [
-          {"id": "bottom-left"},
-          {"id": "bottom-center"},
-          {"id": "bottom-right"}
+          {
+            "id": "bottom-left"
+          },
+          {
+            "id": "bottom-center"
+          },
+          {
+            "id": "bottom-right"
+          }
         ]
       }
     ],
@@ -85,13 +220,98 @@
       }
     }
   },
+  "colors": {
+    "tree": [
+      {
+        "id": "default-colors-group",
+        "children": [
+          {
+            "id": "color-white"
+          },
+          {
+            "id": "color-black"
+          }
+        ]
+      }
+    ],
+    "items": {
+      "default-colors-group": {
+        "type": "folder",
+        "name": "Common Colors"
+      },
+      "color-white": {
+        "type": "color",
+        "name": "White",
+        "hex": "#FFFFFF"
+      },
+      "color-black": {
+        "type": "color",
+        "name": "Black",
+        "hex": "#000000"
+      }
+    }
+  },
+  "typography": {
+    "tree": [
+      {
+        "id": "default-typography-group",
+        "children": [
+          {
+            "id": "typography-character-name"
+          },
+          {
+            "id": "typography-text-view"
+          }
+        ]
+      }
+    ],
+    "items": {
+      "default-typography-group": {
+        "type": "folder",
+        "name": "Template Typography",
+        "fontId": "QIRSqCzwDsLe0fUwDslG1"
+      },
+      "typography-character-name": {
+        "type": "typography",
+        "name": "Character Name",
+        "fontSize": 48,
+        "lineHeight": 1.5,
+        "colorId": "color-white",
+        "fontId": "QIRSqCzwDsLe0fUwDslG1",
+        "fontWeight": "400",
+        "previewText": "Character Name"
+      },
+      "typography-text-view": {
+        "type": "typography",
+        "name": "Text View",
+        "fontSize": 36,
+        "lineHeight": 1.5,
+        "colorId": "color-white",
+        "fontId": "QIRSqCzwDsLe0fUwDslG1",
+        "fontWeight": "400",
+        "previewText": "Text View"
+      }
+    }
+  },
+  "variables": {
+    "items": {},
+    "tree": []
+  },
+  "components": {
+    "items": {},
+    "tree": []
+  },
   "layouts": {
     "tree": [
       {
         "id": "default-layouts-group",
         "children": [
-          {"id": "simple-dialogue"},
-          {"id": "simple-choice"}
+          {
+            "id": "simple-dialogue"
+          },
+          {
+            "id": "simple-choice"
+          }
         ]
       }
     ],
@@ -131,7 +351,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "dialogue_box.png"
+              "imageId": "SOQGhjH3LSTZeL3isaX2j"
             },
             "character-name": {
               "type": "text",
@@ -178,9 +398,15 @@
             {
               "id": "dialogue-container",
               "children": [
-                {"id": "dialogue-box"},
-                {"id": "character-name"},
-                {"id": "dialogue-content"}
+                {
+                  "id": "dialogue-box"
+                },
+                {
+                  "id": "character-name"
+                },
+                {
+                  "id": "dialogue-content"
+                }
               ]
             }
           ]
@@ -302,8 +528,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "choice_box.png",
-              "hoverImageId": "choice_box_activated.png"
+              "imageId": "bTT1l4qwEc6XgsHgVKumE",
+              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
             },
             "choice-box-2": {
               "type": "sprite",
@@ -317,8 +543,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "choice_box.png",
-              "hoverImageId": "choice_box_activated.png"
+              "imageId": "bTT1l4qwEc6XgsHgVKumE",
+              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
             },
             "choice-box-3": {
               "type": "sprite",
@@ -332,8 +558,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "choice_box.png",
-              "hoverImageId": "choice_box_activated.png"
+              "imageId": "bTT1l4qwEc6XgsHgVKumE",
+              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
             },
             "choice-box-4": {
               "type": "sprite",
@@ -347,8 +573,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "choice_box.png",
-              "hoverImageId": "choice_box_activated.png"
+              "imageId": "bTT1l4qwEc6XgsHgVKumE",
+              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
             },
             "choice-box-5": {
               "type": "sprite",
@@ -362,8 +588,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "choice_box.png",
-              "hoverImageId": "choice_box_activated.png"
+              "imageId": "bTT1l4qwEc6XgsHgVKumE",
+              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
             },
             "choice-box-6": {
               "type": "sprite",
@@ -377,8 +603,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "choice_box.png",
-              "hoverImageId": "choice_box_activated.png"
+              "imageId": "bTT1l4qwEc6XgsHgVKumE",
+              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
             },
             "choice-text-1": {
               "type": "text",
@@ -508,43 +734,67 @@
                 {
                   "id": "choice-container-1",
                   "children": [
-                    {"id": "choice-box-1"},
-                    {"id": "choice-text-1"}
+                    {
+                      "id": "choice-box-1"
+                    },
+                    {
+                      "id": "choice-text-1"
+                    }
                   ]
                 },
                 {
                   "id": "choice-container-2",
                   "children": [
-                    {"id": "choice-box-2"},
-                    {"id": "choice-text-2"}
+                    {
+                      "id": "choice-box-2"
+                    },
+                    {
+                      "id": "choice-text-2"
+                    }
                   ]
                 },
                 {
                   "id": "choice-container-3",
                   "children": [
-                    {"id": "choice-box-3"},
-                    {"id": "choice-text-3"}
+                    {
+                      "id": "choice-box-3"
+                    },
+                    {
+                      "id": "choice-text-3"
+                    }
                   ]
                 },
                 {
                   "id": "choice-container-4",
                   "children": [
-                    {"id": "choice-box-4"},
-                    {"id": "choice-text-4"}
+                    {
+                      "id": "choice-box-4"
+                    },
+                    {
+                      "id": "choice-text-4"
+                    }
                   ]
                 },
                 {
                   "id": "choice-container-5",
                   "children": [
-                    {"id": "choice-box-5"},
-                    {"id": "choice-text-5"}
+                    {
+                      "id": "choice-box-5"
+                    },
+                    {
+                      "id": "choice-text-5"
+                    }
                   ]
                 },
                 {
                   "id": "choice-container-6",
                   "children": [
-                    {"id": "choice-box-6"},
-                    {"id": "choice-text-6"}
+                    {
+                      "id": "choice-box-6"
+                    },
+                    {
+                      "id": "choice-text-6"
+                    }
                   ]
                 }
               ]
@@ -554,80 +804,18 @@
       }
     }
   },
-  "colors": {
-    "tree": [
-      {
-        "id": "default-colors-group",
-        "children": [
-          {"id": "color-white"},
-          {"id": "color-black"}
-        ]
-      }
-    ],
-    "items": {
-      "default-colors-group": {
-        "type": "folder",
-        "name": "Common Colors"
-      },
-      "color-white": {
-        "type": "color",
-        "name": "White",
-        "hex": "#FFFFFF"
-      },
-      "color-black": {
-        "type": "color",
-        "name": "Black",
-        "hex": "#000000"
-      }
-    }
-  },
-  "fonts": {
-    "tree": [],
-    "items": {}
-  },
-  "typography": {
-    "tree": [
-      {
-        "id": "default-typography-group",
-        "children": [
-          {"id": "typography-character-name"},
-          {"id": "typography-text-view"}
-        ]
-      }
-    ],
-    "items": {
-      "default-typography-group": {
-        "type": "folder",
-        "name": "Template Typography"
-      },
-      "typography-character-name": {
-        "type": "typography",
-        "name": "Character Name",
-        "fontSize": 48,
-        "lineHeight": 1.5,
-        "colorId": "color-white",
-        "fontId": null,
-        "fontWeight": "400",
-        "previewText": "Character Name"
-      },
-      "typography-text-view": {
-        "type": "typography",
-        "name": "Text View",
-        "fontSize": 36,
-        "lineHeight": 1.5,
-        "colorId": "color-white",
-        "fontId": null,
-        "fontWeight": "400",
-        "previewText": "Text View"
-      }
-    }
+  "preset": {
+    "items": {},
+    "tree": []
   },
   "scenes": {
     "tree": [
       {
         "id": "default-scenes-folder",
         "children": [
-          {"id": "scene-prologue"}
+          {
+            "id": "scene-prologue"
+          }
         ]
       }
     ],
@@ -657,144 +845,207 @@
                       }
                     }
                   },
-                  "line-2": {"presentation": {}},
-                  "line-3": {"presentation": {}},
-                  "line-4": {"presentation": {}},
-                  "line-5": {"presentation": {}},
-                  "line-6": {"presentation": {}},
-                  "line-7": {"presentation": {}},
-                  "line-8": {"presentation": {}},
-                  "line-9": {"presentation": {}},
-                  "line-10": {"presentation": {}},
-                  "line-11": {"presentation": {}},
-                  "line-12": {"presentation": {}},
-                  "line-13": {"presentation": {}},
-                  "line-14": {"presentation": {}},
-                  "line-15": {"presentation": {}},
-                  "line-16": {"presentation": {}},
-                  "line-17": {"presentation": {}},
-                  "line-18": {"presentation": {}},
-                  "line-19": {"presentation": {}},
-                  "line-20": {"presentation": {}},
-                  "line-21": {"presentation": {}},
-                  "line-22": {"presentation": {}},
-                  "line-23": {"presentation": {}},
-                  "line-24": {"presentation": {}},
-                  "line-25": {"presentation": {}},
-                  "line-26": {"presentation": {}},
-                  "line-27": {"presentation": {}},
-                  "line-28": {"presentation": {}},
-                  "line-29": {"presentation": {}},
-                  "line-30": {"presentation": {}},
-                  "line-31": {"presentation": {}},
-                  "line-32": {"presentation": {}}
+                  "line-2": {
+                    "presentation": {}
+                  },
+                  "line-3": {
+                    "presentation": {}
+                  },
+                  "line-4": {
+                    "presentation": {}
+                  },
+                  "line-5": {
+                    "presentation": {}
+                  },
+                  "line-6": {
+                    "presentation": {}
+                  },
+                  "line-7": {
+                    "presentation": {}
+                  },
+                  "line-8": {
+                    "presentation": {}
+                  },
+                  "line-9": {
+                    "presentation": {}
+                  },
+                  "line-10": {
+                    "presentation": {}
+                  },
+                  "line-11": {
+                    "presentation": {}
+                  },
+                  "line-12": {
+                    "presentation": {}
+                  },
+                  "line-13": {
+                    "presentation": {}
+                  },
+                  "line-14": {
+                    "presentation": {}
+                  },
+                  "line-15": {
+                    "presentation": {}
+                  },
+                  "line-16": {
+                    "presentation": {}
+                  },
+                  "line-17": {
+                    "presentation": {}
+                  },
+                  "line-18": {
+                    "presentation": {}
+                  },
+                  "line-19": {
+                    "presentation": {}
+                  },
+                  "line-20": {
+                    "presentation": {}
+                  },
+                  "line-21": {
+                    "presentation": {}
+                  },
+                  "line-22": {
+                    "presentation": {}
+                  },
+                  "line-23": {
+                    "presentation": {}
+                  },
+                  "line-24": {
+                    "presentation": {}
+                  },
+                  "line-25": {
+                    "presentation": {}
+                  },
+                  "line-26": {
+                    "presentation": {}
+                  },
+                  "line-27": {
+                    "presentation": {}
+                  },
+                  "line-28": {
+                    "presentation": {}
+                  },
+                  "line-29": {
+                    "presentation": {}
+                  },
+                  "line-30": {
+                    "presentation": {}
+                  },
+                  "line-31": {
+                    "presentation": {}
+                  },
+                  "line-32": {
+                    "presentation": {}
+                  }
                 },
                 "tree": [
-                  {"id": "line-1"},
-                  {"id": "line-2"},
-                  {"id": "line-3"},
-                  {"id": "line-4"},
-                  {"id": "line-5"},
-                  {"id": "line-6"},
-                  {"id": "line-7"},
-                  {"id": "line-8"},
-                  {"id": "line-9"},
-                  {"id": "line-10"},
-                  {"id": "line-11"},
-                  {"id": "line-12"},
-                  {"id": "line-13"},
-                  {"id": "line-14"},
-                  {"id": "line-15"},
-                  {"id": "line-16"},
-                  {"id": "line-17"},
-                  {"id": "line-18"},
-                  {"id": "line-19"},
-                  {"id": "line-20"},
-                  {"id": "line-21"},
-                  {"id": "line-22"},
-                  {"id": "line-23"},
-                  {"id": "line-24"},
-                  {"id": "line-25"},
-                  {"id": "line-26"},
-                  {"id": "line-27"},
-                  {"id": "line-28"},
-                  {"id": "line-29"},
-                  {"id": "line-30"},
-                  {"id": "line-31"},
-                  {"id": "line-32"}
+                  {
+                    "id": "line-1"
+                  },
+                  {
+                    "id": "line-2"
+                  },
+                  {
+                    "id": "line-3"
+                  },
+                  {
+                    "id": "line-4"
+                  },
+                  {
+                    "id": "line-5"
+                  },
+                  {
+                    "id": "line-6"
+                  },
+                  {
+                    "id": "line-7"
+                  },
+                  {
+                    "id": "line-8"
+                  },
+                  {
+                    "id": "line-9"
+                  },
+                  {
+                    "id": "line-10"
+                  },
+                  {
+                    "id": "line-11"
+                  },
+                  {
+                    "id": "line-12"
+                  },
+                  {
+                    "id": "line-13"
+                  },
+                  {
+                    "id": "line-14"
+                  },
+                  {
+                    "id": "line-15"
+                  },
+                  {
+                    "id": "line-16"
+                  },
+                  {
+                    "id": "line-17"
+                  },
+                  {
+                    "id": "line-18"
+                  },
+                  {
+                    "id": "line-19"
+                  },
+                  {
+                    "id": "line-20"
+                  },
+                  {
+                    "id": "line-21"
+                  },
+                  {
+                    "id": "line-22"
+                  },
+                  {
+                    "id": "line-23"
+                  },
+                  {
+                    "id": "line-24"
+                  },
+                  {
+                    "id": "line-25"
+                  },
+                  {
+                    "id": "line-26"
+                  },
+                  {
+                    "id": "line-27"
+                  },
+                  {
+                    "id": "line-28"
+                  },
+                  {
+                    "id": "line-29"
+                  },
+                  {
+                    "id": "line-30"
+                  },
+                  {
+                    "id": "line-31"
+                  },
+                  {
+                    "id": "line-32"
+                  }
                 ]
               }
             }
           },
           "tree": [
-            {"id": "section-main"}
+            {
+              "id": "section-main"
+            }
           ]
         }
-      }
-    }
-  },
-  "audio": {
-    "tree": [
-      {
-        "id": "default-audio-folder",
-        "children": []
-      }
-    ],
-    "items": {
-      "default-audio-folder": {
-        "type": "folder",
-        "name": "Default Audio"
-      }
-    }
-  },
-  "videos": {
-    "tree": [
-      {
-        "id": "default-videos-folder",
-        "children": []
-      }
-    ],
-    "items": {
-      "default-videos-folder": {
-        "type": "folder",
-        "name": "Default Videos"
-      }
-    }
-  },
-  "characters": {
-    "tree": [
-      {
-        "id": "default-characters-folder",
-        "children": []
-      }
-    ],
-    "items": {
-      "default-characters-folder": {
-        "type": "folder",
-        "name": "Default Characters"
-      }
-    }
-  },
-  "images": {
-    "tree": [],
-    "items": {
-      "dialogue_box.png": {
-        "type": "image",
-        "name": "dialogue box",
-        "filename": "dialogue_box.png",
-        "url": "/templates/default/files/dialogue_box.png"
-      },
-      "choice_box.png": {
-        "type": "image",
-        "name": "choice box",
-        "filename": "choice_box.png",
-        "url": "/templates/default/files/choice_box.png"
-      },
-      "choice_box_activated.png": {
-        "type": "image",
-        "name": "choice box activated",
-        "filename": "choice_box_activated.png",
-        "url": "/templates/default/files/choice_box_activated.png"
       }
     }
   }

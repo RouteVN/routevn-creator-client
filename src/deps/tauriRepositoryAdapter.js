@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { loadTemplate } from "../utils/templateLoader";
+import { loadTemplate, getTemplateFiles } from "../utils/templateLoader";
 import { nanoid } from "nanoid";
 
 /**
@@ -29,35 +29,7 @@ export const initializeProject = async ({
   const templateData = await loadTemplate(template);
 
   // Copy template files to project directory with random file IDs
-  const fileMapping = await copyTemplateFiles(template, filesPath);
-
-  // Update image items with new file IDs (keep imageId unchanged)
-  if (templateData.images && templateData.images.items) {
-    for (const [imageId, image] of Object.entries(templateData.images.items)) {
-      const originalFileName = image.filename;
-      const newFileId = fileMapping[originalFileName];
-      if (newFileId) {
-        // imageId stays the same, only update the fileId reference
-        const fullPath = await join(filesPath, newFileId);
-        image.filename = newFileId;
-        image.url = convertFileSrc(fullPath);
-      }
-    }
-  }
-
-  // Update font items with new file IDs (keep fontId unchanged)
-  if (templateData.fonts && templateData.fonts.items) {
-    for (const [fontId, font] of Object.entries(templateData.fonts.items)) {
-      const originalFileName = font.filename;
-      const newFileId = fileMapping[originalFileName];
-      if (newFileId) {
-        // fontId stays the same, only update the fileId reference
-        const fullPath = await join(filesPath, newFileId);
-        font.filename = newFileId;
-        font.url = convertFileSrc(fullPath);
-      }
-    }
-  }
+  await copyTemplateFiles(template, filesPath);
 
   // Add project info to template data
   const initData = {
@@ -81,28 +53,17 @@ async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
 
   // List of files to copy (hardcoded for now, could be made dynamic)
-  const filesToCopy = [
-    "dialogue_box.png",
-    "choice_box.png",
-    "choice_box_activated.png",
-    "sample_font.ttf",
-  ];
-
-  // Map original filenames to new random file IDs
-  const fileMapping = {};
+  const filesToCopy = await getTemplateFiles(templateId);
 
   for (const fileName of filesToCopy) {
     try {
       const sourcePath = templateFilesPath + fileName;
 
-      // Generate random file ID (no extension)
-      const newFileId = nanoid();
-      fileMapping[fileName] = newFileId;
-
-      const targetFilePath = await join(targetPath, newFileId);
+      const targetFilePath = await join(targetPath, fileName);
 
       // Fetch from the web server and save locally
-      const response = await fetch(sourcePath);
+      // Add a query parameter to bypass Vite's JS parsing
+      const response = await fetch(sourcePath + "?raw");
       if (response.ok) {
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
@@ -115,8 +76,6 @@ async function copyTemplateFiles(templateId, targetPath) {
       console.error(`Failed to copy template file ${fileName}:`, error);
     }
   }
-
-  return fileMapping;
 }
 
 /**
