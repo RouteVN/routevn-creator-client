@@ -94,11 +94,11 @@ async function copyTemplateFiles(templateId, targetPath) {
   for (const fileName of filesToCopy) {
     try {
       const sourcePath = templateFilesPath + fileName;
-      
+
       // Generate random file ID (no extension)
       const newFileId = nanoid();
       fileMapping[fileName] = newFileId;
-      
+
       const targetFilePath = await join(targetPath, newFileId);
 
       // Fetch from the web server and save locally
@@ -115,7 +115,7 @@ async function copyTemplateFiles(templateId, targetPath) {
       console.error(`Failed to copy template file ${fileName}:`, error);
     }
   }
-  
+
   return fileMapping;
 }
 

@@ -12,7 +12,10 @@ export async function initializeWebTemplate(repositoryFactory, fileManager) {
     const templateData = await loadTemplate("default");
 
     // Load and store template files in IndexedDB
-    const templateFiles = await loadTemplateFilesToIndexedDB("default", fileManager);
+    const templateFiles = await loadTemplateFilesToIndexedDB(
+      "default",
+      fileManager,
+    );
 
     // Replace all imageId references in layouts with new random IDs
     if (templateFiles.imageIdMapping && templateData.layouts) {
@@ -20,17 +23,24 @@ export async function initializeWebTemplate(repositoryFactory, fileManager) {
         if (layout.elements && layout.elements.items) {
           for (const element of Object.values(layout.elements.items)) {
             // Replace imageId with new random ID
-            if (element.imageId && templateFiles.imageIdMapping[element.imageId]) {
+            if (
+              element.imageId &&
+              templateFiles.imageIdMapping[element.imageId]
+            ) {
               element.imageId = templateFiles.imageIdMapping[element.imageId];
             }
-            if (element.hoverImageId && templateFiles.imageIdMapping[element.hoverImageId]) {
-              element.hoverImageId = templateFiles.imageIdMapping[element.hoverImageId];
+            if (
+              element.hoverImageId &&
+              templateFiles.imageIdMapping[element.hoverImageId]
+            ) {
+              element.hoverImageId =
+                templateFiles.imageIdMapping[element.hoverImageId];
             }
           }
         }
       }
     }
-    
+
     // Replace fontId references in typography with new random IDs
     if (templateFiles.fontIdMapping && templateData.typography) {
       for (const typo of Object.values(templateData.typography.items)) {
@@ -63,41 +73,41 @@ async function loadTemplateFilesToIndexedDB(templateId, fileManager) {
   // Create folder IDs
   const imageFolderId = nanoid();
   const fontFolderId = nanoid();
-  
+
   const result = {
-    images: { 
+    images: {
       items: {
         [imageFolderId]: {
           type: "folder",
-          name: "Template Images"
-        }
-      }, 
+          name: "Template Images",
+        },
+      },
       tree: [
         {
           id: imageFolderId,
-          children: []
-        }
-      ] 
+          children: [],
+        },
+      ],
     },
-    fonts: { 
+    fonts: {
       items: {
         [fontFolderId]: {
           type: "folder",
-          name: "Template Fonts"
-        }
+          name: "Template Fonts",
+        },
       },
       tree: [
         {
           id: fontFolderId,
-          children: []
-        }
-      ]
+          children: [],
+        },
+      ],
     },
   };
 
   // Map to track original filename -> new random ID for replacement
   const imageIdMapping = {};
-  
+
   // Load image files
   const imageFiles = [
     "dialogue_box.png",
@@ -107,13 +117,15 @@ async function loadTemplateFilesToIndexedDB(templateId, fileManager) {
 
   for (const fileName of imageFiles) {
     try {
-      const response = await fetch(`/templates/${templateId}/files/${fileName}`);
+      const response = await fetch(
+        `/templates/${templateId}/files/${fileName}`,
+      );
       if (response.ok) {
         const blob = await response.blob();
         // Generate ONE random ID that will be used everywhere
         const newId = nanoid();
         imageIdMapping[fileName] = newId;
-        
+
         // Use this ID as the file name so fileManager uses it as fileId
         const file = new File([blob], newId, { type: blob.type });
 
@@ -125,9 +137,9 @@ async function loadTemplateFilesToIndexedDB(templateId, fileManager) {
           // Use the SAME random ID as imageId (key in items)
           result.images.items[newId] = {
             type: "image",
-            name: fileName.replace('.png', '').replace(/_/g, ' '),
-            filename: fileData.fileId,  // should be the same as newId
-            url: fileData.downloadUrl,   // blob URL from IndexedDB
+            name: fileName.replace(".png", "").replace(/_/g, " "),
+            filename: fileData.fileId, // should be the same as newId
+            url: fileData.downloadUrl, // blob URL from IndexedDB
             width: fileData.dimensions?.width,
             height: fileData.dimensions?.height,
           };
@@ -139,22 +151,24 @@ async function loadTemplateFilesToIndexedDB(templateId, fileManager) {
       console.error(`Failed to load template image ${fileName}:`, error);
     }
   }
-  
+
   // Store mapping for template replacement
   result.imageIdMapping = imageIdMapping;
-  
+
   // Map for font IDs
   const fontIdMapping = {};
-  
+
   // Load font files
   try {
-    const response = await fetch(`/templates/${templateId}/files/sample_font.ttf`);
+    const response = await fetch(
+      `/templates/${templateId}/files/sample_font.ttf`,
+    );
     if (response.ok) {
       const blob = await response.blob();
       // Generate ONE random ID for font
       const newId = nanoid();
       fontIdMapping["font-sample_font"] = newId;
-      
+
       const file = new File([blob], newId, { type: "font/ttf" });
 
       // Use fileManager to store in IndexedDB
@@ -166,8 +180,8 @@ async function loadTemplateFilesToIndexedDB(templateId, fileManager) {
         result.fonts.items[newId] = {
           type: "font",
           name: "Sample Font",
-          filename: fontData.fileId,  // should be the same as newId
-          url: fontData.downloadUrl,   // blob URL from upload result
+          filename: fontData.fileId, // should be the same as newId
+          url: fontData.downloadUrl, // blob URL from upload result
         };
         // Add to folder's children
         result.fonts.tree[0].children.push({ id: newId });
@@ -176,7 +190,7 @@ async function loadTemplateFilesToIndexedDB(templateId, fileManager) {
   } catch (error) {
     console.error("Failed to load template font:", error);
   }
-  
+
   result.fontIdMapping = fontIdMapping;
   return result;
 }
