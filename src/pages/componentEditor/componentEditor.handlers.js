@@ -46,7 +46,7 @@ const renderComponentPreview = async (deps) => {
     router,
     render,
     drenderer,
-    getFileContent,
+    fileManagerFactory,
   } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -73,10 +73,12 @@ const renderComponentPreview = async (deps) => {
 
   const assets = {};
 
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
+
   for (const fileId of fileIds) {
-    const { url } = await getFileContent({
+    const { url } = await fileManager.getFileContent({
       fileId: fileId,
-      projectId: "someprojectId",
     });
     assets[`file:${fileId}`] = {
       url: url,

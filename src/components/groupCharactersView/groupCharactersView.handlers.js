@@ -94,7 +94,7 @@ export const handleFormActionClick = (e, deps) => {
 };
 
 export const handleAvatarClick = async (e, deps) => {
-  const { store, render, filePicker, fileManager, uploadImageFiles, subject } =
+  const { store, render, filePicker, fileManagerFactory, router, subject } =
     deps;
 
   try {
@@ -107,9 +107,11 @@ export const handleAvatarClick = async (e, deps) => {
     if (files.length > 0) {
       const file = files[0];
 
+      // Get fileManager for this project
+      const { p } = router.getPayload();
+      const fileManager = await fileManagerFactory.getByProject(p);
       // Upload the file immediately
-      const uploader = fileManager || { upload: uploadImageFiles };
-      const uploadResults = await uploader.upload([file], "someprojectId");
+      const uploadResults = await fileManager.upload([file]);
 
       if (!uploadResults || uploadResults.length === 0) {
         throw new Error("Failed to upload avatar image");

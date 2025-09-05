@@ -21,7 +21,7 @@ export const handleFormChange = async (e, deps) => {
 export const handleFormExtraEvent = async (_, deps) => {
   const {
     filePicker,
-    uploadImageFiles,
+    fileManagerFactory,
     repositoryFactory,
     router,
     subject,
@@ -43,7 +43,9 @@ export const handleFormExtraEvent = async (_, deps) => {
     }
 
     const file = files[0];
-    const successfulUploads = await uploadImageFiles([file], "someprojectId");
+    // Get fileManager for this project
+    const fileManager = await fileManagerFactory.getByProject(p);
+    const successfulUploads = await fileManager.upload([file]);
 
     // TODO better handle failed uploads
     if (successfulUploads.length > 0) {
