@@ -80,13 +80,14 @@ const cancelKeyboardSave = () => {
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileIds, fontsItems) => {
-  const { getFileContent } = deps;
+  const { getFileContent, router } = deps;
+  const { p } = router.getPayload();
   const assets = {};
 
   for (const fileId of fileIds) {
     // Check cache first
     let url;
-    const cacheKey = `${fileId}_someprojectId`;
+    const cacheKey = `${fileId}_${p}`;
 
     if (fileContentCache.has(cacheKey)) {
       url = fileContentCache.get(cacheKey);
@@ -94,7 +95,7 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
       // Fetch from API if not in cache
       const result = await getFileContent({
         fileId: fileId,
-        projectId: "someprojectId",
+        projectId: p,
       });
       url = result.url;
       // Store in cache for future use
@@ -430,11 +431,23 @@ export const handleFileExplorerItemClick = async (e, deps) => {
       if (selectedItem[fieldName]) {
         try {
           // Get the image object using the imageId
-          const image = imageItems[selectedItem[fieldName]];
+          let image = imageItems[selectedItem[fieldName]];
+
+          // Handle legacy case where imageId is actually a fileId
+          if (!image) {
+            // Try to find the image by fileId
+            const imageEntry = Object.entries(imageItems).find(
+              ([id, item]) => item.fileId === selectedItem[fieldName],
+            );
+            if (imageEntry) {
+              image = imageEntry[1];
+            }
+          }
+
           if (image && image.fileId) {
             const { url } = await getFileContent({
               fileId: image.fileId,
-              projectId: "someprojectId",
+              projectId: p,
             });
             fieldResources[fieldName] = { src: url };
           }
@@ -688,7 +701,7 @@ export const handleConfirmImageSelection = async (e, deps) => {
     try {
       const { url } = await getFileContent({
         fileId: selectedImage.fileId,
-        projectId: "someprojectId",
+        projectId: p,
       });
 
       // Get current fieldResources and update with new image
