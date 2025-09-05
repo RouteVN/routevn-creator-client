@@ -431,18 +431,7 @@ export const handleFileExplorerItemClick = async (e, deps) => {
       if (selectedItem[fieldName]) {
         try {
           // Get the image object using the imageId
-          let image = imageItems[selectedItem[fieldName]];
-
-          // Handle legacy case where imageId is actually a fileId
-          if (!image) {
-            // Try to find the image by fileId
-            const imageEntry = Object.entries(imageItems).find(
-              ([id, item]) => item.fileId === selectedItem[fieldName],
-            );
-            if (imageEntry) {
-              image = imageEntry[1];
-            }
-          }
+          const image = imageItems[selectedItem[fieldName]];
 
           if (image && image.fileId) {
             const { url } = await getFileContent({
