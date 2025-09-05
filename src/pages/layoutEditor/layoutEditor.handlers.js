@@ -80,9 +80,12 @@ const cancelKeyboardSave = () => {
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileIds, fontsItems) => {
-  const { getFileContent, router } = deps;
+  const { fileManagerFactory, router } = deps;
   const { p } = router.getPayload();
   const assets = {};
+
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
 
   for (const fileId of fileIds) {
     // Check cache first
@@ -93,9 +96,8 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
       url = fileContentCache.get(cacheKey);
     } else {
       // Fetch from API if not in cache
-      const result = await getFileContent({
+      const result = await fileManager.getFileContent({
         fileId: fileId,
-        projectId: p,
       });
       url = result.url;
       // Store in cache for future use
@@ -407,7 +409,7 @@ export const handleAfterMount = async (deps) => {
 export const handleRenderOnly = (payload, deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (e, deps) => {
-  const { store, render, getFileContent, repositoryFactory, router } = deps;
+  const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const itemId = e.detail.id;
@@ -424,6 +426,9 @@ export const handleFileExplorerItemClick = async (e, deps) => {
     const { images } = repository.getState();
     const imageItems = images.items;
 
+    // Get fileManager for this project
+    const fileManager = await fileManagerFactory.getByProject(p);
+
     // Fetch URLs for each image field
     const imageFields = ["imageId", "hoverImageId", "clickImageId"];
 
@@ -434,9 +439,8 @@ export const handleFileExplorerItemClick = async (e, deps) => {
           const image = imageItems[selectedItem[fieldName]];
 
           if (image && image.fileId) {
-            const { url } = await getFileContent({
+            const { url } = await fileManager.getFileContent({
               fileId: image.fileId,
-              projectId: p,
             });
             fieldResources[fieldName] = { src: url };
           }
@@ -628,7 +632,7 @@ export const handleImageSelectorSelection = (e, deps) => {
 };
 
 export const handleConfirmImageSelection = async (e, deps) => {
-  const { store, render, repositoryFactory, router, getFileContent } = deps;
+  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
@@ -688,9 +692,10 @@ export const handleConfirmImageSelection = async (e, deps) => {
 
     // Update fieldResources with the new image URL
     try {
-      const { url } = await getFileContent({
+      // Get fileManager for this project
+      const fileManager = await fileManagerFactory.getByProject(p);
+      const { url } = await fileManager.getFileContent({
         fileId: selectedImage.fileId,
-        projectId: p,
       });
 
       // Get current fieldResources and update with new image

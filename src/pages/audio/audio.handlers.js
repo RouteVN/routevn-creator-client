@@ -40,13 +40,14 @@ export const handleAudioItemClick = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, repositoryFactory, router, uploadAudioFiles } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await uploadAudioFiles(files, "someprojectId");
+  const successfulUploads = await fileManager.upload(files);
 
   // Add all items to repository
   successfulUploads.forEach((result) => {
@@ -78,18 +79,19 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
+export const handleFormExtraEvent = async (_, deps) => {
   const {
     repositoryFactory,
     router,
     store,
     render,
     filePicker,
-    uploadAudioFiles,
+    fileManagerFactory,
     httpClient,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -109,7 +111,7 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await uploadAudioFiles([file], "someprojectId");
+  const uploadedFiles = await fileManager.upload([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");

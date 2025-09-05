@@ -165,14 +165,16 @@ export const handleTypographyItemClick = (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, uploadFontFiles, repositoryFactory, router } = deps;
+  const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Upload all files using uploadFontFiles
-  const uploadResults = await uploadFontFiles(files, "someprojectId");
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
+  // Upload all files
+  const uploadResults = await fileManager.upload(files);
 
   // uploadResults already contains only successful uploads
   const successfulUploads = uploadResults;
@@ -539,7 +541,7 @@ export const handleAddFontDialogClose = (_, deps) => {
 };
 
 export const handleFontFileSelected = async (e, deps) => {
-  const { store, render, uploadImageFiles } = deps;
+  const { store, render, fileManagerFactory, router } = deps;
   const { files } = e.detail;
 
   if (files && files.length > 0) {
@@ -548,8 +550,11 @@ export const handleFontFileSelected = async (e, deps) => {
     const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
 
     try {
+      // Get fileManager for this project
+      const { p } = router.getPayload();
+      const fileManager = await fileManagerFactory.getByProject(p);
       // Upload the file immediately when selected
-      const uploadResults = await uploadImageFiles([file], "someprojectId");
+      const uploadResults = await fileManager.upload([file]);
 
       if (uploadResults.length === 0) {
         alert("Failed to upload font file");

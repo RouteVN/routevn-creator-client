@@ -33,15 +33,16 @@ export const handleDataChanged = async (e, deps) => {
 };
 
 export const handleImageItemClick = async (e, deps) => {
-  const { store, render, getFileContent } = deps;
+  const { store, render, fileManagerFactory, router } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
-  const { url } = await getFileContent({
+  const { p: projectId } = router.getPayload();
+  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { url } = await fileManager.getFileContent({
     fileId: selectedItem.fileId,
-    projectId: "someprojectId",
   });
   store.setContext({
     fileId: {
@@ -52,16 +53,10 @@ export const handleImageItemClick = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const {
-    router,
-    store,
-    render,
-    fileManager,
-    uploadImageFiles,
-    repositoryFactory,
-  } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { router, store, render, fileManagerFactory, repositoryFactory } = deps;
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -74,11 +69,8 @@ export const handleDragDropFileSelected = async (e, deps) => {
     return;
   }
 
-  // Use fileManager if available, otherwise fall back to uploadImageFiles
-  const uploader = fileManager || { upload: uploadImageFiles };
-
   // Upload all files
-  const uploadResults = await uploader.upload(files, "someprojectId");
+  const uploadResults = await fileManager.upload(files);
 
   // uploadResults already contains only successful uploads
   const successfulUploads = uploadResults;
@@ -148,10 +140,11 @@ export const handleFormExtraEvent = async (_, deps) => {
     store,
     render,
     filePicker,
-    uploadImageFiles,
+    fileManagerFactory,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -171,7 +164,7 @@ export const handleFormExtraEvent = async (_, deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await uploadImageFiles([file], "someprojectId");
+  const uploadedFiles = await fileManager.upload([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");

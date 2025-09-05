@@ -55,24 +55,17 @@ export const handleComponentCreated = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const {
-    store,
-    render,
-    fileManager,
-    uploadImageFiles,
-    repositoryFactory,
-    router,
-  } = deps;
+  const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Use fileManager if available, otherwise fall back to uploadImageFiles
-  const uploader = fileManager || { upload: uploadImageFiles };
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
 
   // Upload all files
-  const uploadResults = await uploader.upload(files, "someprojectId");
+  const uploadResults = await fileManager.upload(files);
 
   // uploadResults already contains only successful uploads
   const successfulUploads = uploadResults;

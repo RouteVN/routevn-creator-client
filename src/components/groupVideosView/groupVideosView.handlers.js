@@ -30,7 +30,7 @@ export const handleVideoItemClick = (e, deps) => {
 };
 
 export const handleVideoThumbnailDoubleClick = async (e, deps) => {
-  const { store, render, getFileContent, props = {} } = deps;
+  const { store, render, fileManagerFactory, router, props = {} } = deps;
   const itemId = e.currentTarget.id.replace("video-item-", "");
 
   const flatGroups = props.flatGroups || [];
@@ -47,9 +47,12 @@ export const handleVideoThumbnailDoubleClick = async (e, deps) => {
   store.setVideoVisible(selectedVideo);
   render();
 
-  const { url } = await getFileContent({
+  // Get the current project ID from router
+  const { p: projectId } = router.getPayload();
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { url } = await fileManager.getFileContent({
     fileId: selectedVideo.fileId,
-    projectId: "someprojectId",
   });
 
   // add updated url to object and render again

@@ -1,6 +1,6 @@
 // IndexedDB storage adapter - implements storage operations locally in browser
 
-import { nanoid } from "nanoid";
+// IndexedDB storage adapter for web platform
 
 const DB_NAME = "RouteVNCreatorFiles";
 const DB_VERSION = 1;
@@ -136,13 +136,29 @@ export const createIndexedDBStorageAdapter = () => {
   const blobUrls = new Map();
 
   return {
+    // Initialize the adapter
+    async init() {
+      // Ensure database is initialized
+      await initDB();
+    },
+
     // Store a file locally in IndexedDB
-    storeFile: async (file, projectId) => {
+    storeFile: async (file) => {
       try {
-        const fileId = nanoid();
+        // Extract fileId from filename - must match template file naming
+        if (!file.name) {
+          throw new Error("File must have a name");
+        }
+
+        // Remove extension to get fileId
+        const fileId = file.name.replace(/\.[^/.]+$/, "");
+
+        if (!fileId) {
+          throw new Error("Invalid file name - cannot extract fileId");
+        }
 
         // Store the file
-        await storeInIndexedDB(fileId, file, projectId, {
+        await storeInIndexedDB(fileId, file, null, {
           name: file.name,
           type: file.type,
         });
@@ -161,7 +177,7 @@ export const createIndexedDBStorageAdapter = () => {
     },
 
     // Get file content URL from IndexedDB
-    getFileUrl: async (fileId, projectId) => {
+    getFileUrl: async (fileId) => {
       try {
         // Check if we already have a blob URL
         if (blobUrls.has(fileId)) {
@@ -183,7 +199,7 @@ export const createIndexedDBStorageAdapter = () => {
     },
 
     // Store metadata as JSON blob
-    storeMetadata: async function (data, projectId) {
+    storeMetadata: async function (data) {
       try {
         const jsonBlob = new Blob([JSON.stringify(data)], {
           type: "application/json",
@@ -196,7 +212,7 @@ export const createIndexedDBStorageAdapter = () => {
         });
 
         // Reuse storeFile for metadata
-        const result = await this.storeFile(jsonBlob, projectId);
+        const result = await this.storeFile(jsonBlob);
         return result;
       } catch (error) {
         console.error("Failed to store metadata in IndexedDB:", error);
@@ -216,7 +232,7 @@ export const createIndexedDBStorageAdapter = () => {
     },
 
     listFiles: async (projectId) => {
-      return listFilesInIndexedDB(projectId);
+      return listFilesInIndexedDB(null);
     },
 
     // Clean up all blob URLs (call on unmount/cleanup)

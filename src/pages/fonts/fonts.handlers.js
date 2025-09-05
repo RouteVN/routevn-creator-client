@@ -37,17 +37,18 @@ export const handleFontItemClick = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
+export const handleFormExtraEvent = async (_, deps) => {
   const {
     repositoryFactory,
     router,
     store,
     render,
     filePicker,
-    uploadFontFiles,
+    fileManagerFactory,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -75,7 +76,7 @@ export const handleFormExtraEvent = async (e, deps) => {
     return;
   }
 
-  const uploadedFiles = await uploadFontFiles([file], "someprojectId");
+  const uploadedFiles = await fileManager.upload([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");
@@ -114,15 +115,16 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const {
     store,
     render,
-    uploadFontFiles,
+    fileManagerFactory,
     repositoryFactory,
     router,
     httpClient,
     fontManager,
     loadFontFile,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -138,7 +140,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   }
 
   // Upload files
-  const successfulUploads = await uploadFontFiles(files, "someprojectId");
+  const successfulUploads = await fileManager.upload(files);
 
   // Add successfully uploaded files to repository and collect new font items
   const newFontItems = [];
@@ -175,7 +177,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
       loadFontFile({
         fontName: item.fontFamily,
         fileId: item.fileId,
-        projectId: "someprojectId",
+        projectId: projectId,
       }),
     );
     await Promise.all(loadPromises);
@@ -190,11 +192,12 @@ export const handleFontItemDoubleClick = async (e, deps) => {
     render,
     repositoryFactory,
     router,
-    getFileContent,
+    fileManagerFactory,
     fontManager,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
   const { itemId } = e.detail;
 
   // Find the font item
@@ -209,7 +212,7 @@ export const handleFontItemDoubleClick = async (e, deps) => {
 
   // Extract font information
   const fontInfoExtractor = createFontInfoExtractor({
-    getFileContent,
+    getFileContent: fileManager.getFileContent,
     fontManager,
   });
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
