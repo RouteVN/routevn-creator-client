@@ -35,8 +35,8 @@ export async function fetchTemplateImages(uploadImageFiles) {
           const result = results[0];
           const imageId = `image-${fileName.replace(".png", "")}`;
 
-          // Store the file ID for layout references
-          fetchedImages[fileName] = result.fileId;
+          // Store the image ID (not file ID) for layout references
+          fetchedImages[fileName] = imageId;
 
           // Create the image item for the repository
           imageItems[imageId] = {
@@ -97,8 +97,8 @@ export async function fetchTemplateFonts(uploadFontFiles) {
           const result = results[0];
           const fontId = `font-sample`;
 
-          // Store the file ID for layout references
-          fetchedFonts[fileName] = result.fileId;
+          // Store the font ID (not file ID) for typography references
+          fetchedFonts[fileName] = fontId;
 
           // Create the font item for the repository
           fontItems[fontId] = {

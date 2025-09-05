@@ -23,9 +23,7 @@ export const handleAfterMount = async (deps) => {
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems(sceneItems);
 
-  return () => {
-    render();
-  };
+  render();
 };
 
 export const handleDataChanged = async (e, deps) => {
@@ -64,9 +62,11 @@ export const handleDataChanged = async (e, deps) => {
 };
 
 export const handleFileExplorerClickItem = (e, deps) => {
-  const { subject } = deps;
+  const { subject, router } = deps;
+  const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
     path: "/project/scene-editor",
+    payload: currentPayload, // Preserve existing payload (including p for projectId)
   });
 };
 
@@ -102,7 +102,7 @@ export const handleWhiteboardItemSelected = (e, deps) => {
 };
 
 export const handleWhiteboardItemDoubleClick = (e, deps) => {
-  const { subject } = deps;
+  const { subject, router } = deps;
   const { itemId } = e.detail;
 
   if (!itemId) {
@@ -111,9 +111,10 @@ export const handleWhiteboardItemDoubleClick = (e, deps) => {
   }
 
   // Redirect to scene editor with sceneId in payload
+  const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
     path: "/project/scene-editor",
-    payload: { sceneId: itemId },
+    payload: { ...currentPayload, sceneId: itemId }, // Preserve p and add sceneId
   });
 };
 
