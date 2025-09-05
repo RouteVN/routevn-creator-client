@@ -14,7 +14,7 @@ import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
-import { initializeWebTemplate } from "./utils/webTemplateInitializer";
+import { initializeWebProject } from "./deps/webProjectInitializer";
 
 // Web-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -107,9 +107,11 @@ const repositoryFactory = createWebRepositoryFactory(
 );
 
 // Initialize template data for first-time users (necessary startup initialization)
-// Get the single file manager instance for web
-const fileManager = await fileManagerFactory.getByProject();
-await initializeWebTemplate(repositoryFactory, fileManager);
+await initializeWebProject({
+  repositoryFactory,
+  storageAdapterFactory,
+  template: "default",
+});
 
 const userConfig = createUserConfig();
 const subject = new Subject();

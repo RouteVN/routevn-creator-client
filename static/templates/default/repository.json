@@ -351,7 +351,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "SOQGhjH3LSTZeL3isaX2j"
+              "imageId": "iN20__bg4TaS80gh7-XcL"
             },
             "character-name": {
               "type": "text",
@@ -528,8 +528,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "bTT1l4qwEc6XgsHgVKumE",
-              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
+              "imageId": "w4D_3F43eaKETNbBaAIaJ",
+              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
             },
             "choice-box-2": {
               "type": "sprite",
@@ -543,8 +543,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "bTT1l4qwEc6XgsHgVKumE",
-              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
+              "imageId": "w4D_3F43eaKETNbBaAIaJ",
+              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
             },
             "choice-box-3": {
               "type": "sprite",
@@ -558,8 +558,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "bTT1l4qwEc6XgsHgVKumE",
-              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
+              "imageId": "w4D_3F43eaKETNbBaAIaJ",
+              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
             },
             "choice-box-4": {
               "type": "sprite",
@@ -573,8 +573,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "bTT1l4qwEc6XgsHgVKumE",
-              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
+              "imageId": "w4D_3F43eaKETNbBaAIaJ",
+              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
             },
             "choice-box-5": {
               "type": "sprite",
@@ -588,8 +588,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "bTT1l4qwEc6XgsHgVKumE",
-              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
+              "imageId": "w4D_3F43eaKETNbBaAIaJ",
+              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
             },
             "choice-box-6": {
               "type": "sprite",
@@ -603,8 +603,8 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "imageId": "bTT1l4qwEc6XgsHgVKumE",
-              "hoverImageId": "vZ_jvxlBxz6FJ8xryL-MV"
+              "imageId": "w4D_3F43eaKETNbBaAIaJ",
+              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
             },
             "choice-text-1": {
               "type": "text",

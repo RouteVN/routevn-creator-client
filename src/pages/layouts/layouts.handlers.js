@@ -5,6 +5,7 @@ export const handleAfterMount = async (deps) => {
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { layouts } = repository.getState();
+  console.log("Layouts loaded:", layouts);
   store.setItems(layouts);
   render();
 };

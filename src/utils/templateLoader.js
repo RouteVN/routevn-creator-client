@@ -17,7 +17,6 @@ export async function loadTemplate(templateId = "default") {
 export async function getTemplateFiles(templateId) {
   try {
     const response = await fetch(`/templates/${templateId}/files/files.json`);
-    console.log(response);
     if (!response.ok) {
       throw new Error(`Failed to load file list: ${templateId}`);
     }
