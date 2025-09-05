@@ -52,8 +52,26 @@ async function renderSceneState(store, drenderer, getFileContent) {
   drenderer.render(renderState);
 }
 
-export const handleBeforeMount = async (deps) => {
-  const { drenderer, store, router, repositoryFactory, render } = deps;
+export const handleBeforeMount = (deps) => {
+  const { drenderer } = deps;
+
+  return () => {
+    drenderer.destroy();
+  };
+};
+
+export const handleAfterMount = async (deps) => {
+  const {
+    getRefIds,
+    drenderer,
+    store,
+    getFileContent,
+    router,
+    repositoryFactory,
+    render,
+  } = deps;
+
+  // Get sceneId and projectId from router
   const { sceneId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
@@ -72,21 +90,14 @@ export const handleBeforeMount = async (deps) => {
     }
   }
 
-  // Trigger render to update the view with selected line
-  render();
-  return () => {
-    drenderer.destroy();
-  };
-};
-
-export const handleAfterMount = async (deps) => {
-  const { getRefIds, drenderer, store, getFileContent } = deps;
   // Initialize drenderer with canvas
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
 
   // Render the canvas with the initial selected line's presentation data
   await renderSceneState(store, drenderer, getFileContent);
+
+  render();
 };
 
 export const handleSectionTabClick = (e, deps) => {
