@@ -14,9 +14,8 @@ import { createLegacyUploaders } from "./deps/fileUploaderCompat";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
-import { createTemplateProjectData } from "./utils/templateProjectData";
 import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
-import { fetchTemplateImages, fetchTemplateFonts } from "./utils/templateSetup";
+import { initializeWebTemplate } from "./utils/webTemplateInitializer";
 
 // Web-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -119,54 +118,8 @@ const repositoryFactory = createWebRepositoryFactory(
   repositoryAdapter,
 );
 
-// Get the single repository for web
-const repository = await repositoryFactory.getByProject();
-
-// Check if we need to add template data
-const actionStream = repository.getAllEvents();
-
-if (actionStream.length === 0) {
-  console.log("First time user - adding template data to repository...");
-
-  // Fetch and upload template resources
-  const templateImagesData = await fetchTemplateImages(uploadImageFiles);
-  const templateFontsData = await fetchTemplateFonts(uploadFontFiles);
-
-  // Create template data structure
-  const templateData = createTemplateProjectData(
-    templateImagesData.fetchedImages,
-    templateFontsData.fetchedFonts,
-  );
-
-  // Prepare the complete initialization data
-  const initData = {
-    images: {
-      items: templateImagesData.imageItems,
-      tree: templateImagesData.imageTree,
-    },
-    fonts: {
-      items: { ...templateFontsData.fontItems, ...templateData.fonts.items },
-      tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-    },
-    animations: templateData.animations,
-    transforms: templateData.transforms,
-    colors: templateData.colors,
-    typography: templateData.typography,
-    layouts: templateData.layouts,
-    scenes: templateData.scenes,
-    audio: templateData.audio,
-    videos: templateData.videos,
-    characters: templateData.characters,
-  };
-
-  // Use the new init action to set all template data at once
-  repository.addAction({
-    actionType: "init",
-    target: null,
-    value: initData,
-  });
-  console.log("Template data added to repository and saved to localStorage");
-}
+// Initialize template data for first-time users (necessary startup initialization)
+await initializeWebTemplate(repositoryFactory, fileManager);
 
 const userConfig = createUserConfig();
 const subject = new Subject();

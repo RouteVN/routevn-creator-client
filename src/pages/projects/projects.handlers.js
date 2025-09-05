@@ -87,19 +87,13 @@ export const handleFormSubmit = async (e, deps) => {
 
     // Initialize project using the service from deps
     try {
-      const { initializeProject, uploadImageFiles, uploadFontFiles } = deps;
+      const { initializeProject } = deps;
 
-      // TODO: improve initializeProject
-      // there should be tempalte management system, where we get the template data from a templateId
-      // clean way to copy all files to project
-      // clean way to write all repository data for the template
       await initializeProject({
         name,
         description,
         projectPath,
         template,
-        uploadImageFiles,
-        uploadFontFiles,
       });
 
       console.log(`Project created at: ${projectPath}`);
