@@ -34,8 +34,14 @@ const getFileIdFromProps = async (attrs, repositoryFactory, router) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, getFileContent, render, repositoryFactory, router } =
-    deps;
+  const {
+    store,
+    attrs,
+    fileManagerFactory,
+    render,
+    repositoryFactory,
+    router,
+  } = deps;
 
   const fileId = await getFileIdFromProps(attrs, repositoryFactory, router);
 
@@ -44,10 +50,13 @@ export const handleAfterMount = async (deps) => {
   }
 
   try {
+    // Get the current project ID from router
+    const { p: projectId } = router.getPayload();
+    // Get fileManager for this project
+    const fileManager = await fileManagerFactory.getByProject(projectId);
     // TODO batch file requests
-    const { url } = await getFileContent({
+    const { url } = await fileManager.getFileContent({
       fileId: fileId,
-      projectId: "someprojectId",
     });
     store.setSrc(url);
     render();
@@ -60,8 +69,14 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleOnUpdate = async (changes, deps) => {
-  const { store, attrs, getFileContent, render, repositoryFactory, router } =
-    deps;
+  const {
+    store,
+    attrs,
+    fileManagerFactory,
+    render,
+    repositoryFactory,
+    router,
+  } = deps;
 
   const fileId = await getFileIdFromProps(attrs, repositoryFactory, router);
 
@@ -71,10 +86,13 @@ export const handleOnUpdate = async (changes, deps) => {
   }
 
   try {
+    // Get the current project ID from router
+    const { p: projectId } = router.getPayload();
+    // Get fileManager for this project
+    const fileManager = await fileManagerFactory.getByProject(projectId);
     // TODO batch file requests
-    const { url } = await getFileContent({
+    const { url } = await fileManager.getFileContent({
       fileId: fileId,
-      projectId: "someprojectId",
     });
     store.setSrc(url);
     render();

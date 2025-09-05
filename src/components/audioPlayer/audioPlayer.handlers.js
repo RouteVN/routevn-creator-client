@@ -55,15 +55,19 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, getFileContent, render, audioManager } = deps;
+  const { store, attrs, fileManagerFactory, render, audioManager, router } =
+    deps;
   const { fileId, autoPlay } = attrs;
   try {
     store.setLoading(true);
     render();
 
-    const { url } = await getFileContent({
+    // Get the current project ID from router
+    const { p: projectId } = router.getPayload();
+    // Get fileManager for this project
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
       fileId,
-      projectId: "someprojectId",
     });
     await audioManager.loadAudio(url);
 
@@ -79,7 +83,8 @@ export const handleAfterMount = async (deps) => {
 
 export const handleOnUpdate = async (changes, deps) => {
   const { oldProps } = changes;
-  const { store, attrs, getFileContent, render, audioManager } = deps;
+  const { store, attrs, fileManagerFactory, render, audioManager, router } =
+    deps;
   const { fileId, autoPlay } = attrs;
 
   if (oldProps.fileId === fileId) {
@@ -92,9 +97,12 @@ export const handleOnUpdate = async (changes, deps) => {
 
     audioManager.stop();
 
-    const { url } = await getFileContent({
+    // Get the current project ID from router
+    const { p: projectId } = router.getPayload();
+    // Get fileManager for this project
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
       fileId,
-      projectId: "someprojectId",
     });
     await audioManager.loadAudio(url);
 

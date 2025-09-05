@@ -20,16 +20,17 @@ export const handleDataChanged = async (e, deps) => {
 };
 
 export const handleVideoItemClick = async (e, deps) => {
-  const { store, render, getFileContent } = deps;
+  const { store, render, fileManagerFactory, router } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
   if (selectedItem && selectedItem.thumbnailFileId) {
-    const { url } = await getFileContent({
+    const { p: projectId } = router.getPayload();
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
       fileId: selectedItem.thumbnailFileId,
-      projectId: "someprojectId",
     });
     store.setContext({
       thumbnailFileId: {
@@ -41,13 +42,14 @@ export const handleVideoItemClick = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, repositoryFactory, router, uploadVideoFiles } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await uploadVideoFiles(files, "someprojectId");
+  const successfulUploads = await fileManager.upload(files);
 
   successfulUploads.forEach((result) => {
     repository.addAction({
@@ -77,17 +79,18 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
+export const handleFormExtraEvent = async (_, deps) => {
   const {
     repositoryFactory,
     router,
     store,
     render,
     filePicker,
-    uploadVideoFiles,
+    fileManagerFactory,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -107,7 +110,7 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await uploadVideoFiles([file], "someprojectId");
+  const uploadedFiles = await fileManager.upload([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");
