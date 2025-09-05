@@ -1,7 +1,7 @@
 import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, getFileContent, render } = deps;
+  const { repositoryFactory, router, store, fileManagerFactory, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const state = repository.getState();
@@ -11,9 +11,10 @@ export const handleAfterMount = async (deps) => {
     return;
   }
 
-  const { url } = await getFileContent({
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
+  const { url } = await fileManager.getFileContent({
     fileId: project.iconFileId,
-    projectId: "someprojectId",
   });
 
   store.setProjectImageUrl(url);
@@ -40,7 +41,7 @@ export const handleHeaderClick = (payload, deps) => {
 };
 
 export const handleProjectImageUpdate = async (_, deps) => {
-  const { repositoryFactory, router, store, render, getFileContent } = deps;
+  const { repositoryFactory, router, store, render, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const state = repository.getState();
@@ -50,9 +51,10 @@ export const handleProjectImageUpdate = async (_, deps) => {
     return;
   }
 
-  const { url } = await getFileContent({
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
+  const { url } = await fileManager.getFileContent({
     fileId: project.iconFileId,
-    projectId: "someprojectId",
   });
 
   store.setProjectImageUrl(url);

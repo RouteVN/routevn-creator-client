@@ -7,9 +7,8 @@ import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
 import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
 // File management imports
-import { createFileManager } from "./deps/fileManager";
-import { createTauriFileSystemStorageAdapter } from "./deps/tauriFileSystemStorageAdapter";
-import { createLegacyUploaders } from "./deps/fileUploaderCompat";
+import { createFileManagerFactory } from "./deps/fileManagerFactory";
+import { createStorageAdapterFactory } from "./deps/storageAdapterFactory";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
@@ -26,28 +25,8 @@ const httpClient = createRouteVnHttpClient({
   },
 });
 
-// Create font manager (needed by fileManager)
+// Create font manager (shared across all projects)
 const fontManager = createFontManager();
-
-// File management setup
-const storageAdapter = createTauriFileSystemStorageAdapter();
-
-// Create the unified file manager
-const fileManager = createFileManager({
-  storageAdapter,
-  fontManager,
-});
-
-// Create legacy uploaders for backward compatibility
-const {
-  uploadImageFiles,
-  uploadAudioFiles,
-  uploadVideoFiles,
-  uploadFontFiles,
-  downloadWaveformData,
-  getFileContent,
-  loadFontFile: loadFontFileFunc,
-} = createLegacyUploaders({ fileManager, httpClient, fontManager });
 
 // Empty initial data structure
 const initialData = {
@@ -116,7 +95,15 @@ const initialData = {
 // Initialize key-value store
 const keyValueStore = await createKeyValueStore();
 
+// Create storage adapter factory
+const storageAdapterFactory = createStorageAdapterFactory(keyValueStore);
+
+// Create factories for multi-project support
 const repositoryFactory = createRepositoryFactory(initialData, keyValueStore);
+const fileManagerFactory = createFileManagerFactory(
+  fontManager,
+  storageAdapterFactory,
+);
 
 const userConfig = createUserConfig();
 const subject = new Subject();
@@ -133,19 +120,12 @@ const componentDependencies = {
   subject,
   router,
   repositoryFactory,
+  fileManagerFactory,
   userConfig,
   audioManager,
-  uploadImageFiles,
-  uploadAudioFiles,
-  uploadVideoFiles,
-  uploadFontFiles,
   fontManager,
-  loadFontFile: loadFontFileFunc,
-  downloadWaveformData,
   drenderer,
   filePicker,
-  getFileContent,
-  fileManager,
   keyValueStore,
   tauriDialog,
   initializeProject,
@@ -157,19 +137,12 @@ const pageDependencies = {
   subject,
   router,
   repositoryFactory,
+  fileManagerFactory,
   userConfig,
   audioManager,
-  uploadImageFiles,
-  uploadAudioFiles,
-  uploadVideoFiles,
-  uploadFontFiles,
   fontManager,
-  loadFontFile: loadFontFileFunc,
-  downloadWaveformData,
   drenderer,
   filePicker,
-  getFileContent,
-  fileManager,
   keyValueStore,
   tauriDialog,
   initializeProject,

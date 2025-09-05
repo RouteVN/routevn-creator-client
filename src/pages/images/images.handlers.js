@@ -25,10 +25,11 @@ export const handleFormExtraEvent = async (e, deps) => {
     store,
     render,
     filePicker,
-    uploadImageFiles,
+    fileManagerFactory,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -47,7 +48,7 @@ export const handleFormExtraEvent = async (e, deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await uploadImageFiles([file], "someprojectId");
+  const uploadedFiles = await fileManager.upload([file]);
 
   // TODO improve error handling
   if (uploadedFiles.length === 0) {
@@ -85,15 +86,16 @@ export const handleFormExtraEvent = async (e, deps) => {
 };
 
 export const handleImageItemClick = async (e, deps) => {
-  const { store, render, getFileContent } = deps;
+  const { store, render, fileManagerFactory, router } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
-  const { url } = await getFileContent({
+  const { p: projectId } = router.getPayload();
+  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { url } = await fileManager.getFileContent({
     fileId: selectedItem.fileId,
-    projectId: "someprojectId",
   });
   store.setContext({
     fileId: {
@@ -104,13 +106,14 @@ export const handleImageItemClick = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { store, render, repositoryFactory, router, uploadImageFiles } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
   const { files, targetGroupId } = e.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await uploadImageFiles(files, "someprojectId");
+  const successfulUploads = await fileManager.upload(files);
   successfulUploads.forEach((result) => {
     console.log("Uploaded file:", result);
     repository.addAction({

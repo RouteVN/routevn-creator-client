@@ -19,16 +19,17 @@ export const handleDataChanged = async (_, deps) => {
 };
 
 export const handleCharacterItemClick = async (e, deps) => {
-  const { store, render, getFileContent } = deps;
+  const { store, render, fileManagerFactory, router } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
   if (selectedItem && selectedItem.fileId) {
-    const { url } = await getFileContent({
+    const { p: projectId } = router.getPayload();
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
       fileId: selectedItem.fileId,
-      projectId: "someprojectId",
     });
     store.setContext({
       fileId: {
@@ -119,11 +120,11 @@ export const handleFormExtraEvent = async (_, deps) => {
     store,
     render,
     filePicker,
-    uploadImageFiles,
-    getFileContent,
+    fileManagerFactory,
   } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const fileManager = await fileManagerFactory.getByProject(projectId);
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -144,8 +145,8 @@ export const handleFormExtraEvent = async (_, deps) => {
   const file = files[0];
 
   try {
-    // Upload the new avatar file using uploadImageFiles
-    const uploadedFiles = await uploadImageFiles([file], "someprojectId");
+    // Upload the new avatar file using fileManager
+    const uploadedFiles = await fileManager.upload([file]);
 
     if (uploadedFiles && uploadedFiles.length > 0) {
       const uploadedFile = uploadedFiles[0];
@@ -177,9 +178,8 @@ export const handleFormExtraEvent = async (_, deps) => {
       const { characters } = repository.getState();
 
       // Get the new file URL
-      const { url } = await getFileContent({
+      const { url } = await fileManager.getFileContent({
         fileId: uploadedFile.fileId,
-        projectId: "someprojectId",
       });
 
       store.setContext({

@@ -8,14 +8,13 @@ import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
 import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
 // File management imports
-import { createFileManager } from "./deps/fileManager";
-import { createIndexedDBStorageAdapter } from "./deps/indexedDBStorageAdapter";
-import { createLegacyUploaders } from "./deps/fileUploaderCompat";
+import { createWebFileManagerFactory } from "./deps/fileManagerFactory";
+import { createWebStorageAdapterFactory } from "./deps/storageAdapterFactory";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
-import { initializeWebTemplate } from "./utils/webTemplateInitializer";
+import { initializeWebProject } from "./deps/webProjectInitializer";
 
 // Web-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -25,28 +24,17 @@ const httpClient = createRouteVnHttpClient({
   },
 });
 
-// Create font manager (needed by fileManager)
+// Create font manager (shared for the single web project)
 const fontManager = createFontManager();
 
-// File management setup with indexedDB storage for web
-const storageAdapter = createIndexedDBStorageAdapter();
+// Create storage adapter factory for web
+const storageAdapterFactory = createWebStorageAdapterFactory();
 
-// Create the unified file manager
-const fileManager = createFileManager({
-  storageAdapter,
+// Create file manager factory for web
+const fileManagerFactory = createWebFileManagerFactory(
   fontManager,
-});
-
-// Create legacy uploaders for backward compatibility
-const {
-  uploadImageFiles,
-  uploadAudioFiles,
-  uploadVideoFiles,
-  uploadFontFiles,
-  downloadWaveformData,
-  getFileContent,
-  loadFontFile: loadFontFileFunc,
-} = createLegacyUploaders({ fileManager, httpClient, fontManager });
+  storageAdapterFactory,
+);
 
 // Empty initial data structure
 const initialData = {
@@ -119,7 +107,11 @@ const repositoryFactory = createWebRepositoryFactory(
 );
 
 // Initialize template data for first-time users (necessary startup initialization)
-await initializeWebTemplate(repositoryFactory, fileManager);
+await initializeWebProject({
+  repositoryFactory,
+  storageAdapterFactory,
+  template: "default",
+});
 
 const userConfig = createUserConfig();
 const subject = new Subject();
@@ -135,19 +127,12 @@ const componentDependencies = {
   subject,
   router,
   repositoryFactory,
+  fileManagerFactory,
   userConfig,
   audioManager,
-  uploadImageFiles,
-  uploadAudioFiles,
-  uploadVideoFiles,
-  uploadFontFiles,
   fontManager,
-  loadFontFile: loadFontFileFunc,
-  downloadWaveformData,
   drenderer,
   filePicker,
-  getFileContent,
-  fileManager,
   // Platform-specific info
   platform: "web",
 };
@@ -157,19 +142,12 @@ const pageDependencies = {
   subject,
   router,
   repositoryFactory,
+  fileManagerFactory,
   userConfig,
   audioManager,
-  uploadImageFiles,
-  uploadAudioFiles,
-  uploadVideoFiles,
-  uploadFontFiles,
   fontManager,
-  loadFontFile: loadFontFileFunc,
-  downloadWaveformData,
   drenderer,
   filePicker,
-  getFileContent,
-  fileManager,
   // Platform-specific info
   platform: "web",
 };

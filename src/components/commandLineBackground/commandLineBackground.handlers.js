@@ -40,9 +40,9 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleImageSelected = async (e, deps) => {
-  const { store, render, getFileContent, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
   const { images } = repository.getState();
 
   const { imageId } = e.detail;
@@ -57,9 +57,10 @@ export const handleImageSelected = async (e, deps) => {
   const flatImageItems = toFlatItems(images);
   const existingImage = flatImageItems.find((item) => item.id === imageId);
 
-  const { url } = await getFileContent({
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { url } = await fileManager.getFileContent({
     fileId: existingImage.fileId,
-    projectId: "someprojectId",
   });
 
   render();

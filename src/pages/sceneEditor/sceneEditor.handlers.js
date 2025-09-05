@@ -6,15 +6,14 @@ import { filter, tap, debounceTime } from "rxjs";
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(
   fileIds,
-  getFileContent,
+  fileManager,
   { audios, images, fonts = {} },
 ) {
   const assets = {};
   for (const fileId of fileIds) {
     try {
-      const { url } = await getFileContent({
+      const { url } = await fileManager.getFileContent({
         fileId,
-        projectId: "someprojectId",
       });
       let type;
 
@@ -40,10 +39,10 @@ async function createAssetsFromFileIds(
 }
 
 // Helper function to render the scene state
-async function renderSceneState(store, drenderer, getFileContent) {
+async function renderSceneState(store, drenderer, fileManager) {
   const renderState = store.selectRenderState();
   const fileIds = extractFileIdsFromRenderState(renderState);
-  const assets = await createAssetsFromFileIds(fileIds, getFileContent, {
+  const assets = await createAssetsFromFileIds(fileIds, fileManager, {
     audios: store.selectAudios(),
     images: store.selectImages(),
     fonts: store.selectFonts(),
@@ -65,7 +64,7 @@ export const handleAfterMount = async (deps) => {
     getRefIds,
     drenderer,
     store,
-    getFileContent,
+    fileManagerFactory,
     router,
     repositoryFactory,
     render,
@@ -94,8 +93,10 @@ export const handleAfterMount = async (deps) => {
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
 
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
   // Render the canvas with the initial selected line's presentation data
-  await renderSceneState(store, drenderer, getFileContent);
+  await renderSceneState(store, drenderer, fileManager);
 
   render();
 };
@@ -128,7 +129,7 @@ export const handleCommandLineSubmit = async (e, deps) => {
     router,
     subject,
     drenderer,
-    getFileContent,
+    fileManagerFactory,
   } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -158,7 +159,9 @@ export const handleCommandLineSubmit = async (e, deps) => {
 
     // Render the canvas with the latest data
     setTimeout(async () => {
-      await renderSceneState(store, drenderer, getFileContent);
+      // Get fileManager for this project
+      const fileManager = await fileManagerFactory.getByProject(p);
+      await renderSceneState(store, drenderer, fileManager);
     }, 10);
     return;
   }
@@ -248,7 +251,7 @@ export const handleSectionAddClick = async (e, deps) => {
     render,
     subject,
     drenderer,
-    getFileContent,
+    fileManagerFactory,
   } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -319,7 +322,9 @@ export const handleSectionAddClick = async (e, deps) => {
 
   // Render the canvas with the new section's data
   setTimeout(async () => {
-    await renderSceneState(store, drenderer, getFileContent);
+    // Get fileManager for this project
+    const fileManager = await fileManagerFactory.getByProject(p);
+    await renderSceneState(store, drenderer, fileManager);
   }, 10);
 };
 
@@ -976,8 +981,11 @@ export const handleUpdateDialogueContent = async (payload, deps) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(payload, deps) {
-  const { store, drenderer, getFileContent } = deps;
-  await renderSceneState(store, drenderer, getFileContent);
+  const { store, drenderer, fileManagerFactory, router } = deps;
+  const { p } = router.getPayload();
+  // Get fileManager for this project
+  const fileManager = await fileManagerFactory.getByProject(p);
+  await renderSceneState(store, drenderer, fileManager);
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing

@@ -8,25 +8,22 @@ import {
 
 export const createFileManager = ({ storageAdapter, fontManager }) => {
   // Process file based on its type
-  const processFile = async (file, projectId) => {
+  const processFile = async (file) => {
     const fileType = detectFileType(file);
     const processor = processors[fileType] || processors.generic;
-    return processor(file, projectId);
+    return processor(file);
   };
 
   // All file processors in one place
   const processors = {
     // Image processor - extracts dimensions
-    image: async (file, projectId) => {
+    image: async (file) => {
       try {
         // Get image dimensions
         const dimensions = await getImageDimensions(file);
 
         // Store the file
-        const { fileId, downloadUrl } = await storageAdapter.storeFile(
-          file,
-          projectId,
-        );
+        const { fileId, downloadUrl } = await storageAdapter.storeFile(file);
 
         return {
           fileId,
@@ -41,24 +38,19 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
     },
 
     // Audio processor - extracts waveform
-    audio: async (file, projectId) => {
+    audio: async (file) => {
       try {
         // Extract waveform data
         const waveformData = await extractWaveformData(file);
 
         // Store the audio file
-        const { fileId, downloadUrl } = await storageAdapter.storeFile(
-          file,
-          projectId,
-        );
+        const { fileId, downloadUrl } = await storageAdapter.storeFile(file);
 
         // Store waveform data if extraction was successful
         let waveformDataFileId = null;
         if (waveformData) {
-          const waveformResult = await storageAdapter.storeMetadata(
-            waveformData,
-            projectId,
-          );
+          const waveformResult =
+            await storageAdapter.storeMetadata(waveformData);
           waveformDataFileId = waveformResult.fileId;
         }
 
@@ -77,7 +69,7 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
     },
 
     // Video processor - extracts thumbnail
-    video: async (file, projectId) => {
+    video: async (file) => {
       try {
         // Extract thumbnail
         const thumbnailData = await extractVideoThumbnail(file, {
@@ -90,8 +82,8 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
 
         // Store both video and thumbnail in parallel
         const [videoResult, thumbnailResult] = await Promise.all([
-          storageAdapter.storeFile(file, projectId),
-          storageAdapter.storeFile(thumbnailData.blob, projectId),
+          storageAdapter.storeFile(file),
+          storageAdapter.storeFile(thumbnailData.blob),
         ]);
 
         return {
@@ -108,7 +100,7 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
     },
 
     // Font processor - validates and loads font
-    font: async (file, projectId) => {
+    font: async (file) => {
       try {
         const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
         const fontUrl = URL.createObjectURL(file);
@@ -122,10 +114,7 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
         }
 
         // Store the font file
-        const { fileId, downloadUrl } = await storageAdapter.storeFile(
-          file,
-          projectId,
-        );
+        const { fileId, downloadUrl } = await storageAdapter.storeFile(file);
 
         return {
           fileId,
@@ -141,12 +130,9 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
     },
 
     // Generic processor - no special processing
-    generic: async (file, projectId) => {
+    generic: async (file) => {
       try {
-        const { fileId, downloadUrl } = await storageAdapter.storeFile(
-          file,
-          projectId,
-        );
+        const { fileId, downloadUrl } = await storageAdapter.storeFile(file);
 
         return {
           fileId,
@@ -161,14 +147,14 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
   };
 
   // Main upload function - handles single or multiple files
-  const upload = async (files, projectId) => {
+  const upload = async (files) => {
     // Ensure we have an array
     const fileArray = Array.isArray(files) ? files : Array.from(files);
 
     // Process all files in parallel
     const uploadPromises = fileArray.map(async (file) => {
       try {
-        const result = await processFile(file, projectId);
+        const result = await processFile(file);
 
         return {
           success: true,
@@ -195,9 +181,9 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
   };
 
   // Get file content URL (works for any file type)
-  const getFileContent = async ({ fileId, projectId }) => {
+  const getFileContent = async ({ fileId }) => {
     try {
-      return await storageAdapter.getFileUrl(fileId, projectId);
+      return await storageAdapter.getFileUrl(fileId);
     } catch (error) {
       console.error("Failed to get file content:", error);
       throw error;
@@ -208,7 +194,7 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
   const downloadMetadata = async ({ fileId }) => {
     try {
       // Get the metadata file URL
-      const { url } = await storageAdapter.getFileUrl(fileId, "someprojectId");
+      const { url } = await storageAdapter.getFileUrl(fileId);
 
       // Fetch and parse the JSON data
       const response = await fetch(url);
@@ -226,14 +212,14 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
   };
 
   // Load font file (for font manager)
-  const loadFontFile = async ({ fontName, fileId, projectId }) => {
+  const loadFontFile = async ({ fontName, fileId }) => {
     if (!fontName || !fileId || fileId === "undefined") {
       throw new Error(
         "Invalid font parameters: fontName and fileId are required.",
       );
     }
     try {
-      const { url } = await getFileContent({ fileId, projectId });
+      const { url } = await getFileContent({ fileId });
       await fontManager.load(fontName, url);
       return { success: true };
     } catch (error) {
