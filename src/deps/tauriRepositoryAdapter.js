@@ -1,11 +1,9 @@
-import { mkdir } from "@tauri-apps/plugin-fs";
+import { mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
-import {
-  fetchTemplateImages,
-  fetchTemplateFonts,
-} from "../utils/templateSetup";
-import { createTemplateProjectData } from "../utils/templateProjectData";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { loadTemplate, getTemplateFiles } from "../utils/templateLoader";
+import { nanoid } from "nanoid";
 
 /**
  * Initialize a new project with folder structure and database
@@ -15,74 +13,70 @@ export const initializeProject = async ({
   description,
   projectPath,
   template,
-  uploadImageFiles,
-  uploadFontFiles,
 }) => {
+  if (!template) {
+    throw new Error("Template is required for project initialization");
+  }
+
   // Create project folders
   const filesPath = await join(projectPath, "files");
   await mkdir(filesPath, { recursive: true });
 
   // Initialize database
-  if (template === "default") {
-    // Directly create adapter and use it to initialize database
-    const adapter = await createTauriSQLiteRepositoryAdapter(projectPath);
+  const adapter = await createTauriSQLiteRepositoryAdapter(projectPath);
 
-    // Fetch template resources
-    const templateImagesData = await fetchTemplateImages(uploadImageFiles);
-    const templateFontsData = await fetchTemplateFonts(uploadFontFiles);
+  // Load template data from static files
+  const templateData = await loadTemplate(template);
 
-    // Create template data
-    const templateData = createTemplateProjectData(
-      templateImagesData.fetchedImages,
-      templateFontsData.fetchedFonts,
-    );
+  // Copy template files to project directory with random file IDs
+  await copyTemplateFiles(template, filesPath);
 
-    // Prepare init data
-    const initData = {
-      project: {
-        name,
-        description,
-      },
-      images: {
-        items: templateImagesData.imageItems,
-        tree: templateImagesData.imageTree,
-      },
-      fonts: {
-        items: {
-          ...templateFontsData.fontItems,
-          ...templateData.fonts.items,
-        },
-        tree: [...templateFontsData.fontTree, ...templateData.fonts.tree],
-      },
-      animations: templateData.animations,
-      transforms: templateData.transforms,
-      colors: templateData.colors,
-      typography: templateData.typography,
-      layouts: templateData.layouts,
-      scenes: templateData.scenes,
-    };
+  // Add project info to template data
+  const initData = {
+    ...templateData,
+    project: {
+      name,
+      description,
+    },
+  };
 
-    // Add the init action directly through adapter
-    await adapter.addAction({
-      actionType: "init",
-      target: null,
-      value: initData,
-    });
-  } else {
-    // Just initialize empty database
-    const dbPath = await join(projectPath, "repository.db");
-    const db = await Database.load(`sqlite:${dbPath}`);
-
-    // Create actions table
-    await db.execute(`CREATE TABLE IF NOT EXISTS actions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      action_type TEXT NOT NULL,
-      target TEXT,
-      value TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
-  }
+  // Add the init action directly through adapter
+  await adapter.addAction({
+    actionType: "init",
+    target: null,
+    value: initData,
+  });
 };
+
+async function copyTemplateFiles(templateId, targetPath) {
+  // Get the path to template files
+  const templateFilesPath = `/templates/${templateId}/files/`;
+
+  // List of files to copy (hardcoded for now, could be made dynamic)
+  const filesToCopy = await getTemplateFiles(templateId);
+
+  for (const fileName of filesToCopy) {
+    try {
+      const sourcePath = templateFilesPath + fileName;
+
+      const targetFilePath = await join(targetPath, fileName);
+
+      // Fetch from the web server and save locally
+      // Add a query parameter to bypass Vite's JS parsing
+      const response = await fetch(sourcePath + "?raw");
+      if (response.ok) {
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        // Write file using Tauri's file system API
+        await writeFile(targetFilePath, uint8Array);
+      }
+    } catch (error) {
+      console.error(`Failed to copy template file ${fileName}:`, error);
+    }
+  }
+}
 
 /**
  * Tauri SQLite Repository Adapter
