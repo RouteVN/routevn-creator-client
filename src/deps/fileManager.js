@@ -61,8 +61,14 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
         // Store waveform data if extraction was successful
         let waveformDataFileId = null;
         if (waveformData) {
-          const waveformResult =
-            await storageAdapter.storeMetadata(waveformData);
+          // Convert normalized data (0-1) to byte values (0-255) for smaller storage
+          const compressedWaveformData = {
+            ...waveformData,
+            data: waveformData.data.map((value) => Math.round(value * 255)),
+          };
+          const waveformResult = await storageAdapter.storeMetadata(
+            compressedWaveformData,
+          );
           waveformDataFileId = waveformResult.fileId;
         }
 
@@ -212,7 +218,14 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
       const response = await fetch(url);
 
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+
+        // Convert byte values (0-255) back to normalized values (0-1) for waveform data
+        if (data && data.data && Array.isArray(data.data)) {
+          data.data = data.data.map((value) => value / 255);
+        }
+
+        return data;
       }
 
       console.error("Failed to download metadata:", response.statusText);

@@ -46,11 +46,6 @@ export const handleAudioItemClick = async (e, deps) => {
     fileId: selectedItem.waveformDataFileId,
   });
 
-  // Convert byte data (0-255) back to normalized values (0-1)
-  if (waveformData && waveformData.data) {
-    waveformData.data = waveformData.data.map((value) => value / 255);
-  }
-
   store.setContext({
     fileId: {
       waveformData,
@@ -157,12 +152,8 @@ export const handleFormExtraEvent = async (_, deps) => {
   // Update the store with the new repository state
   const { audio } = repository.getState();
 
-  // Convert byte data (0-255) back to normalized values (0-1) for display
-  // This is needed because rtgl-waveform expects normalized values
+  // Use the waveform data directly (already normalized)
   const waveformData = uploadResult.waveformData;
-  if (waveformData && waveformData.data) {
-    waveformData.data = waveformData.data.map((value) => value / 255);
-  }
 
   store.setContext({
     fileId: {

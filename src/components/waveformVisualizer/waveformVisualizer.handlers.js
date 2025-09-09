@@ -13,11 +13,6 @@ export const handleAfterMount = async (deps) => {
       fileId: attrs.waveformDataFileId,
     });
 
-    // Convert byte data (0-255) back to normalized values (0-1)
-    if (waveformData && waveformData.data) {
-      waveformData.data = waveformData.data.map((value) => value / 255);
-    }
-
     store.setWaveformData(waveformData);
     store.setLoading(false);
     render();
@@ -45,11 +40,6 @@ export const handleOnUpdate = async (changes, deps) => {
     const waveformData = await fileManager.downloadMetadata({
       fileId: attrs.waveformDataFileId,
     });
-
-    // Convert byte data (0-255) back to normalized values (0-1)
-    if (waveformData && waveformData.data) {
-      waveformData.data = waveformData.data.map((value) => value / 255);
-    }
 
     store.setWaveformData(waveformData);
     store.setLoading(false);
