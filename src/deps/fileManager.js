@@ -40,11 +40,23 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
     // Audio processor - extracts waveform
     audio: async (file) => {
       try {
+        // Read arrayBuffer once and reuse it
+        const arrayBuffer = await file.arrayBuffer();
+
+        // Create copies for both operations
+        const fileForWaveform = new File([arrayBuffer], file.name, {
+          type: file.type,
+        });
+        const fileForStorage = new File([arrayBuffer], file.name, {
+          type: file.type,
+        });
+
         // Extract waveform data
-        const waveformData = await extractWaveformData(file);
+        const waveformData = await extractWaveformData(fileForWaveform);
 
         // Store the audio file
-        const { fileId, downloadUrl } = await storageAdapter.storeFile(file);
+        const { fileId, downloadUrl } =
+          await storageAdapter.storeFile(fileForStorage);
 
         // Store waveform data if extraction was successful
         let waveformDataFileId = null;

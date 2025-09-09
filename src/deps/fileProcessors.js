@@ -46,12 +46,15 @@ export const extractWaveformData = async (audioFile, samples = 1000) => {
     }
 
     const maxAmplitude = Math.max(...waveformData);
-    const normalizedData = waveformData.map((value) => value / maxAmplitude);
+    // Convert to 0-255 byte values for smaller storage
+    const byteData = waveformData.map((value) =>
+      Math.round((value / maxAmplitude) * 255),
+    );
 
     audioContext.close();
 
     return {
-      data: normalizedData,
+      data: byteData,
       duration: audioBuffer.duration,
       sampleRate: audioBuffer.sampleRate,
       channels: audioBuffer.numberOfChannels,

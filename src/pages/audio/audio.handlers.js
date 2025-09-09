@@ -21,15 +21,35 @@ export const handleDataChanged = async (e, deps) => {
 };
 
 export const handleAudioItemClick = async (e, deps) => {
-  const { store, render, downloadWaveformData } = deps;
+  const { store, render, fileManagerFactory, router } = deps;
   const { itemId } = e.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
 
-  const waveformData = await downloadWaveformData({
+  if (!selectedItem?.waveformDataFileId) {
+    // Clear waveform data when no waveformDataFileId
+    store.setContext({
+      fileId: {
+        waveformData: null,
+      },
+    });
+    render();
+    return;
+  }
+
+  // Get the fileManager for the current project
+  const { p: projectId } = router.getPayload();
+  const fileManager = await fileManagerFactory.getByProject(projectId);
+
+  const waveformData = await fileManager.downloadMetadata({
     fileId: selectedItem.waveformDataFileId,
   });
+
+  // Convert byte data (0-255) back to normalized values (0-1)
+  if (waveformData && waveformData.data) {
+    waveformData.data = waveformData.data.map((value) => value / 255);
+  }
 
   store.setContext({
     fileId: {
@@ -87,7 +107,6 @@ export const handleFormExtraEvent = async (_, deps) => {
     render,
     filePicker,
     fileManagerFactory,
-    httpClient,
   } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
@@ -137,9 +156,17 @@ export const handleFormExtraEvent = async (_, deps) => {
 
   // Update the store with the new repository state
   const { audio } = repository.getState();
+
+  // Convert byte data (0-255) back to normalized values (0-1) for display
+  // This is needed because rtgl-waveform expects normalized values
+  const waveformData = uploadResult.waveformData;
+  if (waveformData && waveformData.data) {
+    waveformData.data = waveformData.data.map((value) => value / 255);
+  }
+
   store.setContext({
     fileId: {
-      waveformData: uploadResult.waveformData,
+      waveformData,
     },
   });
   store.setItems(audio);
