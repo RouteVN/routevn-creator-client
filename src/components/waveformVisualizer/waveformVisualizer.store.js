@@ -8,6 +8,11 @@ export const setLoading = (state, isLoading) => {
 };
 
 export const setWaveformData = (state, data) => {
+  // Validate waveform data structure
+  if (data && !data.amplitudes) {
+    throw new Error("Invalid waveform data: missing amplitudes field");
+  }
+
   state.waveformData = data;
 };
 

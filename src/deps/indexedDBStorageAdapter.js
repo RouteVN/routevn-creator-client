@@ -1,6 +1,7 @@
 // IndexedDB storage adapter - implements storage operations locally in browser
 
 // IndexedDB storage adapter for web platform
+import { nanoid } from "nanoid";
 
 const DB_NAME = "RouteVNCreatorFiles";
 const DB_VERSION = 1;
@@ -205,9 +206,12 @@ export const createIndexedDBStorageAdapter = () => {
           type: "application/json",
         });
 
+        // Generate unique name for each metadata file
+        const uniqueName = `metadata_${nanoid()}.json`;
+
         // Add name property for better tracking
         Object.defineProperty(jsonBlob, "name", {
-          value: "metadata.json",
+          value: uniqueName,
           writable: false,
         });
 

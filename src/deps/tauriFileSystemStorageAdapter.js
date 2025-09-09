@@ -85,9 +85,12 @@ export const createTauriFileSystemStorageAdapter = (projectPath) => {
           type: "application/json",
         });
 
+        // Generate unique name for each metadata file
+        const uniqueName = `metadata_${nanoid()}.json`;
+
         // Add name property for compatibility
         Object.defineProperty(jsonBlob, "name", {
-          value: "metadata.json",
+          value: uniqueName,
           writable: false,
         });
 
