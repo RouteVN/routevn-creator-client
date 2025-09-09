@@ -38,19 +38,47 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
     },
 
     // Audio processor - extracts waveform
+    // Waveform data structure:
+    // {
+    //   amplitudes: number[],  // Normalized amplitude values (0-1), stored as bytes (0-255)
+    //   duration: number,      // Audio duration in seconds (rounded to 2 decimals)
+    //   sampleRate: number,    // Audio sample rate (e.g., 44100)
+    //   channels: number       // Number of audio channels (1=mono, 2=stereo)
+    // }
     audio: async (file) => {
       try {
+        // Read arrayBuffer once and reuse it
+        const arrayBuffer = await file.arrayBuffer();
+
+        // Create copies for both operations
+        const fileForWaveform = new File([arrayBuffer], file.name, {
+          type: file.type,
+        });
+        const fileForStorage = new File([arrayBuffer], file.name, {
+          type: file.type,
+        });
+
         // Extract waveform data
-        const waveformData = await extractWaveformData(file);
+        const waveformData = await extractWaveformData(fileForWaveform);
 
         // Store the audio file
-        const { fileId, downloadUrl } = await storageAdapter.storeFile(file);
+        const { fileId, downloadUrl } =
+          await storageAdapter.storeFile(fileForStorage);
 
         // Store waveform data if extraction was successful
         let waveformDataFileId = null;
         if (waveformData) {
-          const waveformResult =
-            await storageAdapter.storeMetadata(waveformData);
+          // Convert normalized amplitudes (0-1) to byte values (0-255) for smaller storage
+          // This reduces file size by ~75% compared to storing float values
+          const compressedWaveformData = {
+            ...waveformData,
+            amplitudes: waveformData.amplitudes.map((value) =>
+              Math.round(value * 255),
+            ),
+          };
+          const waveformResult = await storageAdapter.storeMetadata(
+            compressedWaveformData,
+          );
           waveformDataFileId = waveformResult.fileId;
         }
 
@@ -200,7 +228,18 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
       const response = await fetch(url);
 
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+
+        // Convert byte values (0-255) back to normalized values (0-1) for waveform amplitudes
+        // This is the reverse of the compression done during storage
+        if (data && data.amplitudes && Array.isArray(data.amplitudes)) {
+          data.amplitudes = data.amplitudes.map((value) => value / 255);
+          // TODO: Change rtgl-waveform to accept raw waveform data format directly
+          // Now also provide 'data' field for compatibility with rtgl-waveform components
+          data.data = data.amplitudes;
+        }
+
+        return data;
       }
 
       console.error("Failed to download metadata:", response.statusText);

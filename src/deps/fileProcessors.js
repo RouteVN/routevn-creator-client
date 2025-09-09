@@ -50,9 +50,12 @@ export const extractWaveformData = async (audioFile, samples = 1000) => {
 
     audioContext.close();
 
+    // Return waveform data structure
+    // amplitudes: normalized amplitude values (0-1) for visualization
+    // duration: audio duration in seconds (rounded to 2 decimal places)
     return {
-      data: normalizedData,
-      duration: audioBuffer.duration,
+      amplitudes: normalizedData,
+      duration: Math.round(audioBuffer.duration * 100) / 100,
       sampleRate: audioBuffer.sampleRate,
       channels: audioBuffer.numberOfChannels,
     };
