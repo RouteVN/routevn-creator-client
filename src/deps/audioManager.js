@@ -44,7 +44,7 @@ export default class AudioManager {
   async loadAudio(url) {
     try {
       const response = await fetch(url);
-      if (!response.ok) {   
+      if (!response.ok) {
         throw new Error(`Failed to fetch audio: ${response.status}`);
       }
 

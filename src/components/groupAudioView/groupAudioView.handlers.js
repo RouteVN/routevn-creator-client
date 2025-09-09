@@ -83,11 +83,11 @@ export const handleBeforeMount = (deps) => {
 
   // Initialize panel widths from userConfig
   const leftWidth = parseInt(
-    userConfig.get("resizablePanel.file-explorerWidth") || "280",
+    userConfig.get("resizablePanel.file-explorerWidth") || "300",
     10,
   );
   const rightWidth = parseInt(
-    userConfig.get("resizablePanel.detail-panelWidth") || "320",
+    userConfig.get("resizablePanel.detail-panelWidth") || "270",
     10,
   );
 
