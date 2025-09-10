@@ -41,13 +41,11 @@ export const handleBrowseFolder = async (e, deps) => {
       title: "Select Project Location",
     });
 
-    if (!selected) {
-      return;
+    if (selected) {
+      // Update the form's default value for projectPath
+      store.setProjectPath(selected);
+      render();
     }
-
-    // Update the form's default value for projectPath
-    store.setProjectPath(selected);
-    render();
   } catch (error) {
     console.error("Error selecting folder:", error);
     alert(`Error selecting folder: ${error.message || error}`);
