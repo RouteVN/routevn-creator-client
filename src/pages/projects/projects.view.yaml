@@ -37,6 +37,8 @@ refs:
       click:
         required: true
         handler: handleProjectsClick
+      contextmenu:
+        handler: handleProjectContextMenu
   create-project-dialog:
     eventListeners:
       close:
@@ -49,6 +51,12 @@ refs:
     eventListeners:
       click:
         handler: handleBrowseFolder
+  dropdown-menu:
+    eventListeners:
+      close:
+        handler: handleDropdownMenuClose
+      click-item:
+        handler: handleDropdownMenuClickItem
 
 template:
   - rtgl-view h=100vh w=100vw ah=c:
@@ -70,3 +78,5 @@ template:
         - rtgl-view w=f slot=project-path-selector d=h g=sm av=c:
           - rtgl-input#pathInput w=f .value=projectPathDisplay disabled=true placeholder="No folder selected":
           - rtgl-button#browseButton variant=se: Browse
+  
+  - rtgl-dropdown-menu#dropdown-menu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} .items=dropdownMenu.items:
