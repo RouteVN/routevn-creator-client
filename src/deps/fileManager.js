@@ -234,9 +234,6 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
         // This is the reverse of the compression done during storage
         if (data && data.amplitudes && Array.isArray(data.amplitudes)) {
           data.amplitudes = data.amplitudes.map((value) => value / 255);
-          // TODO: Change rtgl-waveform to accept raw waveform data format directly
-          // Now also provide 'data' field for compatibility with rtgl-waveform components
-          data.data = data.amplitudes;
         }
 
         return data;
