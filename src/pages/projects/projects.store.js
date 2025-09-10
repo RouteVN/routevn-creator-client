@@ -6,6 +6,14 @@ export const INITIAL_STATE = Object.freeze({
   projectPath: "",
   projectPathDisplay: "No folder selected",
 
+  dropdownMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetProjectId: null,
+    items: [],
+  },
+
   defaultValues: {
     name: "",
     description: "",
@@ -105,6 +113,32 @@ export const selectDefaultValues = ({ state }) => {
 
 export const selectProjectPath = ({ state }) => {
   return state.defaultValues.projectPath;
+};
+
+export const selectProjects = ({ state }) => {
+  return state.projects;
+};
+
+export const selectDropdownMenuTargetProjectId = ({ state }) => {
+  return state.dropdownMenu.targetProjectId;
+};
+
+export const openDropdownMenu = (state, { x, y, projectId }) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.x = x;
+  state.dropdownMenu.y = y;
+  state.dropdownMenu.targetProjectId = projectId;
+  state.dropdownMenu.items = [
+    { label: "Delete", type: "item", value: "delete" },
+  ];
+};
+
+export const closeDropdownMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.x = 0;
+  state.dropdownMenu.y = 0;
+  state.dropdownMenu.targetProjectId = null;
+  state.dropdownMenu.items = [];
 };
 
 export const toViewData = ({ state, props }, payload) => {
