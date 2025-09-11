@@ -16,6 +16,7 @@ import { createKeyValueStore } from "./deps/keyValueStore";
 import { createTauriDialog } from "./deps/tauriDialog";
 import { initializeProject } from "./deps/tauriRepositoryAdapter";
 import { createRepositoryFactory } from "./deps/repository";
+import { updaterService } from "./services/updater.service";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -115,6 +116,9 @@ const tauriDialog = createTauriDialog();
 // Initialize async resources first
 const drenderer = await create2dRenderer({ subject });
 
+// Start checking for updates on app startup
+updaterService.checkForUpdatesOnStartup();
+
 const componentDependencies = {
   httpClient,
   subject,
@@ -129,6 +133,7 @@ const componentDependencies = {
   keyValueStore,
   tauriDialog,
   initializeProject,
+  updaterService,
   platform: "tauri",
 };
 
@@ -146,6 +151,7 @@ const pageDependencies = {
   keyValueStore,
   tauriDialog,
   initializeProject,
+  updaterService,
   platform: "tauri",
 };
 

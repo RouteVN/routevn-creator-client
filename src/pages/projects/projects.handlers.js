@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { getVersion } from "@tauri-apps/api/app";
 
 export const handleAfterMount = async (deps) => {
   const { keyValueStore, store, render } = deps;
@@ -6,6 +7,16 @@ export const handleAfterMount = async (deps) => {
   // Load projects from key-value store
   const projects = await keyValueStore.get("projects");
   store.setProjects(projects || []);
+
+  // Get app version
+  try {
+    const appVersion = await getVersion();
+    store.setAppVersion(`v${appVersion}`);
+  } catch (error) {
+    // Fallback for web version or if Tauri API is not available
+    store.setAppVersion("v0.0.0");
+  }
+
   render();
 };
 
@@ -19,6 +30,13 @@ export const handleCloseDialogue = (payload, deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
+};
+
+export const handleCheckForUpdates = async (payload, deps) => {
+  const { updaterService } = deps;
+
+  // Check for updates with UI feedback
+  await updaterService.checkForUpdates(false);
 };
 
 export const handleProjectsClick = async (e, deps) => {

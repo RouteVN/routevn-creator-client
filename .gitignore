@@ -9,6 +9,9 @@ vt/static/public/main.js
 vt/static/public/main.js.map
 static/public/rtgl-icons.js
 /task
+/keys
+/test-versions
+/test-update-server/updates
 
 # Generated setup file
 src/setup.js

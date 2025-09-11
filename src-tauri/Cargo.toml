@@ -27,3 +27,5 @@ tauri-plugin-devtools = "2"
 tauri-plugin-sql = { git = "https://github.com/han4wluc/plugins-workspace", branch = "sql-absolute-path", features = ["sqlite"] }
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
