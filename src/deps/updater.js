@@ -2,14 +2,12 @@ import { check } from "@tauri-apps/plugin-updater";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-export class UpdaterService {
-  constructor() {
-    this.updateAvailable = false;
-    this.updateInfo = null;
-    this.downloadProgress = 0;
-  }
+const createUpdater = () => {
+  let updateAvailable = false;
+  let updateInfo = null;
+  let downloadProgress = 0;
 
-  async checkForUpdates(silent = false) {
+  const checkForUpdates = async (silent = false) => {
     try {
       const update = await check();
 
@@ -20,8 +18,8 @@ export class UpdaterService {
         return null;
       }
 
-      this.updateAvailable = true;
-      this.updateInfo = {
+      updateAvailable = true;
+      updateInfo = {
         version: update.version,
         date: update.date,
         body: update.body,
@@ -38,11 +36,11 @@ export class UpdaterService {
         );
 
         if (shouldUpdate) {
-          await this.downloadAndInstall(update);
+          await downloadAndInstall(update);
         }
       }
 
-      return this.updateInfo;
+      return updateInfo;
     } catch (error) {
       console.error("Failed to check for updates:", error);
       if (!silent) {
@@ -54,14 +52,13 @@ export class UpdaterService {
       }
       return null;
     }
-  }
+  };
 
-  async downloadAndInstall(update) {
+  const downloadAndInstall = async (update) => {
     try {
       let downloaded = 0;
       let contentLength = 0;
 
-      // Download and install the update
       await update.downloadAndInstall((event) => {
         switch (event.event) {
           case "Started":
@@ -70,11 +67,11 @@ export class UpdaterService {
             break;
           case "Progress":
             downloaded += event.data.chunkLength;
-            this.downloadProgress =
+            downloadProgress =
               contentLength > 0
                 ? Math.round((downloaded / contentLength) * 100)
                 : 0;
-            console.log(`Download progress: ${this.downloadProgress}%`);
+            console.log(`Download progress: ${downloadProgress}%`);
             break;
           case "Finished":
             console.log("Update downloaded successfully");
@@ -82,7 +79,6 @@ export class UpdaterService {
         }
       });
 
-      // Relaunch the application
       await relaunch();
     } catch (error) {
       console.error("Failed to download and install update:", error);
@@ -92,20 +88,26 @@ export class UpdaterService {
         cancelLabel: null,
       });
     }
-  }
+  };
 
-  async checkForUpdatesOnStartup() {
-    // Check for updates on startup with notification
-    // Delay the check to avoid blocking the app startup
+  const checkForUpdatesOnStartup = () => {
     setTimeout(() => {
-      this.checkForUpdates(false).then((updateInfo) => {
-        if (updateInfo) {
-          console.log("Update available on startup:", updateInfo);
+      checkForUpdates(false).then((info) => {
+        if (info) {
+          console.log("Update available on startup:", info);
         }
       });
-    }, 5000); // Check after 5 seconds
-  }
-}
+    }, 5000);
+  };
 
-// Create a singleton instance
-export const updaterService = new UpdaterService();
+  return {
+    checkForUpdates,
+    downloadAndInstall,
+    checkForUpdatesOnStartup,
+    getUpdateInfo: () => updateInfo,
+    getDownloadProgress: () => downloadProgress,
+    isUpdateAvailable: () => updateAvailable,
+  };
+};
+
+export const updaterService = createUpdater();

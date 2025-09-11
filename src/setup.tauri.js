@@ -16,7 +16,7 @@ import { createKeyValueStore } from "./deps/keyValueStore";
 import { createTauriDialog } from "./deps/tauriDialog";
 import { initializeProject } from "./deps/tauriRepositoryAdapter";
 import { createRepositoryFactory } from "./deps/repository";
-import { updaterService } from "./services/updater.service";
+import { updaterService } from "./deps/updater";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({

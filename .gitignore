@@ -12,6 +12,7 @@ static/public/rtgl-icons.js
 /keys
 /test-versions
 /test-update-server/updates
+/src-tauri/*.bak
 
 # Generated setup file
 src/setup.js
