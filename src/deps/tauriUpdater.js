@@ -26,6 +26,7 @@ const createUpdater = () => {
       };
 
       if (!silent) {
+        // TODO: In future, use custom UI instead of Tauri's built-in dialog
         const shouldUpdate = await ask(
           `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
           {

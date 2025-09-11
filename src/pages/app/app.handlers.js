@@ -14,6 +14,13 @@ export const handleBeforeMount = (deps) => {
   deps.render();
 };
 
+export const handleAfterMount = (deps) => {
+  // Start checking for updates on app startup (Tauri only)
+  if (deps.updaterService) {
+    deps.updaterService.checkForUpdatesOnStartup();
+  }
+};
+
 export const handleRedirect = (payload, deps) => {
   deps.store.setCurrentRoute(payload.path);
   deps.router.redirect(payload.path, payload.payload);
