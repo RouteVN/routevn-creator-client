@@ -32,10 +32,6 @@ refs:
       click:
         required: true
         handler: handleCreateButtonClick
-  checkUpdateButton:
-    eventListeners:
-      click:
-        handler: handleCheckForUpdates
   project-*:
     eventListeners:
       click:
@@ -68,7 +64,6 @@ template:
       - rtgl-view d=h w=f av=c mb=xl mt=xl:
         - rtgl-text s=h2: "${title}"
         - rtgl-view flex=1:
-        - rtgl-button#checkUpdateButton variant=te ml=sm: Check for Updates
         - rtgl-button#createButton: ${createButtonText}
       - rtgl-view w=f g=md flex=1:
         - $for project, i in projects:
@@ -76,8 +71,6 @@ template:
               - rtgl-text s=lg: "${project.name}"
               #- rtgl-text s=sm: "${project.description}"
               - rtgl-text s=sm: "${project.projectPath}"
-      - rtgl-view w=f ah=c pb=md:
-        - rtgl-text s=sm col=muted: "${appVersion}"
 
   - rtgl-dialog#create-project-dialog ?open=${isOpen} s=md:
     - rtgl-view slot=content g=md:
