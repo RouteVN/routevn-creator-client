@@ -2,13 +2,20 @@ elementName: rvn-settings
 
 viewDataSchema:
   type: object
-  properties: {}
+  properties:
+    appVersion:
+      type: string
+      default: ""
 
 refs:
   left-panel:
     eventListeners:
       data-changed:
         handler: handleDataChanged
+  checkUpdateButton:
+    eventListeners:
+      click:
+        handler: handleCheckForUpdates
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -17,5 +24,9 @@ template:
       - rtgl-view flex=1 h=f p=lg:
         - rtgl-text s=h2: General Settings
         - rtgl-view g=lg mt=lg:
-          - rtgl-text s=md: Settings content will go here
-          - rtgl-text s=sm c=mu-fg: This is a placeholder for the general settings interface
+          - rtgl-view d=v g=md:
+            - rtgl-text s=lg: Version Information
+            - rtgl-view d=h av=c g=sm:
+              - rtgl-text s=sm col=muted: "Current Version:"
+              - rtgl-text s=sm: "${appVersion}"
+            - rtgl-button#checkUpdateButton variant=pr: Check for Updates
