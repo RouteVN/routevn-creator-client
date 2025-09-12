@@ -36,11 +36,11 @@ export const INITIAL_STATE = Object.freeze({
       path: "/project/scenes",
       icon: "script",
     },
-    // {
-    //   title: "Settings",
-    //   path: "/project/settings/general",
-    //   icon: "settings",
-    // },
+    {
+      title: "Settings",
+      path: "/project/settings/general",
+      icon: "settings",
+    },
   ],
 });
 

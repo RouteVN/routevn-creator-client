@@ -154,6 +154,7 @@ const pageDependencies = {
   tauriDialog,
   initializeProject,
   updaterService,
+  appVersion: `v${appVersion}`,
   platform: "tauri",
 };
 
