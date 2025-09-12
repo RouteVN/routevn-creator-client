@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { readDir } from "@tauri-apps/plugin-fs";
 
 export const handleAfterMount = async (deps) => {
   const { keyValueStore, store, render } = deps;
@@ -68,6 +69,34 @@ export const handleFormSubmit = async (e, deps) => {
 
     // Validate input
     if (!name || !description || !projectPath) {
+      return;
+    }
+
+    // Check if the selected directory is empty
+    let canProceed = false;
+    try {
+      const entries = await readDir(projectPath);
+      if (entries.length === 0) {
+        canProceed = true;
+      } else {
+        alert(
+          "The selected folder must be empty. Please choose an empty folder for your new project.",
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("Cannot read directory:", error);
+      alert(
+        `Cannot access the selected folder: ${error.message || error}. Please choose a different folder.`,
+      );
+      return;
+    }
+
+    // Only proceed if explicitly confirmed it's safe
+    if (!canProceed) {
+      alert(
+        "Cannot verify if the selected folder is empty. Please choose a different folder.",
+      );
       return;
     }
 
