@@ -1,5 +1,7 @@
 import { nanoid } from "nanoid";
-import { readDir } from "@tauri-apps/plugin-fs";
+import { readDir, exists } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
+import Database from "@tauri-apps/plugin-sql";
 
 export const handleAfterMount = async (deps) => {
   const { keyValueStore, store, render } = deps;
@@ -15,6 +17,148 @@ export const handleCreateButtonClick = async (payload, deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
+};
+
+export const handleOpenButtonClick = async (payload, deps) => {
+  const { keyValueStore, store, render, tauriDialog } = deps;
+
+  try {
+    // Open folder selection dialog
+    const selected = await tauriDialog.openFolderDialog({
+      title: "Select Existing Project Folder",
+    });
+
+    if (!selected) {
+      return; // User cancelled
+    }
+
+    // Default to blocking
+    let canProceed = false;
+
+    try {
+      // Check for repository.db
+      const dbPath = await join(selected, "repository.db");
+      const dbExists = await exists(dbPath);
+
+      // Check for files folder
+      const filesPath = await join(selected, "files");
+      const filesExists = await exists(filesPath);
+
+      if (dbExists && filesExists) {
+        canProceed = true;
+      } else {
+        const missing = [];
+        if (!dbExists) missing.push("repository.db");
+        if (!filesExists) missing.push("files folder");
+
+        alert(
+          `Cannot open project: Missing ${missing.join(" and ")}. Please select a valid project folder.`,
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("Error validating project folder:", error);
+      alert(
+        `Cannot validate project folder: ${error.message || error}. Please choose a different folder.`,
+      );
+      return;
+    }
+
+    // Only proceed if explicitly confirmed the project is valid
+    if (!canProceed) {
+      alert("Cannot verify project folder. Please choose a different folder.");
+      return;
+    }
+
+    // Read project name and description from the database
+    let projectName;
+    let projectDescription;
+
+    try {
+      const dbPath = await join(selected, "repository.db");
+      const db = await Database.load(`sqlite:${dbPath}`);
+
+      // Get all actions to build the current state
+      const results = await db.select(
+        "SELECT action_type, target, value FROM actions ORDER BY id",
+      );
+
+      // Build the project state from all actions
+      let projectState = {};
+
+      for (const row of results) {
+        if (row.action_type === "init" && row.value) {
+          const initData = JSON.parse(row.value);
+          if (initData.project) {
+            projectState = { ...initData.project };
+          }
+        } else if (row.action_type === "set" && row.target) {
+          // Handle set actions for project fields
+          if (row.target === "project.name") {
+            projectState.name = row.value;
+          } else if (row.target === "project.description") {
+            projectState.description = row.value;
+          }
+        }
+      }
+
+      // Require project name and description from database
+      if (!projectState.name || !projectState.description) {
+        throw new Error(
+          "Project database is missing required project information (name or description)",
+        );
+      }
+
+      projectName = projectState.name;
+      projectDescription = projectState.description;
+    } catch (error) {
+      console.error("Failed to read project information from database:", error);
+      alert(
+        `Cannot import project: Failed to read project information from database. ${error.message || error}`,
+      );
+      return;
+    }
+
+    // Generate a unique device-local project ID
+    const deviceProjectId = nanoid();
+
+    // Create imported project entry
+    const importedProject = {
+      id: deviceProjectId,
+      name: projectName,
+      description: projectDescription,
+      projectPath: selected,
+      template: "imported",
+      createdAt: Date.now(),
+      lastOpenedAt: null,
+    };
+
+    // Get existing projects
+    const projects = (await keyValueStore.get("projects")) || [];
+
+    // Check if this project path already exists
+    const existingProject = projects.find((p) => p.projectPath === selected);
+    if (existingProject) {
+      alert("This project has already been imported.");
+      return;
+    }
+
+    // Add imported project
+    projects.push(importedProject);
+
+    // Save to key-value store
+    await keyValueStore.set("projects", projects);
+
+    // Update store
+    store.setProjects(projects);
+
+    render();
+
+    alert(`Project "${projectName}" has been successfully imported.`);
+  } catch (error) {
+    console.error("Error importing project:", error);
+    alert(`Failed to import project: ${error.message || error}`);
+  }
 };
 
 export const handleCloseDialogue = (payload, deps) => {

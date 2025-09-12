@@ -8,7 +8,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleFormChange = async (e, deps) => {
-  const { repositoryFactory, router } = deps;
+  const { repositoryFactory, router, keyValueStore } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   await repository.addAction({
@@ -16,6 +16,21 @@ export const handleFormChange = async (e, deps) => {
     target: `project.${e.detail.name}`,
     value: e.detail.fieldValue,
   });
+
+  // Sync project name/description changes to the projects list
+  if (e.detail.name === "name" || e.detail.name === "description") {
+    try {
+      const projects = (await keyValueStore.get("projects")) || [];
+      const projectIndex = projects.findIndex((proj) => proj.id === p);
+
+      if (projectIndex !== -1) {
+        projects[projectIndex][e.detail.name] = e.detail.fieldValue;
+        await keyValueStore.set("projects", projects);
+      }
+    } catch (error) {
+      console.warn("Could not sync project info to projects list:", error);
+    }
+  }
 };
 
 export const handleFormExtraEvent = async (_, deps) => {

@@ -9,6 +9,9 @@ viewDataSchema:
     createButtonText:
       type: string
       default: Create Project
+    openButtonText:
+      type: string
+      default: Open Project
     projects:
       type: array
       items:
@@ -32,6 +35,11 @@ refs:
       click:
         required: true
         handler: handleCreateButtonClick
+  openButton:
+    eventListeners:
+      click:
+        required: true
+        handler: handleOpenButtonClick
   project-*:
     eventListeners:
       click:
@@ -64,7 +72,9 @@ template:
       - rtgl-view d=h w=f av=c mb=xl mt=xl:
         - rtgl-text s=h2: "${title}"
         - rtgl-view flex=1:
-        - rtgl-button#createButton: ${createButtonText}
+        - rtgl-view d=h g=sm:
+          - rtgl-button#createButton: ${createButtonText}
+          - rtgl-button#openButton variant=se: ${openButtonText}
       - rtgl-view w=f g=md flex=1:
         - $for project, i in projects:
             - rtgl-view#project-${project.id} h=auto w=f bw=xs p=md cur=p:
