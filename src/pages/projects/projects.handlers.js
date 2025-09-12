@@ -1,11 +1,15 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { keyValueStore, store, render } = deps;
+  const { keyValueStore, store, render, appVersion } = deps;
 
   // Load projects from key-value store
   const projects = await keyValueStore.get("projects");
   store.setProjects(projects || []);
+
+  // Set app version from deps
+  store.setAppVersion(appVersion);
+
   render();
 };
 
@@ -19,6 +23,13 @@ export const handleCloseDialogue = (payload, deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
+};
+
+export const handleCheckForUpdates = async (payload, deps) => {
+  const { updaterService } = deps;
+
+  // Check for updates with UI feedback
+  await updaterService.checkForUpdates(false);
 };
 
 export const handleProjectsClick = async (e, deps) => {
