@@ -4,29 +4,13 @@ import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 
 export const handleAfterMount = async (deps) => {
-  const { keyValueStore, store, render, fileManagerFactory } = deps;
+  const { keyValueStore, store, render } = deps;
 
   // Load projects from key-value store
   const projects = (await keyValueStore.get("projects")) || [];
 
-  // Load icon URLs for projects that have icons
-  const projectsWithIcons = await Promise.all(
-    projects.map(async (project) => {
-      if (project.iconFileId) {
-        try {
-          const fileManager = await fileManagerFactory.getByProject(project.id);
-          const { url } = await fileManager.getFileContent(project.iconFileId);
-          return { ...project, iconUrl: url };
-        } catch (error) {
-          console.warn(`Could not load icon for project ${project.id}:`, error);
-          return project;
-        }
-      }
-      return project;
-    }),
-  );
-
-  store.setProjects(projectsWithIcons);
+  // Simply set projects - icon loading will be handled by rvn-file-image component
+  store.setProjects(projects);
 
   render();
 };
