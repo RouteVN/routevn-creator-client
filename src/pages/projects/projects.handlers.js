@@ -8,7 +8,7 @@ export const handleAfterMount = async (deps) => {
   store.setProjects(projects || []);
 
   // Set app version from deps
-  store.setAppVersion(appVersion || "v0.0.0");
+  store.setAppVersion(appVersion);
 
   render();
 };
