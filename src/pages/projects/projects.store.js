@@ -5,6 +5,7 @@ export const INITIAL_STATE = Object.freeze({
   isOpen: false,
   projectPath: "",
   projectPathDisplay: "No folder selected",
+  appVersion: "",
 
   dropdownMenu: {
     isOpen: false,
@@ -139,6 +140,10 @@ export const closeDropdownMenu = (state) => {
   state.dropdownMenu.y = 0;
   state.dropdownMenu.targetProjectId = null;
   state.dropdownMenu.items = [];
+};
+
+export const setAppVersion = (state, version) => {
+  state.appVersion = version;
 };
 
 export const toViewData = ({ state, props }, payload) => {
