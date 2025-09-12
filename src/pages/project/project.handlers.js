@@ -17,8 +17,12 @@ export const handleFormChange = async (e, deps) => {
     value: e.detail.fieldValue,
   });
 
-  // Sync project name/description changes to the projects list
-  if (e.detail.name === "name" || e.detail.name === "description") {
+  // Sync project name/description/icon changes to the projects list
+  if (
+    e.detail.name === "name" ||
+    e.detail.name === "description" ||
+    e.detail.name === "iconFileId"
+  ) {
     try {
       const projects = (await keyValueStore.get("projects")) || [];
       const projectIndex = projects.findIndex((proj) => proj.id === p);
@@ -42,6 +46,7 @@ export const handleFormExtraEvent = async (_, deps) => {
     subject,
     render,
     store,
+    keyValueStore,
   } = deps;
 
   const { p } = router.getPayload();
@@ -72,6 +77,19 @@ export const handleFormExtraEvent = async (_, deps) => {
       });
 
       store.setIconFileId(result.fileId);
+
+      // Sync icon change to projects list
+      try {
+        const projects = (await keyValueStore.get("projects")) || [];
+        const projectIndex = projects.findIndex((proj) => proj.id === p);
+
+        if (projectIndex !== -1) {
+          projects[projectIndex].iconFileId = result.fileId;
+          await keyValueStore.set("projects", projects);
+        }
+      } catch (error) {
+        console.warn("Could not sync icon to projects list:", error);
+      }
 
       subject.dispatch("project-image-update");
       render();

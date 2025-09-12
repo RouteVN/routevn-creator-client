@@ -75,12 +75,19 @@ template:
         - rtgl-view d=h g=sm:
           - rtgl-button#createButton: ${createButtonText}
           - rtgl-button#openButton variant=se: ${openButtonText}
-      - rtgl-view w=f g=md flex=1:
+      - rtgl-view w=f g=md flex=1 oy=a:
+        - $if emptyMessage:
+            - rtgl-view w=f h=200 ah=c av=c:
+              - rtgl-view d=v ah=c g=md:
+                - rtgl-text s=lg c=mu-fg: ${emptyMessage}
+                - rtgl-text s=sm c=mu-fg: ${emptySubMessage}
         - $for project, i in projects:
             - rtgl-view#project-${project.id} h=auto w=f bw=xs p=md cur=p:
               - rtgl-text s=lg: "${project.name}"
-              #- rtgl-text s=sm: "${project.description}"
-              - rtgl-text s=sm: "${project.projectPath}"
+              #- rtgl-text s=sm c=mu-fg: "${project.description}"
+              - rtgl-view d=h g=sm av=c ah=c mt=xs:
+                - rtgl-svg wh=18 svg=folder c=mu-fg:
+                - rtgl-text s=xs c=mu-fg: "${project.projectPath}"
 
   - rtgl-dialog#create-project-dialog ?open=${isOpen} s=md:
     - rtgl-view slot=content g=md:

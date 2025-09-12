@@ -4,11 +4,29 @@ import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 
 export const handleAfterMount = async (deps) => {
-  const { keyValueStore, store, render } = deps;
+  const { keyValueStore, store, render, fileManagerFactory } = deps;
 
   // Load projects from key-value store
-  const projects = await keyValueStore.get("projects");
-  store.setProjects(projects || []);
+  const projects = (await keyValueStore.get("projects")) || [];
+
+  // Load icon URLs for projects that have icons
+  const projectsWithIcons = await Promise.all(
+    projects.map(async (project) => {
+      if (project.iconFileId) {
+        try {
+          const fileManager = await fileManagerFactory.getByProject(project.id);
+          const { url } = await fileManager.getFileContent(project.iconFileId);
+          return { ...project, iconUrl: url };
+        } catch (error) {
+          console.warn(`Could not load icon for project ${project.id}:`, error);
+          return project;
+        }
+      }
+      return project;
+    }),
+  );
+
+  store.setProjects(projectsWithIcons);
 
   render();
 };
@@ -70,9 +88,10 @@ export const handleOpenButtonClick = async (payload, deps) => {
       return;
     }
 
-    // Read project name and description from the database
+    // Read project name, description and icon from the database
     let projectName;
     let projectDescription;
+    let iconFileId;
 
     try {
       const dbPath = await join(selected, "repository.db");
@@ -98,6 +117,8 @@ export const handleOpenButtonClick = async (payload, deps) => {
             projectState.name = row.value;
           } else if (row.target === "project.description") {
             projectState.description = row.value;
+          } else if (row.target === "project.iconFileId") {
+            projectState.iconFileId = row.value;
           }
         }
       }
@@ -111,6 +132,7 @@ export const handleOpenButtonClick = async (payload, deps) => {
 
       projectName = projectState.name;
       projectDescription = projectState.description;
+      iconFileId = projectState.iconFileId || null;
     } catch (error) {
       console.error("Failed to read project information from database:", error);
       alert(
@@ -129,6 +151,7 @@ export const handleOpenButtonClick = async (payload, deps) => {
       description: projectDescription,
       projectPath: selected,
       template: "imported",
+      iconFileId: iconFileId,
       createdAt: Date.now(),
       lastOpenedAt: null,
     };

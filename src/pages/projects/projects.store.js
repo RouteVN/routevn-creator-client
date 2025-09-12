@@ -1,6 +1,7 @@
 export const INITIAL_STATE = Object.freeze({
   title: "Projects",
   createButtonText: "Create Project",
+  openButtonText: "Open Project",
   projects: [],
   isOpen: false,
   projectPath: "",
@@ -142,5 +143,14 @@ export const closeDropdownMenu = (state) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  return state;
+  return {
+    ...state,
+    hasProjects: state.projects && state.projects.length > 0,
+    emptyMessage:
+      state.projects && state.projects.length === 0 ? "No projects yet" : "",
+    emptySubMessage:
+      state.projects && state.projects.length === 0
+        ? "Create or open a project to get started"
+        : "",
+  };
 };
