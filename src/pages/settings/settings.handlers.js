@@ -24,3 +24,12 @@ export const handleCheckForUpdates = async (payload, deps) => {
   // Check for updates with UI feedback
   await updaterService.checkForUpdates(false);
 };
+
+export const handleBackToProjects = async (e, deps) => {
+  const { subject } = deps;
+
+  // Navigate back to projects page
+  subject.dispatch("redirect", {
+    path: "/projects",
+  });
+};
