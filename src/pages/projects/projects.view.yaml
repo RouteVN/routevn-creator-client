@@ -89,7 +89,10 @@ template:
                 - rtgl-view d=h g=sm av=c mt=xs:
                   - rtgl-svg wh=14 svg=folder c=mu-fg:
                   - rtgl-text s=xs c=mu-fg: "${project.projectPath}"
-              - rvn-file-image wh=48:
+              - $if project.iconUrl:
+                  - rtgl-image wh=48 src=${project.iconUrl} bc=fg of=con br=sm:
+                $else:
+                  - rtgl-image wh=48 src="/public/project_logo_placeholder.png" bc=fg of=con br=sm:
 
   - rtgl-dialog#create-project-dialog ?open=${isOpen} s=md:
     - rtgl-view slot=content g=md:

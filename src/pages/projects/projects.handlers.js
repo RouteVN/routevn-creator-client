@@ -1,14 +1,8 @@
-import { nanoid } from "nanoid";
-
 export const handleAfterMount = async (deps) => {
-  const { keyValueStore, store, render } = deps;
+  const { projectsService, store, render } = deps;
 
-  // Load projects from key-value store
-  const projects = (await keyValueStore.get("projects")) || [];
-
-  // Simply set projects - icon loading will be handled by rvn-file-image component
+  const projects = await projectsService.loadAllProjects();
   store.setProjects(projects);
-
   render();
 };
 
@@ -19,8 +13,7 @@ export const handleCreateButtonClick = async (payload, deps) => {
 };
 
 export const handleOpenButtonClick = async (payload, deps) => {
-  const { keyValueStore, store, render, tauriDialog, tauriFs, tauriDatabase } =
-    deps;
+  const { projectsService, store, render, tauriDialog } = deps;
 
   try {
     // Open folder selection dialog
@@ -32,134 +25,16 @@ export const handleOpenButtonClick = async (payload, deps) => {
       return; // User cancelled
     }
 
-    // Default to blocking
-    let canProceed = false;
+    // Open the project using service
+    const importedProject = await projectsService.openExistingProject(selected);
 
-    try {
-      // Check for repository.db
-      const dbPath = await tauriFs.join(selected, "repository.db");
-      const dbExists = await tauriFs.exists(dbPath);
-
-      // Check for files folder
-      const filesPath = await tauriFs.join(selected, "files");
-      const filesExists = await tauriFs.exists(filesPath);
-
-      if (dbExists && filesExists) {
-        canProceed = true;
-      } else {
-        const missing = [];
-        if (!dbExists) missing.push("repository.db");
-        if (!filesExists) missing.push("files folder");
-
-        alert(
-          `Cannot open project: Missing ${missing.join(" and ")}. Please select a valid project folder.`,
-        );
-        return;
-      }
-    } catch (error) {
-      console.error("Error validating project folder:", error);
-      alert(
-        `Cannot validate project folder: ${error.message || error}. Please choose a different folder.`,
-      );
-      return;
-    }
-
-    // Only proceed if explicitly confirmed the project is valid
-    if (!canProceed) {
-      alert("Cannot verify project folder. Please choose a different folder.");
-      return;
-    }
-
-    // Read project name, description and icon from the database
-    let projectName;
-    let projectDescription;
-    let iconFileId;
-
-    try {
-      const dbPath = await tauriFs.join(selected, "repository.db");
-      const db = await tauriDatabase.load(`sqlite:${dbPath}`);
-
-      // Get all actions to build the current state
-      const results = await db.select(
-        "SELECT action_type, target, value FROM actions ORDER BY id",
-      );
-
-      // Build the project state from all actions
-      let projectState = {};
-
-      for (const row of results) {
-        if (row.action_type === "init" && row.value) {
-          const initData = JSON.parse(row.value);
-          if (initData.project) {
-            projectState = { ...initData.project };
-          }
-        } else if (row.action_type === "set" && row.target) {
-          // Handle set actions for project fields
-          if (row.target === "project.name") {
-            projectState.name = row.value;
-          } else if (row.target === "project.description") {
-            projectState.description = row.value;
-          } else if (row.target === "project.iconFileId") {
-            projectState.iconFileId = row.value;
-          }
-        }
-      }
-
-      // Require project name and description from database
-      if (!projectState.name || !projectState.description) {
-        throw new Error(
-          "Project database is missing required project information (name or description)",
-        );
-      }
-
-      projectName = projectState.name;
-      projectDescription = projectState.description;
-      iconFileId = projectState.iconFileId || null;
-    } catch (error) {
-      console.error("Failed to read project information from database:", error);
-      alert(
-        `Cannot import project: Failed to read project information from database. ${error.message || error}`,
-      );
-      return;
-    }
-
-    // Generate a unique device-local project ID
-    const deviceProjectId = nanoid();
-
-    // Create imported project entry
-    const importedProject = {
-      id: deviceProjectId,
-      name: projectName,
-      description: projectDescription,
-      projectPath: selected,
-      template: "imported",
-      iconFileId: iconFileId,
-      createdAt: Date.now(),
-      lastOpenedAt: null,
-    };
-
-    // Get existing projects
-    const projects = (await keyValueStore.get("projects")) || [];
-
-    // Check if this project path already exists
-    const existingProject = projects.find((p) => p.projectPath === selected);
-    if (existingProject) {
-      alert("This project has already been imported.");
-      return;
-    }
-
-    // Add imported project
-    projects.push(importedProject);
-
-    // Save to key-value store
-    await keyValueStore.set("projects", projects);
-
-    // Update store
-    store.setProjects(projects);
+    // Update store with new project
+    const currentProjects = store.selectProjects() || [];
+    store.setProjects([...currentProjects, importedProject]);
 
     render();
 
-    alert(`Project "${projectName}" has been successfully imported.`);
+    alert(`Project "${importedProject.name}" has been successfully imported.`);
   } catch (error) {
     console.error("Error importing project:", error);
     alert(`Failed to import project: ${error.message || error}`);
@@ -204,7 +79,7 @@ export const handleBrowseFolder = async (e, deps) => {
 };
 
 export const handleFormSubmit = async (e, deps) => {
-  const { keyValueStore, store, render, tauriFs } = deps;
+  const { projectsService, initializeProject, store, render } = deps;
 
   try {
     // Check if it's the submit button
@@ -213,7 +88,6 @@ export const handleFormSubmit = async (e, deps) => {
     }
 
     const { name, description, template } = e.detail.formValues;
-    // Slot fields need to be retrieved from store using select function
     const projectPath = store.selectProjectPath();
 
     // Validate input
@@ -221,83 +95,26 @@ export const handleFormSubmit = async (e, deps) => {
       return;
     }
 
-    // Check if the selected directory is empty
-    let canProceed = false;
-    try {
-      const entries = await tauriFs.readDir(projectPath);
-      if (entries.length === 0) {
-        canProceed = true;
-      } else {
-        alert(
-          "The selected folder must be empty. Please choose an empty folder for your new project.",
-        );
-        return;
-      }
-    } catch (error) {
-      console.error("Cannot read directory:", error);
-      alert(
-        `Cannot access the selected folder: ${error.message || error}. Please choose a different folder.`,
-      );
-      return;
-    }
-
-    // Only proceed if explicitly confirmed it's safe
-    if (!canProceed) {
-      alert(
-        "Cannot verify if the selected folder is empty. Please choose a different folder.",
-      );
-      return;
-    }
-
-    // Generate a unique device-local project ID
-    // This is only for local app storage, not for backend
-    const deviceProjectId = nanoid();
-
-    // Create new project
-    const newProject = {
-      id: deviceProjectId,
+    // Create new project using service
+    const newProject = await projectsService.createNewProject({
       name,
       description,
       projectPath,
       template,
-      createdAt: Date.now(),
-      lastOpenedAt: null,
-    };
+      initializeProject,
+    });
 
-    // Initialize project using the service from deps
-    try {
-      const { initializeProject } = deps;
-
-      await initializeProject({
-        name,
-        description,
-        projectPath,
-        template,
-      });
-
-      console.log(`Project created at: ${projectPath}`);
-    } catch (error) {
-      console.error("Failed to create project:", error);
-      alert(`Failed to create project: ${error.message}`);
-      return;
-    }
-
-    // Get existing projects
-    const projects = (await keyValueStore.get("projects")) || [];
-
-    // Add new project
-    projects.push(newProject);
-
-    // Save to key-value store
-    await keyValueStore.set("projects", projects);
-
-    // Update store and close dialog
-    store.setProjects(projects);
+    // Update store with new project
+    const currentProjects = store.selectProjects() || [];
+    store.setProjects([...currentProjects, newProject]);
     store.toggleDialog();
 
     render();
+
+    console.log(`Project created at: ${projectPath}`);
   } catch (error) {
-    console.error("Error in handleFormSubmit:", error);
+    console.error("Error creating project:", error);
+    alert(`Failed to create project: ${error.message}`);
   }
 };
 
@@ -328,7 +145,7 @@ export const handleDropdownMenuClose = (e, deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (e, deps) => {
-  const { store, render, keyValueStore } = deps;
+  const { store, render, projectsService } = deps;
   const detail = e.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
@@ -381,10 +198,12 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     return;
   }
 
-  // Delete the project only after confirmation
-  const allProjects = (await keyValueStore.get("projects")) || [];
-  const updatedProjects = allProjects.filter((p) => p.id !== projectId);
-  await keyValueStore.set("projects", updatedProjects);
+  // Delete the project entry using service
+  await projectsService.removeProjectEntry(projectId);
+
+  // Update store by removing from current projects
+  const currentProjects = store.selectProjects();
+  const updatedProjects = currentProjects.filter((p) => p.id !== projectId);
   store.setProjects(updatedProjects);
   render();
 };
