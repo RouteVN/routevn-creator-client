@@ -30,8 +30,7 @@ export const handleOpenButtonClick = async (payload, deps) => {
       await projectsService.openExistingProject(selectedPath);
 
     // Update store with new project
-    const currentProjects = store.selectProjects() || [];
-    store.setProjects([...currentProjects, importedProject]);
+    store.addProject(importedProject);
 
     render();
 
@@ -106,8 +105,7 @@ export const handleFormSubmit = async (e, deps) => {
     });
 
     // Update store with new project
-    const currentProjects = store.selectProjects() || [];
-    store.setProjects([...currentProjects, newProject]);
+    store.addProject(newProject);
     store.toggleDialog();
 
     render();
@@ -203,8 +201,6 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   await projectsService.removeProjectEntry(projectId);
 
   // Update store by removing from current projects
-  const currentProjects = store.selectProjects();
-  const updatedProjects = currentProjects.filter((p) => p.id !== projectId);
-  store.setProjects(updatedProjects);
+  store.removeProject(projectId);
   render();
 };

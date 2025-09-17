@@ -102,6 +102,14 @@ export const setProjects = (state, projects) => {
   state.projects = projects;
 };
 
+export const addProject = (state, project) => {
+  state.projects.push(project);
+};
+
+export const removeProject = (state, projectId) => {
+  state.projects = state.projects.filter((p) => p.id !== projectId);
+};
+
 export const setProjectPath = (state, path) => {
   state.projectPath = path; // Update top-level for binding
   state.defaultValues.projectPath = path; // Update defaultValues for form
