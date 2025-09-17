@@ -1,7 +1,4 @@
 import { nanoid } from "nanoid";
-import { readDir, exists } from "@tauri-apps/plugin-fs";
-import { join } from "@tauri-apps/api/path";
-import Database from "@tauri-apps/plugin-sql";
 
 export const handleAfterMount = async (deps) => {
   const { keyValueStore, store, render } = deps;
@@ -22,7 +19,8 @@ export const handleCreateButtonClick = async (payload, deps) => {
 };
 
 export const handleOpenButtonClick = async (payload, deps) => {
-  const { keyValueStore, store, render, tauriDialog } = deps;
+  const { keyValueStore, store, render, tauriDialog, tauriFs, tauriDatabase } =
+    deps;
 
   try {
     // Open folder selection dialog
@@ -39,12 +37,12 @@ export const handleOpenButtonClick = async (payload, deps) => {
 
     try {
       // Check for repository.db
-      const dbPath = await join(selected, "repository.db");
-      const dbExists = await exists(dbPath);
+      const dbPath = await tauriFs.join(selected, "repository.db");
+      const dbExists = await tauriFs.exists(dbPath);
 
       // Check for files folder
-      const filesPath = await join(selected, "files");
-      const filesExists = await exists(filesPath);
+      const filesPath = await tauriFs.join(selected, "files");
+      const filesExists = await tauriFs.exists(filesPath);
 
       if (dbExists && filesExists) {
         canProceed = true;
@@ -78,8 +76,8 @@ export const handleOpenButtonClick = async (payload, deps) => {
     let iconFileId;
 
     try {
-      const dbPath = await join(selected, "repository.db");
-      const db = await Database.load(`sqlite:${dbPath}`);
+      const dbPath = await tauriFs.join(selected, "repository.db");
+      const db = await tauriDatabase.load(`sqlite:${dbPath}`);
 
       // Get all actions to build the current state
       const results = await db.select(
@@ -206,7 +204,7 @@ export const handleBrowseFolder = async (e, deps) => {
 };
 
 export const handleFormSubmit = async (e, deps) => {
-  const { keyValueStore, store, render } = deps;
+  const { keyValueStore, store, render, tauriFs } = deps;
 
   try {
     // Check if it's the submit button
@@ -226,7 +224,7 @@ export const handleFormSubmit = async (e, deps) => {
     // Check if the selected directory is empty
     let canProceed = false;
     try {
-      const entries = await readDir(projectPath);
+      const entries = await tauriFs.readDir(projectPath);
       if (entries.length === 0) {
         canProceed = true;
       } else {
