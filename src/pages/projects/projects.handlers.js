@@ -17,16 +17,17 @@ export const handleOpenButtonClick = async (payload, deps) => {
 
   try {
     // Open folder selection dialog
-    const selected = await tauriDialog.openFolderDialog({
+    const selectedPath = await tauriDialog.openFolderDialog({
       title: "Select Existing Project Folder",
     });
 
-    if (!selected) {
+    if (!selectedPath) {
       return; // User cancelled
     }
 
     // Open the project using service
-    const importedProject = await projectsService.openExistingProject(selected);
+    const importedProject =
+      await projectsService.openExistingProject(selectedPath);
 
     // Update store with new project
     const currentProjects = store.selectProjects() || [];

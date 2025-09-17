@@ -19,8 +19,6 @@ import { createRepositoryFactory } from "./deps/repository";
 import { createProjectsService } from "./deps/projectsService";
 import { updaterService } from "./deps/tauriUpdater";
 import { getVersion } from "@tauri-apps/api/app";
-import { tauriFs } from "./deps/tauriFs";
-import createTauriDatabase from "./deps/tauriSql";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -116,13 +114,10 @@ const router = new Router();
 const audioManager = new AudioManager();
 const filePicker = createFilePicker();
 const tauriDialog = createTauriDialog();
-const tauriDatabase = createTauriDatabase();
 
 // Create projects service
 const projectsService = createProjectsService({
   keyValueStore,
-  tauriFs,
-  tauriDatabase,
 });
 
 // Initialize async resources first
@@ -144,8 +139,6 @@ const componentDependencies = {
   filePicker,
   keyValueStore,
   tauriDialog,
-  tauriFs,
-  tauriDatabase,
   initializeProject,
   projectsService,
   updaterService,
@@ -166,8 +159,6 @@ const pageDependencies = {
   filePicker,
   keyValueStore,
   tauriDialog,
-  tauriFs,
-  tauriDatabase,
   initializeProject,
   projectsService,
   updaterService,

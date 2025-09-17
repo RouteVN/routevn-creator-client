@@ -1,12 +1,15 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { nanoid } from "nanoid"; 
+import Database from "@tauri-apps/plugin-sql";
+import { readDir, exists } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
+import { nanoid } from "nanoid";
 
 export const createProjectsService = (deps) => {
-  const { keyValueStore, tauriFs, tauriDatabase } = deps;
+  const { keyValueStore } = deps;
 
   const loadProjectDataFromDatabase = async (projectPath) => {
-    const dbPath = await tauriFs.join(projectPath, "repository.db");
-    const db = await tauriDatabase.load(`sqlite:${dbPath}`);
+    const dbPath = await join(projectPath, "repository.db");
+    const db = await Database.load(`sqlite:${dbPath}`);
 
     // Get all actions to build the current state
     const results = await db.select(
@@ -43,8 +46,8 @@ export const createProjectsService = (deps) => {
     }
 
     try {
-      const iconPath = await tauriFs.join(projectPath, "files", iconFileId);
-      const exists = await tauriFs.exists(iconPath);
+      const iconPath = await join(projectPath, "files", iconFileId);
+      const exists = await exists(iconPath);
 
       if (exists) {
         return convertFileSrc(iconPath);
@@ -110,12 +113,12 @@ export const createProjectsService = (deps) => {
   const validateProjectFolder = async (folderPath) => {
     try {
       // Check for repository.db
-      const dbPath = await tauriFs.join(folderPath, "repository.db");
-      const dbExists = await tauriFs.exists(dbPath);
+      const dbPath = await join(folderPath, "repository.db");
+      const dbExists = await exists(dbPath);
 
       // Check for files folder
-      const filesPath = await tauriFs.join(folderPath, "files");
-      const filesExists = await tauriFs.exists(filesPath);
+      const filesPath = await join(folderPath, "files");
+      const filesExists = await exists(filesPath);
 
       if (!dbExists || !filesExists) {
         const missing = [];
@@ -182,7 +185,7 @@ export const createProjectsService = (deps) => {
     const projectData = await importProject(folderPath);
 
     // Generate a unique device-local project ID
-    
+
     const deviceProjectId = nanoid();
 
     // Create imported project entry
@@ -223,7 +226,7 @@ export const createProjectsService = (deps) => {
     initializeProject,
   }) => {
     // Check if the selected directory is empty
-    const entries = await tauriFs.readDir(projectPath);
+    const entries = await readDir(projectPath);
     if (entries.length > 0) {
       throw new Error(
         "The selected folder must be empty. Please choose an empty folder for your new project.",
