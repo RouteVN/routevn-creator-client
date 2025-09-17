@@ -1,43 +1,15 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import Database from "@tauri-apps/plugin-sql";
 import { readDir, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { nanoid } from "nanoid";
 
 export const createProjectsService = (deps) => {
-  const { keyValueStore } = deps;
+  const { keyValueStore, repositoryFactory } = deps;
 
   const loadProjectDataFromDatabase = async (projectPath) => {
-    const dbPath = await join(projectPath, "repository.db");
-    const db = await Database.load(`sqlite:${dbPath}`);
-
-    // Get all actions to build the current state
-    const results = await db.select(
-      "SELECT action_type, target, value FROM actions ORDER BY id",
-    );
-
-    // Build the project state from all actions
-    let projectState = {};
-
-    for (const row of results) {
-      if (row.action_type === "init" && row.value) {
-        const initData = JSON.parse(row.value);
-        if (initData.project) {
-          projectState = { ...initData.project };
-        }
-      } else if (row.action_type === "set" && row.target) {
-        // Handle set actions for project fields
-        if (row.target === "project.name") {
-          projectState.name = row.value;
-        } else if (row.target === "project.description") {
-          projectState.description = row.value;
-        } else if (row.target === "project.iconFileId") {
-          projectState.iconFileId = row.value;
-        }
-      }
-    }
-
-    return projectState;
+    const repository = await repositoryFactory.getByPath(projectPath);
+    const { project } = repository.getState();
+    return project;
   };
 
   const loadProjectIcon = async (projectPath, iconFileId) => {
