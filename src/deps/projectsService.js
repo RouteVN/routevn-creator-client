@@ -1,4 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { nanoid } from "nanoid"; 
 
 export const createProjectsService = (deps) => {
   const { keyValueStore, tauriFs, tauriDatabase } = deps;
@@ -181,7 +182,7 @@ export const createProjectsService = (deps) => {
     const projectData = await importProject(folderPath);
 
     // Generate a unique device-local project ID
-    const { nanoid } = await import("nanoid");
+    
     const deviceProjectId = nanoid();
 
     // Create imported project entry
@@ -230,7 +231,6 @@ export const createProjectsService = (deps) => {
     }
 
     // Generate a unique device-local project ID
-    const { nanoid } = await import("nanoid");
     const deviceProjectId = nanoid();
 
     // Create new project entry
