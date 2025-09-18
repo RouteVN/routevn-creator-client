@@ -57,7 +57,6 @@ export const handleFormExtraEvent = async (_, deps) => {
       });
 
       store.setIconFileId(result.fileId);
-
       subject.dispatch("project-image-update");
       render();
     }

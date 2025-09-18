@@ -1,6 +1,7 @@
 export const INITIAL_STATE = Object.freeze({
   title: "Projects",
   createButtonText: "Create Project",
+  openButtonText: "Open Project",
   projects: [],
   isOpen: false,
   projectPath: "",
@@ -101,6 +102,14 @@ export const setProjects = (state, projects) => {
   state.projects = projects;
 };
 
+export const addProject = (state, project) => {
+  state.projects.push(project);
+};
+
+export const removeProject = (state, projectId) => {
+  state.projects = state.projects.filter((p) => p.id !== projectId);
+};
+
 export const setProjectPath = (state, path) => {
   state.projectPath = path; // Update top-level for binding
   state.defaultValues.projectPath = path; // Update defaultValues for form
@@ -142,5 +151,14 @@ export const closeDropdownMenu = (state) => {
 };
 
 export const toViewData = ({ state, props }, payload) => {
-  return state;
+  return {
+    ...state,
+    hasProjects: state.projects && state.projects.length > 0,
+    emptyMessage:
+      state.projects && state.projects.length === 0 ? "No projects yet" : "",
+    emptySubMessage:
+      state.projects && state.projects.length === 0
+        ? "Create or open a project to get started"
+        : "",
+  };
 };
