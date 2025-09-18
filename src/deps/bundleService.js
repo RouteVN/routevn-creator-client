@@ -171,65 +171,6 @@ export const createBundleService = () => {
   };
 
   /**
-   * Imports a project from a bundle file
-   * @param {File|ArrayBuffer} file - Bundle file to import
-   * @returns {Object} Imported project data with blob URLs
-   */
-  const importProject = async (file) => {
-    const arrayBuffer = file instanceof File ? await file.arrayBuffer() : file;
-
-    const { assets, instructions } = await extractBundle(arrayBuffer);
-
-    // Create blob URLs for assets
-    const blobUrls = {};
-    for (const [id, asset] of Object.entries(assets)) {
-      const blob = new Blob([asset.buffer], { type: asset.type });
-      blobUrls[id] = URL.createObjectURL(blob);
-    }
-
-    // Update fileId references to use blob URLs
-    const replaceAssetReferences = (obj) => {
-      if (!obj || typeof obj !== "object") return obj;
-
-      if (Array.isArray(obj)) {
-        return obj.map((item) => replaceAssetReferences(item));
-      }
-
-      const updated = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (
-          (key === "fileId" || key === "iconFileId") &&
-          typeof value === "string" &&
-          blobUrls[value]
-        ) {
-          // Replace fileId with blob URL
-          updated[key] = blobUrls[value];
-        } else if (
-          (key === "src" || key === "url") &&
-          typeof value === "string" &&
-          blobUrls[value]
-        ) {
-          updated[key] = blobUrls[value];
-        } else {
-          updated[key] = replaceAssetReferences(value);
-        }
-      }
-      return updated;
-    };
-
-    const projectData = replaceAssetReferences(instructions);
-
-    return {
-      data: projectData,
-      assets: blobUrls,
-      // Cleanup function to revoke blob URLs when done
-      cleanup: () => {
-        Object.values(blobUrls).forEach((url) => URL.revokeObjectURL(url));
-      },
-    };
-  };
-
-  /**
    * Downloads bundle data as a file
    * @param {Uint8Array} bundle - Bundle data
    * @param {string} filename - Download filename
@@ -249,7 +190,6 @@ export const createBundleService = () => {
     createBundle,
     extractBundle,
     exportProject,
-    importProject,
     downloadBundle,
   };
 };

@@ -75,32 +75,3 @@ export const handleCreateBundle = async (e, deps) => {
 
   bundleService.downloadBundle(bundle, fileName);
 };
-
-export const handleFileSelected = async (e, deps) => {
-  const { bundleService } = deps;
-  const files = e.detail?.files;
-  if (!files || files.length === 0) return;
-
-  const file = files[0];
-  const arrayBuffer = await file.arrayBuffer();
-
-  // Extract bundle without importing
-  const { assets, instructions } =
-    await bundleService.extractBundle(arrayBuffer);
-
-  console.log("\n=== Bundle Contents ===");
-  console.log("Project:", instructions.project?.name || "Unknown");
-  console.log("\nMetadata:");
-  console.log(instructions);
-  console.log("\nAssets:", Object.keys(assets).length);
-
-  // List all assets
-  if (Object.keys(assets).length > 0) {
-    console.log("\nAsset list:");
-    Object.entries(assets).forEach(([id, asset]) => {
-      console.log(`  - ${id}: ${asset.type} (${asset.buffer.length} bytes)`);
-    });
-  }
-
-  console.log("===================\n");
-};
