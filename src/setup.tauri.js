@@ -18,6 +18,7 @@ import { initializeProject } from "./deps/tauriRepositoryAdapter";
 import { createRepositoryFactory } from "./deps/repository";
 import { createProjectsService } from "./deps/projectsService";
 import { updaterService } from "./deps/tauriUpdater";
+import { createBundleService } from "./deps/bundleService";
 import { getVersion } from "@tauri-apps/api/app";
 
 // Tauri-specific configuration
@@ -127,6 +128,9 @@ const drenderer = await create2dRenderer({ subject });
 // Get app version
 const appVersion = await getVersion();
 
+// Create bundle service
+const bundleService = createBundleService();
+
 const componentDependencies = {
   httpClient,
   subject,
@@ -163,6 +167,7 @@ const pageDependencies = {
   initializeProject,
   projectsService,
   updaterService,
+  bundleService,
   appVersion: `v${appVersion}`,
   platform: "tauri",
 };
