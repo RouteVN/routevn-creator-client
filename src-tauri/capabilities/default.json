@@ -29,6 +29,7 @@
     "fs:allow-mkdir",
     "fs:allow-read-file",
     "fs:allow-write-file",
+    "fs:allow-read-dir",
     {
       "identifier": "fs:scope",
       "allow": ["$APPDATA/**", "$APPDATA/routevn-creator/**", "**"]

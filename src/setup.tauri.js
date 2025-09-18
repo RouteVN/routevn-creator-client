@@ -16,6 +16,7 @@ import { createKeyValueStore } from "./deps/keyValueStore";
 import { createTauriDialog } from "./deps/tauriDialog";
 import { initializeProject } from "./deps/tauriRepositoryAdapter";
 import { createRepositoryFactory } from "./deps/repository";
+import { createProjectsService } from "./deps/projectsService";
 import { updaterService } from "./deps/tauriUpdater";
 import { getVersion } from "@tauri-apps/api/app";
 
@@ -114,6 +115,12 @@ const audioManager = new AudioManager();
 const filePicker = createFilePicker();
 const tauriDialog = createTauriDialog();
 
+// Create projects service
+const projectsService = createProjectsService({
+  keyValueStore,
+  repositoryFactory,
+});
+
 // Initialize async resources first
 const drenderer = await create2dRenderer({ subject });
 
@@ -134,6 +141,7 @@ const componentDependencies = {
   keyValueStore,
   tauriDialog,
   initializeProject,
+  projectsService,
   updaterService,
   appVersion: `v${appVersion}`,
   platform: "tauri",
@@ -153,6 +161,7 @@ const pageDependencies = {
   keyValueStore,
   tauriDialog,
   initializeProject,
+  projectsService,
   updaterService,
   appVersion: `v${appVersion}`,
   platform: "tauri",

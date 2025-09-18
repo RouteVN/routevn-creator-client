@@ -454,6 +454,13 @@ export const createRepositoryFactory = (initialState, keyValueStore) => {
       await repository.init();
       return repository;
     },
+    getByPath: async (projectPath) => {
+      console.log("Getting repository for path:", projectPath);
+      const store = await createTauriSQLiteRepositoryAdapter(projectPath);
+      const repository = createRepositoryInternal(initialState, store);
+      await repository.init();
+      return repository;
+    },
   };
 
   return repositoryFactory;

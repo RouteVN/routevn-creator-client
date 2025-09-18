@@ -1,12 +1,8 @@
-import { nanoid } from "nanoid";
-
 export const handleAfterMount = async (deps) => {
-  const { keyValueStore, store, render } = deps;
+  const { projectsService, store, render } = deps;
 
-  // Load projects from key-value store
-  const projects = await keyValueStore.get("projects");
-  store.setProjects(projects || []);
-
+  const projects = await projectsService.loadAllProjects();
+  store.setProjects(projects);
   render();
 };
 
@@ -14,6 +10,35 @@ export const handleCreateButtonClick = async (payload, deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
+};
+
+export const handleOpenButtonClick = async (payload, deps) => {
+  const { projectsService, store, render, tauriDialog } = deps;
+
+  try {
+    // Open folder selection dialog
+    const selectedPath = await tauriDialog.openFolderDialog({
+      title: "Select Existing Project Folder",
+    });
+
+    if (!selectedPath) {
+      return; // User cancelled
+    }
+
+    // Open the project using service
+    const importedProject =
+      await projectsService.openExistingProject(selectedPath);
+
+    // Update store with new project
+    store.addProject(importedProject);
+
+    render();
+
+    alert(`Project "${importedProject.name}" has been successfully imported.`);
+  } catch (error) {
+    console.error("Error importing project:", error);
+    alert(`Failed to import project: ${error.message || error}`);
+  }
 };
 
 export const handleCloseDialogue = (payload, deps) => {
@@ -54,7 +79,7 @@ export const handleBrowseFolder = async (e, deps) => {
 };
 
 export const handleFormSubmit = async (e, deps) => {
-  const { keyValueStore, store, render } = deps;
+  const { projectsService, initializeProject, store, render } = deps;
 
   try {
     // Check if it's the submit button
@@ -63,7 +88,6 @@ export const handleFormSubmit = async (e, deps) => {
     }
 
     const { name, description, template } = e.detail.formValues;
-    // Slot fields need to be retrieved from store using select function
     const projectPath = store.selectProjectPath();
 
     // Validate input
@@ -71,55 +95,25 @@ export const handleFormSubmit = async (e, deps) => {
       return;
     }
 
-    // Generate a unique device-local project ID
-    // This is only for local app storage, not for backend
-    const deviceProjectId = nanoid();
-
-    // Create new project
-    const newProject = {
-      id: deviceProjectId,
+    // Create new project using service
+    const newProject = await projectsService.createNewProject({
       name,
       description,
       projectPath,
       template,
-      createdAt: Date.now(),
-      lastOpenedAt: null,
-    };
+      initializeProject,
+    });
 
-    // Initialize project using the service from deps
-    try {
-      const { initializeProject } = deps;
-
-      await initializeProject({
-        name,
-        description,
-        projectPath,
-        template,
-      });
-
-      console.log(`Project created at: ${projectPath}`);
-    } catch (error) {
-      console.error("Failed to create project:", error);
-      alert(`Failed to create project: ${error.message}`);
-      return;
-    }
-
-    // Get existing projects
-    const projects = (await keyValueStore.get("projects")) || [];
-
-    // Add new project
-    projects.push(newProject);
-
-    // Save to key-value store
-    await keyValueStore.set("projects", projects);
-
-    // Update store and close dialog
-    store.setProjects(projects);
+    // Update store with new project
+    store.addProject(newProject);
     store.toggleDialog();
 
     render();
+
+    console.log(`Project created at: ${projectPath}`);
   } catch (error) {
-    console.error("Error in handleFormSubmit:", error);
+    console.error("Error creating project:", error);
+    alert(`Failed to create project: ${error.message}`);
   }
 };
 
@@ -150,7 +144,7 @@ export const handleDropdownMenuClose = (e, deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (e, deps) => {
-  const { store, render, keyValueStore } = deps;
+  const { store, render, projectsService } = deps;
   const detail = e.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
@@ -203,10 +197,10 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     return;
   }
 
-  // Delete the project only after confirmation
-  const allProjects = (await keyValueStore.get("projects")) || [];
-  const updatedProjects = allProjects.filter((p) => p.id !== projectId);
-  await keyValueStore.set("projects", updatedProjects);
-  store.setProjects(updatedProjects);
+  // Delete the project entry using service
+  await projectsService.removeProjectEntry(projectId);
+
+  // Update store by removing from current projects
+  store.removeProject(projectId);
   render();
 };
