@@ -20,6 +20,10 @@ refs:
     eventListeners:
       click:
         handler: handleBackToProjects
+  createBundleButton:
+    eventListeners:
+      click:
+        handler: handleCreateBundle
 
 template: 
   - rtgl-view d=h w=f h=f: 
@@ -34,5 +38,9 @@ template:
               - rtgl-text s=sm col=muted: "Current Version:"
               - rtgl-text s=sm: "${appVersion}"
             - rtgl-button#checkUpdateButton variant=pr: Check for Updates
+          - rtgl-view d=v g=md mt=xl:
+            - rtgl-text s=lg: Project Bundle
+            - rtgl-text s=sm col=muted mb=md: Export project for distribution
+            - rtgl-button#createBundleButton variant=pr: Create Bundle
         - rtgl-view w=f mt=auto pt=lg bw-t=xs:
           - rtgl-button#backButton variant=se: Back to Projects
