@@ -136,6 +136,13 @@ sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicato
 
 The Tauri build automatically uses the desktop-specific configuration (`src/setup.tauri.js`):
 
+Add `env.dev` to your env variables. It is required to set the private key for the updater
+
+Start dev server from:
+```shell
+bun run watch:tauri
+```
+
 Run the Tauri app in development mode:
 ```shell
 bun run tauri:dev
