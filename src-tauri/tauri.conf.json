@@ -6,8 +6,6 @@
   "build": {
     "frontendDist": "../_site",
     "devUrl": "http://localhost:3001",
-    "beforeDevCommand": "bun run watch:tauri",
-    "beforeBuildCommand": "bun run build:tauri",
     "runner": "cargo"
   },
   "app": {
@@ -17,8 +15,7 @@
         "width": 1600,
         "height": 900,
         "resizable": true,
-        "fullscreen": false,
-        "devtools": true
+        "fullscreen": false
       }
     ],
     "security": {
@@ -27,7 +24,10 @@
       "devCsp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**", "**"]
+        "scope": [
+          "$APPDATA/**",
+          "**"
+        ]
       }
     }
   },
@@ -41,11 +41,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": "v1Compatible"
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlDRjJDOEUyNEY4OEZFQjYKUldTMi9vaFA0c2p5bkNadWk5NGNpbkhEQ1d0cnIwRHV3RFhCSDB2cE5XNU1YbCszeVdzTDBUNVoK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4ODJGRjUyRTg5NDBFRDcKUldUWERwVG9VditDT0gyQTNEWmV3Q0RqUElnUW54aGs0NDhGNGdtL0JvZW00SEdZeDh5ZFl4UnkK",
       "endpoints": [
         "http://localhost:3333/check/{{target}}/{{arch}}/{{current_version}}"
       ],
