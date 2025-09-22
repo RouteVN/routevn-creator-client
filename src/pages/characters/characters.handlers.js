@@ -99,14 +99,16 @@ export const handleCharacterCreated = async (e, deps) => {
 };
 
 export const handleSpritesButtonClick = (e, deps) => {
-  const { subject, render } = deps;
+  const { subject, render, router } = deps;
   const { itemId } = e.detail;
+  const { p } = router.getPayload();
 
   // Dispatch redirect with path and payload for query params
   subject.dispatch("redirect", {
     path: "/project/resources/character-sprites",
     payload: {
       characterId: itemId,
+      p: p,
     },
   });
 
