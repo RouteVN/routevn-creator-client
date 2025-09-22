@@ -46,7 +46,9 @@ export const handleSubmitClick = (e, deps) => {
   });
 
   // Create dialogue object with only non-empty values
-  const dialogue = {};
+  const dialogue = {
+    mode: "adv",
+  };
   if (selectedLayoutId && selectedLayoutId !== "") {
     dialogue.layoutId = selectedLayoutId;
   }
