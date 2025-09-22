@@ -2,7 +2,7 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
-  items: [],
+  items: { items: {}, tree: [] },
   transforms: { tree: [], items: {} },
   /**
    * Array of raw character objects with the following structure (same as props):

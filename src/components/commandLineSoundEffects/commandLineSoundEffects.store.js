@@ -2,7 +2,7 @@ import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
-  items: [],
+  items: { items: {}, tree: [] },
   /**
    * Array of sound effect objects with the following structure:
    * {

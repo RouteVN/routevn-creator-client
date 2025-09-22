@@ -58,7 +58,7 @@ const form = {
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
-  items: [],
+  items: { items: {}, tree: [] },
 
   defaultValues: {
     sameScene: "this_scene",
