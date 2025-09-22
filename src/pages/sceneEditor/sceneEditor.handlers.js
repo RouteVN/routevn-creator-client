@@ -289,9 +289,16 @@ export const handleSectionAddClick = async (e, deps) => {
     ? {
         dialogue: {
           layoutId: dialogueLayoutId,
+          mode: "adv",
+          content: [{ text: "" }],
         },
       }
-    : {};
+    : {
+        dialogue: {
+          mode: "adv",
+          content: [{ text: "" }],
+        },
+      };
 
   repository.addAction({
     actionType: "treePush",
