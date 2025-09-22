@@ -324,6 +324,7 @@
         "type": "layout",
         "name": "Simple Dialogue",
         "layoutType": "dialogue",
+        "mode": "adv",
         "elements": {
           "items": {
             "dialogue-container": {
@@ -374,7 +375,7 @@
               }
             },
             "dialogue-content": {
-              "type": "text",
+              "type": "text-revealing",
               "name": "Dialogue Content",
               "x": -850,
               "y": -275,
@@ -386,7 +387,8 @@
               "scaleY": 1,
               "rotation": 0,
               "contentType": "dialogue.content",
-              "text": "${dialogue.content}",
+              "content": "${dialogue.content}",
+              "displaySpeed": 100,
               "typographyId": "typography-text-view",
               "style": {
                 "wordWrapWidth": 1700,
@@ -841,7 +843,8 @@
                   "line-1": {
                     "presentation": {
                       "dialogue": {
-                        "layoutId": "simple-dialogue"
+                        "layoutId": "simple-dialogue",
+                        "mode": "adv"
                       }
                     }
                   },

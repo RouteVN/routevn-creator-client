@@ -1,6 +1,7 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const INITIAL_STATE = Object.freeze({
+  ready: false,
   mode: "block", // 'block' or 'text-editor'
   cursorPosition: 0, // Track cursor position for navigation
   goalColumn: 0, // Remember the desired column when moving vertically
@@ -11,6 +12,10 @@ export const INITIAL_STATE = Object.freeze({
 
 export const setMode = (state, mode) => {
   state.mode = mode;
+};
+
+export const setReady = (state) => {
+  state.ready = true;
 };
 
 export const setRepositoryState = (state, repositoryState) => {
@@ -217,5 +222,6 @@ export const toViewData = ({ state, props }) => {
     lines,
     selectedLineId: props.selectedLineId,
     mode: state.mode,
+    ready: state.ready,
   };
 };

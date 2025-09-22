@@ -220,16 +220,21 @@ export const handleCommandLineSubmit = async (e, deps) => {
 export const handleEditorDataChanged = async (e, deps) => {
   const { subject, store } = deps;
 
+  const content = [
+    {
+      text: e.detail.content,
+    },
+  ];
   // Update local store immediately for UI responsiveness
   store.setLineTextContent({
     lineId: e.detail.lineId,
-    content: e.detail.content,
+    content,
   });
 
   // Dispatch to subject for throttled/debounced repository update
   subject.dispatch("updateDialogueContent", {
     lineId: e.detail.lineId,
-    content: e.detail.content,
+    content,
   });
 
   // Render the scene immediately with the updated content
@@ -846,7 +851,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
         if (currentPresentation?.dialogue) {
           // Keep content if it exists, remove layoutId and characterId
           const updatedDialogue = {
-            content: currentPresentation.dialogue.content || "",
+            content: currentPresentation.dialogue.content,
           };
 
           repository.addAction({
