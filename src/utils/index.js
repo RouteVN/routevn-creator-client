@@ -76,7 +76,7 @@ export const layoutTreeStructureToRenderState = (
       element["$when"] = node["$when"];
     }
 
-    if (node.type === "text") {
+    if (node.type === "text" || node.type === "text-revealing") {
       let textStyle = {};
 
       // Apply typography if selected
@@ -161,6 +161,7 @@ export const layoutTreeStructureToRenderState = (
       element = {
         ...element,
         text: node.text,
+        content: node.content,
         style: finalStyle,
         ...interactionStyles,
       };
