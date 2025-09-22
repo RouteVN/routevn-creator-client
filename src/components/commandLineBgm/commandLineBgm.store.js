@@ -13,7 +13,7 @@ const form = {
 
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
-  items: [],
+  items: { items: {}, tree: [] },
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
 });
