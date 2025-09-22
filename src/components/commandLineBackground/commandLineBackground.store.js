@@ -20,10 +20,10 @@ const tabs = [
 export const INITIAL_STATE = Object.freeze({
   mode: "current",
   tab: "image", // "image", "layout", or "video"
-  imageItems: [],
-  layoutItems: [],
-  videoItems: [],
-  animationItems: [],
+  imageItems: { items: {}, tree: [] },
+  layoutItems: { items: {}, tree: [] },
+  videoItems: { items: {}, tree: [] },
+  animationItems: { items: {}, tree: [] },
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
@@ -108,6 +108,7 @@ export const selectSelectedResource = ({ state }) => {
     layout: state.layoutItems,
     video: state.videoItems,
   };
+
   const itemsList = itemsMap[state.selectedResourceType] || [];
 
   const flatItems = toFlatItems(itemsList);
@@ -143,7 +144,7 @@ export const toViewData = ({ state }) => {
     layout: state.layoutItems,
     video: state.videoItems,
   };
-  const items = itemsMap[state.tab] || [];
+  const items = itemsMap[state.tab] || { item: {}, tree: [] };
   const flatItems = toFlatItems(items).filter((item) => item.type === "folder");
   const flatGroups = toFlatGroups(items).map((group) => {
     return {

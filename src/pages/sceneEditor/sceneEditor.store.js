@@ -336,8 +336,58 @@ export const selectRenderState = ({ state }) => {
     },
     resolveFile: (f) => `file:${f}`,
     resources,
-    ui: {
-      layouts: selectLayouts({ state }),
+    i18n: {},
+    systemState: {
+      pendingEffects: [],
+      variables: {},
+      saveData: {},
+      lastLineAction: undefined,
+      dialogueUIHidden: false,
+      autoMode: false,
+      skipMode: false,
+      currentLanguagePackId: "",
+      history: {
+        entries: [],
+      },
+      globalAudios: [],
+      historyEntryIndex: undefined,
+      currentMode: "main",
+      nextConfig: {},
+      modes: {
+        main: {
+          currentPointer: "read",
+          modals: [],
+          read: {
+            sectionId: "",
+            lineId: "",
+          },
+          history: {
+            sectionId: undefined,
+            lineId: undefined,
+            historyEntryIndex: undefined,
+          },
+        },
+        replay: {
+          currentPointer: "read",
+          modals: [],
+          read: {
+            sectionId: undefined,
+            lineId: undefined,
+          },
+          history: {
+            sectionId: undefined,
+            lineId: undefined,
+            historyEntryIndex: undefined,
+          },
+        },
+      },
+    },
+    systemStore: {
+      selectSaveDataPage: () => {},
+      selectAutoMode: () => {},
+      selectSkipMode: () => {},
+      selectCurrentLanguagePackId: () => {},
+      selectCurrentLanguagePackKeys: () => {},
     },
   });
 
