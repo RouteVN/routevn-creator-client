@@ -246,7 +246,6 @@ export const handleAfterMount = async (deps) => {
     if (container) {
       container.focus();
     }
-    // render();
   }, 0);
 };
 
