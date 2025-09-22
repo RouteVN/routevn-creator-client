@@ -188,35 +188,35 @@
       "bottom-left": {
         "type": "transform",
         "name": "Bottom Left",
-        "x": "300",
-        "y": "1080",
-        "scaleX": "1",
-        "scaleY": "1",
+        "x": 300,
+        "y": 1080,
+        "scaleX": 1,
+        "scaleY": 1,
         "anchorX": 0.5,
         "anchorY": 1,
-        "rotation": "0"
+        "rotation": 0
       },
       "bottom-center": {
         "type": "transform",
         "name": "Bottom Center",
-        "x": "960",
-        "y": "1080",
-        "scaleX": "1",
-        "scaleY": "1",
+        "x": 960,
+        "y": 1080,
+        "scaleX": 1,
+        "scaleY": 1,
         "anchorX": 0.5,
         "anchorY": 1,
-        "rotation": "0"
+        "rotation": 0
       },
       "bottom-right": {
         "type": "transform",
         "name": "Bottom Right",
-        "x": "1620",
-        "y": "1080",
-        "scaleX": "1",
-        "scaleY": "1",
+        "x": 1620,
+        "y": 1080,
+        "scaleX": 1,
+        "scaleY": 1,
         "anchorX": 0.5,
         "anchorY": 1,
-        "rotation": "0"
+        "rotation": 0
       }
     }
   },
@@ -324,7 +324,6 @@
         "type": "layout",
         "name": "Simple Dialogue",
         "layoutType": "dialogue",
-        "mode": "adv",
         "elements": {
           "items": {
             "dialogue-container": {
