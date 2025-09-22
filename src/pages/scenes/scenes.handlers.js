@@ -235,9 +235,16 @@ export const handleSceneFormAction = async (e, deps) => {
       ? {
           dialogue: {
             layoutId: dialogueLayoutId,
+            mode: "adv",
+            content: [{ text: "" }],
           },
         }
-      : {};
+      : {
+          dialogue: {
+            mode: "adv",
+            content: [{ text: "" }],
+          },
+        };
 
     // Create items object with first line having presentation, rest with empty presentation
     const lineItems = {
