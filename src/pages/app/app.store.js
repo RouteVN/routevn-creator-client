@@ -41,6 +41,7 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
     "/project/resources/layouts",
     "/project/resources/layout-editor",
     "/project/resources/component-editor",
+    "/project/versions",
   ];
   const currentRoute = state.currentRoute;
   const matchPaths = (path, pattern) => {

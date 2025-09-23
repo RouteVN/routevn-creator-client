@@ -1,0 +1,21 @@
+elementName: rvn-versions
+
+viewDataSchema:
+  type: object
+  properties:
+    versions:
+      type: array
+      default: []
+
+refs:
+  left-panel:
+    eventListeners:
+      data-changed:
+        handler: handleDataChanged
+
+template: 
+  - rtgl-view d=h w=f h=f: 
+    - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
+    - rtgl-view flex=1 p=lg d=v:
+      - rtgl-text s=h2: Versions
+      - rtgl-text s=sm col=muted mt=md: Version management coming soon
