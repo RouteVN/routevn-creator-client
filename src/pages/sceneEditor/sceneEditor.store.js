@@ -4,6 +4,7 @@ import {
 } from "route-engine-js";
 import { toFlatItems, toTreeStructure } from "../../deps/repository";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
+import { constructResources } from "../../utils/resourcesConstructor.js";
 
 export const INITIAL_STATE = Object.freeze({
   sceneId: undefined,
@@ -309,20 +310,7 @@ export const selectRenderState = ({ state }) => {
   const presentationState = selectPresentationState({ state });
   if (!presentationState) return null;
 
-  const characterImages = {};
-  const characters = selectCharacters({ state });
-  Object.entries(characters).forEach(([id, character]) => {
-    Object.assign(characterImages, character.sprites);
-  });
-
-  const resources = {
-    images: { ...selectImages({ state }), ...characterImages },
-    transforms: selectTransforms({ state }),
-    characters,
-    audio: selectAudios({ state }),
-    layouts: selectLayouts({ state }),
-    animations: selectAnimations({ state }),
-  };
+  const resources = constructResources(state.repositoryState);
 
   console.log("presentationState", presentationState);
   console.log("resources", resources);
