@@ -6,16 +6,49 @@ viewDataSchema:
     versions:
       type: array
       default: []
+    showVersionForm:
+      type: boolean
+      default: false
+    versionFormFields:
+      type: object
+      default: {}
 
 refs:
   left-panel:
     eventListeners:
       data-changed:
         handler: handleDataChanged
+  save-version-btn:
+    eventListeners:
+      click:
+        handler: handleSaveVersionClick
+  version-form:
+    eventListeners:
+      action-click:
+        handler: handleVersionFormAction
+  version-form-popover:
+    eventListeners:
+      close:
+        handler: handleVersionFormClose
 
-template: 
-  - rtgl-view d=h w=f h=f: 
-    - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
-    - rtgl-view flex=1 p=lg d=v:
-      - rtgl-text s=h2: Versions
-      - rtgl-text s=sm col=muted mt=md: Version management coming soon
+template:
+  - rtgl-view d=h w=f h=f:
+      - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
+      - rtgl-view flex=1 p=lg d=v g=lg:
+          - rtgl-text s=h2: Versions
+          - rtgl-button#save-version-btn v=pr s=md: Save
+          - rtgl-view w=f g=md flex=1 oy=a:
+              - $if versions.length == 0:
+                  - rtgl-view w=f h=200 ah=c av=c:
+                      - rtgl-view d=v ah=c g=md:
+                          - rtgl-text s=lg c=mu-fg: No versions saved yet
+                          - rtgl-text s=sm c=mu-fg: Save your first version to track changes
+                $else:
+                  - $for item in versions:
+                      - rtgl-view#version-${item.id} h=auto w=f bw=xs p=md cur=p d=h av=c:
+                          - rtgl-view flex=1 d=v g=xs:
+                              - rtgl-text s=lg: ${item.name}
+                              - rtgl-text s=xs c=mu-fg: 'Action ${item.actionId} • ${item.createdAt}'
+                          - rtgl-button size=sm variant=ghost col=danger data-version-id="${item.id}" on-click=handleDeleteVersion: Delete
+      - rtgl-popover#version-form-popover ?open=${showVersionForm} x=300 y=100:
+          - rtgl-form#version-form key=${showVersionForm} slot=content .form=versionFormFields w=320:

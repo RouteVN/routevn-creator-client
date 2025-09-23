@@ -52,6 +52,7 @@ export const createProjectsService = (deps) => {
             projectPath: entry.projectPath,
             createdAt: entry.createdAt,
             lastOpenedAt: entry.lastOpenedAt,
+            versions: entry.versions || [],
           };
 
           // Load icon URL if iconFileId exists
@@ -74,6 +75,7 @@ export const createProjectsService = (deps) => {
             projectPath: entry.projectPath,
             createdAt: entry.createdAt,
             lastOpenedAt: entry.lastOpenedAt,
+            versions: entry.versions || [],
           };
         }
       }),
@@ -242,6 +244,40 @@ export const createProjectsService = (deps) => {
     await keyValueStore.set("projects", updatedEntries);
   };
 
+  const addVersionToProject = async (projectId, version) => {
+    const projectEntries = await keyValueStore.get("projects");
+    const projectIndex = projectEntries.findIndex((p) => p.id === projectId);
+    
+    if (projectIndex === -1) {
+      throw new Error("Project not found");
+    }
+    
+    if (!projectEntries[projectIndex].versions) {
+      projectEntries[projectIndex].versions = [];
+    }
+    
+    projectEntries[projectIndex].versions.unshift(version);
+    await keyValueStore.set("projects", projectEntries);
+  };
+
+  const deleteVersionFromProject = async (projectId, versionId) => {
+    const projectEntries = await keyValueStore.get("projects");
+    const projectIndex = projectEntries.findIndex((p) => p.id === projectId);
+    
+    if (projectIndex === -1) {
+      throw new Error("Project not found");
+    }
+    
+    if (!projectEntries[projectIndex].versions) {
+      throw new Error("No versions found for this project");
+    }
+    
+    projectEntries[projectIndex].versions = projectEntries[projectIndex].versions.filter(
+      (v) => v.id !== versionId
+    );
+    await keyValueStore.set("projects", projectEntries);
+  };
+
   return {
     loadAllProjects,
     loadProjectDataFromDatabase,
@@ -252,5 +288,7 @@ export const createProjectsService = (deps) => {
     openExistingProject,
     createNewProject,
     removeProjectEntry,
+    addVersionToProject,
+    deleteVersionFromProject,
   };
 };
