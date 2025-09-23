@@ -2,7 +2,7 @@ export const INITIAL_STATE = Object.freeze({
   versions: [],
   showVersionForm: false,
   versionFormData: {},
-  
+
   dropdownMenu: {
     isOpen: false,
     x: 0,

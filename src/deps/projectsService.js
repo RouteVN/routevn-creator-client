@@ -247,15 +247,15 @@ export const createProjectsService = (deps) => {
   const addVersionToProject = async (projectId, version) => {
     const projectEntries = await keyValueStore.get("projects");
     const projectIndex = projectEntries.findIndex((p) => p.id === projectId);
-    
+
     if (projectIndex === -1) {
       throw new Error("Project not found");
     }
-    
+
     if (!projectEntries[projectIndex].versions) {
       projectEntries[projectIndex].versions = [];
     }
-    
+
     projectEntries[projectIndex].versions.unshift(version);
     await keyValueStore.set("projects", projectEntries);
   };
@@ -263,18 +263,18 @@ export const createProjectsService = (deps) => {
   const deleteVersionFromProject = async (projectId, versionId) => {
     const projectEntries = await keyValueStore.get("projects");
     const projectIndex = projectEntries.findIndex((p) => p.id === projectId);
-    
+
     if (projectIndex === -1) {
       throw new Error("Project not found");
     }
-    
+
     if (!projectEntries[projectIndex].versions) {
       throw new Error("No versions found for this project");
     }
-    
-    projectEntries[projectIndex].versions = projectEntries[projectIndex].versions.filter(
-      (v) => v.id !== versionId
-    );
+
+    projectEntries[projectIndex].versions = projectEntries[
+      projectIndex
+    ].versions.filter((v) => v.id !== versionId);
     await keyValueStore.set("projects", projectEntries);
   };
 
