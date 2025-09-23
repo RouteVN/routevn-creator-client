@@ -4,6 +4,7 @@ import {
 } from "route-engine-js";
 import { toFlatItems, toTreeStructure } from "../../deps/repository";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
+import { constructResources } from "../../utils/resourcesConstructor.js";
 
 export const INITIAL_STATE = Object.freeze({
   sceneId: undefined,
@@ -39,33 +40,6 @@ export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
 
-export const selectFonts = ({ state }) => {
-  return state.repositoryState.fonts?.items || {};
-};
-
-export const selectImages = ({ state }) => {
-  return state.repositoryState.images?.items || {};
-};
-
-export const selectAudios = ({ state }) => {
-  return state.repositoryState.audio?.items || {};
-};
-
-export const selectAnimations = ({ state }) => {
-  const items = {};
-  Object.entries(state.repositoryState.animations?.items || {}).forEach(
-    ([id, item]) => {
-      if (item.type === "animation") {
-        items[id] = {
-          id,
-          properties: item.properties,
-        };
-      }
-    },
-  );
-  return items;
-};
-
 export const selectCharacters = ({ state }) => {
   const characters = state.repositoryState.characters?.items || {};
   const processedCharacters = {};
@@ -98,23 +72,9 @@ export const selectCharacters = ({ state }) => {
   return processedCharacters;
 };
 
-export const selectTransforms = ({ state }) => {
-  const transforms = state.repositoryState.transforms?.items || {};
-  const processedTransforms = {};
-
-  Object.keys(transforms).forEach((transformId) => {
-    const transform = transforms[transformId];
-    if (transform.type === "transform") {
-      processedTransforms[transformId] = transform;
-    }
-  });
-
-  return processedTransforms;
-};
-
 export const selectLayouts = ({ state }) => {
   const layouts = state.repositoryState.layouts?.items || {};
-  const images = selectImages({ state });
+  const images = state.repositoryState.images?.items || {};
   const typography = state.repositoryState.typography || {
     items: {},
     tree: [],
@@ -309,20 +269,7 @@ export const selectRenderState = ({ state }) => {
   const presentationState = selectPresentationState({ state });
   if (!presentationState) return null;
 
-  const characterImages = {};
-  const characters = selectCharacters({ state });
-  Object.entries(characters).forEach(([id, character]) => {
-    Object.assign(characterImages, character.sprites);
-  });
-
-  const resources = {
-    images: { ...selectImages({ state }), ...characterImages },
-    transforms: selectTransforms({ state }),
-    characters,
-    audio: selectAudios({ state }),
-    layouts: selectLayouts({ state }),
-    animations: selectAnimations({ state }),
-  };
+  const resources = constructResources(state.repositoryState);
 
   console.log("presentationState", presentationState);
   console.log("resources", resources);
@@ -579,8 +526,8 @@ export const selectPresentationData = ({ state }) => {
   }
 
   const repositoryState = selectRepositoryState({ state });
-  const images = selectImages({ state });
-  const audios = selectAudios({ state });
+  const images = state.repositoryState.images?.items || {};
+  const audios = state.repositoryState.audio?.items || {};
 
   const presentationItems = [];
 
