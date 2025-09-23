@@ -18,6 +18,7 @@ export const openDropdownMenu = (state, { x, y, versionId }) => {
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetVersionId = versionId;
   state.dropdownMenu.items = [
+    { label: "Create Bundle", type: "item", value: "bundle" },
     { label: "Delete", type: "item", value: "delete" },
   ];
 };

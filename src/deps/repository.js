@@ -478,9 +478,15 @@ const createRepositoryInternal = (initialState, store) => {
     await store.addAction(action);
   };
 
-  const getState = () => {
+  const getState = (untilActionId) => {
+    // If untilActionId is provided, only compute state up to that action
+    const events =
+      untilActionId !== undefined
+        ? cachedActionStreams.slice(0, untilActionId)
+        : cachedActionStreams;
+
     // Compute state from action stream
-    return cachedActionStreams.reduce((acc, action) => {
+    return events.reduce((acc, action) => {
       const { actionType, target, value } = action;
       if (actionType === "set") {
         return set(acc, target, value);

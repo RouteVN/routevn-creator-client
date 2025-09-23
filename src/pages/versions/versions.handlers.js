@@ -92,14 +92,90 @@ export const handleDropdownMenuClose = (_, deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (e, deps) => {
-  const { store, render, projectsService, router } = deps;
+  const {
+    store,
+    render,
+    projectsService,
+    router,
+    bundleService,
+    repositoryFactory,
+    fileManagerFactory,
+  } = deps;
   const detail = e.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
 
+  if (item.value === "bundle") {
+    // Handle Create Bundle action
+    const versionId = store.selectDropdownMenuTargetVersionId();
+    const versions = store.selectVersions();
+    const version = versions.find((v) => v.id === versionId);
+
+    if (!version) {
+      console.warn("Version not found for bundle creation:", versionId);
+      store.closeDropdownMenu();
+      render();
+      return;
+    }
+
+    // Close dropdown
+    store.closeDropdownMenu();
+    render();
+
+    // Get project id from router
+    const { p } = router.getPayload();
+    const repository = await repositoryFactory.getByProject(p);
+    const fileManager = await fileManagerFactory.getByProject(p);
+
+    // Get state at specific action
+    const projectData = repository.getState(version.actionId);
+
+    // Collect all fileIds from project data
+    const fileIds = [];
+    const extractFileIds = (obj) => {
+      if (obj.fileId) fileIds.push(obj.fileId);
+      if (obj.iconFileId) fileIds.push(obj.iconFileId);
+      Object.values(obj).forEach((value) => {
+        if (typeof value === "object" && value !== null) extractFileIds(value);
+      });
+    };
+    extractFileIds(projectData);
+
+    // Fetch files as buffers
+    const files = {};
+    for (const fileId of fileIds) {
+      try {
+        const content = await fileManager.getFileContent({ fileId });
+        const response = await fetch(content.url);
+        const buffer = await response.arrayBuffer();
+        files[fileId] = {
+          buffer: new Uint8Array(buffer),
+          mime: content.type,
+        };
+      } catch (error) {
+        console.warn(`Failed to fetch file ${fileId}:`, error);
+      }
+    }
+
+    // Create bundle with files
+    const bundle = await bundleService.exportProject(projectData, files);
+    const fileName = `${projectData.project.name}_${version.name}.vnbundle`;
+
+    console.log(
+      `✓ Bundle created: ${fileName} (${(bundle.length / 1024).toFixed(1)} KB)`,
+    );
+
+    alert(
+      `Bundle "${fileName}" created. You can find it in system download folder.`,
+    );
+
+    bundleService.downloadBundle(bundle, fileName);
+    return;
+  }
+
   if (item.value !== "delete") {
-    // Hide dropdown for non-delete actions
+    // Hide dropdown for other non-delete actions
     store.closeDropdownMenu();
     render();
     return;
