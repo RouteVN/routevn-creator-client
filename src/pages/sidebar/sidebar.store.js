@@ -37,6 +37,11 @@ export const INITIAL_STATE = Object.freeze({
       icon: "script",
     },
     {
+      title: "Versions",
+      path: "/project/versions",
+      icon: "choices",
+    },
+    {
       title: "Settings",
       path: "/project/settings/general",
       icon: "settings",
@@ -123,6 +128,14 @@ export const toViewData = ({ state }) => {
         (item) => item.title === "Settings",
       );
       if (settingsItem) return settingsItem.path;
+    }
+
+    // For versions
+    if (currentPath === "/project/versions") {
+      const versionsItem = state.items.find(
+        (item) => item.title === "Versions",
+      );
+      if (versionsItem) return versionsItem.path;
     }
 
     return null;
