@@ -2,11 +2,33 @@ import { toFlatItems, toTreeStructure } from "../deps/repository";
 import { layoutTreeStructureToRenderState } from "./index.js";
 
 export function constructImages(repositoryImages = {}) {
-  return repositoryImages;
+  const processedImages = {};
+  Object.entries(repositoryImages).forEach(([id, item]) => {
+    if (item.type === "image") {
+      processedImages[id] = item;
+    }
+  });
+  return processedImages;
 }
 
 export function constructAudios(repositoryAudio = {}) {
-  return repositoryAudio;
+  const processedAudios = {};
+  Object.entries(repositoryAudio).forEach(([id, item]) => {
+    if (item.type === "audio") {
+      processedAudios[id] = item;
+    }
+  });
+  return processedAudios;
+}
+
+export function constructFonts(repositoryFonts = {}) {
+  const processedFonts = {};
+  Object.entries(repositoryFonts).forEach(([id, item]) => {
+    if (item.type === "font") {
+      processedFonts[id] = item;
+    }
+  });
+  return processedFonts;
 }
 
 export function constructAnimations(repositoryAnimations = {}) {
@@ -113,7 +135,7 @@ export function constructResources(repositoryState) {
   const layouts = repositoryState.layouts?.items || {};
   const typography = repositoryState.typography || { items: {}, tree: [] };
   const colors = repositoryState.colors || { items: {}, tree: [] };
-  const fonts = repositoryState.fonts || { items: {}, tree: [] };
+  const fonts = repositoryState.fonts?.items || {};
 
   const processedCharacters = constructCharacters(characters);
   const characterImages = extractCharacterImages(processedCharacters);
@@ -123,6 +145,7 @@ export function constructResources(repositoryState) {
     transforms: constructTransforms(transforms),
     characters: processedCharacters,
     audio: constructAudios(audio),
+    fonts: constructFonts(fonts),
     layouts: constructLayouts(layouts, images, typography, colors, fonts),
     animations: constructAnimations(animations),
   };
