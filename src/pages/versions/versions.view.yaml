@@ -58,7 +58,7 @@ template:
                       - rtgl-view#version-${item.id} h=auto w=f bw=xs p=md cur=p d=h av=c:
                           - rtgl-view flex=1 d=v g=xs:
                               - rtgl-text s=lg: ${item.name}
-                              - rtgl-text s=xs c=mu-fg: 'Action ${item.actionId} • ${item.createdAt}'
+                              - rtgl-text s=xs c=mu-fg: 'Action ${item.actionIndex} • ${item.createdAt}'
       - rtgl-popover#version-form-popover ?open=${showVersionForm} x=300 y=100:
           - rtgl-form#version-form key=${showVersionForm} slot=content .form=versionFormFields w=320:
   

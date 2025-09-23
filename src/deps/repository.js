@@ -478,11 +478,11 @@ const createRepositoryInternal = (initialState, store) => {
     await store.addAction(action);
   };
 
-  const getState = (untilActionId) => {
-    // If untilActionId is provided, only compute state up to that action
+  const getState = (untilActionIndex) => {
+    // If untilActionIndex is provided, only compute state up to that action
     const events =
-      untilActionId !== undefined
-        ? cachedActionStreams.slice(0, untilActionId)
+      untilActionIndex !== undefined
+        ? cachedActionStreams.slice(0, untilActionIndex)
         : cachedActionStreams;
 
     // Compute state from action stream

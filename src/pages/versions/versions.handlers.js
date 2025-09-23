@@ -45,13 +45,13 @@ export const handleVersionFormAction = async (e, deps) => {
 
     // Get current action count from repository
     const allEvents = repository.getAllEvents();
-    const currentActionId = allEvents.length;
+    const currentActionIndex = allEvents.length;
 
     // Create simple version object
     const newVersion = {
       id: nanoid(),
       name: formData.name,
-      actionId: currentActionId,
+      actionIndex: currentActionIndex,
       createdAt: new Date().toISOString(),
     };
 
@@ -129,7 +129,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     const fileManager = await fileManagerFactory.getByProject(p);
 
     // Get state at specific action
-    const projectData = repository.getState(version.actionId);
+    const projectData = repository.getState(version.actionIndex);
 
     // Collect all fileIds from project data
     const fileIds = [];
