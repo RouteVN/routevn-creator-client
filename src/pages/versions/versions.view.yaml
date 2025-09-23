@@ -30,6 +30,16 @@ refs:
     eventListeners:
       close:
         handler: handleVersionFormClose
+  version-*:
+    eventListeners:
+      contextmenu:
+        handler: handleVersionContextMenu
+  dropdown-menu:
+    eventListeners:
+      close:
+        handler: handleDropdownMenuClose
+      click-item:
+        handler: handleDropdownMenuClickItem
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -49,6 +59,7 @@ template:
                           - rtgl-view flex=1 d=v g=xs:
                               - rtgl-text s=lg: ${item.name}
                               - rtgl-text s=xs c=mu-fg: 'Action ${item.actionId} • ${item.createdAt}'
-                          - rtgl-button size=sm variant=ghost col=danger data-version-id="${item.id}" on-click=handleDeleteVersion: Delete
       - rtgl-popover#version-form-popover ?open=${showVersionForm} x=300 y=100:
           - rtgl-form#version-form key=${showVersionForm} slot=content .form=versionFormFields w=320:
+  
+  - rtgl-dropdown-menu#dropdown-menu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} .items=dropdownMenu.items:

@@ -2,7 +2,41 @@ export const INITIAL_STATE = Object.freeze({
   versions: [],
   showVersionForm: false,
   versionFormData: {},
+  
+  dropdownMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetVersionId: null,
+    items: [],
+  },
 });
+
+export const openDropdownMenu = (state, { x, y, versionId }) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.x = x;
+  state.dropdownMenu.y = y;
+  state.dropdownMenu.targetVersionId = versionId;
+  state.dropdownMenu.items = [
+    { label: "Delete", type: "item", value: "delete" },
+  ];
+};
+
+export const closeDropdownMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.x = 0;
+  state.dropdownMenu.y = 0;
+  state.dropdownMenu.targetVersionId = null;
+  state.dropdownMenu.items = [];
+};
+
+export const selectDropdownMenuTargetVersionId = ({ state }) => {
+  return state.dropdownMenu.targetVersionId;
+};
+
+export const selectVersions = ({ state }) => {
+  return state.versions;
+};
 
 export const toViewData = ({ state, props }) => {
   const versionFormFields = {
@@ -39,6 +73,7 @@ export const toViewData = ({ state, props }) => {
     selectedResourceId: props.selectedResourceId,
     flatItems: props.flatItems,
     repositoryTarget: props.repositoryTarget,
+    dropdownMenu: state.dropdownMenu,
   };
 };
 

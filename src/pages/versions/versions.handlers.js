@@ -65,18 +65,77 @@ export const handleVersionFormAction = async (e, deps) => {
   }
 };
 
-export const handleDeleteVersion = async (e, deps) => {
-  const { store, render, router, projectsService } = deps;
-  const { p } = router.getPayload();
-  const versionId = e.target.dataset.versionId;
+export const handleVersionContextMenu = (e, deps) => {
+  const { store, render } = deps;
+  e.preventDefault();
 
-  if (!versionId) return;
+  const versionId = e.currentTarget.id.replace("version-", "");
+  const versions = store.selectVersions();
+  const version = versions.find((v) => v.id === versionId);
 
-  if (confirm("Are you sure you want to delete this version?")) {
-    // Delete version from project
-    await projectsService.deleteVersionFromProject(p, versionId);
-
-    store.deleteVersion(versionId);
-    render();
+  if (!version) {
+    return;
   }
+
+  store.openDropdownMenu({
+    x: e.clientX,
+    y: e.clientY,
+    versionId: versionId,
+  });
+  render();
+};
+
+export const handleDropdownMenuClose = (_, deps) => {
+  const { store, render } = deps;
+  store.closeDropdownMenu();
+  render();
+};
+
+export const handleDropdownMenuClickItem = async (e, deps) => {
+  const { store, render, projectsService, router } = deps;
+  const detail = e.detail;
+
+  // Extract the actual item (rtgl-dropdown-menu wraps it)
+  const item = detail.item || detail;
+
+  if (item.value !== "delete") {
+    // Hide dropdown for non-delete actions
+    store.closeDropdownMenu();
+    render();
+    return;
+  }
+
+  // Get versionId BEFORE closing dropdown (important!)
+  const versionId = store.selectDropdownMenuTargetVersionId();
+
+  if (!versionId) {
+    console.warn("No versionId found for deletion");
+    store.closeDropdownMenu();
+    render();
+    return;
+  }
+
+  const versions = store.selectVersions();
+  const version = versions.find((v) => v.id === versionId);
+
+  if (!version) {
+    console.warn("Version not found for deletion:", versionId);
+    store.closeDropdownMenu();
+    render();
+    return;
+  }
+
+  // Close dropdown
+  store.closeDropdownMenu();
+  render();
+
+  // Get project id from router
+  const { p } = router.getPayload();
+
+  // Delete the version entry using service
+  await projectsService.deleteVersionFromProject(p, versionId);
+
+  // Update store by removing from current versions
+  store.deleteVersion(versionId);
+  render();
 };
