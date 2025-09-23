@@ -424,6 +424,7 @@ export const handleSplitLine = async (e, deps) => {
     ? {
         dialogue: {
           content: rightContent,
+          mode: "adv",
         },
       }
     : {};
