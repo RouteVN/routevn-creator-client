@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { constructResources } from "../../utils/resourcesConstructor.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, router, projectsService } = deps;
@@ -131,7 +132,34 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     // Get state at specific action
     const projectData = repository.getState(version.actionIndex);
 
-    // Collect all fileIds from project data
+    // Filter scenes to only include type: "scene"
+    const scenes = {};
+    if (projectData.scenes?.items) {
+      Object.entries(projectData.scenes.items).forEach(([id, scene]) => {
+        if (scene.type === "scene") {
+          scenes[id] = scene;
+        }
+      });
+    }
+
+    // Transform projectData to the required format
+    const transformedData = {
+      projectData: {
+        screen: {
+          width: 1920,
+          height: 1080,
+          backgroundColor: "#000000",
+        },
+        resources: constructResources(projectData),
+        story: {
+          initialSceneId:
+            projectData.scenes?.initialSceneId || "scene-prologue",
+          scenes: scenes,
+        },
+      },
+    };
+
+    // Collect all fileIds from original project data
     const fileIds = [];
     const extractFileIds = (obj) => {
       if (obj.fileId) fileIds.push(obj.fileId);
@@ -158,8 +186,8 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
       }
     }
 
-    // Create bundle with files
-    const bundle = await bundleService.exportProject(projectData, files);
+    // Create bundle with transformed data
+    const bundle = await bundleService.exportProject(transformedData, files);
     const fileName = `${projectData.project.name}_${version.name}.vnbundle`;
 
     console.log(
