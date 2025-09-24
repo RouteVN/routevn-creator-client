@@ -198,7 +198,6 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     );
 
     bundleService.downloadBundle(bundle, fileName);
-    return;
   }
 
   if (item.value !== "delete") {
