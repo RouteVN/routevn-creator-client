@@ -166,11 +166,11 @@ const getRenderState = async (deps) => {
   const storeElements = store.selectItems();
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
 
-  console.log('layoutElements', layoutElements);
+  console.log("layoutElements", layoutElements);
 
   const layoutTreeStructure = toTreeStructure(layoutElements);
 
-  console.log('layoutTreeStructure', layoutTreeStructure);
+  console.log("layoutTreeStructure", layoutTreeStructure);
 
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
@@ -180,7 +180,7 @@ const getRenderState = async (deps) => {
     { items: fontsItems },
   );
 
-  console.log('renderStateElements', renderStateElements);
+  console.log("renderStateElements", renderStateElements);
 
   return {
     renderStateElements,
@@ -525,7 +525,7 @@ export const handleFormChange = async (e, deps, payload) => {
 
   let unflattenedUpdate;
 
-  console.log('e.detail', e.detail);
+  console.log("e.detail", e.detail);
 
   // Handle anchor selection specially
   if (

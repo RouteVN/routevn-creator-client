@@ -202,11 +202,11 @@ export const layoutTreeStructureToRenderState = (
     }
 
     if (node.forloop) {
-      const postfix = '${i}'
-      element.id = `${element.id}-${postfix}`
+      const postfix = "${i}";
+      element.id = `${element.id}-${postfix}`;
       return {
         [node.forloop]: element,
-      }
+      };
     }
 
     return element;
