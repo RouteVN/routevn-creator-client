@@ -1,5 +1,9 @@
 import { nanoid } from "nanoid";
 import { constructResources } from "../../utils/resourcesConstructor.js";
+import {
+  constructStory,
+  getInitialSceneId,
+} from "../../utils/storyConstructor.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, router, projectsService } = deps;
@@ -131,16 +135,6 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     // Get state at specific action
     const projectData = repository.getState(version.actionIndex);
 
-    // Filter scenes to only include type: "scene"
-    const scenes = {};
-    if (projectData.scenes?.items) {
-      Object.entries(projectData.scenes.items).forEach(([id, scene]) => {
-        if (scene.type === "scene") {
-          scenes[id] = scene;
-        }
-      });
-    }
-
     // Transform projectData to the required format
     const transformedData = {
       projectData: {
@@ -151,9 +145,8 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
         },
         resources: constructResources(projectData),
         story: {
-          initialSceneId:
-            projectData.scenes?.initialSceneId || "scene-prologue",
-          scenes: scenes,
+          initialSceneId: getInitialSceneId(),
+          scenes: constructStory(projectData.scenes),
         },
       },
     };
