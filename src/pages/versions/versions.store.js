@@ -18,6 +18,7 @@ export const openDropdownMenu = (state, { x, y, versionId }) => {
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetVersionId = versionId;
   state.dropdownMenu.items = [
+    { label: "Create Bundle", type: "item", value: "bundle" },
     { label: "Delete", type: "item", value: "delete" },
   ];
 };
@@ -36,6 +37,10 @@ export const selectDropdownMenuTargetVersionId = ({ state }) => {
 
 export const selectVersions = ({ state }) => {
   return state.versions;
+};
+
+export const selectVersion = ({ state }, versionId) => {
+  return state.versions.find((v) => v.id === versionId);
 };
 
 export const toViewData = ({ state, props }) => {

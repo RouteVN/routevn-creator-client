@@ -1,4 +1,9 @@
 import { nanoid } from "nanoid";
+import { constructResources } from "../../utils/resourcesConstructor.js";
+import {
+  constructStory,
+  getInitialSceneId,
+} from "../../utils/storyConstructor.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, router, projectsService } = deps;
@@ -45,13 +50,13 @@ export const handleVersionFormAction = async (e, deps) => {
 
     // Get current action count from repository
     const allEvents = repository.getAllEvents();
-    const currentActionId = allEvents.length;
+    const currentActionIndex = allEvents.length;
 
     // Create simple version object
     const newVersion = {
       id: nanoid(),
       name: formData.name,
-      actionId: currentActionId,
+      actionIndex: currentActionIndex,
       createdAt: new Date().toISOString(),
     };
 
@@ -92,14 +97,104 @@ export const handleDropdownMenuClose = (_, deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (e, deps) => {
-  const { store, render, projectsService, router } = deps;
+  const {
+    store,
+    render,
+    projectsService,
+    router,
+    bundleService,
+    repositoryFactory,
+    fileManagerFactory,
+  } = deps;
   const detail = e.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
 
+  if (item.value === "bundle") {
+    // Handle Create Bundle action
+    const versionId = store.selectDropdownMenuTargetVersionId();
+    const version = store.selectVersion(versionId);
+
+    if (!version) {
+      console.warn("Version not found for bundle creation:", versionId);
+      store.closeDropdownMenu();
+      render();
+      return;
+    }
+
+    // Close dropdown
+    store.closeDropdownMenu();
+    render();
+
+    // Get project id from router
+    const { p } = router.getPayload();
+    const repository = await repositoryFactory.getByProject(p);
+    const fileManager = await fileManagerFactory.getByProject(p);
+
+    // Get state at specific action
+    const projectData = repository.getState(version.actionIndex);
+
+    // Transform projectData to the required format
+    const transformedData = {
+      projectData: {
+        screen: {
+          width: 1920,
+          height: 1080,
+          backgroundColor: "#000000",
+        },
+        resources: constructResources(projectData),
+        story: {
+          initialSceneId: getInitialSceneId(),
+          scenes: constructStory(projectData.scenes),
+        },
+      },
+    };
+
+    // Collect all fileIds from original project data
+    const fileIds = [];
+    const extractFileIds = (obj) => {
+      if (obj.fileId) fileIds.push(obj.fileId);
+      if (obj.iconFileId) fileIds.push(obj.iconFileId);
+      Object.values(obj).forEach((value) => {
+        if (typeof value === "object" && value !== null) extractFileIds(value);
+      });
+    };
+    extractFileIds(projectData);
+
+    // Fetch files as buffers
+    const files = {};
+    for (const fileId of fileIds) {
+      try {
+        const content = await fileManager.getFileContent({ fileId });
+        const response = await fetch(content.url);
+        const buffer = await response.arrayBuffer();
+        files[fileId] = {
+          buffer: new Uint8Array(buffer),
+          mime: content.type,
+        };
+      } catch (error) {
+        console.warn(`Failed to fetch file ${fileId}:`, error);
+      }
+    }
+
+    // Create bundle with transformed data
+    const bundle = await bundleService.exportProject(transformedData, files);
+    const fileName = `${projectData.project.name}_${version.name}.vnbundle`;
+
+    console.log(
+      `✓ Bundle created: ${fileName} (${(bundle.length / 1024).toFixed(1)} KB)`,
+    );
+
+    alert(
+      `Bundle "${fileName}" created. You can find it in system download folder.`,
+    );
+
+    bundleService.downloadBundle(bundle, fileName);
+  }
+
   if (item.value !== "delete") {
-    // Hide dropdown for non-delete actions
+    // Hide dropdown for other non-delete actions
     store.closeDropdownMenu();
     render();
     return;
@@ -115,8 +210,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     return;
   }
 
-  const versions = store.selectVersions();
-  const version = versions.find((v) => v.id === versionId);
+  const version = store.selectVersion(versionId);
 
   if (!version) {
     console.warn("Version not found for deletion:", versionId);
