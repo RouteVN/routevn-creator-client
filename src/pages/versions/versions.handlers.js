@@ -110,8 +110,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   if (item.value === "bundle") {
     // Handle Create Bundle action
     const versionId = store.selectDropdownMenuTargetVersionId();
-    const versions = store.selectVersions();
-    const version = versions.find((v) => v.id === versionId);
+    const version = store.selectVersion(versionId);
 
     if (!version) {
       console.warn("Version not found for bundle creation:", versionId);
@@ -219,8 +218,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     return;
   }
 
-  const versions = store.selectVersions();
-  const version = versions.find((v) => v.id === versionId);
+  const version = store.selectVersion(versionId);
 
   if (!version) {
     console.warn("Version not found for deletion:", versionId);

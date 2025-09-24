@@ -39,6 +39,10 @@ export const selectVersions = ({ state }) => {
   return state.versions;
 };
 
+export const selectVersion = ({ state }, versionId) => {
+  return state.versions.find((v) => v.id === versionId);
+};
+
 export const toViewData = ({ state, props }) => {
   const versionFormFields = {
     fields: [
