@@ -180,17 +180,16 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
 
     // Create bundle with transformed data
     const bundle = await bundleService.exportProject(transformedData, files);
-    const fileName = `${projectData.project.name}_${version.name}.vnbundle`;
+    const zipName = `${projectData.project.name}_${version.name}`;
 
     console.log(
-      `✓ Bundle created: ${fileName} (${(bundle.length / 1024).toFixed(1)} KB)`,
+      `✓ Bundle created: package.vnbundle (${(bundle.length / 1024).toFixed(1)} KB)`,
     );
 
-    alert(
-      `Bundle "${fileName}" created. You can find it in system download folder.`,
-    );
+    // Create and download ZIP with bundle and static files
+    await bundleService.createDistributionZip(bundle, zipName);
 
-    bundleService.downloadBundle(bundle, fileName);
+    console.log(`✓ Distribution ZIP created: ${zipName}.zip`);
   }
 
   if (item.value !== "delete") {
