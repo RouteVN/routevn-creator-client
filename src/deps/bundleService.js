@@ -5,6 +5,8 @@
  * [version(1)] [indexLength(8)] [index(JSON)] [assets...] [instructions(JSON)]
  */
 
+import JSZip from "jszip";
+
 export const createBundleService = () => {
   /**
    * Bundles project data and assets into a single file
@@ -185,11 +187,51 @@ export const createBundleService = () => {
     URL.revokeObjectURL(url);
   };
 
+  /**
+   * Creates a ZIP file containing the bundle and static files
+   * @param {Uint8Array} bundle - Bundle data
+   * @param {string} zipName - Name for the ZIP file (without extension)
+   */
+  const createDistributionZip = async (bundle, zipName) => {
+    const zip = new JSZip();
+
+    // Add package.vnbundle
+    zip.file("package.vnbundle", bundle);
+
+    // Fetch and add static bundle files
+    try {
+      // Fetch index.html
+      const indexResponse = await fetch("/bundle/index.html");
+      const indexContent = await indexResponse.text();
+      zip.file("index.html", indexContent);
+
+      // Fetch main.js
+      const mainJsResponse = await fetch("/bundle/main.js");
+      const mainJsContent = await mainJsResponse.text();
+      zip.file("main.js", mainJsContent);
+    } catch (error) {
+      console.error("Failed to fetch static bundle files:", error);
+      // If static files can't be fetched, still create zip with just the bundle
+    }
+
+    // Generate ZIP file
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+
+    // Download the ZIP
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${zipName}.zip`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Public API
   return {
     createBundle,
     extractBundle,
     exportProject,
     downloadBundle,
+    createDistributionZip,
   };
 };
