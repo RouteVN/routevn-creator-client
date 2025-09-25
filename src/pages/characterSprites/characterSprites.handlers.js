@@ -1,14 +1,14 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { router, store, repositoryFactory, render } = deps;
+  const { router, store, repositoryFactory, render, notification } = deps;
   const { characterId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   const character = characters.items[characterId];
 
   if (!character) {
-    alert("Character not found");
+    notification.error("Character not found");
   }
 
   store.setCharacterId(characterId);
@@ -17,14 +17,14 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleDataChanged = async (e, deps) => {
-  const { router, render, store, repositoryFactory } = deps;
+  const { router, render, store, repositoryFactory, notification } = deps;
   const { characterId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   const character = characters.items[characterId];
 
   if (!character) {
-    alert("Character not found");
+    notification.error("Character not found");
     return;
   }
 
@@ -53,7 +53,14 @@ export const handleImageItemClick = async (e, deps) => {
 };
 
 export const handleDragDropFileSelected = async (e, deps) => {
-  const { router, store, render, fileManagerFactory, repositoryFactory } = deps;
+  const {
+    router,
+    store,
+    render,
+    fileManagerFactory,
+    repositoryFactory,
+    notification,
+  } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const fileManager = await fileManagerFactory.getByProject(projectId);
@@ -65,7 +72,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const character = characters.items[characterId];
 
   if (!character) {
-    alert("Character not found");
+    notification.error("Character not found");
     return;
   }
 

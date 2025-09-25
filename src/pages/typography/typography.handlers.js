@@ -398,7 +398,7 @@ export const handleCloseDialog = (_, deps) => {
 };
 
 export const handleFormActionClick = (e, deps) => {
-  const { store, render } = deps;
+  const { store, render, notification } = deps;
 
   // Check which button was clicked
   const actionId = e.detail.actionId;
@@ -435,13 +435,13 @@ export const handleFormActionClick = (e, deps) => {
       !formData.fontStyle ||
       !formData.fontWeight
     ) {
-      alert("Please fill in all required fields");
+      notification.warning("Please fill in all required fields");
       return;
     }
 
     // Validate font size is a number
     if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
-      alert("Please enter a valid font size (positive number)");
+      notification.warning("Please enter a valid font size (positive number)");
       return;
     }
 
@@ -541,7 +541,7 @@ export const handleAddFontDialogClose = (_, deps) => {
 };
 
 export const handleFontFileSelected = async (e, deps) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, fileManagerFactory, router, notification } = deps;
   const { files } = e.detail;
 
   if (files && files.length > 0) {
@@ -557,7 +557,7 @@ export const handleFontFileSelected = async (e, deps) => {
       const uploadResults = await fileManager.upload([file]);
 
       if (uploadResults.length === 0) {
-        alert("Failed to upload font file");
+        notification.error("Failed to upload font file");
         return;
       }
 
@@ -570,13 +570,13 @@ export const handleFontFileSelected = async (e, deps) => {
       render();
     } catch (error) {
       console.error("Failed to upload font file:", error);
-      alert("Failed to upload font file");
+      notification.error("Failed to upload font file");
     }
   }
 };
 
 export const handleAddFontFormAction = async (e, deps) => {
-  const { store, render, repositoryFactory, router } = deps;
+  const { store, render, repositoryFactory, router, notification } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
@@ -586,7 +586,7 @@ export const handleAddFontFormAction = async (e, deps) => {
 
     // Check if a font file was selected and uploaded
     if (!fontData || !fontData.uploadResult) {
-      alert("Please select a font file");
+      notification.warning("Please select a font file");
       return;
     }
 

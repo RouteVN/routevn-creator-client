@@ -63,7 +63,7 @@ export const handleCloseDialog = (e, deps) => {
 };
 
 export const handleFormActionClick = (e, deps) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store, render, dispatchEvent, notification } = deps;
 
   // Check which button was clicked
   const actionId = e.detail.actionId;
@@ -75,7 +75,7 @@ export const handleFormActionClick = (e, deps) => {
 
     // Validate required fields
     if (!formData.name) {
-      alert("Please enter a component name");
+      notification.warning("Please enter a component name");
       return;
     }
 

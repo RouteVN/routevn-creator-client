@@ -147,7 +147,7 @@ export const handleDropdownMenuClose = (e, deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (e, deps) => {
-  const { store, render, projectsService } = deps;
+  const { store, render, projectsService, notification } = deps;
   const detail = e.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
@@ -184,17 +184,13 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   store.closeDropdownMenu();
   render();
 
-  // Check if the result is a Promise (tauri override) or boolean (native)
-  // Handle both sync and async confirm dialogs
-  let confirmed;
-  const confirmResult = window.confirm(
+  // Use notification service for confirmation
+  const confirmed = await notification.confirmAsync(
     `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
+    "Delete Project",
+    "Delete",
+    "Cancel",
   );
-  if (confirmResult instanceof Promise) {
-    confirmed = await confirmResult;
-  } else {
-    confirmed = confirmResult;
-  }
 
   if (!confirmed) {
     return;
