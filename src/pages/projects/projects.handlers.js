@@ -13,7 +13,7 @@ export const handleCreateButtonClick = async (payload, deps) => {
 };
 
 export const handleOpenButtonClick = async (payload, deps) => {
-  const { projectsService, store, render, tauriDialog } = deps;
+  const { projectsService, store, render, tauriDialog, notification } = deps;
 
   try {
     // Open folder selection dialog
@@ -34,10 +34,12 @@ export const handleOpenButtonClick = async (payload, deps) => {
 
     render();
 
-    alert(`Project "${importedProject.name}" has been successfully imported.`);
+    notification.success(
+      `Project "${importedProject.name}" has been successfully imported.`,
+    );
   } catch (error) {
     console.error("Error importing project:", error);
-    alert(`Failed to import project: ${error.message || error}`);
+    notification.error(`Failed to import project: ${error.message || error}`);
   }
 };
 
@@ -59,7 +61,7 @@ export const handleProjectsClick = async (e, deps) => {
 };
 
 export const handleBrowseFolder = async (e, deps) => {
-  const { store, render, tauriDialog } = deps;
+  const { store, render, tauriDialog, notification } = deps;
 
   try {
     // Open folder selection dialog using tauriDialog from deps
@@ -74,12 +76,13 @@ export const handleBrowseFolder = async (e, deps) => {
     }
   } catch (error) {
     console.error("Error selecting folder:", error);
-    alert(`Error selecting folder: ${error.message || error}`);
+    notification.error(`Error selecting folder: ${error.message || error}`);
   }
 };
 
 export const handleFormSubmit = async (e, deps) => {
-  const { projectsService, initializeProject, store, render } = deps;
+  const { projectsService, initializeProject, store, render, notification } =
+    deps;
 
   try {
     // Check if it's the submit button
@@ -113,7 +116,7 @@ export const handleFormSubmit = async (e, deps) => {
     console.log(`Project created at: ${projectPath}`);
   } catch (error) {
     console.error("Error creating project:", error);
-    alert(`Failed to create project: ${error.message}`);
+    notification.error(`Failed to create project: ${error.message}`);
   }
 };
 

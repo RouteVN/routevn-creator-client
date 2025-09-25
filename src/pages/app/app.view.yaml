@@ -80,3 +80,4 @@ template:
               - rvn-component-editor: []
             $elif currentRoutePattern == "/project/versions":
               - rvn-versions: []
+      - rvn-notification-dialog: []

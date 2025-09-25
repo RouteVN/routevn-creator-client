@@ -1,0 +1,59 @@
+elementName: rvn-notification-dialog
+
+handlers:
+  beforeMount: handleBeforeMount
+
+viewDataSchema:
+  type: object
+  properties:
+    isOpen:
+      type: boolean
+    config:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        confirmText:
+          type: string
+        cancelText:
+          type: string
+
+refs:
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+  confirm-button:
+    eventListeners:
+      click:
+        handler: handleConfirm
+  cancel-button:
+    eventListeners:
+      click:
+        handler: handleCancel
+
+template:
+  - rtgl-dialog#dialog ?open=${isOpen} s=sm:
+    - rtgl-view slot=content g=lg p=lg:
+      - rtgl-view d=h ah=c g=md:
+        - $if config.type == 'error':
+            - rtgl-icon name=x-circle c=error s=lg:
+          $elif config.type == 'warning':
+            - rtgl-icon name=alert-triangle c=warning s=lg:
+          $elif config.type == 'success':
+            - rtgl-icon name=check-circle c=success s=lg:
+          $else:
+            - rtgl-icon name=info c=primary s=lg:
+        - rtgl-text fs=lg fw=600: ${config.title}
+      
+      - rtgl-view p=md:
+        - rtgl-text: ${config.message}
+      
+      - rtgl-view d=h jc=fe g=md mt=lg:
+        - $if config.type == 'confirm':
+            - rtgl-button#cancel-button variant=se: ${config.cancelText}
+        - rtgl-button#confirm-button variant=pr: ${config.confirmText}

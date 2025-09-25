@@ -19,6 +19,7 @@ import { createRepositoryFactory } from "./deps/repository";
 import { createProjectsService } from "./deps/projectsService";
 import { updaterService } from "./deps/tauriUpdater";
 import { createBundleService } from "./deps/bundleService";
+import { notification } from "./deps/notificationService";
 import { getVersion } from "@tauri-apps/api/app";
 
 // Tauri-specific configuration
@@ -147,6 +148,7 @@ const componentDependencies = {
   initializeProject,
   projectsService,
   updaterService,
+  notification,
   appVersion: `v${appVersion}`,
   platform: "tauri",
 };
@@ -168,6 +170,7 @@ const pageDependencies = {
   projectsService,
   updaterService,
   bundleService,
+  notification,
   appVersion: `v${appVersion}`,
   platform: "tauri",
 };

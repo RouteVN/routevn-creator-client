@@ -15,6 +15,7 @@ import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
 import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
 import { initializeWebProject } from "./deps/webProjectInitializer";
+import { notification } from "./deps/notificationService";
 
 // Web-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -133,6 +134,7 @@ const componentDependencies = {
   fontManager,
   drenderer,
   filePicker,
+  notification,
   // Platform-specific info
   platform: "web",
 };
@@ -148,6 +150,7 @@ const pageDependencies = {
   fontManager,
   drenderer,
   filePicker,
+  notification,
   // Platform-specific info
   platform: "web",
 };
