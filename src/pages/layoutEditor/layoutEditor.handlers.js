@@ -998,3 +998,11 @@ export const subscriptions = (deps) => {
     ),
   ];
 };
+
+export const handleSystemActionsChange = (e, deps) => {
+  const { store, render } = deps;
+  const selectedItem = store.selectSelectedItem();
+  selectedItem.eventPayload = e.detail;
+  store.updateSelectedItem(selectedItem);
+  render();
+};

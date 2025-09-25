@@ -542,6 +542,12 @@ export const toViewData = ({ state, props }, payload) => {
               { label: "Bottom Right", value: { x: 1, y: 1 } },
             ],
           },
+          {
+            name: "eventPayload",
+            inputType: "slot",
+            slotName: "eventPayload",
+            description: "Event Payload",
+          },
           ...(selectedItem.type === "text" ||
           selectedItem.type === "text-revealing"
             ? [
@@ -629,6 +635,7 @@ export const toViewData = ({ state, props }, payload) => {
   // Create default values for the form
   const defaultValues = selectedItem
     ? {
+        eventPayload: selectedItem.eventPayload,
         $when: selectedItem.$when,
         forloop: selectedItem.forloop,
         name: selectedItem.name,

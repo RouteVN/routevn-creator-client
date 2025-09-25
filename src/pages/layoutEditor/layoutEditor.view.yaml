@@ -68,6 +68,10 @@ refs:
         handler: handleDropdownMenuClose
       click-item:
         handler: handleDropdownMenuClickItem
+  system-actions:
+    eventListeners:
+      actions-change:
+        handler: handleSystemActionsChange
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -86,9 +90,11 @@ template:
               - rtgl-form#choice-form w=f h=f .form=choiceForm .defaultValues=choiceDefaultValues .context=choicesContext:
       - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
-              - $if selectedItemId:
+              - $if true || selectedItemId:
                   - rtgl-view w=f h=100vh sv:
                       - rtgl-form#detail-form key=${formKey} w=f h=f .form=form .context=context .defaultValues=defaultValues:
+                          - slot name="eventPayload":
+                              - rvn-system-actions#system-actions .actions=defaultValues.eventPayload:
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
