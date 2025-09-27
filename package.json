@@ -10,7 +10,7 @@
     "@tauri-apps/plugin-updater": "^2.9.0",
     "esbuild": "^0.25.5",
     "immer": "^10.1.1",
-    "jempl": "1.0.0-rc1",
+    "jempl": "1.0.0-rc2",
     "js-yaml": "^4.1.0",
     "jsdom": "^26.1.0",
     "nanoid": "^5.1.5",

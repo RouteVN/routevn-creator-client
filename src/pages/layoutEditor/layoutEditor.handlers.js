@@ -297,6 +297,22 @@ const renderLayoutPreview = async (deps, options = {}) => {
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
     },
     choice: choicesData,
+    variables: {
+      titleItems: [
+        {
+          label: "Start",
+        },
+        {
+          label: "Load",
+        },
+        {
+          label: "Options",
+        },
+        {
+          label: "Exit",
+        },
+      ],
+    },
   };
 
   // const filteredElements = filterChoiceContainers(elementsToRender);

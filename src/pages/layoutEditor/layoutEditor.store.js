@@ -474,9 +474,9 @@ export const toViewData = ({ state, props }, payload) => {
             description: "$when",
           },
           {
-            name: "forloop",
+            name: "$each",
             inputType: "inputText",
-            description: "forloop",
+            description: "$each",
           },
           {
             name: "x",
@@ -637,7 +637,7 @@ export const toViewData = ({ state, props }, payload) => {
     ? {
         eventPayload: selectedItem.eventPayload,
         $when: selectedItem.$when,
-        forloop: selectedItem.forloop,
+        $each: selectedItem.$each,
         name: selectedItem.name,
         type: selectedItem.type,
         x: selectedItem.x,

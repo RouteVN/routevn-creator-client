@@ -12,7 +12,7 @@
         "@tauri-apps/plugin-updater": "^2.9.0",
         "esbuild": "^0.25.5",
         "immer": "^10.1.1",
-        "jempl": "1.0.0-rc1",
+        "jempl": "1.0.0-rc2",
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
         "nanoid": "^5.1.5",
@@ -257,7 +257,7 @@
 
     "ismobilejs": ["ismobilejs@1.1.1", "", {}, "sha512-VaFW53yt8QO61k2WJui0dHf4SlL8lxBofUuUmwBo0ljPk0Drz2TiuDW4jo3wDcv41qy/SxrJ+VAzJ/qYqsmzRw=="],
 
-    "jempl": ["jempl@1.0.0-rc1", "", {}, "sha512-dCZmzGaut1fnnbmZRxfMBS+eCD8l6YiJymk1tm0sf4YIEqts9bx46E09TmB9t8dEZ8IBzdS470yT+3wDJhKHDw=="],
+    "jempl": ["jempl@1.0.0-rc2", "", {}, "sha512-xYW/kI6Hc38EKKnsz2QXt45Wy4QiiMRdZJ7qj5TwHS9Xnc0HwAD1ukPhXUxxykViaGUecPmD4X4x34/EOB3e+w=="],
 
     "js-binary-schema-parser": ["js-binary-schema-parser@2.0.3", "", {}, "sha512-xezGJmOb4lk/M1ZZLTR/jaBHQ4gG/lqQnJqdIv4721DMggsa1bDVlHXNeHYogaIEHD9vCRv0fcL4hMA+Coarkg=="],
 
