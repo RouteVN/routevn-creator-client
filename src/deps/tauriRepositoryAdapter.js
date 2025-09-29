@@ -100,6 +100,11 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  await db.execute(`CREATE TABLE IF NOT EXISTS app (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )`);
+
   return {
     async addAction(action) {
       await db.execute(
@@ -121,6 +126,33 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
         target: row.target,
         value: row.value ? JSON.parse(row.value) : null,
       }));
+    },
+
+    app: {
+      get: async (key) => {
+        const result = await db.select("SELECT value FROM app WHERE key = $1", [
+          key,
+        ]);
+
+        if (result && result.length > 0) {
+          try {
+            return JSON.parse(result[0].value);
+          } catch (e) {
+            return result[0].value;
+          }
+        }
+        return null;
+      },
+      set: async (key, value) => {
+        const jsonValue = JSON.stringify(value);
+        await db.execute(
+          "INSERT OR REPLACE INTO app (key, value) VALUES ($1, $2)",
+          [key, jsonValue],
+        );
+      },
+      remove: async (key) => {
+        await db.execute("DELETE FROM app WHERE key = $1", [key]);
+      },
     },
   };
 };
