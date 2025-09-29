@@ -6,8 +6,9 @@ export const INITIAL_STATE = Object.freeze({
 
   defaultValues: {
     name: "",
+    enum: [],
     type: "string",
-    default: "",
+    initialValue: "",
     readonly: false,
   },
 
@@ -19,29 +20,113 @@ export const INITIAL_STATE = Object.freeze({
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the variable name",
         required: true,
+      },
+      {
+        name: "scope",
+        inputType: "select",
+        label: "Scope",
+        required: true,
+        options: [
+          // # • runtime – temporary; resets when game restarts
+          // # Example: Currently selected menu tab, temporary UI state, or animation line
+          // # Use when the value is only needed while the game is running and should not persist across restarts.
+          //
+          // # • device – saved on this device only
+          // # Example: Text speed, sound/music volume, accessibility preferences
+          // # Use for user preferences that should persist on the current device, but don’t need syncing or save/load.
+          //
+          // # • global – synced across all devices
+          // # Example: Whether the game is completed, unlocked bonus content, claimed daily rewards
+          // # Use when the value should follow the player across multiple devices (via cloud sync).
+          //
+          // # • saveData – saved only in game saves
+          // # Example: Player progress, inventory items, story flags
+          // # Use for values that are tied to save/load and shouldn’t change unless the player loads a saved game.
+          { value: "runtime", label: "Runtime" },
+          { value: "device", label: "Device" },
+          { value: "global", label: "Global" },
+          { value: "saveData", label: "Save Data" },
+        ],
       },
       {
         name: "type",
-        inputType: "inputText",
+        inputType: "select",
         label: "Type",
-        description: "Enter the variable type (e.g., string, number, boolean)",
+        required: true,
+        options: [
+          { value: "string", label: "String" },
+          { value: "integer", label: "Integer" },
+          { value: "boolean", label: "Boolean" },
+          { value: "enum", label: "Enum" },
+          { value: "array", label: "Array" },
+          { value: "object", label: "Object" },
+        ],
+      },
+      {
+        $when: "values.type == 'array'",
+        name: "arrayItemType",
+        label: "Item Type",
+        inputType: "select",
+        required: true,
+        options: [
+          { value: "string", label: "String" },
+          { value: "integer", label: "Integer" },
+          { value: "boolean", label: "Boolean" },
+          { value: "enum", label: "Enum" },
+          { value: "object", label: "Object" },
+        ],
+      },
+      {
+        $when: "values.type == 'enum'",
+        name: "enum",
+        inputType: "slot",
+        slot: "enum",
+        label: "Enum",
+        required: false,
+      },
+      {
+        $when: "values.type == 'enum'",
+        name: "initialValue",
+        inputType: "select",
+        label: "Initial Value",
+        options: "${enumOptions}",
+        required: false,
+      },
+      {
+        $when: "values.type == 'boolean'",
+        name: "initialValue",
+        inputType: "select",
+        label: "Initial Value",
+        options: [
+          { value: true, label: "True" },
+          { value: false, label: "False" },
+        ],
         required: true,
       },
       {
-        name: "default",
+        $when: "values.type == 'string'",
+        name: "initialValue",
         inputType: "inputText",
-        label: "Default Value",
-        description: "Enter the default value for this variable",
+        label: "Initial Value",
+        required: false,
+      },
+      {
+        $when: "values.type == 'integer'",
+        name: "initialValue",
+        inputType: "inputText",
+        label: "Initial Value",
         required: false,
       },
       {
         name: "readonly",
-        inputType: "inputCheckbox",
         label: "Read Only",
-        description: "Check if this variable should be read-only",
-        required: false,
+        inputType: "select",
+        required: true,
+        options: [
+          { value: true, label: "Read Only" },
+          { value: false, label: "Editable" },
+        ],
       },
     ],
     actions: {
@@ -57,6 +142,10 @@ export const INITIAL_STATE = Object.freeze({
   },
 });
 
+export const selectDefaultValues = ({ state }) => {
+  return state.defaultValues;
+};
+
 export const toggleGroupCollapse = (state, groupId) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
@@ -64,6 +153,10 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
+};
+
+export const updateFormValues = (state, payload) => {
+  state.defaultValues = payload;
 };
 
 export const toggleDialog = (state) => {
@@ -115,7 +208,7 @@ export const toViewData = ({ state, props }) => {
         columns: [
           { key: "name", label: "Name" },
           { key: "type", label: "Type" },
-          { key: "default", label: "Default Value" },
+          { key: "initialValue", label: "Initial Value" },
           { key: "readOnly", label: "Read Only" },
         ],
         rows:
@@ -124,7 +217,8 @@ export const toViewData = ({ state, props }) => {
                 id: item.id,
                 name: item.name,
                 type: item.variableType || "string",
-                default: item.defaultValue || "",
+                enum: item.enum || [],
+                initialValue: item.defaultValue || "",
                 readOnly: item.readonly ? "Yes" : "No",
               }))
             : [],
@@ -141,13 +235,28 @@ export const toViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
+  console.log("defaultValues", state.defaultValues);
+  const defaultValues = structuredClone(state.defaultValues);
+  if (!defaultValues.enum) {
+    defaultValues.enum = [];
+  }
+
   return {
     group1: flatGroups[0]?.tableData || { columns: [], rows: [] },
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
     isDialogOpen: state.isDialogOpen,
-    defaultValues: state.defaultValues,
+    defaultValues: defaultValues,
     form: state.form,
+    context: {
+      values: defaultValues,
+      enumOptions: defaultValues.enum.map((option) => {
+        return {
+          value: option.id,
+          label: option.label,
+        };
+      }),
+    },
   };
 };

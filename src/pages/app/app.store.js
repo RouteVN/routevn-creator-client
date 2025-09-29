@@ -32,7 +32,6 @@ export const selectCurrentRoutePattern = (state, props, payload) => {
     "/project/resources/choices",
     "/project/resources/dialogue",
     "/project/resources/variables",
-    "/project/resources/presets",
     "/project/scenes",
     "/project/scene-editor",
     "/project/settings/general",
