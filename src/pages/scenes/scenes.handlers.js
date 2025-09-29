@@ -11,6 +11,7 @@ export const handleAfterMount = async (deps) => {
   store.setItems(scenesData);
 
   // Transform only scene items (not folders) into whiteboard items
+  const initialSceneId = scenesData.initialSceneId;
   const sceneItems = Object.entries(scenesData.items || {})
     .filter(([key, item]) => item.type === "scene")
     .map(([sceneId, scene]) => ({
@@ -18,6 +19,8 @@ export const handleAfterMount = async (deps) => {
       name: scene.name || `Scene ${sceneId}`,
       x: scene.position?.x || 200,
       y: scene.position?.y || 200,
+      // Add red color for initial scene
+      textColor: sceneId === initialSceneId ? "de" : undefined,
     }));
 
   // Initialize whiteboard with scene items only
@@ -51,6 +54,7 @@ export const handleDataChanged = async (e, deps) => {
   const currentWhiteboardItems = currentState.whiteboardItems || [];
 
   // Transform only scene items (not folders) into whiteboard items, preserving current positions
+  const initialSceneId = sceneData.initialSceneId;
   const sceneItems = Object.entries(sceneData.items || {})
     .filter(([key, item]) => item.type === "scene")
     .map(([sceneId, scene]) => {
@@ -65,6 +69,8 @@ export const handleDataChanged = async (e, deps) => {
         // Use repository position if available, otherwise use existing whiteboard position, finally default to 200,200
         x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
         y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
+        // Add red color for initial scene
+        textColor: sceneId === initialSceneId ? "de" : undefined,
       };
     });
 
