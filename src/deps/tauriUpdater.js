@@ -1,8 +1,7 @@
 import { check } from "@tauri-apps/plugin-updater";
-import { ask } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-const createUpdater = () => {
+const createUpdater = (globalUI) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
@@ -25,16 +24,14 @@ const createUpdater = () => {
         body: update.body,
       };
 
-      if (!silent) {
-        // TODO: In future, use custom UI instead of Tauri's built-in dialog
-        const shouldUpdate = await ask(
-          `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
-          {
-            title: "Update Available",
-            okLabel: "Update Now",
-            cancelLabel: "Later",
-          },
-        );
+      if (!silent && globalUI) {
+        // Use globalUI service when available
+        const shouldUpdate = await globalUI.showConfirm({
+          message: `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
+          title: "Update Available",
+          confirmText: "Update Now",
+          cancelText: "Later",
+        });
 
         if (shouldUpdate) {
           await downloadAndInstall(update);
@@ -44,11 +41,10 @@ const createUpdater = () => {
       return updateInfo;
     } catch (error) {
       console.error("Failed to check for updates:", error);
-      if (!silent) {
-        await ask(`Failed to check for updates: ${error.message}`, {
-          title: "Update Check Failed",
-          okLabel: "OK",
-          cancelLabel: null,
+      if (!silent && globalUI) {
+        await globalUI.showAlert({
+          message: `Failed to check for updates: ${error.message}`,
+          title: "Error",
         });
       }
       return null;
@@ -83,11 +79,12 @@ const createUpdater = () => {
       await relaunch();
     } catch (error) {
       console.error("Failed to download and install update:", error);
-      await ask(`Failed to install update: ${error.message}`, {
-        title: "Update Failed",
-        okLabel: "OK",
-        cancelLabel: null,
-      });
+      if (globalUI) {
+        await globalUI.showAlert({
+          message: `Failed to install update: ${error.message}`,
+          title: "Error",
+        });
+      }
     }
   };
 
@@ -111,4 +108,4 @@ const createUpdater = () => {
   };
 };
 
-export const updaterService = createUpdater();
+export default createUpdater;
