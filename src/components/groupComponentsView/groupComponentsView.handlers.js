@@ -77,7 +77,7 @@ export const handleFormActionClick = (e, deps) => {
     if (!formData.name) {
       globalUI.showAlert({
         message: "Please enter a component name",
-        type: "warning",
+        title: "Warning",
       });
       return;
     }

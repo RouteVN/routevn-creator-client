@@ -46,8 +46,7 @@ const createUpdater = (getGlobalUI) => {
       if (!silent && globalUI) {
         await globalUI.showAlert({
           message: `Failed to check for updates: ${error.message}`,
-          title: "Update Check Failed",
-          type: "error",
+          title: "Error",
         });
       }
       return null;
@@ -87,8 +86,7 @@ const createUpdater = (getGlobalUI) => {
       if (globalUI) {
         await globalUI.showAlert({
           message: `Failed to install update: ${error.message}`,
-          title: "Update Failed",
-          type: "error",
+          title: "Error",
         });
       }
     }

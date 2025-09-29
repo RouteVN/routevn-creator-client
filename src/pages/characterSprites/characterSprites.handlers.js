@@ -8,7 +8,7 @@ export const handleAfterMount = async (deps) => {
   const character = characters.items[characterId];
 
   if (!character) {
-    globalUI.showAlert({ message: "Character not found", type: "error" });
+    globalUI.showAlert({ message: "Character not found", title: "Error" });
   }
 
   store.setCharacterId(characterId);
@@ -24,7 +24,7 @@ export const handleDataChanged = async (e, deps) => {
   const character = characters.items[characterId];
 
   if (!character) {
-    globalUI.showAlert({ message: "Character not found", type: "error" });
+    globalUI.showAlert({ message: "Character not found", title: "Error" });
     return;
   }
 
@@ -72,7 +72,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const character = characters.items[characterId];
 
   if (!character) {
-    globalUI.showAlert({ message: "Character not found", type: "error" });
+    globalUI.showAlert({ message: "Character not found", title: "Error" });
     return;
   }
 

@@ -77,14 +77,14 @@ export const handleFormActionClick = (e, deps) => {
     if (!formData.name) {
       globalUI.showAlert({
         message: "Please enter a layout name",
-        type: "warning",
+        title: "Warning",
       });
       return;
     }
     if (!formData.layoutType) {
       globalUI.showAlert({
         message: "Please select a layout type",
-        type: "warning",
+        title: "Warning",
       });
       return;
     }

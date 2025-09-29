@@ -7,7 +7,7 @@ export const handleBeforeMount = (deps) => {
   const { store, attrs, render, audioManager, globalUI } = deps;
 
   if (!attrs) {
-    globalUI.showAlert({ message: "Missing fileId", type: "error" });
+    globalUI.showAlert({ message: "Missing fileId", title: "Error" });
     return;
   }
 

@@ -74,7 +74,7 @@ export const handleFormExtraEvent = async (_, deps) => {
     globalUI.showAlert({
       message:
         "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, or .ttc)",
-      type: "warning",
+      title: "Warning",
     });
     return;
   }
@@ -140,7 +140,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
     globalUI.showAlert({
       message:
         "Invalid file format. Please upload only font files (.ttf, .otf, .woff, .woff2, or .ttc)",
-      type: "warning",
+      title: "Warning",
     });
     return;
   }

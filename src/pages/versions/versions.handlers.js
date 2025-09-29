@@ -193,7 +193,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     console.log(`✓ Distribution ZIP created: ${zipName}.zip`);
     globalUI.showAlert({
       message: `Bundle ${zipName}.zip created and downloaded. You can find it in your Downloads folder.`,
-      type: "success",
+      title: "Success",
     });
   }
 

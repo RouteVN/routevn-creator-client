@@ -36,13 +36,13 @@ export const handleOpenButtonClick = async (payload, deps) => {
 
     globalUI.showAlert({
       message: `Project "${importedProject.name}" has been successfully imported.`,
-      type: "success",
+      title: "Success",
     });
   } catch (error) {
     console.error("Error importing project:", error);
     globalUI.showAlert({
       message: `Failed to import project: ${error.message || error}`,
-      type: "error",
+      title: "Error",
     });
   }
 };
@@ -82,7 +82,7 @@ export const handleBrowseFolder = async (e, deps) => {
     console.error("Error selecting folder:", error);
     globalUI.showAlert({
       message: `Error selecting folder: ${error.message || error}`,
-      type: "error",
+      title: "Error",
     });
   }
 };
@@ -124,7 +124,7 @@ export const handleFormSubmit = async (e, deps) => {
     console.error("Error creating project:", error);
     globalUI.showAlert({
       message: `Failed to create project: ${error.message}`,
-      type: "error",
+      title: "Error",
     });
   }
 };
