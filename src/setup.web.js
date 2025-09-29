@@ -123,6 +123,10 @@ const filePicker = createFilePicker();
 // Initialize async resources first
 const drenderer = await create2dRenderer({ subject });
 
+const globalUIElement = document.querySelector("rtgl-global-ui");
+
+const globalUI = createGlobalUI(globalUIElement);
+
 const componentDependencies = {
   httpClient,
   subject,
@@ -134,7 +138,7 @@ const componentDependencies = {
   fontManager,
   drenderer,
   filePicker,
-  notification,
+  globalUI,
   // Platform-specific info
   platform: "web",
 };
@@ -150,7 +154,7 @@ const pageDependencies = {
   fontManager,
   drenderer,
   filePicker,
-  notification,
+  globalUI,
   // Platform-specific info
   platform: "web",
 };

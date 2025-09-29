@@ -132,11 +132,11 @@ const appVersion = await getVersion();
 // Create bundle service
 const bundleService = createBundleService();
 
-// Placeholder object that will be populated after mount
-const globalUI = {};
+const globalUIElement = document.querySelector("rtgl-global-ui");
 
-// Create updater service with a getter function for globalUI
-const updaterService = createUpdater(() => globalUI);
+const globalUI = createGlobalUI(globalUIElement);
+
+const updaterService = createUpdater(globalUI);
 
 const componentDependencies = {
   httpClient,
@@ -177,7 +177,6 @@ const pageDependencies = {
   updaterService,
   bundleService,
   globalUI,
-  createGlobalUI,
   appVersion: `v${appVersion}`,
   platform: "tauri",
 };

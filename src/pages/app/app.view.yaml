@@ -16,7 +16,6 @@ subscriptions:
     handler: handleWindowPop
 
 template:
-  - rtgl-global-ui#global-ui: []
   - rtgl-view d=h w=f h=f:
       - $if showSidebar:
           - rvn-sidebar: []

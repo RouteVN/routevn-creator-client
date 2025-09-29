@@ -1,14 +1,12 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-const createUpdater = (getGlobalUI) => {
+const createUpdater = (globalUI) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
 
   const checkForUpdates = async (silent = false) => {
-    const globalUI =
-      typeof getGlobalUI === "function" ? getGlobalUI() : getGlobalUI;
     try {
       const update = await check();
 
@@ -54,8 +52,6 @@ const createUpdater = (getGlobalUI) => {
   };
 
   const downloadAndInstall = async (update) => {
-    const globalUI =
-      typeof getGlobalUI === "function" ? getGlobalUI() : getGlobalUI;
     try {
       let downloaded = 0;
       let contentLength = 0;
