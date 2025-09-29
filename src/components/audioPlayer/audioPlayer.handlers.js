@@ -4,10 +4,10 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, attrs, render, audioManager } = deps;
+  const { store, attrs, render, audioManager, globalUI } = deps;
 
   if (!attrs) {
-    alert("Missing fileId");
+    globalUI.showAlert({ message: "Missing fileId", title: "Error" });
     return;
   }
 

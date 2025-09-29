@@ -6,6 +6,7 @@ import Subject from "./deps/subject";
 import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
 import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
+import { createGlobalUI } from "https://cdn.jsdelivr.net/npm/@rettangoli/ui@0.1.2-rc34/+esm";
 // File management imports
 import { createFileManagerFactory } from "./deps/fileManagerFactory";
 import { createStorageAdapterFactory } from "./deps/storageAdapterFactory";
@@ -17,7 +18,7 @@ import { createTauriDialog } from "./deps/tauriDialog";
 import { initializeProject } from "./deps/tauriRepositoryAdapter";
 import { createRepositoryFactory } from "./deps/repository";
 import { createProjectsService } from "./deps/projectsService";
-import { updaterService } from "./deps/tauriUpdater";
+import createUpdater from "./deps/tauriUpdater";
 import { createBundleService } from "./deps/bundleService";
 import { getVersion } from "@tauri-apps/api/app";
 
@@ -131,6 +132,12 @@ const appVersion = await getVersion();
 // Create bundle service
 const bundleService = createBundleService();
 
+const globalUIElement = document.querySelector("rtgl-global-ui");
+
+const globalUI = createGlobalUI(globalUIElement);
+
+const updaterService = createUpdater(globalUI);
+
 const componentDependencies = {
   httpClient,
   subject,
@@ -147,6 +154,7 @@ const componentDependencies = {
   initializeProject,
   projectsService,
   updaterService,
+  globalUI,
   appVersion: `v${appVersion}`,
   platform: "tauri",
 };
@@ -168,6 +176,7 @@ const pageDependencies = {
   projectsService,
   updaterService,
   bundleService,
+  globalUI,
   appVersion: `v${appVersion}`,
   platform: "tauri",
 };

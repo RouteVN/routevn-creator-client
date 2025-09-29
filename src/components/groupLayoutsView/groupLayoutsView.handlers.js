@@ -63,7 +63,7 @@ export const handleCloseDialog = (e, deps) => {
 };
 
 export const handleFormActionClick = (e, deps) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store, render, dispatchEvent, globalUI } = deps;
 
   // Check which button was clicked
   const actionId = e.detail.actionId;
@@ -75,11 +75,17 @@ export const handleFormActionClick = (e, deps) => {
 
     // Validate required fields
     if (!formData.name) {
-      alert("Please enter a layout name");
+      globalUI.showAlert({
+        message: "Please enter a layout name",
+        title: "Warning",
+      });
       return;
     }
     if (!formData.layoutType) {
-      alert("Please select a layout type");
+      globalUI.showAlert({
+        message: "Please select a layout type",
+        title: "Warning",
+      });
       return;
     }
 

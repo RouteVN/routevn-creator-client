@@ -13,7 +13,7 @@ export const handleCreateButtonClick = async (payload, deps) => {
 };
 
 export const handleOpenButtonClick = async (payload, deps) => {
-  const { projectsService, store, render, tauriDialog } = deps;
+  const { projectsService, store, render, tauriDialog, globalUI } = deps;
 
   try {
     // Open folder selection dialog
@@ -34,10 +34,16 @@ export const handleOpenButtonClick = async (payload, deps) => {
 
     render();
 
-    alert(`Project "${importedProject.name}" has been successfully imported.`);
+    globalUI.showAlert({
+      message: `Project "${importedProject.name}" has been successfully imported.`,
+      title: "Success",
+    });
   } catch (error) {
     console.error("Error importing project:", error);
-    alert(`Failed to import project: ${error.message || error}`);
+    globalUI.showAlert({
+      message: `Failed to import project: ${error.message || error}`,
+      title: "Error",
+    });
   }
 };
 
@@ -59,7 +65,7 @@ export const handleProjectsClick = async (e, deps) => {
 };
 
 export const handleBrowseFolder = async (e, deps) => {
-  const { store, render, tauriDialog } = deps;
+  const { store, render, tauriDialog, globalUI } = deps;
 
   try {
     // Open folder selection dialog using tauriDialog from deps
@@ -74,12 +80,15 @@ export const handleBrowseFolder = async (e, deps) => {
     }
   } catch (error) {
     console.error("Error selecting folder:", error);
-    alert(`Error selecting folder: ${error.message || error}`);
+    globalUI.showAlert({
+      message: `Error selecting folder: ${error.message || error}`,
+      title: "Error",
+    });
   }
 };
 
 export const handleFormSubmit = async (e, deps) => {
-  const { projectsService, initializeProject, store, render } = deps;
+  const { projectsService, initializeProject, store, render, globalUI } = deps;
 
   try {
     // Check if it's the submit button
@@ -113,7 +122,10 @@ export const handleFormSubmit = async (e, deps) => {
     console.log(`Project created at: ${projectPath}`);
   } catch (error) {
     console.error("Error creating project:", error);
-    alert(`Failed to create project: ${error.message}`);
+    globalUI.showAlert({
+      message: `Failed to create project: ${error.message}`,
+      title: "Error",
+    });
   }
 };
 
@@ -144,7 +156,7 @@ export const handleDropdownMenuClose = (e, deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (e, deps) => {
-  const { store, render, projectsService } = deps;
+  const { store, render, projectsService, globalUI } = deps;
   const detail = e.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
@@ -181,17 +193,13 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   store.closeDropdownMenu();
   render();
 
-  // Check if the result is a Promise (tauri override) or boolean (native)
-  // Handle both sync and async confirm dialogs
-  let confirmed;
-  const confirmResult = window.confirm(
-    `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
-  );
-  if (confirmResult instanceof Promise) {
-    confirmed = await confirmResult;
-  } else {
-    confirmed = confirmResult;
-  }
+  // Use globalUI service for confirmation
+  const confirmed = await globalUI.showConfirm({
+    message: `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
+    title: "Delete Project",
+    confirmText: "Delete",
+    cancelText: "Cancel",
+  });
 
   if (!confirmed) {
     return;
