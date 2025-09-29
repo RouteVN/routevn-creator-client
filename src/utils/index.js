@@ -76,6 +76,10 @@ export const layoutTreeStructureToRenderState = (
       element["$when"] = node["$when"];
     }
 
+    if (node["$each"]) {
+      element["$each"] = node["$each"];
+    }
+
     if (node.type === "text" || node.type === "text-revealing") {
       let textStyle = {};
 

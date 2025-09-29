@@ -166,7 +166,11 @@ const getRenderState = async (deps) => {
   const storeElements = store.selectItems();
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
 
+  console.log("layoutElements", layoutElements);
+
   const layoutTreeStructure = toTreeStructure(layoutElements);
+
+  console.log("layoutTreeStructure", layoutTreeStructure);
 
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
@@ -175,6 +179,8 @@ const getRenderState = async (deps) => {
     { items: colorsItems },
     { items: fontsItems },
   );
+
+  console.log("renderStateElements", renderStateElements);
 
   return {
     renderStateElements,
@@ -291,6 +297,22 @@ const renderLayoutPreview = async (deps, options = {}) => {
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
     },
     choice: choicesData,
+    variables: {
+      titleItems: [
+        {
+          label: "Start",
+        },
+        {
+          label: "Load",
+        },
+        {
+          label: "Options",
+        },
+        {
+          label: "Exit",
+        },
+      ],
+    },
   };
 
   // const filteredElements = filterChoiceContainers(elementsToRender);
@@ -512,14 +534,14 @@ const deepMerge = (target, source) => {
   return result;
 };
 
-export const handleFormChange = async (e, deps) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+export const handleFormChange = async (e, deps, payload) => {
+  const { store, render } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
   let unflattenedUpdate;
+
+  console.log("e.detail", e.detail);
 
   // Handle anchor selection specially
   if (
@@ -538,17 +560,7 @@ export const handleFormChange = async (e, deps) => {
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
-
-  if (e.detail.formValues.contentType === "dialogue.character.name") {
-    updatedItem.text = "${dialogue.character.name}";
-  }
-  if (e.detail.formValues.contentType === "dialogue.content") {
-    updatedItem.text = "${dialogue.content}";
-  }
-
-  if (e.detail.formValues?.contentType?.startsWith("choice.items[")) {
-    updatedItem.text = `\$\{${e.detail.formValues.contentType}\}`;
-  }
+  updatedItem[e.detail.name] = e.detail.fieldValue;
 
   // Update store optimistically for immediate UI feedback
   store.updateSelectedItem(updatedItem);
@@ -1001,4 +1013,12 @@ export const subscriptions = (deps) => {
       }),
     ),
   ];
+};
+
+export const handleSystemActionsChange = (e, deps) => {
+  const { store, render } = deps;
+  const selectedItem = store.selectSelectedItem();
+  selectedItem.eventPayload = e.detail;
+  store.updateSelectedItem(selectedItem);
+  render();
 };
