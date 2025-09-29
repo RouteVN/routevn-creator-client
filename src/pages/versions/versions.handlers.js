@@ -141,7 +141,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
         },
         resources: constructResources(projectData),
         story: {
-          initialSceneId: getInitialSceneId(),
+          initialSceneId: getInitialSceneId(projectData.scenes),
           scenes: constructStory(projectData.scenes),
         },
       },

@@ -26,6 +26,19 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleSetInitialScene = async (sceneId, deps) => {
+  const { repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+
+  // Set the initialSceneId in the scenes object
+  await repository.addAction({
+    actionType: "set",
+    target: "scenes.initialSceneId",
+    value: sceneId,
+  });
+};
+
 export const handleDataChanged = async (e, deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
