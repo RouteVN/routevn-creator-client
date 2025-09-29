@@ -579,7 +579,10 @@ export const handleFontFileSelected = async (e, deps) => {
       render();
     } catch (error) {
       console.error("Failed to upload font file:", error);
-      notification.error("Failed to upload font file");
+      globalUI.showAlert({
+        message: "Failed to upload font file",
+        title: "Error",
+      });
     }
   }
 };
