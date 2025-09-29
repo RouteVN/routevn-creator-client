@@ -6,18 +6,13 @@ import {
 } from "../../utils/storyConstructor.js";
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, router, projectsService } = deps;
+  const { store, render, router, repositoryFactory } = deps;
   const { p } = router.getPayload();
 
   // Load projects and get versions for current project
-  const projects = await projectsService.loadAllProjects();
-  const currentProject = projects.find((proj) => proj.id === p);
-
-  if (currentProject && currentProject.versions) {
-    store.setVersions(currentProject.versions);
-  } else {
-    store.setVersions([]);
-  }
+  const repository = await repositoryFactory.getByProject(p);
+  const versions = (await repository.app.get("versions")) || [];
+  store.setVersions(versions);
 
   render();
 };
