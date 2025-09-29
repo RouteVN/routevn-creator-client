@@ -1,45 +1,14 @@
 import { check } from "@tauri-apps/plugin-updater";
-import { ask } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-// Helper to use notification service if available, fallback to Tauri ask
-const showDialog = async (
-  message,
-  title,
-  type = "confirm",
-  okLabel = "OK",
-  cancelLabel = null,
-) => {
-  // Try to use notification service if available
-  if (window.notification && type === "confirm" && cancelLabel) {
-    return await window.notification.confirmAsync(
-      message,
-      title,
-      okLabel,
-      cancelLabel,
-    );
-  } else if (window.notification && type === "info") {
-    window.notification.info(message, title);
-    return true;
-  } else if (window.notification && type === "error") {
-    window.notification.error(message, title);
-    return true;
-  }
-
-  // Fallback to Tauri ask dialog
-  return await ask(message, {
-    title,
-    okLabel,
-    cancelLabel,
-  });
-};
-
-const createUpdater = () => {
+const createUpdater = (getGlobalUI) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
 
   const checkForUpdates = async (silent = false) => {
+    const globalUI =
+      typeof getGlobalUI === "function" ? getGlobalUI() : getGlobalUI;
     try {
       const update = await check();
 
@@ -57,15 +26,14 @@ const createUpdater = () => {
         body: update.body,
       };
 
-      if (!silent) {
-        // Use notification service when available
-        const shouldUpdate = await showDialog(
-          `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
-          "Update Available",
-          "confirm",
-          "Update Now",
-          "Later",
-        );
+      if (!silent && globalUI) {
+        // Use globalUI service when available
+        const shouldUpdate = await globalUI.showConfirm({
+          message: `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
+          title: "Update Available",
+          confirmText: "Update Now",
+          cancelText: "Later",
+        });
 
         if (shouldUpdate) {
           await downloadAndInstall(update);
@@ -75,18 +43,20 @@ const createUpdater = () => {
       return updateInfo;
     } catch (error) {
       console.error("Failed to check for updates:", error);
-      if (!silent) {
-        await showDialog(
-          `Failed to check for updates: ${error.message}`,
-          "Update Check Failed",
-          "error",
-        );
+      if (!silent && globalUI) {
+        await globalUI.showAlert({
+          message: `Failed to check for updates: ${error.message}`,
+          title: "Update Check Failed",
+          type: "error",
+        });
       }
       return null;
     }
   };
 
   const downloadAndInstall = async (update) => {
+    const globalUI =
+      typeof getGlobalUI === "function" ? getGlobalUI() : getGlobalUI;
     try {
       let downloaded = 0;
       let contentLength = 0;
@@ -114,11 +84,13 @@ const createUpdater = () => {
       await relaunch();
     } catch (error) {
       console.error("Failed to download and install update:", error);
-      await showDialog(
-        `Failed to install update: ${error.message}`,
-        "Update Failed",
-        "error",
-      );
+      if (globalUI) {
+        await globalUI.showAlert({
+          message: `Failed to install update: ${error.message}`,
+          title: "Update Failed",
+          type: "error",
+        });
+      }
     }
   };
 
@@ -142,4 +114,4 @@ const createUpdater = () => {
   };
 };
 
-export const updaterService = createUpdater();
+export default createUpdater;

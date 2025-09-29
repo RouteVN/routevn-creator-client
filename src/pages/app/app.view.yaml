@@ -16,6 +16,7 @@ subscriptions:
     handler: handleWindowPop
 
 template:
+  - rtgl-global-ui#global-ui: []
   - rtgl-view d=h w=f h=f:
       - $if showSidebar:
           - rvn-sidebar: []
@@ -80,4 +81,3 @@ template:
               - rvn-component-editor: []
             $elif currentRoutePattern == "/project/versions":
               - rvn-versions: []
-      - rvn-notification-dialog: []

@@ -1,14 +1,14 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { router, store, repositoryFactory, render, notification } = deps;
+  const { router, store, repositoryFactory, render, globalUI } = deps;
   const { characterId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   const character = characters.items[characterId];
 
   if (!character) {
-    notification.error("Character not found");
+    globalUI.showAlert({ message: "Character not found", type: "error" });
   }
 
   store.setCharacterId(characterId);
@@ -17,14 +17,14 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleDataChanged = async (e, deps) => {
-  const { router, render, store, repositoryFactory, notification } = deps;
+  const { router, render, store, repositoryFactory, globalUI } = deps;
   const { characterId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { characters } = repository.getState();
   const character = characters.items[characterId];
 
   if (!character) {
-    notification.error("Character not found");
+    globalUI.showAlert({ message: "Character not found", type: "error" });
     return;
   }
 
@@ -59,7 +59,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
     render,
     fileManagerFactory,
     repositoryFactory,
-    notification,
+    globalUI,
   } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
@@ -72,7 +72,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const character = characters.items[characterId];
 
   if (!character) {
-    notification.error("Character not found");
+    globalUI.showAlert({ message: "Character not found", type: "error" });
     return;
   }
 

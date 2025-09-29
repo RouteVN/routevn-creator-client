@@ -105,7 +105,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     bundleService,
     repositoryFactory,
     fileManagerFactory,
-    notification,
+    globalUI,
   } = deps;
   const detail = e.detail;
 
@@ -191,9 +191,10 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     await bundleService.createDistributionZip(bundle, zipName);
 
     console.log(`✓ Distribution ZIP created: ${zipName}.zip`);
-    notification.success(
-      `Bundle ${zipName}.zip created and downloaded. You can find it in your Downloads folder.`,
-    );
+    globalUI.showAlert({
+      message: `Bundle ${zipName}.zip created and downloaded. You can find it in your Downloads folder.`,
+      type: "success",
+    });
   }
 
   if (item.value !== "delete") {

@@ -15,6 +15,22 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = (deps) => {
+  // Initialize globalUI with the actual element after mount
+  const globalUIElement = deps.getRefIds()["global-ui"]?.elm;
+
+  if (globalUIElement && deps.globalUI && deps.createGlobalUI) {
+    // Re-create globalUI with the actual element
+    const newGlobalUI = deps.createGlobalUI(globalUIElement);
+    Object.assign(deps.globalUI, newGlobalUI);
+    console.log("GlobalUI initialized with element");
+  } else {
+    console.error("Failed to initialize globalUI:", {
+      hasElement: !!globalUIElement,
+      hasGlobalUI: !!deps.globalUI,
+      hasCreateFunction: !!deps.createGlobalUI,
+    });
+  }
+
   // Start checking for updates on app startup (Tauri only)
   if (deps.updaterService) {
     deps.updaterService.checkForUpdatesOnStartup();

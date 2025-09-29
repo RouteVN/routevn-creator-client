@@ -45,7 +45,7 @@ export const handleFormExtraEvent = async (_, deps) => {
     render,
     filePicker,
     fileManagerFactory,
-    notification,
+    globalUI,
   } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
@@ -71,9 +71,11 @@ export const handleFormExtraEvent = async (_, deps) => {
 
   // Validate file format
   if (!file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i)) {
-    notification.warning(
-      "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, or .ttc)",
-    );
+    globalUI.showAlert({
+      message:
+        "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, or .ttc)",
+      type: "warning",
+    });
     return;
   }
 
@@ -122,7 +124,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
     httpClient,
     fontManager,
     loadFontFile,
-    notification,
+    globalUI,
   } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
@@ -135,9 +137,11 @@ export const handleDragDropFileSelected = async (e, deps) => {
     (file) => !file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i),
   );
   if (invalidFiles.length > 0) {
-    notification.warning(
-      "Invalid file format. Please upload only font files (.ttf, .otf, .woff, .woff2, or .ttc)",
-    );
+    globalUI.showAlert({
+      message:
+        "Invalid file format. Please upload only font files (.ttf, .otf, .woff, .woff2, or .ttc)",
+      type: "warning",
+    });
     return;
   }
 
