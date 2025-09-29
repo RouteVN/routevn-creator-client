@@ -1,0 +1,32 @@
+elementName: rvn-system-actions
+
+refs:
+  command-line-*:
+    eventListeners:
+      back-to-actions:
+        handler: handleBackToActions
+      actionClicked:
+        handler: handleActionClicked
+      submit:
+        handler: handleCommandLineSubmit
+  add-action-button:
+    eventListeners:
+      click:
+        handler: handleAddActionButtonClicked
+  actions-dialog:
+    eventListeners:
+      close:
+        handler: handleActionsDialogClose
+
+template:
+  - rtgl-view g=md w=f:
+      - "$for item in displayActions":
+          - rtgl-view h=36 w=f bgc=mu av=c ph=md:
+              - rtgl-text: ${item.name}
+      - rtgl-button#add-action-button v=ol w=f: +
+  - rtgl-dialog#actions-dialog ?open=${isActionsDialogOpen}:
+      - rtgl-view slot=content w=800 h=80vh:
+          - $if mode == "actions":
+              - rvn-command-line-system-actions#command-line-system-actions:
+            $elif mode == "sectionTransition":
+              - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections .currentSceneId=scene.id:

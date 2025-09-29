@@ -169,7 +169,6 @@ export const INITIAL_STATE = Object.freeze({
         name: "New Text",
         x: 0,
         y: 0,
-        contentType: "custom",
         text: "text",
         style: {
           wordWrapWidth: 300,
@@ -231,7 +230,6 @@ export const INITIAL_STATE = Object.freeze({
         name: "New Text",
         x: 0,
         y: 0,
-        contentType: "custom",
         text: "text",
         style: {
           wordWrapWidth: 300,
@@ -471,6 +469,16 @@ export const toViewData = ({ state, props }, payload) => {
           { name: "name", inputType: "popover-input", description: "Name" },
           { name: "type", inputType: "read-only-text", description: "Type" },
           {
+            name: "$when",
+            inputType: "inputText",
+            description: "$when",
+          },
+          {
+            name: "$each",
+            inputType: "inputText",
+            description: "$each",
+          },
+          {
             name: "x",
             inputType: "slider-input",
             description: "X Position",
@@ -534,74 +542,19 @@ export const toViewData = ({ state, props }, payload) => {
               { label: "Bottom Right", value: { x: 1, y: 1 } },
             ],
           },
-          ...(selectedItem.type === "text"
+          {
+            name: "eventPayload",
+            inputType: "slot",
+            slotName: "eventPayload",
+            description: "Event Payload",
+          },
+          ...(selectedItem.type === "text" ||
+          selectedItem.type === "text-revealing"
             ? [
                 {
-                  '$if layoutType == "normal"': {
-                    name: "contentType",
-                    inputType: "select",
-                    description: "Content Type",
-                    options: [{ label: "Custom Content", value: "custom" }],
-                    required: true,
-                  },
-                },
-                {
-                  '$if layoutType == "dialogue"': {
-                    name: "contentType",
-                    inputType: "select",
-                    description: "Content Type",
-                    options: [
-                      { label: "Custom Content", value: "custom" },
-                      { label: "Dialogue Content", value: "dialogue.content" },
-                      {
-                        label: "Character Name",
-                        value: "dialogue.character.name",
-                      },
-                    ],
-                    required: true,
-                  },
-                },
-                {
-                  '$if layoutType == "choice"': {
-                    name: "contentType",
-                    inputType: "select",
-                    description: "Content Type",
-                    options: [
-                      { label: "Custom Content", value: "custom" },
-                      {
-                        label: "Choice Content 1",
-                        value: "choice.items[0].content",
-                      },
-                      {
-                        label: "Choice Content 2",
-                        value: "choice.items[1].content",
-                      },
-                      {
-                        label: "Choice Content 3",
-                        value: "choice.items[2].content",
-                      },
-                      {
-                        label: "Choice Content 4",
-                        value: "choice.items[3].content",
-                      },
-                      {
-                        label: "Choice Content 5",
-                        value: "choice.items[4].content",
-                      },
-                      {
-                        label: "Choice Content 6",
-                        value: "choice.items[5].content",
-                      },
-                    ],
-                    required: true,
-                  },
-                },
-                {
-                  '$if contentType == "custom"': {
-                    name: "text",
-                    inputType: "popover-input",
-                    description: "Text Content",
-                  },
+                  name: "text",
+                  inputType: "popover-input",
+                  description: "Text Content",
                 },
                 {
                   name: "typographyId",
@@ -673,23 +626,6 @@ export const toViewData = ({ state, props }, payload) => {
                   ],
                   required: true,
                 },
-                {
-                  '$if layoutType == "choice"': {
-                    name: "$when",
-                    inputType: "select",
-                    description: "Container Type",
-                    options: [
-                      { label: "Custom Container", value: undefined },
-                      { label: "Choice Container 1", value: "choice.items[0]" },
-                      { label: "Choice Container 2", value: "choice.items[1]" },
-                      { label: "Choice Container 3", value: "choice.items[2]" },
-                      { label: "Choice Container 4", value: "choice.items[3]" },
-                      { label: "Choice Container 5", value: "choice.items[4]" },
-                      { label: "Choice Container 6", value: "choice.items[5]" },
-                    ],
-                    required: true,
-                  },
-                },
               ]
             : []),
         ],
@@ -699,6 +635,9 @@ export const toViewData = ({ state, props }, payload) => {
   // Create default values for the form
   const defaultValues = selectedItem
     ? {
+        eventPayload: selectedItem.eventPayload,
+        $when: selectedItem.$when,
+        $each: selectedItem.$each,
         name: selectedItem.name,
         type: selectedItem.type,
         x: selectedItem.x,
