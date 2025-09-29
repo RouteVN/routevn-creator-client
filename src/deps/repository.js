@@ -524,6 +524,11 @@ const createRepositoryInternal = (initialState, store) => {
     addAction,
     getState,
     getAllEvents,
+    app: {
+      get: store.app.get,
+      set: store.app.set,
+      remove: store.app.remove,
+    },
   };
 };
 
