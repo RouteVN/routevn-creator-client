@@ -810,6 +810,7 @@
     "tree": []
   },
   "scenes": {
+    "initialSceneId": "scene-prologue",
     "tree": [
       {
         "id": "default-scenes-folder",
