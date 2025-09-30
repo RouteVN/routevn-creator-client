@@ -87,10 +87,6 @@ const initialData = {
     items: {},
     tree: [],
   },
-  preset: {
-    items: {},
-    tree: [],
-  },
   scenes: {
     items: {},
     tree: [],

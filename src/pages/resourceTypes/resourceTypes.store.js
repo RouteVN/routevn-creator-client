@@ -65,11 +65,6 @@ export const systemConfigItems = [
     name: "Variables",
     path: "/project/resources/variables",
   },
-  {
-    id: "presets",
-    name: "Presets",
-    path: "/project/resources/presets",
-  },
 ];
 
 const settingsItems = [
