@@ -72,6 +72,14 @@ refs:
         handler: handleItemClick
       dblclick:
         handler: handleItemDoubleClick
+  sprites-button-*:
+    eventListeners:
+      click:
+        handler: handleSpritesButtonClick
+  add-character-button-*:
+    eventListeners:
+      click:
+        handler: handleAddCharacterClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -110,12 +118,32 @@ template:
                                         - rtgl-image br=md w=225 h=150 src=/public/project_logo_placeholder.png:
                                   $elif resourceType == 'images':
                                     - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                  $elif resourceType == 'characters':
+                                    - rtgl-view w=f d=h g=xl fw=w mt=lg bw=xs br=lg p=lg:
+                                      - rvn-file-image w=96 h=96 br=f fileId=${item.fileId}:
+                                      - rtgl-view flex=1 g=md:
+                                        - rtgl-text s=h2: ${item.name}
+                                        - rtgl-text c=mu-fg: ${item.description}
+                                      - rtgl-view h=f av=c:
+                                        - rtgl-button#sprites-button-${item.id}: Sprites
                                   $else:
                                     - rtgl-view w=200 d=v p=md bw=xs br=md:
                                       - rtgl-text s=xs c=mu-fg: ${item.name}
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                          - $if resourceType == 'characters':
+                              - rtgl-view mt=lg w=f:
+                                - 'rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p':
+                                  - rtgl-svg wh=24 svg=plus c=pr:
+                                  - rtgl-text s=md c=pr fw=500: Add Character
+                            $else:
+                              - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                         $else:
-                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                          - $if resourceType == 'characters':
+                              - rtgl-view mt=lg w=f:
+                                - 'rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p':
+                                  - rtgl-svg wh=24 svg=plus c=pr:
+                                  - rtgl-text s=md c=pr fw=500: Add Character
+                            $else:
+                              - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
         $elif searchQuery:
           - rtgl-view w=f h=400 av=c ah=c:
             - rtgl-text s=lg c=mu-fg: ${emptyMessage}
