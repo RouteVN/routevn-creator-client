@@ -17,12 +17,16 @@ refs:
         handler: handleDataChanged
   groupview:
     eventListeners:
-      font-item-click:
+      item-click:
         handler: handleFontItemClick
-      font-item-double-click:
+      item-dblclick:
         handler: handleFontItemDoubleClick
       files-uploaded:
         handler: handleDragDropFileSelected
+      search-input:
+        handler: handleSearchInput
+      group-toggle:
+        handler: handleGroupToggle
   font-dialog:
     eventListeners:
       close:
@@ -40,32 +44,32 @@ refs:
 
 template:
   - rtgl-view d=h w=f h=f:
-    - rtgl-view d=h h=f w=f:
-      - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
-        - rtgl-view slot="content" w=f h=f:
-          - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-          - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
-      - rtgl-view flex=1 h=f:
-        - rvn-group-fonts-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-      - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - rtgl-view wh=f slot="content":
-          - $if selectedItemId:
-            - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues .context=context:
-            $else:
-              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                  - rtgl-text s=md c=mu-fg: No selection
-    - rtgl-dialog#font-dialog ?open=${isModalOpen} s=lg:
-      - rtgl-view slot="content" p=xl:
-        - $if selectedFontInfo:
-            - rtgl-view d=h g=lg h=f:
-              - rtgl-view flex=1:
-                - rtgl-form .form=fontInfoForm .defaultValues=fontInfoValues:
-              - rtgl-view flex=2 mt=xl:
-                - rtgl-view p=md bgc=bg-hover br=sm:
-                  - 'rtgl-view d=h fw=w style="gap: 4px;"':
-                    - $for glyph in glyphList:
-                        - 'rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg':
-                          - 'rtgl-text style="font-family: ${selectedFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
-          $else:
-            - rtgl-view d=v av=c ah=c h=200:
-              - rtgl-text c=mu-fg: Loading...
+      - rtgl-view d=h h=f w=f:
+          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+                  - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
+          - rtgl-view flex=1 h=f:
+              - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues .context=context:
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection
+      - rtgl-dialog#font-dialog ?open=${isModalOpen} s=lg:
+          - rtgl-view slot="content" p=xl:
+              - $if selectedFontInfo:
+                  - rtgl-view d=h g=lg h=f:
+                      - rtgl-view flex=1:
+                          - rtgl-form .form=fontInfoForm .defaultValues=fontInfoValues:
+                      - rtgl-view flex=2 mt=xl:
+                          - rtgl-view p=md bgc=bg-hover br=sm:
+                              - 'rtgl-view d=h fw=w style="gap: 4px;"':
+                                  - $for glyph in glyphList:
+                                      - "rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg":
+                                          - 'rtgl-text style="font-family: ${selectedFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
+                $else:
+                  - rtgl-view d=v av=c ah=c h=200:
+                      - rtgl-text c=mu-fg: Loading...

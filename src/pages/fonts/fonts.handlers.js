@@ -123,7 +123,6 @@ export const handleDragDropFileSelected = async (e, deps) => {
     router,
     httpClient,
     fontManager,
-    loadFontFile,
     globalUI,
   } = deps;
   const { p: projectId } = router.getPayload();
@@ -180,10 +179,9 @@ export const handleDragDropFileSelected = async (e, deps) => {
 
     // Load the newly uploaded fonts to ensure they're available
     const loadPromises = newFontItems.map((item) =>
-      loadFontFile({
+      fileManager.loadFontFile({
         fontName: item.fontFamily,
         fileId: item.fileId,
-        projectId: projectId,
       }),
     );
     await Promise.all(loadPromises);
@@ -255,5 +253,21 @@ export const handleFormChange = async (e, deps) => {
 
   const { fonts } = repository.getState();
   store.setItems(fonts);
+  render();
+};
+
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail.value || "";
+
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const groupId = e.detail.groupId;
+
+  store.toggleGroupCollapse(groupId);
   render();
 };

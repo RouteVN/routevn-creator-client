@@ -31,6 +31,11 @@ export const INITIAL_STATE = Object.freeze({
       src: "",
     },
   },
+  searchQuery: "",
+  collapsedIds: [],
+  zoomLevel: 1.0,
+  fullImagePreviewVisible: false,
+  fullImagePreviewFileId: undefined,
 });
 
 export const setContext = (state, context) => {
@@ -56,9 +61,93 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+};
+
+export const toggleGroupCollapse = (state, groupId) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
+};
+
+export const setZoomLevel = (state, zoomLevel) => {
+  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+
+  // Only update if the value actually changed (avoid infinite loops)
+  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) {
+    return; // No change needed
+  }
+
+  state.zoomLevel = newZoomLevel;
+};
+
+export const showFullImagePreview = (state, fileId) => {
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewFileId = fileId;
+};
+
+export const hideFullImagePreview = (state) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewFileId = undefined;
+};
+
+export const selectCurrentZoomLevel = ({ state }) => {
+  return state.zoomLevel || 1.0;
+};
+
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.imagesData);
-  const flatGroups = toFlatGroups(state.imagesData);
+  const rawFlatGroups = toFlatGroups(state.imagesData);
+  const searchQuery = state.searchQuery.toLowerCase();
+
+  // Helper function to check if an item matches the search query
+  const matchesSearch = (item) => {
+    if (!searchQuery) return true;
+
+    const name = (item.name || "").toLowerCase();
+    const description = (item.description || "").toLowerCase();
+
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+
+  // Calculate zoom-based dimensions
+  const baseHeight = 150;
+  const imageHeight = Math.round(baseHeight * state.zoomLevel);
+  const maxWidth = Math.round(400 * state.zoomLevel);
+
+  // Apply collapsed state and search filtering to flatGroups
+  const flatGroups = rawFlatGroups
+    .map((group) => {
+      // Filter children based on search query
+      const filteredChildren = (group.children || []).filter(matchesSearch);
+
+      // Only show groups that have matching children or if there's no search query
+      const hasMatchingChildren = filteredChildren.length > 0;
+      const shouldShowGroup = !searchQuery || hasMatchingChildren;
+
+      return {
+        ...group,
+        isCollapsed: state.collapsedIds.includes(group.id),
+        children: state.collapsedIds.includes(group.id)
+          ? []
+          : filteredChildren.map((item) => ({
+              ...item,
+              height: imageHeight,
+              maxWidth: maxWidth,
+              selectedStyle:
+                item.id === state.selectedItemId
+                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                  : "",
+            })),
+        hasChildren: filteredChildren.length > 0,
+        shouldDisplay: shouldShowGroup,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -116,5 +205,24 @@ export const toViewData = ({ state }) => {
     form,
     context: state.context,
     defaultValues,
+    searchQuery: state.searchQuery,
+    collapsedIds: state.collapsedIds,
+    resourceType: "images",
+    searchPlaceholder: "Search images...",
+    uploadText: "Upload Image",
+    acceptedFileTypes: [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".bmp",
+      ".webp",
+      ".svg",
+    ],
+    zoomLevel: state.zoomLevel,
+    imageHeight,
+    maxWidth,
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewFileId: state.fullImagePreviewFileId,
   };
 };
