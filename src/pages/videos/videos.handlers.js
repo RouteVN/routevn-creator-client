@@ -165,3 +165,55 @@ export const handleFormChange = async (e, deps) => {
   store.setItems(videos);
   render();
 };
+
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail.value || "";
+
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const groupId = e.detail.groupId;
+
+  store.toggleGroupCollapse(groupId);
+  render();
+};
+
+export const handleVideoItemDoubleClick = async (e, deps) => {
+  const { store, render, fileManagerFactory, router, repositoryFactory } = deps;
+  const { itemId } = e.detail;
+  const { p: projectId } = router.getPayload();
+
+  // Find the video item
+  const repository = await repositoryFactory.getByProject(projectId);
+  const { videos } = repository.getState();
+  const flatItems = toFlatItems(videos);
+  const videoItem = flatItems.find((item) => item.id === itemId);
+
+  if (!videoItem) {
+    console.warn("Video item not found:", itemId);
+    return;
+  }
+
+  // Get video URL
+  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { url } = await fileManager.getFileContent({
+    fileId: videoItem.fileId,
+  });
+
+  store.setVideoVisible({
+    url,
+    fileType: videoItem.fileType,
+  });
+  render();
+};
+
+export const handleOutsideVideoClick = (_, deps) => {
+  const { store, render } = deps;
+
+  store.setVideoNotVisible();
+  render();
+};

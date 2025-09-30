@@ -121,6 +121,8 @@ export const INITIAL_STATE = Object.freeze({
   },
   isModalOpen: false,
   selectedFontInfo: null,
+  searchQuery: "",
+  collapsedIds: [],
 });
 
 export const setItems = (state, fontsData) => {
@@ -149,6 +151,19 @@ export const setModalOpen = (state, isOpen) => {
 
 export const setSelectedFontInfo = (state, fontInfo) => {
   state.selectedFontInfo = fontInfo;
+};
+
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+};
+
+export const toggleGroupCollapse = (state, groupId) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
 };
 
 export const getGlyphList = () => {
@@ -195,7 +210,48 @@ export const getUnicodeValue = (char) => {
 
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.fontsData);
-  const flatGroups = toFlatGroups(state.fontsData);
+  const rawFlatGroups = toFlatGroups(state.fontsData);
+  const searchQuery = state.searchQuery.toLowerCase();
+
+  // Helper function to check if an item matches the search query
+  const matchesSearch = (item) => {
+    if (!searchQuery) return true;
+
+    const name = (item.name || "").toLowerCase();
+    const description = (item.description || "").toLowerCase();
+
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+
+  // Apply collapsed state and search filtering to flatGroups
+  const flatGroups = rawFlatGroups
+    .map((group) => {
+      // Filter children based on search query
+      const filteredChildren = (group.children || []).filter(matchesSearch);
+
+      // Only show groups that have matching children or if there's no search query
+      const hasMatchingChildren = filteredChildren.length > 0;
+      const shouldShowGroup = !searchQuery || hasMatchingChildren;
+
+      return {
+        ...group,
+        isCollapsed: state.collapsedIds.includes(group.id),
+        children: state.collapsedIds.includes(group.id)
+          ? []
+          : filteredChildren.map((item) => ({
+              ...item,
+              fontFamily: item.fontFamily || "sans-serif",
+              previewText: "Aa",
+              selectedStyle:
+                item.id === state.selectedItemId
+                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                  : "",
+            })),
+        hasChildren: filteredChildren.length > 0,
+        shouldDisplay: shouldShowGroup,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -273,6 +329,12 @@ export const toViewData = ({ state, props }, payload) => {
     glyphList: state.selectedFontInfo?.glyphs || getGlyphList(),
     fontInfoForm,
     fontInfoValues,
+    searchQuery: state.searchQuery,
+    collapsedIds: state.collapsedIds,
+    searchPlaceholder: "Search fonts...",
+    uploadText: "Upload Font",
+    acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
+    resourceType: "fonts",
   };
 
   return viewData;
