@@ -1,0 +1,129 @@
+elementName: rvn-group-resources-view
+
+viewDataSchema:
+  type: object
+  properties:
+    resourceType:
+      type: string
+    searchQuery:
+      type: string
+    imageHeight:
+      type: number
+    maxWidth:
+      type: number
+
+propsSchema:
+  type: object
+  properties:
+    resourceType:
+      type: string
+      description: Type of resource (fonts, images, audio, etc.)
+    flatGroups:
+      type: array
+      description: Array of resource groups to display (pre-filtered and processed by parent)
+    selectedItemId:
+      type: string
+      description: ID of currently selected item
+    searchQuery:
+      type: string
+      description: Current search query (controlled by parent)
+    collapsedIds:
+      type: array
+      description: Array of collapsed group IDs (controlled by parent)
+    uploadText:
+      type: string
+      description: Text to display in upload zone
+    acceptedFileTypes:
+      type: array
+      description: Array of accepted file extensions
+    searchPlaceholder:
+      type: string
+      description: Placeholder text for search input
+    emptyMessage:
+      type: string
+      description: Message to show when no items found
+    imageHeight:
+      type: number
+      description: Height for image items (for zoom control)
+    maxWidth:
+      type: number
+      description: Max width for image items (for zoom control)
+
+refs:
+  search-input:
+    eventListeners:
+      input-change:
+        handler: handleSearchInput
+  drag-drop-item-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  drag-drop-bar-*:
+    eventListeners:
+      file-selected:
+        handler: handleDragDropFileSelected
+  group-*:
+    eventListeners:
+      click:
+        handler: handleGroupClick
+  item-*:
+    eventListeners:
+      click:
+        handler: handleItemClick
+      dblclick:
+        handler: handleItemDoubleClick
+
+template:
+  - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
+    - rtgl-view g=lg w=f h=f:
+      - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+        - rtgl-input#search-input s=sm placeholder="${searchPlaceholder}" value=${searchQuery}:
+      - $if flatGroups.length > 0:
+          - $for group in flatGroups:
+            - rtgl-view w=f ph=md:
+              - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
+                - $if group.isCollapsed:
+                    - rtgl-svg wh=16 svg=folderArrowRight:
+                  $else:
+                    - rtgl-svg wh=16 svg=folderArrowDown:
+                - rtgl-view d=h av=c g=md:
+                  - rtgl-svg wh=16 svg=folder:
+                  - rtgl-text: ${group.fullLabel}
+              - $if !group.isCollapsed:
+                  - rtgl-view w=f mb=md p=sm:
+                    - rtgl-view d=h fw=w g=md:
+                      - $if group.hasChildren:
+                          - $for item in group.children:
+                              - 'rtgl-view#item-${item.id} cur=p style="${item.selectedStyle}"':
+                                - $if resourceType == 'fonts':
+                                    - rtgl-view w=200 d=v p=md bw=xs br=md:
+                                      - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=200 height=150 av=c ah=c:
+                                      - rtgl-text s=xs c=mu-fg m=sm ellipsis w="calc(200px - 2 * var(--spacing-md))": ${item.name}
+                                  $elif resourceType == 'videos':
+                                    - rvn-file-image br=md w=200 h=150 fileId=${item.thumbnailFileId}:
+                                  $elif resourceType == 'audio':
+                                    - $if item.waveformDataFileId:
+                                        - rtgl-view:
+                                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
+                                          - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
+                                      $else:
+                                        - rtgl-image br=md w=225 h=150 src=/public/project_logo_placeholder.png:
+                                  $elif resourceType == 'images':
+                                    - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                  $else:
+                                    - rtgl-view w=200 d=v p=md bw=xs br=md:
+                                      - rtgl-text s=xs c=mu-fg: ${item.name}
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                        $else:
+                          - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+        $elif searchQuery:
+          - rtgl-view w=f h=400 av=c ah=c:
+            - rtgl-text s=lg c=mu-fg: ${emptyMessage}
+        $else:
+          - rtgl-view w=f h=f av=c ah=c:
+              - rtgl-text s=lg c=mu-fg: No data
+
+              - rtgl-view h=64:
+
+      - $if flatGroups.length > 0:
+          - rtgl-view h=33vh:

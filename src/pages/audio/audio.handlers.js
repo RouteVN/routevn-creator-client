@@ -184,3 +184,40 @@ export const handleFormChange = async (e, deps) => {
   store.setItems(audio);
   render();
 };
+
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail.value || "";
+
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const groupId = e.detail.groupId;
+
+  store.toggleGroupCollapse(groupId);
+  render();
+};
+
+export const handleAudioItemDoubleClick = async (e, deps) => {
+  const { store, render } = deps;
+  const { itemId } = e.detail;
+
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem && selectedItem.id === itemId) {
+    store.openAudioPlayer({
+      fileId: selectedItem.fileId,
+      fileName: selectedItem.name,
+    });
+    render();
+  }
+};
+
+export const handleAudioPlayerClose = (_, deps) => {
+  const { store, render } = deps;
+
+  store.closeAudioPlayer();
+  render();
+};

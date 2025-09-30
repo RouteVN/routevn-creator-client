@@ -32,6 +32,10 @@ export const INITIAL_STATE = Object.freeze({
       src: "",
     },
   },
+  searchQuery: "",
+  collapsedIds: [],
+  videoVisible: false,
+  selectedVideo: undefined,
 });
 
 export const setItems = (state, videosData) => {
@@ -57,9 +61,71 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+};
+
+export const toggleGroupCollapse = (state, groupId) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
+};
+
+export const setVideoVisible = (state, video) => {
+  state.videoVisible = true;
+  state.selectedVideo = video;
+};
+
+export const setVideoNotVisible = (state) => {
+  state.videoVisible = false;
+  state.selectedVideo = undefined;
+};
+
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.videosData);
-  const flatGroups = toFlatGroups(state.videosData);
+  const rawFlatGroups = toFlatGroups(state.videosData);
+  const searchQuery = state.searchQuery.toLowerCase();
+
+  // Helper function to check if an item matches the search query
+  const matchesSearch = (item) => {
+    if (!searchQuery) return true;
+
+    const name = (item.name || "").toLowerCase();
+    const description = (item.description || "").toLowerCase();
+
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+
+  // Apply collapsed state and search filtering to flatGroups
+  const flatGroups = rawFlatGroups
+    .map((group) => {
+      // Filter children based on search query
+      const filteredChildren = (group.children || []).filter(matchesSearch);
+
+      // Only show groups that have matching children or if there's no search query
+      const hasMatchingChildren = filteredChildren.length > 0;
+      const shouldShowGroup = !searchQuery || hasMatchingChildren;
+
+      return {
+        ...group,
+        isCollapsed: state.collapsedIds.includes(group.id),
+        children: state.collapsedIds.includes(group.id)
+          ? []
+          : filteredChildren.map((item) => ({
+              ...item,
+              selectedStyle:
+                item.id === state.selectedItemId
+                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                  : "",
+            })),
+        hasChildren: filteredChildren.length > 0,
+        shouldDisplay: shouldShowGroup,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -112,5 +178,21 @@ export const toViewData = ({ state }) => {
     form,
     context: state.context,
     defaultValues,
+    searchQuery: state.searchQuery,
+    collapsedIds: state.collapsedIds,
+    resourceType: "videos",
+    searchPlaceholder: "Search videos...",
+    uploadText: "Upload Video",
+    acceptedFileTypes: [
+      ".mp4",
+      ".avi",
+      ".mov",
+      ".wmv",
+      ".flv",
+      ".webm",
+      ".mkv",
+    ],
+    videoVisible: state.videoVisible,
+    selectedVideo: state.selectedVideo,
   };
 };
