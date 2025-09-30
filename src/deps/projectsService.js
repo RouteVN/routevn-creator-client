@@ -8,7 +8,6 @@ export const createProjectsService = (deps) => {
   const loadProjectDataFromDatabase = async (projectPath) => {
     const repository = await repositoryFactory.getByPath(projectPath);
     const { project } = repository.getState();
-    console.log("project from db", project);
     return project;
   };
 
@@ -49,8 +48,6 @@ export const createProjectsService = (deps) => {
           if (iconUrl) {
             project.iconUrl = iconUrl;
           }
-
-          console.log("project", project);
 
           return project;
         } catch (error) {
