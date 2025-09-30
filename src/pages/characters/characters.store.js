@@ -27,6 +27,47 @@ export const INITIAL_STATE = Object.freeze({
       src: "",
     },
   },
+  searchQuery: "",
+  collapsedIds: [],
+  isDialogOpen: false,
+  targetGroupId: null,
+  avatarFileId: null,
+  dialogDefaultValues: {
+    name: "",
+    description: "",
+  },
+  dialogForm: {
+    title: "Add Character",
+    fields: [
+      {
+        name: "name",
+        inputType: "inputText",
+        label: "Name",
+        required: true,
+      },
+      {
+        name: "description",
+        inputType: "inputText",
+        label: "Description",
+        required: false,
+      },
+      {
+        inputType: "slot",
+        slot: "avatar-slot",
+        label: "Avatar",
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Add Character",
+        },
+      ],
+    },
+  },
 });
 
 export const setContext = (state, context) => {
@@ -41,6 +82,38 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+};
+
+export const toggleGroupCollapse = (state, groupId) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
+};
+
+export const setTargetGroupId = (state, groupId) => {
+  state.targetGroupId = groupId;
+};
+
+export const toggleDialog = (state) => {
+  state.isDialogOpen = !state.isDialogOpen;
+};
+
+export const setAvatarFileId = (state, fileId) => {
+  state.avatarFileId = fileId;
+};
+
+export const clearAvatarState = (state) => {
+  state.avatarFileId = null;
+};
+
+export const selectTargetGroupId = ({ state }) => state.targetGroupId;
+export const selectAvatarFileId = ({ state }) => state.avatarFileId;
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   // state.charactersData contains the full structure with tree and items
@@ -54,7 +127,7 @@ export const selectSelectedItemId = ({ state }) => {
 
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.charactersData);
-  const flatGroups = toFlatGroups(state.charactersData);
+  const rawFlatGroups = toFlatGroups(state.charactersData);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -71,6 +144,51 @@ export const toViewData = ({ state, props }, payload) => {
     };
   }
 
+  // Apply search filter
+  const searchQuery = state.searchQuery.toLowerCase().trim();
+  let filteredGroups = rawFlatGroups;
+
+  if (searchQuery) {
+    filteredGroups = rawFlatGroups
+      .map((group) => {
+        const filteredChildren = (group.children || []).filter((item) => {
+          const name = (item.name || "").toLowerCase();
+          const description = (item.description || "").toLowerCase();
+          return (
+            name.includes(searchQuery) || description.includes(searchQuery)
+          );
+        });
+
+        const groupName = (group.name || "").toLowerCase();
+        const shouldIncludeGroup =
+          filteredChildren.length > 0 || groupName.includes(searchQuery);
+
+        return shouldIncludeGroup
+          ? {
+              ...group,
+              children: filteredChildren,
+              hasChildren: filteredChildren.length > 0,
+            }
+          : null;
+      })
+      .filter(Boolean);
+  }
+
+  // Apply collapsed state and selection styling
+  const flatGroups = filteredGroups.map((group) => ({
+    ...group,
+    isCollapsed: state.collapsedIds.includes(group.id),
+    children: state.collapsedIds.includes(group.id)
+      ? []
+      : (group.children || []).map((item) => ({
+          ...item,
+          selectedStyle:
+            item.id === state.selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
+  }));
+
   return {
     flatItems,
     flatGroups,
@@ -81,5 +199,12 @@ export const toViewData = ({ state, props }, payload) => {
     form,
     context: state.context,
     defaultValues,
+    searchQuery: state.searchQuery,
+    resourceType: "characters",
+    searchPlaceholder: "Search characters...",
+    isDialogOpen: state.isDialogOpen,
+    dialogDefaultValues: state.dialogDefaultValues,
+    dialogForm: state.dialogForm,
+    avatarFileId: state.avatarFileId,
   };
 };

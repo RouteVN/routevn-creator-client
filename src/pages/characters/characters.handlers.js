@@ -219,3 +219,92 @@ export const handleFormChange = async (e, deps) => {
   store.setItems(characters);
   render();
 };
+
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail?.value || "";
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+  store.toggleGroupCollapse(groupId);
+  render();
+};
+
+export const handleAddCharacterClick = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+  store.setTargetGroupId(groupId);
+  store.toggleDialog();
+  render();
+};
+
+export const handleCloseDialog = (e, deps) => {
+  const { store, render } = deps;
+  store.clearAvatarState();
+  store.toggleDialog();
+  render();
+};
+
+export const handleDialogFormActionClick = (e, deps) => {
+  const { store, render } = deps;
+  const actionId = e.detail.actionId;
+
+  if (actionId === "submit") {
+    const formData = e.detail.formValues;
+    const targetGroupId = store.selectTargetGroupId();
+    const avatarFileId = store.selectAvatarFileId();
+
+    // Dispatch character-created event
+    const event = new CustomEvent("character-created", {
+      detail: {
+        groupId: targetGroupId,
+        name: formData.name,
+        description: formData.description,
+        avatarFileId: avatarFileId,
+      },
+      bubbles: true,
+      composed: true,
+    });
+
+    // Handle the character creation directly
+    handleCharacterCreated(event, deps);
+
+    // Clear avatar state and close dialog
+    store.clearAvatarState();
+    store.toggleDialog();
+    render();
+  }
+};
+
+export const handleDialogAvatarClick = async (e, deps) => {
+  const { store, render, filePicker, fileManagerFactory, router } = deps;
+
+  try {
+    const files = await filePicker.open({
+      accept: "image/*",
+      multiple: false,
+    });
+
+    if (files.length > 0) {
+      const file = files[0];
+      const { p } = router.getPayload();
+      const fileManager = await fileManagerFactory.getByProject(p);
+
+      const uploadResults = await fileManager.upload([file]);
+
+      if (!uploadResults || uploadResults.length === 0) {
+        throw new Error("Failed to upload avatar image");
+      }
+
+      const result = uploadResults[0];
+      store.setAvatarFileId(result.fileId);
+      render();
+    }
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+  }
+};
