@@ -805,10 +805,6 @@
       }
     }
   },
-  "preset": {
-    "items": {},
-    "tree": []
-  },
   "scenes": {
     "initialSceneId": "scene-prologue",
     "tree": [

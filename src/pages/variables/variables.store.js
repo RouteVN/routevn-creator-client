@@ -10,9 +10,9 @@ const form = {
       label: "Variable Type",
     },
     {
-      name: "defaultValue",
+      name: "initialValue",
       inputType: "popover-input",
-      label: "Default Value",
+      label: "Initial Value",
     },
     { name: "readonly", inputType: "popover-input", label: "Read Only" },
   ],
@@ -47,7 +47,7 @@ export const toViewData = ({ state, props }, payload) => {
     defaultValues = {
       name: selectedItem.name,
       variableType: selectedItem.variableType || "",
-      defaultValue: selectedItem.defaultValue || "",
+      initialValue: selectedItem.initialValue || "",
       readonly: selectedItem.readonly ? "true" : "false",
     };
   }

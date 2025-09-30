@@ -29,6 +29,19 @@ export const handleVariableItemClick = (e, deps) => {
   );
 };
 
+export const handleDialogFormChange = (e, deps) => {
+  const { store, render } = deps;
+
+  console.log("store.selectDefaultValues", store.selectDefaultValues());
+  console.log("e.detail.formValues", e.detail.formValues);
+  // Update form values for preview
+  store.updateFormValues({
+    ...store.selectDefaultValues(),
+    ...e.detail.formValues,
+  });
+  render();
+};
+
 export const handleAddVariableClick = (e, deps) => {
   const { store, render } = deps;
   e.stopPropagation(); // Prevent group click
@@ -47,6 +60,7 @@ export const handleCloseDialog = (e, deps) => {
 
   // Close dialog
   store.toggleDialog();
+  store.updateFormValues({});
   render();
 };
 
@@ -89,7 +103,7 @@ export const handleFormActionClick = (e, deps) => {
           groupId: targetGroupId,
           name: formData.name,
           type: formData.type,
-          defaultValue: formData.default,
+          initialValue: formData.initialValue,
           readonly: formData.readonly,
         },
         bubbles: true,
@@ -101,4 +115,19 @@ export const handleFormActionClick = (e, deps) => {
     store.toggleDialog();
     render();
   }
+};
+
+export const handleEnumAddButtonClick = (e, deps) => {
+  const { getRefIds, store, render } = deps;
+  const inputElm = getRefIds()["form-enum-input"].elm;
+  const defaultValues = structuredClone(store.selectDefaultValues());
+  if (!defaultValues.enum) {
+    defaultValues.enum = [];
+  }
+  defaultValues.enum.push({
+    label: inputElm.value,
+    id: `${Math.random()}`,
+  });
+  store.updateFormValues(defaultValues);
+  render();
 };

@@ -26,11 +26,11 @@ export const INITIAL_STATE = Object.freeze({
       path: "/project/resources/colors",
       icon: "color",
     },
-    // {
-    //   title: "System Config",
-    //   path: "/project/resources/variables",
-    //   icon: "gear",
-    // },
+    {
+      title: "System",
+      path: "/project/resources/variables",
+      icon: "system",
+    },
     {
       title: "Scenes",
       path: "/project/scenes",
@@ -136,6 +136,12 @@ export const toViewData = ({ state }) => {
         (item) => item.title === "Versions",
       );
       if (versionsItem) return versionsItem.path;
+    }
+
+    // For system - match variables route
+    if (currentPath === "/project/resources/variables") {
+      const systemItem = state.items.find((item) => item.title === "System");
+      if (systemItem) return systemItem.path;
     }
 
     return null;

@@ -74,11 +74,6 @@ export const INITIAL_STATE = Object.freeze({
       label: "Variables",
       route: "/project/resources/variables",
     },
-    {
-      id: "presets",
-      label: "Presets",
-      route: "/project/resources/presets",
-    },
   ],
 });
 
