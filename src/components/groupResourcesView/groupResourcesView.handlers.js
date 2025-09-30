@@ -83,3 +83,33 @@ export const handleDragDropFileSelected = async (e, deps) => {
     }),
   );
 };
+
+export const handleSpritesButtonClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent item click
+  const itemId = e.currentTarget.id.replace("sprites-button-", "");
+
+  // Forward sprites button click to parent
+  dispatchEvent(
+    new CustomEvent("sprites-button-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleAddCharacterClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+  const groupId = e.currentTarget.id.replace("add-character-button-", "");
+
+  // Forward add character click to parent
+  dispatchEvent(
+    new CustomEvent("add-character-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};

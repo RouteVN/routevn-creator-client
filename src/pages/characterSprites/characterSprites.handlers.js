@@ -209,3 +209,89 @@ export const handleFormExtraEvent = async (_, deps) => {
   store.setItems(character?.sprites || { items: {}, tree: [] });
   render();
 };
+
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail?.value || "";
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+  store.toggleGroupCollapse(groupId);
+  render();
+};
+
+export const handleZoomChange = (e, deps) => {
+  const { store, render, userConfig } = deps;
+  const zoomLevel = parseFloat(e.detail?.value || e.target?.value);
+
+  store.setZoomLevel(zoomLevel);
+
+  if (userConfig) {
+    userConfig.set("characterSprites.zoomLevel", zoomLevel);
+  }
+
+  render();
+};
+
+export const handleZoomIn = (_, deps) => {
+  const { store, render, userConfig } = deps;
+  const currentZoom = store.selectCurrentZoomLevel();
+  const newZoom = Math.min(4.0, currentZoom + 0.1);
+
+  store.setZoomLevel(newZoom);
+
+  if (userConfig) {
+    userConfig.set("characterSprites.zoomLevel", newZoom);
+  }
+
+  render();
+};
+
+export const handleZoomOut = (_, deps) => {
+  const { store, render, userConfig } = deps;
+  const currentZoom = store.selectCurrentZoomLevel();
+  const newZoom = Math.max(0.5, currentZoom - 0.1);
+
+  store.setZoomLevel(newZoom);
+
+  if (userConfig) {
+    userConfig.set("characterSprites.zoomLevel", newZoom);
+  }
+
+  render();
+};
+
+export const handleImageDoubleClick = (e, deps) => {
+  const { store, render } = deps;
+  const { itemId } = e.detail;
+
+  store.setSelectedItemId(itemId);
+
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem && selectedItem.id === itemId) {
+    store.showFullImagePreview(selectedItem.fileId);
+    render();
+  }
+};
+
+export const handlePreviewOverlayClick = (_, deps) => {
+  const { store, render } = deps;
+  store.hideFullImagePreview();
+  render();
+};
+
+export const handleOnMount = async (deps) => {
+  const { store, render, userConfig } = deps;
+
+  if (userConfig) {
+    const savedZoom = await userConfig.get("characterSprites.zoomLevel");
+    if (savedZoom !== null && savedZoom !== undefined) {
+      store.setZoomLevel(savedZoom);
+      render();
+    }
+  }
+};
