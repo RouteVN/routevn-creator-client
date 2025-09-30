@@ -15,12 +15,10 @@ export const createProjectsService = (deps) => {
   const loadProjectIcon = async (projectId, iconFileId) => {
     if (!iconFileId) return null;
     const fileManager = await fileManagerFactory.getByProject(projectId);
-    console.log(projectId, iconFileId, fileManager); // ok, fileManager is not undefined
-    const { iconUrl } = await fileManager.getFileContent({
+    const { url } = await fileManager.getFileContent({
       fileId: iconFileId,
     });
-    console.log("iconUrl", iconUrl); // error here, iconUrl is undefined
-    return iconUrl;
+    return url;
   };
 
   const loadAllProjects = async () => {
