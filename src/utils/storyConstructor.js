@@ -67,8 +67,8 @@ export function constructStory(scenes) {
 }
 
 /**
- * Get the initial scene ID - always returns "scene-prologue"
+ * Get the initial scene ID from scenes data
  */
-export function getInitialSceneId() {
-  return "scene-prologue";
+export function getInitialSceneId(scenes) {
+  return scenes?.initialSceneId || null;
 }

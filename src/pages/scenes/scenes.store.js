@@ -5,6 +5,7 @@ const form = {
 };
 
 const CONTEXT_MENU_ITEMS = [
+  { label: "Set Initial Scene", type: "item", value: "set-initial" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
 
@@ -104,6 +105,22 @@ export const selectDropdownMenuItemId = ({ state }) => {
   return state.dropdownMenu.itemId;
 };
 
+export const selectWhiteboardItems = ({ state }) => {
+  return state.whiteboardItems;
+};
+
+export const selectScenesData = ({ state }) => {
+  return state.scenesData;
+};
+
+export const selectIsWaitingForTransform = ({ state }) => {
+  return state.isWaitingForTransform;
+};
+
+export const selectSceneWhiteboardPosition = ({ state }) => {
+  return state.sceneWhiteboardPosition;
+};
+
 // Track if we've initialized from repository yet
 let hasInitialized = false;
 
@@ -118,6 +135,7 @@ export const toViewData = ({ state, props }, payload) => {
       state.scenesData = scenes;
 
       // Transform only scene items (not folders) into whiteboard items
+      const initialSceneId = scenes.initialSceneId;
       const sceneItems = Object.entries(scenes.items || {})
         .filter(([key, item]) => item.type === "scene")
         .map(([sceneId, scene]) => ({
@@ -125,6 +143,8 @@ export const toViewData = ({ state, props }, payload) => {
           name: scene.name || `Scene ${sceneId}`,
           x: scene.position?.x || 200,
           y: scene.position?.y || 200,
+          // Add red color for initial scene
+          textColor: sceneId === initialSceneId ? "de" : undefined,
         }));
 
       state.whiteboardItems = sceneItems;

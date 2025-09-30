@@ -11,6 +11,7 @@ export const handleAfterMount = async (deps) => {
   store.setItems(scenesData);
 
   // Transform only scene items (not folders) into whiteboard items
+  const initialSceneId = scenesData.initialSceneId;
   const sceneItems = Object.entries(scenesData.items || {})
     .filter(([key, item]) => item.type === "scene")
     .map(([sceneId, scene]) => ({
@@ -18,12 +19,27 @@ export const handleAfterMount = async (deps) => {
       name: scene.name || `Scene ${sceneId}`,
       x: scene.position?.x || 200,
       y: scene.position?.y || 200,
+      // Add red color for initial scene
+      textColor: sceneId === initialSceneId ? "de" : undefined,
     }));
 
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems(sceneItems);
 
   render();
+};
+
+export const handleSetInitialScene = async (sceneId, deps) => {
+  const { repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+
+  // Set the initialSceneId in the scenes object
+  await repository.addAction({
+    actionType: "set",
+    target: "scenes.initialSceneId",
+    value: sceneId,
+  });
 };
 
 export const handleDataChanged = async (e, deps) => {
@@ -34,10 +50,10 @@ export const handleDataChanged = async (e, deps) => {
   const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
-  const currentState = store.getState();
-  const currentWhiteboardItems = currentState.whiteboardItems || [];
+  const currentWhiteboardItems = store.selectWhiteboardItems() || [];
 
   // Transform only scene items (not folders) into whiteboard items, preserving current positions
+  const initialSceneId = sceneData.initialSceneId;
   const sceneItems = Object.entries(sceneData.items || {})
     .filter(([key, item]) => item.type === "scene")
     .map(([sceneId, scene]) => {
@@ -52,6 +68,8 @@ export const handleDataChanged = async (e, deps) => {
         // Use repository position if available, otherwise use existing whiteboard position, finally default to 200,200
         x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
         y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
+        // Add red color for initial scene
+        textColor: sceneId === initialSceneId ? "de" : undefined,
       };
     });
 
@@ -149,9 +167,9 @@ export const handleFormChange = async (e, deps) => {
 
 export const handleWhiteboardClick = (e, deps) => {
   const { store, render } = deps;
-  const currentState = store.getState();
+  const isWaitingForTransform = store.selectIsWaitingForTransform();
 
-  if (currentState.isWaitingForTransform) {
+  if (isWaitingForTransform) {
     // Get click position relative to whiteboard
     const { formX, formY, whiteboardX, whiteboardY } = e.detail;
 
@@ -197,8 +215,7 @@ export const handleSceneFormAction = async (e, deps) => {
     store.resetSceneForm();
     render();
   } else if (actionId === "submit") {
-    const currentState = store.getState();
-    const { sceneWhiteboardPosition } = currentState;
+    const sceneWhiteboardPosition = store.selectSceneWhiteboardPosition();
 
     // Get form values from the event detail (same pattern as typography)
     const formData = e.detail.formValues;
@@ -346,14 +363,15 @@ export const handleWhiteboardItemDelete = async (e, deps) => {
   store.setItems(updatedScenes);
 
   // Remove from whiteboard items
-  const currentState = store.getState();
-  const updatedWhiteboardItems = currentState.whiteboardItems.filter(
+  const currentWhiteboardItems = store.selectWhiteboardItems();
+  const updatedWhiteboardItems = currentWhiteboardItems.filter(
     (item) => item.id !== itemId,
   );
   store.setWhiteboardItems(updatedWhiteboardItems);
 
   // Clear selection if the deleted item was selected
-  if (currentState.selectedItemId === itemId) {
+  const selectedItemId = store.selectSelectedItemId();
+  if (selectedItemId === itemId) {
     store.setSelectedItemId(null);
   }
 
@@ -393,6 +411,32 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   store.hideDropdownMenu();
   render();
 
+  // Handle set initial scene action
+  if (item.value === "set-initial" && itemId) {
+    // Set the initialSceneId in the scenes object
+    await repository.addAction({
+      actionType: "set",
+      target: "scenes.initialSceneId",
+      value: itemId,
+    });
+
+    // Get updated scenes data
+    const { scenes: updatedScenes } = repository.getState();
+    store.setItems(updatedScenes);
+
+    // Update whiteboard items with new colors
+    const currentWhiteboardItems = store.selectWhiteboardItems();
+    const initialSceneId = updatedScenes.initialSceneId;
+    const updatedWhiteboardItems = currentWhiteboardItems.map((item) => ({
+      ...item,
+      // Update text color based on whether it's the initial scene
+      textColor: item.id === initialSceneId ? "de" : undefined,
+    }));
+    store.setWhiteboardItems(updatedWhiteboardItems);
+
+    render();
+  }
+
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
     // Remove from repository
@@ -409,14 +453,15 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     store.setItems(updatedScenes);
 
     // Remove from whiteboard items
-    const currentState = store.getState();
-    const updatedWhiteboardItems = currentState.whiteboardItems.filter(
+    const currentWhiteboardItems = store.selectWhiteboardItems();
+    const updatedWhiteboardItems = currentWhiteboardItems.filter(
       (item) => item.id !== itemId,
     );
     store.setWhiteboardItems(updatedWhiteboardItems);
 
     // Clear selection if the deleted item was selected
-    if (currentState.selectedItemId === itemId) {
+    const selectedItemId = store.selectSelectedItemId();
+    if (selectedItemId === itemId) {
       store.setSelectedItemId(null);
     }
 
