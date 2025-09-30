@@ -34,7 +34,7 @@ export const handleVariableCreated = async (e, deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, type, defaultValue, readonly } = e.detail;
+  const { groupId, name, type, initialValue, readonly } = e.detail;
 
   // Add new variable to repository
   repository.addAction({
@@ -48,7 +48,7 @@ export const handleVariableCreated = async (e, deps) => {
         type: "variable",
         name: name,
         variableType: type,
-        defaultValue: defaultValue,
+        initialValue: initialValue,
         readonly: readonly,
       },
     },

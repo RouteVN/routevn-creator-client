@@ -103,7 +103,7 @@ export const handleFormActionClick = (e, deps) => {
           groupId: targetGroupId,
           name: formData.name,
           type: formData.type,
-          defaultValue: formData.initialValue,
+          initialValue: formData.initialValue,
           readonly: formData.readonly,
         },
         bubbles: true,

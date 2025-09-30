@@ -59,8 +59,8 @@ export const INITIAL_STATE = Object.freeze({
           { value: "integer", label: "Integer" },
           { value: "boolean", label: "Boolean" },
           { value: "enum", label: "Enum" },
-          { value: "array", label: "Array" },
-          { value: "object", label: "Object" },
+          // { value: "array", label: "Array" },
+          // { value: "object", label: "Object" },
         ],
       },
       {
@@ -181,12 +181,12 @@ export const toViewData = ({ state, props }) => {
 
     const name = (item.name || "").toLowerCase();
     const type = (item.variableType || "").toLowerCase();
-    const defaultValue = (item.defaultValue || "").toLowerCase();
+    const initialValue = (item.initialValue || "").toLowerCase();
 
     return (
       name.includes(searchQuery) ||
       type.includes(searchQuery) ||
-      defaultValue.includes(searchQuery)
+      initialValue.includes(searchQuery)
     );
   };
 
@@ -218,7 +218,7 @@ export const toViewData = ({ state, props }) => {
                 name: item.name,
                 type: item.variableType || "string",
                 enum: item.enum || [],
-                initialValue: item.defaultValue || "",
+                initialValue: item.initialValue || "",
                 readOnly: item.readonly ? "Yes" : "No",
               }))
             : [],
