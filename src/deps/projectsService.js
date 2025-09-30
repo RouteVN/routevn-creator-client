@@ -1,10 +1,9 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { nanoid } from "nanoid";
 
 export const createProjectsService = (deps) => {
-  const { keyValueStore, repositoryFactory } = deps;
+  const { keyValueStore, repositoryFactory, fileManagerFactory } = deps;
 
   const loadProjectDataFromDatabase = async (projectPath) => {
     const repository = await repositoryFactory.getByPath(projectPath);
@@ -12,23 +11,13 @@ export const createProjectsService = (deps) => {
     return project;
   };
 
-  const loadProjectIcon = async (projectPath, iconFileId) => {
-    if (!iconFileId || !projectPath) {
-      return null;
-    }
-
-    try {
-      const iconPath = await join(projectPath, "files", iconFileId);
-      const exists = await exists(iconPath);
-
-      if (exists) {
-        return convertFileSrc(iconPath);
-      }
-    } catch (error) {
-      console.warn(`Failed to load icon:`, error);
-    }
-
-    return null;
+  const loadProjectIcon = async (projectId, iconFileId) => {
+    if (!iconFileId) return null;
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
+      fileId: iconFileId,
+    });
+    return url;
   };
 
   const loadAllProjects = async () => {
@@ -55,10 +44,7 @@ export const createProjectsService = (deps) => {
           };
 
           // Load icon URL if iconFileId exists
-          const iconUrl = await loadProjectIcon(
-            project.projectPath,
-            project.iconFileId,
-          );
+          const iconUrl = await loadProjectIcon(project.id, project.iconFileId);
           if (iconUrl) {
             project.iconUrl = iconUrl;
           }

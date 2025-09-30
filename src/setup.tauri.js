@@ -121,6 +121,7 @@ const tauriDialog = createTauriDialog();
 const projectsService = createProjectsService({
   keyValueStore,
   repositoryFactory,
+  fileManagerFactory,
 });
 
 // Initialize async resources first
