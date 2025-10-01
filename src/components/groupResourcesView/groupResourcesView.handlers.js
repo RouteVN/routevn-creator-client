@@ -188,3 +188,18 @@ export const handleAddVariableClick = (e, deps) => {
     }),
   );
 };
+
+export const handleAddAnimationClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+  const groupId = e.currentTarget.id.replace("add-animation-button-", "");
+
+  // Forward add animation click to parent
+  dispatchEvent(
+    new CustomEvent("add-animation-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
