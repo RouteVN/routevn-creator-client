@@ -173,3 +173,18 @@ export const handleAddTransformClick = (e, deps) => {
     }),
   );
 };
+
+export const handleAddVariableClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+  const groupId = e.currentTarget.id.replace("add-variable-button-", "");
+
+  // Forward add variable click to parent
+  dispatchEvent(
+    new CustomEvent("add-variable-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
