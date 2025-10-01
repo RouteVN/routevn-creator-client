@@ -34,7 +34,7 @@ export const INITIAL_STATE = Object.freeze({
           //
           // # • device – saved on this device only
           // # Example: Text speed, sound/music volume, accessibility preferences
-          // # Use for user preferences that should persist on the current device, but don’t need syncing or save/load.
+          // # Use for user preferences that should persist on the current device, but don't need syncing or save/load.
           //
           // # • global – synced across all devices
           // # Example: Whether the game is completed, unlocked bonus content, claimed daily rewards
@@ -42,7 +42,7 @@ export const INITIAL_STATE = Object.freeze({
           //
           // # • saveData – saved only in game saves
           // # Example: Player progress, inventory items, story flags
-          // # Use for values that are tied to save/load and shouldn’t change unless the player loads a saved game.
+          // # Use for values that are tied to save/load and shouldn't change unless the player loads a saved game.
           { value: "runtime", label: "Runtime" },
           { value: "device", label: "Device" },
           { value: "global", label: "Global" },
