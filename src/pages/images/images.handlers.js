@@ -181,77 +181,15 @@ export const handleGroupToggle = (e, deps) => {
   render();
 };
 
-export const handleZoomChange = (e, deps) => {
-  const { store, render, userConfig } = deps;
-  const zoomLevel = parseFloat(e.detail?.value || e.target?.value);
-
-  store.setZoomLevel(zoomLevel);
-
-  // Save zoom level to user config
-  if (userConfig) {
-    userConfig.set("images.zoomLevel", zoomLevel);
-  }
-
-  render();
-};
-
-export const handleZoomIn = (_, deps) => {
-  const { store, render, userConfig } = deps;
-  const currentZoom = store.selectCurrentZoomLevel();
-  const newZoom = Math.min(4.0, currentZoom + 0.1);
-
-  store.setZoomLevel(newZoom);
-
-  // Save zoom level to user config
-  if (userConfig) {
-    userConfig.set("images.zoomLevel", newZoom);
-  }
-
-  render();
-};
-
-export const handleZoomOut = (_, deps) => {
-  const { store, render, userConfig } = deps;
-  const currentZoom = store.selectCurrentZoomLevel();
-  const newZoom = Math.max(0.5, currentZoom - 0.1);
-
-  store.setZoomLevel(newZoom);
-
-  // Save zoom level to user config
-  if (userConfig) {
-    userConfig.set("images.zoomLevel", newZoom);
-  }
-
-  render();
-};
-
 export const handleImageDoubleClick = (e, deps) => {
   const { store, render } = deps;
   const { itemId } = e.detail;
-
-  const selectedItem = store.selectSelectedItem();
-  if (selectedItem && selectedItem.id === itemId) {
-    store.showFullImagePreview(selectedItem.fileId);
-    render();
-  }
+  store.showFullImagePreview(itemId);
+  render();
 };
 
 export const handlePreviewOverlayClick = (_, deps) => {
   const { store, render } = deps;
-
   store.hideFullImagePreview();
   render();
-};
-
-export const handleOnMount = async (deps) => {
-  const { store, render, userConfig } = deps;
-
-  // Load saved zoom level from user config
-  if (userConfig) {
-    const savedZoom = await userConfig.get("images.zoomLevel");
-    if (savedZoom !== null && savedZoom !== undefined) {
-      store.setZoomLevel(savedZoom);
-      render();
-    }
-  }
 };

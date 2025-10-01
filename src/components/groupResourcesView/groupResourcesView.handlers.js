@@ -203,3 +203,48 @@ export const handleAddAnimationClick = (e, deps) => {
     }),
   );
 };
+
+export const handleZoomChange = async (e, deps) => {
+  const { store, render, userConfig } = deps;
+  const zoomLevel = parseFloat(e.detail?.value || e.target?.value);
+
+  // Update internal state
+  store.setZoomLevel(zoomLevel);
+  await userConfig.set("images.zoomLevel", zoomLevel);
+  render();
+};
+
+export const handleZoomIn = async (_, deps) => {
+  const { store, render, userConfig } = deps;
+
+  // Increase zoom by 0.1, max 4.0
+  const currentZoom = store.state.zoomLevel || 1.0;
+  const newZoom = Math.min(4.0, currentZoom + 0.1);
+
+  // Update internal state
+  store.setZoomLevel(newZoom);
+  await userConfig.set("images.zoomLevel", newZoom);
+  render();
+};
+
+export const handleZoomOut = async (_, deps) => {
+  const { store, render, userConfig } = deps;
+
+  // Decrease zoom by 0.1, min 0.5
+  const currentZoom = store.state.zoomLevel || 1.0;
+  const newZoom = Math.max(0.5, currentZoom - 0.1);
+
+  // Update internal state
+  store.setZoomLevel(newZoom);
+  await userConfig.set("images.zoomLevel", newZoom);
+  render();
+};
+
+export const handleAfterMount = async (deps) => {
+  const { store, render, userConfig } = deps;
+  const savedZoom = await userConfig.get("images.zoomLevel");
+  if (savedZoom !== null && savedZoom !== undefined) {
+    store.setZoomLevel(savedZoom);
+    render();
+  }
+};
