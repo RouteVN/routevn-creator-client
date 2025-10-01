@@ -111,6 +111,8 @@ export const INITIAL_STATE = Object.freeze({
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
   selectedItemId: null,
+  searchQuery: "",
+  collapsedIds: [],
   context: {
     typographyPreview: {
       src: "",
@@ -190,6 +192,19 @@ export const setContext = (state, context) => {
 
 export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
+};
+
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+};
+
+export const toggleGroupCollapse = (state, groupId) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
 };
 
 // Dialog management
@@ -304,6 +319,11 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectItemById = ({ state }, itemId) => {
+  const flatItems = toFlatItems(state.typographyData);
+  return flatItems.find((item) => item.id === itemId);
+};
+
 export const selectColorsData = ({ state }) => state.colorsData;
 
 export const selectFontsData = ({ state }) => state.fontsData;
@@ -326,12 +346,54 @@ export const selectSelectedFontData = ({ state }) => ({
 
 export const toViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
-  const flatGroups = toFlatGroups(state.typographyData);
+  const rawFlatGroups = toFlatGroups(state.typographyData);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
+
+  // Apply search filter
+  const searchQuery = state.searchQuery.toLowerCase().trim();
+  let filteredGroups = rawFlatGroups;
+
+  if (searchQuery) {
+    filteredGroups = rawFlatGroups
+      .map((group) => {
+        const filteredChildren = (group.children || []).filter((item) => {
+          const name = (item.name || "").toLowerCase();
+          return name.includes(searchQuery);
+        });
+
+        const groupName = (group.name || "").toLowerCase();
+        const shouldIncludeGroup =
+          filteredChildren.length > 0 || groupName.includes(searchQuery);
+
+        return shouldIncludeGroup
+          ? {
+              ...group,
+              children: filteredChildren,
+              hasChildren: filteredChildren.length > 0,
+            }
+          : null;
+      })
+      .filter(Boolean);
+  }
+
+  // Apply collapsed state and selection styling
+  const flatGroups = filteredGroups.map((group) => ({
+    ...group,
+    isCollapsed: state.collapsedIds.includes(group.id),
+    children: state.collapsedIds.includes(group.id)
+      ? []
+      : (group.children || []).map((item) => ({
+          ...item,
+          selectedStyle:
+            item.id === state.selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
+  }));
 
   // Helper function to get color name from ID
   const getColorName = (colorId) => {
@@ -630,5 +692,8 @@ export const toViewData = ({ state }) => {
     previewColor: getPreviewColor(),
     previewFontFamily: previewFontData.fontFamily,
     previewFontFileId: previewFontData.fileId,
+    searchQuery: state.searchQuery,
+    resourceType: "typography",
+    searchPlaceholder: "Search typography...",
   };
 };

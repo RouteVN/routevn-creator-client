@@ -1,7 +1,8 @@
 export const INITIAL_STATE = Object.freeze({});
 
-export const toViewData = ({ state, props }) => {
+export const toViewData = ({ state, props, attrs }) => {
   return {
+    fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
     resourceType: props.resourceType || "default",
     flatGroups: props.flatGroups || [],
     selectedItemId: props.selectedItemId,

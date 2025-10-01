@@ -2,7 +2,9 @@ elementName: rvn-colors
 
 viewDataSchema:
   type: object
-  properties: {}
+  properties:
+    searchQuery:
+      type: string
 
 refs:
   file-explorer:
@@ -11,16 +13,16 @@ refs:
         handler: handleDataChanged
   groupview:
     eventListeners:
-      color-item-click:
+      item-click:
         handler: handleColorItemClick
-      color-item-dblclick:
+      item-dblclick:
         handler: handleColorItemDoubleClick
       add-color-click:
         handler: handleAddColorClick
-      color-created:
-        handler: handleColorCreated
-      color-edited:
-        handler: handleColorEdited
+      search-input:
+        handler: handleSearchInput
+      group-toggle:
+        handler: handleGroupToggle
   detail-form:
     eventListeners:
       form-change:
@@ -52,7 +54,7 @@ template:
                   - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
                   - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
           - rtgl-view flex=1 h=f:
-              - rvn-group-colors-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
+              - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
