@@ -322,9 +322,14 @@ export const handleTransformFormActionClick = (e, deps) => {
           anchorY: parseFloat(formData.anchor.anchorY),
           anchorX: parseFloat(formData.anchor.anchorX),
           rotation: parseInt(formData.rotation),
-        }
+        },
       };
-      handleTransformEdited(editEvent, { store, render, repositoryFactory, router });
+      handleTransformEdited(editEvent, {
+        store,
+        render,
+        repositoryFactory,
+        router,
+      });
 
       // Force immediate render to update thumbnails
       render();
@@ -341,9 +346,14 @@ export const handleTransformFormActionClick = (e, deps) => {
           anchorX: parseFloat(formData.anchor.anchorX),
           anchorY: parseFloat(formData.anchor.anchorY),
           rotation: parseInt(formData.rotation),
-        }
+        },
       };
-      handleTransformCreated(createEvent, { store, render, repositoryFactory, router });
+      handleTransformCreated(createEvent, {
+        store,
+        render,
+        repositoryFactory,
+        router,
+      });
     }
 
     // Close dialog and reset all state

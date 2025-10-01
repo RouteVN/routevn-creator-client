@@ -317,10 +317,10 @@ export const toViewData = ({ state, props }, payload) => {
 
         return shouldIncludeGroup
           ? {
-            ...group,
-            children: filteredChildren,
-            hasChildren: filteredChildren.length > 0,
-          }
+              ...group,
+              children: filteredChildren,
+              hasChildren: filteredChildren.length > 0,
+            }
           : null;
       })
       .filter(Boolean);
@@ -333,12 +333,12 @@ export const toViewData = ({ state, props }, payload) => {
     children: state.collapsedIds.includes(group.id)
       ? []
       : (group.children || []).map((item) => ({
-        ...item,
-        selectedStyle:
-          item.id === state.selectedItemId
-            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-            : "",
-      })),
+          ...item,
+          selectedStyle:
+            item.id === state.selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
   }));
 
   // TODO this is hacky way to work around limitation of passing props
@@ -369,6 +369,6 @@ export const toViewData = ({ state, props }, payload) => {
     editItemId: state.editItemId,
     transformForm: state.transformForm,
     dialogDefaultValues: state.defaultValues,
-    items
+    items,
   };
 };
