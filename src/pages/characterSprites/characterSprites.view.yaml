@@ -31,9 +31,9 @@ refs:
       group-toggle:
         handler: handleGroupToggle
     preview-overlay:
-    eventListeners:
-      click:
-        handler: handlePreviewOverlayClick
+      eventListeners:
+        click:
+          handler: handlePreviewOverlayClick
   detail-form:
     eventListeners:
       extra-event:
