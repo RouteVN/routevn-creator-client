@@ -15,5 +15,7 @@ export const toViewData = ({ state, props, attrs }) => {
       `No ${props.resourceType || "items"} found matching "${props.searchQuery || ""}"`,
     imageHeight: props.imageHeight,
     maxWidth: props.maxWidth,
+    itemProperties: props.itemProperties || {},
+    items: props.items || {},
   };
 };
