@@ -26,33 +26,27 @@ export const handleImageItemClick = (e, deps) => {
   render();
 };
 
-export const handleLayoutCreated = async (e, deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, layoutType } = e.detail;
+export const handleItemDoubleClick = (e, deps) => {
+  const { router, subject } = deps;
+  const { itemId } = e.detail;
 
-  repository.addAction({
-    actionType: "treePush",
-    target: "layouts",
-    value: {
-      parent: groupId,
-      position: "last",
-      item: {
-        id: nanoid(),
-        type: "layout",
-        name: name,
-        layoutType: layoutType,
-        elements: {
-          items: {},
-          tree: [],
-        },
-      },
+  // Get current payload to preserve projectId
+  const currentPayload = router ? router.getPayload() : {};
+
+  subject.dispatch("redirect", {
+    path: "/project/resources/layout-editor",
+    payload: {
+      ...currentPayload, // Preserve existing payload (including p for projectId)
+      layoutId: itemId,
     },
   });
+};
 
-  const { layouts } = repository.getState();
-  store.setItems(layouts);
+export const handleAddLayoutClick = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+
+  store.openAddDialog(groupId);
   render();
 };
 
@@ -124,5 +118,74 @@ export const handleFormChange = async (e, deps) => {
 
   const { layouts } = repository.getState();
   store.setItems(layouts);
+  render();
+};
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail?.value || "";
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+  store.toggleGroupCollapse(groupId);
+  render();
+};
+
+export const handleAddDialogClose = (e, deps) => {
+  const { store, render } = deps;
+  store.closeAddDialog();
+  render();
+};
+
+export const handleLayoutFormActionClick = async (e, deps) => {
+  const { store, render, repositoryFactory, router, globalUI } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+
+  const formData = e.detail.formValues;
+  const targetGroupId = store.getState().targetGroupId;
+
+  // Validate required fields
+  if (!formData.name) {
+    globalUI.showAlert({
+      message: "Please enter a layout name",
+      title: "Warning",
+    });
+    return;
+  }
+  if (!formData.layoutType) {
+    globalUI.showAlert({
+      message: "Please select a layout type",
+      title: "Warning",
+    });
+    return;
+  }
+
+  // Create the layout directly in the repository (like colors page does)
+  repository.addAction({
+    actionType: "treePush",
+    target: "layouts",
+    value: {
+      parent: targetGroupId,
+      position: "last",
+      item: {
+        id: nanoid(),
+        type: "layout",
+        name: formData.name,
+        layoutType: formData.layoutType,
+        elements: {
+          items: {},
+          tree: [],
+        },
+      },
+    },
+  });
+
+  const { layouts } = repository.getState();
+  store.setItems(layouts);
+  store.closeAddDialog();
   render();
 };

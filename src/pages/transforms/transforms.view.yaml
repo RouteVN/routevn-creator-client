@@ -2,7 +2,9 @@ elementName: rvn-transforms
 
 viewDataSchema:
   type: object
-  properties: {}
+  properties:
+    searchQuery:
+      type: string
 
 refs:
   file-explorer:
@@ -13,17 +15,23 @@ refs:
     eventListeners:
       transform-item-click:
         handler: handleTransformItemClick
+      transform-item-double-click:
+        handler: handleTransformItemDoubleClick
+      add-transform-click:
+        handler: handleAddTransformClick
       transform-created:
         handler: handleTransformCreated
-      transform-edited:
-        handler: handleTransformEdited
+      search-input:
+        handler: handleSearchInput
+      group-click:
+        handler: handleGroupClick
   detail-form:
     eventListeners:
       form-change:
         handler: handleFormChange
 
 template:
-  - rtgl-view d=h w=f h=f: 
+  - rtgl-view d=h w=f h=f:
     - rtgl-view d=h h=f w=f:
       - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:

@@ -113,3 +113,63 @@ export const handleAddCharacterClick = (e, deps) => {
     }),
   );
 };
+
+export const handleAddColorClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+  const groupId = e.currentTarget.id.replace("add-color-button-", "");
+
+  // Forward add color click to parent
+  dispatchEvent(
+    new CustomEvent("add-color-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleAddTypographyClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+  const groupId = e.currentTarget.id.replace("add-typography-button-", "");
+
+  // Forward add typography click to parent
+  dispatchEvent(
+    new CustomEvent("add-typography-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleAddLayoutClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+  const groupId = e.currentTarget.id.replace("add-layout-button-", "");
+
+  // Forward add layout click to parent
+  dispatchEvent(
+    new CustomEvent("add-layout-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleAddTransformClick = (e, deps) => {
+  const { dispatchEvent } = deps;
+  e.stopPropagation(); // Prevent group click
+  const groupId = e.currentTarget.id.replace("add-transform-button-", "");
+
+  // Forward add transform click to parent
+  dispatchEvent(
+    new CustomEvent("add-transform-click", {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
