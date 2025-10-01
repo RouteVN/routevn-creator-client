@@ -33,7 +33,6 @@ export const INITIAL_STATE = Object.freeze({
   },
   searchQuery: "",
   collapsedIds: [],
-  zoomLevel: 1.0,
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
 });
@@ -74,29 +73,20 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
-export const setZoomLevel = (state, zoomLevel) => {
-  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
+export const showFullImagePreview = (state, itemId) => {
+  // Find the item by itemId and extract its fileId
+  const flatItems = toFlatItems(state.imagesData);
+  const item = flatItems.find((item) => item.id === itemId);
 
-  // Only update if the value actually changed (avoid infinite loops)
-  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) {
-    return; // No change needed
+  if (item && item.fileId) {
+    state.fullImagePreviewVisible = true;
+    state.fullImagePreviewFileId = item.fileId;
   }
-
-  state.zoomLevel = newZoomLevel;
-};
-
-export const showFullImagePreview = (state, fileId) => {
-  state.fullImagePreviewVisible = true;
-  state.fullImagePreviewFileId = fileId;
 };
 
 export const hideFullImagePreview = (state) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
-};
-
-export const selectCurrentZoomLevel = ({ state }) => {
-  return state.zoomLevel || 1.0;
 };
 
 export const toViewData = ({ state }) => {
@@ -114,10 +104,11 @@ export const toViewData = ({ state }) => {
     return name.includes(searchQuery) || description.includes(searchQuery);
   };
 
-  // Calculate zoom-based dimensions
+  // Fixed base dimensions - zoom is handled by groupResourcesView
   const baseHeight = 150;
-  const imageHeight = Math.round(baseHeight * state.zoomLevel);
-  const maxWidth = Math.round(400 * state.zoomLevel);
+  const baseWidth = 400;
+  const imageHeight = baseHeight;
+  const maxWidth = baseWidth;
 
   // Apply collapsed state and search filtering to flatGroups
   const flatGroups = rawFlatGroups
@@ -219,7 +210,6 @@ export const toViewData = ({ state }) => {
       ".webp",
       ".svg",
     ],
-    zoomLevel: state.zoomLevel,
     imageHeight,
     maxWidth,
     fullImagePreviewVisible: state.fullImagePreviewVisible,

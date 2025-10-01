@@ -48,12 +48,32 @@ propsSchema:
     maxWidth:
       type: number
       description: Max width for image items (for zoom control)
+    zoomLevel:
+      type: number
+      description: Current zoom level for zoom controls
+    showZoomControls:
+      type: boolean
+      description: Whether to show zoom controls
 
 refs:
   search-input:
     eventListeners:
       input-change:
         handler: handleSearchInput
+  zoom-slider:
+    eventListeners:
+      change:
+        handler: handleZoomChange
+      input-change:
+        handler: handleZoomChange
+  zoom-out:
+    eventListeners:
+      click:
+        handler: handleZoomOut
+  zoom-in:
+    eventListeners:
+      click:
+        handler: handleZoomIn
   drag-drop-item-*:
     eventListeners:
       file-selected:
@@ -105,7 +125,14 @@ template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
       - rtgl-view g=lg w=f h=f:
           - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-              - rtgl-input#search-input s=sm placeholder="${searchPlaceholder}" value=${searchQuery}:
+              - rtgl-view w=f d=h av=c g=md fw=w:
+                  - rtgl-view av=c g=md:
+                      - rtgl-input#search-input s=sm placeholder="${searchPlaceholder}" value=${searchQuery} flex=1:
+                  - $if showZoomControls:
+                      - rtgl-view d=h av=e g=sm:
+                          - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
+                          - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
+                          - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
           - $if flatGroups.length > 0:
               - $for group in flatGroups:
                   - rtgl-view w=f ph=md:
@@ -124,18 +151,18 @@ template:
                                       - $for item in group.children:
                                           - 'rtgl-view#item-${item.id} ${fullWidthAttr} cur=p style="${item.selectedStyle}"':
                                               - $if resourceType == 'fonts':
-                                                  - rtgl-view w=200 d=v p=md bw=xs br=md:
-                                                      - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=200 height=150 av=c ah=c:
-                                                      - rtgl-text s=xs c=mu-fg m=sm ellipsis w="calc(200px - 2 * var(--spacing-md))": ${item.name}
+                                                  - rtgl-view w=${mediaWidth} d=v p=md bw=xs br=md:
+                                                      - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c:
+                                                      - rtgl-text s=xs c=mu-fg m=sm ellipsis: ${item.name}
                                                 $elif resourceType == 'videos':
-                                                  - rvn-file-image br=md w=200 h=150 fileId=${item.thumbnailFileId}:
+                                                  - rvn-file-image br=md w=${mediaWidth} h=${mediaHeight} fileId=${item.thumbnailFileId}:
                                                 $elif resourceType == 'audio':
                                                   - $if item.waveformDataFileId:
                                                       - rtgl-view:
-                                                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
-                                                          - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
+                                                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}:
+                                                          - rtgl-text w=${mediaWidth} ellipsis=true mt=sm: ${item.name}
                                                     $else:
-                                                      - rtgl-image br=md w=225 h=150 src=/public/project_logo_placeholder.png:
+                                                      - rtgl-image br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png:
                                                 $elif resourceType == 'images':
                                                   - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
                                                 $elif resourceType == 'characters':
@@ -148,13 +175,13 @@ template:
                                                           - rtgl-button#sprites-button-${item.id}: Sprites
                                                 $elif resourceType == 'colors':
                                                   - 'rtgl-view br=md g=sm bw=xs style="overflow: hidden;"':
-                                                      - 'rtgl-view w=200 h=150 style="background-color: ${item.hex}"':
-                                                      - rtgl-text s=sm c=mu-fg m=md ellipsis w="calc(200px - 2 * var(--spacing-md))": ${item.name}
+                                                      - 'rtgl-view w=${mediaWidth} h=${mediaHeight} style="background-color: ${item.hex}"':
+                                                      - rtgl-text s=sm c=mu-fg m=md ellipsis w="calc(${mediaWidth}px - 2 * var(--spacing-md))": ${item.name}
                                                 $elif resourceType == 'typography':
                                                   - rtgl-view w=f br=md p=md bw=xs:
                                                       - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false:
                                                 $elif resourceType == 'layouts':
-                                                  - rtgl-view w=200 h=150 ah=c av=c bw=xs br=sm cur=p style="${item.selectedStyle}":
+                                                  - rtgl-view w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=p style="${item.selectedStyle}":
                                                       - rtgl-view av=c ah=c:
                                                           - rtgl-text s=md: ${item.name}
                                                           - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
@@ -168,7 +195,7 @@ template:
                                                       - rtgl-view h=12:
                                                       - rvn-keyframe-timeline .properties=#{item.properties}:
                                                 $else:
-                                                  - rtgl-view w=200 d=v p=md bw=xs br=md:
+                                                  - rtgl-view w=${mediaWidth} d=v p=md bw=xs br=md:
                                                       - rtgl-text s=xs c=mu-fg: ${item.name}
                                       - $if resourceType == 'characters':
                                           - rtgl-view mt=lg w=f:
@@ -176,7 +203,7 @@ template:
                                                   - rtgl-svg wh=24 svg=plus c=pr:
                                                   - rtgl-text s=md c=pr fw=500: Add Character
                                         $elif resourceType == 'colors':
-                                          - "rtgl-view#add-color-button-${group.id} w=200 h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                          - "rtgl-view#add-color-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                               - rtgl-svg svg=plus wh=24:
                                               - rtgl-text: Add Color
                                         $elif resourceType == 'typography':
@@ -184,11 +211,11 @@ template:
                                               - rtgl-svg svg=plus wh=24 c=pr:
                                               - rtgl-text s=md c=pr fw=500: Add Typography
                                         $elif resourceType == 'layouts':
-                                          - "rtgl-view#add-layout-button-${group.id} w=200 h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                          - "rtgl-view#add-layout-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                               - rtgl-svg svg=plus wh=24:
                                               - rtgl-text: Add Layout
                                         $elif resourceType == 'transforms':
-                                          - rtgl-view#add-transform-button-${group.id} w=200 h=150 av=c ah=c bw=xs br=md g=md cur=p:
+                                          - rtgl-view#add-transform-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c bw=xs br=md g=md cur=p:
                                               - rtgl-svg svg=plus wh=24:
                                               - rtgl-text: Add Transform
                                         $elif resourceType == 'animations':
@@ -205,7 +232,7 @@ template:
                                                   - rtgl-svg wh=24 svg=plus c=pr:
                                                   - rtgl-text s=md c=pr fw=500: Add Character
                                         $elif resourceType == 'colors':
-                                          - "rtgl-view#add-color-button-${group.id} w=200 h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                          - "rtgl-view#add-color-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                               - rtgl-svg svg=plus wh=24:
                                               - rtgl-text: Add Color
                                         $elif resourceType == 'typography':
@@ -213,11 +240,11 @@ template:
                                               - rtgl-svg svg=plus wh=24 c=pr:
                                               - rtgl-text s=md c=pr fw=500: Add Typography
                                         $elif resourceType == 'layouts':
-                                          - "rtgl-view#add-layout-button-${group.id} w=200 h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                          - "rtgl-view#add-layout-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                               - rtgl-svg svg=plus wh=24:
                                               - rtgl-text: Add Layout
                                         $elif resourceType == 'transforms':
-                                          - rtgl-view#add-transform-button-${group.id} w=200 h=150 av=c ah=c bw=xs br=md g=md cur=p:
+                                          - rtgl-view#add-transform-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c bw=xs br=md g=md cur=p:
                                               - rtgl-svg svg=plus wh=24:
                                               - rtgl-text: Add Transform
                                         $elif resourceType == 'animations':
