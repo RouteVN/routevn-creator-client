@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { toFlatItems } from "../../deps/repository.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
@@ -25,8 +26,46 @@ export const handleDataChanged = async (e, deps) => {
 
 export const handleTransformItemClick = (e, deps) => {
   const { store, render } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = e.detail;
   store.setSelectedItemId(itemId);
+  render();
+};
+
+export const handleTransformItemDoubleClick = (e, deps) => {
+  const { store, render } = deps;
+  const { itemId } = e.detail;
+
+  // Find the transform item
+  const flatItems = toFlatItems(store.getState().transformData);
+  const transformItem = flatItems.find((item) => item.id === itemId);
+
+  if (transformItem) {
+    // Open edit dialog with transform data
+    store.openTransformFormDialog({
+      editMode: true,
+      itemId: itemId,
+      itemData: transformItem,
+    });
+    render();
+  }
+};
+
+export const handleAddTransformClick = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+
+  store.openTransformFormDialog({
+    targetGroupId: groupId,
+  });
+  render();
+};
+
+export const handleGroupClick = (e, deps) => {
+  const { store, render } = deps;
+  const groupId = e.currentTarget.id.replace("group-", "");
+
+  // Handle group collapse internally
+  store.toggleGroupCollapse(groupId);
   render();
 };
 
@@ -116,5 +155,18 @@ export const handleTransformEdited = async (e, deps) => {
   // Update local state and render immediately
   const { transforms } = repository.getState();
   store.setItems(transforms);
+  render();
+};
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail?.value || "";
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+  store.toggleGroupCollapse(groupId);
   render();
 };

@@ -1,5 +1,42 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
+const layoutForm = {
+  title: "Add Layout",
+  fields: [
+    {
+      name: "name",
+      inputType: "inputText",
+      label: "Layout Name",
+      required: true,
+    },
+    {
+      name: "layoutType",
+      inputType: "select",
+      label: "Layout Type",
+      required: true,
+      options: [
+        { value: "normal", label: "Normal" },
+        { value: "dialogue", label: "Dialogue" },
+        { value: "choice", label: "Choice" },
+      ],
+      tooltip: {
+        content:
+          "Normal is layout that can be used for background or menu pages. Dialogue is used for text dialogue layout. Choices is used for the choices.",
+      },
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        content: "Add Layout",
+      },
+    ],
+  },
+};
+
 const form = {
   fields: [
     { name: "name", inputType: "popover-input", description: "Name" },
@@ -14,7 +51,11 @@ const form = {
 export const INITIAL_STATE = Object.freeze({
   layoutsData: { tree: [], items: {} },
   selectedItemId: null,
+  searchQuery: "",
+  collapsedIds: [],
   fieldResources: {},
+  isAddDialogOpen: false,
+  targetGroupId: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
     { label: "Duplicate", type: "item", value: "duplicate-item" },
@@ -38,6 +79,29 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
 
+export const setSearchQuery = (state, query) => {
+  state.searchQuery = query;
+};
+
+export const toggleGroupCollapse = (state, groupId) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
+};
+
+export const openAddDialog = (state, groupId) => {
+  state.isAddDialogOpen = true;
+  state.targetGroupId = groupId;
+};
+
+export const closeAddDialog = (state) => {
+  state.isAddDialogOpen = false;
+  state.targetGroupId = null;
+};
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.layoutsData);
@@ -48,7 +112,7 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const toViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutsData);
-  const flatGroups = toFlatGroups(state.layoutsData);
+  const rawFlatGroups = toFlatGroups(state.layoutsData);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -75,6 +139,48 @@ export const toViewData = ({ state, props }, payload) => {
     };
   }
 
+  // Apply search filter
+  const searchQuery = state.searchQuery.toLowerCase().trim();
+  let filteredGroups = rawFlatGroups;
+
+  if (searchQuery) {
+    filteredGroups = rawFlatGroups
+      .map((group) => {
+        const filteredChildren = (group.children || []).filter((item) => {
+          const name = (item.name || "").toLowerCase();
+          return name.includes(searchQuery);
+        });
+
+        const groupName = (group.name || "").toLowerCase();
+        const shouldIncludeGroup =
+          filteredChildren.length > 0 || groupName.includes(searchQuery);
+
+        return shouldIncludeGroup
+          ? {
+              ...group,
+              children: filteredChildren,
+              hasChildren: filteredChildren.length > 0,
+            }
+          : null;
+      })
+      .filter(Boolean);
+  }
+
+  // Apply collapsed state and selection styling
+  const flatGroups = filteredGroups.map((group) => ({
+    ...group,
+    isCollapsed: state.collapsedIds.includes(group.id),
+    children: state.collapsedIds.includes(group.id)
+      ? []
+      : (group.children || []).map((item) => ({
+          ...item,
+          selectedStyle:
+            item.id === state.selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
+  }));
+
   return {
     flatItems,
     flatGroups,
@@ -87,5 +193,14 @@ export const toViewData = ({ state, props }, payload) => {
     form,
     defaultValues,
     fieldResources: state.fieldResources,
+    searchQuery: state.searchQuery,
+    resourceType: "layouts",
+    searchPlaceholder: "Search layouts...",
+    isAddDialogOpen: state.isAddDialogOpen,
+    layoutForm: layoutForm,
+    layoutFormDefaults: {
+      name: "",
+      layoutType: "dialogue",
+    },
   };
 };

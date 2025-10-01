@@ -366,7 +366,10 @@ export const handleAddTypographyClick = (e, deps) => {
 
 export const handleTypographyItemDoubleClick = (e, deps) => {
   const { store, render } = deps;
-  const { itemId, item } = e.detail;
+  const { itemId } = e.detail;
+
+  // Get the item from the store
+  const item = store.selectItemById(itemId);
 
   if (item) {
     // Set form values from the item
@@ -636,4 +639,17 @@ export const handleAddFontFormAction = async (e, deps) => {
     store.closeAddFontDialog();
     render();
   }
+};
+export const handleSearchInput = (e, deps) => {
+  const { store, render } = deps;
+  const searchQuery = e.detail?.value || "";
+  store.setSearchQuery(searchQuery);
+  render();
+};
+
+export const handleGroupToggle = (e, deps) => {
+  const { store, render } = deps;
+  const { groupId } = e.detail;
+  store.toggleGroupCollapse(groupId);
+  render();
 };
