@@ -19,10 +19,6 @@ refs:
         handler: handleTypographyItemDoubleClick
       files-uploaded:
         handler: handleDragDropFileSelected
-      typography-created:
-        handler: handleTypographyCreated
-      typography-updated:
-        handler: handleTypographyUpdated
       add-typography-click:
         handler: handleAddTypographyClick
       search-input:
