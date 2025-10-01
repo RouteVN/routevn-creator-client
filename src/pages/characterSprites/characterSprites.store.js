@@ -155,8 +155,6 @@ export const toViewData = ({ state, props }, payload) => {
       ? []
       : (group.children || []).map((item) => ({
           ...item,
-          height: imageHeight,
-          maxWidth: maxWidth,
           selectedStyle:
             item.id === state.selectedItemId
               ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
