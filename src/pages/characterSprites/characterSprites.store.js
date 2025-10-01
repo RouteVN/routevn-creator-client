@@ -35,7 +35,6 @@ export const INITIAL_STATE = Object.freeze({
   },
   searchQuery: "",
   collapsedIds: [],
-  zoomLevel: 1.0,
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
 });
@@ -69,12 +68,6 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
-export const setZoomLevel = (state, zoomLevel) => {
-  const newZoomLevel = Math.max(0.5, Math.min(4.0, zoomLevel));
-  if (Math.abs(state.zoomLevel - newZoomLevel) < 0.001) return;
-  state.zoomLevel = newZoomLevel;
-};
-
 export const showFullImagePreview = (state, fileId) => {
   state.fullImagePreviewVisible = true;
   state.fullImagePreviewFileId = fileId;
@@ -84,8 +77,6 @@ export const hideFullImagePreview = (state) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
 };
-
-export const selectCurrentZoomLevel = ({ state }) => state.zoomLevel;
 
 export const selectCharacterId = ({ state }) => {
   return state.characterId;
@@ -156,11 +147,6 @@ export const toViewData = ({ state, props }, payload) => {
       .filter(Boolean);
   }
 
-  // Calculate zoom-based dimensions
-  const baseHeight = 150;
-  const imageHeight = Math.round(baseHeight * state.zoomLevel);
-  const maxWidth = Math.round(400 * state.zoomLevel);
-
   // Apply collapsed state and selection styling
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
@@ -169,8 +155,6 @@ export const toViewData = ({ state, props }, payload) => {
       ? []
       : (group.children || []).map((item) => ({
           ...item,
-          height: imageHeight,
-          maxWidth: maxWidth,
           selectedStyle:
             item.id === state.selectedItemId
               ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
@@ -193,9 +177,6 @@ export const toViewData = ({ state, props }, payload) => {
     searchPlaceholder: "Search sprites...",
     uploadText: "Upload Sprite",
     acceptedFileTypes: [".png", ".jpg", ".jpeg", ".gif", ".webp"],
-    zoomLevel: state.zoomLevel,
-    imageHeight,
-    maxWidth,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
   };

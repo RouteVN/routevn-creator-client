@@ -1,16 +1,10 @@
 elementName: rvn-images
 
-onMount:
-  handler: handleOnMount
-
-
 viewDataSchema:
   type: object
   properties:
     searchQuery:
       type: string
-    zoomLevel:
-      type: number
     imageHeight:
       type: number
     maxWidth:
@@ -37,20 +31,6 @@ refs:
         handler: handleSearchInput
       group-toggle:
         handler: handleGroupToggle
-  zoom-slider:
-    eventListeners:
-      change:
-        handler: handleZoomChange
-      input-change:
-        handler: handleZoomChange
-  zoom-out:
-    eventListeners:
-      click:
-        handler: handleZoomOut
-  zoom-in:
-    eventListeners:
-      click:
-        handler: handleZoomIn
   preview-overlay:
     eventListeners:
       click:
@@ -64,28 +44,23 @@ refs:
 
 template:
   - rtgl-view d=h w=f h=f:
-    - rtgl-view d=h h=f w=f:
-      - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
-        - rtgl-view slot="content" w=f h=f:
-          - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-          - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
-      - rtgl-view flex=1 h=f d=v:
-        - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="z-index: 100;"':
-          - rtgl-view d=h av=c g=sm:
-            - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
-            - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
-            - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
-        - rtgl-view flex=1 h=f:
-          - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes .imageHeight=imageHeight .maxWidth=maxWidth:
-      - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - rtgl-view wh=f slot="content":
-          - $if selectedItemId:
-            - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .context=context .defaultValues=defaultValues:
-            $else:
-              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                  - rtgl-text s=md c=mu-fg: No selection
-    - $if fullImagePreviewVisible:
-        - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
-          - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
-          - $if fullImagePreviewFileId:
-              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
+      - rtgl-view d=h h=f w=f:
+          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+                  - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
+          - rtgl-view flex=1 h=f d=v:
+              - rtgl-view flex=1 h=f:
+                  - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes .imageHeight=imageHeight .maxWidth=maxWidth:
+          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .context=context .defaultValues=defaultValues:
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection
+      - $if fullImagePreviewVisible:
+          - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
+              - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
+              - $if fullImagePreviewFileId:
+                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
