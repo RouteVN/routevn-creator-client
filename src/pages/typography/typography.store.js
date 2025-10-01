@@ -380,19 +380,49 @@ export const toViewData = ({ state }) => {
       .filter(Boolean);
   }
 
-  // Apply collapsed state and selection styling
+  // Helper function to get color hex from ID
+  const getColorHex = (colorId) => {
+    if (!colorId) return "#000000";
+    const colorItems = toFlatItems(state.colorsData);
+    const color = colorItems.find(
+      (item) => item.type === "color" && item.id === colorId,
+    );
+    return color ? color.hex : "#000000";
+  };
+
+  // Helper function to get font data from ID
+  const getFontData = (fontId) => {
+    if (!fontId) return { fontFamily: null, fileId: null };
+    const fontItems = toFlatItems(state.fontsData);
+    const font = fontItems.find(
+      (item) => item.type === "font" && item.id === fontId,
+    );
+    return font
+      ? { fontFamily: font.fontFamily, fileId: font.fileId }
+      : { fontFamily: fontId, fileId: null };
+  };
+
+  // Apply collapsed state and selection styling, and add typography-specific preview data
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
     isCollapsed: state.collapsedIds.includes(group.id),
     children: state.collapsedIds.includes(group.id)
       ? []
-      : (group.children || []).map((item) => ({
-          ...item,
-          selectedStyle:
-            item.id === state.selectedItemId
-              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-              : "",
-        })),
+      : (group.children || []).map((item) => {
+          const fontData = getFontData(item.fontId);
+          return {
+            ...item,
+            fontStyle: fontData.fontFamily,
+            fontFileId: fontData.fileId,
+            color: getColorHex(item.colorId),
+            previewText:
+              item.previewText || "The quick brown fox jumps over the lazy dog",
+            selectedStyle:
+              item.id === state.selectedItemId
+                ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+                : "",
+          };
+        }),
   }));
 
   // Helper function to get color name from ID
@@ -415,26 +445,6 @@ export const toViewData = ({ state }) => {
     );
     if (!font) throw new Error(`Font with ID ${fontId} not found`);
     return font.fontFamily;
-  };
-
-  // Helper functions for dialog form
-  const getColorHex = (colorId) => {
-    if (!colorId) throw new Error("colorId is required for getColorHex");
-    const color = toFlatItems(state.colorsData)
-      .filter((item) => item.type === "color")
-      .find((color) => color.id === colorId);
-    if (!color || !color.hex)
-      throw new Error(`Color with ID ${colorId} not found or has no hex value`);
-    return color.hex;
-  };
-
-  const getFontData = (fontId) => {
-    if (!fontId) throw new Error("fontId is required for getFontData");
-    const font = toFlatItems(state.fontsData)
-      .filter((item) => item.type === "font")
-      .find((font) => font.id === fontId);
-    if (!font) throw new Error(`Font with ID ${fontId} not found`);
-    return { fontFamily: font.fontFamily, fileId: font.fileId };
   };
 
   // Generate color options for dialog form

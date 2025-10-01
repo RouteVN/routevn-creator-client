@@ -208,7 +208,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleTypographyCreated = async (e, deps) => {
+const handleTypographyCreated = async (e, deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -247,7 +247,7 @@ export const handleTypographyCreated = async (e, deps) => {
   render();
 };
 
-export const handleTypographyUpdated = async (e, deps) => {
+const handleTypographyUpdated = async (e, deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
