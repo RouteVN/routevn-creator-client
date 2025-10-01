@@ -49,8 +49,6 @@ refs:
         handler: handleTransformFormActionClick
       form-change:
         handler: handleTransformFormChange
-  canvas:
-    selector: canvas
 
 template:
   - rtgl-view d=h w=f h=f:
