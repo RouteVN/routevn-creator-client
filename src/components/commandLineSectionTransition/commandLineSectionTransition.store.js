@@ -81,7 +81,7 @@ export const setFormValues = (state, payload) => {
   state.formValues = payload;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }) => {
   const allItems = toFlatItems(state.items);
   const allScenes = allItems.filter((item) => item.type === "scene");
   const currentSceneSections = props?.sections || [];

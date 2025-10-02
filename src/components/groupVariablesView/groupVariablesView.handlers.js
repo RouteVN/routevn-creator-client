@@ -61,7 +61,7 @@ export const handleAddVariableClick = (deps, payload) => {
   render();
 };
 
-export const handleCloseDialog = (deps, payload) => {
+export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
 
   // Close dialog
@@ -123,7 +123,7 @@ export const handleFormActionClick = (deps, payload) => {
   }
 };
 
-export const handleEnumAddButtonClick = (deps, payload) => {
+export const handleEnumAddButtonClick = (deps) => {
   const { getRefIds, store, render } = deps;
   const inputElm = getRefIds()["form-enum-input"].elm;
   const defaultValues = structuredClone(store.selectDefaultValues());

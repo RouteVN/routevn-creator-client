@@ -58,7 +58,7 @@ const findLastLinePosition = (element, goalColumn) => {
           lastLineStartPos = pos;
         }
       }
-    } catch (e) {
+    } catch {
       // If range creation fails, continue
       continue;
     }
@@ -233,7 +233,7 @@ const isCursorOnLastLine = (element) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { render, store, getRefIds, repositoryFactory, router } = deps;
+  const { store, getRefIds, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
@@ -250,7 +250,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleContainerKeyDown = (deps, payload) => {
-  const { store, render, props, dispatchEvent, getRefIds } = deps;
+  const { store, props, dispatchEvent, getRefIds } = deps;
   const mode = store.selectMode();
 
   // Only handle container keydown if the target is the container itself
@@ -451,9 +451,8 @@ export const handleContainerKeyDown = (deps, payload) => {
 };
 
 export const handleLineKeyDown = (deps, payload) => {
-  const { editor, dispatchEvent, store, render, props } = deps;
+  const { dispatchEvent, store, render, props } = deps;
   const id = payload._event.target.id.replace(/^line-/, "");
-  let newOffset;
   const mode = store.selectMode();
 
   // Capture cursor position immediately before any key handling

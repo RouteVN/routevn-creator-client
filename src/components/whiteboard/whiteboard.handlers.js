@@ -97,7 +97,7 @@ export const handleContainerWheel = (deps, payload) => {
   );
 };
 
-export const handleZoomInClick = (deps, payload) => {
+export const handleZoomInClick = (deps) => {
   const { store, getRefIds, render, dispatchEvent } = deps;
 
   const container = getRefIds().container.elm;
@@ -121,7 +121,7 @@ export const handleZoomInClick = (deps, payload) => {
   );
 };
 
-export const handleZoomOutClick = (deps, payload) => {
+export const handleZoomOutClick = (deps) => {
   const { store, getRefIds, render, dispatchEvent } = deps;
 
   const container = getRefIds().container.elm;
@@ -156,7 +156,6 @@ export const handleItemMouseDown = (deps, payload) => {
 
   const itemId = payload._event.currentTarget.id.replace("item-", "");
   const itemElement = payload._event.currentTarget;
-  const rect = itemElement.getBoundingClientRect();
   const canvas = getRefIds().canvas.elm;
   const canvasRect = canvas.getBoundingClientRect();
   const zoomLevel = store.selectZoomLevel();
@@ -248,7 +247,7 @@ export const handleItemContextMenu = (deps, payload) => {
 };
 
 export const handleWindowMouseMove = (deps, payload) => {
-  const { store, getRefIds, dispatchEvent, render } = deps;
+  const { store, getRefIds, render } = deps;
 
   if (store.selectIsPanning()) {
     // Handle panning
@@ -309,7 +308,7 @@ export const handleWindowMouseMove = (deps, payload) => {
   }
 };
 
-export const handleWindowMouseUp = (deps, payload) => {
+export const handleWindowMouseUp = (deps) => {
   const { store, getRefIds, dispatchEvent } = deps;
 
   if (store.selectIsPanning()) {
@@ -362,16 +361,22 @@ export const handleWindowKeyUp = (deps, payload) => {
 export const subscriptions = (deps) => {
   return [
     fromEvent(window, "mousemove").pipe(
-      tap((event) => deps.handlers.handleWindowMouseMove(deps, payload)),
+      tap((event) =>
+        deps.handlers.handleWindowMouseMove(deps, { _event: event }),
+      ),
     ),
     fromEvent(window, "mouseup").pipe(
-      tap((event) => deps.handlers.handleWindowMouseUp(deps, payload)),
+      tap((event) =>
+        deps.handlers.handleWindowMouseUp(deps, { _event: event }),
+      ),
     ),
     fromEvent(window, "keydown").pipe(
-      tap((event) => deps.handlers.handleWindowKeyDown(deps, payload)),
+      tap((event) =>
+        deps.handlers.handleWindowKeyDown(deps, { _event: event }),
+      ),
     ),
     fromEvent(window, "keyup").pipe(
-      tap((event) => deps.handlers.handleWindowKeyUp(deps, payload)),
+      tap((event) => deps.handlers.handleWindowKeyUp(deps, { _event: event })),
     ),
   ];
 };

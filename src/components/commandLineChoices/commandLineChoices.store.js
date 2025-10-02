@@ -199,7 +199,7 @@ const form = {
   ],
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }) => {
   const layouts = props?.layouts || [];
 
   const layoutOptions = layouts

@@ -235,7 +235,7 @@ export const createIndexedDBStorageAdapter = () => {
       return deleteFromIndexedDB(fileId);
     },
 
-    listFiles: async (projectId) => {
+    listFiles: async () => {
       return listFilesInIndexedDB(null);
     },
 

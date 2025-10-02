@@ -180,7 +180,7 @@ export const selectPopoverItemId = ({ state }) => {
   return state.popover.itemId;
 };
 
-export const selectViewData = ({ state, props, attrs }, payload) => {
+export const selectViewData = ({ state, props, attrs }) => {
   let items = props.items || [];
 
   // Filter items based on collapsed state

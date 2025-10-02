@@ -1,5 +1,5 @@
 export const handleBeforeMount = (deps) => {
-  const { store, render, props } = deps;
+  const { store, props } = deps;
 
   // Initialize with existing dialogue data if available
   if (props?.line?.presentation?.dialogue?.layoutId) {
@@ -35,7 +35,7 @@ export const handleFormChange = (deps, payload) => {
   render();
 };
 
-export const handleSubmitClick = (deps, payload) => {
+export const handleSubmitClick = (deps) => {
   console.log("[handleSubmitClick] Submit button clicked");
   const { store, dispatchEvent } = deps;
   const { selectedLayoutId, selectedCharacterId } = store.getState();

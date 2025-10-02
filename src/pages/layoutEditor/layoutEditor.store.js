@@ -441,7 +441,7 @@ export const selectFontsData = ({ state }) => {
   return state.fontsData;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
 
@@ -451,7 +451,6 @@ export const selectViewData = ({ state, props }, payload) => {
 
   // Helper to transform images data into groups
   const imageGroups = toFlatGroups(state.images);
-  const imageItems = state.images.items;
 
   // Helper to transform typography data into groups
   const typographyGroups = toFlatGroups(state.typographyData);

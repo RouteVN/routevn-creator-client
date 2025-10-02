@@ -1,26 +1,3 @@
-const form = {
-  fields: [
-    {
-      name: "fileId",
-      inputType: "image",
-      src: "${fileId.src}",
-      height: 135,
-    },
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "typeDisplay", inputType: "read-only-text", description: "Type" },
-    {
-      name: "displayFileType",
-      inputType: "read-only-text",
-      description: "File Type",
-    },
-    {
-      name: "displayFileSize",
-      inputType: "read-only-text",
-      description: "File Size",
-    },
-  ],
-};
-
 export const createInitialState = () => ({
   spritesData: { tree: [], items: {} },
   selectedItemId: undefined,

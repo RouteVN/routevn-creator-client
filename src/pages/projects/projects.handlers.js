@@ -6,13 +6,13 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleCreateButtonClick = async (deps, payload) => {
+export const handleCreateButtonClick = async (deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
 };
 
-export const handleOpenButtonClick = async (deps, payload) => {
+export const handleOpenButtonClick = async (deps) => {
   const { projectsService, store, render, tauriDialog, globalUI } = deps;
 
   try {
@@ -47,7 +47,7 @@ export const handleOpenButtonClick = async (deps, payload) => {
   }
 };
 
-export const handleCloseDialogue = (deps, payload) => {
+export const handleCloseDialogue = (deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
@@ -65,7 +65,7 @@ export const handleProjectsClick = async (deps, payload) => {
   });
 };
 
-export const handleBrowseFolder = async (deps, payload) => {
+export const handleBrowseFolder = async (deps) => {
   const { store, render, tauriDialog, globalUI } = deps;
 
   try {
@@ -150,7 +150,7 @@ export const handleProjectContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleDropdownMenuClose = (deps, payload) => {
+export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.closeDropdownMenu();
   render();

@@ -51,7 +51,7 @@ export const setSelectedCharacterId = (state, { characterId }) => {
   state.defaultValues.characterId = characterId;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }) => {
   const layouts = props.layouts || [];
   const characters = props.characters || [];
 

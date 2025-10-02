@@ -64,10 +64,7 @@ export const updateCharacterTransform = (state, { index, transform }) => {
   }
 };
 
-export const updateCharacterSprite = (
-  state,
-  { index, spriteId, spriteFileId },
-) => {
+export const updateCharacterSprite = (state, { index, spriteId }) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].sprites = [
       {
@@ -193,7 +190,7 @@ const form = {
   ],
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );

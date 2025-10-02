@@ -36,7 +36,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -107,18 +107,6 @@ export const handleAnimationUpdated = async (deps, payload) => {
   const { animations } = repository.getState();
   store.setItems(animations);
   render();
-};
-
-const getInitialValue = (property) => {
-  const defaultValues = {
-    x: 0,
-    y: 0,
-    alpha: 1,
-    scaleX: 1,
-    scaleY: 1,
-    rotation: 0,
-  };
-  return defaultValues[property] || 0;
 };
 
 export const handleFormChange = async (deps, payload) => {
@@ -192,20 +180,20 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
 };
 
 // Dialog handlers
-export const handleCloseDialog = (deps, payload) => {
+export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
   store.closeDialog();
   render();
 };
 
-export const handleClosePopover = (deps, payload) => {
+export const handleClosePopover = (deps) => {
   const { store, render } = deps;
   store.closePopover();
   render();
 };
 
 export const handleFormActionClick = (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
+  const { store, render } = deps;
 
   const actionId = payload._event.detail.actionId;
 
@@ -450,7 +438,7 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
   render();
 };
 
-export const handleReplayAnimation = async (deps, payload) => {
+export const handleReplayAnimation = async (deps) => {
   const { store, drenderer } = deps;
 
   if (!store.selectIsDrendererInitialized()) {

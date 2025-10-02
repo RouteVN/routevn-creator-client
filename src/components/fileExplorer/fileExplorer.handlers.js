@@ -152,7 +152,7 @@ export const handleFileAction = async (deps, payload) => {
       });
     }
   } else if (item.value.action === "new-child-item") {
-    const { action, ...restItem } = item.value;
+    const { ...restItem } = item.value;
     repository.addAction({
       actionType: "treePush",
       target: repositoryTarget,

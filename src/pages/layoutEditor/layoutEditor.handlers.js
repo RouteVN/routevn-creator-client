@@ -327,7 +327,6 @@ const renderLayoutPreview = async (deps, options = {}) => {
   if (!selectedItem) {
     return;
   }
-  const bounds = drenderer.getStageElementBounds();
   const result = calculateAbsolutePosition(
     renderStateElements,
     selectedItem.id,
@@ -428,7 +427,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 // Simple render handler for events that only need to trigger a re-render
-export const handleRenderOnly = (deps, payload) => deps.render();
+export const handleRenderOnly = (deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
@@ -483,7 +482,7 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
 export const handleTargetChanged = handleRenderOnly;
 export const handleAddLayoutClick = handleRenderOnly;
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { router, store, repositoryFactory, render } = deps;
   const { layoutId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -646,7 +645,7 @@ export const handleImageSelectorSelection = (deps, payload) => {
   render();
 };
 
-export const handleConfirmImageSelection = async (deps, payload) => {
+export const handleConfirmImageSelection = async (deps) => {
   const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -682,7 +681,7 @@ export const handleConfirmImageSelection = async (deps, payload) => {
       (selectedItem.width === 0 || selectedItem.height === 0)
     ) {
       const targetImage = Object.entries(images.items)
-        .map(([id, item]) => item)
+        .map(([, item]) => item)
         .find((item) => item.fileId === selectedImage.fileId);
       updateObject.width = targetImage?.width || 0;
       updateObject.height = targetImage?.height || 0;
@@ -721,9 +720,6 @@ export const handleConfirmImageSelection = async (deps, payload) => {
       };
 
       store.setFieldResources(newFieldResources);
-
-      // Get updated selected item after repository update
-      const updatedSelectedItem = store.selectSelectedItem();
     } catch (error) {
       console.error(`Failed to fetch image for ${fieldName}:`, error);
     }
@@ -737,19 +733,19 @@ export const handleConfirmImageSelection = async (deps, payload) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleCancelImageSelection = (deps, payload) => {
+export const handleCancelImageSelection = (deps) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
 };
 
-export const handleCloseImageSelectorDialog = (deps, payload) => {
+export const handleCloseImageSelectorDialog = (deps) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
 };
 
-export const handleDropdownMenuClose = (deps, payload) => {
+export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
@@ -898,10 +894,8 @@ export const handleArrowKeyDown = async (deps, payload) => {
 };
 
 export const handle2dRenderEvent = async (deps, payload) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { eventName, payload: eventPayload } = payload._event;
+  const { store } = deps;
+  const { eventName } = payload._event;
 
   const { isDragging, dragOffset } = store.selectDragging();
 
@@ -984,7 +978,7 @@ export const subscriptions = (deps) => {
   const { subject } = deps;
   return [
     fromEvent(window, "keydown").pipe(
-      filter((e) => {
+      filter(() => {
         return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
           payload._event.key,
         );
@@ -994,8 +988,8 @@ export const subscriptions = (deps) => {
       }),
     ),
     subject.pipe(
-      filter(({ action, payload }) => action === "2drendererEvent"),
-      tap(({ action, payload }) => {
+      filter(({ action }) => action === "2drendererEvent"),
+      tap(({ payload }) => {
         handle2dRenderEvent(payload, deps);
       }),
     ),

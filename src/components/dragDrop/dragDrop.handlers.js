@@ -17,7 +17,7 @@ const isFileTypeAccepted = (file, acceptedFileTypes) => {
   });
 };
 
-export const handleClick = (deps, payload) => {
+export const handleClick = (deps) => {
   const { dispatchEvent, props } = deps;
   const input = document.createElement("input");
   input.type = "file";
