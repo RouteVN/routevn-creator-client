@@ -66,7 +66,7 @@ export const setAutoPlayDelay = (state, { autoPlayDelay }) => {
   state.defaultValues.autoPlayDelay = autoPlayDelay;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   const booleanOptions = [
     { value: false, label: "No" },
     { value: true, label: "Yes" },

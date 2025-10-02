@@ -13,7 +13,7 @@ export const handleAfterMount = async (deps) => {
   // Transform only scene items (not folders) into whiteboard items
   const initialSceneId = scenesData.initialSceneId;
   const sceneItems = Object.entries(scenesData.items || {})
-    .filter(([key, item]) => item.type === "scene")
+    .filter(([, item]) => item.type === "scene")
     .map(([sceneId, scene]) => ({
       id: sceneId,
       name: scene.name || `Scene ${sceneId}`,
@@ -42,7 +42,7 @@ export const handleSetInitialScene = async (sceneId, deps) => {
   });
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -55,7 +55,7 @@ export const handleDataChanged = async (deps, payload) => {
   // Transform only scene items (not folders) into whiteboard items, preserving current positions
   const initialSceneId = sceneData.initialSceneId;
   const sceneItems = Object.entries(sceneData.items || {})
-    .filter(([key, item]) => item.type === "scene")
+    .filter(([, item]) => item.type === "scene")
     .map(([sceneId, scene]) => {
       // Check if this scene already exists in whiteboard with a different position
       const existingWhiteboardItem = currentWhiteboardItems.find(
@@ -79,7 +79,7 @@ export const handleDataChanged = async (deps, payload) => {
   render();
 };
 
-export const handleFileExplorerClickItem = (deps, payload) => {
+export const handleFileExplorerClickItem = (deps) => {
   const { subject, router } = deps;
   const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
@@ -136,7 +136,7 @@ export const handleWhiteboardItemDoubleClick = (deps, payload) => {
   });
 };
 
-export const handleAddSceneClick = (deps, payload) => {
+export const handleAddSceneClick = (deps) => {
   const { store, render } = deps;
 
   // Start waiting for transform
@@ -199,7 +199,7 @@ export const handleWhiteboardCanvasContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleSceneFormClose = (deps, payload) => {
+export const handleSceneFormClose = (deps) => {
   const { store, render } = deps;
   store.resetSceneForm();
   render();
@@ -391,7 +391,7 @@ export const handleWhiteboardItemContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleDropdownMenuClose = (deps, payload) => {
+export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();

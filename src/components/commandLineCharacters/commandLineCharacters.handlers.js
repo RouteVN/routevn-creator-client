@@ -1,11 +1,10 @@
 import { toFlatItems } from "../../deps/repository";
-import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
   const { repositoryFactory, router, store, props } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { characters, transforms, animations } = repository.getState();
+  const { characters, transforms } = repository.getState();
   store.setItems({
     items: characters || { tree: [], items: {} },
   });
@@ -107,7 +106,7 @@ export const handleCharacterItemClick = (deps, payload) => {
   render();
 };
 
-export const handleSubmitClick = (deps, payload) => {
+export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const selectedCharacters = store.selectSelectedCharacters();
 
@@ -135,7 +134,7 @@ export const handleSubmitClick = (deps, payload) => {
   );
 };
 
-export const handleCharacterSelectorClick = (deps, payload) => {
+export const handleCharacterSelectorClick = (deps) => {
   const { store, render } = deps;
 
   store.setMode({
@@ -177,7 +176,7 @@ export const handleRemoveCharacterClick = (deps, payload) => {
   render();
 };
 
-export const handleAddCharacterClick = (deps, payload) => {
+export const handleAddCharacterClick = (deps) => {
   const { store, render } = deps;
 
   store.setMode({
@@ -212,7 +211,7 @@ export const handleSpriteItemClick = (deps, payload) => {
   render();
 };
 
-export const handleButtonSelectClick = (deps, payload) => {
+export const handleButtonSelectClick = (deps) => {
   const { store, render } = deps;
   const mode = store.selectMode();
   const selectedCharacters = store.selectCharactersWithRepositoryData();
@@ -243,7 +242,7 @@ export const handleButtonSelectClick = (deps, payload) => {
   render();
 };
 
-export const handleDropdownMenuClose = (deps, payload) => {
+export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();

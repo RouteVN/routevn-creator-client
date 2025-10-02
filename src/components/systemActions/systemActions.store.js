@@ -4,7 +4,7 @@ export const createInitialState = () => ({
   isActionsDialogOpen: false,
 });
 
-export const selectViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state }) => {
   const displayActions = selectDisplayActions({ state });
   return {
     mode: state.mode,

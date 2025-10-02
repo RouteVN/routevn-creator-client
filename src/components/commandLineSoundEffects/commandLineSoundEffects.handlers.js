@@ -73,7 +73,7 @@ export const handleFormExtra = async (deps, payload) => {
   }
 };
 
-export const handleFormChange = (deps, payload) => {
+export const handleFormChange = () => {
   // No longer needed since we removed trigger functionality
 };
 
@@ -115,7 +115,6 @@ export const handleSfxContextMenu = (deps, payload) => {
   const { store, render } = deps;
 
   const id = payload._event.currentTarget.id.replace("sfx-", "");
-  const rect = payload._event.currentTarget.getBoundingClientRect();
 
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
@@ -177,7 +176,7 @@ export const handleBreadcumbClick = (deps, payload) => {
   }
 };
 
-export const handleDropdownMenuClose = (deps, payload) => {
+export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
@@ -185,7 +184,7 @@ export const handleDropdownMenuClose = (deps, payload) => {
 
 export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render } = deps;
-  const { detail } = e;
+  const { detail } = payload._event;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
@@ -202,7 +201,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   render();
 };
 
-export const handleButtonSelectClick = async (deps, payload) => {
+export const handleButtonSelectClick = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);

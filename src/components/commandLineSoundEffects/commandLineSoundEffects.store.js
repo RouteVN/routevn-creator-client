@@ -161,7 +161,7 @@ export const selectBreadcrumb = ({ state }) => {
   return breadcrumb;
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );

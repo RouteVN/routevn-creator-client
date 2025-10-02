@@ -129,15 +129,15 @@ export const selectScene = ({ state }) => {
   return processedScene;
 };
 
-export const selectSceneId = ({ state, props }, payload) => {
+export const selectSceneId = ({ state }) => {
   return state.sceneId;
 };
 
-export const selectSelectedSectionId = ({ state, props }, payload) => {
+export const selectSelectedSectionId = ({ state }) => {
   return state.selectedSectionId;
 };
 
-export const selectSelectedLineId = ({ state, props }, payload) => {
+export const selectSelectedLineId = ({ state }) => {
   return state.selectedLineId;
 };
 
@@ -343,8 +343,7 @@ export const selectRenderState = ({ state }) => {
   return renderState;
 };
 
-export const selectViewData = ({ state, props }) => {
-  const currentLine = selectSelectedLine({ state, props });
+export const selectViewData = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) {
     return {
@@ -464,7 +463,7 @@ export const selectLineIdIndex = (state, props, payload) => {
   return state.currentLines.findIndex((line) => line.id === lineId);
 };
 
-export const selectPreviousLineId = ({ state, props }, payload) => {
+export const selectPreviousLineId = ({ state }, payload) => {
   const { lineId } = payload;
   const scene = selectScene({ state });
   if (!scene) return lineId;
@@ -482,7 +481,7 @@ export const selectPreviousLineId = ({ state, props }, payload) => {
   return currentLines[lineIndex - 1]?.id;
 };
 
-export const selectNextLineId = ({ state, props }, payload) => {
+export const selectNextLineId = ({ state }, payload) => {
   const { lineId } = payload;
   const scene = selectScene({ state });
   if (!scene) return lineId;
