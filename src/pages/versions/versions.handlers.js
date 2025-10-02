@@ -19,13 +19,13 @@ export const handleAfterMount = async (deps) => {
 
 export const handleDataChanged = () => {};
 
-export const handleSaveVersionClick = (deps, payload) => {
+export const handleSaveVersionClick = (deps) => {
   const { store, render } = deps;
   store.setShowVersionForm(true);
   render();
 };
 
-export const handleVersionFormClose = (deps, payload) => {
+export const handleVersionFormClose = (deps) => {
   const { store, render } = deps;
   store.resetVersionForm();
   render();
@@ -85,7 +85,7 @@ export const handleVersionContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleDropdownMenuClose = (deps, payload) => {
+export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.closeDropdownMenu();
   render();

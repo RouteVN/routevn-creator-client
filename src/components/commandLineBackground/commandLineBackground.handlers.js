@@ -59,14 +59,14 @@ export const handleImageSelected = async (deps, payload) => {
 
   // Get fileManager for this project
   const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { url } = await fileManager.getFileContent({
+  await fileManager.getFileContent({
     fileId: existingImage.fileId,
   });
 
   render();
 };
 
-export const handleFormExtra = (deps, payload) => {
+export const handleFormExtra = (deps) => {
   const { store, render } = deps;
   store.setMode({
     mode: "gallery",
@@ -112,7 +112,7 @@ export const handleTabClick = (deps, payload) => {
   render();
 };
 
-export const handleSubmitClick = (deps, payload) => {
+export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
   const selectedAnimationId = store.selectSelectedAnimation();
@@ -142,7 +142,7 @@ export const handleSubmitClick = (deps, payload) => {
   );
 };
 
-export const handleBackgroundImageClick = (deps, payload) => {
+export const handleBackgroundImageClick = (deps) => {
   const { store, render } = deps;
   const selectedResource = store.selectSelectedResource();
 
@@ -177,7 +177,7 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
   }
 };
 
-export const handleButtonSelectClick = async (deps, payload) => {
+export const handleButtonSelectClick = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);

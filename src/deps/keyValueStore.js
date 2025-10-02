@@ -22,7 +22,7 @@ export const createKeyValueStore = async () => {
     if (result && result.length > 0) {
       try {
         return JSON.parse(result[0].value);
-      } catch (e) {
+      } catch {
         return result[0].value;
       }
     }

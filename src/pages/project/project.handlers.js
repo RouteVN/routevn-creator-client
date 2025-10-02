@@ -18,7 +18,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 };
 
-export const handleFormExtraEvent = async (deps, payload) => {
+export const handleFormExtraEvent = async (deps) => {
   const {
     filePicker,
     fileManagerFactory,

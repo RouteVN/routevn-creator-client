@@ -27,7 +27,7 @@ export const handleRedirect = (deps, payload) => {
   deps.render();
 };
 
-export const handleWindowPop = (deps, payload) => {
+export const handleWindowPop = (deps) => {
   // console.log('handleWindowPop', payload._event);
   console.log("pathname", deps.router.getPathName());
   deps.store.setCurrentRoute(deps.router.getPathName());
@@ -71,7 +71,7 @@ export const subscriptions = (deps) => {
   const { subject } = deps;
   return [
     subject.pipe(
-      filter(({ action, payload }) => action === "redirect"),
+      filter(({ action }) => action === "redirect"),
       tap(({ action, payload }) => {
         deps.handlers.handleRedirect(deps, { ...payload, action });
       }),

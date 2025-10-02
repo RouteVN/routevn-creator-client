@@ -100,7 +100,7 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.layoutsData);
   const rawFlatGroups = toFlatGroups(state.layoutsData);
 

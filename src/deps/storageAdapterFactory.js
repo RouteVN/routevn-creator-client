@@ -70,7 +70,7 @@ export const createStorageAdapterFactory = (keyValueStore) => {
 
     // Clear all cached adapters
     async clearAll() {
-      for (const [path, adapter] of adapterCache.entries()) {
+      for (const [, adapter] of adapterCache.entries()) {
         if (adapter.cleanup) {
           await adapter.cleanup();
         }

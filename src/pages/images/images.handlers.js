@@ -9,7 +9,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleFileExplorerDataChanged = async (deps, payload) => {
+export const handleFileExplorerDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -18,7 +18,7 @@ export const handleFileExplorerDataChanged = async (deps, payload) => {
   render();
 };
 
-export const handleFormExtraEvent = async (deps, payload) => {
+export const handleFormExtraEvent = async (deps) => {
   const {
     repositoryFactory,
     router,

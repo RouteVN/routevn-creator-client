@@ -9,7 +9,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -115,7 +115,7 @@ export const handleSpritesButtonClick = (deps, payload) => {
   render();
 };
 
-export const handleFormExtraEvent = async (deps, payload) => {
+export const handleFormExtraEvent = async (deps) => {
   const {
     repositoryFactory,
     router,
@@ -242,7 +242,7 @@ export const handleAddCharacterClick = (deps, payload) => {
   render();
 };
 
-export const handleCloseDialog = (deps, payload) => {
+export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
   store.clearAvatarState();
   store.toggleDialog();
@@ -259,7 +259,7 @@ export const handleDialogFormActionClick = (deps, payload) => {
     const avatarFileId = store.selectAvatarFileId();
 
     // Dispatch character-created event
-    const event = new CustomEvent("character-created", {
+    new CustomEvent("character-created", {
       detail: {
         groupId: targetGroupId,
         name: formData.name,
@@ -280,7 +280,7 @@ export const handleDialogFormActionClick = (deps, payload) => {
   }
 };
 
-export const handleDialogAvatarClick = async (deps, payload) => {
+export const handleDialogAvatarClick = async (deps) => {
   const { store, render, filePicker, fileManagerFactory, router } = deps;
 
   try {
