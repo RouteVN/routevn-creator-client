@@ -1,5 +1,5 @@
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props } = deps;
+  const { repositoryFactory, router, store, props, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { scenes } = repository.getState();
@@ -9,7 +9,7 @@ export const handleAfterMount = async (deps) => {
   });
 
   // Safe access to nested properties
-  const sectionTransition = props?.line?.presentation?.sectionTransition;
+  const sectionTransition = props?.sectionTransition;
 
   if (!sectionTransition) {
     return;
@@ -32,6 +32,8 @@ export const handleAfterMount = async (deps) => {
   }
 
   store.setFormValues(formValues);
+
+  render();
 };
 
 export const handleSubmitClick = (deps) => {

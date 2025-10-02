@@ -18,8 +18,8 @@ export const handleAfterMount = async (deps) => {
     audio,
   });
 
-  if (props?.line?.presentation?.sfx?.items) {
-    const { items } = props.line.presentation.sfx;
+  if (props?.sfx?.items) {
+    const { items } = props.sfx;
     if (items && items.length > 0) {
       store.setExistingSfx({
         sfx: items,

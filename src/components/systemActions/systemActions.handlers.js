@@ -45,11 +45,20 @@ export const handleCommandLineSubmit = (deps, payload) => {
 export const handleAddActionButtonClicked = (deps) => {
   const { store, render } = deps;
   store.showActionsDialog();
+  store.setMode({ mode: "actions" });
   render();
 };
 
 export const handleActionsDialogClose = (deps) => {
   const { store, render } = deps;
   store.hideActionsDialog();
+  render();
+};
+
+export const handleActionItemClick = (deps, payload) => {
+  const { store, render } = deps;
+  const mode = payload._event.target.dataset.mode;
+  store.showActionsDialog();
+  store.setMode({ mode });
   render();
 };

@@ -7,8 +7,11 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    line:
+    character:
       type: object
+      properties:
+        items:
+          type: array
     presentationState:
       type: object
 

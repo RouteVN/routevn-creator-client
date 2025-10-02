@@ -150,10 +150,8 @@ export const handleLayoutSelectChange = (deps, payload) => {
 export const handleBeforeMount = (deps) => {
   const { store, render, props } = deps;
 
-  // Initialize from existing line data if available
-  const choicesData =
-    props?.line?.presentation?.choice ||
-    props?.line?.presentation?.presentation?.choice;
+  // Initialize from existing choices data if available
+  const choicesData = props?.choices;
   if (choicesData) {
     // Set existing items by directly modifying items array
     if (choicesData.items && choicesData.items.length > 0) {
@@ -184,9 +182,7 @@ export const handlePropsChanged = (deps) => {
   const { store, render, props } = deps;
 
   // Re-initialize when props change
-  const choicesData =
-    props?.line?.presentation?.choices ||
-    props?.line?.presentation?.presentation?.choices;
+  const choicesData = props?.choices;
   if (choicesData) {
     const currentItems = store.selectItems();
 

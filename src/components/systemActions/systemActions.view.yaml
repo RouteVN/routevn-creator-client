@@ -1,5 +1,23 @@
 elementName: rvn-system-actions
 
+propsSchema:
+  type: object
+  properties:
+    actions:
+      type: array
+    selectedLine:
+      type: object
+    layouts:
+      type: array
+    allCharacters:
+      type: array
+    sections:
+      type: array
+    scene:
+      type: object
+    presentationState:
+      type: object
+
 refs:
   command-line-*:
     eventListeners:
@@ -17,16 +35,81 @@ refs:
     eventListeners:
       close:
         handler: handleActionsDialogClose
+  action-item-*:
+    eventListeners:
+      click:
+        handler: handleActionItemClick
 
 template:
   - rtgl-view g=md w=f:
-      - "$for item in displayActions":
-          - rtgl-view h=36 w=f bgc=mu av=c ph=md:
-              - rtgl-text: ${item.name}
+      - $if actions:
+          - $for item in actions:
+              $if item.type == "background":
+                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                    - rtgl-svg svg=${item.icon} wh=24:
+                    - rvn-file-image fileId=${item.data.backgroundImage.fileId} w=50 h=35:
+                    - rtgl-text s=sm: ${item.data.backgroundImage.name}
+              $elif item.type == "bgm":
+                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                    - rtgl-svg svg=${item.icon} wh=24:
+                    - rtgl-text s=sm: ${item.data.bgmAudio.name}
+              $elif item.type == "sfx":
+                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                    - rtgl-svg svg=${item.icon} wh=24:
+                    - rtgl-text s=sm: ${item.data.soundEffectsNames}
+              $elif item.type == "characters":
+                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                    - rtgl-svg svg=${item.icon} wh=24:
+                    - rtgl-view d=h g=sm av=c:
+                        - $for charData, i in item.data.charactersData:
+                            - $if charData.sprite && charData.sprite.fileId:
+                                - rvn-file-image fileId=${charData.sprite.fileId} w=35 h=35:
+                              $else:
+                                - rtgl-view w=35 h=35 bgc=ac av=c ah=c:
+                                    - rtgl-text s=xs: No Sprite
+              $elif item.type == "sectionTransition":
+                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                    - rtgl-svg svg="transition" wh=24:
+                    - rtgl-svg svg=${item.icon} wh=24:
+                    - $if item.data.sectionTransitionData.scene:
+                        - rtgl-text s=sm: "Transition to scene: ${item.data.sectionTransitionData.scene.name} section: ${item.data.sectionTransitionData.section.name}"
+                      $else:
+                        - rtgl-text s=sm: "Transition to section: ${item.data.sectionTransitionData.section.name}"
+              $elif item.type == "dialogue":
+                - $if item.data.dialogueCharacterData || item.data.dialogueData:
+                    - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                        - rtgl-svg svg=${item.icon} wh=24:
+                        - $if item.data.dialogueData:
+                            - rtgl-text s=sm: ${item.data.dialogueData.name}
+                        - $if item.data.dialogueCharacterData:
+                            - rvn-file-image fileId=${item.data.dialogueCharacterData.fileId} w=32 h=32 br=f:
+              $elif item.type == "choices":
+                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                    - rtgl-svg svg=${item.icon} wh=24:
+                    - rtgl-view d=v:
+                        - rtgl-text s=sm: "Choices"
+                        - $for choice in item.data.choicesData.items:
+                            - rtgl-text s=xs c=mu-fg: "• ${choice.content}"
+        $else:
+          - rtgl-text s=sm c=mu-fg: No actions added yet
       - rtgl-button#add-action-button v=ol w=f: +
   - rtgl-dialog#actions-dialog ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh:
           - $if mode == "actions":
-              - rvn-command-line-system-actions#command-line-system-actions:
+              - rvn-command-line-actions#command-line-actions:
+            $elif mode == "dialogue":
+              - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .dialogue=selectedLine.presentation.dialogue:
+            $elif mode == "choice":
+              - rvn-command-line-choices#command-line-choices .layouts=layouts .choices=selectedLine.presentation.choices:
+            $elif mode == "background":
+              - rvn-command-line-background#command-line-background data-mode="background" .background=selectedLine.presentation.background:
+            $elif mode == "bgm":
+              - rvn-command-line-bgm#command-line-bgm .bgm=selectedLine.presentation.bgm:
+            $elif mode == "sfx":
+              - rvn-command-line-sound-effects#command-line-sound-effects .sfx=selectedLine.presentation.sfx:
+            $elif mode == "character":
+              - rvn-command-line-characters#command-line-characters .character=selectedLine.presentation.character .presentationState=presentationState:
             $elif mode == "sectionTransition":
-              - rvn-command-line-section-transition#command-line-section-transition .line=selectedLine .sections=sections .currentSceneId=scene.id:
+              - rvn-command-line-section-transition#command-line-section-transition .sectionTransition=selectedLine.presentation.sectionTransition .sections=sections .currentSceneId=scene.id:
+            $elif mode == "controls":
+              - rvn-command-line-controls#command-line-controls .controls=selectedLine.controls:

@@ -32,22 +32,11 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    line:
+    bgm:
       type: object
       properties:
-        presentation:
-          type: object
-          properties:
-            bgm:
-              type: object
-              properties:
-                resourceId:
-                  type: string
-                resourceType:
-                  type: string
-                  enum: ["audio"]
-                loopType:
-                  type: string
+        audioId:
+          type: string
 
 refs:
   form:
