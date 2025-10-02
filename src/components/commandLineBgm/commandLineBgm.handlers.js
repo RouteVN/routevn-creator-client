@@ -1,7 +1,7 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props } = deps;
+  const { repositoryFactory, router, store, props, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { audio } = repository.getState();
@@ -11,12 +11,14 @@ export const handleAfterMount = async (deps) => {
   });
 
   // Initialize with existing BGM data if available
-  const audioId = props?.line?.presentation?.bgm?.audioId;
+  const audioId = props?.bgm?.audioId;
   if (audioId) {
     store.setSelectedResource({
       resourceId: audioId,
     });
   }
+
+  render();
 };
 
 export const handleAudioWaveformClick = (deps) => {

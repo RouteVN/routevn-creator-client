@@ -28,7 +28,7 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    line:
+    controls:
       type: object
       properties:
         disableUserClick:

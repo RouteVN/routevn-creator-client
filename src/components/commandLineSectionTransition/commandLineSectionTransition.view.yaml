@@ -3,21 +3,15 @@ elementName: rvn-command-line-section-transition
 propsSchema:
   type: object
   properties:
-    line:
+    sectionTransition:
       type: object
       properties:
-        presentation:
-          type: object
-          properties:
-            sectionTransition:
-              type: object
-              properties:
-                sceneId:
-                  type: string
-                sectionId:
-                  type: string
-                animation:
-                  type: string
+        sceneId:
+          type: string
+        sectionId:
+          type: string
+        animation:
+          type: string
     sections:
       type: array
       items:

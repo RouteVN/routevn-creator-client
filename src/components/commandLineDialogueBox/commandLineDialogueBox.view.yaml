@@ -49,7 +49,7 @@ propsSchema:
             type: string
           name:
             type: string
-    line:
+    dialogue:
       type: object
       properties:
         layoutId:
