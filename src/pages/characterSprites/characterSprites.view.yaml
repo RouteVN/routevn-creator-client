@@ -23,15 +23,17 @@ refs:
       item-click:
         handler: handleImageItemClick
       item-dblclick:
-        handler: handleImageDoubleClick
+        action: showFullImagePreview
+        payload:
+          itemId: "${event.detail.itemId}"
       files-uploaded:
         handler: handleDragDropFileSelected
       search-input:
         handler: handleSearchInput
-    preview-overlay:
-      eventListeners:
-        click:
-          handler: handlePreviewOverlayClick
+  preview-overlay:
+    eventListeners:
+      click:
+        action: hideFullImagePreview
   detail-form:
     eventListeners:
       extra-event:
@@ -41,22 +43,22 @@ refs:
 
 template:
   - rtgl-view d=h w=f h=f:
-    - rtgl-view d=h h=f w=f:
-      - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
-        - rtgl-view slot="content" w=f h=f:
-          - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-          - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
-      - rtgl-view flex=1 h=f:
-          - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
-      - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - rtgl-view wh=f slot="content":
-          - $if selectedItemId:
-            - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .context=context .defaultValues=defaultValues:
-            $else:
-              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                  - rtgl-text s=md c=mu-fg: No selection
-    - $if fullImagePreviewVisible:
-        - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
+      - rtgl-view d=h h=f w=f:
+          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+                  - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
+          - rtgl-view flex=1 h=f:
+              - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .context=context .defaultValues=defaultValues:
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection
+      - $when: fullImagePreviewVisible
+        rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
           - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
           - $if fullImagePreviewFileId:
               - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
