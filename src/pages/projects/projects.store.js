@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   title: "Projects",
   createButtonText: "Create Project",
   openButtonText: "Open Project",
@@ -150,7 +150,7 @@ export const closeDropdownMenu = (state) => {
   state.dropdownMenu.items = [];
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   return {
     ...state,
     hasProjects: state.projects && state.projects.length > 0,

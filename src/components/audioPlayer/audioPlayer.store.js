@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   isLoading: true,
   isPlaying: false,
   currentTime: 0,
@@ -49,7 +49,7 @@ export const selectPlaybackPosition = ({ state }) => ({
 
 export const selectDuration = ({ state }) => state.duration;
 
-export const toViewData = ({ state, props }) => ({
+export const selectViewData = ({ state, props }) => ({
   isPlaying: state.isPlaying,
   title: props.title,
   isLoading: state.isLoading,

@@ -11,7 +11,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
   selectedResourceId: undefined,
@@ -84,7 +84,7 @@ export const selectBreadcrumb = ({ state }) => {
   return breadcrumb;
 };
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );

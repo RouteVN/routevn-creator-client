@@ -111,7 +111,7 @@ const fontInfoForm = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   fontsData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
@@ -208,7 +208,7 @@ export const getUnicodeValue = (char) => {
   return `U+${code.toString(16).toUpperCase().padStart(4, "0")}`;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.fontsData);
   const rawFlatGroups = toFlatGroups(state.fontsData);
   const searchQuery = state.searchQuery.toLowerCase();

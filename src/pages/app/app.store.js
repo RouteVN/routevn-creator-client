@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   currentRoute: "/projects",
 });
 
@@ -75,7 +75,7 @@ export const setCurrentRoute = (state, payload) => {
   state.currentRoute = payload;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   return {
     ...state,
     currentRoutePattern: selectCurrentRoutePattern(state, props, payload),

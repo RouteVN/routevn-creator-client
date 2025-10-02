@@ -10,7 +10,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -19,16 +19,16 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleImageItemClick = (e, deps) => {
+export const handleImageItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
   render();
 };
 
-export const handleItemDoubleClick = (e, deps) => {
+export const handleItemDoubleClick = (deps, payload) => {
   const { router, subject } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   // Get current payload to preserve projectId
   const currentPayload = router ? router.getPayload() : {};
@@ -42,19 +42,19 @@ export const handleItemDoubleClick = (e, deps) => {
   });
 };
 
-export const handleAddLayoutClick = (e, deps) => {
+export const handleAddLayoutClick = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
 
   store.openAddDialog(groupId);
   render();
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
+export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { files, targetGroupId } = e.detail; // Extract from forwarded event
+  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   // Get fileManager for this project
@@ -100,7 +100,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -111,7 +111,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -120,32 +120,32 @@ export const handleFormChange = async (e, deps) => {
   store.setItems(layouts);
   render();
 };
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail?.value || "";
+  const searchQuery = payload._event.detail?.value || "";
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.toggleGroupCollapse(groupId);
   render();
 };
 
-export const handleAddDialogClose = (e, deps) => {
+export const handleAddDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeAddDialog();
   render();
 };
 
-export const handleLayoutFormActionClick = async (e, deps) => {
+export const handleLayoutFormActionClick = async (deps, payload) => {
   const { store, render, repositoryFactory, router, globalUI } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
-  const formData = e.detail.formValues;
+  const formData = payload._event.detail.formValues;
   const targetGroupId = store.getState().targetGroupId;
 
   // Validate required fields

@@ -1,4 +1,4 @@
-const INITIAL_STATE = Object.freeze({});
+export const createInitialState = () => ({});
 
 const getContrastBackground = (color) => {
   if (
@@ -40,7 +40,7 @@ const getContrastBackground = (color) => {
   return "transparent";
 };
 
-const toViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, attrs }) => {
   const showBorder = attrs.showBorder !== "false";
   const height = attrs.height ? parseInt(attrs.height) : null;
   const textColor = attrs.color || "currentColor";
@@ -69,4 +69,4 @@ const toViewData = ({ state, attrs }) => {
   };
 };
 
-export { INITIAL_STATE, toViewData };
+// Removed deprecated exports

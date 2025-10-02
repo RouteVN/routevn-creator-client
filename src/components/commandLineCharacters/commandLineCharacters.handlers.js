@@ -32,9 +32,9 @@ export const handleAfterMount = async (deps) => {
   });
 };
 
-export const handleCharacterClick = (e, deps) => {
+export const handleCharacterClick = (deps, payload) => {
   const { store, render } = deps;
-  const id = e.currentTarget.id;
+  const id = payload._event.currentTarget.id;
 
   // Extract character index from ID (format: character-{id}-{index})
   const parts = id.split("-");
@@ -51,28 +51,31 @@ export const handleCharacterClick = (e, deps) => {
   render();
 };
 
-export const handleCharacterContextMenu = (e, deps) => {
-  e.preventDefault();
+export const handleCharacterContextMenu = (deps, payload) => {
+  payload._event.preventDefault();
   const { store, render } = deps;
-  const id = e.currentTarget.id;
+  const id = payload._event.currentTarget.id;
 
   // Extract character index from ID (format: character-{id}-{index})
   const parts = id.split("-");
   const index = parseInt(parts[parts.length - 1]);
 
   store.showDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
+    position: { x: payload._event.clientX, y: payload._event.clientY },
     characterIndex: index,
   });
 
   render();
 };
 
-export const handleTransformChange = (e, deps) => {
+export const handleTransformChange = (deps, payload) => {
   const { store, render } = deps;
-  const id = e.currentTarget?.id || e.target?.id;
+  const id = payload._event.currentTarget?.id || payload._event.target?.id;
   // Try both event structures (native change event and custom option-selected event)
-  const value = e.detail?.value || e.currentTarget?.value || e.target?.value;
+  const value =
+    payload._event.detail?.value ||
+    payload._event.currentTarget?.value ||
+    payload._event.target?.value;
 
   // Extract index from ID (format: transform-{index})
   const index = parseInt(id.replace("transform-", ""));
@@ -81,9 +84,12 @@ export const handleTransformChange = (e, deps) => {
   render();
 };
 
-export const handleCharacterItemClick = (e, deps) => {
+export const handleCharacterItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const characterId = e.currentTarget.id.replace("character-item-", "");
+  const characterId = payload._event.currentTarget.id.replace(
+    "character-item-",
+    "",
+  );
 
   // Add character to selected characters
   store.addCharacter({ id: characterId });
@@ -101,7 +107,7 @@ export const handleCharacterItemClick = (e, deps) => {
   render();
 };
 
-export const handleSubmitClick = (payload, deps) => {
+export const handleSubmitClick = (deps, payload) => {
   const { dispatchEvent, store } = deps;
   const selectedCharacters = store.selectSelectedCharacters();
 
@@ -129,7 +135,7 @@ export const handleSubmitClick = (payload, deps) => {
   );
 };
 
-export const handleCharacterSelectorClick = (payload, deps) => {
+export const handleCharacterSelectorClick = (deps, payload) => {
   const { store, render } = deps;
 
   store.setMode({
@@ -139,21 +145,21 @@ export const handleCharacterSelectorClick = (payload, deps) => {
   render();
 };
 
-export const handleBreadcumbClick = (e, deps) => {
+export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
-  } else if (e.detail.id === "current") {
+  } else if (payload._event.detail.id === "current") {
     store.setMode({
       mode: "current",
     });
     render();
-  } else if (e.detail.id === "character-select") {
+  } else if (payload._event.detail.id === "character-select") {
     store.setMode({
       mode: "sprite-select",
     });
@@ -161,15 +167,17 @@ export const handleBreadcumbClick = (e, deps) => {
   }
 };
 
-export const handleRemoveCharacterClick = (e, deps) => {
+export const handleRemoveCharacterClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace("remove-character-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("remove-character-", ""),
+  );
 
   store.removeCharacter(index);
   render();
 };
 
-export const handleAddCharacterClick = (payload, deps) => {
+export const handleAddCharacterClick = (deps, payload) => {
   const { store, render } = deps;
 
   store.setMode({
@@ -179,9 +187,11 @@ export const handleAddCharacterClick = (payload, deps) => {
   render();
 };
 
-export const handleCharacterSpriteClick = (e, deps) => {
+export const handleCharacterSpriteClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace("character-sprite-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("character-sprite-", ""),
+  );
 
   store.setSelectedCharacterIndex({ index });
   store.setMode({
@@ -191,9 +201,9 @@ export const handleCharacterSpriteClick = (e, deps) => {
   render();
 };
 
-export const handleSpriteItemClick = (e, deps) => {
+export const handleSpriteItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const spriteId = e.currentTarget.id.replace("sprite-item-", "");
+  const spriteId = payload._event.currentTarget.id.replace("sprite-item-", "");
 
   store.setTempSelectedSpriteId({
     spriteId: spriteId,
@@ -202,7 +212,7 @@ export const handleSpriteItemClick = (e, deps) => {
   render();
 };
 
-export const handleButtonSelectClick = (e, deps) => {
+export const handleButtonSelectClick = (deps, payload) => {
   const { store, render } = deps;
   const mode = store.selectMode();
   const selectedCharacters = store.selectCharactersWithRepositoryData();
@@ -233,15 +243,15 @@ export const handleButtonSelectClick = (e, deps) => {
   render();
 };
 
-export const handleDropdownMenuClose = (e, deps) => {
+export const handleDropdownMenuClose = (deps, payload) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = (e, deps) => {
+export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render } = deps;
-  const { item } = e.detail;
+  const { item } = payload._event.detail;
   const characterIndex = store.selectDropdownMenuCharacterIndex();
 
   if (item.value === "delete" && characterIndex !== null) {

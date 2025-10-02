@@ -1,6 +1,6 @@
 import { toFlatItems } from "../../deps/repository";
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   // Popover state for renaming
   popover: {
     isOpen: false,
@@ -257,7 +257,7 @@ export const setTempSelectedImageId = (state, { imageId }) => {
   state.imageSelectorDialog.selectedImageId = imageId;
 };
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   const hasContent = props.fields && props.fields.length > 0;
   let visibleFields = props.fields
     ? props.fields.filter((field) => field.show !== false)

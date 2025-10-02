@@ -24,17 +24,23 @@ refs:
       item-click:
         handler: handleImageItemClick
       item-dblclick:
-        handler: handleImageDoubleClick
+        action: showFullImagePreview
+        payload:
+          itemId: "${event.detail.itemId}"
       files-uploaded:
         handler: handleDragDropFileSelected
       search-input:
-        handler: handleSearchInput
+        action: setSearchQuery
+        payload:
+          value: ${event.detail.value}
       group-toggle:
-        handler: handleGroupToggle
+        action: toggleGroupCollapse
+        payload:
+          groupId: "${event.detail.groupId}"
   preview-overlay:
     eventListeners:
       click:
-        handler: handlePreviewOverlayClick
+        action: hideFullImagePreview
   detail-form:
     eventListeners:
       extra-event:
@@ -59,8 +65,9 @@ template:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      - $if fullImagePreviewVisible:
-          - rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
-              - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
-              - $if fullImagePreviewFileId:
-                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
+      # - $if fullImagePreviewVisible:
+      - $when: fullImagePreviewVisible
+        rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
+          - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
+          - $if fullImagePreviewFileId:
+              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:

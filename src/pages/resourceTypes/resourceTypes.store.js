@@ -105,7 +105,7 @@ const resourceCategoryNames = {
   },
 };
 
-export const INITIAL_STATE = Object.freeze({});
+export const createInitialState = () => ({});
 
 export const selectResourceItem = ({ props }, id) => {
   const { resourceCategory } = props;
@@ -114,7 +114,7 @@ export const selectResourceItem = ({ props }, id) => {
   );
 };
 
-export const toViewData = ({ props }) => {
+export const selectViewData = ({ props }) => {
   const { resourceCategory, selectedResourceId } = props;
 
   // Get the actual resource ID to highlight (use parent mapping if exists)

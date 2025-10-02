@@ -21,9 +21,9 @@ export const handleBeforeMount = (deps) => {
   }
 };
 
-export const handleFormChange = (e, deps) => {
+export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const formData = e.detail.formData;
+  const formData = payload._event.detail.formData;
 
   if (formData.disableUserClick !== undefined) {
     store.setDisableUserClick({ disableUserClick: formData.disableUserClick });
@@ -41,7 +41,7 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleSubmitClick = (e, deps) => {
+export const handleSubmitClick = (deps, payload) => {
   const { store, dispatchEvent } = deps;
   const { disableUserClick, autoPlay, autoPlayDelay } = store.getState();
 
@@ -61,10 +61,10 @@ export const handleSubmitClick = (e, deps) => {
   );
 };
 
-export const handleBreadcumbClick = (e, deps) => {
+export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},

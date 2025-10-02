@@ -1,6 +1,6 @@
 import { toFlatItems } from "../../deps/repository";
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   ready: false,
   mode: "block", // 'block' or 'text-editor'
   cursorPosition: 0, // Track cursor position for navigation
@@ -58,7 +58,7 @@ export const selectNavigationDirection = ({ state }) => {
   return state.navigationDirection;
 };
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   const lines = (props.lines || []).map((line, i) => {
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";

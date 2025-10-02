@@ -428,13 +428,13 @@ export const handleAfterMount = async (deps) => {
 };
 
 // Simple render handler for events that only need to trigger a re-render
-export const handleRenderOnly = (payload, deps) => deps.render();
+export const handleRenderOnly = (deps, payload) => deps.render();
 
-export const handleFileExplorerItemClick = async (e, deps) => {
+export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const itemId = e.detail.id;
+  const itemId = payload._event.detail.id;
   store.setSelectedItemId(itemId);
   render();
 
@@ -483,7 +483,7 @@ export const handleFileExplorerItemClick = async (e, deps) => {
 export const handleTargetChanged = handleRenderOnly;
 export const handleAddLayoutClick = handleRenderOnly;
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { router, store, repositoryFactory, render } = deps;
   const { layoutId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -534,33 +534,36 @@ const deepMerge = (target, source) => {
   return result;
 };
 
-export const handleFormChange = async (e, deps, payload) => {
+export const handleFormChange = async (deps, event, payload) => {
   const { store, render } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
 
   let unflattenedUpdate;
 
-  console.log("e.detail", e.detail);
+  console.log("payload._event.detail", payload._event.detail);
 
   // Handle anchor selection specially
   if (
-    e.detail.name === "anchor" &&
-    e.detail.fieldValue &&
-    typeof e.detail.fieldValue === "object"
+    payload._event.detail.name === "anchor" &&
+    payload._event.detail.fieldValue &&
+    typeof payload._event.detail.fieldValue === "object"
   ) {
     // When anchor is selected, update both anchorX and anchorY
     unflattenedUpdate = {
-      anchorX: e.detail.fieldValue.x,
-      anchorY: e.detail.fieldValue.y,
+      anchorX: payload._event.detail.fieldValue.x,
+      anchorY: payload._event.detail.fieldValue.y,
     };
   } else {
-    unflattenedUpdate = unflattenKey(e.detail.name, e.detail.fieldValue);
+    unflattenedUpdate = unflattenKey(
+      payload._event.detail.name,
+      payload._event.detail.fieldValue,
+    );
   }
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
-  updatedItem[e.detail.name] = e.detail.fieldValue;
+  updatedItem[payload._event.detail.name] = payload._event.detail.fieldValue;
 
   // Update store optimistically for immediate UI feedback
   store.updateSelectedItem(updatedItem);
@@ -579,9 +582,9 @@ export const handleFormChange = async (e, deps, payload) => {
   await renderLayoutPreview(deps, { skipAssetLoading: true });
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
+export const handleFormExtraEvent = async (deps, payload) => {
   const { store, render } = deps;
-  const { trigger, name, fieldIndex } = e.detail;
+  const { trigger, name, fieldIndex } = payload._event.detail;
 
   if (
     !["imageId", "hoverImageId", "clickImageId", "typographyId"].includes(name)
@@ -600,10 +603,10 @@ export const handleFormExtraEvent = async (e, deps) => {
       const currentValue = selectedItem[name] || null;
 
       // Transform images to groups format for the selector
-      const imageGroups = store.toViewData().imageGroups;
+      const imageGroups = store.selectViewData().imageGroups;
 
       // Find the field index by matching the field name
-      const form = store.toViewData().form;
+      const form = store.selectViewData().form;
       let actualFieldIndex = fieldIndex;
       if (actualFieldIndex === undefined && form && form.fields) {
         actualFieldIndex = form.fields.findIndex(
@@ -625,9 +628,9 @@ export const handleFormExtraEvent = async (e, deps) => {
     const selectedItem = store.selectSelectedItem();
     // Only show context menu if there's actually an image set for this field
     if (selectedItem && selectedItem[name]) {
-      e.preventDefault();
+      payload._event.preventDefault();
       store.showDropdownMenuForImageField({
-        position: { x: e.detail.x, y: e.detail.y },
+        position: { x: payload._event.detail.x, y: payload._event.detail.y },
         fieldName: name,
       });
       render();
@@ -635,15 +638,15 @@ export const handleFormExtraEvent = async (e, deps) => {
   }
 };
 
-export const handleImageSelectorSelection = (e, deps) => {
+export const handleImageSelectorSelection = (deps, payload) => {
   const { store, render } = deps;
-  const { imageId } = e.detail;
+  const { imageId } = payload._event.detail;
 
   store.setTempSelectedImageId({ imageId });
   render();
 };
 
-export const handleConfirmImageSelection = async (e, deps) => {
+export const handleConfirmImageSelection = async (deps, payload) => {
   const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -654,7 +657,7 @@ export const handleConfirmImageSelection = async (e, deps) => {
 
   // Get the field name from the form
   const selectedItem = store.selectSelectedItem();
-  const form = store.toViewData().form;
+  const form = store.selectViewData().form;
   const fieldName = form?.fields[fieldIndex]?.name;
 
   if (fieldName && selectedItem && selectedImageId) {
@@ -734,29 +737,29 @@ export const handleConfirmImageSelection = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleCancelImageSelection = (e, deps) => {
+export const handleCancelImageSelection = (deps, payload) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
 };
 
-export const handleCloseImageSelectorDialog = (e, deps) => {
+export const handleCloseImageSelectorDialog = (deps, payload) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
 };
 
-export const handleDropdownMenuClose = (e, deps) => {
+export const handleDropdownMenuClose = (deps, payload) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = async (e, deps) => {
+export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const detail = e.detail;
+  const detail = payload._event.detail;
   const item = detail.item || detail;
   const fieldName = store.selectDropdownMenuFieldName();
 
@@ -806,9 +809,9 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   }
 };
 
-export const handleDialogueFormChange = async (e, deps) => {
+export const handleDialogueFormChange = async (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = e.detail;
+  const { name, fieldValue } = payload._event.detail;
 
   // Update the dialogue default values in the store
   store.setDialogueDefaultValue({ name, fieldValue });
@@ -817,9 +820,9 @@ export const handleDialogueFormChange = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleChoiceFormChange = async (e, deps) => {
+export const handleChoiceFormChange = async (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = e.detail;
+  const { name, fieldValue } = payload._event.detail;
 
   // Update the choice default values in the store
   store.setChoiceDefaultValue({ name, fieldValue });
@@ -828,7 +831,7 @@ export const handleChoiceFormChange = async (e, deps) => {
   await renderLayoutPreview(deps);
 };
 
-export const handleArrowKeyDown = async (e, deps) => {
+export const handleArrowKeyDown = async (deps, payload) => {
   const { store, render } = deps;
 
   const currentItem = store.selectSelectedItem();
@@ -840,7 +843,7 @@ export const handleArrowKeyDown = async (e, deps) => {
   let change = {};
   const layoutId = store.selectLayoutId();
 
-  if (e.key === "ArrowUp") {
+  if (payload._event.key === "ArrowUp") {
     if (e.metaKey) {
       change = {
         height: Math.round(currentItem.height - unit),
@@ -850,7 +853,7 @@ export const handleArrowKeyDown = async (e, deps) => {
         y: Math.round(currentItem.y - unit),
       };
     }
-  } else if (e.key === "ArrowDown") {
+  } else if (payload._event.key === "ArrowDown") {
     if (e.metaKey) {
       change = {
         height: Math.round(currentItem.height + unit),
@@ -860,7 +863,7 @@ export const handleArrowKeyDown = async (e, deps) => {
         y: Math.round(currentItem.y + unit),
       };
     }
-  } else if (e.key === "ArrowLeft") {
+  } else if (payload._event.key === "ArrowLeft") {
     if (e.metaKey) {
       change = {
         width: Math.round(currentItem.width - unit),
@@ -870,7 +873,7 @@ export const handleArrowKeyDown = async (e, deps) => {
         x: Math.round(currentItem.x - unit),
       };
     }
-  } else if (e.key === "ArrowRight") {
+  } else if (payload._event.key === "ArrowRight") {
     if (e.metaKey) {
       change = {
         width: Math.round(currentItem.width + unit),
@@ -894,11 +897,11 @@ export const handleArrowKeyDown = async (e, deps) => {
   scheduleKeyboardSave(deps, currentItem.id, layoutId);
 };
 
-export const handle2dRenderEvent = async (e, deps) => {
+export const handle2dRenderEvent = async (deps, payload) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { eventName, payload } = e;
+  const { eventName, payload: eventPayload } = payload._event;
 
   const { isDragging, dragOffset } = store.selectDragging();
 
@@ -983,11 +986,11 @@ export const subscriptions = (deps) => {
     fromEvent(window, "keydown").pipe(
       filter((e) => {
         return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
-          e.key,
+          payload._event.key,
         );
       }),
       tap((e) => {
-        handleArrowKeyDown(e, deps);
+        handleArrowKeyDown(deps, { _event: e });
       }),
     ),
     subject.pipe(
@@ -1015,10 +1018,10 @@ export const subscriptions = (deps) => {
   ];
 };
 
-export const handleSystemActionsChange = (e, deps) => {
+export const handleSystemActionsChange = (deps, payload) => {
   const { store, render } = deps;
   const selectedItem = store.selectSelectedItem();
-  selectedItem.eventPayload = e.detail;
+  selectedItem.eventPayload = payload._event.detail;
   store.updateSelectedItem(selectedItem);
   render();
 };

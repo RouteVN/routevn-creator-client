@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   panelWidth: 280, // Will be updated based on attrs
   isResizing: false,
   startX: 0,
@@ -29,7 +29,7 @@ export const initializePanelWidth = (state, { width, minWidth, maxWidth }) => {
   state.startWidth = constrainedWidth;
 };
 
-export const toViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, attrs }) => {
   return {
     w: parseInt(attrs.w) || 280,
     minW: parseInt(attrs["min-w"]) || 200,

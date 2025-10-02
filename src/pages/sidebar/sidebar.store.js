@@ -4,7 +4,7 @@ import {
   systemConfigItems,
 } from "../resourceTypes/resourceTypes.store.js";
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   header: {
     label: "Sidebar",
     path: "/project",
@@ -53,7 +53,7 @@ export const setProjectImageUrl = (state, imageUrl) => {
   state.header.image.src = imageUrl;
 };
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   const currentPath =
     typeof window !== "undefined" ? window.location.pathname : "";
 

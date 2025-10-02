@@ -1,6 +1,6 @@
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const searchQuery = e.detail.value || "";
+  const searchQuery = payload._event.detail.value || "";
 
   // Forward search input to parent
   dispatchEvent(
@@ -12,9 +12,9 @@ export const handleSearchInput = (e, deps) => {
   );
 };
 
-export const handleGroupClick = (e, deps) => {
+export const handleGroupClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const groupId = e.currentTarget.id.replace("group-", "");
+  const groupId = payload._event.currentTarget.id.replace("group-", "");
 
   // Forward group toggle to parent
   dispatchEvent(
@@ -26,9 +26,9 @@ export const handleGroupClick = (e, deps) => {
   );
 };
 
-export const handleItemClick = (e, deps) => {
+export const handleItemClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = e.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item-", "");
 
   // Forward item selection to parent
   dispatchEvent(
@@ -40,9 +40,9 @@ export const handleItemClick = (e, deps) => {
   );
 };
 
-export const handleItemDoubleClick = (e, deps) => {
+export const handleItemDoubleClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = e.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item-", "");
 
   // Forward double-click event to parent
   dispatchEvent(
@@ -54,10 +54,10 @@ export const handleItemDoubleClick = (e, deps) => {
   );
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
+export const handleDragDropFileSelected = async (deps, payload) => {
   const { dispatchEvent, fontManager, props = {} } = deps;
-  const { files } = e.detail;
-  const targetGroupId = e.currentTarget.id
+  const { files } = payload._event.detail;
+  const targetGroupId = payload._event.currentTarget.id
     .replace("drag-drop-bar-", "")
     .replace("drag-drop-item-", "");
 
@@ -84,10 +84,10 @@ export const handleDragDropFileSelected = async (e, deps) => {
   );
 };
 
-export const handleSpritesButtonClick = (e, deps) => {
+export const handleSpritesButtonClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent item click
-  const itemId = e.currentTarget.id.replace("sprites-button-", "");
+  payload._event.stopPropagation(); // Prevent item click
+  const itemId = payload._event.currentTarget.id.replace("sprites-button-", "");
 
   // Forward sprites button click to parent
   dispatchEvent(
@@ -99,10 +99,13 @@ export const handleSpritesButtonClick = (e, deps) => {
   );
 };
 
-export const handleAddCharacterClick = (e, deps) => {
+export const handleAddCharacterClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent group click
-  const groupId = e.currentTarget.id.replace("add-character-button-", "");
+  payload._event.stopPropagation(); // Prevent group click
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-character-button-",
+    "",
+  );
 
   // Forward add character click to parent
   dispatchEvent(
@@ -114,10 +117,13 @@ export const handleAddCharacterClick = (e, deps) => {
   );
 };
 
-export const handleAddColorClick = (e, deps) => {
+export const handleAddColorClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent group click
-  const groupId = e.currentTarget.id.replace("add-color-button-", "");
+  payload._event.stopPropagation(); // Prevent group click
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-color-button-",
+    "",
+  );
 
   // Forward add color click to parent
   dispatchEvent(
@@ -129,10 +135,13 @@ export const handleAddColorClick = (e, deps) => {
   );
 };
 
-export const handleAddTypographyClick = (e, deps) => {
+export const handleAddTypographyClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent group click
-  const groupId = e.currentTarget.id.replace("add-typography-button-", "");
+  payload._event.stopPropagation(); // Prevent group click
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-typography-button-",
+    "",
+  );
 
   // Forward add typography click to parent
   dispatchEvent(
@@ -144,10 +153,13 @@ export const handleAddTypographyClick = (e, deps) => {
   );
 };
 
-export const handleAddLayoutClick = (e, deps) => {
+export const handleAddLayoutClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent group click
-  const groupId = e.currentTarget.id.replace("add-layout-button-", "");
+  payload._event.stopPropagation(); // Prevent group click
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-layout-button-",
+    "",
+  );
 
   // Forward add layout click to parent
   dispatchEvent(
@@ -159,10 +171,13 @@ export const handleAddLayoutClick = (e, deps) => {
   );
 };
 
-export const handleAddTransformClick = (e, deps) => {
+export const handleAddTransformClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent group click
-  const groupId = e.currentTarget.id.replace("add-transform-button-", "");
+  payload._event.stopPropagation(); // Prevent group click
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-transform-button-",
+    "",
+  );
 
   // Forward add transform click to parent
   dispatchEvent(
@@ -174,10 +189,13 @@ export const handleAddTransformClick = (e, deps) => {
   );
 };
 
-export const handleAddVariableClick = (e, deps) => {
+export const handleAddVariableClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent group click
-  const groupId = e.currentTarget.id.replace("add-variable-button-", "");
+  payload._event.stopPropagation(); // Prevent group click
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-variable-button-",
+    "",
+  );
 
   // Forward add variable click to parent
   dispatchEvent(
@@ -189,10 +207,13 @@ export const handleAddVariableClick = (e, deps) => {
   );
 };
 
-export const handleAddAnimationClick = (e, deps) => {
+export const handleAddAnimationClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  e.stopPropagation(); // Prevent group click
-  const groupId = e.currentTarget.id.replace("add-animation-button-", "");
+  payload._event.stopPropagation(); // Prevent group click
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-animation-button-",
+    "",
+  );
 
   // Forward add animation click to parent
   dispatchEvent(
@@ -204,9 +225,11 @@ export const handleAddAnimationClick = (e, deps) => {
   );
 };
 
-export const handleZoomChange = async (e, deps) => {
+export const handleZoomChange = async (deps, payload) => {
   const { store, render, userConfig } = deps;
-  const zoomLevel = parseFloat(e.detail?.value || e.target?.value);
+  const zoomLevel = parseFloat(
+    payload._event.detail?.value || payload._event.target?.value,
+  );
 
   // Update internal state
   store.setZoomLevel(zoomLevel);
@@ -214,7 +237,7 @@ export const handleZoomChange = async (e, deps) => {
   render();
 };
 
-export const handleZoomIn = async (_, deps) => {
+export const handleZoomIn = async (deps, payload) => {
   const { store, render, userConfig } = deps;
 
   // Increase zoom by 0.1, max 4.0
@@ -227,7 +250,7 @@ export const handleZoomIn = async (_, deps) => {
   render();
 };
 
-export const handleZoomOut = async (_, deps) => {
+export const handleZoomOut = async (deps, payload) => {
   const { store, render, userConfig } = deps;
 
   // Decrease zoom by 0.1, min 0.5

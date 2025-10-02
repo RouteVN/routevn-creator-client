@@ -126,25 +126,25 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleTargetChanged = (payload, deps) => {
+export const handleTargetChanged = (deps, payload) => {
   const { render } = deps;
   render();
 };
 
-export const handleFileExplorerItemClick = async (e, deps) => {
+export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render } = deps;
-  const itemId = e.detail.id;
+  const itemId = payload._event.detail.id;
   store.setSelectedItemId(itemId);
   render();
   await renderComponentPreview(deps);
 };
 
-export const handleAddComponentClick = (e, deps) => {
+export const handleAddComponentClick = (deps, payload) => {
   const { render } = deps;
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { router, store, repositoryFactory, render } = deps;
   const { componentId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);

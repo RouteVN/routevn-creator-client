@@ -116,8 +116,8 @@ export const handleOnUpdate = async (changes, deps) => {
   }
 };
 
-export const handlePlayPause = async (e, deps) => {
-  e.preventDefault();
+export const handlePlayPause = async (deps, payload) => {
+  payload._event.preventDefault();
   const { audioManager } = deps;
 
   if (audioManager.isPlaying()) {
@@ -127,21 +127,21 @@ export const handlePlayPause = async (e, deps) => {
   await audioManager.play();
 };
 
-export const handleProgressBarClick = async (e, deps) => {
+export const handleProgressBarClick = async (deps, payload) => {
   const { store, audioManager } = deps;
   const duration = store.selectDuration();
 
   if (!duration) return;
 
-  const rect = e.currentTarget.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  const clickX = payload._event.clientX - rect.left;
   const seekTime = calculateSeekPosition(clickX, rect.width, duration);
 
   await audioManager.seek(seekTime);
 };
 
-export const handleClose = (e, deps) => {
-  e.preventDefault();
+export const handleClose = (deps, payload) => {
+  payload._event.preventDefault();
   const { dispatchEvent, audioManager } = deps;
 
   audioManager.stop();

@@ -9,7 +9,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -20,9 +20,9 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleAudioItemClick = async (e, deps) => {
+export const handleAudioItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
@@ -54,12 +54,12 @@ export const handleAudioItemClick = async (e, deps) => {
   render();
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
+export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { files, targetGroupId } = e.detail; // Extract from forwarded event
+  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   const successfulUploads = await fileManager.upload(files);
@@ -94,7 +94,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (_, deps) => {
+export const handleFormExtraEvent = async (deps, payload) => {
   const {
     repositoryFactory,
     router,
@@ -164,7 +164,7 @@ export const handleFormExtraEvent = async (_, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -175,7 +175,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -185,25 +185,25 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail.value || "";
+  const searchQuery = payload._event.detail.value || "";
 
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = e.detail.groupId;
+  const groupId = payload._event.detail.groupId;
 
   store.toggleGroupCollapse(groupId);
   render();
 };
 
-export const handleAudioItemDoubleClick = async (e, deps) => {
+export const handleAudioItemDoubleClick = async (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   const selectedItem = store.selectSelectedItem();
   if (selectedItem && selectedItem.id === itemId) {
@@ -215,7 +215,7 @@ export const handleAudioItemDoubleClick = async (e, deps) => {
   }
 };
 
-export const handleAudioPlayerClose = (_, deps) => {
+export const handleAudioPlayerClose = (deps, payload) => {
   const { store, render } = deps;
 
   store.closeAudioPlayer();

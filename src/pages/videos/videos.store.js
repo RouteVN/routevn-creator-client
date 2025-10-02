@@ -24,7 +24,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   videosData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
@@ -84,7 +84,7 @@ export const setVideoNotVisible = (state) => {
   state.selectedVideo = undefined;
 };
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.videosData);
   const rawFlatGroups = toFlatGroups(state.videosData);
   const searchQuery = state.searchQuery.toLowerCase();

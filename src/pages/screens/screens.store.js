@@ -1,5 +1,5 @@
-export const INITIAL_STATE = Object.freeze({});
+export const createInitialState = () => ({});
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   return state;
 };

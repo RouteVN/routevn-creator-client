@@ -24,7 +24,7 @@ const stringifyAttrs = (attrs) => {
     .join(" ");
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   src: "/public/project_logo_placeholder.png",
   isLoading: true,
 });
@@ -45,7 +45,7 @@ export const selectIsLoading = (state) => {
   return state.isLoading;
 };
 
-export const toViewData = ({ state, attrs, props }, payload) => {
+export const selectViewData = ({ state, attrs, props }, payload) => {
   const { style, ...restAttrs } = attrs;
   return {
     src: state.src,

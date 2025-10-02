@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   layouts: [],
   selectedLayoutId: "",
   characters: [],
@@ -51,7 +51,7 @@ export const setSelectedCharacterId = (state, { characterId }) => {
   state.defaultValues.characterId = characterId;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const layouts = props.layouts || [];
   const characters = props.characters || [];
 

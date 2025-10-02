@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   mouseX: 0,
   showHoverLine: false,
 });
@@ -12,7 +12,7 @@ export const hideTimelineLine = (state) => {
   state.showHoverLine = false;
 };
 
-export const toViewData = ({ state, props, attrs }) => {
+export const selectViewData = ({ state, props, attrs }) => {
   let selectedProperties = [];
 
   if (props.properties) {

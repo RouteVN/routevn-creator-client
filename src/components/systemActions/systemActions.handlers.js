@@ -13,42 +13,42 @@ export const handleOnUpdate = (changes, deps) => {
   render();
 };
 
-export const handleBackToActions = (e, deps) => {
+export const handleBackToActions = (deps, payload) => {
   const { store, render } = deps;
   store.setMode({ mode: "actions" });
   render();
 };
 
-export const handleActionClicked = (e, deps) => {
+export const handleActionClicked = (deps, payload) => {
   const { store, render } = deps;
-  console.log("e.detail", e.detail);
+  console.log("payload._event.detail", payload._event.detail);
 
   store.setMode({
-    mode: e.detail.item.mode,
+    mode: payload._event.detail.item.mode,
   });
 
   render();
 };
 
-export const handleCommandLineSubmit = (e, deps) => {
+export const handleCommandLineSubmit = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  console.log("e.detail", e.detail);
+  console.log("payload._event.detail", payload._event.detail);
   dispatchEvent(
     new CustomEvent("actions-change", {
-      detail: e.detail,
+      detail: payload._event.detail,
     }),
   );
   store.hideActionsDialog();
   render();
 };
 
-export const handleAddActionButtonClicked = (e, deps) => {
+export const handleAddActionButtonClicked = (deps, payload) => {
   const { store, render } = deps;
   store.showActionsDialog();
   render();
 };
 
-export const handleActionsDialogClose = (e, deps) => {
+export const handleActionsDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.hideActionsDialog();
   render();

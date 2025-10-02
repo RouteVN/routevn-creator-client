@@ -28,7 +28,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -37,9 +37,9 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleColorItemClick = (e, deps) => {
+export const handleColorItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
@@ -53,11 +53,11 @@ export const handleColorItemClick = (e, deps) => {
   render();
 };
 
-export const handleColorCreated = async (e, deps) => {
+export const handleColorCreated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, hex } = e.detail;
+  const { groupId, name, hex } = payload._event.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -79,9 +79,9 @@ export const handleColorCreated = async (e, deps) => {
   render();
 };
 
-export const handleColorEdited = (e, deps) => {
+export const handleColorEdited = (deps, payload) => {
   const { store, render, subject } = deps;
-  const { itemId, name, hex } = e.detail;
+  const { itemId, name, hex } = payload._event.detail;
 
   // Dispatch to app handlers for repository update
   subject.dispatch("update-color", {
@@ -93,7 +93,7 @@ export const handleColorEdited = (e, deps) => {
   });
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -104,7 +104,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -113,10 +113,10 @@ export const handleFormChange = async (e, deps) => {
   store.setItems(colors);
 
   // Update context if hex value changed
-  if (e.detail.name === "hex") {
+  if (payload._event.detail.name === "hex") {
     store.setContext({
       colorImage: {
-        src: hexToBase64Image(e.detail.fieldValue),
+        src: hexToBase64Image(payload._event.detail.fieldValue),
       },
     });
   }
@@ -124,33 +124,33 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleColorItemDoubleClick = (e, deps) => {
+export const handleColorItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
   store.openEditDialog(itemId);
   render();
 };
 
-export const handleAddColorClick = (e, deps) => {
+export const handleAddColorClick = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.openAddDialog(groupId);
   render();
 };
 
-export const handleEditDialogClose = (e, deps) => {
+export const handleEditDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeEditDialog();
   render();
 };
 
-export const handleEditFormAction = async (e, deps) => {
+export const handleEditFormAction = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
-  if (e.detail.actionId === "submit") {
-    const formData = e.detail.formValues;
+  if (payload._event.detail.actionId === "submit") {
+    const formData = payload._event.detail.formValues;
     const editItemId = store.getState().editItemId;
 
     // Update the color in the repository
@@ -184,11 +184,11 @@ export const handleEditFormAction = async (e, deps) => {
   }
 };
 
-export const handleFormFieldClick = (e, deps) => {
+export const handleFormFieldClick = (deps, payload) => {
   const { store, render } = deps;
-  console.log("e.detail", e.detail);
+  console.log("payload._event.detail", payload._event.detail);
   // Check if the clicked field is the color image
-  if (e.detail.name === "colorImage") {
+  if (payload._event.detail.name === "colorImage") {
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId) {
       store.openEditDialog(selectedItemId);
@@ -197,19 +197,19 @@ export const handleFormFieldClick = (e, deps) => {
   }
 };
 
-export const handleAddDialogClose = (e, deps) => {
+export const handleAddDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeAddDialog();
   render();
 };
 
-export const handleAddFormAction = async (e, deps) => {
+export const handleAddFormAction = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
-  if (e.detail.actionId === "submit") {
-    const formData = e.detail.formValues;
+  if (payload._event.detail.actionId === "submit") {
+    const formData = payload._event.detail.formValues;
     const targetGroupId = store.getState().targetGroupId;
     const newColorId = nanoid();
 
@@ -236,16 +236,16 @@ export const handleAddFormAction = async (e, deps) => {
   }
 };
 
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail?.value || "";
+  const searchQuery = payload._event.detail?.value || "";
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.toggleGroupCollapse(groupId);
   render();
 };

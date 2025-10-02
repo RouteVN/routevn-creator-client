@@ -36,7 +36,7 @@ const getNextZoomLevel = (currentZoom, direction) => {
   }
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   isDragging: false,
   dragItemId: null,
   // Pan state
@@ -151,7 +151,7 @@ export const selectPan = ({ state, props }, payload) => ({
 });
 export const selectZoomLevel = ({ state, props }, payload) => state.zoomLevel;
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   const items = (props.items || []).map((item) => ({
     ...item,
     borderColor: props.selectedItemId === item.id ? "fg" : "ac",

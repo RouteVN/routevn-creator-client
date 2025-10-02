@@ -20,7 +20,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   project: {
     name: "",
     description: "",
@@ -38,7 +38,7 @@ export const setIconFileId = (state, iconFileId) => {
   state.project.iconFileId = iconFileId;
 };
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   return {
     defaultValues: state.project,
     form,

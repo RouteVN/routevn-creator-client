@@ -1,6 +1,6 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   componentId: null,
@@ -112,7 +112,7 @@ export const selectComponentId = ({ state }) => {
   return state.componentId;
 };
 
-export const toViewData = ({ state }, payload) => {
+export const selectViewData = ({ state }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
   const imageGroups = toFlatGroups(state.images);
