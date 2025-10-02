@@ -407,7 +407,10 @@ export const handleFormActionClick = (deps, payload) => {
   const actionId = payload._event.detail.actionId;
 
   // Handle add option for color selector
-  if (actionId === "select-options-add" && payload._event.detail.name === "fontColor") {
+  if (
+    actionId === "select-options-add" &&
+    payload._event.detail.name === "fontColor"
+  ) {
     // Open the add color dialog
     store.openAddColorDialog();
     render();
@@ -415,7 +418,10 @@ export const handleFormActionClick = (deps, payload) => {
   }
 
   // Handle add option for font selector
-  if (actionId === "select-options-add" && payload._event.detail.name === "fontStyle") {
+  if (
+    actionId === "select-options-add" &&
+    payload._event.detail.name === "fontStyle"
+  ) {
     // Open the add font dialog
     store.openAddFontDialog();
     render();

@@ -56,7 +56,7 @@ export const handleCloseDialogue = (deps, payload) => {
 export const handleProjectsClick = async (deps, payload) => {
   const { subject } = deps;
   const id = payload._event.currentTarget.id.replace("project-", "");
-  console.log('id', id)
+  console.log("id", id);
   subject.dispatch("redirect", {
     path: `/project`,
     payload: {

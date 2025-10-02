@@ -10,7 +10,9 @@ export const handleChoiceClick = (deps, payload) => {
   const { store, render } = deps;
 
   try {
-    const index = parseInt(payload._event.currentTarget.getAttribute("data-index"));
+    const index = parseInt(
+      payload._event.currentTarget.getAttribute("data-index"),
+    );
 
     store.setMode("editChoice");
     store.setEditingIndex(index);
@@ -38,7 +40,9 @@ export const handleChoiceContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
 
-  const index = parseInt(payload._event.currentTarget.getAttribute("data-index"));
+  const index = parseInt(
+    payload._event.currentTarget.getAttribute("data-index"),
+  );
 
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
@@ -114,7 +118,9 @@ export const handleSubmitClick = (deps, payload) => {
 
 export const handleRemoveChoiceClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(payload._event.currentTarget.id.replace("remove-choice-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("remove-choice-", ""),
+  );
 
   store.removeChoice(index);
   render();
@@ -122,7 +128,9 @@ export const handleRemoveChoiceClick = (deps, payload) => {
 
 export const handleChoiceContentInput = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(payload._event.currentTarget.id.replace("choice-content-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("choice-content-", ""),
+  );
 
   store.updateChoice({
     index: index,

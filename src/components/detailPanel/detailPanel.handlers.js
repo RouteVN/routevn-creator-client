@@ -2,7 +2,10 @@ export const handleEditableImageClick = (deps, payload) => {
   const { getRefIds } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = payload._event.currentTarget.id.replace("editable-image-", "");
+  const fieldIndex = payload._event.currentTarget.id.replace(
+    "editable-image-",
+    "",
+  );
 
   // Get the corresponding file input and trigger click
   const refIds = getRefIds();
@@ -34,7 +37,10 @@ export const handleEditableNumberClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const fieldName = payload._event.currentTarget.id.replace("editable-number-", "");
+  const fieldName = payload._event.currentTarget.id.replace(
+    "editable-number-",
+    "",
+  );
   const field = store.selectField(fieldName);
 
   // Calculate position for left-bottom placement relative to mouse cursor
@@ -77,7 +83,9 @@ export const handleFileInputChange = (deps, payload) => {
   const { dispatchEvent, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("file-input-", ""));
+  const fieldIndex = parseInt(
+    payload._event.currentTarget.id.replace("file-input-", ""),
+  );
   const field = props.fields[fieldIndex];
   const file = payload._event.target.files[0];
 
@@ -104,7 +112,10 @@ export const handleEditableAudioClick = (deps, payload) => {
   const { getRefIds } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = payload._event.currentTarget.id.replace("editable-audio-", "");
+  const fieldIndex = payload._event.currentTarget.id.replace(
+    "editable-audio-",
+    "",
+  );
 
   // Get the corresponding audio file input and trigger click
   const refIds = getRefIds();
@@ -177,7 +188,9 @@ export const handleColorFieldClick = (deps, payload) => {
   const { store, render, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("color-field-", ""));
+  const fieldIndex = parseInt(
+    payload._event.currentTarget.id.replace("color-field-", ""),
+  );
   const field = props.fields[fieldIndex];
 
   if (field && field.type === "color" && field.editable) {
@@ -231,7 +244,9 @@ export const handleFontFieldClick = (deps, payload) => {
   const { getRefIds, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("font-field-", ""));
+  const fieldIndex = parseInt(
+    payload._event.currentTarget.id.replace("font-field-", ""),
+  );
   const field = props.fields[fieldIndex];
 
   if (field && field.editable) {
@@ -274,7 +289,10 @@ export const handleEditableTextClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const fieldName = payload._event.currentTarget.id.replace("editable-text-", "");
+  const fieldName = payload._event.currentTarget.id.replace(
+    "editable-text-",
+    "",
+  );
 
   const field = store.selectField(fieldName);
 
@@ -443,7 +461,9 @@ export const handleClearImage = (deps, payload) => {
   const { props, dispatchEvent } = deps;
 
   // Extract field index from element ID
-  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("clear-image-", ""));
+  const fieldIndex = parseInt(
+    payload._event.currentTarget.id.replace("clear-image-", ""),
+  );
   const field = props.fields[fieldIndex];
 
   if (field && field.type === "image-selector") {

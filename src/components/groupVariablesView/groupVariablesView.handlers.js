@@ -33,7 +33,10 @@ export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
 
   console.log("store.selectDefaultValues", store.selectDefaultValues());
-  console.log("payload._event.detail.formValues", payload._event.detail.formValues);
+  console.log(
+    "payload._event.detail.formValues",
+    payload._event.detail.formValues,
+  );
   // Update form values for preview
   store.updateFormValues({
     ...store.selectDefaultValues(),
@@ -47,7 +50,10 @@ export const handleAddVariableClick = (deps, payload) => {
   payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
-  const groupId = payload._event.currentTarget.id.replace("add-variable-button-", "");
+  const groupId = payload._event.currentTarget.id.replace(
+    "add-variable-button-",
+    "",
+  );
   store.setTargetGroupId(groupId);
 
   // Toggle dialog open

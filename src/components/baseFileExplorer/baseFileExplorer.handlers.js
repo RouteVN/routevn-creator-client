@@ -115,7 +115,8 @@ export const handleItemMouseDown = (deps, payload) => {
   const refIds = getRefIds();
 
   // Get the container element to calculate relative positions
-  const containerRect = payload._event.currentTarget.parentElement.getBoundingClientRect();
+  const containerRect =
+    payload._event.currentTarget.parentElement.getBoundingClientRect();
 
   const itemRects = Object.keys(refIds).reduce((acc, key) => {
     const ref = refIds[key];
@@ -191,7 +192,12 @@ export const handleWindowMouseMove = (deps, payload) => {
   const items = props.items || [];
   const sourceId = store.selectSelectedItemId();
 
-  const result = getSelectedItemIndex(payload._event.clientY, itemRects, 0, items);
+  const result = getSelectedItemIndex(
+    payload._event.clientY,
+    itemRects,
+    0,
+    items,
+  );
 
   // Find the source item's index in the items array
   const sourceIndex = items.findIndex((item) => item.id === sourceId);

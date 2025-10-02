@@ -62,7 +62,10 @@ export const handleFormChange = (deps, payload) => {
 
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const resourceId = payload._event.currentTarget.id.replace("resource-item-", "");
+  const resourceId = payload._event.currentTarget.id.replace(
+    "resource-item-",
+    "",
+  );
 
   store.setTempSelectedResource({
     resourceId,

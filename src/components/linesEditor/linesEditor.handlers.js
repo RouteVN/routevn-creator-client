@@ -469,7 +469,10 @@ export const handleLineKeyDown = (deps, payload) => {
       payload._event.key === "End"
     ) {
       store.setGoalColumn(cursorPos);
-    } else if (payload._event.key === "ArrowUp" || payload._event.key === "ArrowDown") {
+    } else if (
+      payload._event.key === "ArrowUp" ||
+      payload._event.key === "ArrowDown"
+    ) {
       // For vertical movement, ensure we have the current position as goal column if not set
       const currentGoalColumn = store.selectGoalColumn();
       if (currentGoalColumn === 0) {
@@ -490,7 +493,10 @@ export const handleLineKeyDown = (deps, payload) => {
 
           // Get current line content
           const currentContent = payload._event.currentTarget.textContent;
-          const currentLineId = payload._event.currentTarget.id.replace(/^line-/, "");
+          const currentLineId = payload._event.currentTarget.id.replace(
+            /^line-/,
+            "",
+          );
 
           // Find the previous line
           const currentIndex = props.lines.findIndex(
@@ -619,7 +625,10 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "up",
                 targetCursorPosition: goalColumn,
@@ -681,7 +690,8 @@ export const handleLineKeyDown = (deps, payload) => {
           lineHeight: parseFloat(
             window.getComputedStyle(payload._event.currentTarget).lineHeight,
           ),
-          textContent: payload._event.currentTarget.textContent.substring(0, 50) + "...",
+          textContent:
+            payload._event.currentTarget.textContent.substring(0, 50) + "...",
         });
 
         if (isOnLastLine) {
@@ -697,7 +707,10 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "down",
                 targetCursorPosition: goalColumn,
@@ -726,7 +739,10 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "down",
                 targetCursorPosition: 0, // Go to beginning of next line
@@ -754,7 +770,10 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "up",
                 targetCursorPosition: -1, // Special value to indicate "go to end"

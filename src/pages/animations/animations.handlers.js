@@ -264,7 +264,8 @@ export const handleAddPropertiesClick = (deps, payload) => {
 
 export const handleAddPropertyFormSubmit = (deps, payload) => {
   const { store, render } = deps;
-  const { property, initialValue, useInitialValue } = payload._event.detail.formValues;
+  const { property, initialValue, useInitialValue } =
+    payload._event.detail.formValues;
 
   const defaultValues = {
     x: 960,

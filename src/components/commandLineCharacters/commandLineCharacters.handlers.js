@@ -72,7 +72,10 @@ export const handleTransformChange = (deps, payload) => {
   const { store, render } = deps;
   const id = payload._event.currentTarget?.id || payload._event.target?.id;
   // Try both event structures (native change event and custom option-selected event)
-  const value = payload._event.detail?.value || payload._event.currentTarget?.value || payload._event.target?.value;
+  const value =
+    payload._event.detail?.value ||
+    payload._event.currentTarget?.value ||
+    payload._event.target?.value;
 
   // Extract index from ID (format: transform-{index})
   const index = parseInt(id.replace("transform-", ""));
@@ -83,7 +86,10 @@ export const handleTransformChange = (deps, payload) => {
 
 export const handleCharacterItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const characterId = payload._event.currentTarget.id.replace("character-item-", "");
+  const characterId = payload._event.currentTarget.id.replace(
+    "character-item-",
+    "",
+  );
 
   // Add character to selected characters
   store.addCharacter({ id: characterId });
@@ -163,7 +169,9 @@ export const handleBreadcumbClick = (deps, payload) => {
 
 export const handleRemoveCharacterClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(payload._event.currentTarget.id.replace("remove-character-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("remove-character-", ""),
+  );
 
   store.removeCharacter(index);
   render();
@@ -181,7 +189,9 @@ export const handleAddCharacterClick = (deps, payload) => {
 
 export const handleCharacterSpriteClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(payload._event.currentTarget.id.replace("character-sprite-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("character-sprite-", ""),
+  );
 
   store.setSelectedCharacterIndex({ index });
   store.setMode({

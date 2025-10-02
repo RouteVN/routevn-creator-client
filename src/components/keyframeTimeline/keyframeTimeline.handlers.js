@@ -56,7 +56,10 @@ export const handleKeyframeRightClick = (deps, payload) => {
 
 export const handlePropertyNameRightClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace("property-name-", "");
+  const property = payload._event.currentTarget.id.replace(
+    "property-name-",
+    "",
+  );
 
   payload._event.preventDefault();
 
@@ -76,7 +79,10 @@ export const handlePropertyNameRightClick = (deps, payload) => {
 
 export const handleInitialValueClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace("initial-value-", "");
+  const property = payload._event.currentTarget.id.replace(
+    "initial-value-",
+    "",
+  );
 
   dispatchEvent(
     new CustomEvent("initial-value-click", {

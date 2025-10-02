@@ -73,7 +73,7 @@ export const subscriptions = (deps) => {
     subject.pipe(
       filter(({ action, payload }) => action === "redirect"),
       tap(({ action, payload }) => {
-        deps.handlers.handleRedirect(deps, { ...payload, action } );
+        deps.handlers.handleRedirect(deps, { ...payload, action });
       }),
     ),
     fromEvent(window, "popstate").pipe(

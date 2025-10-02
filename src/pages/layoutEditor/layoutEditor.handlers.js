@@ -555,7 +555,10 @@ export const handleFormChange = async (deps, event, payload) => {
       anchorY: payload._event.detail.fieldValue.y,
     };
   } else {
-    unflattenedUpdate = unflattenKey(payload._event.detail.name, payload._event.detail.fieldValue);
+    unflattenedUpdate = unflattenKey(
+      payload._event.detail.name,
+      payload._event.detail.fieldValue,
+    );
   }
 
   const currentItem = store.selectSelectedItem();

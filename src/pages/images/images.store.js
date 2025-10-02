@@ -64,7 +64,7 @@ export const setSearchQuery = (state, { query }) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, { groupId } ) => {
+export const toggleGroupCollapse = (state, { groupId }) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);

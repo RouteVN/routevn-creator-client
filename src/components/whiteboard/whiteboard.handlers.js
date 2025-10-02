@@ -12,8 +12,10 @@ export const handleContainerContextMenu = (deps, payload) => {
   const pan = store.selectPan();
   const zoomLevel = store.selectZoomLevel();
 
-  const canvasX = (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
-  const canvasY = (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
+  const canvasX =
+    (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
+  const canvasY =
+    (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
 
   // Emit canvas right-click event
   dispatchEvent(
@@ -47,8 +49,10 @@ export const handleContainerMouseDown = (deps, payload) => {
     const zoomLevel = store.selectZoomLevel();
 
     // Use container coordinates instead of canvas coordinates for proper zoom calculation
-    const canvasX = (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
-    const canvasY = (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
+    const canvasX =
+      (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
+    const canvasY =
+      (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
 
     // Emit click event with coordinates
     deps.dispatchEvent(
@@ -159,8 +163,10 @@ export const handleItemMouseDown = (deps, payload) => {
   const pan = store.selectPan();
 
   // Calculate the mouse position relative to the canvas coordinate space
-  const mouseInCanvasX = (payload._event.clientX - canvasRect.left - pan.x) / zoomLevel;
-  const mouseInCanvasY = (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
+  const mouseInCanvasX =
+    (payload._event.clientX - canvasRect.left - pan.x) / zoomLevel;
+  const mouseInCanvasY =
+    (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
 
   // Get the item's current position in canvas coordinates
   const itemX = parseInt(itemElement.style.left, 10) || 0;
@@ -262,7 +268,8 @@ export const handleWindowMouseMove = (deps, payload) => {
     // Calculate current mouse position in canvas coordinate space
     const mouseInCanvasX =
       (payload._event.clientX - canvasRect.left - pan.x) / zoomLevel;
-    const mouseInCanvasY = (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
+    const mouseInCanvasY =
+      (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
 
     // Calculate new item position by subtracting the drag offset
     const newX = mouseInCanvasX - dragOffset.x;
