@@ -1,10 +1,10 @@
 export const handleTabClick =
   ({ setActiveTab, navigate }) =>
   (event) => {
-    const tab = event.detail.data.item;
+    const tab = payload._event.detail.data.item;
 
     if (!tab || !tab.path) {
-      console.error("handleTabClick: Missing tab or path", event.detail);
+      console.error("handleTabClick: Missing tab or path", payload._event.detail);
       return;
     }
 

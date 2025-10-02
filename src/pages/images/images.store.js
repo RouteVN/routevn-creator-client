@@ -23,7 +23,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   imagesData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
@@ -60,11 +60,11 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = (state, { query }) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = (state, { groupId } ) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -73,8 +73,7 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
-export const showFullImagePreview = (state, itemId) => {
-  // Find the item by itemId and extract its fileId
+export const showFullImagePreview = (state, { itemId }) => {
   const flatItems = toFlatItems(state.imagesData);
   const item = flatItems.find((item) => item.id === itemId);
 
@@ -89,7 +88,7 @@ export const hideFullImagePreview = (state) => {
   state.fullImagePreviewFileId = undefined;
 };
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.imagesData);
   const rawFlatGroups = toFlatGroups(state.imagesData);
   const searchQuery = state.searchQuery.toLowerCase();

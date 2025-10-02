@@ -64,7 +64,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -78,16 +78,16 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleTransformItemClick = (e, deps) => {
+export const handleTransformItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
   store.setSelectedItemId(itemId);
   render();
 };
 
-export const handleTransformItemDoubleClick = async (e, deps) => {
+export const handleTransformItemDoubleClick = async (deps, payload) => {
   const { store, render, drenderer, getRefIds } = deps;
-  const itemId = e.detail.itemId;
+  const itemId = payload._event.detail.itemId;
 
   // Find the item data using the same approach as fonts page
   const state = store.getState();
@@ -135,12 +135,12 @@ export const handleTransformItemDoubleClick = async (e, deps) => {
   drenderer.render(renderState);
 };
 
-export const handleAddTransformClick = async (e, deps) => {
+export const handleAddTransformClick = async (deps, payload) => {
   const { store, render, drenderer, getRefIds } = deps;
-  e.stopPropagation(); // Prevent group click
+  payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
-  const groupId = e.detail.groupId;
+  const groupId = payload._event.detail.groupId;
 
   // Open dialog in add mode
   store.openTransformFormDialog({
@@ -173,23 +173,23 @@ export const handleAddTransformClick = async (e, deps) => {
   drenderer.render(renderState);
 };
 
-export const handleGroupClick = (e, deps) => {
+export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = e.currentTarget.id.replace("group-", "");
+  const groupId = payload._event.currentTarget.id.replace("group-", "");
 
   // Handle group collapse internally
   store.toggleGroupCollapse(groupId);
   render();
 };
 
-export const handleTransformCreated = async (e, deps) => {
+export const handleTransformCreated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
-    e.detail;
+    payload._event.detail;
 
-  console.log("22222222222222 created", e.detail);
+  console.log("22222222222222 created", payload._event.detail);
 
   repository.addAction({
     actionType: "treePush",
@@ -217,7 +217,7 @@ export const handleTransformCreated = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -228,7 +228,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -238,12 +238,12 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleTransformEdited = async (e, deps) => {
+export const handleTransformEdited = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { itemId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
-    e.detail;
+    payload._event.detail;
 
   // Update repository directly
   repository.addAction({
@@ -271,22 +271,22 @@ export const handleTransformEdited = async (e, deps) => {
   render();
 };
 
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail?.value || "";
+  const searchQuery = payload._event.detail?.value || "";
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.toggleGroupCollapse(groupId);
   render();
 };
 
 // Transform dialog and canvas handlers (moved from groupTransformsView)
-export const handleTransformDialogClose = (_, deps) => {
+export const handleTransformDialogClose = (deps, payload) => {
   const { store, render } = deps;
 
   // Close dialog and reset all state
@@ -294,15 +294,15 @@ export const handleTransformDialogClose = (_, deps) => {
   render();
 };
 
-export const handleTransformFormActionClick = (e, deps) => {
+export const handleTransformFormActionClick = (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
 
   // Check which button was clicked
-  const actionId = e.detail.actionId;
+  const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
     // Get form values from the event detail - it's in formValues
-    const formData = e.detail.formValues;
+    const formData = payload._event.detail.formValues;
 
     // Get state values using selector functions
     const targetGroupId = store.selectTargetGroupId();
@@ -364,10 +364,10 @@ export const handleTransformFormActionClick = (e, deps) => {
   }
 };
 
-export const handleTransformFormChange = async (e, deps) => {
+export const handleTransformFormChange = async (deps, payload) => {
   const { render, drenderer } = deps;
 
-  const formValues = e.detail.formValues;
+  const formValues = payload._event.detail.formValues;
 
   const x = parseInt(formValues.x || 0);
   const y = parseInt(formValues.y || 0);

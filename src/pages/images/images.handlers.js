@@ -3,13 +3,14 @@ import { nanoid } from "nanoid";
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
+  console.log('p', p)
   const repository = await repositoryFactory.getByProject(p);
   const { images } = repository.getState();
   store.setItems(images);
   render();
 };
 
-export const handleFileExplorerDataChanged = async (e, deps) => {
+export const handleFileExplorerDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -18,7 +19,7 @@ export const handleFileExplorerDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (e, deps) => {
+export const handleFormExtraEvent = async (deps, payload) => {
   const {
     repositoryFactory,
     router,
@@ -85,9 +86,9 @@ export const handleFormExtraEvent = async (e, deps) => {
   render();
 };
 
-export const handleImageItemClick = async (e, deps) => {
+export const handleImageItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
@@ -105,12 +106,12 @@ export const handleImageItemClick = async (e, deps) => {
   render();
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
+export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { files, targetGroupId } = e.detail; // Extract from forwarded event
+  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   const successfulUploads = await fileManager.upload(files);
@@ -144,7 +145,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -155,7 +156,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -165,31 +166,3 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleSearchInput = (e, deps) => {
-  const { store, render } = deps;
-  const searchQuery = e.detail.value || "";
-
-  store.setSearchQuery(searchQuery);
-  render();
-};
-
-export const handleGroupToggle = (e, deps) => {
-  const { store, render } = deps;
-  const groupId = e.detail.groupId;
-
-  store.toggleGroupCollapse(groupId);
-  render();
-};
-
-export const handleImageDoubleClick = (e, deps) => {
-  const { store, render } = deps;
-  const { itemId } = e.detail;
-  store.showFullImagePreview(itemId);
-  render();
-};
-
-export const handlePreviewOverlayClick = (_, deps) => {
-  const { store, render } = deps;
-  store.hideFullImagePreview();
-  render();
-};

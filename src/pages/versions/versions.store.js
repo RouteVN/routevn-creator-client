@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   versions: [],
   showVersionForm: false,
   versionFormData: {},
@@ -43,7 +43,7 @@ export const selectVersion = ({ state }, versionId) => {
   return state.versions.find((v) => v.id === versionId);
 };
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   const versionFormFields = {
     fields: [
       {

@@ -110,12 +110,12 @@ export const getSelectedItemIndex = (
   };
 };
 
-export const handleItemMouseDown = (e, deps) => {
+export const handleItemMouseDown = (deps, payload) => {
   const { store, getRefIds, render } = deps;
   const refIds = getRefIds();
 
   // Get the container element to calculate relative positions
-  const containerRect = e.currentTarget.parentElement.getBoundingClientRect();
+  const containerRect = payload._event.currentTarget.parentElement.getBoundingClientRect();
 
   const itemRects = Object.keys(refIds).reduce((acc, key) => {
     const ref = refIds[key];
@@ -134,7 +134,7 @@ export const handleItemMouseDown = (e, deps) => {
     return acc;
   }, {});
 
-  const itemId = e.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item-", "");
   store.startDragging({
     id: itemId,
     itemRects,
@@ -143,7 +143,7 @@ export const handleItemMouseDown = (e, deps) => {
   render();
 };
 
-export const handleWindowMouseUp = (e, deps) => {
+export const handleWindowMouseUp = (deps, payload) => {
   const { store, dispatchEvent, render, props } = deps;
 
   if (!store.selectIsDragging()) {
@@ -179,7 +179,7 @@ export const handleWindowMouseUp = (e, deps) => {
   );
 };
 
-export const handleWindowMouseMove = (e, deps) => {
+export const handleWindowMouseMove = (deps, payload) => {
   const isDragging = deps.store.selectIsDragging();
 
   if (!isDragging) {
@@ -191,7 +191,7 @@ export const handleWindowMouseMove = (e, deps) => {
   const items = props.items || [];
   const sourceId = store.selectSelectedItemId();
 
-  const result = getSelectedItemIndex(e.clientY, itemRects, 0, items);
+  const result = getSelectedItemIndex(payload._event.clientY, itemRects, 0, items);
 
   // Find the source item's index in the items array
   const sourceIndex = items.findIndex((item) => item.id === sourceId);
@@ -240,35 +240,35 @@ export const subscriptions = (deps) => {
   return [
     fromEvent(window, "mousemove", { passive: true }).pipe(
       tap((e) => {
-        deps.handlers.handleWindowMouseMove(e, deps);
+        deps.handlers.handleWindowMouseMove(deps, { _event: e });
       }),
     ),
     fromEvent(window, "mouseup", { passive: true }).pipe(
       tap((e) => {
-        deps.handlers.handleWindowMouseUp(e, deps);
+        deps.handlers.handleWindowMouseUp(deps, { _event: e });
       }),
     ),
   ];
 };
 
-export const handleContainerContextMenu = (e, deps) => {
+export const handleContainerContextMenu = (deps, payload) => {
   const { store, render, props } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
   // Show dropdown menu for empty space
   store.showDropdownMenuFileExplorerEmpty({
-    position: { x: e.clientX, y: e.clientY },
+    position: { x: payload._event.clientX, y: payload._event.clientY },
     emptyContextMenuItems: props.emptyContextMenuItems,
   });
   render();
 };
 
-export const handleEmptyMessageClick = (e, deps) => {
+export const handleEmptyMessageClick = (deps, payload) => {
   const { store, render, props } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
   // Show dropdown menu when clicking on empty message
-  const rect = e.currentTarget.getBoundingClientRect();
+  const rect = payload._event.currentTarget.getBoundingClientRect();
   store.showDropdownMenuFileExplorerEmpty({
     position: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
     emptyContextMenuItems: props.emptyContextMenuItems,
@@ -276,11 +276,11 @@ export const handleEmptyMessageClick = (e, deps) => {
   render();
 };
 
-export const handleItemContextMenu = (e, deps) => {
+export const handleItemContextMenu = (deps, payload) => {
   const { store, render, props } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
-  const itemId = e.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item-", "");
 
   // Find the item to get its type
   const item = props.items?.find((item) => item.id === itemId);
@@ -297,16 +297,16 @@ export const handleItemContextMenu = (e, deps) => {
 
   // Show dropdown menu for item
   store.showDropdownMenuFileExplorerItem({
-    position: { x: e.clientX, y: e.clientY },
+    position: { x: payload._event.clientX, y: payload._event.clientY },
     id: itemId,
     contextMenuItems: filteredMenuItems,
   });
   render();
 };
 
-export const handleItemClick = (e, deps) => {
+export const handleItemClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
-  const itemId = e.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item-", "");
 
   // Update selected item
   store.setSelectedItemId(itemId);
@@ -321,23 +321,23 @@ export const handleItemClick = (e, deps) => {
   );
 };
 
-export const handleArrowClick = (e, deps) => {
+export const handleArrowClick = (deps, payload) => {
   const { store, render } = deps;
-  e.stopPropagation(); // Prevent triggering item click
-  const folderId = e.currentTarget.id.replace("arrow-", "");
+  payload._event.stopPropagation(); // Prevent triggering item click
+  const folderId = payload._event.currentTarget.id.replace("arrow-", "");
   store.toggleFolderExpand(folderId);
   render();
 };
 
-export const handleDropdownMenuClickOverlay = (e, deps) => {
+export const handleDropdownMenuClickOverlay = (deps, payload) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = (e, deps) => {
+export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, dispatchEvent, render } = deps;
-  const detail = e.detail;
+  const detail = payload._event.detail;
   const itemId = store.selectDropdownMenuItemId();
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
@@ -367,15 +367,15 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   );
 };
 
-export const handlePopoverClickOverlay = (e, deps) => {
+export const handlePopoverClickOverlay = (deps, payload) => {
   const { store, render } = deps;
   store.hidePopover();
   render();
 };
 
-export const handleFormActionClick = (e, deps) => {
+export const handleFormActionClick = (deps, payload) => {
   const { store, dispatchEvent, render } = deps;
-  const detail = e.detail;
+  const detail = payload._event.detail;
 
   // Extract action and values from detail (form structure may vary)
   const action = detail.action || detail.actionId;

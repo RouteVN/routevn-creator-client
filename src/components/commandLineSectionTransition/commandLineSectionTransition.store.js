@@ -56,7 +56,7 @@ const form = {
   },
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
 
@@ -81,7 +81,7 @@ export const setFormValues = (state, payload) => {
   state.formValues = payload;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const allItems = toFlatItems(state.items);
   const allScenes = allItems.filter((item) => item.type === "scene");
   const currentSceneSections = props?.sections || [];

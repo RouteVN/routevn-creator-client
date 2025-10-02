@@ -90,7 +90,7 @@ const choiceForm = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   formKeyCheckpoint: 0,
   isDragging: false,
   dragOffset: { x: 0, y: 0 },
@@ -441,7 +441,7 @@ export const selectFontsData = ({ state }) => {
   return state.fontsData;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
 

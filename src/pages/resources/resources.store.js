@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   assets: [
     {
       id: "images",
@@ -88,6 +88,6 @@ export const selectResourceRoute = ({ state, props }, id) => {
   return resource.route;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   return state;
 };

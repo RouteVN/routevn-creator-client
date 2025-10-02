@@ -39,13 +39,13 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleImageSelected = async (e, deps) => {
+export const handleImageSelected = async (deps, payload) => {
   const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const { images } = repository.getState();
 
-  const { imageId } = e.detail;
+  const { imageId } = payload._event.detail;
 
   store.setTempSelectedResource({
     resourceId: imageId,
@@ -66,7 +66,7 @@ export const handleImageSelected = async (e, deps) => {
   render();
 };
 
-export const handleFormExtra = (e, deps) => {
+export const handleFormExtra = (deps, payload) => {
   const { store, render } = deps;
   store.setMode({
     mode: "gallery",
@@ -75,9 +75,9 @@ export const handleFormExtra = (e, deps) => {
   render();
 };
 
-export const handleFormInputChange = (e, deps) => {
+export const handleFormInputChange = (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = e.detail;
+  const { name, fieldValue } = payload._event.detail;
 
   if (name === "animation") {
     store.setSelectedAnimation({
@@ -87,9 +87,9 @@ export const handleFormInputChange = (e, deps) => {
   }
 };
 
-export const handleResourceItemClick = (e, deps) => {
+export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const resourceId = e.currentTarget.id.replace("resource-item-", "");
+  const resourceId = payload._event.currentTarget.id.replace("resource-item-", "");
   const resourceType = store.selectTab();
 
   store.setTempSelectedResource({
@@ -99,17 +99,17 @@ export const handleResourceItemClick = (e, deps) => {
   render();
 };
 
-export const handleTabClick = (e, deps) => {
+export const handleTabClick = (deps, payload) => {
   const { store, render } = deps;
 
   store.setTab({
-    tab: e.detail.id,
+    tab: payload._event.detail.id,
   });
 
   render();
 };
 
-export const handleSubmitClick = (e, deps) => {
+export const handleSubmitClick = (deps, payload) => {
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
   const selectedAnimationId = store.selectSelectedAnimation();
@@ -139,7 +139,7 @@ export const handleSubmitClick = (e, deps) => {
   );
 };
 
-export const handleBackgroundImageClick = (payload, deps) => {
+export const handleBackgroundImageClick = (deps, payload) => {
   const { store, render } = deps;
   const selectedResource = store.selectSelectedResource();
 
@@ -157,10 +157,10 @@ export const handleBackgroundImageClick = (payload, deps) => {
   render();
 };
 
-export const handleBreadcumbActionsClick = (e, deps) => {
+export const handleBreadcumbActionsClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
@@ -168,13 +168,13 @@ export const handleBreadcumbActionsClick = (e, deps) => {
     );
   } else {
     store.setMode({
-      mode: e.detail.id,
+      mode: payload._event.detail.id,
     });
     render();
   }
 };
 
-export const handleButtonSelectClick = async (e, deps) => {
+export const handleButtonSelectClick = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);

@@ -1,8 +1,8 @@
-export const handleEditableImageClick = (e, deps) => {
+export const handleEditableImageClick = (deps, payload) => {
   const { getRefIds } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = e.currentTarget.id.replace("editable-image-", "");
+  const fieldIndex = payload._event.currentTarget.id.replace("editable-image-", "");
 
   // Get the corresponding file input and trigger click
   const refIds = getRefIds();
@@ -13,15 +13,15 @@ export const handleEditableImageClick = (e, deps) => {
   }
 };
 
-export const handleSelectChange = (e, deps) => {
+export const handleSelectChange = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const id = e.currentTarget.id.replace("select-", "");
+  const id = payload._event.currentTarget.id.replace("select-", "");
 
   dispatchEvent(
     new CustomEvent("item-update", {
       detail: {
         formValues: {
-          [id]: e.detail.value,
+          [id]: payload._event.detail.value,
         },
       },
       bubbles: true,
@@ -30,17 +30,17 @@ export const handleSelectChange = (e, deps) => {
   );
 };
 
-export const handleEditableNumberClick = (e, deps) => {
+export const handleEditableNumberClick = (deps, payload) => {
   const { store, render } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
-  const fieldName = e.currentTarget.id.replace("editable-number-", "");
+  const fieldName = payload._event.currentTarget.id.replace("editable-number-", "");
   const field = store.selectField(fieldName);
 
   // Calculate position for left-bottom placement relative to mouse cursor
   const position = {
-    x: e.clientX, // Move 200px to the left of cursor
-    y: e.clientY, // Move 10px down from cursor
+    x: payload._event.clientX, // Move 200px to the left of cursor
+    y: payload._event.clientY, // Move 10px down from cursor
   };
 
   store.showPopover({
@@ -73,13 +73,13 @@ export const handleEditableNumberClick = (e, deps) => {
   render();
 };
 
-export const handleFileInputChange = (e, deps) => {
+export const handleFileInputChange = (deps, payload) => {
   const { dispatchEvent, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace("file-input-", ""));
+  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("file-input-", ""));
   const field = props.fields[fieldIndex];
-  const file = e.target.files[0];
+  const file = payload._event.target.files[0];
 
   if (file && field) {
     // Emit event to parent component with file and field information
@@ -96,15 +96,15 @@ export const handleFileInputChange = (e, deps) => {
     );
 
     // Reset the file input for future uploads
-    e.target.value = "";
+    payload._event.target.value = "";
   }
 };
 
-export const handleEditableAudioClick = (e, deps) => {
+export const handleEditableAudioClick = (deps, payload) => {
   const { getRefIds } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = e.currentTarget.id.replace("editable-audio-", "");
+  const fieldIndex = payload._event.currentTarget.id.replace("editable-audio-", "");
 
   // Get the corresponding audio file input and trigger click
   const refIds = getRefIds();
@@ -115,30 +115,30 @@ export const handleEditableAudioClick = (e, deps) => {
   }
 };
 
-export const handleTitleClick = (e, deps) => {
+export const handleTitleClick = (deps, payload) => {
   const { store, render } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
   const position = {
-    x: e.clientX,
-    y: e.clientY,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
   };
 
   store.showPopover({ position });
   render();
 };
 
-export const handlePopoverClickOverlay = (_, deps) => {
+export const handlePopoverClickOverlay = (deps, payload) => {
   const { store, render } = deps;
   store.hidePopover();
   render();
 };
 
-export const handleFormActionClick = (e, deps) => {
+export const handleFormActionClick = (deps, payload) => {
   const { store, dispatchEvent, render } = deps;
-  const detail = e.detail;
+  const detail = payload._event.detail;
 
   // Extract action and values from detail - use correct property names
   const action = detail.actionId;
@@ -173,11 +173,11 @@ export const handleFormActionClick = (e, deps) => {
   }
 };
 
-export const handleColorFieldClick = (e, deps) => {
+export const handleColorFieldClick = (deps, payload) => {
   const { store, render, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace("color-field-", ""));
+  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("color-field-", ""));
   const field = props.fields[fieldIndex];
 
   if (field && field.type === "color" && field.editable) {
@@ -193,15 +193,15 @@ export const handleColorFieldClick = (e, deps) => {
   }
 };
 
-export const handleCloseColorDialog = (e, deps) => {
+export const handleCloseColorDialog = (deps, payload) => {
   const { store, render } = deps;
   store.hideColorDialog();
   render();
 };
 
-export const handleColorFormActionClick = (e, deps) => {
+export const handleColorFormActionClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  const detail = e.detail;
+  const detail = payload._event.detail;
 
   // Extract values from detail
   const values = detail.formValues;
@@ -227,11 +227,11 @@ export const handleColorFormActionClick = (e, deps) => {
   );
 };
 
-export const handleFontFieldClick = (e, deps) => {
+export const handleFontFieldClick = (deps, payload) => {
   const { getRefIds, props } = deps;
 
   // Extract the field index from the element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace("font-field-", ""));
+  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("font-field-", ""));
   const field = props.fields[fieldIndex];
 
   if (field && field.editable) {
@@ -245,15 +245,15 @@ export const handleFontFieldClick = (e, deps) => {
   }
 };
 
-export const handleTypographySelectChange = (e, deps) => {
+export const handleTypographySelectChange = (deps, payload) => {
   const { store, render, props } = deps;
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
-    e.currentTarget.id.replace("typography-select-", ""),
+    payload._event.currentTarget.id.replace("typography-select-", ""),
   );
   const field = props.fields[fieldIndex];
-  const selectedValue = e.detail.value;
+  const selectedValue = payload._event.detail.value;
 
   if (
     field &&
@@ -269,20 +269,20 @@ export const handleTypographySelectChange = (e, deps) => {
   }
 };
 
-export const handleEditableTextClick = (e, deps) => {
+export const handleEditableTextClick = (deps, payload) => {
   console.log("@##################");
   const { store, render } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
-  const fieldName = e.currentTarget.id.replace("editable-text-", "");
+  const fieldName = payload._event.currentTarget.id.replace("editable-text-", "");
 
   const field = store.selectField(fieldName);
 
   // Calculate position for left-bottom placement relative to mouse cursor
   // Offset to the left and slightly down from the cursor
   const position = {
-    x: e.clientX,
-    y: e.clientY,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
   };
 
   store.showPopover({
@@ -313,15 +313,15 @@ export const handleEditableTextClick = (e, deps) => {
   render();
 };
 
-export const handleCloseTypographyDialog = (e, deps) => {
+export const handleCloseTypographyDialog = (deps, payload) => {
   const { store, render } = deps;
   store.hideTypographyDialog();
   render();
 };
 
-export const handleTypographyFormActionClick = (e, deps) => {
+export const handleTypographyFormActionClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  const detail = e.detail;
+  const detail = payload._event.detail;
 
   // Extract values from detail
   const values = detail.formValues;
@@ -351,16 +351,16 @@ export const handleTypographyFormActionClick = (e, deps) => {
   );
 };
 
-export const handleImageSelectorFieldClick = (e, deps) => {
+export const handleImageSelectorFieldClick = (deps, payload) => {
   const { store, render, props, dispatchEvent } = deps;
 
   console.log("handleImageSelectorFieldClick called");
-  console.log("event target:", e.currentTarget);
-  console.log("event target id:", e.currentTarget.id);
+  console.log("event target:", payload._event.currentTarget);
+  console.log("event target id:", payload._event.currentTarget.id);
 
   // Extract field index from element ID
   const fieldIndex = parseInt(
-    e.currentTarget.id.replace("image-selector-field-", ""),
+    payload._event.currentTarget.id.replace("image-selector-field-", ""),
   );
   const field = props.fields[fieldIndex];
 
@@ -383,15 +383,15 @@ export const handleImageSelectorFieldClick = (e, deps) => {
   }
 };
 
-export const handleImageSelectorSelection = (e, deps) => {
+export const handleImageSelectorSelection = (deps, payload) => {
   const { store, render } = deps;
-  const { imageId } = e.detail;
+  const { imageId } = payload._event.detail;
 
   store.setTempSelectedImageId({ imageId });
   render();
 };
 
-export const handleConfirmImageSelection = (e, deps) => {
+export const handleConfirmImageSelection = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
 
   const state = store.getState ? store.getState() : store._state || store.state;
@@ -415,21 +415,21 @@ export const handleConfirmImageSelection = (e, deps) => {
   );
 };
 
-export const handleCancelImageSelection = (e, deps) => {
+export const handleCancelImageSelection = (deps, payload) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
 };
 
-export const handleCloseImageSelectorDialog = (e, deps) => {
+export const handleCloseImageSelectorDialog = (deps, payload) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
 };
 
-export const handleShowImageSelectorDialog = (e, deps) => {
+export const handleShowImageSelectorDialog = (deps, payload) => {
   const { store, render } = deps;
-  const { fieldIndex, groups, currentValue } = e.detail;
+  const { fieldIndex, groups, currentValue } = payload._event.detail;
 
   store.showImageSelectorDialog({
     fieldIndex,
@@ -439,11 +439,11 @@ export const handleShowImageSelectorDialog = (e, deps) => {
   render();
 };
 
-export const handleClearImage = (e, deps) => {
+export const handleClearImage = (deps, payload) => {
   const { props, dispatchEvent } = deps;
 
   // Extract field index from element ID
-  const fieldIndex = parseInt(e.currentTarget.id.replace("clear-image-", ""));
+  const fieldIndex = parseInt(payload._event.currentTarget.id.replace("clear-image-", ""));
   const field = props.fields[fieldIndex];
 
   if (field && field.type === "image-selector") {

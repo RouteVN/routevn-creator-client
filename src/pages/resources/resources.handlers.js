@@ -7,10 +7,10 @@ export const lstrip = (prefix) => {
   };
 };
 
-export const handleResourcesClick = (e, deps) => {
+export const handleResourcesClick = (deps, payload) => {
   console.log("iiiiiiiiiiiiiiii");
   const { selectResourceRoute } = deps.store;
-  const resourceId = lstrip("resource-")(e.currentTarget.id);
+  const resourceId = lstrip("resource-")(payload._event.currentTarget.id);
   const route = selectResourceRoute(resourceId);
   console.log({
     resourceId,

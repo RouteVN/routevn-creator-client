@@ -7,18 +7,18 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   await repository.addAction({
     actionType: "set",
-    target: `project.${e.detail.name}`,
-    value: e.detail.fieldValue,
+    target: `project.${payload._event.detail.name}`,
+    value: payload._event.detail.fieldValue,
   });
 };
 
-export const handleFormExtraEvent = async (_, deps) => {
+export const handleFormExtraEvent = async (deps, payload) => {
   const {
     filePicker,
     fileManagerFactory,

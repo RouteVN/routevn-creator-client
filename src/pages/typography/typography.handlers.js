@@ -18,7 +18,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (_, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -128,9 +128,9 @@ const generateTypographyPreview = (item, colorsData, fontsData) => {
   return canvas.toDataURL("image/png");
 };
 
-export const handleTypographyItemClick = (e, deps) => {
+export const handleTypographyItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
@@ -164,11 +164,11 @@ export const handleTypographyItemClick = (e, deps) => {
   render();
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
+export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { files, targetGroupId } = e.detail; // Extract from forwarded event
+  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   // Get fileManager for this project
@@ -208,7 +208,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-const handleTypographyCreated = async (e, deps) => {
+const handleTypographyCreated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -221,7 +221,7 @@ const handleTypographyCreated = async (e, deps) => {
     fontStyle,
     fontWeight,
     previewText,
-  } = e.detail;
+  } = payload._event.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -247,7 +247,7 @@ const handleTypographyCreated = async (e, deps) => {
   render();
 };
 
-const handleTypographyUpdated = async (e, deps) => {
+const handleTypographyUpdated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -260,7 +260,7 @@ const handleTypographyUpdated = async (e, deps) => {
     fontStyle,
     fontWeight,
     previewText,
-  } = e.detail;
+  } = payload._event.detail;
 
   repository.addAction({
     actionType: "treeUpdate",
@@ -284,7 +284,7 @@ const handleTypographyUpdated = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -295,7 +295,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -334,7 +334,7 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = (_, deps) => {
+export const handleFormExtraEvent = (deps, payload) => {
   const { store, render } = deps;
 
   // Handle typography preview click
@@ -353,9 +353,9 @@ export const handleFormExtraEvent = (_, deps) => {
 };
 
 // Dialog handlers
-export const handleAddTypographyClick = (e, deps) => {
+export const handleAddTypographyClick = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
 
   store.setTargetGroupId(groupId);
   store.clearEditMode();
@@ -364,9 +364,9 @@ export const handleAddTypographyClick = (e, deps) => {
   render();
 };
 
-export const handleTypographyItemDoubleClick = (e, deps) => {
+export const handleTypographyItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   // Get the item from the store
   const item = store.selectItemById(itemId);
@@ -382,15 +382,15 @@ export const handleTypographyItemDoubleClick = (e, deps) => {
   }
 };
 
-export const handleDialogFormChange = (e, deps) => {
+export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
 
   // Update form values for preview
-  store.updateFormValues(e.detail.formValues);
+  store.updateFormValues(payload._event.detail.formValues);
   render();
 };
 
-export const handleCloseDialog = (_, deps) => {
+export const handleCloseDialog = (deps, payload) => {
   const { store, render } = deps;
 
   // Reset form values, clear edit mode, and close dialog
@@ -400,14 +400,14 @@ export const handleCloseDialog = (_, deps) => {
   render();
 };
 
-export const handleFormActionClick = (e, deps) => {
+export const handleFormActionClick = (deps, payload) => {
   const { store, render, globalUI } = deps;
 
   // Check which button was clicked
-  const actionId = e.detail.actionId;
+  const actionId = payload._event.detail.actionId;
 
   // Handle add option for color selector
-  if (actionId === "select-options-add" && e.detail.name === "fontColor") {
+  if (actionId === "select-options-add" && payload._event.detail.name === "fontColor") {
     // Open the add color dialog
     store.openAddColorDialog();
     render();
@@ -415,7 +415,7 @@ export const handleFormActionClick = (e, deps) => {
   }
 
   // Handle add option for font selector
-  if (actionId === "select-options-add" && e.detail.name === "fontStyle") {
+  if (actionId === "select-options-add" && payload._event.detail.name === "fontStyle") {
     // Open the add font dialog
     store.openAddFontDialog();
     render();
@@ -424,7 +424,7 @@ export const handleFormActionClick = (e, deps) => {
 
   if (actionId === "submit") {
     // Get form values from the event detail
-    const formData = e.detail.formValues;
+    const formData = payload._event.detail.formValues;
 
     // Get the store state using selector
     const { targetGroupId, editMode, editingItemId } =
@@ -499,19 +499,19 @@ export const handleFormActionClick = (e, deps) => {
 };
 
 // Add color dialog handlers
-export const handleAddColorDialogClose = (_, deps) => {
+export const handleAddColorDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeAddColorDialog();
   render();
 };
 
-export const handleAddColorFormAction = async (e, deps) => {
+export const handleAddColorFormAction = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
-  if (e.detail.actionId === "submit") {
-    const formData = e.detail.formValues;
+  if (payload._event.detail.actionId === "submit") {
+    const formData = payload._event.detail.formValues;
     const newColorId = nanoid();
 
     // Create the color in the repository
@@ -543,15 +543,15 @@ export const handleAddColorFormAction = async (e, deps) => {
 };
 
 // Add font dialog handlers
-export const handleAddFontDialogClose = (_, deps) => {
+export const handleAddFontDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeAddFontDialog();
   render();
 };
 
-export const handleFontFileSelected = async (e, deps) => {
+export const handleFontFileSelected = async (deps, payload) => {
   const { store, render, fileManagerFactory, router, globalUI } = deps;
-  const { files } = e.detail;
+  const { files } = payload._event.detail;
 
   if (files && files.length > 0) {
     const file = files[0];
@@ -590,13 +590,13 @@ export const handleFontFileSelected = async (e, deps) => {
   }
 };
 
-export const handleAddFontFormAction = async (e, deps) => {
+export const handleAddFontFormAction = async (deps, payload) => {
   const { store, render, repositoryFactory, router, globalUI } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
-  if (e.detail.actionId === "submit") {
-    const formData = e.detail.formValues;
+  if (payload._event.detail.actionId === "submit") {
+    const formData = payload._event.detail.formValues;
     const fontData = store.selectSelectedFontData();
 
     // Check if a font file was selected and uploaded
@@ -640,16 +640,16 @@ export const handleAddFontFormAction = async (e, deps) => {
     render();
   }
 };
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail?.value || "";
+  const searchQuery = payload._event.detail?.value || "";
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.toggleGroupCollapse(groupId);
   render();
 };

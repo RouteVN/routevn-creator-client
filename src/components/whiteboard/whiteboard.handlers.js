@@ -2,8 +2,8 @@ import { fromEvent, tap } from "rxjs";
 
 let dragOffset = { x: 0, y: 0 };
 
-export const handleContainerContextMenu = (event, deps) => {
-  event.preventDefault();
+export const handleContainerContextMenu = (deps, payload) => {
+  payload._event.preventDefault();
   const { store, getRefIds, dispatchEvent } = deps;
 
   // Calculate click position in canvas coordinates
@@ -12,15 +12,15 @@ export const handleContainerContextMenu = (event, deps) => {
   const pan = store.selectPan();
   const zoomLevel = store.selectZoomLevel();
 
-  const canvasX = (event.clientX - containerRect.left - pan.x) / zoomLevel;
-  const canvasY = (event.clientY - containerRect.top - pan.y) / zoomLevel;
+  const canvasX = (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
+  const canvasY = (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
 
   // Emit canvas right-click event
   dispatchEvent(
     new CustomEvent("canvas-context-menu", {
       detail: {
-        formX: event.clientX,
-        formY: event.clientY,
+        formX: payload._event.clientX,
+        formY: payload._event.clientY,
         whiteboardX: canvasX,
         whiteboardY: canvasY,
       },
@@ -30,14 +30,14 @@ export const handleContainerContextMenu = (event, deps) => {
   );
 };
 
-export const handleContainerMouseDown = (event, deps) => {
+export const handleContainerMouseDown = (deps, payload) => {
   const { store, getRefIds } = deps;
 
   if (store.selectIsPanMode()) {
     // Start panning
     store.startPanning({
-      mouseX: event.clientX,
-      mouseY: event.clientY,
+      mouseX: payload._event.clientX,
+      mouseY: payload._event.clientY,
     });
   } else {
     // Calculate click position in canvas coordinates using container coordinates
@@ -47,15 +47,15 @@ export const handleContainerMouseDown = (event, deps) => {
     const zoomLevel = store.selectZoomLevel();
 
     // Use container coordinates instead of canvas coordinates for proper zoom calculation
-    const canvasX = (event.clientX - containerRect.left - pan.x) / zoomLevel;
-    const canvasY = (event.clientY - containerRect.top - pan.y) / zoomLevel;
+    const canvasX = (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
+    const canvasY = (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
 
     // Emit click event with coordinates
     deps.dispatchEvent(
       new CustomEvent("canvas-click", {
         detail: {
-          formX: event.clientX,
-          formY: event.clientY,
+          formX: payload._event.clientX,
+          formY: payload._event.clientY,
           whiteboardX: canvasX,
           whiteboardY: canvasY,
         },
@@ -66,15 +66,15 @@ export const handleContainerMouseDown = (event, deps) => {
   }
 };
 
-export const handleContainerWheel = (event, deps) => {
-  event.preventDefault();
+export const handleContainerWheel = (deps, payload) => {
+  payload._event.preventDefault();
   const { store, getRefIds, render, dispatchEvent } = deps;
 
   // Calculate mouse position relative to container
   const container = getRefIds().container.elm;
   const rect = container.getBoundingClientRect();
-  const mouseX = event.clientX - rect.left;
-  const mouseY = event.clientY - rect.top;
+  const mouseX = payload._event.clientX - rect.left;
+  const mouseY = payload._event.clientY - rect.top;
 
   // Determine zoom direction and scale factor
   const zoomIntensity = 0.1;
@@ -93,7 +93,7 @@ export const handleContainerWheel = (event, deps) => {
   );
 };
 
-export const handleZoomInClick = (event, deps) => {
+export const handleZoomInClick = (deps, payload) => {
   const { store, getRefIds, render, dispatchEvent } = deps;
 
   const container = getRefIds().container.elm;
@@ -117,7 +117,7 @@ export const handleZoomInClick = (event, deps) => {
   );
 };
 
-export const handleZoomOutClick = (event, deps) => {
+export const handleZoomOutClick = (deps, payload) => {
   const { store, getRefIds, render, dispatchEvent } = deps;
 
   const container = getRefIds().container.elm;
@@ -141,8 +141,8 @@ export const handleZoomOutClick = (event, deps) => {
   );
 };
 
-export const handleItemMouseDown = (event, deps) => {
-  event.stopPropagation();
+export const handleItemMouseDown = (deps, payload) => {
+  payload._event.stopPropagation();
   const { store, getRefIds } = deps;
 
   if (store.selectIsPanMode()) {
@@ -150,8 +150,8 @@ export const handleItemMouseDown = (event, deps) => {
     return;
   }
 
-  const itemId = event.currentTarget.id.replace("item-", "");
-  const itemElement = event.currentTarget;
+  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemElement = payload._event.currentTarget;
   const rect = itemElement.getBoundingClientRect();
   const canvas = getRefIds().canvas.elm;
   const canvasRect = canvas.getBoundingClientRect();
@@ -159,8 +159,8 @@ export const handleItemMouseDown = (event, deps) => {
   const pan = store.selectPan();
 
   // Calculate the mouse position relative to the canvas coordinate space
-  const mouseInCanvasX = (event.clientX - canvasRect.left - pan.x) / zoomLevel;
-  const mouseInCanvasY = (event.clientY - canvasRect.top - pan.y) / zoomLevel;
+  const mouseInCanvasX = (payload._event.clientX - canvasRect.left - pan.x) / zoomLevel;
+  const mouseInCanvasY = (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
 
   // Get the item's current position in canvas coordinates
   const itemX = parseInt(itemElement.style.left, 10) || 0;
@@ -193,10 +193,10 @@ export const handleItemMouseDown = (event, deps) => {
   );
 };
 
-export const handleItemDoubleClick = (event, deps) => {
-  event.stopPropagation();
+export const handleItemDoubleClick = (deps, payload) => {
+  payload._event.stopPropagation();
 
-  const fullId = event.currentTarget.id;
+  const fullId = payload._event.currentTarget.id;
   const itemId = fullId ? fullId.replace("item-", "") : "";
 
   if (!itemId) {
@@ -214,12 +214,12 @@ export const handleItemDoubleClick = (event, deps) => {
   );
 };
 
-export const handleItemContextMenu = (event, deps) => {
-  event.preventDefault();
-  event.stopPropagation();
+export const handleItemContextMenu = (deps, payload) => {
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
 
   const { dispatchEvent } = deps;
-  const fullId = event.currentTarget.id;
+  const fullId = payload._event.currentTarget.id;
   const itemId = fullId ? fullId.replace("item-", "") : "";
 
   if (!itemId) {
@@ -232,8 +232,8 @@ export const handleItemContextMenu = (event, deps) => {
     new CustomEvent("item-context-menu", {
       detail: {
         itemId,
-        x: event.clientX,
-        y: event.clientY,
+        x: payload._event.clientX,
+        y: payload._event.clientY,
       },
       bubbles: true,
       composed: true,
@@ -241,14 +241,14 @@ export const handleItemContextMenu = (event, deps) => {
   );
 };
 
-export const handleWindowMouseMove = (event, deps) => {
+export const handleWindowMouseMove = (deps, payload) => {
   const { store, getRefIds, dispatchEvent, render } = deps;
 
   if (store.selectIsPanning()) {
     // Handle panning
     store.updatePan({
-      mouseX: event.clientX,
-      mouseY: event.clientY,
+      mouseX: payload._event.clientX,
+      mouseY: payload._event.clientY,
     });
     render();
   } else if (store.selectIsDragging()) {
@@ -261,8 +261,8 @@ export const handleWindowMouseMove = (event, deps) => {
 
     // Calculate current mouse position in canvas coordinate space
     const mouseInCanvasX =
-      (event.clientX - canvasRect.left - pan.x) / zoomLevel;
-    const mouseInCanvasY = (event.clientY - canvasRect.top - pan.y) / zoomLevel;
+      (payload._event.clientX - canvasRect.left - pan.x) / zoomLevel;
+    const mouseInCanvasY = (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
 
     // Calculate new item position by subtracting the drag offset
     const newX = mouseInCanvasX - dragOffset.x;
@@ -302,7 +302,7 @@ export const handleWindowMouseMove = (event, deps) => {
   }
 };
 
-export const handleWindowMouseUp = (event, deps) => {
+export const handleWindowMouseUp = (deps, payload) => {
   const { store, getRefIds, dispatchEvent } = deps;
 
   if (store.selectIsPanning()) {
@@ -332,21 +332,21 @@ export const handleWindowMouseUp = (event, deps) => {
 };
 
 // Keyboard event handlers
-export const handleWindowKeyDown = (event, deps) => {
+export const handleWindowKeyDown = (deps, payload) => {
   const { store, render } = deps;
 
   if (event.code === "Space" && !store.selectIsPanMode()) {
-    event.preventDefault();
+    payload._event.preventDefault();
     store.togglePanMode({ isPanMode: true });
     render();
   }
 };
 
-export const handleWindowKeyUp = (event, deps) => {
+export const handleWindowKeyUp = (deps, payload) => {
   const { store, render } = deps;
 
   if (event.code === "Space" && store.selectIsPanMode()) {
-    event.preventDefault();
+    payload._event.preventDefault();
     store.togglePanMode({ isPanMode: false });
     render();
   }
@@ -355,16 +355,16 @@ export const handleWindowKeyUp = (event, deps) => {
 export const subscriptions = (deps) => {
   return [
     fromEvent(window, "mousemove").pipe(
-      tap((event) => deps.handlers.handleWindowMouseMove(event, deps)),
+      tap((event) => deps.handlers.handleWindowMouseMove(deps, payload)),
     ),
     fromEvent(window, "mouseup").pipe(
-      tap((event) => deps.handlers.handleWindowMouseUp(event, deps)),
+      tap((event) => deps.handlers.handleWindowMouseUp(deps, payload)),
     ),
     fromEvent(window, "keydown").pipe(
-      tap((event) => deps.handlers.handleWindowKeyDown(event, deps)),
+      tap((event) => deps.handlers.handleWindowKeyDown(deps, payload)),
     ),
     fromEvent(window, "keyup").pipe(
-      tap((event) => deps.handlers.handleWindowKeyUp(event, deps)),
+      tap((event) => deps.handlers.handleWindowKeyUp(deps, payload)),
     ),
   ];
 };

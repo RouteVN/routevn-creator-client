@@ -6,13 +6,13 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleCreateButtonClick = async (payload, deps) => {
+export const handleCreateButtonClick = async (deps, payload) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
 };
 
-export const handleOpenButtonClick = async (payload, deps) => {
+export const handleOpenButtonClick = async (deps, payload) => {
   const { projectsService, store, render, tauriDialog, globalUI } = deps;
 
   try {
@@ -47,15 +47,16 @@ export const handleOpenButtonClick = async (payload, deps) => {
   }
 };
 
-export const handleCloseDialogue = (payload, deps) => {
+export const handleCloseDialogue = (deps, payload) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
 };
 
-export const handleProjectsClick = async (e, deps) => {
+export const handleProjectsClick = async (deps, payload) => {
   const { subject } = deps;
-  const id = e.currentTarget.id.replace("project-", "");
+  const id = payload._event.currentTarget.id.replace("project-", "");
+  console.log('id', id)
   subject.dispatch("redirect", {
     path: `/project`,
     payload: {
@@ -64,7 +65,7 @@ export const handleProjectsClick = async (e, deps) => {
   });
 };
 
-export const handleBrowseFolder = async (e, deps) => {
+export const handleBrowseFolder = async (deps, payload) => {
   const { store, render, tauriDialog, globalUI } = deps;
 
   try {
@@ -87,16 +88,16 @@ export const handleBrowseFolder = async (e, deps) => {
   }
 };
 
-export const handleFormSubmit = async (e, deps) => {
+export const handleFormSubmit = async (deps, payload) => {
   const { projectsService, initializeProject, store, render, globalUI } = deps;
 
   try {
     // Check if it's the submit button
-    if (e.detail.actionId !== "submit") {
+    if (payload.detail.actionId !== "submit") {
       return;
     }
 
-    const { name, description, template } = e.detail.formValues;
+    const { name, description, template } = payload.detail.formValues;
     const projectPath = store.selectProjectPath();
 
     // Validate input
@@ -129,11 +130,11 @@ export const handleFormSubmit = async (e, deps) => {
   }
 };
 
-export const handleProjectContextMenu = (e, deps) => {
+export const handleProjectContextMenu = (deps, payload) => {
   const { store, render } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
-  const projectId = e.currentTarget.id.replace("project-", "");
+  const projectId = payload._event.currentTarget.id.replace("project-", "");
   const projects = store.selectProjects();
   const project = projects.find((p) => p.id === projectId);
 
@@ -142,22 +143,22 @@ export const handleProjectContextMenu = (e, deps) => {
   }
 
   store.openDropdownMenu({
-    x: e.clientX,
-    y: e.clientY,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
     projectId: projectId,
   });
   render();
 };
 
-export const handleDropdownMenuClose = (e, deps) => {
+export const handleDropdownMenuClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = async (e, deps) => {
+export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectsService, globalUI } = deps;
-  const detail = e.detail;
+  const detail = payload.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;

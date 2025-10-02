@@ -6,7 +6,7 @@ import { toFlatItems, toTreeStructure } from "../../deps/repository";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
 import { constructResources } from "../../utils/resourcesConstructor.js";
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   sceneId: undefined,
   selectedLineId: undefined,
   sectionsGraphView: false,
@@ -343,7 +343,7 @@ export const selectRenderState = ({ state }) => {
   return renderState;
 };
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   const currentLine = selectSelectedLine({ state, props });
   const scene = selectScene({ state });
   if (!scene) {

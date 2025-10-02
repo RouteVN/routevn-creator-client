@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   disableUserClick: false,
   autoPlay: false,
   autoPlayDelay: 1000,
@@ -66,7 +66,7 @@ export const setAutoPlayDelay = (state, { autoPlayDelay }) => {
   state.defaultValues.autoPlayDelay = autoPlayDelay;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const booleanOptions = [
     { value: false, label: "No" },
     { value: true, label: "Yes" },

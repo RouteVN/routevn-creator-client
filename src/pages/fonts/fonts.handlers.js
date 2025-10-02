@@ -12,7 +12,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -21,9 +21,9 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleFontItemClick = (e, deps) => {
+export const handleFontItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
@@ -37,7 +37,7 @@ export const handleFontItemClick = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (_, deps) => {
+export const handleFormExtraEvent = async (deps, payload) => {
   const {
     repositoryFactory,
     router,
@@ -114,7 +114,7 @@ export const handleFormExtraEvent = async (_, deps) => {
   render();
 };
 
-export const handleDragDropFileSelected = async (e, deps) => {
+export const handleDragDropFileSelected = async (deps, payload) => {
   const {
     store,
     render,
@@ -128,7 +128,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { files, targetGroupId } = e.detail; // Extract from forwarded event
+  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
   // Validate all files first
@@ -190,7 +190,7 @@ export const handleDragDropFileSelected = async (e, deps) => {
   render();
 };
 
-export const handleFontItemDoubleClick = async (e, deps) => {
+export const handleFontItemDoubleClick = async (deps, payload) => {
   const {
     store,
     render,
@@ -202,7 +202,7 @@ export const handleFontItemDoubleClick = async (e, deps) => {
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   // Find the font item
   const { fonts } = repository.getState();
@@ -227,7 +227,7 @@ export const handleFontItemDoubleClick = async (e, deps) => {
   render();
 };
 
-export const handleCloseModal = (e, deps) => {
+export const handleCloseModal = (deps, payload) => {
   const { store, render } = deps;
 
   store.setModalOpen(false);
@@ -235,7 +235,7 @@ export const handleCloseModal = (e, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -246,7 +246,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -256,17 +256,17 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail.value || "";
+  const searchQuery = payload._event.detail.value || "";
 
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = e.detail.groupId;
+  const groupId = payload._event.detail.groupId;
 
   store.toggleGroupCollapse(groupId);
   render();

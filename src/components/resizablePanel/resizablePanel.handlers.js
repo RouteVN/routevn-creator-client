@@ -20,33 +20,33 @@ export const handleBeforeMount = (deps) => {
   });
 };
 
-export const handleResizeStart = (e, deps) => {
+export const handleResizeStart = (deps, payload) => {
   const { store, render, attrs } = deps;
 
-  e.preventDefault();
+  payload._event.preventDefault();
   console.log("🔧 Resizable panel resize start triggered");
 
-  const startX = e.clientX;
+  const startX = payload._event.clientX;
   const startWidth = store.selectPanelWidth();
 
   store.startResize({ startX, startWidth });
   render();
 
   // Add global event listeners
-  const handleMouseMove = (e) => handleResizeMove(e, deps);
+  const handleMouseMove = (e) => handleResizeMove(deps, e);
   const handleMouseUp = (e) =>
-    handleResizeEnd(e, deps, { handleMouseMove, handleMouseUp });
+    handleResizeEnd(deps, e, { handleMouseMove, handleMouseUp });
 
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
 };
 
-const handleResizeMove = (e, deps) => {
+const handleResizeMove = (deps, e) => {
   const { store, render, attrs, subject } = deps;
 
   if (!store.selectIsResizing()) return;
 
-  const deltaX = e.clientX - store.selectStartX();
+  const deltaX = payload._event.clientX - store.selectStartX();
 
   // Determine resize direction based on resize-side attr
   const isResizeFromLeft = attrs["resize-side"] === "left";
@@ -66,7 +66,7 @@ const handleResizeMove = (e, deps) => {
   render();
 };
 
-const handleResizeEnd = (e, deps, listeners) => {
+const handleResizeEnd = (deps, e, listeners) => {
   const { store, render, attrs, userConfig, subject } = deps;
   const { handleMouseMove, handleMouseUp } = listeners;
 

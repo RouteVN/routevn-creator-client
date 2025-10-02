@@ -1,29 +1,29 @@
-export const handleMouseMove = (e, deps) => {
+export const handleMouseMove = (deps, payload) => {
   const { store, render } = deps;
-  const rect = e.currentTarget.getBoundingClientRect();
-  const x = e.clientX - rect.left;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  const x = payload._event.clientX - rect.left;
 
   store.setMousePosition(x);
   render();
 };
 
-export const handleMouseLeave = (e, deps) => {
+export const handleMouseLeave = (deps, payload) => {
   const { store, render } = deps;
-  store.hideTimelineLine(e.clientX);
+  store.hideTimelineLine(payload._event.clientX);
   render();
 };
 
-export const handleAddKeyframe = (e, deps) => {
+export const handleAddKeyframe = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = e.currentTarget.id.replace("add-keyframe-", "");
+  const property = payload._event.currentTarget.id.replace("add-keyframe-", "");
 
   // Dispatch event to parent to add keyframe - let the parent get the context
   dispatchEvent(
     new CustomEvent("add-keyframe", {
       detail: {
         property,
-        x: e.clientX,
-        y: e.clientY,
+        x: payload._event.clientX,
+        y: payload._event.clientY,
       },
       bubbles: true,
       composed: true,
@@ -31,13 +31,13 @@ export const handleAddKeyframe = (e, deps) => {
   );
 };
 
-export const handleKeyframeRightClick = (e, deps) => {
+export const handleKeyframeRightClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const [property, index] = e.currentTarget.id
+  const [property, index] = payload._event.currentTarget.id
     .replace("keyframe-", "")
     .split("-");
 
-  e.preventDefault();
+  payload._event.preventDefault();
 
   // Dispatch event to parent to add keyframe - let the parent get the context
   dispatchEvent(
@@ -45,8 +45,8 @@ export const handleKeyframeRightClick = (e, deps) => {
       detail: {
         property,
         index,
-        x: e.clientX,
-        y: e.clientY,
+        x: payload._event.clientX,
+        y: payload._event.clientY,
       },
       bubbles: true,
       composed: true,
@@ -54,19 +54,19 @@ export const handleKeyframeRightClick = (e, deps) => {
   );
 };
 
-export const handlePropertyNameRightClick = (e, deps) => {
+export const handlePropertyNameRightClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = e.currentTarget.id.replace("property-name-", "");
+  const property = payload._event.currentTarget.id.replace("property-name-", "");
 
-  e.preventDefault();
+  payload._event.preventDefault();
 
   // Dispatch event to parent to handle property right-click
   dispatchEvent(
     new CustomEvent("property-name-right-click", {
       detail: {
         property,
-        x: e.clientX,
-        y: e.clientY,
+        x: payload._event.clientX,
+        y: payload._event.clientY,
       },
       bubbles: true,
       composed: true,
@@ -74,16 +74,16 @@ export const handlePropertyNameRightClick = (e, deps) => {
   );
 };
 
-export const handleInitialValueClick = (e, deps) => {
+export const handleInitialValueClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = e.currentTarget.id.replace("initial-value-", "");
+  const property = payload._event.currentTarget.id.replace("initial-value-", "");
 
   dispatchEvent(
     new CustomEvent("initial-value-click", {
       detail: {
         property,
-        x: e.clientX,
-        y: e.clientY,
+        x: payload._event.clientX,
+        y: payload._event.clientY,
       },
       bubbles: true,
       composed: true,

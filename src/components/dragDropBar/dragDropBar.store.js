@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   isDragging: false,
 });
 
@@ -10,7 +10,7 @@ export const stopDragging = (state, isDragging) => {
   state.isDragging = false;
 };
 
-export const toViewData = ({ state, props }) => ({
+export const selectViewData = ({ state, props }) => ({
   ...state,
   ...props,
   bgc: state.isDragging ? "mu" : "",

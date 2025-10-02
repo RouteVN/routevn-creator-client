@@ -107,9 +107,9 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleSectionTabClick = (e, deps) => {
+export const handleSectionTabClick = (deps, payload) => {
   const { store, render, subject } = deps;
-  const id = e.currentTarget.id.replace("section-tab-", "");
+  const id = payload._event.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
 
   // Reset selected line to first line of new section
@@ -127,7 +127,7 @@ export const handleSectionTabClick = (e, deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleCommandLineSubmit = async (e, deps) => {
+export const handleCommandLineSubmit = async (deps, payload) => {
   const {
     store,
     render,
@@ -144,7 +144,7 @@ export const handleCommandLineSubmit = async (e, deps) => {
   const lineId = store.selectSelectedLineId();
 
   // Handle section/scene transitions
-  if (e.detail.sectionTransition) {
+  if (payload._event.detail.sectionTransition) {
     if (!lineId) {
       console.warn("Section transition requires a selected line");
       return;
@@ -155,7 +155,7 @@ export const handleCommandLineSubmit = async (e, deps) => {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
       value: {
         replace: false,
-        item: e.detail,
+        item: payload._event.detail,
       },
     });
 
@@ -176,7 +176,7 @@ export const handleCommandLineSubmit = async (e, deps) => {
     return;
   }
 
-  let submissionData = e.detail;
+  let submissionData = payload._event.detail;
 
   // If this is a dialogue submission, preserve the existing content
   if (submissionData.dialogue) {
@@ -223,23 +223,23 @@ export const handleCommandLineSubmit = async (e, deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleEditorDataChanged = async (e, deps) => {
+export const handleEditorDataChanged = async (deps, payload) => {
   const { subject, store } = deps;
 
   const content = [
     {
-      text: e.detail.content,
+      text: payload._event.detail.content,
     },
   ];
   // Update local store immediately for UI responsiveness
   store.setLineTextContent({
-    lineId: e.detail.lineId,
+    lineId: payload._event.detail.lineId,
     content,
   });
 
   // Dispatch to subject for throttled/debounced repository update
   subject.dispatch("updateDialogueContent", {
-    lineId: e.detail.lineId,
+    lineId: payload._event.detail.lineId,
     content,
   });
 
@@ -248,13 +248,13 @@ export const handleEditorDataChanged = async (e, deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleAddPresentationButtonClick = (e, deps) => {
+export const handleAddPresentationButtonClick = (deps, payload) => {
   const { store, render } = deps;
   store.setMode("actions");
   render();
 };
 
-export const handleSectionAddClick = async (e, deps) => {
+export const handleSectionAddClick = async (deps, payload) => {
   const {
     store,
     repositoryFactory,
@@ -346,7 +346,7 @@ export const handleSectionAddClick = async (e, deps) => {
   }, 10);
 };
 
-export const handleSplitLine = async (e, deps) => {
+export const handleSplitLine = async (deps, payload) => {
   const { repositoryFactory, router, store, render, getRefIds, subject } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -354,7 +354,7 @@ export const handleSplitLine = async (e, deps) => {
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
-  const { lineId, leftContent, rightContent } = e.detail;
+  const { lineId, leftContent, rightContent } = payload._event.detail;
 
   // First, persist any temporary line changes from the store to the repository
   // This ensures edits to other lines aren't lost when we update the repository
@@ -484,7 +484,7 @@ export const handleSplitLine = async (e, deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleNewLine = async (e, deps) => {
+export const handleNewLine = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -509,10 +509,10 @@ export const handleNewLine = async (e, deps) => {
   render();
 };
 
-export const handleLineNavigation = (e, deps) => {
+export const handleLineNavigation = (deps, payload) => {
   const { store, getRefIds, render, subject, drenderer } = deps;
   const { targetLineId, mode, direction, targetCursorPosition, lineRect } =
-    e.detail;
+    payload._event.detail;
 
   // For block mode, just update the selection and handle scrolling
   if (mode === "block") {
@@ -668,17 +668,17 @@ export const handleLineNavigation = (e, deps) => {
   }
 };
 
-export const handleBackToActions = (e, deps) => {
+export const handleBackToActions = (deps, payload) => {
   const { store, render } = deps;
   store.setMode("actions");
   render();
 };
 
-export const handleMergeLines = async (e, deps) => {
+export const handleMergeLines = async (deps, payload) => {
   const { store, getRefIds, render, repositoryFactory, router, subject } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { prevLineId, currentLineId, contentToAppend } = e.detail;
+  const { prevLineId, currentLineId, contentToAppend } = payload._event.detail;
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -756,40 +756,40 @@ export const handleMergeLines = async (e, deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleOpenCommandLine = (e, deps) => {
+export const handleOpenCommandLine = (deps, payload) => {
   const { store, render } = deps;
-  const mode = e.currentTarget.getAttribute("data-mode");
+  const mode = payload._event.currentTarget.getAttribute("data-mode");
   store.setMode(mode);
   render();
 };
 
-export const handlePresentationActionRightClick = (e, deps) => {
+export const handlePresentationActionRightClick = (deps, payload) => {
   const { store, render } = deps;
-  const mode = e.currentTarget.getAttribute("data-mode");
-  e.preventDefault();
+  const mode = payload._event.currentTarget.getAttribute("data-mode");
+  payload._event.preventDefault();
   store.showPresentationDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
+    position: { x: payload._event.clientX, y: payload._event.clientY },
     presentationType: mode,
   });
   render();
 };
 
-export const handleActionClicked = (e, deps) => {
+export const handleActionClicked = (deps, payload) => {
   const { store, render } = deps;
-  store.setMode(e.detail.item.mode);
+  store.setMode(payload._event.detail.item.mode);
   render();
 };
 
-export const handleSectionTabRightClick = (e, deps) => {
+export const handleSectionTabRightClick = (deps, payload) => {
   const { store, render } = deps;
-  e.preventDefault(); // Prevent default browser context menu
+  payload._event.preventDefault(); // Prevent default browser context menu
 
-  const sectionId = e.currentTarget.id.replace("section-tab-", "");
+  const sectionId = payload._event.currentTarget.id.replace("section-tab-", "");
 
   store.showSectionDropdownMenu({
     position: {
-      x: e.clientX,
-      y: e.clientY,
+      x: payload._event.clientX,
+      y: payload._event.clientY,
     },
     sectionId,
   });
@@ -797,23 +797,23 @@ export const handleSectionTabRightClick = (e, deps) => {
   render();
 };
 
-export const handleActionsDialogClose = (e, deps) => {
+export const handleActionsDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.setMode("lines-editor");
   render();
 };
 
-export const handleDropdownMenuClickOverlay = (e, deps) => {
+export const handleDropdownMenuClickOverlay = (deps, payload) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = async (e, deps) => {
+export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, repositoryFactory, router, subject } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const action = e.detail.item.value; // Access value from item object
+  const action = payload._event.detail.item.value; // Access value from item object
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
   const presentationType = dropdownState.presentationType;
@@ -892,17 +892,17 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
   render();
 };
 
-export const handlePopoverClickOverlay = (e, deps) => {
+export const handlePopoverClickOverlay = (deps, payload) => {
   const { store, render } = deps;
   store.hidePopover();
   render();
 };
 
-export const handleFormActionClick = async (e, deps) => {
+export const handleFormActionClick = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const detail = e.detail;
+  const detail = payload._event.detail;
 
   // Extract action and values from detail
   const action = detail.action || detail.actionId;
@@ -944,7 +944,7 @@ export const handleFormActionClick = async (e, deps) => {
   }
 };
 
-export const handleToggleSectionsGraphView = (e, deps) => {
+export const handleToggleSectionsGraphView = (deps, payload) => {
   const { store, render } = deps;
   store.toggleSectionsGraphView();
   render();
@@ -1017,7 +1017,7 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "updateDialogueContent"),
       debounceTime(2000),
       tap(({ payload }) => {
-        deps.handlers.handleUpdateDialogueContent(payload, deps);
+        deps.handlers.handleUpdateDialogueContent(deps, payload);
       }),
     ),
     // Debounce canvas renders by 50ms to prevent multiple renders on rapid navigation

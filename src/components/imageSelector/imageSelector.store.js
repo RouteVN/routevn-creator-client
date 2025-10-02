@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   selectedImageId: undefined,
 });
 
@@ -10,7 +10,7 @@ export const setSelectedImageId = (state, payload) => {
   state.selectedImageId = payload.imageId;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const groups = props.groups || [];
   const selectedImageId = props.selectedImageId;
 

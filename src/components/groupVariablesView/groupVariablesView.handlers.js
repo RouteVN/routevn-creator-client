@@ -1,23 +1,23 @@
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail.value || "";
+  const searchQuery = payload._event.detail.value || "";
 
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupClick = (e, deps) => {
+export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = e.currentTarget.id.replace("group-", "");
+  const groupId = payload._event.currentTarget.id.replace("group-", "");
 
   // Handle group collapse internally
   store.toggleGroupCollapse(groupId);
   render();
 };
 
-export const handleVariableItemClick = (e, deps) => {
+export const handleVariableItemClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = e.currentTarget.id.replace("variable-item-", "");
+  const itemId = payload._event.currentTarget.id.replace("variable-item-", "");
 
   // Forward variable item selection to parent
   dispatchEvent(
@@ -29,25 +29,25 @@ export const handleVariableItemClick = (e, deps) => {
   );
 };
 
-export const handleDialogFormChange = (e, deps) => {
+export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
 
   console.log("store.selectDefaultValues", store.selectDefaultValues());
-  console.log("e.detail.formValues", e.detail.formValues);
+  console.log("payload._event.detail.formValues", payload._event.detail.formValues);
   // Update form values for preview
   store.updateFormValues({
     ...store.selectDefaultValues(),
-    ...e.detail.formValues,
+    ...payload._event.detail.formValues,
   });
   render();
 };
 
-export const handleAddVariableClick = (e, deps) => {
+export const handleAddVariableClick = (deps, payload) => {
   const { store, render } = deps;
-  e.stopPropagation(); // Prevent group click
+  payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
-  const groupId = e.currentTarget.id.replace("add-variable-button-", "");
+  const groupId = payload._event.currentTarget.id.replace("add-variable-button-", "");
   store.setTargetGroupId(groupId);
 
   // Toggle dialog open
@@ -55,7 +55,7 @@ export const handleAddVariableClick = (e, deps) => {
   render();
 };
 
-export const handleCloseDialog = (e, deps) => {
+export const handleCloseDialog = (deps, payload) => {
   const { store, render } = deps;
 
   // Close dialog
@@ -64,9 +64,9 @@ export const handleCloseDialog = (e, deps) => {
   render();
 };
 
-export const handleTableRowClick = (e, deps) => {
+export const handleTableRowClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const { rowData } = e.detail;
+  const { rowData } = payload._event.detail;
 
   if (rowData && rowData.id) {
     // Forward variable item selection to parent
@@ -80,15 +80,15 @@ export const handleTableRowClick = (e, deps) => {
   }
 };
 
-export const handleFormActionClick = (e, deps) => {
+export const handleFormActionClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
 
   // Check which button was clicked
-  const actionId = e.detail.actionId;
+  const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
     // Get form values from the event detail - it's in formValues
-    const formData = e.detail.formValues;
+    const formData = payload._event.detail.formValues;
 
     // Get the target group ID from store - access the internal state properly
     const storeState = store.getState
@@ -117,7 +117,7 @@ export const handleFormActionClick = (e, deps) => {
   }
 };
 
-export const handleEnumAddButtonClick = (e, deps) => {
+export const handleEnumAddButtonClick = (deps, payload) => {
   const { getRefIds, store, render } = deps;
   const inputElm = getRefIds()["form-enum-input"].elm;
   const defaultValues = structuredClone(store.selectDefaultValues());

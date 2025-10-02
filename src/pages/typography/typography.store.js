@@ -106,7 +106,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
@@ -344,7 +344,7 @@ export const selectSelectedFontData = ({ state }) => ({
   uploadResult: state.selectedFontUploadResult,
 });
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.typographyData);
   const rawFlatGroups = toFlatGroups(state.typographyData);
 

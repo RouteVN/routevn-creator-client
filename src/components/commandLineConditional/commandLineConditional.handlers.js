@@ -1,55 +1,55 @@
-export const handleConditionTypeChange = (e, deps) => {
+export const handleConditionTypeChange = (deps, payload) => {
   const { store, render } = deps;
-  const type = e.target.value;
+  const type = payload._event.target.value;
 
   store.setConditionType(type);
   render();
 };
 
-export const handleVariableSelect = (e, deps) => {
+export const handleVariableSelect = (deps, payload) => {
   const { store, render } = deps;
-  const variable = e.target.value;
+  const variable = payload._event.target.value;
 
   store.setSelectedVariable(variable);
   render();
 };
 
-export const handleOperatorSelect = (e, deps) => {
+export const handleOperatorSelect = (deps, payload) => {
   const { store, render } = deps;
-  const operator = e.target.value;
+  const operator = payload._event.target.value;
 
   store.setOperator(operator);
   render();
 };
 
-export const handleValueInput = (e, deps) => {
+export const handleValueInput = (deps, payload) => {
   const { store, render } = deps;
-  const value = e.target.value;
+  const value = payload._event.target.value;
 
   store.setComparisonValue(value);
   render();
 };
 
-export const handleSubmitClick = (e, deps) => {
+export const handleSubmitClick = (deps, payload) => {
   const { dispatchEvent } = deps;
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         conditional: {
-          conditionType: e?.conditionType,
-          selectedVariable: e?.selectedVariable,
-          operator: e?.operator,
-          comparisonValue: e?.comparisonValue,
+          conditionType: payload._event.detail.conditionType,
+          selectedVariable: payload._event.detail.selectedVariable,
+          operator: payload._event.detail.operator,
+          comparisonValue: payload._event.detail.comparisonValue,
         },
       },
     }),
   );
 };
 
-export const handleBreadcumbClick = (e, deps) => {
+export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},

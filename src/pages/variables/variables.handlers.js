@@ -9,7 +9,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -23,18 +23,18 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleVariableItemClick = (e, deps) => {
+export const handleVariableItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
   render();
 };
 
-export const handleVariableCreated = async (e, deps) => {
+export const handleVariableCreated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, type, initialValue, readonly } = e.detail;
+  const { groupId, name, type, initialValue, readonly } = payload._event.detail;
 
   // Add new variable to repository
   repository.addAction({
@@ -60,7 +60,7 @@ export const handleVariableCreated = async (e, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -71,7 +71,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });

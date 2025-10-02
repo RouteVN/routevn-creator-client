@@ -42,7 +42,7 @@ export const handleSetInitialScene = async (sceneId, deps) => {
   });
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -79,7 +79,7 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleFileExplorerClickItem = (e, deps) => {
+export const handleFileExplorerClickItem = (deps, payload) => {
   const { subject, router } = deps;
   const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
@@ -92,11 +92,11 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const handleWhiteboardItemPositionChanged = async (e, deps) => {
+export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { itemId, x, y } = e.detail;
+  const { itemId, x, y } = payload._event.detail;
 
   // Update position in repository using 'set' action
   repository.addAction({
@@ -110,18 +110,18 @@ export const handleWhiteboardItemPositionChanged = async (e, deps) => {
   render();
 };
 
-export const handleWhiteboardItemSelected = (e, deps) => {
+export const handleWhiteboardItemSelected = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   // Update selected item for detail panel
   store.setSelectedItemId(itemId);
   render();
 };
 
-export const handleWhiteboardItemDoubleClick = (e, deps) => {
+export const handleWhiteboardItemDoubleClick = (deps, payload) => {
   const { subject, router } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   if (!itemId) {
     console.error("ERROR: itemId is missing in double-click event");
@@ -136,7 +136,7 @@ export const handleWhiteboardItemDoubleClick = (e, deps) => {
   });
 };
 
-export const handleAddSceneClick = (e, deps) => {
+export const handleAddSceneClick = (deps, payload) => {
   const { store, render } = deps;
 
   // Start waiting for transform
@@ -144,7 +144,7 @@ export const handleAddSceneClick = (e, deps) => {
   render();
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -155,7 +155,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -165,13 +165,13 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleWhiteboardClick = (e, deps) => {
+export const handleWhiteboardClick = (deps, payload) => {
   const { store, render } = deps;
   const isWaitingForTransform = store.selectIsWaitingForTransform();
 
   if (isWaitingForTransform) {
     // Get click position relative to whiteboard
-    const { formX, formY, whiteboardX, whiteboardY } = e.detail;
+    const { formX, formY, whiteboardX, whiteboardY } = payload._event.detail;
 
     // Reset form data
     store.setSceneFormData({ name: "", folderId: "_root" });
@@ -185,9 +185,9 @@ export const handleWhiteboardClick = (e, deps) => {
   }
 };
 
-export const handleWhiteboardCanvasContextMenu = (e, deps) => {
+export const handleWhiteboardCanvasContextMenu = (deps, payload) => {
   const { store, render } = deps;
-  const { formX, formY, whiteboardX, whiteboardY } = e.detail;
+  const { formX, formY, whiteboardX, whiteboardY } = payload._event.detail;
 
   // Reset form data
   store.setSceneFormData({ name: "", folderId: "_root" });
@@ -199,17 +199,17 @@ export const handleWhiteboardCanvasContextMenu = (e, deps) => {
   render();
 };
 
-export const handleSceneFormClose = (e, deps) => {
+export const handleSceneFormClose = (deps, payload) => {
   const { store, render } = deps;
   store.resetSceneForm();
   render();
 };
 
-export const handleSceneFormAction = async (e, deps) => {
+export const handleSceneFormAction = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const actionId = e.detail.actionId;
+  const actionId = payload._event.detail.actionId;
 
   if (actionId === "cancel") {
     store.resetSceneForm();
@@ -218,7 +218,7 @@ export const handleSceneFormAction = async (e, deps) => {
     const sceneWhiteboardPosition = store.selectSceneWhiteboardPosition();
 
     // Get form values from the event detail (same pattern as typography)
-    const formData = e.detail.formValues;
+    const formData = payload._event.detail.formValues;
 
     console.log("Submitting scene with form data:", formData);
 
@@ -343,11 +343,11 @@ export const handleSceneFormAction = async (e, deps) => {
   }
 };
 
-export const handleWhiteboardItemDelete = async (e, deps) => {
+export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   // Remove from repository
   repository.addAction({
@@ -378,9 +378,9 @@ export const handleWhiteboardItemDelete = async (e, deps) => {
   render();
 };
 
-export const handleWhiteboardItemContextMenu = (e, deps) => {
+export const handleWhiteboardItemContextMenu = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId, x, y } = e.detail;
+  const { itemId, x, y } = payload._event.detail;
 
   // Show dropdown menu at the provided position
   store.showDropdownMenu({
@@ -391,17 +391,17 @@ export const handleWhiteboardItemContextMenu = (e, deps) => {
   render();
 };
 
-export const handleDropdownMenuClose = (e, deps) => {
+export const handleDropdownMenuClose = (deps, payload) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = async (e, deps) => {
+export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const detail = e.detail;
+  const detail = payload._event.detail;
   const itemId = store.selectDropdownMenuItemId();
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)

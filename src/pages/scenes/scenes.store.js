@@ -9,7 +9,7 @@ const CONTEXT_MENU_ITEMS = [
   { label: "Delete", type: "item", value: "delete-item" },
 ];
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
   selectedItemId: null,
   whiteboardItems: [],
@@ -124,7 +124,7 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
 // Track if we've initialized from repository yet
 let hasInitialized = false;
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   // Check if we need to initialize from repository on first render
   if (!hasInitialized && payload && payload.repository) {
     const repositoryState = payload.repository.getState();

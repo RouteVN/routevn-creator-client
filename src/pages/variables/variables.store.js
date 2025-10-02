@@ -18,7 +18,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   variablesData: { tree: [], items: {} },
   selectedItemId: null,
 });
@@ -33,7 +33,7 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.variablesData);
   const flatGroups = toFlatGroups(state.variablesData);
 

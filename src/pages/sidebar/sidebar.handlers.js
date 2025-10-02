@@ -22,16 +22,16 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleItemClick = async (payload, deps) => {
+export const handleItemClick = async (deps, payload) => {
   const { subject, router } = deps;
   const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
-    path: payload.detail.item.id,
+    path: payload._event.detail.item.id,
     payload: currentPayload, // Pass through current payload (including projectId)
   });
 };
 
-export const handleHeaderClick = (payload, deps) => {
+export const handleHeaderClick = (deps, payload) => {
   const { subject, router } = deps;
   const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
@@ -40,7 +40,7 @@ export const handleHeaderClick = (payload, deps) => {
   });
 };
 
-export const handleProjectImageUpdate = async (_, deps) => {
+export const handleProjectImageUpdate = async (deps, payload) => {
   const { repositoryFactory, router, store, render, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -68,7 +68,7 @@ export const subscriptions = (deps) => {
     subject.pipe(
       filter(({ action, payload }) => action === "project-image-update"),
       tap(({ action, payload }) => {
-        deps.handlers.handleProjectImageUpdate(payload, deps);
+        deps.handlers.handleProjectImageUpdate(deps, payload);
       }),
     ),
     subject.pipe(

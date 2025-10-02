@@ -36,7 +36,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (e, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -50,18 +50,18 @@ export const handleDataChanged = async (e, deps) => {
   render();
 };
 
-export const handleAnimationItemClick = (e, deps) => {
+export const handleAnimationItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
   render();
 };
 
-export const handleAnimationCreated = async (e, deps) => {
+export const handleAnimationCreated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, properties } = e.detail;
+  const { groupId, name, properties } = payload._event.detail;
 
   repository.addAction({
     actionType: "treePush",
@@ -85,11 +85,11 @@ export const handleAnimationCreated = async (e, deps) => {
   render();
 };
 
-export const handleAnimationUpdated = async (e, deps) => {
+export const handleAnimationUpdated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { itemId, name, properties } = e.detail;
+  const { itemId, name, properties } = payload._event.detail;
 
   repository.addAction({
     actionType: "treeUpdate",
@@ -121,7 +121,7 @@ const getInitialValue = (property) => {
   return defaultValues[property] || 0;
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -132,7 +132,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -143,32 +143,32 @@ export const handleFormChange = async (e, deps) => {
 };
 
 // Handlers forwarded from groupResourcesView
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail.value || "";
+  const searchQuery = payload._event.detail.value || "";
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.toggleGroupCollapse(groupId);
   render();
 };
 
-export const handleAddAnimationClick = async (e, deps) => {
+export const handleAddAnimationClick = async (deps, payload) => {
   const { store, render, drenderer } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.setTargetGroupId(groupId);
   store.openDialog();
   drenderer.render(resetState);
   render();
 };
 
-export const handleAnimationItemDoubleClick = async (e, deps) => {
+export const handleAnimationItemDoubleClick = async (deps, payload) => {
   const { store, render, drenderer } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
 
   const animationsData = store.selectAnimationsData();
 
@@ -199,25 +199,25 @@ export const handleAnimationItemDoubleClick = async (e, deps) => {
 };
 
 // Dialog handlers
-export const handleCloseDialog = (e, deps) => {
+export const handleCloseDialog = (deps, payload) => {
   const { store, render } = deps;
   store.closeDialog();
   render();
 };
 
-export const handleClosePopover = (e, deps) => {
+export const handleClosePopover = (deps, payload) => {
   const { store, render } = deps;
   store.closePopover();
   render();
 };
 
-export const handleFormActionClick = (e, deps) => {
+export const handleFormActionClick = (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
 
-  const actionId = e.detail.actionId;
+  const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
-    const formData = e.detail.formValues;
+    const formData = payload._event.detail.formValues;
     const formState = store.selectFormState();
     const { targetGroupId, editItemId, editMode, properties } = formState;
 
@@ -250,21 +250,21 @@ export const handleFormActionClick = (e, deps) => {
   }
 };
 
-export const handleAddPropertiesClick = (e, deps) => {
+export const handleAddPropertiesClick = (deps, payload) => {
   const { store, render } = deps;
 
   store.setPopover({
     mode: "addProperty",
-    x: e.clientX,
-    y: e.clientY,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
   });
 
   render();
 };
 
-export const handleAddPropertyFormSubmit = (e, deps) => {
+export const handleAddPropertyFormSubmit = (deps, payload) => {
   const { store, render } = deps;
-  const { property, initialValue, useInitialValue } = e.detail.formValues;
+  const { property, initialValue, useInitialValue } = payload._event.detail.formValues;
 
   const defaultValues = {
     x: 960,
@@ -290,29 +290,29 @@ export const handleAddPropertyFormSubmit = (e, deps) => {
   render();
 };
 
-export const handleAddKeyframeInDialog = (e, deps) => {
+export const handleAddKeyframeInDialog = (deps, payload) => {
   const { store, render } = deps;
 
   store.setPopover({
     mode: "addKeyframe",
-    x: e.detail.x,
-    y: e.detail.y,
+    x: payload._event.detail.x,
+    y: payload._event.detail.y,
     payload: {
-      property: e.detail.property,
+      property: payload._event.detail.property,
     },
   });
 
   render();
 };
 
-export const handleAddKeyframeFormSubmit = (e, deps) => {
+export const handleAddKeyframeFormSubmit = (deps, payload) => {
   const { store, render } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
 
   store.addKeyframe({
-    ...e.detail.formValues,
+    ...payload._event.detail.formValues,
     property,
     index,
   });
@@ -320,40 +320,40 @@ export const handleAddKeyframeFormSubmit = (e, deps) => {
   render();
 };
 
-export const handleKeyframeRightClick = (e, deps) => {
+export const handleKeyframeRightClick = (deps, payload) => {
   const { render, store } = deps;
   store.setPopover({
     mode: "keyframeMenu",
-    x: e.detail.x,
-    y: e.detail.y,
+    x: payload._event.detail.x,
+    y: payload._event.detail.y,
     payload: {
-      property: e.detail.property,
-      index: e.detail.index,
+      property: payload._event.detail.property,
+      index: payload._event.detail.index,
     },
   });
   render();
 };
 
-export const handlePropertyNameRightClick = (e, deps) => {
+export const handlePropertyNameRightClick = (deps, payload) => {
   const { render, store } = deps;
   store.setPopover({
     mode: "propertyNameMenu",
-    x: e.detail.x,
-    y: e.detail.y,
+    x: payload._event.detail.x,
+    y: payload._event.detail.y,
     payload: {
-      property: e.detail.property,
+      property: payload._event.detail.property,
     },
   });
   render();
 };
 
-export const handleKeyframeDropdownItemClick = (e, deps) => {
+export const handleKeyframeDropdownItemClick = (deps, payload) => {
   const { render, store } = deps;
   const popover = store.selectPopover();
   const { property, index } = popover.payload;
   const { x, y } = popover;
 
-  if (e.detail.item.value === "edit") {
+  if (payload._event.detail.item.value === "edit") {
     store.setPopover({
       mode: "editKeyframe",
       x: x,
@@ -363,13 +363,13 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
         index,
       },
     });
-  } else if (e.detail.item.value === "delete-property") {
+  } else if (payload._event.detail.item.value === "delete-property") {
     store.deleteProperty({ property });
     store.closePopover();
-  } else if (e.detail.item.value === "delete-keyframe") {
+  } else if (payload._event.detail.item.value === "delete-keyframe") {
     store.deleteKeyframe({ property, index });
     store.closePopover();
-  } else if (e.detail.item.value === "add-right") {
+  } else if (payload._event.detail.item.value === "add-right") {
     store.setPopover({
       mode: "addKeyframe",
       x: x,
@@ -379,7 +379,7 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
         index: index + 1,
       },
     });
-  } else if (e.detail.item.value === "add-left") {
+  } else if (payload._event.detail.item.value === "add-left") {
     store.setPopover({
       mode: "addKeyframe",
       x: x,
@@ -389,10 +389,10 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
         index,
       },
     });
-  } else if (e.detail.item.value === "move-right") {
+  } else if (payload._event.detail.item.value === "move-right") {
     store.moveKeyframeRight({ property, index });
     store.closePopover();
-  } else if (e.detail.item.value === "move-left") {
+  } else if (payload._event.detail.item.value === "move-left") {
     store.moveKeyframeLeft({ property, index });
     store.closePopover();
   }
@@ -400,13 +400,13 @@ export const handleKeyframeDropdownItemClick = (e, deps) => {
   render();
 };
 
-export const handleEditKeyframeFormSubmit = (e, deps) => {
+export const handleEditKeyframeFormSubmit = (deps, payload) => {
   const { store, render } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
   store.updateKeyframe({
-    keyframe: e.detail.formValues,
+    keyframe: payload._event.detail.formValues,
     index,
     property,
   });
@@ -414,23 +414,23 @@ export const handleEditKeyframeFormSubmit = (e, deps) => {
   render();
 };
 
-export const handleInitialValueClick = (e, deps) => {
+export const handleInitialValueClick = (deps, payload) => {
   const { render, store } = deps;
   store.setPopover({
     mode: "editInitialValue",
-    x: e.detail.x,
-    y: e.detail.y,
+    x: payload._event.detail.x,
+    y: payload._event.detail.y,
     payload: {
-      property: e.detail.property,
+      property: payload._event.detail.property,
     },
   });
   render();
 };
 
-export const handleAddPropertyFormChange = (e, deps) => {
+export const handleAddPropertyFormChange = (deps, payload) => {
   const { store, render } = deps;
 
-  const { name, fieldValue } = e.detail;
+  const { name, fieldValue } = payload._event.detail;
 
   const currentFormValues = store.selectPopover().formValues || {};
   const updatedFormValues = {
@@ -441,10 +441,10 @@ export const handleAddPropertyFormChange = (e, deps) => {
   render();
 };
 
-export const handleEditInitialValueFormChange = (e, deps) => {
+export const handleEditInitialValueFormChange = (deps, payload) => {
   const { store, render } = deps;
 
-  const { name, fieldValue } = e.detail;
+  const { name, fieldValue } = payload._event.detail;
 
   const currentFormValues = store.selectPopover().formValues || {};
   const updatedFormValues = {
@@ -456,7 +456,7 @@ export const handleEditInitialValueFormChange = (e, deps) => {
   render();
 };
 
-export const handleReplayAnimation = async (e, deps) => {
+export const handleReplayAnimation = async (deps, payload) => {
   const { store, drenderer } = deps;
 
   if (!store.selectIsDrendererInitialized()) {
@@ -471,13 +471,13 @@ export const handleReplayAnimation = async (e, deps) => {
   }, 100);
 };
 
-export const handleEditInitialValueFormSubmit = (e, deps) => {
+export const handleEditInitialValueFormSubmit = (deps, payload) => {
   const { store, render } = deps;
   const {
     payload: { property },
   } = store.selectPopover();
 
-  const { initialValue, valueSource } = e.detail.formValues;
+  const { initialValue, valueSource } = payload._event.detail.formValues;
 
   const defaultValues = {
     x: 960,

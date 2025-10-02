@@ -13,7 +13,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = (e, deps) => {
+export const handleDataChanged = (deps, payload) => {
   const { store } = deps;
   // Handle file explorer data changes
 };
@@ -25,7 +25,7 @@ export const handleCheckForUpdates = async (payload, deps) => {
   await updaterService.checkForUpdates(false);
 };
 
-export const handleBackToProjects = async (e, deps) => {
+export const handleBackToProjects = async (deps, payload) => {
   const { subject } = deps;
 
   // Navigate back to projects page

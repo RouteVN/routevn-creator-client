@@ -1,7 +1,7 @@
-export const handleImageItemClick = (e, deps) => {
+export const handleImageItemClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
 
-  const id = e.currentTarget.id.replace("image-item-", "");
+  const id = payload._event.currentTarget.id.replace("image-item-", "");
 
   store.setSelectedImageId({
     imageId: id,

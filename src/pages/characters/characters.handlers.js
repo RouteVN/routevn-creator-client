@@ -9,7 +9,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (_, deps) => {
+export const handleDataChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -18,9 +18,9 @@ export const handleDataChanged = async (_, deps) => {
   render();
 };
 
-export const handleCharacterItemClick = async (e, deps) => {
+export const handleCharacterItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router } = deps;
-  const { itemId } = e.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
@@ -40,11 +40,11 @@ export const handleCharacterItemClick = async (e, deps) => {
   render();
 };
 
-export const handleCharacterCreated = async (e, deps) => {
+export const handleCharacterCreated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, description, avatarFileId } = e.detail;
+  const { groupId, name, description, avatarFileId } = payload._event.detail;
 
   try {
     // Create default sprites folder with proper structure
@@ -98,9 +98,9 @@ export const handleCharacterCreated = async (e, deps) => {
   }
 };
 
-export const handleSpritesButtonClick = (e, deps) => {
+export const handleSpritesButtonClick = (deps, payload) => {
   const { subject, render, router } = deps;
-  const { itemId } = e.detail;
+  const { itemId } = payload._event.detail;
   const { p } = router.getPayload();
 
   // Dispatch redirect with path and payload for query params
@@ -115,7 +115,7 @@ export const handleSpritesButtonClick = (e, deps) => {
   render();
 };
 
-export const handleFormExtraEvent = async (_, deps) => {
+export const handleFormExtraEvent = async (deps, payload) => {
   const {
     repositoryFactory,
     router,
@@ -199,7 +199,7 @@ export const handleFormExtraEvent = async (_, deps) => {
   }
 };
 
-export const handleFormChange = async (e, deps) => {
+export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -210,7 +210,7 @@ export const handleFormChange = async (e, deps) => {
       id: store.selectSelectedItemId(),
       replace: false,
       item: {
-        [e.detail.name]: e.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
     },
   });
@@ -220,41 +220,41 @@ export const handleFormChange = async (e, deps) => {
   render();
 };
 
-export const handleSearchInput = (e, deps) => {
+export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = e.detail?.value || "";
+  const searchQuery = payload._event.detail?.value || "";
   store.setSearchQuery(searchQuery);
   render();
 };
 
-export const handleGroupToggle = (e, deps) => {
+export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.toggleGroupCollapse(groupId);
   render();
 };
 
-export const handleAddCharacterClick = (e, deps) => {
+export const handleAddCharacterClick = (deps, payload) => {
   const { store, render } = deps;
-  const { groupId } = e.detail;
+  const { groupId } = payload._event.detail;
   store.setTargetGroupId(groupId);
   store.toggleDialog();
   render();
 };
 
-export const handleCloseDialog = (e, deps) => {
+export const handleCloseDialog = (deps, payload) => {
   const { store, render } = deps;
   store.clearAvatarState();
   store.toggleDialog();
   render();
 };
 
-export const handleDialogFormActionClick = (e, deps) => {
+export const handleDialogFormActionClick = (deps, payload) => {
   const { store, render } = deps;
-  const actionId = e.detail.actionId;
+  const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
-    const formData = e.detail.formValues;
+    const formData = payload._event.detail.formValues;
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
 
@@ -271,7 +271,7 @@ export const handleDialogFormActionClick = (e, deps) => {
     });
 
     // Handle the character creation directly
-    handleCharacterCreated(event, deps);
+    handleCharacterCreated(deps, payload);
 
     // Clear avatar state and close dialog
     store.clearAvatarState();
@@ -280,7 +280,7 @@ export const handleDialogFormActionClick = (e, deps) => {
   }
 };
 
-export const handleDialogAvatarClick = async (e, deps) => {
+export const handleDialogAvatarClick = async (deps, payload) => {
   const { store, render, filePicker, fileManagerFactory, router } = deps;
 
   try {

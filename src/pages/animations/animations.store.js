@@ -358,7 +358,7 @@ const editAnimationForm = {
   },
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   animationsData: { tree: [], items: {} },
   selectedItemId: null,
   contextMenuItems: [
@@ -692,7 +692,7 @@ export const updateInitialValue = (state, payload) => {
   state.properties[property].initialValue = initialValue;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.animationsData);
   const rawFlatGroups = toFlatGroups(state.animationsData);
 

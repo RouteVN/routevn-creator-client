@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   collapsedIds: [],
   searchQuery: "",
   isDialogOpen: false,
@@ -171,7 +171,7 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
 
