@@ -46,7 +46,7 @@ export const selectIsLoading = (state) => {
 };
 
 export const selectViewData = ({ state, attrs }) => {
-  const { ...restAttrs } = attrs;
+  const { style: _style, ...restAttrs } = attrs;
   return {
     src: state.src,
     isLoading: state.isLoading,
