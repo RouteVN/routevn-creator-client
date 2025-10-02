@@ -33,8 +33,6 @@ refs:
         handler: handleAddTransformClick
       search-input:
         handler: handleSearchInput
-      group-toggle:
-        handler: handleGroupToggle
   detail-form:
     eventListeners:
       form-change:

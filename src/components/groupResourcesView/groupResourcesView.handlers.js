@@ -13,17 +13,12 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleGroupClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+  const { store, render } = deps;
   const groupId = payload._event.currentTarget.id.replace("group-", "");
 
-  // Forward group toggle to parent
-  dispatchEvent(
-    new CustomEvent("group-toggle", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  // Handle group toggle locally
+  store.toggleGroupCollapse({ groupId });
+  render();
 };
 
 export const handleItemClick = (deps, payload) => {

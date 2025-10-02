@@ -652,10 +652,3 @@ export const handleSearchInput = (deps, payload) => {
   store.setSearchQuery(searchQuery);
   render();
 };
-
-export const handleGroupToggle = (deps, payload) => {
-  const { store, render } = deps;
-  const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse(groupId);
-  render();
-};
