@@ -3,7 +3,6 @@ import { nanoid } from "nanoid";
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
-  console.log("p", p);
   const repository = await repositoryFactory.getByProject(p);
   const { images } = repository.getState();
   store.setItems(images);

@@ -31,8 +31,6 @@ refs:
         handler: handleDragDropFileSelected
       search-input:
         handler: handleSearchInput
-      group-toggle:
-        handler: handleGroupToggle
   rvn-audio-player:
     eventListeners:
       audio-player-close:

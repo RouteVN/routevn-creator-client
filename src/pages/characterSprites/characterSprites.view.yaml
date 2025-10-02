@@ -28,8 +28,6 @@ refs:
         handler: handleDragDropFileSelected
       search-input:
         handler: handleSearchInput
-      group-toggle:
-        handler: handleGroupToggle
     preview-overlay:
       eventListeners:
         click:

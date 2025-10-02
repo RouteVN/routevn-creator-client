@@ -47,11 +47,6 @@ export const userInterfaceItems = [
     name: "Typography",
     path: "/project/resources/typography",
   },
-  // {
-  //   id: "components",
-  //   name: "Components",
-  //   path: "/project/resources/components",
-  // },
   {
     id: "layouts",
     name: "Layouts",

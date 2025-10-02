@@ -38,7 +38,6 @@ export const createInitialState = () => ({
     },
   },
   searchQuery: "",
-  collapsedIds: [],
   playingAudio: {
     title: "",
     fileId: undefined,
@@ -74,14 +73,6 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
-  const index = state.collapsedIds.indexOf(groupId);
-  if (index > -1) {
-    state.collapsedIds.splice(index, 1);
-  } else {
-    state.collapsedIds.push(groupId);
-  }
-};
 
 export const openAudioPlayer = (state, { fileId, fileName }) => {
   state.playingAudio.fileId = fileId;
@@ -140,16 +131,13 @@ export const selectViewData = ({ state }) => {
 
       return {
         ...group,
-        isCollapsed: state.collapsedIds.includes(group.id),
-        children: state.collapsedIds.includes(group.id)
-          ? []
-          : filteredChildren.map((item) => ({
-              ...item,
-              selectedStyle:
-                item.id === state.selectedItemId
-                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                  : "",
-            })),
+        children: filteredChildren.map((item) => ({
+          ...item,
+          selectedStyle:
+            item.id === state.selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };
@@ -190,7 +178,6 @@ export const selectViewData = ({ state }) => {
     context: state.context,
     defaultValues,
     searchQuery: state.searchQuery,
-    collapsedIds: state.collapsedIds,
     resourceType: "audio",
     searchPlaceholder: "Search audios...",
     uploadText: "Upload Audio",

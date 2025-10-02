@@ -174,13 +174,6 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-export const handleGroupToggle = (deps, payload) => {
-  const { store, render } = deps;
-  const groupId = payload._event.detail.groupId;
-
-  store.toggleGroupCollapse(groupId);
-  render();
-};
 
 export const handleVideoItemDoubleClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router, repositoryFactory } = deps;

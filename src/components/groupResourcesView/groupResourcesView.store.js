@@ -1,9 +1,19 @@
 export const createInitialState = () => ({
   zoomLevel: 1.0,
+  collapsedIds: [],
 });
 
 export const setZoomLevel = (state, zoomLevel) => {
   state.zoomLevel = zoomLevel;
+};
+
+export const toggleGroupCollapse = (state, { groupId }) => {
+  const index = state.collapsedIds.indexOf(groupId);
+  if (index > -1) {
+    state.collapsedIds.splice(index, 1);
+  } else {
+    state.collapsedIds.push(groupId);
+  }
 };
 
 export const selectViewData = ({ state, props, attrs }) => {
@@ -17,10 +27,17 @@ export const selectViewData = ({ state, props, attrs }) => {
   const mediaWidth = Math.round(baseMediaWidth * state.zoomLevel);
   const mediaHeight = Math.round(baseMediaHeight * state.zoomLevel);
 
+  // Apply collapse state to flatGroups
+  const processedFlatGroups = (props.flatGroups || []).map((group) => ({
+    ...group,
+    isCollapsed: state.collapsedIds.includes(group.id),
+    children: state.collapsedIds.includes(group.id) ? [] : group.children || [],
+  }));
+
   return {
     fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
     resourceType: props.resourceType || "default",
-    flatGroups: props.flatGroups || [],
+    flatGroups: processedFlatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: props.searchQuery || "",
     uploadText: props.uploadText || "Upload Files",

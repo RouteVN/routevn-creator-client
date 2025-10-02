@@ -17,8 +17,6 @@ refs:
         handler: handleAddAnimationClick
       item-dblclick:
         handler: handleAnimationItemDoubleClick
-      group-toggle:
-        handler: handleGroupToggle
       search-input:
         handler: handleSearchInput
   detail-form:
