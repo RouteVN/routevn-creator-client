@@ -208,7 +208,7 @@ export const getUnicodeValue = (char) => {
   return `U+${code.toString(16).toUpperCase().padStart(4, "0")}`;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.fontsData);
   const rawFlatGroups = toFlatGroups(state.fontsData);
   const searchQuery = state.searchQuery.toLowerCase();

@@ -6,7 +6,7 @@ export const createInitialState = () => ({
   appVersion: "",
 });
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state }) => {
   return {
     ...state,
   };

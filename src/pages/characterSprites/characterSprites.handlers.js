@@ -16,7 +16,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { router, render, store, repositoryFactory, globalUI } = deps;
   const { characterId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -140,7 +140,7 @@ export const handleFormChange = async (deps, payload) => {
   render();
 };
 
-export const handleFormExtraEvent = async (deps, payload) => {
+export const handleFormExtraEvent = async (deps) => {
   const {
     router,
     repositoryFactory,

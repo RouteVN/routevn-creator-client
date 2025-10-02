@@ -59,7 +59,7 @@ export const extractWaveformData = async (audioFile, samples = 1000) => {
       sampleRate: audioBuffer.sampleRate,
       channels: audioBuffer.numberOfChannels,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 };

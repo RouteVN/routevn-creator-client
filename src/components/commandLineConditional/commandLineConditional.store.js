@@ -21,7 +21,7 @@ export const setComparisonValue = (state, value) => {
   state.comparisonValue = value;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   let breadcrumb = [
     {
       id: "actions",

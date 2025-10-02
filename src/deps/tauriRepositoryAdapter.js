@@ -1,9 +1,7 @@
 import { mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { loadTemplate, getTemplateFiles } from "../utils/templateLoader";
-import { nanoid } from "nanoid";
 
 /**
  * Initialize a new project with folder structure and database
@@ -137,7 +135,7 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
         if (result && result.length > 0) {
           try {
             return JSON.parse(result[0].value);
-          } catch (e) {
+          } catch {
             return result[0].value;
           }
         }

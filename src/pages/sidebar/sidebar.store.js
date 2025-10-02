@@ -94,7 +94,7 @@ export const selectViewData = ({ state }) => {
 
         // Extract the resource type from current path
         const currentResourceMatch = currentPath.match(
-          /^\/project\/resources\/([^\/\?]+)/,
+          /^\/project\/resources\/([^/?]+)/,
         );
         if (!currentResourceMatch) return false;
         const currentResourceType = currentResourceMatch[1];

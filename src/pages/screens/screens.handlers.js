@@ -1,1 +1,1 @@
-export const myHandler = (deps, payload) => {};
+export const myHandler = () => {};

@@ -13,7 +13,7 @@ export const selectShowSidebar = (state, props, payload) => {
   return !normalizedRoutesWithoutNavbar.includes(normalizedPattern);
 };
 
-export const selectCurrentRoutePattern = (state, props, payload) => {
+export const selectCurrentRoutePattern = (state) => {
   const routePatterms = [
     "/project",
     "/projects",

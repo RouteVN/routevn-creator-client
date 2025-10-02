@@ -31,7 +31,7 @@ export const handleItemClick = async (deps, payload) => {
   });
 };
 
-export const handleHeaderClick = (deps, payload) => {
+export const handleHeaderClick = (deps) => {
   const { subject, router } = deps;
   const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
@@ -40,7 +40,7 @@ export const handleHeaderClick = (deps, payload) => {
   });
 };
 
-export const handleProjectImageUpdate = async (deps, payload) => {
+export const handleProjectImageUpdate = async (deps) => {
   const { repositoryFactory, router, store, render, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -66,8 +66,8 @@ export const subscriptions = (deps) => {
   const { subject, render } = deps;
   return [
     subject.pipe(
-      filter(({ action, payload }) => action === "project-image-update"),
-      tap(({ action, payload }) => {
+      filter(({ action }) => action === "project-image-update"),
+      tap(({ payload }) => {
         deps.handlers.handleProjectImageUpdate(deps, payload);
       }),
     ),

@@ -65,7 +65,7 @@ export const createFileManagerFactory = (
 
     // Clear all cached managers
     async clearAll() {
-      for (const [projectId, manager] of managerCache.entries()) {
+      for (const [, manager] of managerCache.entries()) {
         if (manager.cleanup) {
           await manager.cleanup();
         }

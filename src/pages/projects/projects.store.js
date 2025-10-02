@@ -150,7 +150,7 @@ export const closeDropdownMenu = (state) => {
   state.dropdownMenu.items = [];
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   return {
     ...state,
     hasProjects: state.projects && state.projects.length > 0,
