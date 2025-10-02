@@ -24,7 +24,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   spritesData: { tree: [], items: {} },
   selectedItemId: undefined,
   characterId: undefined,
@@ -95,7 +95,7 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.spritesData);
   const rawFlatGroups = toFlatGroups(state.spritesData);
 

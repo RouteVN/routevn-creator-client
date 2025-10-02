@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   waveformData: {},
   isLoading: true,
 });
@@ -16,7 +16,7 @@ export const setWaveformData = (state, data) => {
   state.waveformData = data;
 };
 
-export const toViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, attrs }) => {
   return {
     isLoading: state.isLoading,
     w: attrs.w || "250",

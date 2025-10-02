@@ -1,6 +1,6 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
   transforms: { tree: [], items: {} },
@@ -193,7 +193,7 @@ const form = {
   ],
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );

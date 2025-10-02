@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   zoomLevel: 1.0,
 });
 
@@ -6,7 +6,7 @@ export const setZoomLevel = (state, zoomLevel) => {
   state.zoomLevel = zoomLevel;
 };
 
-export const toViewData = ({ state, props, attrs }) => {
+export const selectViewData = ({ state, props, attrs }) => {
   // Calculate dimensions based on zoom level for all media types
   const baseHeight = props.imageHeight || 150;
   const baseWidth = props.maxWidth || 400;

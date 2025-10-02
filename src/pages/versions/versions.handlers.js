@@ -19,28 +19,28 @@ export const handleAfterMount = async (deps) => {
 
 export const handleDataChanged = () => {};
 
-export const handleSaveVersionClick = (_, deps) => {
+export const handleSaveVersionClick = (deps, payload) => {
   const { store, render } = deps;
   store.setShowVersionForm(true);
   render();
 };
 
-export const handleVersionFormClose = (_, deps) => {
+export const handleVersionFormClose = (deps, payload) => {
   const { store, render } = deps;
   store.resetVersionForm();
   render();
 };
 
-export const handleVersionFormAction = async (e, deps) => {
+export const handleVersionFormAction = async (deps, payload) => {
   const { store, render, repositoryFactory, router, projectsService } = deps;
   const { p } = router.getPayload();
-  const actionId = e.detail.actionId;
+  const actionId = payload._event.detail.actionId;
 
   if (actionId === "cancel") {
     store.resetVersionForm();
     render();
   } else if (actionId === "submit") {
-    const formData = e.detail.formValues;
+    const formData = payload._event.detail.formValues;
     const repository = await repositoryFactory.getByProject(p);
 
     // Get current action count from repository
@@ -65,11 +65,11 @@ export const handleVersionFormAction = async (e, deps) => {
   }
 };
 
-export const handleVersionContextMenu = (e, deps) => {
+export const handleVersionContextMenu = (deps, payload) => {
   const { store, render } = deps;
-  e.preventDefault();
+  payload._event.preventDefault();
 
-  const versionId = e.currentTarget.id.replace("version-", "");
+  const versionId = payload._event.currentTarget.id.replace("version-", "");
   const versions = store.selectVersions();
   const version = versions.find((v) => v.id === versionId);
 
@@ -78,20 +78,20 @@ export const handleVersionContextMenu = (e, deps) => {
   }
 
   store.openDropdownMenu({
-    x: e.clientX,
-    y: e.clientY,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
     versionId: versionId,
   });
   render();
 };
 
-export const handleDropdownMenuClose = (_, deps) => {
+export const handleDropdownMenuClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = async (e, deps) => {
+export const handleDropdownMenuClickItem = async (deps, payload) => {
   const {
     store,
     render,
@@ -102,7 +102,7 @@ export const handleDropdownMenuClickItem = async (e, deps) => {
     fileManagerFactory,
     globalUI,
   } = deps;
-  const detail = e.detail;
+  const detail = payload._event.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;

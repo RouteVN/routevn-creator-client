@@ -1,10 +1,10 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   actions: {},
   mode: "actions",
   isActionsDialogOpen: false,
 });
 
-export const toViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, attrs }) => {
   const displayActions = selectDisplayActions({ state });
   return {
     mode: state.mode,

@@ -9,7 +9,7 @@ const EMPTY_CONTEXT_MENU_ITEMS = [
   { label: "New Folder", type: "item", value: "new-item" },
 ];
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   isDragging: false,
   selectedItemId: undefined,
 
@@ -180,7 +180,7 @@ export const selectPopoverItemId = ({ state }) => {
   return state.popover.itemId;
 };
 
-export const toViewData = ({ state, props, attrs }, payload) => {
+export const selectViewData = ({ state, props, attrs }, payload) => {
   let items = props.items || [];
 
   // Filter items based on collapsed state

@@ -34,7 +34,7 @@ export const handleAfterMount = async (deps) => {
   store.setFormValues(formValues);
 };
 
-export const handleSubmitClick = (payload, deps) => {
+export const handleSubmitClick = (deps, payload) => {
   const { dispatchEvent, store } = deps;
   const { formValues } = store.getState();
 
@@ -69,16 +69,16 @@ export const handleSubmitClick = (payload, deps) => {
   }
 };
 
-export const handleBreadcumbClick = (e, deps) => {
+export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
-  } else if (e.detail.id === "current") {
+  } else if (payload._event.detail.id === "current") {
     store.setMode({
       mode: "current",
     });
@@ -86,15 +86,15 @@ export const handleBreadcumbClick = (e, deps) => {
   }
 };
 
-export const handleFormChange = (e, deps) => {
+export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const { formValues } = e.detail;
+  const { formValues } = payload._event.detail;
 
   store.setFormValues(formValues);
   render();
 };
 
-export const handleTabClick = (e, deps) => {
+export const handleTabClick = (deps, payload) => {
   const { render } = deps;
   render();
 };

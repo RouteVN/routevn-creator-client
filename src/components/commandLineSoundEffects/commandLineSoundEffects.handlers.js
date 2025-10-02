@@ -54,9 +54,9 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleFormExtra = async (e, deps) => {
+export const handleFormExtra = async (deps, payload) => {
   const { store, render } = deps;
-  const { name } = e.detail;
+  const { name } = payload._event.detail;
 
   // Extract index from field name (e.g., "sfx[0]" -> 0)
   const match = name.match(/sfx\[(\d+)\]/);
@@ -73,12 +73,12 @@ export const handleFormExtra = async (e, deps) => {
   }
 };
 
-export const handleFormChange = (e, deps) => {
+export const handleFormChange = (deps, payload) => {
   // No longer needed since we removed trigger functionality
 };
 
-export const handleAddNewClick = (e, deps) => {
-  e.stopPropagation();
+export const handleAddNewClick = (deps, payload) => {
+  payload._event.stopPropagation();
   const { store, render } = deps;
 
   // Create a new sound effect but don't add it to the store yet
@@ -95,10 +95,10 @@ export const handleAddNewClick = (e, deps) => {
   render();
 };
 
-export const handleSfxClick = (e, deps) => {
+export const handleSfxClick = (deps, payload) => {
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("sfx-", "");
+  const id = payload._event.currentTarget.id.replace("sfx-", "");
 
   store.setCurrentEditingId({
     id: id,
@@ -110,25 +110,25 @@ export const handleSfxClick = (e, deps) => {
   render();
 };
 
-export const handleSfxContextMenu = (e, deps) => {
-  e.preventDefault();
+export const handleSfxContextMenu = (deps, payload) => {
+  payload._event.preventDefault();
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("sfx-", "");
-  const rect = e.currentTarget.getBoundingClientRect();
+  const id = payload._event.currentTarget.id.replace("sfx-", "");
+  const rect = payload._event.currentTarget.getBoundingClientRect();
 
   store.showDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
+    position: { x: payload._event.clientX, y: payload._event.clientY },
     sfxId: id,
   });
 
   render();
 };
 
-export const handleResourceItemClick = (e, deps) => {
+export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
 
-  const id = e.currentTarget.id.replace("resource-item-", "");
+  const id = payload._event.currentTarget.id.replace("resource-item-", "");
 
   store.setTempSelectedResourceId({
     resourceId: id,
@@ -137,8 +137,8 @@ export const handleResourceItemClick = (e, deps) => {
   render();
 };
 
-export const handleSubmitClick = (e, deps) => {
-  e.stopPropagation();
+export const handleSubmitClick = (deps, payload) => {
+  payload._event.stopPropagation();
 
   const { dispatchEvent, store } = deps;
   const sfx = store.selectSfxs();
@@ -160,16 +160,16 @@ export const handleSubmitClick = (e, deps) => {
   );
 };
 
-export const handleBreadcumbClick = (e, deps) => {
+export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
-  } else if (e.detail.id === "current") {
+  } else if (payload._event.detail.id === "current") {
     store.setMode({
       mode: "current",
     });
@@ -177,13 +177,13 @@ export const handleBreadcumbClick = (e, deps) => {
   }
 };
 
-export const handleDropdownMenuClose = (e, deps) => {
+export const handleDropdownMenuClose = (deps, payload) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = (e, deps) => {
+export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render } = deps;
   const { detail } = e;
 
@@ -202,7 +202,7 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   render();
 };
 
-export const handleButtonSelectClick = async (e, deps) => {
+export const handleButtonSelectClick = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);

@@ -249,13 +249,13 @@ export const handleAfterMount = async (deps) => {
   }, 0);
 };
 
-export const handleContainerKeyDown = (e, deps) => {
+export const handleContainerKeyDown = (deps, payload) => {
   const { store, render, props, dispatchEvent, getRefIds } = deps;
   const mode = store.selectMode();
 
   // Only handle container keydown if the target is the container itself
   // If it's a contenteditable, let the line handler handle it
-  if (e.target.id !== "container") {
+  if (payload._event.target.id !== "container") {
     return;
   }
 
@@ -263,10 +263,10 @@ export const handleContainerKeyDown = (e, deps) => {
     const currentLineId = props.selectedLineId;
     const lines = props.lines || [];
 
-    switch (e.key) {
+    switch (payload._event.key) {
       case "ArrowUp":
-        e.preventDefault();
-        e.stopPropagation();
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
         if (!currentLineId && lines.length > 0) {
           // No selection, select the first line
           const firstLineId = lines[0].id;
@@ -354,8 +354,8 @@ export const handleContainerKeyDown = (e, deps) => {
         }
         break;
       case "ArrowDown":
-        e.preventDefault();
-        e.stopPropagation();
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
         if (!currentLineId && lines.length > 0) {
           // No selection, select the first line
           const firstLineId = lines[0].id;
@@ -430,7 +430,7 @@ export const handleContainerKeyDown = (e, deps) => {
         }
         break;
       case "Enter":
-        e.preventDefault();
+        payload._event.preventDefault();
         if (currentLineId) {
           // Focus the selected line to enter text-editor mode at the end
           const lineElement = deps.getRefIds()[`line-${currentLineId}`]?.elm;
@@ -442,7 +442,7 @@ export const handleContainerKeyDown = (e, deps) => {
             store.setNavigationDirection("end");
 
             // Use updateSelectedLine to properly position cursor at end
-            deps.handlers.updateSelectedLine(currentLineId, deps);
+            deps.handlers.updateSelectedLine(deps, { _event: currentLineId });
           }
         }
         break;
@@ -450,26 +450,29 @@ export const handleContainerKeyDown = (e, deps) => {
   }
 };
 
-export const handleLineKeyDown = (e, deps) => {
+export const handleLineKeyDown = (deps, payload) => {
   const { editor, dispatchEvent, store, render, props } = deps;
-  const id = e.target.id.replace(/^line-/, "");
+  const id = payload._event.target.id.replace(/^line-/, "");
   let newOffset;
   const mode = store.selectMode();
 
   // Capture cursor position immediately before any key handling
   if (mode === "text-editor") {
-    const cursorPos = getCursorPosition(e.currentTarget);
+    const cursorPos = getCursorPosition(payload._event.currentTarget);
     store.setCursorPosition(cursorPos);
 
     // Update goal column for horizontal movement or when setting new vertical position
     if (
-      e.key === "ArrowLeft" ||
-      e.key === "ArrowRight" ||
-      e.key === "Home" ||
-      e.key === "End"
+      payload._event.key === "ArrowLeft" ||
+      payload._event.key === "ArrowRight" ||
+      payload._event.key === "Home" ||
+      payload._event.key === "End"
     ) {
       store.setGoalColumn(cursorPos);
-    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    } else if (
+      payload._event.key === "ArrowUp" ||
+      payload._event.key === "ArrowDown"
+    ) {
       // For vertical movement, ensure we have the current position as goal column if not set
       const currentGoalColumn = store.selectGoalColumn();
       if (currentGoalColumn === 0) {
@@ -478,19 +481,22 @@ export const handleLineKeyDown = (e, deps) => {
     }
   }
 
-  switch (e.key) {
+  switch (payload._event.key) {
     case "Backspace":
       if (mode === "text-editor") {
         // Check if cursor is at position 0
-        const currentPos = getCursorPosition(e.currentTarget);
+        const currentPos = getCursorPosition(payload._event.currentTarget);
 
         if (currentPos === 0) {
-          e.preventDefault();
-          e.stopPropagation();
+          payload._event.preventDefault();
+          payload._event.stopPropagation();
 
           // Get current line content
-          const currentContent = e.currentTarget.textContent;
-          const currentLineId = e.currentTarget.id.replace(/^line-/, "");
+          const currentContent = payload._event.currentTarget.textContent;
+          const currentLineId = payload._event.currentTarget.id.replace(
+            /^line-/,
+            "",
+          );
 
           // Find the previous line
           const currentIndex = props.lines.findIndex(
@@ -515,10 +521,10 @@ export const handleLineKeyDown = (e, deps) => {
       }
       break;
     case "Escape":
-      e.preventDefault();
+      payload._event.preventDefault();
       // Switch to block mode and blur the current element
       store.setMode("block");
-      e.currentTarget.blur();
+      payload._event.currentTarget.blur();
       // Focus the container to enable block mode navigation
       const container = deps.getRefIds()["container"]?.elm;
       if (container) {
@@ -528,11 +534,11 @@ export const handleLineKeyDown = (e, deps) => {
       break;
     case "Enter":
       if (mode === "text-editor") {
-        e.preventDefault();
+        payload._event.preventDefault();
 
         // Get current cursor position and text content
-        const cursorPos = getCursorPosition(e.currentTarget);
-        const fullText = e.currentTarget.textContent;
+        const cursorPos = getCursorPosition(payload._event.currentTarget);
+        const fullText = payload._event.currentTarget.textContent;
 
         // Split the content at cursor position
         const leftContent = fullText.substring(0, cursorPos);
@@ -553,7 +559,7 @@ export const handleLineKeyDown = (e, deps) => {
       break;
     case "ArrowUp":
       if (mode === "block") {
-        e.preventDefault();
+        payload._event.preventDefault();
         // In block mode, just update selectedLineId without focusing
         const currentIndex = props.lines.findIndex((line) => line.id === id);
         if (currentIndex > 0) {
@@ -605,12 +611,12 @@ export const handleLineKeyDown = (e, deps) => {
         }
       } else {
         // In text-editor mode, check if cursor is on first line
-        const isOnFirstLine = isCursorOnFirstLine(e.currentTarget);
+        const isOnFirstLine = isCursorOnFirstLine(payload._event.currentTarget);
 
         if (isOnFirstLine) {
           // Cursor is on first line, move to previous line
-          e.preventDefault();
-          e.stopPropagation(); // Prevent bubbling to container
+          payload._event.preventDefault();
+          payload._event.stopPropagation(); // Prevent bubbling to container
           const goalColumn = store.selectGoalColumn() || 0;
 
           // Set navigating flag
@@ -619,7 +625,10 @@ export const handleLineKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "up",
                 targetCursorPosition: goalColumn,
@@ -633,7 +642,7 @@ export const handleLineKeyDown = (e, deps) => {
       break;
     case "ArrowDown":
       if (mode === "block") {
-        e.preventDefault();
+        payload._event.preventDefault();
         // In block mode, just update selectedLineId without focusing
         const currentIndex = props.lines.findIndex((line) => line.id === id);
         if (currentIndex < props.lines.length - 1) {
@@ -672,22 +681,23 @@ export const handleLineKeyDown = (e, deps) => {
         }
       } else {
         // In text-editor mode, check if cursor is on last line
-        const isOnLastLine = isCursorOnLastLine(e.currentTarget);
+        const isOnLastLine = isCursorOnLastLine(payload._event.currentTarget);
 
         console.log("[linesEditor] ArrowDown in text-editor mode:", {
-          lineId: e.currentTarget.id,
+          lineId: payload._event.currentTarget.id,
           isOnLastLine,
-          elementHeight: e.currentTarget.scrollHeight,
+          elementHeight: payload._event.currentTarget.scrollHeight,
           lineHeight: parseFloat(
-            window.getComputedStyle(e.currentTarget).lineHeight,
+            window.getComputedStyle(payload._event.currentTarget).lineHeight,
           ),
-          textContent: e.currentTarget.textContent.substring(0, 50) + "...",
+          textContent:
+            payload._event.currentTarget.textContent.substring(0, 50) + "...",
         });
 
         if (isOnLastLine) {
           // Cursor is on last line, move to next line
-          e.preventDefault();
-          e.stopPropagation(); // Prevent bubbling to container
+          payload._event.preventDefault();
+          payload._event.stopPropagation(); // Prevent bubbling to container
           const goalColumn = store.selectGoalColumn() || 0;
 
           // Set navigating flag and direction
@@ -697,7 +707,10 @@ export const handleLineKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "down",
                 targetCursorPosition: goalColumn,
@@ -712,13 +725,13 @@ export const handleLineKeyDown = (e, deps) => {
     case "ArrowRight":
       if (mode === "text-editor") {
         // Check if cursor is at the end of the text
-        const currentPos = getCursorPosition(e.currentTarget);
-        const textLength = e.currentTarget.textContent.length;
+        const currentPos = getCursorPosition(payload._event.currentTarget);
+        const textLength = payload._event.currentTarget.textContent.length;
 
         if (currentPos >= textLength) {
           // Cursor is at end, move to next line
-          e.preventDefault();
-          e.stopPropagation();
+          payload._event.preventDefault();
+          payload._event.stopPropagation();
 
           // Set navigating flag
           store.setIsNavigating(true);
@@ -726,7 +739,10 @@ export const handleLineKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "down",
                 targetCursorPosition: 0, // Go to beginning of next line
@@ -741,12 +757,12 @@ export const handleLineKeyDown = (e, deps) => {
     case "ArrowLeft":
       if (mode === "text-editor") {
         // Check if cursor is at the beginning of the text
-        const currentPos = getCursorPosition(e.currentTarget);
+        const currentPos = getCursorPosition(payload._event.currentTarget);
 
         if (currentPos <= 0) {
           // Cursor is at beginning, move to previous line
-          e.preventDefault();
-          e.stopPropagation();
+          payload._event.preventDefault();
+          payload._event.stopPropagation();
 
           // Set navigating flag
           store.setIsNavigating(true);
@@ -754,7 +770,10 @@ export const handleLineKeyDown = (e, deps) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: e.currentTarget.id.replace(/^line-/, ""),
+                targetLineId: payload._event.currentTarget.id.replace(
+                  /^line-/,
+                  "",
+                ),
                 mode: "text-editor",
                 direction: "up",
                 targetCursorPosition: -1, // Special value to indicate "go to end"
@@ -768,20 +787,20 @@ export const handleLineKeyDown = (e, deps) => {
   }
 };
 
-export const handleLineMouseUp = (e, deps) => {
+export const handleLineMouseUp = (deps, payload) => {
   const { store } = deps;
 
   // Save cursor position after mouse up (selection change)
   // Use multiple attempts with slight delays to ensure selection is established
   setTimeout(() => {
-    const cursorPos = getCursorPosition(e.currentTarget);
+    const cursorPos = getCursorPosition(payload._event.currentTarget);
     if (cursorPos > 0) {
       store.setCursorPosition(cursorPos);
       store.setGoalColumn(cursorPos);
     } else {
       // Try again with longer delay if position is 0
       setTimeout(() => {
-        const cursorPos2 = getCursorPosition(e.currentTarget);
+        const cursorPos2 = getCursorPosition(payload._event.currentTarget);
         store.setCursorPosition(cursorPos2);
         store.setGoalColumn(cursorPos2);
       }, 10);
@@ -789,14 +808,14 @@ export const handleLineMouseUp = (e, deps) => {
   }, 0);
 };
 
-export const handleOnInput = (e, deps) => {
+export const handleOnInput = (deps, payload) => {
   const { dispatchEvent, store } = deps;
 
-  const lineId = e.target.id.replace(/^line-/, "");
-  const content = e.target.textContent;
+  const lineId = payload._event.target.id.replace(/^line-/, "");
+  const content = payload._event.target.textContent;
 
   // Save cursor position on every input
-  const cursorPos = getCursorPosition(e.target);
+  const cursorPos = getCursorPosition(payload._event.target);
   store.setCursorPosition(cursorPos);
 
   const detail = {
@@ -904,12 +923,12 @@ export const updateSelectedLine = (lineId, deps) => {
   lineRef.elm.focus({ preventScroll: true });
 };
 
-export const handleOnFocus = (e, deps) => {
+export const handleOnFocus = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  const lineId = e.currentTarget.id.replace(/^line-/, "");
+  const lineId = payload._event.currentTarget.id.replace(/^line-/, "");
 
   // Get the line element's coordinates
-  const lineElement = e.currentTarget;
+  const lineElement = payload._event.currentTarget;
   const lineRect = lineElement.getBoundingClientRect();
 
   // Always update the selected line ID with coordinates
@@ -942,7 +961,7 @@ export const handleOnFocus = (e, deps) => {
 
   // When user clicks to focus (not navigating), set goal column to current position
   setTimeout(() => {
-    const cursorPos = getCursorPosition(e.currentTarget);
+    const cursorPos = getCursorPosition(payload._event.currentTarget);
     if (cursorPos >= 0) {
       store.setGoalColumn(cursorPos);
     }
@@ -951,12 +970,12 @@ export const handleOnFocus = (e, deps) => {
   render();
 };
 
-export const handleLineBlur = (e, deps) => {
+export const handleLineBlur = (deps, payload) => {
   const { store, render, getRefIds } = deps;
 
   // Capture element references before the timeout
-  const blurredLineId = e.currentTarget.id;
-  const blurredElement = e.currentTarget;
+  const blurredLineId = payload._event.currentTarget.id;
+  const blurredElement = payload._event.currentTarget;
   const shadowRoot = blurredElement.getRootNode();
 
   console.log("[linesEditor] Blur event triggered on line:", blurredLineId);

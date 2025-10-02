@@ -15,9 +15,9 @@ const tabs = [
   // },
 ];
 
-// Form structure will be created dynamically in toViewData
+// Form structure will be created dynamically in selectViewData
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   mode: "current",
   tab: "image", // "image", "layout", or "video"
   imageItems: { items: {}, tree: [] },
@@ -138,7 +138,7 @@ export const selectSelectedResource = ({ state }) => {
   };
 };
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   const itemsMap = {
     image: state.imageItems,
     layout: state.layoutItems,

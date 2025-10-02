@@ -1,11 +1,11 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   resourceCategory: "settings",
   selectedResourceId: "user",
   repositoryTarget: "settings",
   flatItems: [],
 });
 
-export const toViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props }) => {
   return {
     ...state,
   };

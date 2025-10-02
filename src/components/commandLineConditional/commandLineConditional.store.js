@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   conditionType: "variable",
   selectedVariable: "",
   operator: "==",
@@ -21,7 +21,7 @@ export const setComparisonValue = (state, value) => {
   state.comparisonValue = value;
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   let breadcrumb = [
     {
       id: "actions",

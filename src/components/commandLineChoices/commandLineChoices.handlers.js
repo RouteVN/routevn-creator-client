@@ -1,4 +1,4 @@
-export const handleAddChoiceClick = (e, deps) => {
+export const handleAddChoiceClick = (deps, payload) => {
   const { store, render } = deps;
 
   store.setMode("editChoice");
@@ -6,11 +6,13 @@ export const handleAddChoiceClick = (e, deps) => {
   render();
 };
 
-export const handleChoiceClick = (e, deps) => {
+export const handleChoiceClick = (deps, payload) => {
   const { store, render } = deps;
 
   try {
-    const index = parseInt(e.currentTarget.getAttribute("data-index"));
+    const index = parseInt(
+      payload._event.currentTarget.getAttribute("data-index"),
+    );
 
     store.setMode("editChoice");
     store.setEditingIndex(index);
@@ -34,21 +36,23 @@ export const handleChoiceClick = (e, deps) => {
   }
 };
 
-export const handleChoiceContextMenu = (e, deps) => {
-  e.preventDefault();
+export const handleChoiceContextMenu = (deps, payload) => {
+  payload._event.preventDefault();
   const { store, render } = deps;
 
-  const index = parseInt(e.currentTarget.getAttribute("data-index"));
+  const index = parseInt(
+    payload._event.currentTarget.getAttribute("data-index"),
+  );
 
   store.showDropdownMenu({
-    position: { x: e.clientX, y: e.clientY },
+    position: { x: payload._event.clientX, y: payload._event.clientY },
     choiceIndex: index,
   });
 
   render();
 };
 
-export const handleCancelEditClick = (e, deps) => {
+export const handleCancelEditClick = (deps, payload) => {
   const { store, render } = deps;
 
   store.setMode("list");
@@ -61,36 +65,36 @@ export const handleCancelEditClick = (e, deps) => {
   }
 };
 
-export const handleSaveChoiceClick = (e, deps) => {
+export const handleSaveChoiceClick = (deps, payload) => {
   const { store, render } = deps;
 
   store.saveChoice();
   render();
 };
 
-// export const handleChoiceFormInput = (e, deps) => {
+// export const handleChoiceFormInput = (deps, payload) => {
 //   const { store, render } = deps;
-//   const { name, fieldValue } = e.detail;
+//   const { name, fieldValue } = payload._event.detail;
 //
 //   store.updateEditForm({ field: name, value: fieldValue });
 //   render();
 // };
 
-export const handleChoiceFormChange = (e, deps) => {
+export const handleChoiceFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = e.detail;
+  const { name, fieldValue } = payload._event.detail;
 
   store.updateEditForm({ field: name, value: fieldValue });
   render();
 };
 
-export const handleChoiceItemClick = (e, deps) => {
+export const handleChoiceItemClick = (deps, payload) => {
   const { store, render } = deps;
   // Placeholder for choice item interaction
   render();
 };
 
-export const handleSubmitClick = (e, deps) => {
+export const handleSubmitClick = (deps, payload) => {
   const { dispatchEvent, store } = deps;
   const items = store.selectItems();
   const selectedLayoutId = store.selectSelectedLayoutId();
@@ -112,28 +116,32 @@ export const handleSubmitClick = (e, deps) => {
   );
 };
 
-export const handleRemoveChoiceClick = (e, deps) => {
+export const handleRemoveChoiceClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace("remove-choice-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("remove-choice-", ""),
+  );
 
   store.removeChoice(index);
   render();
 };
 
-export const handleChoiceContentInput = (e, deps) => {
+export const handleChoiceContentInput = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(e.currentTarget.id.replace("choice-content-", ""));
+  const index = parseInt(
+    payload._event.currentTarget.id.replace("choice-content-", ""),
+  );
 
   store.updateChoice({
     index: index,
-    content: e.currentTarget.value,
+    content: payload._event.currentTarget.value,
   });
   render();
 };
 
-export const handleLayoutSelectChange = (e, deps) => {
+export const handleLayoutSelectChange = (deps, payload) => {
   const { store, render } = deps;
-  const layoutId = e.detail.value;
+  const layoutId = payload._event.detail.value;
 
   store.setSelectedLayoutId({ layoutId });
   render();
@@ -209,13 +217,13 @@ export const handlePropsChanged = (deps) => {
   render();
 };
 
-export const handleFormExtra = (e, deps) => {
+export const handleFormExtra = (deps, payload) => {
   // No longer needed since we use direct handlers on slot elements
 };
 
-export const handleFormChange = (e, deps) => {
+export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = e.detail;
+  const { name, fieldValue } = payload._event.detail;
 
   if (name === "layoutId") {
     store.setSelectedLayoutId({ layoutId: fieldValue });
@@ -223,15 +231,15 @@ export const handleFormChange = (e, deps) => {
   }
 };
 
-export const handleDropdownMenuClose = (e, deps) => {
+export const handleDropdownMenuClose = (deps, payload) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
 };
 
-export const handleDropdownMenuClickItem = (e, deps) => {
+export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render } = deps;
-  const { item } = e.detail;
+  const { item } = payload._event.detail;
   const choiceIndex = store.selectDropdownMenuChoiceIndex();
 
   if (item.value === "delete" && choiceIndex !== null) {
@@ -242,16 +250,16 @@ export const handleDropdownMenuClickItem = (e, deps) => {
   render();
 };
 
-export const handleBreadcumbClick = (e, deps) => {
+export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
-  } else if (e.detail.id === "list") {
+  } else if (payload._event.detail.id === "list") {
     store.setMode("list");
     store.setEditingIndex(-1);
 

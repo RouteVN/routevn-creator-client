@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   tabs: [
     {
       id: "variables",
@@ -13,7 +13,7 @@ export const setActiveTab = (state, tabId) => {
   state.activeTab = tabId;
 };
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   const currentPath =
     typeof window !== "undefined" ? window.location.pathname : "";
 

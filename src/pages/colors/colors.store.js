@@ -19,7 +19,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   colorsData: { tree: [], items: {} },
   selectedItemId: null,
   isEditDialogOpen: false,
@@ -97,7 +97,7 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const flatItems = toFlatItems(state.colorsData);
   const rawFlatGroups = toFlatGroups(state.colorsData);
 

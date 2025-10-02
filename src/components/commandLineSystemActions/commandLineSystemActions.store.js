@@ -1,4 +1,4 @@
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   items: [
     {
       id: "10",
@@ -9,7 +9,7 @@ export const INITIAL_STATE = Object.freeze({
   ],
 });
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   return {
     items: state.items,
   };

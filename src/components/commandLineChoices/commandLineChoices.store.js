@@ -45,7 +45,7 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
   ],
 });
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   mode: "list", // "list" or "editChoice"
   items: [
     { content: "Choice 1", action: { type: "continue" } },
@@ -199,7 +199,7 @@ const form = {
   ],
 };
 
-export const toViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state, props }, payload) => {
   const layouts = props?.layouts || [];
 
   const layoutOptions = layouts

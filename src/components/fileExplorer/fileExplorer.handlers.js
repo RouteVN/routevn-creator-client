@@ -14,23 +14,23 @@ const lodashGet = (obj, path, defaultValue) => {
 };
 
 // Forward click-item event from base component
-export const handleClickItem = (e, deps) => {
+export const handleClickItem = (deps, payload) => {
   const { dispatchEvent } = deps;
   // Just forward the event
   dispatchEvent(
     new CustomEvent("click-item", {
-      detail: e.detail,
+      detail: payload._event.detail,
       bubbles: true,
       composed: true,
     }),
   );
 };
 
-export const handleFileAction = async (e, deps) => {
+export const handleFileAction = async (deps, payload) => {
   const { dispatchEvent, repositoryFactory, router, props } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const detail = e.detail;
+  const detail = payload._event.detail;
   const repositoryTarget = props.repositoryTarget;
 
   if (!repositoryTarget) {
@@ -196,7 +196,7 @@ export const handleFileAction = async (e, deps) => {
   );
 };
 
-export const handleTargetChanged = async (e, deps) => {
+export const handleTargetChanged = async (deps, payload) => {
   const { dispatchEvent, repositoryFactory, router, props } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -208,7 +208,7 @@ export const handleTargetChanged = async (e, deps) => {
     );
   }
 
-  const { target, source, position } = e.detail;
+  const { target, source, position } = payload._event.detail;
 
   if (!source || !source.id) {
     console.warn("No source item provided");

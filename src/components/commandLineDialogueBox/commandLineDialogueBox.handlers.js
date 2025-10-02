@@ -15,10 +15,10 @@ export const handleBeforeMount = (deps) => {
   }
 };
 
-export const handleFormChange = (e, deps) => {
+export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  console.log("e.detail", e.detail);
-  const { formValues } = e.detail;
+  console.log("payload._event.detail", payload._event.detail);
+  const { formValues } = payload._event.detail;
 
   if (!formValues) {
     return;
@@ -35,7 +35,7 @@ export const handleFormChange = (e, deps) => {
   render();
 };
 
-export const handleSubmitClick = (e, deps) => {
+export const handleSubmitClick = (deps, payload) => {
   console.log("[handleSubmitClick] Submit button clicked");
   const { store, dispatchEvent } = deps;
   const { selectedLayoutId, selectedCharacterId } = store.getState();
@@ -69,10 +69,10 @@ export const handleSubmitClick = (e, deps) => {
   console.log("[handleSubmitClick] Submit event dispatched");
 };
 
-export const handleBreadcumbClick = (e, deps) => {
+export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent } = deps;
 
-  if (e.detail.id === "actions") {
+  if (payload._event.detail.id === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},

@@ -29,7 +29,7 @@ const form = {
   ],
 };
 
-export const INITIAL_STATE = Object.freeze({
+export const createInitialState = () => ({
   audioData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
@@ -113,7 +113,7 @@ export const selectAudioPlayerRight = (state) => {
   return state.audioPlayerRight;
 };
 
-export const toViewData = ({ state }) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.audioData);
   const rawFlatGroups = toFlatGroups(state.audioData);
   const searchQuery = state.searchQuery.toLowerCase();
