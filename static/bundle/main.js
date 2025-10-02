@@ -1,4 +1,3 @@
-import yaml from "https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/+esm";
 import { fileTypeFromBuffer } from "https://cdn.jsdelivr.net/npm/file-type@19.0.0/+esm";
 import createRouteEngine from 'https://cdn.jsdelivr.net/npm/route-engine-js@0.0.2-rc18/+esm'
 import RouteGraphics, {
@@ -35,8 +34,6 @@ async function parseVNBundle(arrayBuffer) {
   }
   return { assets, instructions };
 }
-
-const jsonData = yaml.load(window.yamlContent);
 
 const init = async () => {
   const response = await fetch('./package.vnbundle');

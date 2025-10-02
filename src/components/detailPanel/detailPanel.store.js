@@ -287,31 +287,6 @@ export const selectViewData = ({ state, props }) => {
     }
   }
 
-  // Only create form configuration when popover is open
-  const renameForm = state.popover.isOpen
-    ? {
-        fields: [
-          {
-            name: "name",
-            inputType: "inputText",
-            label: "Name",
-            value: "", // Always start with empty value
-            required: true,
-          },
-        ],
-        actions: {
-          layout: "",
-          buttons: [
-            {
-              id: "submit",
-              variant: "pr",
-              content: "Rename",
-            },
-          ],
-        },
-      }
-    : null;
-
   return {
     title: props.title || "",
     visibleFields,

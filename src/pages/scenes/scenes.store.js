@@ -124,7 +124,7 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
 // Track if we've initialized from repository yet
 let hasInitialized = false;
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }, payload) => {
   // Check if we need to initialize from repository on first render
   if (!hasInitialized && payload && payload.repository) {
     const repositoryState = payload.repository.getState();
@@ -137,7 +137,7 @@ export const selectViewData = ({ state, props }, payload) => {
       // Transform only scene items (not folders) into whiteboard items
       const initialSceneId = scenes.initialSceneId;
       const sceneItems = Object.entries(scenes.items || {})
-        .filter(([key, item]) => item.type === "scene")
+        .filter(([, item]) => item.type === "scene")
         .map(([sceneId, scene]) => ({
           id: sceneId,
           name: scene.name || `Scene ${sceneId}`,

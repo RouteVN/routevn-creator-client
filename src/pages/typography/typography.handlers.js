@@ -18,7 +18,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -334,7 +334,7 @@ export const handleFormChange = async (deps, payload) => {
   render();
 };
 
-export const handleFormExtraEvent = (deps, payload) => {
+export const handleFormExtraEvent = (deps) => {
   const { store, render } = deps;
 
   // Handle typography preview click
@@ -390,7 +390,7 @@ export const handleDialogFormChange = (deps, payload) => {
   render();
 };
 
-export const handleCloseDialog = (deps, payload) => {
+export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
 
   // Reset form values, clear edit mode, and close dialog
@@ -505,7 +505,7 @@ export const handleFormActionClick = (deps, payload) => {
 };
 
 // Add color dialog handlers
-export const handleAddColorDialogClose = (deps, payload) => {
+export const handleAddColorDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeAddColorDialog();
   render();
@@ -549,7 +549,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
 };
 
 // Add font dialog handlers
-export const handleAddFontDialogClose = (deps, payload) => {
+export const handleAddFontDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeAddFontDialog();
   render();

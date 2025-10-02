@@ -77,7 +77,7 @@ export const createInitialState = () => ({
   ],
 });
 
-export const selectResourceRoute = ({ state, props }, id) => {
+export const selectResourceRoute = ({ state }, id) => {
   // console.log('payload', payload)
   // const { resourceId, projectId } = payload;
   const resources = state.assets.concat(state.ui).concat(state.system);
@@ -88,6 +88,6 @@ export const selectResourceRoute = ({ state, props }, id) => {
   return resource.route;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   return state;
 };

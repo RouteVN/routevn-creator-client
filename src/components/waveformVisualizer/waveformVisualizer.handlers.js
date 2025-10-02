@@ -16,8 +16,7 @@ export const handleAfterMount = async (deps) => {
     store.setWaveformData(waveformData);
     store.setLoading(false);
     render();
-  } catch (error) {
-    // store.setError(true);
+  } catch {
     store.setLoading(false);
     render();
   }
@@ -44,7 +43,7 @@ export const handleOnUpdate = async (changes, deps) => {
     store.setWaveformData(waveformData);
     store.setLoading(false);
     render();
-  } catch (error) {
+  } catch {
     // store.setError(true);
     store.setLoading(false);
     render();

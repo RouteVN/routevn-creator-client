@@ -2,11 +2,11 @@ export const createInitialState = () => ({
   isDragging: false,
 });
 
-export const startDragging = (state, isDragging) => {
+export const startDragging = (state) => {
   state.isDragging = true;
 };
 
-export const stopDragging = (state, isDragging) => {
+export const stopDragging = (state) => {
   state.isDragging = false;
 };
 

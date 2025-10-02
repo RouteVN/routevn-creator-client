@@ -41,7 +41,7 @@ export const handleResizeStart = (deps, payload) => {
   document.addEventListener("mouseup", handleMouseUp);
 };
 
-const handleResizeMove = (deps, e) => {
+const handleResizeMove = (deps) => {
   const { store, render, attrs, subject } = deps;
 
   if (!store.selectIsResizing()) return;

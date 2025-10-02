@@ -267,20 +267,6 @@ export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
     return ["Latin"];
   };
 
-  const containsSequence = (array, sequence) => {
-    for (let i = 0; i <= array.length - sequence.length; i++) {
-      let found = true;
-      for (let j = 0; j < sequence.length; j++) {
-        if (array[i + j] !== sequence[j]) {
-          found = false;
-          break;
-        }
-      }
-      if (found) return true;
-    }
-    return false;
-  };
-
   // Lightweight font table parsing helpers
   const getUint16 = (data, offset) => {
     return (data[offset] << 8) | data[offset + 1];
@@ -325,94 +311,6 @@ export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
     }
 
     return tables;
-  };
-
-  const parseFormat4Subtable = (data, supportedCodepoints) => {
-    try {
-      const segCountX2 = getUint16(data, 6);
-      const segCount = segCountX2 / 2;
-
-      // Read segment arrays
-      let offset = 14;
-      const endCodes = [];
-      const startCodes = [];
-      const idDeltas = [];
-      const idRangeOffsets = [];
-
-      // End codes
-      for (let i = 0; i < segCount; i++) {
-        endCodes.push(getUint16(data, offset));
-        offset += 2;
-      }
-
-      offset += 2; // Skip reserved pad
-
-      // Start codes
-      for (let i = 0; i < segCount; i++) {
-        startCodes.push(getUint16(data, offset));
-        offset += 2;
-      }
-
-      // ID deltas
-      for (let i = 0; i < segCount; i++) {
-        idDeltas.push(getUint16(data, offset));
-        offset += 2;
-      }
-
-      // ID range offsets
-      const idRangeOffsetStart = offset;
-      for (let i = 0; i < segCount; i++) {
-        idRangeOffsets.push(getUint16(data, offset));
-        offset += 2;
-      }
-
-      // Extract supported codepoints
-      for (let i = 0; i < segCount; i++) {
-        const startCode = startCodes[i];
-        const endCode = endCodes[i];
-
-        if (startCode === 0xffff) break; // End of table
-
-        for (let codepoint = startCode; codepoint <= endCode; codepoint++) {
-          if (codepoint < 0x10000) {
-            // Basic Multilingual Plane only
-            supportedCodepoints.add(codepoint);
-          }
-        }
-      }
-    } catch (error) {
-      console.warn("Error parsing format 4 subtable:", error);
-    }
-  };
-
-  const parseFormat12Subtable = (data, supportedCodepoints) => {
-    try {
-      const length = getUint32(data, 4);
-      const numGroups = getUint32(data, 12);
-
-      let offset = 16;
-      for (let i = 0; i < numGroups; i++) {
-        const startCharCode = getUint32(data, offset);
-        const endCharCode = getUint32(data, offset + 4);
-        const startGlyphId = getUint32(data, offset + 8);
-
-        // Add all codepoints in this range
-        for (
-          let codepoint = startCharCode;
-          codepoint <= endCharCode;
-          codepoint++
-        ) {
-          if (codepoint < 0x10000) {
-            // Basic Multilingual Plane only for now
-            supportedCodepoints.add(codepoint);
-          }
-        }
-
-        offset += 12;
-      }
-    } catch (error) {
-      console.warn("Error parsing format 12 subtable:", error);
-    }
   };
 
   return {

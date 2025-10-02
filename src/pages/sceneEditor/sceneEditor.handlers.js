@@ -25,7 +25,7 @@ async function createAssetsFromFileIds(
       Object.entries(audios)
         .concat(Object.entries(images))
         .concat(Object.entries(fonts))
-        .forEach(([key, item]) => {
+        .forEach(([_key, item]) => {
           if (item.fileId === fileId) {
             type = item.fileType;
           }
@@ -248,19 +248,18 @@ export const handleEditorDataChanged = async (deps, payload) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleAddPresentationButtonClick = (deps, payload) => {
+export const handleAddPresentationButtonClick = (deps) => {
   const { store, render } = deps;
   store.setMode("actions");
   render();
 };
 
-export const handleSectionAddClick = async (deps, payload) => {
+export const handleSectionAddClick = async (deps) => {
   const {
     store,
     repositoryFactory,
     router,
     render,
-    subject,
     drenderer,
     fileManagerFactory,
   } = deps;
@@ -388,15 +387,12 @@ export const handleSplitLine = async (deps, payload) => {
     .filter((item) => item.type === "scene")
     .find((item) => item.id === sceneId);
 
-  let existingPresentation = {};
   let existingDialogue = {};
   if (scene) {
     const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
     if (section) {
       const line = toFlatItems(section.lines).find((l) => l.id === lineId);
       if (line && line.presentation) {
-        // Preserve ALL presentation data
-        existingPresentation = JSON.parse(JSON.stringify(line.presentation));
         if (line.presentation.dialogue) {
           existingDialogue = line.presentation.dialogue;
         }
@@ -484,7 +480,7 @@ export const handleSplitLine = async (deps, payload) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleNewLine = async (deps, payload) => {
+export const handleNewLine = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -668,7 +664,7 @@ export const handleLineNavigation = (deps, payload) => {
   }
 };
 
-export const handleBackToActions = (deps, payload) => {
+export const handleBackToActions = (deps) => {
   const { store, render } = deps;
   store.setMode("actions");
   render();
@@ -797,13 +793,13 @@ export const handleSectionTabRightClick = (deps, payload) => {
   render();
 };
 
-export const handleActionsDialogClose = (deps, payload) => {
+export const handleActionsDialogClose = (deps) => {
   const { store, render } = deps;
   store.setMode("lines-editor");
   render();
 };
 
-export const handleDropdownMenuClickOverlay = (deps, payload) => {
+export const handleDropdownMenuClickOverlay = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
@@ -826,7 +822,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   if (action === "delete-section") {
     // Delete section from repository
-    const scene = store.selectScene();
     repository.addAction({
       actionType: "treeDelete",
       target: `scenes.items.${sceneId}.sections`,
@@ -892,7 +887,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   render();
 };
 
-export const handlePopoverClickOverlay = (deps, payload) => {
+export const handlePopoverClickOverlay = (deps) => {
   const { store, render } = deps;
   store.hidePopover();
   render();
@@ -944,7 +939,7 @@ export const handleFormActionClick = async (deps, payload) => {
   }
 };
 
-export const handleToggleSectionsGraphView = (deps, payload) => {
+export const handleToggleSectionsGraphView = (deps) => {
   const { store, render } = deps;
   store.toggleSectionsGraphView();
   render();

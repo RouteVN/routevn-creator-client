@@ -1,5 +1,4 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-import { formatFileSize } from "../../utils/index.js";
 
 const form = {
   fields: [
@@ -681,7 +680,7 @@ export const updateInitialValue = (state, payload) => {
   state.properties[property].initialValue = initialValue;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.animationsData);
   const rawFlatGroups = toFlatGroups(state.animationsData);
 

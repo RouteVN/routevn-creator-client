@@ -13,7 +13,7 @@ export const handleOnUpdate = (changes, deps) => {
   render();
 };
 
-export const handleBackToActions = (deps, payload) => {
+export const handleBackToActions = (deps) => {
   const { store, render } = deps;
   store.setMode({ mode: "actions" });
   render();
@@ -42,13 +42,13 @@ export const handleCommandLineSubmit = (deps, payload) => {
   render();
 };
 
-export const handleAddActionButtonClicked = (deps, payload) => {
+export const handleAddActionButtonClicked = (deps) => {
   const { store, render } = deps;
   store.showActionsDialog();
   render();
 };
 
-export const handleActionsDialogClose = (deps, payload) => {
+export const handleActionsDialogClose = (deps) => {
   const { store, render } = deps;
   store.hideActionsDialog();
   render();

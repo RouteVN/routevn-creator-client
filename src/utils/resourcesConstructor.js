@@ -1,4 +1,4 @@
-import { toFlatItems, toTreeStructure } from "../deps/repository";
+import { toTreeStructure } from "../deps/repository";
 import { layoutTreeStructureToRenderState } from "./index.js";
 
 export function constructImages(repositoryImages = {}) {
@@ -120,7 +120,7 @@ export function constructLayouts(
 
 export function extractCharacterImages(characters) {
   const characterImages = {};
-  Object.entries(characters).forEach(([id, character]) => {
+  Object.entries(characters).forEach(([, character]) => {
     Object.assign(characterImages, character.sprites);
   });
   return characterImages;

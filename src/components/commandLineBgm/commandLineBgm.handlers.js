@@ -19,7 +19,7 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleAudioWaveformClick = (deps, payload) => {
+export const handleAudioWaveformClick = (deps) => {
   const { store, render } = deps;
 
   // When user clicks on waveform, open gallery
@@ -54,8 +54,8 @@ export const handleFormExtra = (deps, payload) => {
   render();
 };
 
-export const handleFormChange = (deps, payload) => {
-  const { store, render } = deps;
+export const handleFormChange = (deps) => {
+  const { render } = deps;
   // Handle any form field changes if needed
   render();
 };
@@ -158,7 +158,7 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
   }
 };
 
-export const handleButtonSelectClick = async (deps, payload) => {
+export const handleButtonSelectClick = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);

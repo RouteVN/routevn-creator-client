@@ -44,7 +44,8 @@
   },
   "lint-staged": {
     "src/**/*.{js}": [
-      "bunx prettier --write"
+      "bunx prettier --write",
+      "oxlint"
     ]
   }
 }

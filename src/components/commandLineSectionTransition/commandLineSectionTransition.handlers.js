@@ -34,7 +34,7 @@ export const handleAfterMount = async (deps) => {
   store.setFormValues(formValues);
 };
 
-export const handleSubmitClick = (deps, payload) => {
+export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const { formValues } = store.getState();
 
@@ -94,7 +94,7 @@ export const handleFormChange = (deps, payload) => {
   render();
 };
 
-export const handleTabClick = (deps, payload) => {
+export const handleTabClick = (deps) => {
   const { render } = deps;
   render();
 };

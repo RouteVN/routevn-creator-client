@@ -10,7 +10,7 @@ export const setSelectedImageId = (state, payload) => {
   state.selectedImageId = payload.imageId;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ props }) => {
   const groups = props.groups || [];
   const selectedImageId = props.selectedImageId;
 

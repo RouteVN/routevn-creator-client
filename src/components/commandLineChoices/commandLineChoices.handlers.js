@@ -1,4 +1,4 @@
-export const handleAddChoiceClick = (deps, payload) => {
+export const handleAddChoiceClick = (deps) => {
   const { store, render } = deps;
 
   store.setMode("editChoice");
@@ -52,7 +52,7 @@ export const handleChoiceContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleCancelEditClick = (deps, payload) => {
+export const handleCancelEditClick = (deps) => {
   const { store, render } = deps;
 
   store.setMode("list");
@@ -65,7 +65,7 @@ export const handleCancelEditClick = (deps, payload) => {
   }
 };
 
-export const handleSaveChoiceClick = (deps, payload) => {
+export const handleSaveChoiceClick = (deps) => {
   const { store, render } = deps;
 
   store.saveChoice();
@@ -88,13 +88,13 @@ export const handleChoiceFormChange = (deps, payload) => {
   render();
 };
 
-export const handleChoiceItemClick = (deps, payload) => {
-  const { store, render } = deps;
+export const handleChoiceItemClick = (deps) => {
+  const { render } = deps;
   // Placeholder for choice item interaction
   render();
 };
 
-export const handleSubmitClick = (deps, payload) => {
+export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const items = store.selectItems();
   const selectedLayoutId = store.selectSelectedLayoutId();
@@ -217,7 +217,7 @@ export const handlePropsChanged = (deps) => {
   render();
 };
 
-export const handleFormExtra = (deps, payload) => {
+export const handleFormExtra = (_deps) => {
   // No longer needed since we use direct handlers on slot elements
 };
 
@@ -231,7 +231,7 @@ export const handleFormChange = (deps, payload) => {
   }
 };
 
-export const handleDropdownMenuClose = (deps, payload) => {
+export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();

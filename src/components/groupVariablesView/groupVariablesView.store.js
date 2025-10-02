@@ -172,7 +172,6 @@ export const setTargetGroupId = (state, groupId) => {
 };
 
 export const selectViewData = ({ state, props }) => {
-  const selectedItemId = props.selectedItemId;
   const searchQuery = state.searchQuery.toLowerCase();
 
   // Helper function to check if an item matches the search query

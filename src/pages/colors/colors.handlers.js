@@ -80,7 +80,7 @@ export const handleColorCreated = async (deps, payload) => {
 };
 
 export const handleColorEdited = (deps, payload) => {
-  const { render, subject } = deps;
+  const { subject } = deps;
   const { itemId, name, hex } = payload._event.detail;
 
   // Dispatch to app handlers for repository update
@@ -138,7 +138,7 @@ export const handleAddColorClick = (deps, payload) => {
   render();
 };
 
-export const handleEditDialogClose = (deps, payload) => {
+export const handleEditDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeEditDialog();
   render();
@@ -197,7 +197,7 @@ export const handleFormFieldClick = (deps, payload) => {
   }
 };
 
-export const handleAddDialogClose = (deps, payload) => {
+export const handleAddDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeAddDialog();
   render();

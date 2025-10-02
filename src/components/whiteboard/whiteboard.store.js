@@ -137,19 +137,19 @@ export const zoomFromCenter = (
   state.panY = centerY - canvasY * newZoom;
 };
 
-export const selectIsDragging = ({ state, props }, payload) => {
+export const selectIsDragging = ({ state }) => {
   return state.isDragging;
 };
 
-export const selectDragItemId = ({ state, props }, payload) => state.dragItemId;
+export const selectDragItemId = ({ state }) => state.dragItemId;
 
-export const selectIsPanMode = ({ state, props }, payload) => state.isPanMode;
-export const selectIsPanning = ({ state, props }, payload) => state.isPanning;
-export const selectPan = ({ state, props }, payload) => ({
+export const selectIsPanMode = ({ state }) => state.isPanMode;
+export const selectIsPanning = ({ state }) => state.isPanning;
+export const selectPan = ({ state }) => ({
   x: state.panX,
   y: state.panY,
 });
-export const selectZoomLevel = ({ state, props }, payload) => state.zoomLevel;
+export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
 export const selectViewData = ({ state, props }) => {
   const items = (props.items || []).map((item) => ({

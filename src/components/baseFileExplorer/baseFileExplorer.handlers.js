@@ -144,7 +144,7 @@ export const handleItemMouseDown = (deps, payload) => {
   render();
 };
 
-export const handleWindowMouseUp = (deps, payload) => {
+export const handleWindowMouseUp = (deps) => {
   const { store, dispatchEvent, render, props } = deps;
 
   if (!store.selectIsDragging()) {
@@ -335,7 +335,7 @@ export const handleArrowClick = (deps, payload) => {
   render();
 };
 
-export const handleDropdownMenuClickOverlay = (deps, payload) => {
+export const handleDropdownMenuClickOverlay = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
@@ -373,7 +373,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   );
 };
 
-export const handlePopoverClickOverlay = (deps, payload) => {
+export const handlePopoverClickOverlay = (deps) => {
   const { store, render } = deps;
   store.hidePopover();
   render();

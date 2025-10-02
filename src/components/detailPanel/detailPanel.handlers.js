@@ -141,7 +141,7 @@ export const handleTitleClick = (deps, payload) => {
   render();
 };
 
-export const handlePopoverClickOverlay = (deps, payload) => {
+export const handlePopoverClickOverlay = (deps) => {
   const { store, render } = deps;
   store.hidePopover();
   render();
@@ -206,7 +206,7 @@ export const handleColorFieldClick = (deps, payload) => {
   }
 };
 
-export const handleCloseColorDialog = (deps, payload) => {
+export const handleCloseColorDialog = (deps) => {
   const { store, render } = deps;
   store.hideColorDialog();
   render();
@@ -261,7 +261,7 @@ export const handleFontFieldClick = (deps, payload) => {
 };
 
 export const handleTypographySelectChange = (deps, payload) => {
-  const { store, render, props } = deps;
+  const { props } = deps;
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
@@ -331,7 +331,7 @@ export const handleEditableTextClick = (deps, payload) => {
   render();
 };
 
-export const handleCloseTypographyDialog = (deps, payload) => {
+export const handleCloseTypographyDialog = (deps) => {
   const { store, render } = deps;
   store.hideTypographyDialog();
   render();
@@ -370,7 +370,7 @@ export const handleTypographyFormActionClick = (deps, payload) => {
 };
 
 export const handleImageSelectorFieldClick = (deps, payload) => {
-  const { store, render, props, dispatchEvent } = deps;
+  const { props, dispatchEvent } = deps;
 
   console.log("handleImageSelectorFieldClick called");
   console.log("event target:", payload._event.currentTarget);
@@ -409,7 +409,7 @@ export const handleImageSelectorSelection = (deps, payload) => {
   render();
 };
 
-export const handleConfirmImageSelection = (deps, payload) => {
+export const handleConfirmImageSelection = (deps) => {
   const { store, render, dispatchEvent } = deps;
 
   const state = store.getState ? store.getState() : store._state || store.state;
@@ -433,13 +433,13 @@ export const handleConfirmImageSelection = (deps, payload) => {
   );
 };
 
-export const handleCancelImageSelection = (deps, payload) => {
+export const handleCancelImageSelection = (deps) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
 };
 
-export const handleCloseImageSelectorDialog = (deps, payload) => {
+export const handleCloseImageSelectorDialog = (deps) => {
   const { store, render } = deps;
   store.hideImageSelectorDialog();
   render();
