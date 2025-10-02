@@ -23,8 +23,6 @@ refs:
         handler: handleAddTypographyClick
       search-input:
         handler: handleSearchInput
-      group-toggle:
-        handler: handleGroupToggle
   detail-form:
     eventListeners:
       form-change:

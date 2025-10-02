@@ -371,7 +371,6 @@ export const createInitialState = () => ({
     { label: "New Folder", type: "item", value: "new-item" },
   ],
   // Animation dialog state
-  collapsedIds: [],
   searchQuery: "",
   isDialogOpen: false,
   isDrendererInitialized: false,
@@ -405,16 +404,6 @@ export const setSelectedItemId = (state, itemId) => {
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectAnimationsData = ({ state }) => state.animationsData;
-
-// Animation dialog state functions
-export const toggleGroupCollapse = (state, groupId) => {
-  const index = state.collapsedIds.indexOf(groupId);
-  if (index > -1) {
-    state.collapsedIds.splice(index, 1);
-  } else {
-    state.collapsedIds.push(groupId);
-  }
-};
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
@@ -710,7 +699,7 @@ export const selectViewData = ({ state, props }, payload) => {
     };
   }
 
-  // Apply search filtering and collapsed state to flatGroups
+  // Apply search filtering to flatGroups (collapse state is now handled by groupResourcesView)
   const searchQuery = state.searchQuery.toLowerCase();
   const matchesSearch = (item) => {
     if (!searchQuery) return true;
@@ -721,22 +710,22 @@ export const selectViewData = ({ state, props }, payload) => {
 
   const flatGroups = rawFlatGroups
     .map((group) => {
+      // Filter children based on search query
       const filteredChildren = (group.children || []).filter(matchesSearch);
+
+      // Only show groups that have matching children or if there's no search query
       const hasMatchingChildren = filteredChildren.length > 0;
       const shouldShowGroup = !searchQuery || hasMatchingChildren;
 
       return {
         ...group,
-        isCollapsed: state.collapsedIds.includes(group.id),
-        children: state.collapsedIds.includes(group.id)
-          ? []
-          : filteredChildren.map((item) => ({
-              ...item,
-              selectedStyle:
-                item.id === state.selectedItemId
-                  ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                  : "",
-            })),
+        children: filteredChildren.map((item) => ({
+          ...item,
+          selectedStyle:
+            item.id === state.selectedItemId
+              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+              : "",
+        })),
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };

@@ -112,7 +112,6 @@ export const createInitialState = () => ({
   fontsData: { tree: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
-  collapsedIds: [],
   context: {
     typographyPreview: {
       src: "",
@@ -196,15 +195,6 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
-};
-
-export const toggleGroupCollapse = (state, groupId) => {
-  const index = state.collapsedIds.indexOf(groupId);
-  if (index > -1) {
-    state.collapsedIds.splice(index, 1);
-  } else {
-    state.collapsedIds.push(groupId);
-  }
 };
 
 // Dialog management
@@ -402,27 +392,24 @@ export const selectViewData = ({ state }) => {
       : { fontFamily: fontId, fileId: null };
   };
 
-  // Apply collapsed state and selection styling, and add typography-specific preview data
+  // Apply selection styling and add typography-specific preview data (collapse state is now handled by groupResourcesView)
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
-    isCollapsed: state.collapsedIds.includes(group.id),
-    children: state.collapsedIds.includes(group.id)
-      ? []
-      : (group.children || []).map((item) => {
-          const fontData = getFontData(item.fontId);
-          return {
-            ...item,
-            fontStyle: fontData.fontFamily,
-            fontFileId: fontData.fileId,
-            color: getColorHex(item.colorId),
-            previewText:
-              item.previewText || "The quick brown fox jumps over the lazy dog",
-            selectedStyle:
-              item.id === state.selectedItemId
-                ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-                : "",
-          };
-        }),
+    children: (group.children || []).map((item) => {
+      const fontData = getFontData(item.fontId);
+      return {
+        ...item,
+        fontStyle: fontData.fontFamily,
+        fontFileId: fontData.fileId,
+        color: getColorHex(item.colorId),
+        previewText:
+          item.previewText || "The quick brown fox jumps over the lazy dog",
+        selectedStyle:
+          item.id === state.selectedItemId
+            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+            : "",
+      };
+    }),
   }));
 
   // Helper function to get color name from ID

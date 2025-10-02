@@ -127,13 +127,6 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-export const handleGroupToggle = (deps, payload) => {
-  const { store, render } = deps;
-  const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse(groupId);
-  render();
-};
-
 export const handleAddDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeAddDialog();

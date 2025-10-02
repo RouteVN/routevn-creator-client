@@ -33,10 +33,6 @@ refs:
         action: setSearchQuery
         payload:
           value: ${event.detail.value}
-      group-toggle:
-        action: toggleGroupCollapse
-        payload:
-          groupId: "${event.detail.groupId}"
   preview-overlay:
     eventListeners:
       click:

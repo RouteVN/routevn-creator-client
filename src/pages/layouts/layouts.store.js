@@ -52,7 +52,6 @@ export const createInitialState = () => ({
   layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
-  collapsedIds: [],
   fieldResources: {},
   isAddDialogOpen: false,
   targetGroupId: null,
@@ -81,15 +80,6 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
-};
-
-export const toggleGroupCollapse = (state, groupId) => {
-  const index = state.collapsedIds.indexOf(groupId);
-  if (index > -1) {
-    state.collapsedIds.splice(index, 1);
-  } else {
-    state.collapsedIds.push(groupId);
-  }
 };
 
 export const openAddDialog = (state, groupId) => {
@@ -166,19 +156,16 @@ export const selectViewData = ({ state, props }, payload) => {
       .filter(Boolean);
   }
 
-  // Apply collapsed state and selection styling
+  // Apply selection styling (collapse state is now handled by groupResourcesView)
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
-    isCollapsed: state.collapsedIds.includes(group.id),
-    children: state.collapsedIds.includes(group.id)
-      ? []
-      : (group.children || []).map((item) => ({
-          ...item,
-          selectedStyle:
-            item.id === state.selectedItemId
-              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-              : "",
-        })),
+    children: (group.children || []).map((item) => ({
+      ...item,
+      selectedStyle:
+        item.id === state.selectedItemId
+          ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+          : "",
+    })),
   }));
 
   return {

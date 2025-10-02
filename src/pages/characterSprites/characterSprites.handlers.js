@@ -216,34 +216,3 @@ export const handleSearchInput = (deps, payload) => {
   store.setSearchQuery(searchQuery);
   render();
 };
-
-export const handleGroupToggle = (deps, payload) => {
-  const { store, render } = deps;
-  const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse(groupId);
-  render();
-};
-
-export const handleImageDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
-  const { itemId } = payload._event.detail;
-
-  store.setSelectedItemId(itemId);
-
-  const selectedItem = store.selectSelectedItem();
-  if (selectedItem && selectedItem.id === itemId) {
-    store.showFullImagePreview(selectedItem.fileId);
-    render();
-  }
-};
-
-export const handlePreviewOverlayClick = (deps, payload) => {
-  const { store, render } = deps;
-  store.hideFullImagePreview();
-  render();
-};
-
-export const handleOnMount = async (deps) => {
-  const { store, render, userConfig } = deps;
-  // No zoom initialization needed - handled by groupResourcesView
-};
