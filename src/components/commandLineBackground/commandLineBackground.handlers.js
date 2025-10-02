@@ -1,7 +1,8 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props } = deps;
+  const { repositoryFactory, router, store, props, render } = deps;
+
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { images, layouts, videos, animations } = repository.getState();
@@ -13,7 +14,9 @@ export const handleAfterMount = async (deps) => {
     animations,
   });
 
-  if (!props.line.presentation?.background) {
+  console.log("props.background", props.background);
+
+  if (!props.background) {
     return;
   }
 
@@ -21,7 +24,7 @@ export const handleAfterMount = async (deps) => {
     resourceId,
     resourceType,
     animations: backgroundAnimations,
-  } = props.line.presentation.background;
+  } = props.background;
   if (!resourceId || !resourceType) {
     return;
   }
@@ -37,6 +40,8 @@ export const handleAfterMount = async (deps) => {
       animationId: backgroundAnimations.in,
     });
   }
+
+  render();
 };
 
 export const handleImageSelected = async (deps, payload) => {

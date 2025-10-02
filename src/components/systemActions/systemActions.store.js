@@ -1,15 +1,21 @@
 export const createInitialState = () => ({
-  actions: {},
   mode: "actions",
   isActionsDialogOpen: false,
 });
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, props }) => {
   const displayActions = selectDisplayActions({ state });
   return {
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
     displayActions,
+    actions: props.actions,
+    selectedLine: props.selectedLine,
+    layouts: props.layouts,
+    allCharacters: props.allCharacters,
+    sections: props.sections,
+    scene: props.scene,
+    presentationState: props.presentationState,
   };
 };
 

@@ -49,20 +49,19 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    line:
+    background:
       type: object
       properties:
-        presentation:
+        resourceId:
+          type: string
+        resourceType:
+          type: string
+          enum: ["image", "layout", "video"]
+        animations:
           type: object
           properties:
-            background:
-              type: object
-              properties:
-                resourceId:
-                  type: string
-                resourceType:
-                  type: string
-                  enum: ["image", "layout", "video"]
+            in:
+              type: string
 
 refs:
   rvn-image-selector:

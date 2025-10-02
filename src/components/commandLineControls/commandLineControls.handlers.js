@@ -1,24 +1,26 @@
 export const handleBeforeMount = (deps) => {
-  const { store, props } = deps;
+  const { store, props, render } = deps;
 
   // Initialize with existing controls data if available
-  if (props?.line?.controls?.disableUserClick !== undefined) {
+  if (props?.controls?.disableUserClick !== undefined) {
     store.setDisableUserClick({
-      disableUserClick: props.line.controls.disableUserClick,
+      disableUserClick: props.controls.disableUserClick,
     });
   }
 
-  if (props?.line?.controls?.autoPlay !== undefined) {
+  if (props?.controls?.autoPlay !== undefined) {
     store.setAutoPlay({
-      autoPlay: props.line.controls.autoPlay,
+      autoPlay: props.controls.autoPlay,
     });
   }
 
-  if (props?.line?.controls?.autoPlayDelay !== undefined) {
+  if (props?.controls?.autoPlayDelay !== undefined) {
     store.setAutoPlayDelay({
-      autoPlayDelay: props.line.controls.autoPlayDelay,
+      autoPlayDelay: props.controls.autoPlayDelay,
     });
   }
+
+  render();
 };
 
 export const handleFormChange = (deps, payload) => {

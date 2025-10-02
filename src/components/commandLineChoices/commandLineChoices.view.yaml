@@ -12,11 +12,15 @@ propsSchema:
             type: string
           name:
             type: string
-    line:
+    choices:
       type: object
       properties:
-        presentation:
-          type: object
+        items:
+          type: array
+          items:
+            type: object
+        layoutId:
+          type: string
 
 viewDataSchema:
   type: object

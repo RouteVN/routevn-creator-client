@@ -47,24 +47,18 @@ viewDataSchema:
 propsSchema:
   type: object
   properties:
-    line:
+    sfx:
       type: object
       properties:
-        presentation:
-          type: object
-          properties:
-            sfx:
-              type: object
-              properties:
-                items:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      audioId:
-                        type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              audioId:
+                type: string
 
 refs:
   add-new-button:

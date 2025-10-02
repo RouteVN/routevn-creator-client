@@ -27,5 +27,6 @@ export const selectViewData = ({ state }) => {
   return {
     tabs: state.tabs,
     activeTab,
+    actions: [], // Add empty actions array for systemActions component
   };
 };

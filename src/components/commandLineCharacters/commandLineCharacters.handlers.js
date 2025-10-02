@@ -1,7 +1,7 @@
 import { toFlatItems } from "../../deps/repository";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props } = deps;
+  const { repositoryFactory, router, store, props, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { characters, transforms } = repository.getState();
@@ -12,13 +12,13 @@ export const handleAfterMount = async (deps) => {
     transforms: transforms || { tree: [], items: {} },
   });
 
-  // Use presentationState if available, otherwise fall back to line.presentation
+  // Use presentationState if available, otherwise fall back to character prop
   let characterItems = null;
 
   if (props?.presentationState?.character?.items) {
     characterItems = props.presentationState.character.items;
-  } else if (props?.line?.presentation?.character?.items) {
-    characterItems = props.line.presentation.character.items;
+  } else if (props?.character?.items) {
+    characterItems = props.character.items;
   }
 
   if (!characterItems) {
@@ -29,6 +29,8 @@ export const handleAfterMount = async (deps) => {
   store.setExistingCharacters({
     characters: characterItems,
   });
+
+  render();
 };
 
 export const handleCharacterClick = (deps, payload) => {
