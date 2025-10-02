@@ -73,7 +73,6 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-
 export const openAudioPlayer = (state, { fileId, fileName }) => {
   state.playingAudio.fileId = fileId;
   state.playingAudio.title = fileName;

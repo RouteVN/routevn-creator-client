@@ -127,7 +127,6 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-
 export const handleAddDialogClose = (deps, payload) => {
   const { store, render } = deps;
   store.closeAddDialog();

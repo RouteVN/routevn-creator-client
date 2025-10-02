@@ -216,4 +216,3 @@ export const handleSearchInput = (deps, payload) => {
   store.setSearchQuery(searchQuery);
   render();
 };
-

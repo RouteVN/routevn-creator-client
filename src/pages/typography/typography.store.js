@@ -197,7 +197,6 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-
 // Dialog management
 export const toggleDialog = (state) => {
   state.isDialogOpen = !state.isDialogOpen;

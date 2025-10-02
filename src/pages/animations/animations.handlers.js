@@ -150,7 +150,6 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-
 export const handleAddAnimationClick = async (deps, payload) => {
   const { store, render, drenderer } = deps;
   const { groupId } = payload._event.detail;

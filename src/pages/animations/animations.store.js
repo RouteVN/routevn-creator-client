@@ -405,7 +405,6 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectAnimationsData = ({ state }) => state.animationsData;
 
-
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };

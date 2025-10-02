@@ -57,4 +57,3 @@ export const setSelectedItemId = (state, itemId) => {
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
-

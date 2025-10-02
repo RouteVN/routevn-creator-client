@@ -63,7 +63,6 @@ export const setSearchQuery = (state, { query }) => {
   state.searchQuery = query;
 };
 
-
 export const showFullImagePreview = (state, { itemId }) => {
   const flatItems = toFlatItems(state.imagesData);
   const item = flatItems.find((item) => item.id === itemId);

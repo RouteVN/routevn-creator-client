@@ -64,7 +64,6 @@ export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
 
-
 export const setVideoVisible = (state, video) => {
   state.videoVisible = true;
   state.selectedVideo = video;

@@ -193,7 +193,6 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-
 export const handleAudioItemDoubleClick = async (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail;

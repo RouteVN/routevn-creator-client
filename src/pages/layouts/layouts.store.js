@@ -52,7 +52,7 @@ export const createInitialState = () => ({
   layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
-    fieldResources: {},
+  fieldResources: {},
   isAddDialogOpen: false,
   targetGroupId: null,
   contextMenuItems: [
@@ -81,7 +81,6 @@ export const setSelectedItemId = (state, itemId) => {
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
 };
-
 
 export const openAddDialog = (state, groupId) => {
   state.isAddDialogOpen = true;

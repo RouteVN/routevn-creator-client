@@ -174,7 +174,6 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-
 export const handleVideoItemDoubleClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router, repositoryFactory } = deps;
   const { itemId } = payload._event.detail;
