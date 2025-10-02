@@ -1,5 +1,5 @@
 export const createInitialState = () => ({});
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   return state;
 };

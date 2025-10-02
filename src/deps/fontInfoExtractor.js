@@ -149,7 +149,7 @@ export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
     return weights[weightClass] || `${weightClass}`;
   };
 
-  const getSupportedGlyphs = async (fontBuffer) => {
+  const getSupportedGlyphs = async () => {
     const supportedGlyphs = [];
 
     // Just use basic Latin characters for glyph preview
@@ -261,22 +261,10 @@ export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
     return supportedGlyphs;
   };
 
-  const detectLanguageSupport = (glyphs) => {
+  const detectLanguageSupport = () => {
     // TODO: Fix language detection - implement proper script detection based on actual font CMAP tables
     // Currently simplified to just return Latin since we're only showing Latin characters
     return ["Latin"];
-  };
-
-  const checkForWeightSupport = (fontData) => {
-    // Simplified check - look for 'fvar' table presence which indicates variable font
-    const fvarSignature = [0x66, 0x76, 0x61, 0x72]; // 'fvar' in bytes
-    return containsSequence(fontData, fvarSignature);
-  };
-
-  const checkForItalicSupport = (fontData) => {
-    // Simplified check - this would need proper font table parsing
-    // For now, we'll do a basic heuristic
-    return false; // Default to false without proper analysis
   };
 
   const containsSequence = (array, sequence) => {
@@ -317,7 +305,6 @@ export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
     // Parse table directory
     for (let i = 0; i < numTables; i++) {
       const tag = String.fromCharCode(...fontData.slice(offset, offset + 4));
-      const checksum = getUint32(fontData, offset + 4);
       const tableOffset = getUint32(fontData, offset + 8);
       const length = getUint32(fontData, offset + 12);
 
@@ -342,7 +329,6 @@ export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
 
   const parseFormat4Subtable = (data, supportedCodepoints) => {
     try {
-      const length = getUint16(data, 2);
       const segCountX2 = getUint16(data, 6);
       const segCount = segCountX2 / 2;
 

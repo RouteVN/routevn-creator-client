@@ -39,7 +39,8 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.3",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.2"
+    "lint-staged": "^16.1.2",
+    "oxlint": "^1.19.0"
   },
   "lint-staged": {
     "src/**/*.{js}": [

@@ -10,7 +10,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -127,7 +127,7 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-export const handleAddDialogClose = (deps, payload) => {
+export const handleAddDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeAddDialog();
   render();

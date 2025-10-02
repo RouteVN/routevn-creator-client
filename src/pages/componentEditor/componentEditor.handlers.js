@@ -126,7 +126,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleTargetChanged = (deps, payload) => {
+export const handleTargetChanged = (deps) => {
   const { render } = deps;
   render();
 };
@@ -139,12 +139,12 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   await renderComponentPreview(deps);
 };
 
-export const handleAddComponentClick = (deps, payload) => {
+export const handleAddComponentClick = (deps) => {
   const { render } = deps;
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { router, store, repositoryFactory, render } = deps;
   const { componentId, p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);

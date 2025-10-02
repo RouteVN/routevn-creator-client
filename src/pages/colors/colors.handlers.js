@@ -28,7 +28,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -80,7 +80,7 @@ export const handleColorCreated = async (deps, payload) => {
 };
 
 export const handleColorEdited = (deps, payload) => {
-  const { store, render, subject } = deps;
+  const { render, subject } = deps;
   const { itemId, name, hex } = payload._event.detail;
 
   // Dispatch to app handlers for repository update

@@ -232,7 +232,7 @@ export const handleZoomChange = async (deps, payload) => {
   render();
 };
 
-export const handleZoomIn = async (deps, payload) => {
+export const handleZoomIn = async (deps) => {
   const { store, render, userConfig } = deps;
 
   // Increase zoom by 0.1, max 4.0
@@ -245,7 +245,7 @@ export const handleZoomIn = async (deps, payload) => {
   render();
 };
 
-export const handleZoomOut = async (deps, payload) => {
+export const handleZoomOut = async (deps) => {
   const { store, render, userConfig } = deps;
 
   // Decrease zoom by 0.1, min 0.5

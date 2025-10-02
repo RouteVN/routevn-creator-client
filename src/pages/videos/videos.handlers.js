@@ -10,7 +10,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -79,7 +79,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   render();
 };
 
-export const handleFormExtraEvent = async (deps, payload) => {
+export const handleFormExtraEvent = async (deps) => {
   const {
     repositoryFactory,
     router,
@@ -203,7 +203,7 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
   render();
 };
 
-export const handleOutsideVideoClick = (deps, payload) => {
+export const handleOutsideVideoClick = (deps) => {
   const { store, render } = deps;
 
   store.setVideoNotVisible();

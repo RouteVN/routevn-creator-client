@@ -61,7 +61,6 @@ template:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      # - $if fullImagePreviewVisible:
       - $when: fullImagePreviewVisible
         rtgl-view#preview-overlay pos=fix cor=full ah=c av=c z=3000 cur=p:
           - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":

@@ -217,7 +217,7 @@ export default class AudioManager {
         this.sourceNode.onended = null;
         this.sourceNode.disconnect();
         this.sourceNode.stop();
-      } catch (error) {}
+      } catch {}
       this.sourceNode = null;
     }
   }

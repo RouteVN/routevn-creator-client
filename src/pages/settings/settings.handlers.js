@@ -1,4 +1,4 @@
-export const handleBeforeMount = (deps) => {
+export const handleBeforeMount = () => {
   // Initialize settings
 };
 
@@ -13,8 +13,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = (deps, payload) => {
-  const { store } = deps;
+export const handleDataChanged = () => {
   // Handle file explorer data changes
 };
 
@@ -25,7 +24,7 @@ export const handleCheckForUpdates = async (payload, deps) => {
   await updaterService.checkForUpdates(false);
 };
 
-export const handleBackToProjects = async (deps, payload) => {
+export const handleBackToProjects = async (deps) => {
   const { subject } = deps;
 
   // Navigate back to projects page

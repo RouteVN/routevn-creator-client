@@ -112,7 +112,7 @@ export const selectComponentId = ({ state }) => {
   return state.componentId;
 };
 
-export const selectViewData = ({ state }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
   const imageGroups = toFlatGroups(state.images);

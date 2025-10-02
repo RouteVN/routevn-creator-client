@@ -1,8 +1,7 @@
-export const handleBeforeMount = (deps) => {
+export const handleBeforeMount = () => {
   // Initialize user settings
 };
 
-export const handleDataChanged = (deps, payload) => {
-  const { store } = deps;
+export const handleDataChanged = () => {
   // Handle file explorer data changes
 };

@@ -1,5 +1,4 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-import { formatFileSize } from "../../utils/index.js";
 
 const form = {
   fields: [
@@ -33,7 +32,7 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.variablesData);
   const flatGroups = toFlatGroups(state.variablesData);
 

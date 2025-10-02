@@ -21,7 +21,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleResizeStart = (deps, payload) => {
-  const { store, render, attrs } = deps;
+  const { store, render } = deps;
 
   payload._event.preventDefault();
   console.log("🔧 Resizable panel resize start triggered");

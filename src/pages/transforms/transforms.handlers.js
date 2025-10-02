@@ -64,7 +64,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -286,7 +286,7 @@ export const handleGroupToggle = (deps, payload) => {
 };
 
 // Transform dialog and canvas handlers (moved from groupTransformsView)
-export const handleTransformDialogClose = (deps, payload) => {
+export const handleTransformDialogClose = (deps) => {
   const { store, render } = deps;
 
   // Close dialog and reset all state

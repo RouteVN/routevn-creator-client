@@ -12,7 +12,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps, payload) => {
+export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -37,7 +37,7 @@ export const handleFontItemClick = (deps, payload) => {
   render();
 };
 
-export const handleFormExtraEvent = async (deps, payload) => {
+export const handleFormExtraEvent = async (deps) => {
   const {
     repositoryFactory,
     router,
@@ -121,8 +121,6 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     fileManagerFactory,
     repositoryFactory,
     router,
-    httpClient,
-    fontManager,
     globalUI,
   } = deps;
   const { p: projectId } = router.getPayload();
@@ -227,7 +225,7 @@ export const handleFontItemDoubleClick = async (deps, payload) => {
   render();
 };
 
-export const handleCloseModal = (deps, payload) => {
+export const handleCloseModal = (deps) => {
   const { store, render } = deps;
 
   store.setModalOpen(false);

@@ -5,7 +5,7 @@ export const createInitialState = () => ({
   flatItems: [],
 });
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state }) => {
   return {
     ...state,
   };

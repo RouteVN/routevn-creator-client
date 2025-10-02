@@ -1,5 +1,5 @@
 export const handleBeforeMount = (deps) => {
-  const { store, render, props } = deps;
+  const { store, props } = deps;
 
   // Initialize with existing controls data if available
   if (props?.line?.controls?.disableUserClick !== undefined) {
@@ -41,7 +41,7 @@ export const handleFormChange = (deps, payload) => {
   render();
 };
 
-export const handleSubmitClick = (deps, payload) => {
+export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent } = deps;
   const { disableUserClick, autoPlay, autoPlayDelay } = store.getState();
 
