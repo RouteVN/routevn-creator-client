@@ -43,7 +43,7 @@ export const selectVersion = ({ state }, versionId) => {
   return state.versions.find((v) => v.id === versionId);
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state }) => {
   const versionFormFields = {
     fields: [
       {
@@ -74,11 +74,10 @@ export const selectViewData = ({ state, props }) => {
     versions: state.versions || [],
     showVersionForm: state.showVersionForm || false,
     versionFormFields,
-    resourceCategory: props.resourceCategory,
-    selectedResourceId: props.selectedResourceId,
-    flatItems: props.flatItems,
-    repositoryTarget: props.repositoryTarget,
+    resourceCategory: "releases",
     dropdownMenu: state.dropdownMenu,
+    resourceType: "versions",
+    selectedResourceId: "versions",
   };
 };
 

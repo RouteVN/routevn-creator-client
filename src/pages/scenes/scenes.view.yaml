@@ -47,6 +47,14 @@ refs:
         handler: handleDropdownMenuClose
       click-item:
         handler: handleDropdownMenuClickItem
+  preview-button:
+    eventListeners:
+      click:
+        handler: handleClickShowScenePreview
+  preview-hide-button:
+    eventListeners:
+      click:
+        action: hidePreviewScene
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -62,6 +70,7 @@ template:
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
+                          - rtgl-button#preview-button slot="preview" data-scene-id="${selectedItemId}": Preview
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
@@ -71,3 +80,5 @@ template:
       - rtgl-popover#scene-form-popover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
           - rtgl-form#scene-form key=${showSceneForm} slot=content .form=sceneFormFields w=320:
       - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+  - $if previewVisible:
+      - rvn-vn-preview scene-id="${previewSceneId}":

@@ -4,7 +4,7 @@ import {
 } from "route-engine-js";
 import { toFlatItems, toTreeStructure } from "../../deps/repository";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
-import { constructResources } from "../../utils/resourcesConstructor.js";
+import { constructResources } from "../../utils/projectDataConstructor.js";
 
 export const createInitialState = () => ({
   sceneId: undefined,

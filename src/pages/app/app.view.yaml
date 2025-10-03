@@ -57,7 +57,7 @@ template:
             $elif currentRoutePattern == "/project/resources/dialogue":
               - rvn-dialogue: []
             $elif currentRoutePattern == "/project/resources/variables":
-              - rvn-system: []
+              - rvn-variables: []
             $elif currentRoutePattern == "/project/scenes":
               - rvn-scenes: []
             $elif currentRoutePattern == "/project/scene-editor":
@@ -76,5 +76,5 @@ template:
               - rvn-layout-editor: []
             $elif currentRoutePattern == "/project/resources/component-editor":
               - rvn-component-editor: []
-            $elif currentRoutePattern == "/project/versions":
+            $elif currentRoutePattern == "/project/releases/versions":
               - rvn-versions: []

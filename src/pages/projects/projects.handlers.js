@@ -93,11 +93,11 @@ export const handleFormSubmit = async (deps, payload) => {
 
   try {
     // Check if it's the submit button
-    if (payload.detail.actionId !== "submit") {
+    if (payload._event.detail.actionId !== "submit") {
       return;
     }
 
-    const { name, description, template } = payload.detail.formValues;
+    const { name, description, template } = payload._event.detail.formValues;
     const projectPath = store.selectProjectPath();
 
     // Validate input
@@ -158,7 +158,7 @@ export const handleDropdownMenuClose = (deps) => {
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectsService, globalUI } = deps;
-  const detail = payload.detail;
+  const detail = payload._event.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;

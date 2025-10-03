@@ -75,6 +75,14 @@ const settingsItems = [
   },
 ];
 
+const releaseItems = [
+  {
+    id: "versions",
+    name: "Version",
+    path: "/project/releases/versions",
+  },
+];
+
 // Map sub-resource IDs to their parent resource IDs for menu highlighting
 const resourceParentMapping = {
   "character-sprites": "characters",
@@ -97,6 +105,10 @@ const resourceCategoryNames = {
   settings: {
     label: "Settings",
     resources: settingsItems,
+  },
+  releases: {
+    label: "Releases",
+    resources: releaseItems,
   },
 };
 

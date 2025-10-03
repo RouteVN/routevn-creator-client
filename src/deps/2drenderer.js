@@ -9,6 +9,7 @@ import RouteGraphics, {
   SliderRendererPlugin,
   KeyframeTransitionPlugin,
 } from "route-graphics";
+import createRouteEngine from "route-engine-js";
 
 export const create2dRenderer = async ({ subject }) => {
   let app;
@@ -49,6 +50,22 @@ export const create2dRenderer = async ({ subject }) => {
     loadAssets: async (assets) => {
       await assetBufferManager.load(assets);
       await app.loadAssets(assetBufferManager.getBufferMap());
+    },
+    initRouteEngine: (projectData) => {
+      const engine = createRouteEngine();
+      engine.onEvent(({ eventType, payload }) => {
+        // console.log('onEvent', { eventType, payload })
+        if (eventType === "render") {
+          app.render(payload);
+        }
+      });
+
+      engine.init({
+        projectData,
+        ticker: app._app.ticker,
+        // captureElement,
+        loadAssets: app.loadAssets,
+      });
     },
     render: (payload) => app.render(payload),
     destroy: () => {
