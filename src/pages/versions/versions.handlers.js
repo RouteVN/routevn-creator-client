@@ -1,9 +1,9 @@
 import { nanoid } from "nanoid";
-import { constructResources } from "../../utils/resourcesConstructor.js";
+import { constructResources } from "../../utils/projectDataConstructor.js";
 import {
   constructStory,
   getInitialSceneId,
-} from "../../utils/storyConstructor.js";
+} from "../../utils/projectDataConstructor.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, router, repositoryFactory } = deps;

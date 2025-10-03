@@ -6,7 +6,7 @@ import {
   constructImages,
   constructAudios,
   constructFonts,
-} from "../../utils/resourcesConstructor.js";
+} from "../../utils/projectDataConstructor.js";
 
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(

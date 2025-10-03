@@ -87,8 +87,11 @@ refs:
 
 template:
   - rtgl-view w=f h=f:
-      - rtgl-view bwb=xs w=f h=48 av=c ph=lg:
-          - rtgl-text c=mu-fg: ${scene.name}
+      - rtgl-view bwb=xs w=f h=48 av=c ph=lg d=h:
+          - rtgl-view flex=1:
+              - rtgl-text c=mu-fg: ${scene.name}
+          - rtgl-view flex=1:
+              - rtgl-button: Preview
       - rtgl-view d=h w=f h=f:
           - $if sectionsGraphView:
               - 'rtgl-view w="calc((100vw - 64px) / 2)"':
