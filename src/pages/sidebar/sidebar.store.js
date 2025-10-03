@@ -38,7 +38,7 @@ export const createInitialState = () => ({
     },
     {
       title: "Versions",
-      path: "/project/versions",
+      path: "/project/releases/versions",
       icon: "choices",
     },
     {
@@ -130,19 +130,19 @@ export const selectViewData = ({ state }) => {
       if (settingsItem) return settingsItem.path;
     }
 
-    // For versions
-    if (currentPath === "/project/versions") {
-      const versionsItem = state.items.find(
-        (item) => item.title === "Versions",
-      );
-      if (versionsItem) return versionsItem.path;
-    }
-
+    // // For versions
+    // if (currentPath === "/project/versions") {
+    //   const versionsItem = state.items.find(
+    //     (item) => item.title === "Versions",
+    //   );
+    //   if (versionsItem) return versionsItem.path;
+    // }
+    //
     // For system - match variables route
-    if (currentPath === "/project/resources/variables") {
-      const systemItem = state.items.find((item) => item.title === "System");
-      if (systemItem) return systemItem.path;
-    }
+    // if (currentPath === "/project/resources/variables") {
+    //   const systemItem = state.items.find((item) => item.title === "System");
+    //   if (systemItem) return systemItem.path;
+    // }
 
     return null;
   };

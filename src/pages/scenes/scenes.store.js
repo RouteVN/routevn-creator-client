@@ -1,7 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
 
 const form = {
-  fields: [{ name: "name", inputType: "popover-input", description: "Name" }],
+  fields: [
+    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "preview", inputType: "slot", slot: "preview" },
+  ],
 };
 
 const CONTEXT_MENU_ITEMS = [
@@ -25,10 +28,29 @@ export const createInitialState = () => ({
     items: [],
     itemId: null,
   },
+  previewVisible: false,
+  previewSceneId: undefined,
 });
 
 export const setItems = (state, scenesData) => {
   state.scenesData = scenesData;
+};
+
+export const showPreviewSceneId = (state, payload) => {
+  const { sceneId } = payload;
+  state.previewVisible = true;
+  state.previewSceneId = sceneId;
+};
+
+export const hidePreviewScene = (state) => {
+  state.previewVisible = false;
+};
+
+export const selectPreviewScene = ({ state }) => {
+  return {
+    previewVisible: state.previewVisible,
+    previewSceneId: state.previewSceneId,
+  };
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -209,6 +231,11 @@ export const selectViewData = ({ state }, payload) => {
     },
   };
 
+  console.log({
+    selectedItemId: state.selectedItemId,
+    defaultValues: defaultValues,
+  });
+
   return {
     flatItems,
     flatGroups,
@@ -228,5 +255,7 @@ export const selectViewData = ({ state }, payload) => {
     folderOptions,
     whiteboardCursor: state.isWaitingForTransform ? "crosshair" : undefined,
     dropdownMenu: state.dropdownMenu,
+    previewVisible: state.previewVisible,
+    previewSceneId: state.previewSceneId,
   };
 };
