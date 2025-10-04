@@ -18,10 +18,11 @@ const layoutForm = {
         { value: "normal", label: "Normal" },
         { value: "dialogue", label: "Dialogue" },
         { value: "choice", label: "Choice" },
+        { value: "screen", label: "Screen" },
       ],
       tooltip: {
         content:
-          "Normal is layout that can be used for background or menu pages. Dialogue is used for text dialogue layout. Choices is used for the choices.",
+          "Normal is layout that can be used for background or menu pages. Dialogue is used for text dialogue layout. Choice is used for the choices. Screen is a general purpose layout type.",
       },
     },
   ],
@@ -117,6 +118,7 @@ export const selectViewData = ({ state }) => {
       normal: "Normal",
       dialogue: "Dialogue",
       choice: "Choice",
+      screen: "Screen",
     };
 
     const layoutTypeLabel = selectedItem.layoutType

@@ -42,8 +42,20 @@ export const createInitialState = () => ({
       icon: "transition",
       mode: "sectionTransition",
     },
+    {
+      id: "11",
+      label: "Screen",
+      icon: "screen",
+      mode: "screen",
+    },
+    {
+      id: "12",
+      label: "Next Line",
+      icon: "next-line",
+      mode: "nextLine",
+    },
     // {
-    //   id: "11",
+    //   id: "13",
     //   label: "Controls",
     //   icon: "controls",
     //   mode: "controls",

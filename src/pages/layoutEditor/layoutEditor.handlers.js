@@ -533,7 +533,7 @@ const deepMerge = (target, source) => {
   return result;
 };
 
-export const handleFormChange = async (deps, event, payload) => {
+export const handleFormChange = async (deps, payload) => {
   const { store, render } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
@@ -895,7 +895,7 @@ export const handleArrowKeyDown = async (deps, payload) => {
 
 export const handle2dRenderEvent = async (deps, payload) => {
   const { store } = deps;
-  const { eventName } = payload._event;
+  const { eventName } = payload;
 
   const { isDragging, dragOffset } = store.selectDragging();
 
@@ -943,7 +943,7 @@ export const handle2dRenderEvent = async (deps, payload) => {
  * @param {Object} deps - Component dependencies
  * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
  */
-async function handleDebouncedUpdate(payload, deps, skipUIUpdate = false) {
+async function handleDebouncedUpdate(deps, payload, skipUIUpdate = false) {
   const { repositoryFactory, router, store, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
@@ -990,7 +990,7 @@ export const subscriptions = (deps) => {
     subject.pipe(
       filter(({ action }) => action === "2drendererEvent"),
       tap(({ payload }) => {
-        handle2dRenderEvent(payload, deps);
+        handle2dRenderEvent(deps, payload);
       }),
     ),
     // Debounce regular element updates
@@ -998,7 +998,7 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "layoutEditor.updateElement"),
       debounceTime(DEBOUNCE_DELAYS.UPDATE),
       tap(async ({ payload }) => {
-        await handleDebouncedUpdate(payload, deps, false);
+        await handleDebouncedUpdate(deps, payload, false);
       }),
     ),
     // Debounce drag saves to repository (UI already updated immediately)
@@ -1006,7 +1006,7 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "layoutEditor.updateElementDrag"),
       debounceTime(DEBOUNCE_DELAYS.DRAG),
       tap(async ({ payload }) => {
-        await handleDebouncedUpdate(payload, deps, true);
+        await handleDebouncedUpdate(deps, payload, true);
       }),
     ),
   ];
@@ -1016,6 +1016,7 @@ export const handleSystemActionsChange = (deps, payload) => {
   const { store, render } = deps;
   const selectedItem = store.selectSelectedItem();
   selectedItem.eventPayload = payload._event.detail;
+  console.log("selectedItem", selectedItem);
   store.updateSelectedItem(selectedItem);
   render();
 };
