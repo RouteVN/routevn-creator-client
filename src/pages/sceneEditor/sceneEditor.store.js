@@ -757,6 +757,38 @@ export const selectActionsData = ({ state }) => {
     });
   }
 
+  // Screen
+  if (selectedLine.actions.screen) {
+    const screenData = selectedLine.actions.screen.layoutId
+      ? toFlatItems(repositoryState.layouts).find(
+          (l) => l.id === selectedLine.actions.screen.layoutId,
+        )
+      : null;
+
+    if (screenData) {
+      actionsItems.push({
+        type: "screen",
+        id: "actions-action-screen",
+        dataMode: "screen",
+        icon: "screen",
+        data: {
+          screenData,
+        },
+      });
+    }
+  }
+
+  // Next Line
+  if (selectedLine.actions.nextLine) {
+    actionsItems.push({
+      type: "nextLine",
+      id: "actions-action-next-line",
+      dataMode: "nextLine",
+      icon: "next-line",
+      data: {},
+    });
+  }
+
   return actionsItems;
 };
 
