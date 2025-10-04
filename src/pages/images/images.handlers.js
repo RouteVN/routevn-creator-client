@@ -110,6 +110,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const fileManager = await fileManagerFactory.getByProject(projectId);
+  console.log(" payload._event.detail", payload._event.detail);
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 

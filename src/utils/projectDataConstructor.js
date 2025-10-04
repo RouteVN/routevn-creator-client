@@ -1,18 +1,7 @@
 import { toTreeStructure } from "../deps/repository";
 import { layoutTreeStructureToRenderState } from "./index.js";
 
-export function constructProjectData(state) {
-  // Resources construction (from resourcesConstructor.js)
-  // const images = state.images?.items || {};
-  // const audio = state.audio?.items || {};
-  // const animations = state.animations?.items || {};
-  // const characters = state.characters?.items || {};
-  // const transforms = state.transforms?.items || {};
-  // const layouts = state.layouts?.items || {};
-  // const typography = state.typography || { items: {}, tree: [] };
-  // const colors = state.colors || { items: {}, tree: [] };
-  // const fonts = state.fonts?.items || {};
-
+export function constructProjectData(state, options = {}) {
   // Helper functions
   function constructImages(repositoryImages = {}) {
     const processedImages = {};
@@ -209,10 +198,9 @@ export function constructProjectData(state) {
                 typeof lineNode === "string" ? lineNode : lineNode.id;
               const line = section.lines.items[lineId];
               if (line) {
-                // Transform line structure - rename 'presentation' to 'actions'
                 const transformedLine = {
                   id: lineId,
-                  actions: line.presentation || {},
+                  actions: line.actions || {},
                 };
                 transformedSection.lines.push(transformedLine);
               }
@@ -230,7 +218,7 @@ export function constructProjectData(state) {
   }
 
   function getInitialSceneId(scenes) {
-    return scenes?.initialSceneId || null;
+    return options.initialSceneId || scenes?.initialSceneId;
   }
 
   // Construct final project data
@@ -352,10 +340,6 @@ export function constructStory(scenes) {
   });
 
   return transformedScenes;
-}
-
-export function getInitialSceneId(scenes) {
-  return scenes?.initialSceneId || null;
 }
 
 export function constructResources(repositoryState) {

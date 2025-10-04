@@ -65,7 +65,7 @@ template:
                           - rvn-file-image fileId=${line.characterFileId} w=16 h=16 br=f:
                   - rtgl-view d=h w=f:
                       - rtgl-view w=f:
-                          - 'div#line-${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=true': ${line.presentation.dialogue.content[0].text}
+                          - 'div#line-${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=true': ${line.actions.dialogue.content[0].text}
                           - $if line.sceneTransition:
                               - rtgl-view d=h:
                                   - rtgl-svg svg="transition" wh=16:

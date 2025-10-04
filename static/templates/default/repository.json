@@ -837,7 +837,7 @@
               "lines": {
                 "items": {
                   "line-1": {
-                    "presentation": {
+                    "actions": {
                       "dialogue": {
                         "layoutId": "simple-dialogue",
                         "mode": "adv"
@@ -845,97 +845,97 @@
                     }
                   },
                   "line-2": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-3": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-4": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-5": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-6": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-7": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-8": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-9": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-10": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-11": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-12": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-13": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-14": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-15": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-16": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-17": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-18": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-19": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-20": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-21": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-22": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-23": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-24": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-25": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-26": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-27": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-28": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-29": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-30": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-31": {
-                    "presentation": {}
+                    "actions": {}
                   },
                   "line-32": {
-                    "presentation": {}
+                    "actions": {}
                   }
                 },
                 "tree": [
