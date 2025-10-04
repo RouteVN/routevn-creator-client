@@ -11,7 +11,5 @@ attrsSchema:
 refs: {}
 
 template:
-  - rtgl-view pos=fix w=100vw h=100vh bgc=de z=5000:
-      - rtgl-text: Preview ${previewSceneId}
-      - rtgl-button#preview-hide-button: Hide
+  - 'rtgl-view pos=fix w=100vw h=100vh style="left: 0; top: 0;" z=3500':
       - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex;"':
