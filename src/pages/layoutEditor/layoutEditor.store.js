@@ -266,7 +266,6 @@ export const setSelectedItemId = (state, itemId) => {
 };
 
 export const updateSelectedItem = (state, updatedItem) => {
-  // Update the selected item in the layoutData
   if (state.selectedItemId && state.layoutData && state.layoutData.items) {
     state.layoutData.items[state.selectedItemId] = updatedItem;
   }
@@ -634,7 +633,14 @@ export const selectViewData = ({ state }) => {
   // Create default values for the form
   const defaultValues = selectedItem
     ? {
-        eventPayload: selectedItem.eventPayload,
+        eventPayload: Object.entries(selectedItem.eventPayload || {}).map(
+          ([key, value]) => {
+            return {
+              ...value,
+              type: key,
+            };
+          },
+        ),
         $when: selectedItem.$when,
         $each: selectedItem.$each,
         name: selectedItem.name,
