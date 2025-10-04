@@ -51,9 +51,9 @@ refs:
     eventListeners:
       click:
         handler: handleClickShowScenePreview
-  preview-hide-button:
+  vn-preview:
     eventListeners:
-      click:
+      close:
         action: hidePreviewScene
 
 template:
@@ -81,4 +81,4 @@ template:
           - rtgl-form#scene-form key=${showSceneForm} slot=content .form=sceneFormFields w=320:
       - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
   - $if previewVisible:
-      - rvn-vn-preview scene-id="${previewSceneId}":
+      - rvn-vn-preview#vn-preview scene-id="${previewSceneId}":
