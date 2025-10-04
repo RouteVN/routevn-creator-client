@@ -51,7 +51,8 @@ export const handleItemDoubleClick = (deps, payload) => {
 
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { dispatchEvent, fontManager, props = {} } = deps;
-  const { files } = payload._event.detail;
+  const { _event: event } = payload;
+  const { files } = event.detail;
   const targetGroupId = payload._event.currentTarget.id
     .replace("drag-drop-bar-", "")
     .replace("drag-drop-item-", "");
@@ -70,8 +71,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     new CustomEvent("files-uploaded", {
       detail: {
         files,
+        originalEvent: event,
         targetGroupId,
-        originalEvent: e,
       },
       bubbles: true,
       composed: true,

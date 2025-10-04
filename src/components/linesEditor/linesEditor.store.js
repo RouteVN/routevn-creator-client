@@ -64,19 +64,19 @@ export const selectViewData = ({ state, props }) => {
     const isBlockMode = state.mode === "block";
 
     let backgroundFileId;
-    if (line.presentation?.background) {
-      const resourceId = line.presentation.background.resourceId;
+    if (line.actions?.background) {
+      const resourceId = line.actions.background.resourceId;
       backgroundFileId = state.repositoryState.images.items[resourceId]?.fileId;
     }
 
     // Character sprites for display (characters shown on screen)
     let characterSprites = [];
     if (
-      line.presentation?.character?.items &&
-      line.presentation.character.items.length > 0
+      line.actions?.character?.items &&
+      line.actions.character.items.length > 0
     ) {
       // Collect all character sprites
-      characterSprites = line.presentation.character.items
+      characterSprites = line.actions.character.items
         .map((char) => {
           const character = state.repositoryState.characters?.items?.[char.id];
           let spriteFileId = null;
@@ -113,11 +113,11 @@ export const selectViewData = ({ state, props }) => {
 
     // Dialogue character icon (who is speaking)
     let characterFileId;
-    if (line.presentation?.dialogue?.characterId) {
+    if (line.actions?.dialogue?.characterId) {
       // Get character data from repository
       const characters = toFlatItems(state.repositoryState.characters || []);
       const character = characters.find(
-        (c) => c.id === line.presentation.dialogue.characterId,
+        (c) => c.id === line.actions.dialogue.characterId,
       );
 
       if (character && character.fileId) {
@@ -135,27 +135,24 @@ export const selectViewData = ({ state, props }) => {
     let hasDialogueLayout = false;
 
     // Check for BGM
-    if (line.presentation?.bgm?.audioId) {
+    if (line.actions?.bgm?.audioId) {
       hasBgm = true;
     }
 
     // Check for SFX
-    if (
-      line.presentation?.sfx?.items &&
-      line.presentation.sfx.items.length > 0
-    ) {
+    if (line.actions?.sfx?.items && line.actions.sfx.items.length > 0) {
       hasSfx = true;
     }
 
     // Check for Dialogue Layout
-    if (line.presentation?.dialogue?.layoutId) {
+    if (line.actions?.dialogue?.layoutId) {
       hasDialogueLayout = true;
     }
 
     // Handle both nested and non-nested structures
     const sectionTransitionData =
-      line.presentation?.sectionTransition ||
-      line.presentation?.presentation?.sectionTransition;
+      line.actions?.sectionTransition ||
+      line.actions?.actions?.sectionTransition;
 
     if (sectionTransitionData) {
       if (sectionTransitionData.sceneId) {
@@ -191,8 +188,7 @@ export const selectViewData = ({ state, props }) => {
     }
 
     // Handle choices
-    const choicesData =
-      line.presentation?.choice || line.presentation?.presentation?.choice;
+    const choicesData = line.actions?.choice || line.actions?.actions?.choice;
     if (choicesData && choicesData.items && choicesData.items.length > 0) {
       hasChoices = true;
       choices = choicesData.items;

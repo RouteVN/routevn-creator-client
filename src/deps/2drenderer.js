@@ -17,6 +17,11 @@ export const create2dRenderer = async ({ subject }) => {
 
   return {
     init: async (options = {}) => {
+      if (app) {
+        app.destroy();
+        app = undefined;
+      }
+
       const { canvas } = options;
       assetBufferManager = createAssetBufferManager();
       app = new RouteGraphics();
@@ -54,7 +59,6 @@ export const create2dRenderer = async ({ subject }) => {
     initRouteEngine: (projectData) => {
       const engine = createRouteEngine();
       engine.onEvent(({ eventType, payload }) => {
-        // console.log('onEvent', { eventType, payload })
         if (eventType === "render") {
           app.render(payload);
         }
@@ -73,6 +77,7 @@ export const create2dRenderer = async ({ subject }) => {
         return;
       }
       app.destroy();
+      app = undefined;
     },
     getStageElementBounds: () => {
       return app.getStageElementBounds();

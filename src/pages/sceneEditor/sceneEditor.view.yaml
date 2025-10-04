@@ -24,12 +24,12 @@ refs:
         handler: handleLineNavigation
       mergeLines:
         handler: handleMergeLines
-  presentation-action-*:
+  actions-action-*:
     eventListeners:
       click:
         handler: handleOpenCommandLine
       contextmenu:
-        handler: handlePresentationActionRightClick
+        handler: handleActionsActionRightClick
   section-tab-*:
     eventListeners:
       click:
@@ -54,10 +54,10 @@ refs:
     eventListeners:
       action-click:
         handler: handleFormActionClick
-  add-presentation-button:
+  add-actions-button:
     eventListeners:
       click:
-        handler: handleAddPresentationButtonClick
+        handler: handleAddActionsButtonClick
   command-line-*:
     eventListeners:
       back-to-actions:
@@ -84,6 +84,14 @@ refs:
         handler: handleCommandLineSubmit
       actions-change:
         handler: handleCommandLineSubmit
+  preview-button:
+    eventListeners:
+      click:
+        handler: handlePreviewClick
+  vn-preview:
+    eventListeners:
+      close:
+        handler: handleHidePreviewScene
 
 template:
   - rtgl-view w=f h=f:
@@ -91,7 +99,7 @@ template:
           - rtgl-view flex=1:
               - rtgl-text c=mu-fg: ${scene.name}
           - rtgl-view flex=1:
-              - rtgl-button: Preview
+              - rtgl-button#preview-button: Preview
       - rtgl-view d=h w=f h=f:
           - $if sectionsGraphView:
               - 'rtgl-view w="calc((100vw - 64px) / 2)"':
@@ -130,7 +138,9 @@ template:
                   - rtgl-view d=h av=c:
                       - rtgl-text s=sm c=mu-fg: Actions
                   - rtgl-view g=md w=f pv=md:
-                      - rvn-system-actions#system-actions .actions=presentationData .selectedLine=selectedLine .layouts=layouts .allCharacters=allCharacters .sections=sections .scene=scene .presentationState=presentationState:
+                      - rvn-system-actions#system-actions .actions=actionsData .selectedLine=selectedLine .layouts=layouts .allCharacters=allCharacters .sections=sections .scene=scene .presentationState=presentationState:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:
+  - $if previewVisible:
+      - rvn-vn-preview#vn-preview scene-id="${previewSceneId}":

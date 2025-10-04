@@ -101,7 +101,7 @@ export const handleAfterMount = async (deps) => {
 
   // Get fileManager for this project
   const fileManager = await fileManagerFactory.getByProject(p);
-  // Render the canvas with the initial selected line's presentation data
+  // Render the canvas with the initial selected line's actions data
   await renderSceneState(store, drenderer, fileManager);
 
   render();
@@ -152,7 +152,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     repository.addAction({
       actionType: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
       value: {
         replace: false,
         item: payload._event.detail,
@@ -191,13 +191,13 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       );
       if (section) {
         const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-        if (line && line.presentation?.dialogue?.content) {
+        if (line && line.actions?.dialogue?.content) {
           // Preserve existing text
           submissionData = {
             ...submissionData,
             dialogue: {
               ...submissionData.dialogue,
-              content: line.presentation.dialogue.content,
+              content: line.actions.dialogue.content,
             },
           };
         }
@@ -207,7 +207,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
     value: {
       replace: false,
       item: submissionData,
@@ -248,7 +248,7 @@ export const handleEditorDataChanged = async (deps, payload) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleAddPresentationButtonClick = (deps) => {
+export const handleAddActionsButtonClick = (deps) => {
   const { store, render } = deps;
   store.setMode("actions");
   render();
@@ -289,8 +289,8 @@ export const handleSectionAddClick = async (deps) => {
     }
   }
 
-  // Create presentation object with dialogue layout if found
-  const presentation = dialogueLayoutId
+  // Create actions object with dialogue layout if found
+  const actions = dialogueLayoutId
     ? {
         dialogue: {
           layoutId: dialogueLayoutId,
@@ -317,7 +317,7 @@ export const handleSectionAddClick = async (deps) => {
         lines: {
           items: {
             [newLineId]: {
-              presentation: presentation,
+              actions: actions,
             },
           },
           tree: [
@@ -368,20 +368,20 @@ export const handleSplitLine = async (deps, payload) => {
         // Skip the line being split
         if (
           line.id !== lineId &&
-          line.presentation?.dialogue?.content !== undefined
+          line.actions?.dialogue?.content !== undefined
         ) {
           // Persist this line's content to the repository
           repository.addAction({
             actionType: "set",
-            target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.presentation.dialogue.content`,
-            value: line.presentation.dialogue.content,
+            target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
+            value: line.actions.dialogue.content,
           });
         }
       });
     });
   }
 
-  // Get existing presentation data to preserve everything except dialogue content
+  // Get existing actions data to preserve everything except dialogue content
   const { scenes } = repository.getState();
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
@@ -392,9 +392,9 @@ export const handleSplitLine = async (deps, payload) => {
     const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
     if (section) {
       const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-      if (line && line.presentation) {
-        if (line.presentation.dialogue) {
-          existingDialogue = line.presentation.dialogue;
+      if (line && line.actions) {
+        if (line.actions.dialogue) {
+          existingDialogue = line.actions.dialogue;
         }
       }
     }
@@ -406,14 +406,14 @@ export const handleSplitLine = async (deps, payload) => {
     // If dialogue exists, update only the content
     repository.addAction({
       actionType: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation.dialogue.content`,
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
       value: leftContent,
     });
   } else if (leftContent) {
     // If no dialogue exists but we have content, create minimal dialogue
     repository.addAction({
       actionType: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation.dialogue`,
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
       value: {
         content: leftContent,
       },
@@ -421,8 +421,8 @@ export const handleSplitLine = async (deps, payload) => {
   }
 
   // Then, create a new line with the right content and insert it after the current line
-  // New line should have empty presentation except for dialogue.content
-  const newLinePresentation = rightContent
+  // New line should have empty actions except for dialogue.content
+  const newLineActions = rightContent
     ? {
         dialogue: {
           content: rightContent,
@@ -439,7 +439,7 @@ export const handleSplitLine = async (deps, payload) => {
       position: { after: lineId },
       item: {
         id: newLineId,
-        presentation: newLinePresentation,
+        actions: newLineActions,
       },
     },
   });
@@ -497,7 +497,7 @@ export const handleNewLine = async (deps) => {
       position: "last",
       item: {
         id: newLineId,
-        presentation: {},
+        actions: {},
       },
     },
   });
@@ -686,7 +686,7 @@ export const handleMergeLines = async (deps, payload) => {
 
   if (!prevLine) return;
 
-  const prevContent = prevLine.presentation?.dialogue?.content || "";
+  const prevContent = prevLine.actions?.dialogue?.content || "";
   const mergedContent = prevContent + contentToAppend;
 
   // Store the length of the previous content for cursor positioning
@@ -694,14 +694,14 @@ export const handleMergeLines = async (deps, payload) => {
 
   // Get existing dialogue data to preserve layoutId and characterId
   let existingDialogue = {};
-  if (prevLine.presentation?.dialogue) {
-    existingDialogue = prevLine.presentation.dialogue;
+  if (prevLine.actions?.dialogue) {
+    existingDialogue = prevLine.actions.dialogue;
   }
 
   // Update previous line with merged content
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.presentation`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions`,
     value: {
       replace: false,
       item: {
@@ -759,13 +759,13 @@ export const handleOpenCommandLine = (deps, payload) => {
   render();
 };
 
-export const handlePresentationActionRightClick = (deps, payload) => {
+export const handleActionsActionRightClick = (deps, payload) => {
   const { store, render } = deps;
   const mode = payload._event.currentTarget.getAttribute("data-mode");
   payload._event.preventDefault();
-  store.showPresentationDropdownMenu({
+  store.showActionsDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
-    presentationType: mode,
+    actionsType: mode,
   });
   render();
 };
@@ -812,7 +812,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const action = payload._event.detail.item.value; // Access value from item object
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
-  const presentationType = dropdownState.presentationType;
+  const actionsType = dropdownState.actionsType;
   const sceneId = store.selectSceneId();
 
   // Store position before hiding dropdown (for rename popover)
@@ -844,36 +844,36 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       position,
       sectionId,
     });
-  } else if (action === "delete-presentation") {
+  } else if (action === "delete-actions") {
     const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
 
-    if (presentationType && selectedLineId && selectedSectionId) {
+    if (actionsType && selectedLineId && selectedSectionId) {
       // Special handling for dialogue - keep content, remove only layoutId and characterId
-      if (presentationType === "dialogue") {
+      if (actionsType === "dialogue") {
         const stateBefore = repository.getState();
-        const currentPresentation =
+        const currentActions =
           stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
             selectedSectionId
-          ]?.lines?.items?.[selectedLineId]?.presentation;
+          ]?.lines?.items?.[selectedLineId]?.actions;
 
-        if (currentPresentation?.dialogue) {
+        if (currentActions?.dialogue) {
           // Keep content if it exists, remove layoutId and characterId
           const updatedDialogue = {
-            content: currentPresentation.dialogue.content,
+            content: currentActions.dialogue.content,
           };
 
           repository.addAction({
             actionType: "set",
-            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.dialogue`,
+            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
             value: updatedDialogue,
           });
         }
       } else {
-        // For all other presentation types, use unset to remove completely
+        // For all other actions types, use unset to remove completely
         repository.addAction({
           actionType: "unset",
-          target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.presentation.${presentationType}`,
+          target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
         });
       }
 
@@ -945,6 +945,27 @@ export const handleToggleSectionsGraphView = (deps) => {
   render();
 };
 
+export const handlePreviewClick = (deps) => {
+  const { store, render } = deps;
+  const sceneId = store.selectSceneId();
+  store.showPreviewSceneId({ sceneId });
+  render();
+};
+
+export const handleHidePreviewScene = async (deps) => {
+  const { store, render, drenderer, getRefIds, fileManagerFactory, router } =
+    deps;
+
+  const { p } = router.getPayload();
+  store.hidePreviewScene();
+  render();
+
+  const { canvas } = getRefIds();
+  await drenderer.init({ canvas: canvas.elm });
+  const fileManager = await fileManagerFactory.getByProject(p);
+  await renderSceneState(store, drenderer, fileManager);
+};
+
 // Handler for throttled/debounced dialogue content updates
 export const handleUpdateDialogueContent = async (deps, payload) => {
   const { repositoryFactory, router, store, subject } = deps;
@@ -966,15 +987,15 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
     const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
     if (section) {
       const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-      if (line && line.presentation?.dialogue) {
-        existingDialogue = line.presentation.dialogue;
+      if (line && line.actions?.dialogue) {
+        existingDialogue = line.actions.dialogue;
       }
     }
   }
 
   repository.addAction({
     actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.presentation`,
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
     value: {
       replace: false,
       item: {

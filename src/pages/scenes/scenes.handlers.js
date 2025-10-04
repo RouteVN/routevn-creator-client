@@ -247,8 +247,8 @@ export const handleSceneFormAction = async (deps, payload) => {
       }
     }
 
-    // Create presentation object with dialogue layout if found
-    const presentation = dialogueLayoutId
+    // Create actions object with dialogue layout if found
+    const actions = dialogueLayoutId
       ? {
           dialogue: {
             layoutId: dialogueLayoutId,
@@ -263,17 +263,17 @@ export const handleSceneFormAction = async (deps, payload) => {
           },
         };
 
-    // Create items object with first line having presentation, rest with empty presentation
+    // Create items object with first line having actions, rest with empty actions
     const lineItems = {
       [stepId]: {
-        presentation: presentation,
+        actions: actions,
       },
     };
 
-    // Add 31 lines with empty presentation
+    // Add 31 lines with empty actions
     additionalLineIds.forEach((lineId) => {
       lineItems[lineId] = {
-        presentation: {},
+        actions: {},
       };
     });
 
@@ -471,6 +471,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
 export const handleClickShowScenePreview = (deps, payload) => {
   const { store, render } = deps;
-  store.showPreviewSceneId(payload._event.target.dataset.sceneId);
+  store.showPreviewSceneId({
+    sceneId: payload._event.target.dataset.sceneId,
+  });
   render();
 };

@@ -17,7 +17,7 @@ export const createInitialState = () => ({
     position: { x: 0, y: 0 },
     items: [],
     sectionId: null,
-    presentationType: null,
+    actionsType: null,
   },
   popover: {
     isOpen: false,
@@ -25,6 +25,8 @@ export const createInitialState = () => ({
     sectionId: null,
   },
   repositoryState: {},
+  previewVisible: false,
+  previewSceneId: undefined,
 });
 
 export const setSceneId = (state, sceneId) => {
@@ -33,6 +35,23 @@ export const setSceneId = (state, sceneId) => {
 
 export const setRepositoryState = (state, repository) => {
   state.repositoryState = repository;
+};
+
+export const showPreviewSceneId = (state, payload) => {
+  const { sceneId } = payload;
+  state.previewVisible = true;
+  state.previewSceneId = sceneId;
+};
+
+export const hidePreviewScene = (state) => {
+  state.previewVisible = false;
+};
+
+export const selectPreviewScene = ({ state }) => {
+  return {
+    previewVisible: state.previewVisible,
+    previewSceneId: state.previewSceneId,
+  };
 };
 
 // Repository selectors
@@ -167,20 +186,17 @@ export const showSectionDropdownMenu = (state, { position, sectionId }) => {
     position,
     items,
     sectionId,
-    presentationType: null,
+    actionsType: null,
   };
 };
 
-export const showPresentationDropdownMenu = (
-  state,
-  { position, presentationType },
-) => {
+export const showActionsDropdownMenu = (state, { position, actionsType }) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
-    items: [{ label: "Delete", type: "item", value: "delete-presentation" }],
+    items: [{ label: "Delete", type: "item", value: "delete-actions" }],
     sectionId: null,
-    presentationType,
+    actionsType,
   };
 };
 
@@ -190,7 +206,7 @@ export const hideDropdownMenu = (state) => {
     position: { x: 0, y: 0 },
     items: [],
     sectionId: null,
-    presentationType: null,
+    actionsType: null,
   };
 };
 
@@ -226,15 +242,15 @@ export const setLineTextContent = (state, { lineId, content }) => {
     return;
   }
 
-  if (!line.presentation) {
-    line.presentation = {};
+  if (!line.actions) {
+    line.actions = {};
   }
 
-  if (!line.presentation.dialogue) {
-    line.presentation.dialogue = {};
+  if (!line.actions.dialogue) {
+    line.actions.dialogue = {};
   }
 
-  line.presentation.dialogue.content = content;
+  line.actions.dialogue.content = content;
 };
 
 export const selectPresentationState = ({ state }) => {
@@ -257,9 +273,7 @@ export const selectPresentationState = ({ state }) => {
   const linesUpToSelectedLine = currentSection?.lines?.slice(0, endIndex) || [];
 
   const presentationState = constructPresentationState(
-    linesUpToSelectedLine.map((line) =>
-      JSON.parse(JSON.stringify(line.presentation)),
-    ),
+    linesUpToSelectedLine.map((line) => structuredClone(line.actions)),
   );
 
   return presentationState;
@@ -351,7 +365,7 @@ export const selectViewData = ({ state }) => {
       sections: [],
       currentLines: [],
       currentLine: null,
-      presentationData: [],
+      actionsData: [],
       presentationState: null,
       mode: state.mode,
       dropdownMenu: state.dropdownMenu,
@@ -430,7 +444,7 @@ export const selectViewData = ({ state }) => {
     currentLines: Array.isArray(currentSection?.lines)
       ? currentSection.lines
       : [],
-    presentationData: selectPresentationData({ state }),
+    actionsData: selectActionsData({ state }),
     presentationState,
     mode: state.mode,
     dropdownMenu: state.dropdownMenu,
@@ -455,6 +469,8 @@ export const selectViewData = ({ state }) => {
       2,
     ),
     isActionsDialogOpen: state.mode !== "lines-editor",
+    previewVisible: state.previewVisible,
+    previewSceneId: state.previewSceneId,
   };
 };
 
@@ -508,7 +524,7 @@ export const selectSelectedLine = ({ state }) => {
     ?.lines.find((line) => line.id === state.selectedLineId);
 };
 
-export const selectPresentationData = ({ state }) => {
+export const selectActionsData = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) return [];
 
@@ -520,7 +536,7 @@ export const selectPresentationData = ({ state }) => {
     (line) => line.id === state.selectedLineId,
   );
 
-  if (!selectedLine?.presentation) {
+  if (!selectedLine?.actions) {
     return [];
   }
 
@@ -528,16 +544,15 @@ export const selectPresentationData = ({ state }) => {
   const images = state.repositoryState.images?.items || {};
   const audios = state.repositoryState.audio?.items || {};
 
-  const presentationItems = [];
+  const actionsItems = [];
 
   // Background
-  if (selectedLine.presentation.background) {
-    const backgroundImage =
-      images[selectedLine.presentation.background.resourceId];
+  if (selectedLine.actions.background) {
+    const backgroundImage = images[selectedLine.actions.background.resourceId];
     if (backgroundImage) {
-      presentationItems.push({
+      actionsItems.push({
         type: "background",
-        id: "presentation-action-background",
+        id: "actions-action-background",
         dataMode: "background",
         icon: "image",
         data: {
@@ -548,14 +563,14 @@ export const selectPresentationData = ({ state }) => {
   }
 
   // Layout
-  if (selectedLine.presentation.layout) {
+  if (selectedLine.actions.layout) {
     const layoutData = toFlatItems(repositoryState.layouts).find(
-      (l) => l.id === selectedLine.presentation.layout.layoutId,
+      (l) => l.id === selectedLine.actions.layout.layoutId,
     );
     if (layoutData) {
-      presentationItems.push({
+      actionsItems.push({
         type: "layout",
-        id: "presentation-action-layout",
+        id: "actions-action-layout",
         dataMode: "layout",
         icon: "layout",
         data: {
@@ -566,12 +581,12 @@ export const selectPresentationData = ({ state }) => {
   }
 
   // BGM
-  if (selectedLine.presentation.bgm) {
-    const bgmAudio = audios[selectedLine.presentation.bgm.audioId];
+  if (selectedLine.actions.bgm) {
+    const bgmAudio = audios[selectedLine.actions.bgm.audioId];
     if (bgmAudio) {
-      presentationItems.push({
+      actionsItems.push({
         type: "bgm",
-        id: "presentation-action-bgm",
+        id: "actions-action-bgm",
         dataMode: "bgm",
         icon: "music",
         data: {
@@ -585,21 +600,19 @@ export const selectPresentationData = ({ state }) => {
   }
 
   // Sound Effects
-  if (selectedLine.presentation.sfx?.items) {
-    const soundEffectsAudio = selectedLine.presentation.sfx.items.map(
-      (sfx) => ({
-        ...sfx,
-        audio: audios[sfx.audioId],
-      }),
-    );
+  if (selectedLine.actions.sfx?.items) {
+    const soundEffectsAudio = selectedLine.actions.sfx.items.map((sfx) => ({
+      ...sfx,
+      audio: audios[sfx.audioId],
+    }));
     const soundEffectsNames = soundEffectsAudio
       .map((sfx) => sfx.audio?.name || "Unknown")
       .filter((name) => name !== "Unknown")
       .join(", ");
 
-    presentationItems.push({
+    actionsItems.push({
       type: "sfx",
-      id: "presentation-action-sfx",
+      id: "actions-action-sfx",
       dataMode: "sfx",
       icon: "audio",
       data: {
@@ -610,34 +623,32 @@ export const selectPresentationData = ({ state }) => {
   }
 
   // Characters
-  if (selectedLine.presentation.character?.items) {
-    const charactersData = selectedLine.presentation.character.items.map(
-      (char) => {
-        const character = repositoryState.characters?.items?.[char.id];
-        let sprite = null;
+  if (selectedLine.actions.character?.items) {
+    const charactersData = selectedLine.actions.character.items.map((char) => {
+      const character = repositoryState.characters?.items?.[char.id];
+      let sprite = null;
 
-        if (char.sprites?.[0]?.imageId && character?.sprites) {
-          const spriteId = char.sprites[0].imageId;
-          const flatSprites = toFlatItems(character.sprites);
-          sprite = flatSprites.find((s) => s.id === spriteId);
-        }
+      if (char.sprites?.[0]?.imageId && character?.sprites) {
+        const spriteId = char.sprites[0].imageId;
+        const flatSprites = toFlatItems(character.sprites);
+        sprite = flatSprites.find((s) => s.id === spriteId);
+      }
 
-        return {
-          ...char,
-          character,
-          sprite,
-        };
-      },
-    );
+      return {
+        ...char,
+        character,
+        sprite,
+      };
+    });
 
     const charactersNames = charactersData
       .map((char) => char.character?.name || "Unknown")
       .join(", ");
 
-    presentationItems.push({
+    actionsItems.push({
       type: "characters",
-      id: "presentation-action-characters",
-      dataMode: "character", // Use singular to match the property name in presentation object
+      id: "actions-action-characters",
+      dataMode: "character", // Use singular to match the property name in actions object
       icon: "character",
       data: {
         charactersData,
@@ -649,8 +660,8 @@ export const selectPresentationData = ({ state }) => {
   // Transition (Scene or Section)
   // Handle both nested and non-nested structures
   const sectionTransitionData =
-    selectedLine.presentation.sectionTransition ||
-    selectedLine.presentation.presentation?.sectionTransition;
+    selectedLine.actions.sectionTransition ||
+    selectedLine.actions.actions?.sectionTransition;
   if (sectionTransitionData) {
     const transition = sectionTransitionData;
 
@@ -666,10 +677,10 @@ export const selectPresentationData = ({ state }) => {
         scene: targetScene,
       };
 
-      presentationItems.push({
+      actionsItems.push({
         type: "sectionTransition",
-        id: "presentation-action-scene",
-        dataMode: "sectionTransition", // Use sectionTransition as the property name in presentation object
+        id: "actions-action-scene",
+        dataMode: "sectionTransition", // Use sectionTransition as the property name in actions object
         icon: "scene",
         data: {
           sectionTransitionData,
@@ -687,9 +698,9 @@ export const selectPresentationData = ({ state }) => {
         section: targetSection,
       };
 
-      presentationItems.push({
+      actionsItems.push({
         type: "sectionTransition",
-        id: "presentation-action-section",
+        id: "actions-action-section",
         dataMode: "sectionTransition",
         icon: "section",
         data: {
@@ -700,20 +711,20 @@ export const selectPresentationData = ({ state }) => {
   }
 
   // Dialogue
-  if (selectedLine.presentation.dialogue) {
+  if (selectedLine.actions.dialogue) {
     const dialogueData = toFlatItems(repositoryState.layouts).find(
-      (l) => l.id === selectedLine.presentation.dialogue.layoutId,
+      (l) => l.id === selectedLine.actions.dialogue.layoutId,
     );
-    const dialogueCharacterData = selectedLine.presentation.dialogue.characterId
+    const dialogueCharacterData = selectedLine.actions.dialogue.characterId
       ? repositoryState.characters?.items?.[
-          selectedLine.presentation.dialogue.characterId
+          selectedLine.actions.dialogue.characterId
         ]
       : null;
 
-    presentationItems.push({
+    actionsItems.push({
       type: "dialogue",
-      id: "presentation-action-dialogue",
-      dataMode: "dialogue", // Use singular to match the property name in presentation object
+      id: "actions-action-dialogue",
+      dataMode: "dialogue", // Use singular to match the property name in actions object
       icon: "dialogue",
       data: {
         dialogueData,
@@ -725,8 +736,7 @@ export const selectPresentationData = ({ state }) => {
   // Choices
   // Handle both nested and non-nested structures
   const choicesData =
-    selectedLine.presentation.choice ||
-    selectedLine.presentation.presentation?.choice;
+    selectedLine.actions.choice || selectedLine.actions.actions?.choice;
   if (choicesData) {
     const layoutData = choicesData.layoutId
       ? toFlatItems(repositoryState.layouts).find(
@@ -734,10 +744,10 @@ export const selectPresentationData = ({ state }) => {
         )
       : null;
 
-    presentationItems.push({
+    actionsItems.push({
       type: "choices",
-      id: "presentation-action-choices",
-      dataMode: "choice", // Use singular to match the property name in presentation object
+      id: "actions-action-choices",
+      dataMode: "choice", // Use singular to match the property name in actions object
       icon: "choices",
       data: {
         choicesData,
@@ -746,7 +756,7 @@ export const selectPresentationData = ({ state }) => {
     });
   }
 
-  return presentationItems;
+  return actionsItems;
 };
 
 export const toggleSectionsGraphView = (state) => {
@@ -776,7 +786,7 @@ export const selectSectionTransitionsDAG = ({ state }) => {
     // Check all lines in this section for section transitions within current scene
     if (section.lines) {
       section.lines.forEach((line) => {
-        const sectionTransition = line.presentation?.sectionTransition;
+        const sectionTransition = line.actions?.sectionTransition;
 
         if (sectionTransition && sectionTransition.sectionId) {
           // Only include transitions to other sections within the same scene
