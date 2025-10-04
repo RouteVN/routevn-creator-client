@@ -805,8 +805,10 @@
       }
     }
   },
+  "story": {
+    "initialSceneId": "scene-prologue"
+  },
   "scenes": {
-    "initialSceneId": "scene-prologue",
     "tree": [
       {
         "id": "default-scenes-folder",

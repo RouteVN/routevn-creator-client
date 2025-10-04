@@ -4,14 +4,14 @@ export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { scenes } = repository.getState();
+  const { scenes, story } = repository.getState();
   const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
   store.setItems(scenesData);
 
   // Transform only scene items (not folders) into whiteboard items
-  const initialSceneId = scenesData.initialSceneId;
+  const initialSceneId = story?.initialSceneId;
   const sceneItems = Object.entries(scenesData.items || {})
     .filter(([, item]) => item.type === "scene")
     .map(([sceneId, scene]) => ({
@@ -34,10 +34,10 @@ export const handleSetInitialScene = async (sceneId, deps) => {
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
-  // Set the initialSceneId in the scenes object
+  // Set the initialSceneId in the story object
   await repository.addAction({
     actionType: "set",
-    target: "scenes.initialSceneId",
+    target: "story.initialSceneId",
     value: sceneId,
   });
 };
@@ -46,14 +46,14 @@ export const handleDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { scenes } = repository.getState();
+  const { scenes, story } = repository.getState();
   const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
   const currentWhiteboardItems = store.selectWhiteboardItems() || [];
 
   // Transform only scene items (not folders) into whiteboard items, preserving current positions
-  const initialSceneId = sceneData.initialSceneId;
+  const initialSceneId = story?.initialSceneId;
   const sceneItems = Object.entries(sceneData.items || {})
     .filter(([, item]) => item.type === "scene")
     .map(([sceneId, scene]) => {
@@ -413,20 +413,20 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle set initial scene action
   if (item.value === "set-initial" && itemId) {
-    // Set the initialSceneId in the scenes object
+    // Set the initialSceneId in the story object
     await repository.addAction({
       actionType: "set",
-      target: "scenes.initialSceneId",
+      target: "story.initialSceneId",
       value: itemId,
     });
 
     // Get updated scenes data
-    const { scenes: updatedScenes } = repository.getState();
+    const { scenes: updatedScenes, story } = repository.getState();
     store.setItems(updatedScenes);
 
     // Update whiteboard items with new colors
     const currentWhiteboardItems = store.selectWhiteboardItems();
-    const initialSceneId = updatedScenes.initialSceneId;
+    const initialSceneId = story?.initialSceneId;
     const updatedWhiteboardItems = currentWhiteboardItems.map((item) => ({
       ...item,
       // Update text color based on whether it's the initial scene

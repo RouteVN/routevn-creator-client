@@ -4,7 +4,7 @@ import {
 } from "route-engine-js";
 import { toFlatItems, toTreeStructure } from "../../deps/repository";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
-import { constructResources } from "../../utils/projectDataConstructor.js";
+import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 export const createInitialState = () => ({
   sceneId: undefined,
@@ -283,7 +283,8 @@ export const selectRenderState = ({ state }) => {
   const presentationState = selectPresentationState({ state });
   if (!presentationState) return null;
 
-  const resources = constructResources(state.repositoryState);
+  const projectData = constructProjectData(state.repositoryState);
+  const resources = projectData.resources;
 
   console.log("presentationState", presentationState);
   console.log("resources", resources);
