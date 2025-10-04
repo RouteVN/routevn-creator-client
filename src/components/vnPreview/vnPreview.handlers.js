@@ -42,13 +42,15 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { router, repositoryFactory, drenderer, getRefIds } = deps;
+  const { router, repositoryFactory, drenderer, getRefIds, attrs } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const state = repository.getState();
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
-  const projectData = constructProjectData(state);
+  const projectData = constructProjectData(state, {
+    initialSceneId: attrs["scene-id"],
+  });
   const fileIds = extractFileIdsFromRenderState(projectData);
   const assets = await loadAssets(deps, fileIds);
   await drenderer.loadAssets(assets);

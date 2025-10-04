@@ -1,9 +1,6 @@
 import { nanoid } from "nanoid";
 import { constructResources } from "../../utils/projectDataConstructor.js";
-import {
-  constructStory,
-  getInitialSceneId,
-} from "../../utils/projectDataConstructor.js";
+import { constructStory } from "../../utils/projectDataConstructor.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, router, repositoryFactory } = deps;
@@ -141,7 +138,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
         },
         resources: constructResources(projectData),
         story: {
-          initialSceneId: getInitialSceneId(projectData.scenes),
+          initialSceneId: projectData.scenes.initialSceneId,
           scenes: constructStory(projectData.scenes),
         },
       },
