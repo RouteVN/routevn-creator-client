@@ -1,6 +1,5 @@
 import { nanoid } from "nanoid";
-import { constructResources } from "../../utils/projectDataConstructor.js";
-import { constructStory } from "../../utils/projectDataConstructor.js";
+import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, router, repositoryFactory } = deps;
@@ -129,19 +128,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     const projectData = repository.getState(version.actionIndex);
 
     // Transform projectData to the required format
+    const constructedProjectData = constructProjectData(projectData);
     const transformedData = {
-      projectData: {
-        screen: {
-          width: 1920,
-          height: 1080,
-          backgroundColor: "#000000",
-        },
-        resources: constructResources(projectData),
-        story: {
-          initialSceneId: projectData.scenes.initialSceneId,
-          scenes: constructStory(projectData.scenes),
-        },
-      },
+      projectData: constructedProjectData,
     };
 
     // Collect all fileIds from original project data

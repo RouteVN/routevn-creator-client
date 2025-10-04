@@ -39,6 +39,9 @@ const initialData = {
     name: "Project 1",
     description: "Project 1 description",
   },
+  story: {
+    initialSceneId: "",
+  },
   images: {
     items: {},
     tree: [],

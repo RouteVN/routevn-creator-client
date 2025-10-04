@@ -150,14 +150,14 @@ export const selectViewData = ({ state }, payload) => {
   // Check if we need to initialize from repository on first render
   if (!hasInitialized && payload && payload.repository) {
     const repositoryState = payload.repository.getState();
-    const { scenes } = repositoryState;
+    const { scenes, story } = repositoryState;
 
     if (scenes && Object.keys(scenes.items || {}).length > 0) {
       // Initialize the scenes data
       state.scenesData = scenes;
 
       // Transform only scene items (not folders) into whiteboard items
-      const initialSceneId = scenes.initialSceneId;
+      const initialSceneId = story?.initialSceneId;
       const sceneItems = Object.entries(scenes.items || {})
         .filter(([, item]) => item.type === "scene")
         .map(([sceneId, scene]) => ({
