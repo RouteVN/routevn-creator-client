@@ -2,11 +2,7 @@ import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
 import { filter, tap, debounceTime } from "rxjs";
-import {
-  constructImages,
-  constructAudios,
-  constructFonts,
-} from "../../utils/projectDataConstructor.js";
+import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 // Helper function to create assets object from fileIds
 async function createAssetsFromFileIds(
@@ -48,10 +44,11 @@ async function renderSceneState(store, drenderer, fileManager) {
   const renderState = store.selectRenderState();
   const fileIds = extractFileIdsFromRenderState(renderState);
   const repositoryState = store.selectRepositoryState();
+  const projectData = constructProjectData(repositoryState);
   const assets = await createAssetsFromFileIds(fileIds, fileManager, {
-    audios: constructAudios(repositoryState.audio?.items || {}),
-    images: constructImages(repositoryState.images?.items || {}),
-    fonts: constructFonts(repositoryState.fonts?.items || {}),
+    audios: projectData.resources.audio,
+    images: projectData.resources.images,
+    fonts: projectData.resources.fonts,
   });
   await drenderer.loadAssets(assets);
   drenderer.render(renderState);
