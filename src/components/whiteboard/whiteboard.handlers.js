@@ -71,7 +71,7 @@ export const handleContainerMouseDown = (deps, payload) => {
 };
 
 export const handleContainerWheel = (deps, payload) => {
-  payload._event.preventDefault();
+  const { _event: event } = payload;
   const { store, getRefIds, render, dispatchEvent } = deps;
 
   // Calculate mouse position relative to container
@@ -84,6 +84,7 @@ export const handleContainerWheel = (deps, payload) => {
   const zoomIntensity = 0.1;
   const scaleFactor = event.deltaY < 0 ? 1 + zoomIntensity : 1 - zoomIntensity;
 
+  event.preventDefault();
   store.zoomAt({ mouseX, mouseY, scaleFactor });
   render();
 

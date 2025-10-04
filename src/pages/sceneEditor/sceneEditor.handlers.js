@@ -946,7 +946,7 @@ export const handleToggleSectionsGraphView = (deps) => {
 };
 
 // Handler for throttled/debounced dialogue content updates
-export const handleUpdateDialogueContent = async (payload, deps) => {
+export const handleUpdateDialogueContent = async (deps, payload) => {
   const { repositoryFactory, router, store, subject } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
