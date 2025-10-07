@@ -311,6 +311,9 @@
           },
           {
             "id": "simple-choice"
+          },
+          {
+            "id": "default-screen"
           }
         ]
       }
@@ -409,6 +412,39 @@
                   "id": "dialogue-content"
                 }
               ]
+            }
+          ]
+        }
+      },
+      "default-screen": {
+        "type": "layout",
+        "name": "Default Screen",
+        "layoutType": "screen",
+        "elements": {
+          "items": {
+            "jkfeklaf": {
+              "type": "sprite",
+              "anchorX": 0,
+              "anchorY": 0,
+              "eventName": "system",
+              "eventPayload": {
+                "actions": {
+                  "nextLine": {}
+                }
+              },
+              "height": 1080,
+              "id": "lkj3kfsd",
+              "rotation": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            }
+          },
+          "tree": [
+            {
+              "id": "jkfeklaf"
             }
           ]
         }
@@ -843,6 +879,10 @@
                       "dialogue": {
                         "layoutId": "simple-dialogue",
                         "mode": "adv"
+                      },
+                      "screen": {
+                        "resourceId": "default-screen",
+                        "resourceType": "layout"
                       }
                     }
                   },
