@@ -1012,11 +1012,27 @@ export const subscriptions = (deps) => {
   ];
 };
 
-export const handleSystemActionsChange = (deps, payload) => {
-  const { store, render } = deps;
+export const handleSystemActionsChange = async (deps, payload) => {
+  const { store, render, router, repositoryFactory } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const layoutId = store.selectLayoutId();
+  const selectedItemId = store.selectSelectedItemId();
   const selectedItem = store.selectSelectedItem();
-  selectedItem.eventPayload = payload._event.detail;
-  console.log("selectedItem", selectedItem);
+  selectedItem.eventPayload = {
+    actions: payload._event.detail,
+  };
   store.updateSelectedItem(selectedItem);
   render();
+
+  // Save to repository
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `layouts.items.${layoutId}.elements`,
+    value: {
+      id: selectedItemId,
+      replace: true,
+      item: selectedItem,
+    },
+  });
 };

@@ -70,7 +70,12 @@ export const layoutTreeStructureToRenderState = (
       scaleX: parseFloat(node.scaleX || 1),
       scaleY: parseFloat(node.scaleY || 1),
       rotation: parseInt(node.rotation || 0),
+      eventPayload: node.eventPayload,
     };
+
+    if (element.eventPayload) {
+      element.eventName = "system";
+    }
 
     if (node["$when"]) {
       element["$when"] = node["$when"];

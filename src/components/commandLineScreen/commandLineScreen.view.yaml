@@ -34,7 +34,7 @@ propsSchema:
     screen:
       type: object
       properties:
-        layoutId:
+        resourceId:
           type: string
 
 refs:
