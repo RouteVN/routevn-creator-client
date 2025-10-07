@@ -258,20 +258,20 @@ export const handleDialogFormActionClick = (deps, payload) => {
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
 
-    // Dispatch character-created event
-    new CustomEvent("character-created", {
-      detail: {
-        groupId: targetGroupId,
-        name: formData.name,
-        description: formData.description,
-        avatarFileId: avatarFileId,
+    // Create a synthetic event payload with the correct structure
+    const characterCreatedPayload = {
+      _event: {
+        detail: {
+          groupId: targetGroupId,
+          name: formData.name,
+          description: formData.description,
+          avatarFileId: avatarFileId,
+        },
       },
-      bubbles: true,
-      composed: true,
-    });
+    };
 
-    // Handle the character creation directly
-    handleCharacterCreated(deps, payload);
+    // Handle the character creation directly with correct payload
+    handleCharacterCreated(deps, characterCreatedPayload);
 
     // Clear avatar state and close dialog
     store.clearAvatarState();
