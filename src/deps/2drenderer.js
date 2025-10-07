@@ -14,6 +14,7 @@ import createRouteEngine from "route-engine-js";
 export const create2dRenderer = async ({ subject }) => {
   let app;
   let assetBufferManager;
+  let eventHandler = () => {};
 
   return {
     init: async (options = {}) => {
@@ -25,14 +26,19 @@ export const create2dRenderer = async ({ subject }) => {
       const { canvas } = options;
       assetBufferManager = createAssetBufferManager();
       app = new RouteGraphics();
+
+      eventHandler = (eventName, payload) => {
+        subject.dispatch("2drendererEvent", {
+          eventName,
+          payload,
+        });
+      };
+
       await app.init({
         width: 1920,
         height: 1080,
         eventHandler: (eventName, payload) => {
-          subject.dispatch("2drendererEvent", {
-            eventName,
-            payload,
-          });
+          eventHandler(eventName, payload);
         },
         plugins: [
           new SpriteRendererPlugin(),
@@ -70,6 +76,20 @@ export const create2dRenderer = async ({ subject }) => {
         // captureElement,
         loadAssets: app.loadAssets,
       });
+
+      eventHandler = (eventType, payload) => {
+        if (eventType === "completed") {
+          engine.handleEvent({
+            payload: {
+              actions: {
+                handleCompleted: {},
+              },
+            },
+          });
+        } else if (eventType === "system") {
+          engine.handleEvent({ payload });
+        }
+      };
     },
     render: (payload) => app.render(payload),
     destroy: () => {

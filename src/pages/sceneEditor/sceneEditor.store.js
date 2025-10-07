@@ -566,7 +566,7 @@ export const selectActionsData = ({ state }) => {
   // Layout
   if (selectedLine.actions.layout) {
     const layoutData = toFlatItems(repositoryState.layouts).find(
-      (l) => l.id === selectedLine.actions.layout.layoutId,
+      (l) => l.id === selectedLine.actions.layout.resourceId,
     );
     if (layoutData) {
       actionsItems.push({
@@ -714,7 +714,7 @@ export const selectActionsData = ({ state }) => {
   // Dialogue
   if (selectedLine.actions.dialogue) {
     const dialogueData = toFlatItems(repositoryState.layouts).find(
-      (l) => l.id === selectedLine.actions.dialogue.layoutId,
+      (l) => l.id === selectedLine.actions.dialogue.resourceId,
     );
     const dialogueCharacterData = selectedLine.actions.dialogue.characterId
       ? repositoryState.characters?.items?.[
@@ -739,9 +739,9 @@ export const selectActionsData = ({ state }) => {
   const choicesData =
     selectedLine.actions.choice || selectedLine.actions.actions?.choice;
   if (choicesData) {
-    const layoutData = choicesData.layoutId
+    const layoutData = choicesData.resourceId
       ? toFlatItems(repositoryState.layouts).find(
-          (l) => l.id === choicesData.layoutId,
+          (l) => l.id === choicesData.resourceId,
         )
       : null;
 
@@ -759,9 +759,9 @@ export const selectActionsData = ({ state }) => {
 
   // Screen
   if (selectedLine.actions.screen) {
-    const screenData = selectedLine.actions.screen.layoutId
+    const screenData = selectedLine.actions.screen.resourceId
       ? toFlatItems(repositoryState.layouts).find(
-          (l) => l.id === selectedLine.actions.screen.layoutId,
+          (l) => l.id === selectedLine.actions.screen.resourceId,
         )
       : null;
 
