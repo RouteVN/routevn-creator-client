@@ -633,7 +633,7 @@ export const selectViewData = ({ state }) => {
   // Create default values for the form
   const defaultValues = selectedItem
     ? {
-        actions: Object.entries(selectedItem.eventPayload.actions || {}).map(
+        actions: Object.entries(selectedItem?.eventPayload?.actions || {}).map(
           ([key, value]) => {
             return {
               ...value,
