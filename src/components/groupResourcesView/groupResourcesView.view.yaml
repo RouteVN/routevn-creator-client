@@ -18,6 +18,9 @@ propsSchema:
     resourceType:
       type: string
       description: Type of resource (fonts, images, audio, etc.)
+    repositoryTarget:
+      type: string
+      description: Repository target for data operations (e.g. 'images', 'audio')
     flatGroups:
       type: array
       description: Array of resource groups to display (pre-filtered and processed by parent)
@@ -60,6 +63,12 @@ refs:
     eventListeners:
       input-change:
         handler: handleSearchInput
+  context-menu:
+    eventListeners:
+      close:
+        handler: handleCloseContextMenu
+      click-item:
+        handler: handleContextMenuClickItem
   zoom-slider:
     eventListeners:
       change:
@@ -92,10 +101,22 @@ refs:
         handler: handleItemClick
       dblclick:
         handler: handleItemDoubleClick
+      contextmenu:
+        handler: handleItemContextMenu
+  transform-item-*:
+    eventListeners:
+      click:
+        handler: handleItemClick
+      dblclick:
+        handler: handleItemDoubleClick
+      contextmenu:
+        handler: handleItemContextMenu
   sprites-button-*:
     eventListeners:
       click:
         handler: handleSpritesButtonClick
+      contextmenu:
+        handler: handleItemContextMenu
   add-character-button-*:
     eventListeners:
       click:
@@ -265,7 +286,7 @@ template:
           - rtgl-view w=f h=f av=c ah=c:
               - rtgl-text s=lg c=mu-fg: No data
 
-              - rtgl-view h=64:
+      - rtgl-dropdown-menu#context-menu .items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}:
 
       - $if flatGroups.length > 0:
           - rtgl-view h=33vh:

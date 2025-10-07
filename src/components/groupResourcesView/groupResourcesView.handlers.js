@@ -267,3 +267,75 @@ export const handleAfterMount = async (deps) => {
     render();
   }
 };
+
+export const handleItemContextMenu = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.preventDefault();
+  const itemId = payload._event.currentTarget.id
+    .replace("item-", "")
+    .replace("transform-item-", "")
+    .replace("sprites-button-", "");
+  const { clientX: x, clientY: y } = payload._event;
+
+  store.showContextMenu({ itemId, x, y });
+  render();
+};
+
+export const handleCloseContextMenu = (deps) => {
+  const { store, render } = deps;
+
+  // Hide context menu
+  store.hideContextMenu();
+  render();
+};
+
+export const handleContextMenuClickItem = async (deps, payload) => {
+  const { store, render, dispatchEvent, repositoryFactory, router, props } =
+    deps;
+  const detail = payload._event.detail;
+  // Extract the actual item (rtgl-dropdown-menu wraps it)
+  const item = detail.item || detail;
+  const dropdownMenu = store.selectDropdownMenu();
+  const itemId = dropdownMenu.targetItemId;
+
+  // Only handle delete actions
+  if (item && item.value === "delete-item") {
+    const repositoryTarget = props.repositoryTarget;
+    const { p } = router.getPayload();
+    const repository = await repositoryFactory.getByProject(p);
+
+    if (!repositoryTarget) {
+      throw new Error(
+        "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to groupResourcesView component",
+      );
+    }
+
+    const repositoryState = repository.getState();
+    const targetData = repositoryState[repositoryTarget];
+    const currentItem =
+      targetData && targetData.items ? targetData.items[itemId] : null;
+
+    if (currentItem) {
+      repository.addAction({
+        actionType: "treeDelete",
+        target: repositoryTarget,
+        value: {
+          id: itemId,
+        },
+      });
+
+      // Emit data-changed event after repository action
+      dispatchEvent(
+        new CustomEvent("data-changed", {
+          detail: { target: repositoryTarget },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  // Hide context menu
+  store.hideContextMenu();
+  render();
+};
