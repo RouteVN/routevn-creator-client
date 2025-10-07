@@ -2,9 +2,9 @@ export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
 
   // Initialize with existing screen data if available
-  if (props?.screen?.layoutId) {
-    store.setSelectedLayoutId({
-      layoutId: props.screen.layoutId,
+  if (props?.screen?.resourceId) {
+    store.setSelectedResourceId({
+      resourceId: props.screen.resourceId,
     });
   }
 };
@@ -17,8 +17,8 @@ export const handleFormChange = (deps, payload) => {
     return;
   }
 
-  if (formValues.layoutId !== undefined) {
-    store.setSelectedLayoutId({ layoutId: formValues.layoutId });
+  if (formValues.resourceId !== undefined) {
+    store.setSelectedResourceId({ resourceId: formValues.resourceId });
   }
 
   render();
@@ -29,9 +29,11 @@ export const handleSubmitClick = (deps) => {
   const { selectedLayoutId } = store.getState();
 
   // Create screen object with only non-empty values
-  const screen = {};
+  const screen = {
+    resourceType: 'layout'
+  };
   if (selectedLayoutId && selectedLayoutId !== "") {
-    screen.layoutId = selectedLayoutId;
+    screen.resourceId = selectedLayoutId;
   }
 
   dispatchEvent(
