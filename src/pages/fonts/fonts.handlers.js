@@ -4,11 +4,39 @@ import { toFlatItems } from "../../deps/repository.js";
 import { getFileType } from "../../utils/getFileType";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
+  const { store, repositoryFactory, router, render, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { fonts } = repository.getState();
   store.setItems(fonts);
+
+  // Load all fonts before rendering to ensure proper preview display
+  const fileManager = await fileManagerFactory.getByProject(p);
+  const flatItems = toFlatItems(fonts);
+  const fontItems = flatItems.filter(
+    (item) => item.type === "font" && item.fontFamily && item.fileId,
+  );
+
+  if (fontItems.length > 0) {
+    try {
+      const loadPromises = fontItems.map((item) =>
+        fileManager
+          .loadFontFile({
+            fontName: item.fontFamily,
+            fileId: item.fileId,
+          })
+          .catch((error) => {
+            console.warn(`Failed to load font ${item.fontFamily}:`, error);
+            return null;
+          }),
+      );
+
+      await Promise.all(loadPromises);
+    } catch (error) {
+      console.warn("Error loading fonts during mount:", error);
+    }
+  }
+
   render();
 };
 
