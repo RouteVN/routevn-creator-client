@@ -1020,8 +1020,8 @@ export const handleSystemActionsChange = async (deps, payload) => {
   const selectedItemId = store.selectSelectedItemId();
   const selectedItem = store.selectSelectedItem();
   selectedItem.eventPayload = {
-    actions: payload._event.detail
-  }
+    actions: payload._event.detail,
+  };
   store.updateSelectedItem(selectedItem);
   render();
 
@@ -1035,5 +1035,4 @@ export const handleSystemActionsChange = async (deps, payload) => {
       item: selectedItem,
     },
   });
-
 };

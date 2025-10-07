@@ -30,7 +30,7 @@ export const handleSubmitClick = (deps) => {
 
   // Create screen object with only non-empty values
   const screen = {
-    resourceType: 'layout'
+    resourceType: "layout",
   };
   if (selectedLayoutId && selectedLayoutId !== "") {
     screen.resourceId = selectedLayoutId;

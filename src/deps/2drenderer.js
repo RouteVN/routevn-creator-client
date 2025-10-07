@@ -14,7 +14,7 @@ import createRouteEngine from "route-engine-js";
 export const create2dRenderer = async ({ subject }) => {
   let app;
   let assetBufferManager;
-  let eventHandler = () => { };
+  let eventHandler = () => {};
 
   return {
     init: async (options = {}) => {
@@ -32,13 +32,13 @@ export const create2dRenderer = async ({ subject }) => {
           eventName,
           payload,
         });
-      }
+      };
 
       await app.init({
         width: 1920,
         height: 1080,
         eventHandler: (eventName, payload) => {
-          eventHandler(eventName, payload)
+          eventHandler(eventName, payload);
         },
         plugins: [
           new SpriteRendererPlugin(),
@@ -82,14 +82,14 @@ export const create2dRenderer = async ({ subject }) => {
           engine.handleEvent({
             payload: {
               actions: {
-                handleCompleted: {}
-              }
-            }
+                handleCompleted: {},
+              },
+            },
           });
         } else if (eventType === "system") {
           engine.handleEvent({ payload });
         }
-      }
+      };
     },
     render: (payload) => app.render(payload),
     destroy: () => {

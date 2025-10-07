@@ -70,7 +70,7 @@ export const layoutTreeStructureToRenderState = (
       scaleX: parseFloat(node.scaleX || 1),
       scaleY: parseFloat(node.scaleY || 1),
       rotation: parseInt(node.rotation || 0),
-      eventPayload: node.eventPayload
+      eventPayload: node.eventPayload,
     };
 
     if (element.eventPayload) {
