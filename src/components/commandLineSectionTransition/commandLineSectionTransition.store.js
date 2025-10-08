@@ -3,32 +3,18 @@ import { toFlatItems } from "../../deps/repository";
 const form = {
   fields: [
     {
-      name: "sameScene",
+      name: "sceneId",
       inputType: "select",
-      label: "Type",
+      label: "Scene",
       description: "",
       required: false,
-      placeholder: "Choose Target",
-      options: [
-        { value: "this_scene", label: "This Scene" },
-        { value: "other_scene", label: "Other Scene" },
-      ],
-    },
-    {
-      '$if sameScene == "other_scene"': {
-        name: "sceneId",
-        inputType: "select",
-        label: "Target Scene",
-        description: "",
-        required: false,
-        placeholder: "Choose a scene",
-        options: "${sceneOptions}",
-      },
+      placeholder: "Choose a scene",
+      options: "${sceneOptions}",
     },
     {
       name: "sectionId",
       inputType: "select",
-      label: "Target Section",
+      label: "Section",
       description: "",
       required: false,
       placeholder: "Choose a section",
@@ -61,7 +47,6 @@ export const createInitialState = () => ({
   items: { items: {}, tree: [] },
 
   defaultValues: {
-    sameScene: "this_scene",
     sceneId: undefined,
     sectionId: undefined,
     animation: "fade",
@@ -81,6 +66,10 @@ export const setFormValues = (state, payload) => {
   state.formValues = payload;
 };
 
+export const setSceneId = (state, payload) => {
+  state.defaultValues.sceneId = payload.sceneId;
+};
+
 export const selectViewData = ({ state, props }) => {
   const allItems = toFlatItems(state.items);
   const allScenes = allItems.filter((item) => item.type === "scene");
@@ -96,44 +85,47 @@ export const selectViewData = ({ state, props }) => {
     },
   ];
 
-  // Determine which sections to show based on form values
-  let sectionOptions = [];
+  // Build scene options - include all scenes
+  const sceneOptions = allScenes.map((scene) => ({
+    value: scene.id,
+    label: scene.name,
+  }));
 
-  if (
-    state.formValues?.sameScene === "other_scene" &&
-    state.formValues?.sceneId
-  ) {
-    // Show sections from the selected other scene
-    const selectedScene = allScenes.find(
-      (scene) => scene.id === state.formValues.sceneId,
-    );
-    if (selectedScene && selectedScene.sections) {
-      const sceneSections = toFlatItems(selectedScene.sections);
-      sectionOptions = sceneSections.map((section) => ({
+  // Determine which sections to show based on selected scene
+  let sectionOptions = [];
+  const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
+
+  if (selectedSceneId) {
+    if (selectedSceneId === props?.currentSceneId) {
+      // Show sections from current scene
+      sectionOptions = currentSceneSections.map((section) => ({
         value: section.id,
         label: section.name,
       }));
+    } else {
+      // Show sections from the selected other scene
+      const selectedScene = allScenes.find(
+        (scene) => scene.id === selectedSceneId,
+      );
+      if (selectedScene && selectedScene.sections) {
+        const sceneSections = toFlatItems(selectedScene.sections);
+        sectionOptions = sceneSections.map((section) => ({
+          value: section.id,
+          label: section.name,
+        }));
+      }
     }
-  } else {
-    // Show sections from current scene (this_scene)
-    sectionOptions = currentSceneSections.map((section) => ({
-      value: section.id,
-      label: section.name,
-    }));
   }
 
-  // Filter out the current scene from sceneOptions when in "other_scene" mode
-  const sceneOptions = allScenes
-    .filter((scene) => scene.id !== props?.currentSceneId)
-    .map((scene) => ({
-      value: scene.id,
-      label: scene.name,
-    }));
+  // Prepare default values - set current scene as default if not already set
+  const defaultValues = {
+    ...state.defaultValues,
+    sceneId: state.defaultValues.sceneId || props?.currentSceneId,
+  };
 
   const context = {
     sceneOptions,
     sectionOptions,
-    sameScene: state.formValues?.sameScene,
   };
 
   return {
@@ -141,6 +133,6 @@ export const selectViewData = ({ state, props }) => {
     breadcrumb,
     form,
     context,
-    defaultValues: state.defaultValues,
+    defaultValues,
   };
 };
