@@ -22,6 +22,27 @@ export const selectViewData = ({ state, props }) => {
   const actionsObject = selectActionsData({ props });
   const actionsArray = convertActionsObjectToArray(actionsObject);
 
+  const repositoryState = props.repositoryState || {};
+  const layouts = Object.entries(repositoryState.layouts?.items || {})
+    .filter(([_, layout]) => layout.layoutType === "dialogue")
+    .map(([id, layout]) => ({
+      id,
+      name: layout.name,
+      layoutType: layout.layoutType,
+    }));
+
+  const allCharacters = Object.entries(repositoryState.characters?.items || {});
+
+  const filteredCharacters = allCharacters
+    .filter(([_, character]) => {
+      return character.type === "character";
+    })
+    .map(([id, character]) => ({
+      id,
+      name: character.name,
+      type: character.type,
+    }));
+
   return {
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
@@ -29,8 +50,11 @@ export const selectViewData = ({ state, props }) => {
     displayActions,
     actions: actionsArray,
     actionsObject,
-    repositoryState: props.repositoryState,
+    repositoryState,
     selectedLineId: props.selectedLineId,
+    layouts,
+    allCharacters: filteredCharacters,
+    selectedLine: props.selectedLine,
   };
 };
 

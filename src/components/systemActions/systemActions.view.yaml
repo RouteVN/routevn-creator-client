@@ -9,6 +9,8 @@ propsSchema:
       type: object
     selectedLineId:
       type: string
+    selectedLine:
+      type: object
 
 refs:
   command-line-*:
@@ -107,7 +109,7 @@ template:
           - $if mode == "actions":
               - rvn-command-line-actions#command-line-actions:
             $elif mode == "dialogue":
-              - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .dialogue=selectedLine.presentation.dialogue:
+              - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=layouts .characters=allCharacters .dialogue=selectedLine.actions.dialogue:
             $elif mode == "choice":
               - rvn-command-line-choices#command-line-choices .layouts=layouts .choices=selectedLine.presentation.choices:
             $elif mode == "background":
