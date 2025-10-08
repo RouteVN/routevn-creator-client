@@ -399,12 +399,13 @@ export const handleSplitLine = async (deps, payload) => {
 
   // First, update the current line with the left content
   // Only update the dialogue.content, preserve everything else
+  const leftContentArray = leftContent ? [{ text: leftContent }] : [];
   if (existingDialogue && Object.keys(existingDialogue).length > 0) {
     // If dialogue exists, update only the content
     repository.addAction({
       actionType: "set",
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
-      value: leftContent,
+      value: leftContentArray,
     });
   } else if (leftContent) {
     // If no dialogue exists but we have content, create minimal dialogue
@@ -412,17 +413,18 @@ export const handleSplitLine = async (deps, payload) => {
       actionType: "set",
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
       value: {
-        content: leftContent,
+        content: leftContentArray,
       },
     });
   }
 
   // Then, create a new line with the right content and insert it after the current line
   // New line should have empty actions except for dialogue.content
+  const rightContentArray = rightContent ? [{ text: rightContent }] : [];
   const newLineActions = rightContent
     ? {
         dialogue: {
-          content: rightContent,
+          content: rightContentArray,
           mode: "adv",
         },
       }
@@ -598,7 +600,7 @@ export const handleLineNavigation = (deps, payload) => {
 
   // Determine next line based on direction if targetLineId is current line
   if (targetLineId === currentLineId) {
-    if (direction === "up") {
+    if (direction === "up" || direction === "end") {
       nextLineId = store.selectPreviousLineId({ lineId: currentLineId });
     } else if (direction === "down") {
       nextLineId = store.selectNextLineId({ lineId: currentLineId });
