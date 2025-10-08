@@ -61,10 +61,30 @@ export const selectViewData = ({ state, props, attrs }) => {
     children: state.collapsedIds.includes(group.id) ? [] : group.children || [],
   }));
 
+  // Function to recursively set borderColor based on selectedItemId
+  const setBorderColorForItems = (items) => {
+    return items.map((item) => {
+      const updatedItem = {
+        ...item,
+        borderColor: item.id === props.selectedItemId ? "fg" : "bo",
+      };
+
+      // If item has children, recursively process them
+      if (item.children && Array.isArray(item.children)) {
+        updatedItem.children = setBorderColorForItems(item.children);
+      }
+
+      return updatedItem;
+    });
+  };
+
+  // Apply borderColor to all items in processedFlatGroups
+  const finalProcessedGroups = setBorderColorForItems(processedFlatGroups);
+
   return {
     fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
     resourceType: props.resourceType || "default",
-    flatGroups: processedFlatGroups,
+    flatGroups: finalProcessedGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: props.searchQuery || "",
     uploadText: props.uploadText || "Upload Files",
