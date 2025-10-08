@@ -66,13 +66,9 @@ viewDataSchema:
                 type: string
               label:
                 type: string
-        sameScene:
-          type: string
     defaultValues:
       type: object
       properties:
-        sameScene:
-          type: string
         sceneId:
           type: string
         sectionId:

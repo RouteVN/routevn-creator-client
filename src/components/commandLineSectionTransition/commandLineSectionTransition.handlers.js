@@ -8,10 +8,24 @@ export const handleAfterMount = async (deps) => {
     items: scenes,
   });
 
+  // Set default scene to current scene
+  if (props?.currentSceneId) {
+    store.setSceneId({
+      sceneId: props.currentSceneId,
+    });
+  }
+
   // Safe access to nested properties
   const sectionTransition = props?.sectionTransition;
 
   if (!sectionTransition) {
+    // Initialize with defaults when creating new transition
+    const formValues = {
+      sceneId: props?.currentSceneId,
+      animation: "fade",
+    };
+    store.setFormValues(formValues);
+    render();
     return;
   }
 
@@ -23,11 +37,14 @@ export const handleAfterMount = async (deps) => {
 
   if (transition.sceneId) {
     // Scene transition
-    formValues.sameScene = "other_scene";
     formValues.sceneId = transition.sceneId;
-  } else if (transition.sectionId) {
+  } else {
+    // Default to current scene if no scene specified
+    formValues.sceneId = props?.currentSceneId;
+  }
+
+  if (transition.sectionId) {
     // Section transition
-    formValues.sameScene = "this_scene";
     formValues.sectionId = transition.sectionId;
   }
 
@@ -40,26 +57,13 @@ export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const { formValues } = store.getState();
 
-  if (formValues?.sameScene === "other_scene" && formValues?.sceneId) {
+  if (formValues?.sceneId) {
     // Scene transition
     dispatchEvent(
       new CustomEvent("submit", {
         detail: {
           sectionTransition: {
             sceneId: formValues.sceneId,
-            animation: formValues.animation || "fade",
-          },
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  } else if (formValues?.sectionId) {
-    // Section transition
-    dispatchEvent(
-      new CustomEvent("submit", {
-        detail: {
-          sectionTransition: {
             sectionId: formValues.sectionId,
             animation: formValues.animation || "fade",
           },
