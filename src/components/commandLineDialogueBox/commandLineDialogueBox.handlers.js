@@ -16,7 +16,6 @@ export const handleBeforeMount = (deps) => {
 
 export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  console.log("payload._event.detail", payload._event.detail);
   const { formValues } = payload._event.detail;
 
   if (!formValues) {
@@ -35,14 +34,8 @@ export const handleFormChange = (deps, payload) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  console.log("[handleSubmitClick] Submit button clicked");
   const { store, dispatchEvent } = deps;
   const { selectedLayoutId, selectedCharacterId } = store.getState();
-
-  console.log("[handleSubmitClick] Current state:", {
-    selectedLayoutId,
-    selectedCharacterId,
-  });
 
   // Create dialogue object with only non-empty values
   const dialogue = {
@@ -55,8 +48,6 @@ export const handleSubmitClick = (deps) => {
     dialogue.characterId = selectedCharacterId;
   }
 
-  console.log("[handleSubmitClick] Dialogue object to submit:", dialogue);
-
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
@@ -64,8 +55,6 @@ export const handleSubmitClick = (deps) => {
       },
     }),
   );
-
-  console.log("[handleSubmitClick] Submit event dispatched");
 };
 
 export const handleBreadcumbClick = (deps, payload) => {

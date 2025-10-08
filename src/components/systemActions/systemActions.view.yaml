@@ -83,8 +83,6 @@ template:
                         - rtgl-svg svg=${item.icon} wh=24:
                         - $if item.data.dialogueData:
                             - rtgl-text s=sm: ${item.data.dialogueData.name}
-                        - $if item.data.dialogueCharacterData:
-                            - rvn-file-image fileId=${item.data.dialogueCharacterData.fileId} w=32 h=32 br=f:
               $elif item.type == "choices":
                 - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                     - rtgl-svg svg=${item.icon} wh=24:
