@@ -268,8 +268,7 @@
     "items": {
       "default-typography-group": {
         "type": "folder",
-        "name": "Template Typography",
-        "fontId": "QIRSqCzwDsLe0fUwDslG1"
+        "name": "Template Typography"
       },
       "typography-character-name": {
         "type": "typography",
@@ -277,7 +276,7 @@
         "fontSize": 48,
         "lineHeight": 1.5,
         "colorId": "color-white",
-        "fontId": "QIRSqCzwDsLe0fUwDslG1",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
         "fontWeight": "400",
         "previewText": "Character Name"
       },
@@ -287,7 +286,7 @@
         "fontSize": 36,
         "lineHeight": 1.5,
         "colorId": "color-white",
-        "fontId": "QIRSqCzwDsLe0fUwDslG1",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
         "fontWeight": "400",
         "previewText": "Text View"
       }
