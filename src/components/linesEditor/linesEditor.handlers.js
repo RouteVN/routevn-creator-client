@@ -774,7 +774,7 @@ export const handleLineKeyDown = (deps, payload) => {
                   "",
                 ),
                 mode: "text-editor",
-                direction: "up",
+                direction: "end",
                 targetCursorPosition: -1, // Special value to indicate "go to end"
                 lineRect: null,
               },
@@ -829,7 +829,7 @@ export const handleOnInput = (deps, payload) => {
   );
 };
 
-export const updateSelectedLine = (lineId, deps) => {
+export const updateSelectedLine = (deps, lineId) => {
   const { store, getRefIds } = deps;
   const refIds = getRefIds();
   const lineRef = refIds[`line-${lineId}`];
