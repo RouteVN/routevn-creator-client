@@ -1014,7 +1014,7 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 };
 
 // Handler for debounced canvas rendering
-async function handleRenderCanvas(payload, deps) {
+async function handleRenderCanvas(deps) {
   const { store, drenderer, fileManagerFactory, router } = deps;
   const { p } = router.getPayload();
   // Get fileManager for this project
@@ -1040,7 +1040,7 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "sceneEditor.renderCanvas"),
       debounceTime(50),
       tap(async ({ payload }) => {
-        await handleRenderCanvas(payload, deps);
+        await handleRenderCanvas(deps, payload);
       }),
     ),
   ];

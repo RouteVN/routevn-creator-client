@@ -633,14 +633,7 @@ export const selectViewData = ({ state }) => {
   // Create default values for the form
   const defaultValues = selectedItem
     ? {
-        actions: Object.entries(selectedItem?.eventPayload?.actions || {}).map(
-          ([key, value]) => {
-            return {
-              ...value,
-              type: key,
-            };
-          },
-        ),
+        actions: selectedItem?.eventPayload?.actions || {},
         $when: selectedItem.$when,
         $each: selectedItem.$each,
         name: selectedItem.name,
@@ -691,11 +684,21 @@ export const selectViewData = ({ state }) => {
     ...state.choiceDefaultValues,
   };
 
+  // Create mock repository state for systemActions component
+  const repositoryStateForActions = {
+    images: state.images,
+    audio: { items: {} }, // No audio data in layoutEditor
+    layouts: { items: {}, tree: [] }, // No layouts data needed in layoutEditor context
+    characters: { items: {} }, // No characters data in layoutEditor
+    scenes: { items: {}, tree: [] }, // No scenes data in layoutEditor
+  };
+
   return {
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
     repositoryTarget: `layouts.items.${state.layoutId}.elements`,
+    repositoryStateForActions,
     resourceCategory: "userInterface",
     selectedResourceId: "layout-editor",
     contextMenuItems: state.contextMenuItems,

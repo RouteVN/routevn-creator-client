@@ -4,19 +4,11 @@ propsSchema:
   type: object
   properties:
     actions:
-      type: array
-    selectedLine:
       type: object
-    layouts:
-      type: array
-    allCharacters:
-      type: array
-    sections:
-      type: array
-    scene:
+    repositoryState:
       type: object
-    presentationState:
-      type: object
+    selectedLineId:
+      type: string
 
 refs:
   command-line-*:

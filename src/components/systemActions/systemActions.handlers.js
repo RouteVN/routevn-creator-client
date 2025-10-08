@@ -1,12 +1,10 @@
 export const handleBeforeMount = (deps) => {
   const { props, render, store } = deps;
-  console.log("props", props);
   store.updateActions(props.actions);
   render();
 };
 
 export const handleOnUpdate = (changes, deps) => {
-  console.log("system actions on update", changes);
   const { render, store } = deps;
   const { newProps } = changes;
   store.updateActions(newProps.actions);
@@ -21,7 +19,6 @@ export const handleBackToActions = (deps) => {
 
 export const handleActionClicked = (deps, payload) => {
   const { store, render } = deps;
-  console.log("payload._event.detail", payload._event.detail);
 
   store.setMode({
     mode: payload._event.detail.item.mode,
@@ -32,7 +29,6 @@ export const handleActionClicked = (deps, payload) => {
 
 export const handleCommandLineSubmit = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  console.log("payload._event.detail", payload._event.detail);
   dispatchEvent(
     new CustomEvent("actions-change", {
       detail: payload._event.detail,

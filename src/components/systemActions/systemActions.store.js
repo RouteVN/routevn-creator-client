@@ -1,3 +1,5 @@
+import { toFlatItems } from "../../deps/repository";
+
 export const createInitialState = () => ({
   mode: "actions",
   isActionsDialogOpen: false,
@@ -5,17 +7,17 @@ export const createInitialState = () => ({
 
 export const selectViewData = ({ state, props }) => {
   const displayActions = selectDisplayActions({ state });
+  const actionsObject = selectActionsData({ props });
+  const actionsArray = convertActionsObjectToArray(actionsObject);
+
   return {
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
     displayActions,
-    actions: props.actions,
-    selectedLine: props.selectedLine,
-    layouts: props.layouts,
-    allCharacters: props.allCharacters,
-    sections: props.sections,
-    scene: props.scene,
-    presentationState: props.presentationState,
+    actions: actionsArray,
+    actionsObject,
+    repositoryState: props.repositoryState,
+    selectedLineId: props.selectedLineId,
   };
 };
 
@@ -50,4 +52,263 @@ export const hideActionsDialog = (state) => {
 
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
+};
+
+// Helper function to convert actions object to array for view compatibility
+export const convertActionsObjectToArray = (actionsObject) => {
+  return Object.values(actionsObject).filter(Boolean);
+};
+
+// Moved from sceneEditor.store.js - now returns object instead of array
+export const selectActionsData = ({ props }) => {
+  const { actions, repositoryState } = props;
+
+  if (!actions) {
+    return {};
+  }
+
+  const repositoryStateData = repositoryState || {};
+  // Images and audios: accessed directly by ID (e.g., images[id])
+  const images = repositoryStateData.images?.items || {};
+  const audios = repositoryStateData.audio?.items || {};
+  // Layouts: need full tree structure for toFlatItems() to search through nested folders
+  const layoutsTree = repositoryStateData.layouts || {};
+
+  const actionsObject = {};
+
+  // Background
+  if (actions.background) {
+    const backgroundImage = images[actions.background.resourceId];
+    if (backgroundImage) {
+      actionsObject.background = {
+        type: "background",
+        id: "actions-action-background",
+        dataMode: "background",
+        icon: "image",
+        data: {
+          backgroundImage,
+        },
+      };
+    }
+  }
+
+  // Layout
+  if (actions.layout) {
+    const layoutData = layoutsTree
+      ? toFlatItems(layoutsTree).find((l) => l.id === actions.layout.resourceId)
+      : null;
+    if (layoutData) {
+      actionsObject.layout = {
+        type: "layout",
+        id: "actions-action-layout",
+        dataMode: "layout",
+        icon: "layout",
+        data: {
+          layoutData,
+        },
+      };
+    }
+  }
+
+  // BGM
+  if (actions.bgm) {
+    const bgmAudio = audios[actions.bgm.audioId];
+    if (bgmAudio) {
+      actionsObject.bgm = {
+        type: "bgm",
+        id: "actions-action-bgm",
+        dataMode: "bgm",
+        icon: "music",
+        data: {
+          bgmAudio: {
+            fileId: bgmAudio.fileId,
+            name: bgmAudio.name,
+          },
+        },
+      };
+    }
+  }
+
+  // Sound Effects
+  if (actions.sfx?.items) {
+    const soundEffectsAudio = actions.sfx.items.map((sfx) => ({
+      ...sfx,
+      audio: audios[sfx.audioId],
+    }));
+    const soundEffectsNames = soundEffectsAudio
+      .map((sfx) => sfx.audio?.name || "Unknown")
+      .filter((name) => name !== "Unknown")
+      .join(", ");
+
+    actionsObject.sfx = {
+      type: "sfx",
+      id: "actions-action-sfx",
+      dataMode: "sfx",
+      icon: "audio",
+      data: {
+        soundEffectsAudio,
+        soundEffectsNames,
+      },
+    };
+  }
+
+  // Characters
+  if (actions.character?.items) {
+    const charactersData = actions.character.items.map((char) => {
+      const character = repositoryStateData.characters?.items?.[char.id];
+      let sprite = null;
+
+      if (char.sprites?.[0]?.imageId && character?.sprites) {
+        const spriteId = char.sprites[0].imageId;
+        const flatSprites = Object.values(character.sprites);
+        sprite = flatSprites.find((s) => s.id === spriteId);
+      }
+
+      return {
+        ...char,
+        character,
+        sprite,
+      };
+    });
+
+    const charactersNames = charactersData
+      .map((char) => char.character?.name || "Unknown")
+      .join(", ");
+
+    actionsObject.characters = {
+      type: "characters",
+      id: "actions-action-characters",
+      dataMode: "character",
+      icon: "character",
+      data: {
+        charactersData,
+        charactersNames,
+      },
+    };
+  }
+
+  // Transition (Scene or Section)
+  const sectionTransitionData =
+    actions.sectionTransition || actions.actions?.sectionTransition;
+  if (sectionTransitionData) {
+    const transition = sectionTransitionData;
+
+    if (transition.sceneId) {
+      // Scene Transition
+      const scenes = repositoryStateData.scenes;
+      const targetScene = scenes
+        ? toFlatItems(scenes).find((scene) => scene.id === transition.sceneId)
+        : null;
+
+      const transitionData = {
+        ...transition,
+        scene: targetScene,
+      };
+
+      actionsObject.sectionTransition = {
+        type: "sectionTransition",
+        id: "actions-action-scene",
+        dataMode: "sectionTransition",
+        icon: "scene",
+        data: {
+          sectionTransitionData: transitionData,
+        },
+      };
+    } else if (transition.sectionId) {
+      // Section Transition
+      const transitionData = {
+        ...transition,
+        section: null, // Would need scene context to resolve this
+      };
+
+      actionsObject.sectionTransition = {
+        type: "sectionTransition",
+        id: "actions-action-section",
+        dataMode: "sectionTransition",
+        icon: "section",
+        data: {
+          sectionTransitionData: transitionData,
+        },
+      };
+    }
+  }
+
+  // Dialogue
+  if (actions.dialogue) {
+    const dialogueData =
+      actions.dialogue.layoutId && layoutsTree
+        ? toFlatItems(layoutsTree).find(
+            (l) => l.id === actions.dialogue.layoutId,
+          )
+        : null;
+    const dialogueCharacterData = actions.dialogue.characterId
+      ? repositoryStateData.characters?.items?.[actions.dialogue.characterId]
+      : null;
+
+    actionsObject.dialogue = {
+      type: "dialogue",
+      id: "actions-action-dialogue",
+      dataMode: "dialogue",
+      icon: "dialogue",
+      data: {
+        dialogueData,
+        dialogueCharacterData,
+      },
+    };
+  }
+
+  // Choices
+  const choicesData = actions.choice || actions.actions?.choice;
+  if (choicesData) {
+    const layoutData =
+      choicesData.resourceId && layoutsTree
+        ? toFlatItems(layoutsTree).find((l) => l.id === choicesData.resourceId)
+        : null;
+
+    actionsObject.choices = {
+      type: "choices",
+      id: "actions-action-choices",
+      dataMode: "choice",
+      icon: "choices",
+      data: {
+        choicesData,
+        layoutData,
+      },
+    };
+  }
+
+  // Screen
+  if (actions.screen) {
+    const screenData =
+      actions.screen.resourceId && layoutsTree
+        ? toFlatItems(layoutsTree).find(
+            (l) => l.id === actions.screen.resourceId,
+          )
+        : null;
+
+    if (screenData) {
+      actionsObject.screen = {
+        type: "screen",
+        id: "actions-action-screen",
+        dataMode: "screen",
+        icon: "screen",
+        data: {
+          screenData,
+        },
+      };
+    }
+  }
+
+  // Next Line
+  if (actions.nextLine) {
+    actionsObject.nextLine = {
+      type: "nextLine",
+      id: "actions-action-next-line",
+      dataMode: "nextLine",
+      icon: "next-line",
+      data: {},
+    };
+  }
+
+  return actionsObject;
 };
