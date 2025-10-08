@@ -203,7 +203,9 @@ template:
                                               - rtgl-text s=sm c=mu-fg m=md ellipsis w="calc(${mediaWidth}px - 2 * var(--spacing-md))": ${item.name}
                                         $elif resourceType == 'typography':
                                           - rtgl-view w=f br=md p=md bw=xs:
+                                            - rtgl-view:  
                                               - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false:
+                                              - rtgl-text w=${mediaWidth} ellipsis=true mt=sm: ${item.name}
                                         $elif resourceType == 'layouts':
                                           - rtgl-view w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=p style="${item.selectedStyle}":
                                               - rtgl-view av=c ah=c:
