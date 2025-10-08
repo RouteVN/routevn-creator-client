@@ -305,6 +305,7 @@ export const handleItemContextMenu = (deps, payload) => {
   store.showDropdownMenuFileExplorerItem({
     position: { x: payload._event.clientX, y: payload._event.clientY },
     id: itemId,
+    type: item?.type,
     contextMenuItems: filteredMenuItems,
   });
   render();
