@@ -21,8 +21,6 @@ refs:
         handler: handleAddColorClick
       search-input:
         handler: handleSearchInput
-      data-changed:
-        handler: handleDataChanged
       item-delete:
         handler: handleItemDelete
   detail-form:
@@ -56,7 +54,7 @@ template:
                   - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
                   - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
           - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .repositoryTarget=repositoryTarget:
+              - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:

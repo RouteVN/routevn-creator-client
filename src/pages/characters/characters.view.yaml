@@ -27,8 +27,6 @@ refs:
         handler: handleSearchInput
       group-toggle:
         handler: handleGroupToggle
-      data-changed:
-        handler: handleDataChanged
       item-delete:
         handler: handleItemDelete
   add-character-dialog:
@@ -62,7 +60,7 @@ template:
                   - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
                   - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
           - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview full-width-item .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder show-zoom-controls=false .repositoryTarget=repositoryTarget:
+              - rvn-group-resources-view#groupview full-width-item .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder show-zoom-controls=false:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:

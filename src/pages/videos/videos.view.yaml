@@ -25,8 +25,6 @@ refs:
         handler: handleDragDropFileSelected
       search-input:
         handler: handleSearchInput
-      data-changed:
-        handler: handleDataChanged
       item-delete:
         handler: handleItemDelete
   dialog-overlay:
@@ -48,7 +46,7 @@ template:
                   - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
                   - rvn-file-explorer .items=flatItems .repositoryTarget=repositoryTarget:
           - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes .repositoryTarget=repositoryTarget:
+              - rvn-group-resources-view#groupview .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .searchPlaceholder=searchPlaceholder .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
