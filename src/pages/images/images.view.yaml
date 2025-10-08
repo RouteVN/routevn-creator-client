@@ -33,6 +33,8 @@ refs:
         action: setSearchQuery
         payload:
           value: ${event.detail.value}
+      item-delete:
+        handler: handleItemDelete
   preview-overlay:
     eventListeners:
       click:

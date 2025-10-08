@@ -213,3 +213,24 @@ export const handleAudioPlayerClose = (deps) => {
   store.closeAudioPlayer();
   render();
 };
+
+export const handleItemDelete = async (deps, payload) => {
+  const { repositoryFactory, router, store, render } = deps;
+  const { p: projectId } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(projectId);
+  const { resourceType, itemId } = payload._event.detail;
+
+  // Perform the delete operation
+  repository.addAction({
+    actionType: "treeDelete",
+    target: resourceType,
+    value: {
+      id: itemId,
+    },
+  });
+
+  // Refresh data and update store (reuse existing logic from handleDataChanged)
+  const data = repository.getState()[resourceType];
+  store.setItems(data);
+  render();
+};
