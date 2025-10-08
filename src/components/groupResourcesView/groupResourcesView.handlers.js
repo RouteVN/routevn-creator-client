@@ -294,7 +294,7 @@ export const handleContextMenuClickItem = async (deps, payload) => {
     deps;
   const detail = payload._event.detail;
   // Extract the actual item (rtgl-dropdown-menu wraps it)
-  const item = detail.item || detail;
+  const item = detail.item;
   const dropdownMenu = store.selectDropdownMenu();
   const itemId = dropdownMenu.targetItemId;
 
