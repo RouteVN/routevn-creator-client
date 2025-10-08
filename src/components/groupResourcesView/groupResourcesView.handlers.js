@@ -267,3 +267,52 @@ export const handleAfterMount = async (deps) => {
     render();
   }
 };
+
+export const handleItemContextMenu = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.preventDefault();
+  const itemId = payload._event.currentTarget.id
+    .replace("item-", "")
+    .replace("transform-item-", "")
+    .replace("sprites-button-", "");
+  const { clientX: x, clientY: y } = payload._event;
+
+  store.showContextMenu({ itemId, x, y });
+  render();
+};
+
+export const handleCloseContextMenu = (deps) => {
+  const { store, render } = deps;
+
+  // Hide context menu
+  store.hideContextMenu();
+  render();
+};
+
+export const handleContextMenuClickItem = async (deps, payload) => {
+  const { store, render, dispatchEvent, props } = deps;
+  const detail = payload._event.detail;
+  // Extract the actual item (rtgl-dropdown-menu wraps it)
+  const item = detail.item;
+  const dropdownMenu = store.selectDropdownMenu();
+  const itemId = dropdownMenu.targetItemId;
+
+  // Only handle delete actions
+  if (item && item.value === "delete-item") {
+    // Dispatch item-delete event to let parent page handle repository delete operation
+    dispatchEvent(
+      new CustomEvent("item-delete", {
+        detail: {
+          resourceType: props.resourceType,
+          itemId,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  // Hide context menu
+  store.hideContextMenu();
+  render();
+};

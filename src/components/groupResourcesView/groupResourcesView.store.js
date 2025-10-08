@@ -1,6 +1,13 @@
 export const createInitialState = () => ({
   zoomLevel: 1.0,
   collapsedIds: [],
+  dropdownMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetItemId: null,
+    items: [],
+  },
 });
 
 export const setZoomLevel = (state, zoomLevel) => {
@@ -15,6 +22,26 @@ export const toggleGroupCollapse = (state, { groupId }) => {
     state.collapsedIds.push(groupId);
   }
 };
+
+export const showContextMenu = (state, { itemId, x, y }) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.x = x;
+  state.dropdownMenu.y = y;
+  state.dropdownMenu.targetItemId = itemId;
+  state.dropdownMenu.items = [
+    { label: "Delete", type: "item", value: "delete-item" },
+  ];
+};
+
+export const hideContextMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.x = 0;
+  state.dropdownMenu.y = 0;
+  state.dropdownMenu.targetItemId = null;
+  state.dropdownMenu.items = [];
+};
+
+export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
 
 export const selectViewData = ({ state, props, attrs }) => {
   // Calculate dimensions based on zoom level for all media types
@@ -54,5 +81,6 @@ export const selectViewData = ({ state, props, attrs }) => {
     showZoomControls: attrs["show-zoom-controls"] !== "false", // Default to true unless explicitly set to "false"
     itemProperties: props.itemProperties || {},
     items: props.items || {},
+    dropdownMenu: state.dropdownMenu,
   };
 };

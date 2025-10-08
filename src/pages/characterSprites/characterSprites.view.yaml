@@ -30,6 +30,8 @@ refs:
         handler: handleDragDropFileSelected
       search-input:
         handler: handleSearchInput
+      item-delete:
+        handler: handleItemDelete
   preview-overlay:
     eventListeners:
       click:

@@ -33,6 +33,8 @@ refs:
         handler: handleAddTransformClick
       search-input:
         handler: handleSearchInput
+      item-delete:
+        handler: handleItemDelete
   detail-form:
     eventListeners:
       form-change:

@@ -21,6 +21,8 @@ refs:
         handler: handleAddColorClick
       search-input:
         handler: handleSearchInput
+      item-delete:
+        handler: handleItemDelete
   detail-form:
     eventListeners:
       form-change:

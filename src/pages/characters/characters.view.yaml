@@ -27,6 +27,8 @@ refs:
         handler: handleSearchInput
       group-toggle:
         handler: handleGroupToggle
+      item-delete:
+        handler: handleItemDelete
   add-character-dialog:
     eventListeners:
       close:
