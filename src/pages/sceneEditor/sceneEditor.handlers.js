@@ -1045,3 +1045,12 @@ export const subscriptions = (deps) => {
     ),
   ];
 };
+
+export const handleBackClick = (deps) => {
+  const { router, subject } = deps;
+  const { p } = router.getPayload();
+  subject.dispatch("redirect", {
+    path: "/project/scenes",
+    payload: { p },
+  });
+};
