@@ -1014,7 +1014,7 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 };
 
 // Handler for debounced canvas rendering
-async function handleRenderCanvas(payload, deps) {
+async function handleRenderCanvas(deps) {
   const { store, drenderer, fileManagerFactory, router } = deps;
   const { p } = router.getPayload();
   // Get fileManager for this project
@@ -1040,7 +1040,7 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "sceneEditor.renderCanvas"),
       debounceTime(50),
       tap(async ({ payload }) => {
-        await handleRenderCanvas(payload, deps);
+        await handleRenderCanvas(deps, payload);
       }),
     ),
   ];
@@ -1053,4 +1053,45 @@ export const handleBackClick = (deps) => {
     path: "/project/scenes",
     payload: { p },
   });
+};
+
+export const handleSystemActionsActionDelete = async (deps, payload) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const { actionType } = payload._event.detail;
+  // Get current selected line
+  const selectedLine = store.selectSelectedLine();
+  if (!selectedLine || !selectedLine.actions) {
+    console.log("⚠️ No selected line or actions found");
+    return;
+  }
+  // Create a new actions object without the action to delete
+  const newActions = { ...selectedLine.actions };
+  if (newActions.hasOwnProperty(actionType)) {
+    delete newActions[actionType];
+  }
+  // Create updated line object
+  const updatedLine = {
+    ...selectedLine,
+    actions: newActions,
+  };
+
+  // Save directly to repository - this will update the state
+  const repository = await repositoryFactory.getByProject(p);
+  const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+    value: {
+      id: selectedLine.id,
+      replace: true,
+      item: updatedLine,
+    },
+  });
+  // Get sceneId and projectId from router
+  store.setRepositoryState(repository.getState());
+  // Trigger re-render
+  render();
 };
