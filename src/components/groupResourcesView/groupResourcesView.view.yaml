@@ -171,18 +171,24 @@ template:
                                               - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c:
                                               - rtgl-text s=xs c=mu-fg m=sm ellipsis: ${item.name}
                                         $elif resourceType == 'videos':
-                                          - rvn-file-image br=md w=${mediaWidth} h=${mediaHeight} fileId=${item.thumbnailFileId}:
+                                          - rtgl-view:
+                                            - rvn-file-image br=md w=${mediaWidth} h=${mediaHeight} fileId=${item.thumbnailFileId}:
+                                            - rtgl-text w=${mediaWidth} ellipsis=true mt=sm: ${item.name}
                                         $elif resourceType == 'audio':
                                           - $if item.waveformDataFileId:
                                               - rtgl-view:
-                                                  - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}:
-                                                  - rtgl-text w=${mediaWidth} ellipsis=true mt=sm: ${item.name}
+                                                - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}:
+                                                - rtgl-text w=${mediaWidth} ellipsis=true mt=sm: ${item.name}
                                             $else:
                                               - rtgl-image br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png:
                                         $elif resourceType == 'images':
-                                          - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                          - rtgl-view:
+                                            - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                            - rtgl-text w=${mediaWidth} ellipsis=true mt=sm: ${item.name}
                                         $elif resourceType == 'characterSprites':
-                                          - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                          - rtgl-view:
+                                            - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                            - rtgl-text w=${mediaWidth} ellipsis=true mt=sm: ${item.name}
                                         $elif resourceType == 'characters':
                                           - rtgl-view w=f d=h g=xl fw=w mt=lg bw=xs br=lg p=lg:
                                               - rvn-file-image w=96 h=96 br=f fileId=${item.fileId}:
