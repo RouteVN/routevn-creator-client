@@ -33,6 +33,8 @@ refs:
         handler: handleSearchInput
       data-changed:
         handler: handleDataChanged
+      item-delete:
+        handler: handleItemDelete
   rvn-audio-player:
     eventListeners:
       audio-player-close:

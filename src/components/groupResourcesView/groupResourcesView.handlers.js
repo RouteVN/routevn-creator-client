@@ -299,9 +299,9 @@ export const handleContextMenuClickItem = async (deps, payload) => {
 
   // Only handle delete actions
   if (item && item.value === "delete-item") {
-    // Dispatch delete event instead of calling repository directly
+    // Dispatch item-delete event to let parent page handle repository delete operation
     dispatchEvent(
-      new CustomEvent("delete-item", {
+      new CustomEvent("item-delete", {
         detail: {
           resourceType: props.resourceType,
           itemId,

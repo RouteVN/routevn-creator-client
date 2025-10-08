@@ -29,6 +29,8 @@ refs:
         handler: handleGroupToggle
       data-changed:
         handler: handleDataChanged
+      item-delete:
+        handler: handleItemDelete
   add-character-dialog:
     eventListeners:
       close:

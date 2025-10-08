@@ -35,6 +35,8 @@ refs:
           value: ${event.detail.value}
       data-changed:
         handler: handleFileExplorerDataChanged
+      item-delete:
+        handler: handleItemDelete
   preview-overlay:
     eventListeners:
       click:

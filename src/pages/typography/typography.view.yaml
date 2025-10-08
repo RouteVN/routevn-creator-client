@@ -25,6 +25,8 @@ refs:
         handler: handleSearchInput
       data-changed:
         handler: handleDataChanged
+      item-delete:
+        handler: handleItemDelete
   detail-form:
     eventListeners:
       form-change:

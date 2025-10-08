@@ -27,6 +27,8 @@ refs:
         handler: handleSearchInput
       data-changed:
         handler: handleDataChanged
+      item-delete:
+        handler: handleItemDelete
   dialog-overlay:
     eventListeners:
       click:

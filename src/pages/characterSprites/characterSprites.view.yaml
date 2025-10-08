@@ -32,6 +32,8 @@ refs:
         handler: handleSearchInput
       data-changed:
         handler: handleDataChanged
+      item-delete:
+        handler: handleItemDelete
   preview-overlay:
     eventListeners:
       click:
