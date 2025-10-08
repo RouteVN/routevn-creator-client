@@ -1,6 +1,11 @@
 // Context menu constants
-const CONTEXT_MENU_ITEMS = [
+const CONTEXT_MENU_FOLDERS = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const CONTEXT_MENU_ITEMS = [
   { label: "Rename", type: "item", value: "rename-item" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
@@ -114,13 +119,20 @@ export const toggleFolderExpand = (state, folderId) => {
 
 export const showDropdownMenuFileExplorerItem = (
   state,
-  { position, id, contextMenuItems },
+  { position, id, type, contextMenuItems },
 ) => {
+  let items;
+  if (contextMenuItems) {
+    items = contextMenuItems;
+  } else {
+    items = type === "folder" ? CONTEXT_MENU_FOLDERS : CONTEXT_MENU_ITEMS;
+  }
+
   state.dropdownMenu = {
     isOpen: true,
     position,
     itemId: id,
-    items: contextMenuItems || CONTEXT_MENU_ITEMS,
+    items,
   };
 };
 
