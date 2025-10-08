@@ -1036,3 +1036,35 @@ export const handleSystemActionsChange = async (deps, payload) => {
     },
   });
 };
+
+export const handleSystemActionsActionDelete = async (deps, payload) => {
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const { actionType } = payload._event.detail;
+
+  // Get current selected item
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  if (!selectedItem || !selectedItem.eventPayload?.actions) return;
+
+  // Delete the action from the item's actions
+  delete selectedItem.eventPayload.actions[actionType];
+
+  // Update the item in the store
+  store.updateSelectedItem(selectedItem);
+  render();
+
+  // Save to repository
+  const layoutId = store.selectLayoutId();
+  const repository = await repositoryFactory.getByProject(p);
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `layouts.items.${layoutId}.elements`,
+    value: {
+      id: selectedItemId,
+      replace: true,
+      item: selectedItem,
+    },
+  });
+};

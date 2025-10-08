@@ -72,6 +72,8 @@ refs:
     eventListeners:
       actions-change:
         handler: handleSystemActionsChange
+      action-delete:
+        handler: handleSystemActionsActionDelete
 
 template:
   - rtgl-view d=h w=f h=f:

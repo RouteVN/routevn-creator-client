@@ -3,6 +3,18 @@ import { toFlatItems } from "../../deps/repository";
 export const createInitialState = () => ({
   mode: "actions",
   isActionsDialogOpen: false,
+  dropdownMenu: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    actionType: null,
+    items: [
+      {
+        label: "Delete",
+        type: "item",
+        value: "delete",
+      },
+    ],
+  },
 });
 
 export const selectViewData = ({ state, props }) => {
@@ -13,6 +25,7 @@ export const selectViewData = ({ state, props }) => {
   return {
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
+    dropdownMenu: state.dropdownMenu,
     displayActions,
     actions: actionsArray,
     actionsObject,
@@ -311,4 +324,28 @@ export const selectActionsData = ({ props }) => {
   }
 
   return actionsObject;
+};
+
+export const showDropdownMenu = (state, { position, actionType }) => {
+  state.dropdownMenu = {
+    ...state.dropdownMenu,
+    isOpen: true,
+    position,
+    actionType,
+  };
+};
+
+export const hideDropdownMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.actionType = null;
+};
+
+export const selectDropdownMenuActionType = ({ state }) => {
+  return state.dropdownMenu.actionType;
+};
+
+export const deleteAction = (state, _actionType) => {
+  // This will be handled in the component that owns the actions data
+  // For now, just hide the dropdown menu
+  hideDropdownMenu(state);
 };

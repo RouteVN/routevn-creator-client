@@ -82,6 +82,8 @@ refs:
         handler: handleActionClicked
       submit:
         handler: handleCommandLineSubmit
+      action-delete:
+        handler: handleSystemActionsActionDelete
       actions-change:
         handler: handleCommandLineSubmit
   back-button:

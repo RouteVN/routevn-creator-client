@@ -1054,3 +1054,86 @@ export const handleBackClick = (deps) => {
     payload: { p },
   });
 };
+
+export const handleSystemActionsActionDelete = async (deps, payload) => {
+  console.log("🎬 sceneEditor handleSystemActionsActionDelete called", {
+    payload,
+  });
+
+  const { store, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const { actionType } = payload._event.detail;
+
+  console.log("🎬 Extracted actionType", { actionType });
+
+  // Get current selected line
+  const selectedLine = store.selectSelectedLine();
+  console.log("🎬 Selected line", { selectedLine });
+
+  if (!selectedLine || !selectedLine.actions) {
+    console.log("⚠️ No selected line or actions found");
+    return;
+  }
+
+  console.log("🎬 Actions before deletion", {
+    actions: selectedLine.actions,
+    actionType,
+    hasProperty: selectedLine.actions.hasOwnProperty(actionType),
+    isObject: typeof selectedLine.actions,
+    isFrozen: Object.isFrozen(selectedLine.actions),
+    isSealed: Object.isSealed(selectedLine.actions),
+  });
+
+  // Create a new actions object without the action to delete
+  const newActions = { ...selectedLine.actions };
+  if (newActions.hasOwnProperty(actionType)) {
+    delete newActions[actionType];
+    console.log("✅ Successfully deleted action", actionType);
+  } else {
+    console.log("⚠️ Action type not found in actions object", {
+      actionType,
+      availableActions: Object.keys(selectedLine.actions),
+    });
+    return;
+  }
+
+  console.log("🎬 Actions after deletion", newActions);
+
+  // Create updated line object
+  const updatedLine = {
+    ...selectedLine,
+    actions: newActions,
+  };
+
+  // Save directly to repository - this will update the state
+  const repository = await repositoryFactory.getByProject(p);
+  const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+
+  console.log("🎬 Saving to repository", {
+    sceneId,
+    sectionId,
+    lineId: selectedLine.id,
+  });
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+    value: {
+      id: selectedLine.id,
+      replace: true,
+      item: updatedLine,
+    },
+  });
+
+  console.log("✅ Action deletion completed and saved to repository");
+
+  // Get sceneId and projectId from router
+  store.setRepositoryState(repository.getState());
+
+  // Trigger re-render
+  render();
+  console.log("🔄 Repository state refreshed and UI re-render triggered");
+
+  console.log("✅ Action deletion completed");
+};

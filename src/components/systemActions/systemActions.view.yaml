@@ -31,13 +31,21 @@ refs:
     eventListeners:
       click:
         handler: handleActionItemClick
+      contextmenu:
+        handler: handleActionItemRightClick
+  dropdown-menu:
+    eventListeners:
+      close:
+        handler: handleDropdownMenuClose
+      click-item:
+        handler: handleDropdownMenuClickItem
 
 template:
   - rtgl-view g=md w=f:
       - $if actions:
           - $for item in actions:
               $if item.type == "background":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" data-action-type="${item.type}" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
                     - rtgl-svg svg=${item.icon} wh=24:
                     - rvn-file-image fileId=${item.data.backgroundImage.fileId} w=50 h=35:
                     - rtgl-text s=sm: ${item.data.backgroundImage.name}
@@ -118,3 +126,4 @@ template:
               - rvn-command-line-next-line#command-line-next-line .nextLine=selectedLine.presentation.nextLine:
             $elif mode == "controls":
               - rvn-command-line-controls#command-line-controls .controls=selectedLine.controls:
+  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

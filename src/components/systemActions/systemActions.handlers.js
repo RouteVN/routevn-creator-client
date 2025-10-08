@@ -53,8 +53,47 @@ export const handleActionsDialogClose = (deps) => {
 
 export const handleActionItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const mode = payload._event.target.dataset.mode;
+  const event = payload._event;
+  const mode = event.currentTarget?.dataset?.mode;
   store.showActionsDialog();
   store.setMode({ mode });
+  render();
+};
+
+export const handleActionItemRightClick = (deps, payload) => {
+  const { store, render } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  store.showDropdownMenu({
+    position: { x: event.clientX, y: event.clientY },
+    actionType: event.currentTarget?.dataset?.mode,
+  });
+  render();
+};
+
+export const handleDropdownMenuClickItem = (deps, payload) => {
+  const { store, render, dispatchEvent } = deps;
+  const { detail } = payload._event;
+
+  // Extract the actual item (rtgl-dropdown-menu wraps it)
+  const item = detail.item || detail;
+  const actionType = store.selectDropdownMenuActionType();
+
+  store.hideDropdownMenu();
+
+  if (item.value === "delete" && actionType) {
+    // Dispatch delete action event to parent component
+    dispatchEvent(
+      new CustomEvent("action-delete", {
+        detail: { actionType },
+      }),
+    );
+  }
+  render();
+};
+
+export const handleDropdownMenuClose = (deps) => {
+  const { store, render } = deps;
+  store.hideDropdownMenu();
   render();
 };
