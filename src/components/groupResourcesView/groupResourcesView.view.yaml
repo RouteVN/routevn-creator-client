@@ -18,9 +18,6 @@ propsSchema:
     resourceType:
       type: string
       description: Type of resource (fonts, images, audio, etc.)
-    repositoryTarget:
-      type: string
-      description: Repository target for data operations (e.g. 'images', 'audio')
     flatGroups:
       type: array
       description: Array of resource groups to display (pre-filtered and processed by parent)
@@ -286,7 +283,7 @@ template:
           - rtgl-view w=f h=f av=c ah=c:
               - rtgl-text s=lg c=mu-fg: No data
 
-      - rtgl-dropdown-menu#context-menu .items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}:
-
       - $if flatGroups.length > 0:
           - rtgl-view h=33vh:
+
+      - rtgl-dropdown-menu#context-menu .items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}:

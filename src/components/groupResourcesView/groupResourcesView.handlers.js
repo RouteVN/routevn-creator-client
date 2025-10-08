@@ -290,8 +290,7 @@ export const handleCloseContextMenu = (deps) => {
 };
 
 export const handleContextMenuClickItem = async (deps, payload) => {
-  const { store, render, dispatchEvent, repositoryFactory, router, props } =
-    deps;
+  const { store, render, dispatchEvent, props } = deps;
   const detail = payload._event.detail;
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item;
@@ -300,39 +299,17 @@ export const handleContextMenuClickItem = async (deps, payload) => {
 
   // Only handle delete actions
   if (item && item.value === "delete-item") {
-    const repositoryTarget = props.repositoryTarget;
-    const { p } = router.getPayload();
-    const repository = await repositoryFactory.getByProject(p);
-
-    if (!repositoryTarget) {
-      throw new Error(
-        "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to groupResourcesView component",
-      );
-    }
-
-    const repositoryState = repository.getState();
-    const targetData = repositoryState[repositoryTarget];
-    const currentItem =
-      targetData && targetData.items ? targetData.items[itemId] : null;
-
-    if (currentItem) {
-      repository.addAction({
-        actionType: "treeDelete",
-        target: repositoryTarget,
-        value: {
-          id: itemId,
+    // Dispatch delete event instead of calling repository directly
+    dispatchEvent(
+      new CustomEvent("delete-item", {
+        detail: {
+          resourceType: props.resourceType,
+          itemId,
         },
-      });
-
-      // Emit data-changed event after repository action
-      dispatchEvent(
-        new CustomEvent("data-changed", {
-          detail: { target: repositoryTarget },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-    }
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   // Hide context menu
