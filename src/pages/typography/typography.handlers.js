@@ -26,6 +26,14 @@ export const handleDataChanged = async (deps) => {
   render();
 };
 
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  const { store, render } = deps;
+  const { selectedItemId } = payload._event.detail;
+
+  store.setSelectedItemId(selectedItemId);
+  render();
+};
+
 // Helper function to generate typography preview image
 const generateTypographyPreview = (item, colorsData, fontsData) => {
   if (!item) {

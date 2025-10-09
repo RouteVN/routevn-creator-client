@@ -78,6 +78,14 @@ export const handleDataChanged = async (deps) => {
   render();
 };
 
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  const { store, render } = deps;
+  const { selectedItemId } = payload._event.detail;
+
+  store.setSelectedItemId(selectedItemId);
+  render();
+};
+
 export const handleTransformItemClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail;

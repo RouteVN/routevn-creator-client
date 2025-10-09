@@ -315,11 +315,8 @@ export const handleItemClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
   const itemId = payload._event.currentTarget.id.replace("item-", "");
 
-  console.log("🔍 [baseFileExplorer] handleItemClick clicked itemId:", itemId);
-
   // Update selected item
   store.setSelectedItemId(itemId);
-  console.log("🔍 [baseFileExplorer] setSelectedItemId to:", itemId);
   render();
 
   dispatchEvent(
@@ -330,10 +327,6 @@ export const handleItemClick = (deps, payload) => {
     }),
   );
 
-  console.log(
-    "🔍 [baseFileExplorer] Dispatching selection-changed event with itemId:",
-    itemId,
-  );
   dispatchEvent(
     new CustomEvent("selection-changed", {
       detail: {
@@ -343,38 +336,6 @@ export const handleItemClick = (deps, payload) => {
       composed: true,
     }),
   );
-};
-
-export const handlePageSelectionChanged = (deps, payload) => {
-  console.log(
-    "🔍 [baseFileExplorer] 🎉 handlePageSelectionChanged was called!",
-  );
-  console.log("🔍 [baseFileExplorer] Event payload:", payload);
-
-  if (payload && payload._event && payload._event.detail) {
-    const { store, render } = deps;
-    const { selectedItemId } = payload._event.detail;
-
-    console.log(
-      "🔍 [baseFileExplorer] handlePageSelectionChanged received selectedItemId:",
-      selectedItemId,
-    );
-
-    const currentItemId = store.selectSelectedItemId();
-    console.log(
-      "🔍 [baseFileExplorer] Current selectedItemId before update:",
-      currentItemId,
-    );
-
-    store.setSelectedItemId(selectedItemId);
-    console.log(
-      "🔍 [baseFileExplorer] Updated selectedItemId to:",
-      selectedItemId,
-    );
-    render();
-  } else {
-    console.log("🔍 [baseFileExplorer] Invalid event payload");
-  }
 };
 
 export const handleArrowClick = (deps, payload) => {
