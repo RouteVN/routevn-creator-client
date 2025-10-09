@@ -1,20 +1,7 @@
 import { toFlatItems } from "../../deps/repository";
 
-export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props, render } = deps;
-
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { images, layouts, videos, animations } = repository.getState();
-
-  store.setRepositoryState({
-    images,
-    layouts,
-    videos,
-    animations,
-  });
-
-  console.log("props.background", props.background);
+export const handleBeforeMount = (deps) => {
+  const { store, props } = deps;
 
   if (!props.background) {
     return;
@@ -25,6 +12,7 @@ export const handleAfterMount = async (deps) => {
     resourceType,
     animations: backgroundAnimations,
   } = props.background;
+
   if (!resourceId || !resourceType) {
     return;
   }
@@ -40,6 +28,21 @@ export const handleAfterMount = async (deps) => {
       animationId: backgroundAnimations.in,
     });
   }
+};
+
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, router, store, render } = deps;
+
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const { images, layouts, videos, animations } = repository.getState();
+
+  store.setRepositoryState({
+    images,
+    layouts,
+    videos,
+    animations,
+  });
 
   render();
 };
