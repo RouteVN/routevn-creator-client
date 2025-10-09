@@ -83,7 +83,7 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
-      - $if mode == 'current':
+      - $if mode == 'current' && initiated:
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb .items=breadcrumb:
           - rtgl-form#transition-form .defaultValues=defaultValues .form=form .context=context w=f:
