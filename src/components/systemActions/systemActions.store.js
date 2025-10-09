@@ -17,13 +17,29 @@ export const createInitialState = () => ({
   },
 });
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, attrs }) => {
   const displayActions = selectDisplayActions({ state });
   const actionsObject = selectActionsData({ props });
   const actionsArray = convertActionsObjectToArray(actionsObject);
 
   const repositoryState = props.repositoryState || {};
-  const layouts = Object.entries(repositoryState.layouts?.items || {})
+  const choiceLayouts = Object.entries(repositoryState.layouts?.items || {})
+    .filter(([_, layout]) => layout.layoutType === "choice")
+    .map(([id, layout]) => ({
+      id,
+      name: layout.name,
+      layoutType: layout.layoutType,
+    }));
+
+  const screenLayouts = Object.entries(repositoryState.layouts?.items || {})
+    .filter(([_, layout]) => layout.layoutType === "screen")
+    .map(([id, layout]) => ({
+      id,
+      name: layout.name,
+      layoutType: layout.layoutType,
+    }));
+
+  const dialogueLayouts = Object.entries(repositoryState.layouts?.items || {})
     .filter(([_, layout]) => layout.layoutType === "dialogue")
     .map(([id, layout]) => ({
       id,
@@ -53,9 +69,13 @@ export const selectViewData = ({ state, props }) => {
     actionsObject,
     repositoryState,
     selectedLineId: props.selectedLineId,
-    layouts,
+    layouts: choiceLayouts, // Default to choice layouts for backward compatibility
+    choiceLayouts,
+    screenLayouts,
+    dialogueLayouts,
     allCharacters: filteredCharacters,
     selectedLine: props.selectedLine,
+    actionsType: attrs["action-type"],
   };
 };
 
