@@ -96,14 +96,14 @@ template:
                   - rtgl-view w=f h=100vh sv:
                       - rtgl-form#detail-form key=${formKey} w=f h=f .form=form .context=context .defaultValues=defaultValues:
                           - slot name="eventPayload":
-                              - rvn-system-actions#system-actions .actions=defaultValues.actions .repositoryState=repositoryStateForActions .selectedLineId=selectedItemId:
+                              - rvn-system-actions#system-actions .actions=defaultValues.actions .repositoryState=repositoryStateForActions .selectedLineId=selectedItemId action-type="system":
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:
-          - rtgl-view d=f jc=fe g=sm:
+          - rtgl-view g=sm:
               - rtgl-button#cancel-image-selection variant=se: Cancel
               - rtgl-button#confirm-image-selection variant=pr: OK
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen} placement=left:
