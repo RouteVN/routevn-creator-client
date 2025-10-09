@@ -9,6 +9,28 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  const { store, render } = deps;
+  const { selectedItemId } = payload._event.detail;
+
+  console.log(
+    "🔍 [images] handleFileExplorerSelectionChanged received selectedItemId:",
+    selectedItemId,
+  );
+
+  // get selecting itemId
+  const currentItemId = store.selectSelectedItemId();
+  console.log(
+    "🔍 [images] Current selectedItemId before update:",
+    currentItemId,
+  );
+
+  // update image page
+  store.setSelectedItemId(selectedItemId);
+  console.log("🔍 [images] Updated selectedItemId to:", selectedItemId);
+  render();
+};
+
 export const handleFileExplorerDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
@@ -86,9 +108,13 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleImageItemClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, fileManagerFactory, router, dispatchEvent } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
+
+  console.log("🔍 [images] handleImageItemClick clicked itemId:", itemId);
+
   store.setSelectedItemId(itemId);
+  console.log("🔍 [images] setSelectedItemId to:", itemId);
 
   const selectedItem = store.selectSelectedItem();
 
@@ -102,6 +128,22 @@ export const handleImageItemClick = async (deps, payload) => {
       src: url,
     },
   });
+
+  // 发出事件同步到baseFileExplorer
+  console.log(
+    "🔍 [images] Dispatching page-selection-changed event with itemId:",
+    itemId,
+  );
+  dispatchEvent(
+    new CustomEvent("page-selection-changed", {
+      detail: {
+        selectedItemId: itemId,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+
   render();
 };
 
