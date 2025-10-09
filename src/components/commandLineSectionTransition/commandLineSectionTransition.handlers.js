@@ -4,25 +4,17 @@ export const handleAfterMount = async (deps) => {
   const repository = await repositoryFactory.getByProject(p);
   const { scenes } = repository.getState();
 
+  // Safe access to nested properties
+  const sectionTransition = props?.sectionTransition;
+
   store.setItems({
     items: scenes,
   });
-
-  // Set default scene to current scene
-  if (props?.currentSceneId) {
-    store.setSceneId({
-      sceneId: props.currentSceneId,
-    });
-  }
-
-  // Safe access to nested properties
-  const sectionTransition = props?.sectionTransition;
 
   if (!sectionTransition) {
     // Initialize with defaults when creating new transition
     const formValues = {
       sceneId: props?.currentSceneId,
-      animation: "fade",
     };
     store.setFormValues(formValues);
     render();
@@ -32,7 +24,7 @@ export const handleAfterMount = async (deps) => {
   // Initialize form values from existing line data
   const transition = sectionTransition;
   const formValues = {
-    animation: transition.animation || "fade",
+    animation: transition.animation,
   };
 
   if (transition.sceneId) {
@@ -49,7 +41,6 @@ export const handleAfterMount = async (deps) => {
   }
 
   store.setFormValues(formValues);
-
   render();
 };
 

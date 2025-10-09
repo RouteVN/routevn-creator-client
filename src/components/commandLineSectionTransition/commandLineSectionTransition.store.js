@@ -45,12 +45,6 @@ const form = {
 export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
-
-  defaultValues: {
-    sceneId: undefined,
-    sectionId: undefined,
-    animation: "fade",
-  },
   formValues: {},
 });
 
@@ -64,10 +58,6 @@ export const setItems = (state, payload) => {
 
 export const setFormValues = (state, payload) => {
   state.formValues = payload;
-};
-
-export const setSceneId = (state, payload) => {
-  state.defaultValues.sceneId = payload.sceneId;
 };
 
 export const selectViewData = ({ state, props }) => {
@@ -117,12 +107,6 @@ export const selectViewData = ({ state, props }) => {
     }
   }
 
-  // Prepare default values - set current scene as default if not already set
-  const defaultValues = {
-    ...state.defaultValues,
-    sceneId: state.defaultValues.sceneId || props?.currentSceneId,
-  };
-
   const context = {
     sceneOptions,
     sectionOptions,
@@ -133,6 +117,6 @@ export const selectViewData = ({ state, props }) => {
     breadcrumb,
     form,
     context,
-    defaultValues,
+    defaultValues: state.formValues,
   };
 };
