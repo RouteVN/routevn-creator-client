@@ -55,7 +55,7 @@ styles:
 
 template:
   - $if ready:
-      - 'rtgl-view#container w=f h=f tabindex=0 style="outline: none;"':
+      - 'rtgl-view#container w=f tabindex=0 style="outline: none;"':
           - $for line, i in lines:
               - 'rtgl-view d=h w=f style="background-color: ${line.backgroundColor};"':
                   - rtgl-view h=f w=32 ah=e mr=md pt=sm:
