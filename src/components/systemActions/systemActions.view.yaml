@@ -117,7 +117,7 @@ template:
             $elif mode == "character":
               - rvn-command-line-characters#command-line-characters .character=selectedLine.actions.character .presentationState=presentationState:
             $elif mode == "sectionTransition":
-              - rvn-command-line-section-transition#command-line-section-transition .sectionTransition=selectedLine.actions.sectionTransition .sections=sections .currentSceneId=currentSceneId:
+              - rvn-command-line-section-transition#command-line-section-transition .sectionTransition=selectedLine.actions.sectionTransition .currentSceneId=currentSceneId:
             $elif mode == "screen":
               - rvn-command-line-screen#command-line-screen .layouts=layouts .screen=selectedLine.actions.screen:
             $elif mode == "nextLine":

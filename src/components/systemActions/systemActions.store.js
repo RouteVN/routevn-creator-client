@@ -237,9 +237,15 @@ export const selectActionsData = ({ props }) => {
         ? toFlatItems(scenes).find((scene) => scene.id === transition.sceneId)
         : null;
 
+      const sections = toFlatItems(targetScene.sections);
+      const section = sections.find(
+        (section) => section.id === transition.sectionId,
+      );
+
       const transitionData = {
         ...transition,
         scene: targetScene,
+        section,
       };
 
       actionsObject.sectionTransition = {
@@ -247,22 +253,6 @@ export const selectActionsData = ({ props }) => {
         id: "actions-action-scene",
         dataMode: "sectionTransition",
         icon: "scene",
-        data: {
-          sectionTransitionData: transitionData,
-        },
-      };
-    } else if (transition.sectionId) {
-      // Section Transition
-      const transitionData = {
-        ...transition,
-        section: null, // Would need scene context to resolve this
-      };
-
-      actionsObject.sectionTransition = {
-        type: "sectionTransition",
-        id: "actions-action-section",
-        dataMode: "sectionTransition",
-        icon: "section",
         data: {
           sectionTransitionData: transitionData,
         },

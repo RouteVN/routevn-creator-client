@@ -7,12 +7,11 @@ export const handleAfterMount = async (deps) => {
   // Safe access to nested properties
   const sectionTransition = props?.sectionTransition;
 
-  store.setItems({
-    items: scenes,
+  store.setScenes({
+    scenes,
   });
 
   if (!sectionTransition) {
-    // Initialize with defaults when creating new transition
     const formValues = {
       sceneId: props?.currentSceneId,
     };

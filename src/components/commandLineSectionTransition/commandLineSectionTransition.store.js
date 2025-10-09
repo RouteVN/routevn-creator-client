@@ -44,7 +44,7 @@ const form = {
 
 export const createInitialState = () => ({
   mode: "current",
-  items: { items: {}, tree: [] },
+  scenes: { items: {}, tree: [] },
   formValues: {},
 });
 
@@ -52,8 +52,8 @@ export const setMode = (state, payload) => {
   state.mode = payload.mode;
 };
 
-export const setItems = (state, payload) => {
-  state.items = payload.items;
+export const setScenes = (state, payload) => {
+  state.scenes = payload.scenes;
 };
 
 export const setFormValues = (state, payload) => {
@@ -61,9 +61,14 @@ export const setFormValues = (state, payload) => {
 };
 
 export const selectViewData = ({ state, props }) => {
-  const allItems = toFlatItems(state.items);
-  const allScenes = allItems.filter((item) => item.type === "scene");
-  const currentSceneSections = props?.sections || [];
+  const scenes = toFlatItems(state.scenes);
+  const allScenes = scenes.filter((item) => item.type === "scene");
+  const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
+
+  const currentScene = allScenes.find((item) => item.id === selectedSceneId);
+  const currentSceneSections = currentScene?.sections
+    ? toFlatItems(currentScene?.sections)
+    : [];
 
   let breadcrumb = [
     {
@@ -75,25 +80,20 @@ export const selectViewData = ({ state, props }) => {
     },
   ];
 
-  // Build scene options - include all scenes
   const sceneOptions = allScenes.map((scene) => ({
     value: scene.id,
     label: scene.name,
   }));
 
-  // Determine which sections to show based on selected scene
   let sectionOptions = [];
-  const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
 
   if (selectedSceneId) {
     if (selectedSceneId === props?.currentSceneId) {
-      // Show sections from current scene
       sectionOptions = currentSceneSections.map((section) => ({
         value: section.id,
         label: section.name,
       }));
     } else {
-      // Show sections from the selected other scene
       const selectedScene = allScenes.find(
         (scene) => scene.id === selectedSceneId,
       );
