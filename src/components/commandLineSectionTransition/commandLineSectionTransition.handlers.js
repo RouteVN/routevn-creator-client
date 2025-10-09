@@ -16,6 +16,7 @@ export const handleAfterMount = async (deps) => {
       sceneId: props?.currentSceneId,
     };
     store.setFormValues(formValues);
+    store.setInitiated();
     render();
     return;
   }
@@ -40,6 +41,7 @@ export const handleAfterMount = async (deps) => {
   }
 
   store.setFormValues(formValues);
+  store.setInitiated();
   render();
 };
 
