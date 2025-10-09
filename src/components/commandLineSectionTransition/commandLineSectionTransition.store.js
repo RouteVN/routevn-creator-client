@@ -44,12 +44,17 @@ const form = {
 
 export const createInitialState = () => ({
   mode: "current",
+  initiated: false,
   scenes: { items: {}, tree: [] },
   formValues: {},
 });
 
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
+};
+
+export const setInitiated = (state) => {
+  state.initiated = true;
 };
 
 export const setScenes = (state, payload) => {
@@ -113,6 +118,7 @@ export const selectViewData = ({ state, props }) => {
   };
 
   return {
+    initiated: state.initiated,
     mode: state.mode,
     breadcrumb,
     form,
