@@ -1,6 +1,5 @@
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
-
   // Initialize with existing screen data if available
   if (props?.screen?.resourceId) {
     store.setSelectedResourceId({

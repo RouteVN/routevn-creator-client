@@ -69,7 +69,6 @@ template:
                           - $if line.sceneTransition:
                               - rtgl-view d=h:
                                   - rtgl-svg svg="transition" wh=16:
-                                  - rtgl-svg svg="scene" wh=16:
                                   - rtgl-text s=sm: "Transition to scene: ${line.transitionTarget}"
                           - $if line.sectionTransition:
                               - rtgl-view d=h:

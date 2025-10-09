@@ -13,6 +13,8 @@ propsSchema:
       type: object
     currentSceneId:
       type: string
+    presentationState:
+      type: object
 
 refs:
   command-line-*:
@@ -46,80 +48,72 @@ refs:
 
 template:
   - rtgl-view g=md w=f:
-      - $if actions:
-          - $for item in actions:
-              $if item.type == "background":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" data-action-type="${item.type}" g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - rvn-file-image fileId=${item.data.backgroundImage.fileId} w=50 h=35:
-                    - rtgl-text s=sm: ${item.data.backgroundImage.name}
-              $elif item.type == "bgm":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - rtgl-text s=sm: ${item.data.bgmAudio.name}
-              $elif item.type == "sfx":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - rtgl-text s=sm: ${item.data.soundEffectsNames}
-              $elif item.type == "characters":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - rtgl-view d=h g=sm av=c:
-                        - $for charData, i in item.data.charactersData:
-                            - rvn-file-image fileId=${charData.sprite.fileId} w=32 h=32:
-              $elif item.type == "sectionTransition":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                    - rtgl-svg svg="transition" wh=24:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - $if item.data.sectionTransitionData.scene:
-                        - rtgl-text s=sm: "Transition to scene: ${item.data.sectionTransitionData.scene.name} section: ${item.data.sectionTransitionData.section.name}"
-                      $else:
-                        - rtgl-text s=sm: "Transition to section: ${item.data.sectionTransitionData.section.name}"
-              $elif item.type == "dialogue":
-                - $if item.data.dialogueCharacterData || item.data.dialogueData:
-                    - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                        - rtgl-svg svg=${item.icon} wh=24:
-                        - $if item.data.dialogueData:
-                            - rtgl-text s=sm: ${item.data.dialogueData.name}
-              $elif item.type == "choices":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - rtgl-view d=v:
-                        - rtgl-text s=sm: "Choices"
-                        - $for choice in item.data.choicesData.items:
-                            - rtgl-text s=xs c=mu-fg: "• ${choice.content}"
-              $elif item.type == "screen":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - $if item.data.screenData:
-                        - rtgl-text s=sm: ${item.data.screenData.name}
-              $elif item.type == "nextLine":
-                - rtgl-view#action-item-${item.id} data-mode="${item.dataMode}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                    - rtgl-svg svg=${item.icon} wh=24:
-                    - rtgl-text s=sm: Next Line
+      - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.sectionTransition || preview.dialogue || preview.choice || preview.screen || preview.nextLine:
+          - $if preview.screen:
+              - rtgl-view#action-item-screen data-mode=screen g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=screen wh=24:
+                  - rtgl-text s=sm: ${preview.screen.name}
+          - $if preview.background:
+              - rtgl-view#action-item-background data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                  - rtgl-svg svg=image wh=24:
+                  - rvn-file-image fileId=${preview.background.fileId} w=50 h=35:
+                  - rtgl-text s=sm: ${preview.background.name}
+          - $if preview.bgm:
+              - rtgl-view#action-item-bgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=music wh=24:
+                  - rtgl-text s=sm: ${preview.bgm.name}
+          - $if preview.sfx:
+              - rtgl-view#action-item-sfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=audio wh=24:
+                  - rtgl-text s=sm: ${preview.sfx.names}
+          - $if preview.character:
+              - rtgl-view#action-item-character data-mode=character g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=character wh=24:
+                  - rtgl-view d=h g=sm av=c:
+                      - $for charData, i in preview.character:
+                          - rvn-file-image fileId=${charData.sprite.fileId} w=32 h=32:
+          - $if preview.sectionTransition:
+              - rtgl-view#action-item-sectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg="transition" wh=24:
+                  - rtgl-text s=sm: "Transition to scene: ${preview.sectionTransition.scene.name} section: ${preview.sectionTransition.section.name}"
+          - $if preview.dialogue:
+              - rtgl-view#action-item-dialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg=dialogue wh=24:
+                  - rtgl-text s=sm: ${preview.dialogue.name}
+          - $if preview.choice:
+              - rtgl-view#action-item-choices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=p pv=md:
+                  - rtgl-svg svg=choices wh=24:
+                  - rtgl-view d=v:
+                      - rtgl-text s=sm mb=sm: "${preview.choice.layout.name}"
+                      - $for choice in preview.choice.items:
+                          - rtgl-text s=xs c=mu-fg: "• ${choice.content}"
+          - $if preview.nextLine:
+              - rtgl-view#action-item-nextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                  - rtgl-svg svg="next-line" wh=24:
+                  - rtgl-text s=sm: Next Line
         $else:
           - rtgl-text s=sm c=mu-fg: No actions added yet
       - rtgl-button#add-action-button v=ol w=f: +
-  - rtgl-dialog#actions-dialog ?open=${isActionsDialogOpen}:
+  - rtgl-dialog#actions-dialog key=${mode} ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh:
           - $if mode == "actions":
               - rvn-command-line-actions#command-line-actions actions-type=${actionsType}:
             $elif mode == "dialogue":
-              - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=dialogueLayouts .characters=allCharacters .dialogue=selectedLine.actions.dialogue:
+              - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=dialogueLayouts .characters=allCharacters .dialogue=actions.dialogue:
             $elif mode == "choice":
-              - rvn-command-line-choices#command-line-choices .layouts=choiceLayouts .choices=selectedLine.actions.choices:
+              - rvn-command-line-choices#command-line-choices .layouts=choiceLayouts .choice=actions.choice:
             $elif mode == "background":
-              - rvn-command-line-background#command-line-background data-mode="background" .background=selectedLine.actions.background:
+              - rvn-command-line-background#command-line-background data-mode="background" .background=actions.background:
             $elif mode == "bgm":
-              - rvn-command-line-bgm#command-line-bgm .bgm=selectedLine.actions.bgm:
+              - rvn-command-line-bgm#command-line-bgm .bgm=actions.bgm:
             $elif mode == "sfx":
-              - rvn-command-line-sound-effects#command-line-sound-effects .sfx=selectedLine.actions.sfx:
+              - rvn-command-line-sound-effects#command-line-sound-effects .sfx=actions.sfx:
             $elif mode == "character":
-              - rvn-command-line-characters#command-line-characters .character=selectedLine.actions.character .presentationState=presentationState:
+              - rvn-command-line-characters#command-line-characters .character=actions.character .presentationState=presentationState:
             $elif mode == "sectionTransition":
-              - rvn-command-line-section-transition#command-line-section-transition .sectionTransition=selectedLine.actions.sectionTransition .currentSceneId=currentSceneId:
+              - rvn-command-line-section-transition#command-line-section-transition .sectionTransition=actions.sectionTransition .currentSceneId=currentSceneId:
             $elif mode == "screen":
-              - rvn-command-line-screen#command-line-screen .layouts=screenLayouts .screen=selectedLine.actions.screen:
+              - rvn-command-line-screen#command-line-screen .layouts=screenLayouts .screen=actions.screen:
             $elif mode == "nextLine":
               - rvn-command-line-next-line#command-line-next-line .nextLine=selectedLine.actions.nextLine:
             $elif mode == "controls":
