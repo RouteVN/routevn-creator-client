@@ -12,7 +12,7 @@ propsSchema:
             type: string
           name:
             type: string
-    choices:
+    choice:
       type: object
       properties:
         items:

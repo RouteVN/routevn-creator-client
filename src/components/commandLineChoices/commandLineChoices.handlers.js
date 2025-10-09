@@ -1,3 +1,70 @@
+export const handleBeforeMount = (deps) => {
+  const { store, render, props } = deps;
+
+  // Initialize from existing choices data if available
+  console.log("props?.choice", props?.choice);
+  const choicesData = props?.choice;
+  if (choicesData) {
+    // Set existing items by directly modifying items array
+    if (choicesData.items && choicesData.items.length > 0) {
+      // Note: We need to update the state directly here during initialization
+      // This is acceptable during mount phase
+      const currentItems = store.selectItems();
+      currentItems.length = 0; // Clear existing
+      choicesData.items.forEach((item) => {
+        currentItems.push({
+          content: item.content,
+          action: item.action || { type: "continue" },
+        });
+      });
+    }
+
+    // Set selected layout
+    if (choicesData.layoutId && choicesData.layoutId !== "") {
+      store.setSelectedLayoutId({
+        layoutId: choicesData.layoutId,
+      });
+    }
+  }
+
+  render();
+};
+
+// export const handlePropsChanged = (deps) => {
+//   const { store, render, props } = deps;
+//
+//   // Re-initialize when props change
+//   const choicesData = props?.choices;
+//   if (choicesData) {
+//     const currentItems = store.selectItems();
+//
+//     // Reset items to initial state first
+//     currentItems.length = 0;
+//     currentItems.push(
+//       { content: "Choice 1", action: { type: "continue" } },
+//       { content: "Choice 2", action: { type: "continue" } },
+//     );
+//
+//     // Set existing items
+//     if (choicesData.items && choicesData.items.length > 0) {
+//       currentItems.length = 0; // Clear again
+//       choicesData.items.forEach((item) => {
+//         currentItems.push({
+//           content: item.content,
+//           action: item.action || { type: "continue" },
+//         });
+//       });
+//     }
+//
+//     // Set selected layout
+//     store.setSelectedLayoutId({
+//       layoutId: choicesData.layoutId || "",
+//     });
+//   }
+//
+//   render();
+// };
+
 export const handleAddChoiceClick = (deps) => {
   const { store, render } = deps;
 
@@ -144,72 +211,6 @@ export const handleLayoutSelectChange = (deps, payload) => {
   const layoutId = payload._event.detail.value;
 
   store.setSelectedLayoutId({ layoutId });
-  render();
-};
-
-export const handleBeforeMount = (deps) => {
-  const { store, render, props } = deps;
-
-  // Initialize from existing choices data if available
-  const choicesData = props?.choices;
-  if (choicesData) {
-    // Set existing items by directly modifying items array
-    if (choicesData.items && choicesData.items.length > 0) {
-      // Note: We need to update the state directly here during initialization
-      // This is acceptable during mount phase
-      const currentItems = store.selectItems();
-      currentItems.length = 0; // Clear existing
-      choicesData.items.forEach((item) => {
-        currentItems.push({
-          content: item.content,
-          action: item.action || { type: "continue" },
-        });
-      });
-    }
-
-    // Set selected layout
-    if (choicesData.layoutId && choicesData.layoutId !== "") {
-      store.setSelectedLayoutId({
-        layoutId: choicesData.layoutId,
-      });
-    }
-  }
-
-  render();
-};
-
-export const handlePropsChanged = (deps) => {
-  const { store, render, props } = deps;
-
-  // Re-initialize when props change
-  const choicesData = props?.choices;
-  if (choicesData) {
-    const currentItems = store.selectItems();
-
-    // Reset items to initial state first
-    currentItems.length = 0;
-    currentItems.push(
-      { content: "Choice 1", action: { type: "continue" } },
-      { content: "Choice 2", action: { type: "continue" } },
-    );
-
-    // Set existing items
-    if (choicesData.items && choicesData.items.length > 0) {
-      currentItems.length = 0; // Clear again
-      choicesData.items.forEach((item) => {
-        currentItems.push({
-          content: item.content,
-          action: item.action || { type: "continue" },
-        });
-      });
-    }
-
-    // Set selected layout
-    store.setSelectedLayoutId({
-      layoutId: choicesData.layoutId || "",
-    });
-  }
-
   render();
 };
 
