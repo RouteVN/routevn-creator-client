@@ -211,6 +211,7 @@ export const selectActionsData = ({ props }) => {
   // Next Line
   if (actions.nextLine) {
     actionsObject.nextLine = actions.nextLine;
+    preview.nextLine = actions.nextLine;
   }
 
   return {
@@ -238,7 +239,5 @@ export const selectDropdownMenuActionType = ({ state }) => {
 };
 
 export const deleteAction = (state, _actionType) => {
-  // This will be handled in the component that owns the actions data
-  // For now, just hide the dropdown menu
   hideDropdownMenu(state);
 };

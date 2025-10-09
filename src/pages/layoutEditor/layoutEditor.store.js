@@ -693,6 +693,8 @@ export const selectViewData = ({ state }) => {
     scenes: { items: {}, tree: [] }, // No scenes data in layoutEditor
   };
 
+  console.log("defaultValues", defaultValues);
+
   return {
     flatItems,
     flatGroups,
@@ -725,5 +727,6 @@ export const selectViewData = ({ state }) => {
     },
     dropdownMenu: state.dropdownMenu,
     formKey: `${state.selectedItemId}-${state.formKeyCheckpoint}`,
+    presentationState: {},
   };
 };

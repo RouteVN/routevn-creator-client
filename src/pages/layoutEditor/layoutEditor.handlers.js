@@ -1044,7 +1044,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
 
   // Get current selected item
   const selectedItemId = store.selectSelectedItemId();
-  const selectedItem = store.selectSelectedItem();
+  const selectedItem = structuredClone(store.selectSelectedItem());
   if (!selectedItem || !selectedItem.eventPayload?.actions) return;
 
   // Delete the action from the item's actions

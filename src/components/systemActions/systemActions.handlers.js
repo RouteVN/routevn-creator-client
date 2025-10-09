@@ -1,5 +1,6 @@
 export const handleBeforeMount = (deps) => {
   const { props, render, store } = deps;
+  console.log("props.actions", props.actions);
   store.updateActions(props.actions);
   render();
 };
@@ -19,6 +20,8 @@ export const handleBackToActions = (deps) => {
 
 export const handleActionClicked = (deps, payload) => {
   const { store, render } = deps;
+
+  console.log("XXXXXXXXXXXXXXXX", payload);
 
   store.setMode({
     mode: payload._event.detail.item.mode,
