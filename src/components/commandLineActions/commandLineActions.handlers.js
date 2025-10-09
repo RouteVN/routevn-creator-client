@@ -14,8 +14,6 @@ export const handleActionClick = (deps, payload) => {
   const items = store.selectItems() || [];
   const item = items.find((item) => item.id === id);
 
-  console.log("IIIIIIIIIIIIIIIIIIIIIIIIIII", item);
-
   if (item) {
     dispatchEvent(
       new CustomEvent("actionClicked", {

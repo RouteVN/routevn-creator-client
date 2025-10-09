@@ -30,41 +30,6 @@ export const handleBeforeMount = (deps) => {
   render();
 };
 
-// export const handlePropsChanged = (deps) => {
-//   const { store, render, props } = deps;
-//
-//   // Re-initialize when props change
-//   const choicesData = props?.choices;
-//   if (choicesData) {
-//     const currentItems = store.selectItems();
-//
-//     // Reset items to initial state first
-//     currentItems.length = 0;
-//     currentItems.push(
-//       { content: "Choice 1", action: { type: "continue" } },
-//       { content: "Choice 2", action: { type: "continue" } },
-//     );
-//
-//     // Set existing items
-//     if (choicesData.items && choicesData.items.length > 0) {
-//       currentItems.length = 0; // Clear again
-//       choicesData.items.forEach((item) => {
-//         currentItems.push({
-//           content: item.content,
-//           action: item.action || { type: "continue" },
-//         });
-//       });
-//     }
-//
-//     // Set selected layout
-//     store.setSelectedLayoutId({
-//       layoutId: choicesData.layoutId || "",
-//     });
-//   }
-//
-//   render();
-// };
-
 export const handleAddChoiceClick = (deps) => {
   const { store, render } = deps;
 

@@ -1,7 +1,5 @@
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
-  // Initialize with existing dialogue data if available
-  console.log("props?.dialogue", props?.dialogue);
   if (props?.dialogue?.layoutId) {
     store.setSelectedLayoutId({
       layoutId: props.dialogue.layoutId,
