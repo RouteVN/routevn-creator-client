@@ -1,5 +1,5 @@
 export const createInitialState = () => ({
-  waveformData: {},
+  waveformData: null,
   isLoading: true,
 });
 
