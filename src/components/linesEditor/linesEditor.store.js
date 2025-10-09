@@ -133,6 +133,7 @@ export const selectViewData = ({ state, props }) => {
     let hasBgm = false;
     let hasSfx = false;
     let hasDialogueLayout = false;
+    let hasScreen = false;
 
     // Check for BGM
     if (line.actions?.bgm?.audioId) {
@@ -147,6 +148,11 @@ export const selectViewData = ({ state, props }) => {
     // Check for Dialogue Layout
     if (line.actions?.dialogue?.layoutId) {
       hasDialogueLayout = true;
+    }
+
+    // Check for Screen
+    if (line.actions?.screen?.resourceId) {
+      hasScreen = true;
     }
 
     // Handle both nested and non-nested structures
@@ -211,6 +217,7 @@ export const selectViewData = ({ state, props }) => {
       hasBgm,
       hasSfx,
       hasDialogueLayout,
+      hasScreen,
     };
   });
 

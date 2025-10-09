@@ -94,6 +94,8 @@ template:
                                       - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
                           - $if line.hasDialogueLayout:
                               - rtgl-svg svg="dialogue" wh=24 mr=sm:
+                          - $if line.hasScreen:
+                              - rtgl-svg svg="screen" wh=24 mr=sm:
                           - $if line.hasBgm:
                               - rtgl-svg svg="music" wh=24 mr=sm:
                           - $if line.hasSfx:
