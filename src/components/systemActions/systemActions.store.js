@@ -1,5 +1,3 @@
-import { toFlatItems } from "../../deps/repository";
-
 export const createInitialState = () => ({
   mode: "actions",
   isActionsDialogOpen: false,
@@ -19,8 +17,7 @@ export const createInitialState = () => ({
 
 export const selectViewData = ({ state, props, attrs }) => {
   const displayActions = selectDisplayActions({ state });
-  const actionsObject = selectActionsData({ props });
-  const actionsArray = convertActionsObjectToArray(actionsObject);
+  const { actions: actionsObject, preview } = selectActionsData({ props });
 
   const repositoryState = props.repositoryState || {};
   const choiceLayouts = Object.entries(repositoryState.layouts?.items || {})
@@ -65,8 +62,8 @@ export const selectViewData = ({ state, props, attrs }) => {
     isActionsDialogOpen: state.isActionsDialogOpen,
     dropdownMenu: state.dropdownMenu,
     displayActions,
-    actions: actionsArray,
-    actionsObject,
+    actions: actionsObject,
+    preview,
     repositoryState,
     selectedLineId: props.selectedLineId,
     layouts: choiceLayouts, // Default to choice layouts for backward compatibility
@@ -106,20 +103,16 @@ export const showActionsDialog = (state) => {
 
 export const hideActionsDialog = (state) => {
   state.isActionsDialogOpen = false;
+  state.mode = "hidden";
 };
 
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
 };
 
-// Helper function to convert actions object to array for view compatibility
-export const convertActionsObjectToArray = (actionsObject) => {
-  return Object.values(actionsObject).filter(Boolean);
-};
-
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props }) => {
-  const { actions, repositoryState } = props;
+  const { actions, repositoryState, presentationState } = props;
 
   if (!actions) {
     return {};
@@ -129,62 +122,27 @@ export const selectActionsData = ({ props }) => {
   // Images and audios: accessed directly by ID (e.g., images[id])
   const images = repositoryStateData.images?.items || {};
   const audios = repositoryStateData.audio?.items || {};
+  const scenes = repositoryStateData.scenes || {};
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsTree = repositoryStateData.layouts || {};
 
   const actionsObject = {};
+  const preview = {};
 
-  // Background
-  if (actions.background) {
-    const backgroundImage = images[actions.background.resourceId];
-    if (backgroundImage) {
-      actionsObject.background = {
-        type: "background",
-        id: "actions-action-background",
-        dataMode: "background",
-        icon: "image",
-        data: {
-          backgroundImage,
-        },
-      };
-    }
+  if (presentationState.background) {
+    const backgroundImage = images[presentationState.background.resourceId];
+    actionsObject.background = presentationState.background;
+    preview.background = backgroundImage;
   }
 
-  // Layout
-  if (actions.layout) {
-    const layoutData = layoutsTree
-      ? toFlatItems(layoutsTree).find((l) => l.id === actions.layout.resourceId)
-      : null;
-    if (layoutData) {
-      actionsObject.layout = {
-        type: "layout",
-        id: "actions-action-layout",
-        dataMode: "layout",
-        icon: "layout",
-        data: {
-          layoutData,
-        },
-      };
-    }
+  if (presentationState.layout) {
+    actionsObject.layout = presentationState.layout;
+    preview.layout = layoutsTree.items[presentationState.layout.resourceId];
   }
 
-  // BGM
-  if (actions.bgm) {
-    const bgmAudio = audios[actions.bgm.audioId];
-    if (bgmAudio) {
-      actionsObject.bgm = {
-        type: "bgm",
-        id: "actions-action-bgm",
-        dataMode: "bgm",
-        icon: "music",
-        data: {
-          bgmAudio: {
-            fileId: bgmAudio.fileId,
-            name: bgmAudio.name,
-          },
-        },
-      };
-    }
+  if (presentationState.bgm) {
+    actionsObject.bgm = presentationState.bgm;
+    preview.bgm = audios[presentationState.bgm.audioId];
   }
 
   // Sound Effects
@@ -193,26 +151,20 @@ export const selectActionsData = ({ props }) => {
       ...sfx,
       audio: audios[sfx.audioId],
     }));
-    const soundEffectsNames = soundEffectsAudio
-      .map((sfx) => sfx.audio?.name || "Unknown")
-      .filter((name) => name !== "Unknown")
+    const names = soundEffectsAudio
+      .map((sfx) => sfx.audio?.name || "")
+      .filter((name) => name !== "")
       .join(", ");
 
-    actionsObject.sfx = {
-      type: "sfx",
-      id: "actions-action-sfx",
-      dataMode: "sfx",
-      icon: "audio",
-      data: {
-        soundEffectsAudio,
-        soundEffectsNames,
-      },
+    actionsObject.sfx = actions.sfx;
+    preview.sfx = {
+      names,
     };
   }
 
-  // Characters
-  if (actions.character?.items) {
-    const charactersData = actions.character.items.map((char) => {
+  if (presentationState.character?.items) {
+    actionsObject.character = presentationState.character;
+    preview.character = presentationState.character.items.map((char) => {
       const character = repositoryStateData.characters?.items?.[char.id];
       let sprite = {};
 
@@ -223,141 +175,49 @@ export const selectActionsData = ({ props }) => {
 
       return {
         ...char,
-        character,
+        name: character?.name || "",
         sprite,
       };
     });
+  }
 
-    const charactersNames = charactersData
-      .map((char) => char.character?.name || "")
-      .join(", ");
-
-    actionsObject.characters = {
-      type: "characters",
-      id: "actions-action-characters",
-      dataMode: "character",
-      icon: "character",
-      data: {
-        charactersData,
-        charactersNames,
-      },
+  if (actions.sectionTransition) {
+    actionsObject.sectionTransition = actions.sectionTransition;
+    const scene = scenes.items[actions.sectionTransition.sceneId];
+    preview.sectionTransition = {
+      scene,
+      section: scene.sections.items[actions.sectionTransition.sectionId],
     };
   }
 
-  // Transition (Scene or Section)
-  const sectionTransitionData =
-    actions.sectionTransition || actions.actions?.sectionTransition;
-  if (sectionTransitionData) {
-    const transition = sectionTransitionData;
-
-    if (transition.sceneId) {
-      // Scene Transition
-      const scenes = repositoryStateData.scenes;
-      const targetScene = scenes
-        ? toFlatItems(scenes).find((scene) => scene.id === transition.sceneId)
-        : null;
-
-      const sections = toFlatItems(targetScene.sections);
-      const section = sections.find(
-        (section) => section.id === transition.sectionId,
-      );
-
-      const transitionData = {
-        ...transition,
-        scene: targetScene,
-        section,
-      };
-
-      actionsObject.sectionTransition = {
-        type: "sectionTransition",
-        id: "actions-action-scene",
-        dataMode: "sectionTransition",
-        icon: "scene",
-        data: {
-          sectionTransitionData: transitionData,
-        },
-      };
-    }
+  if (presentationState.dialogue) {
+    actionsObject.dialogue = presentationState.dialogue;
+    preview.dialogue = layoutsTree.items[presentationState.dialogue.layoutId];
   }
 
-  // Dialogue
-  if (actions.dialogue) {
-    const dialogueData =
-      actions.dialogue.layoutId && layoutsTree
-        ? toFlatItems(layoutsTree).find(
-            (l) => l.id === actions.dialogue.layoutId,
-          )
-        : null;
-    const dialogueCharacterData = actions.dialogue.characterId
-      ? repositoryStateData.characters?.items?.[actions.dialogue.characterId]
-      : null;
-
-    actionsObject.dialogue = {
-      type: "dialogue",
-      id: "actions-action-dialogue",
-      dataMode: "dialogue",
-      icon: "dialogue",
-      data: {
-        dialogueData,
-        dialogueCharacterData,
-      },
+  if (actions.choice) {
+    actionsObject.choice = actions.choice;
+    preview.choice = {
+      layout: layoutsTree.items[actions.choice.layoutId],
+      items: actions.choice.items,
     };
   }
 
-  // Choices
-  const choicesData = actions.choice || actions.actions?.choice;
-  if (choicesData) {
-    const layoutData =
-      choicesData.resourceId && layoutsTree
-        ? toFlatItems(layoutsTree).find((l) => l.id === choicesData.resourceId)
-        : null;
-
-    actionsObject.choices = {
-      type: "choices",
-      id: "actions-action-choices",
-      dataMode: "choice",
-      icon: "choices",
-      data: {
-        choicesData,
-        layoutData,
-      },
-    };
-  }
-
-  // Screen
-  if (actions.screen) {
-    const screenData =
-      actions.screen.resourceId && layoutsTree
-        ? toFlatItems(layoutsTree).find(
-            (l) => l.id === actions.screen.resourceId,
-          )
-        : null;
-
-    if (screenData) {
-      actionsObject.screen = {
-        type: "screen",
-        id: "actions-action-screen",
-        dataMode: "screen",
-        icon: "screen",
-        data: {
-          screenData,
-        },
-      };
-    }
+  if (presentationState.screen) {
+    actionsObject.screen = presentationState.screen;
+    preview.screen = layoutsTree.items[presentationState.screen.resourceId];
   }
 
   // Next Line
   if (actions.nextLine) {
-    actionsObject.nextLine = {
-      type: "nextLine",
-      id: "actions-action-next-line",
-      dataMode: "nextLine",
-      icon: "next-line",
-      data: {},
-    };
+    actionsObject.nextLine = actions.nextLine;
+    preview.nextLine = actions.nextLine;
   }
 
-  return actionsObject;
+  return {
+    actions: actionsObject,
+    preview,
+  };
 };
 
 export const showDropdownMenu = (state, { position, actionType }) => {
@@ -379,7 +239,5 @@ export const selectDropdownMenuActionType = ({ state }) => {
 };
 
 export const deleteAction = (state, _actionType) => {
-  // This will be handled in the component that owns the actions data
-  // For now, just hide the dropdown menu
   hideDropdownMenu(state);
 };

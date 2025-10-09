@@ -96,7 +96,7 @@ template:
                   - rtgl-view w=f h=100vh sv:
                       - rtgl-form#detail-form key=${formKey} w=f h=f .form=form .context=context .defaultValues=defaultValues:
                           - slot name="eventPayload":
-                              - rvn-system-actions#system-actions .actions=defaultValues.actions .repositoryState=repositoryStateForActions .selectedLineId=selectedItemId action-type="system":
+                              - rvn-system-actions#system-actions .actions=defaultValues.actions .repositoryState=repositoryStateForActions .selectedLineId=selectedItemId action-type="system" .presentationState=presentationState:
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection

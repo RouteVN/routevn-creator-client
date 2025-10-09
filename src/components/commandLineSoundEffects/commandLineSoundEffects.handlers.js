@@ -2,14 +2,7 @@ import { toFlatItems } from "../../deps/repository";
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const {
-    repositoryFactory,
-    router,
-    store,
-    props,
-    render,
-    downloadWaveformData,
-  } = deps;
+  const { repositoryFactory, router, store, props, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { audio } = repository.getState();
@@ -21,7 +14,7 @@ export const handleAfterMount = async (deps) => {
   if (props?.sfx?.items) {
     const { items } = props.sfx;
     if (items && items.length > 0) {
-      store.setExistingSfx({
+      store.setExistingSfxs({
         sfx: items,
       });
     }
@@ -32,25 +25,6 @@ export const handleAfterMount = async (deps) => {
   if (!sfx || sfx.length === 0) {
     return;
   }
-
-  const context = {};
-
-  // Load waveform data for each existing sound effect
-  for (const [index, sfx] of sfx.entries()) {
-    if (sfx.waveformDataFileId) {
-      try {
-        const waveformData = await downloadWaveformData({
-          fileId: sfx.waveformDataFileId,
-        });
-        context[`sfx[${index}]`] = { waveformData };
-      } catch (error) {
-        console.error(`Failed to load waveform data for sfx[${index}]:`, error);
-        throw error;
-      }
-    }
-  }
-
-  store.setContext(context);
   render();
 };
 

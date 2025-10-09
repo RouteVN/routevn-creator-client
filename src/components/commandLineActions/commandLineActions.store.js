@@ -73,7 +73,7 @@ export const selectViewData = ({ attrs }) => {
   };
 };
 
-export const selectItems = ({ props }) => {
-  const actionsType = props?.attributes?.["actions-type"];
+export const selectItems = ({ attrs }) => {
+  const actionsType = attrs?.["actions-type"];
   return actionsType === "system" ? SYSTEM_ACTIONS : PRESENTATION_ACTIONS;
 };
