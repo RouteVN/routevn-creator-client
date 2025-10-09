@@ -12,15 +12,6 @@ propsSchema:
           type: string
         animation:
           type: string
-    sections:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
     currentSceneId:
       type: string
 
@@ -92,10 +83,10 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
-    - $if mode == 'current':
-      - rtgl-view d=h g=md:
-        - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-      - rtgl-form#transition-form .defaultValues=defaultValues .form=form .context=context w=f:
-      - rtgl-view flex=1:
-      - rtgl-view d=h av=c ah=e w=f g=lg:
-        - rtgl-button#submit-button: Submit
+      - $if mode == 'current':
+          - rtgl-view d=h g=md:
+              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+          - rtgl-form#transition-form .defaultValues=defaultValues .form=form .context=context w=f:
+          - rtgl-view flex=1:
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+              - rtgl-button#submit-button: Submit

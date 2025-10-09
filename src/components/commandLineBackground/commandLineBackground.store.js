@@ -110,7 +110,6 @@ export const selectSelectedResource = ({ state }) => {
   };
 
   const itemsList = itemsMap[state.selectedResourceType] || [];
-
   const flatItems = toFlatItems(itemsList);
   const item = flatItems.find((item) => item.id === state.selectedResourceId);
 
@@ -205,6 +204,11 @@ export const selectViewData = ({ state }) => {
     ],
   };
 
+  const defaultValues = {
+    background: selectedResource?.fileId || "",
+    animation: state.selectedAnimationId,
+  };
+
   return {
     mode: state.mode,
     tab: state.tab,
@@ -216,10 +220,7 @@ export const selectViewData = ({ state }) => {
     selectedResource,
     dialogueForm: {
       form,
-      defaultValues: {
-        backgroundFileId: selectedResource?.fileId || "",
-        animation: state.selectedAnimationId,
-      },
+      defaultValues,
     },
   };
 };

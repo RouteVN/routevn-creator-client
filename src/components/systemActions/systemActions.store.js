@@ -44,6 +44,7 @@ export const selectViewData = ({ state, props }) => {
     }));
 
   return {
+    currentSceneId: props.currentSceneId,
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
     dropdownMenu: state.dropdownMenu,
@@ -193,12 +194,11 @@ export const selectActionsData = ({ props }) => {
   if (actions.character?.items) {
     const charactersData = actions.character.items.map((char) => {
       const character = repositoryStateData.characters?.items?.[char.id];
-      let sprite = null;
+      let sprite = {};
 
       if (char.sprites?.[0]?.imageId && character?.sprites) {
         const spriteId = char.sprites[0].imageId;
-        const flatSprites = Object.values(character.sprites);
-        sprite = flatSprites.find((s) => s.id === spriteId);
+        sprite.fileId = character.sprites?.items[spriteId]?.fileId;
       }
 
       return {
@@ -209,7 +209,7 @@ export const selectActionsData = ({ props }) => {
     });
 
     const charactersNames = charactersData
-      .map((char) => char.character?.name || "Unknown")
+      .map((char) => char.character?.name || "")
       .join(", ");
 
     actionsObject.characters = {
@@ -237,9 +237,15 @@ export const selectActionsData = ({ props }) => {
         ? toFlatItems(scenes).find((scene) => scene.id === transition.sceneId)
         : null;
 
+      const sections = toFlatItems(targetScene.sections);
+      const section = sections.find(
+        (section) => section.id === transition.sectionId,
+      );
+
       const transitionData = {
         ...transition,
         scene: targetScene,
+        section,
       };
 
       actionsObject.sectionTransition = {
@@ -247,22 +253,6 @@ export const selectActionsData = ({ props }) => {
         id: "actions-action-scene",
         dataMode: "sectionTransition",
         icon: "scene",
-        data: {
-          sectionTransitionData: transitionData,
-        },
-      };
-    } else if (transition.sectionId) {
-      // Section Transition
-      const transitionData = {
-        ...transition,
-        section: null, // Would need scene context to resolve this
-      };
-
-      actionsObject.sectionTransition = {
-        type: "sectionTransition",
-        id: "actions-action-section",
-        dataMode: "sectionTransition",
-        icon: "section",
         data: {
           sectionTransitionData: transitionData,
         },
