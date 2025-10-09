@@ -1,14 +1,9 @@
 export const handleBeforeMount = (deps) => {
   const { store, render, props } = deps;
 
-  // Initialize from existing choices data if available
-  console.log("props?.choice", props?.choice);
   const choicesData = props?.choice;
   if (choicesData) {
-    // Set existing items by directly modifying items array
     if (choicesData.items && choicesData.items.length > 0) {
-      // Note: We need to update the state directly here during initialization
-      // This is acceptable during mount phase
       const currentItems = store.selectItems();
       currentItems.length = 0; // Clear existing
       choicesData.items.forEach((item) => {
