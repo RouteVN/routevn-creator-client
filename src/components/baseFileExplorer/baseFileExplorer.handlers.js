@@ -322,7 +322,7 @@ export const handleItemClick = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("click-item", {
       detail: {
-        itemId: itemId,
+        itemId: id,
       },
     }),
   );
@@ -335,7 +335,7 @@ export const handleItemDblClick = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("dblclick-item", {
       detail: {
-        itemId: itemId,
+        itemId,
       },
     }),
   );
