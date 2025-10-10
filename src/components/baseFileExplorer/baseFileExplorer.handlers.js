@@ -326,16 +326,6 @@ export const handleItemClick = (deps, payload) => {
       },
     }),
   );
-
-  dispatchEvent(
-    new CustomEvent("selection-changed", {
-      detail: {
-        selectedItemId: itemId,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
 };
 
 export const handleArrowClick = (deps, payload) => {

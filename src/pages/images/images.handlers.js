@@ -11,9 +11,9 @@ export const handleAfterMount = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { selectedItemId } = payload._event.detail;
+  const { id } = payload._event.detail;
 
-  store.setSelectedItemId(selectedItemId);
+  store.setSelectedItemId(id);
   render();
 };
 

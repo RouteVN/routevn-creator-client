@@ -19,7 +19,7 @@ refs:
     eventListeners:
       data-changed:
         handler: handleFileExplorerDataChanged
-      selection-changed:
+      click-item:
         handler: handleFileExplorerSelectionChanged
   groupview:
     eventListeners:
