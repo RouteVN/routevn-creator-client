@@ -26,6 +26,12 @@ export const handleClickItem = (deps, payload) => {
   );
 };
 
+export const handlePageItemClick = (deps, payload) => {
+  const { getRefIds } = deps;
+  const { "base-file-explorer": baseFileExplorer } = getRefIds();
+  baseFileExplorer.elm.transformedHandlers.handlePageItemClick(payload);
+};
+
 export const handleFileAction = async (deps, payload) => {
   const { dispatchEvent, repositoryFactory, router, props } = deps;
   const { p } = router.getPayload();

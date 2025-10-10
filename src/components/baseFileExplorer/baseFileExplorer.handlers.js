@@ -328,6 +328,14 @@ export const handleItemClick = (deps, payload) => {
   );
 };
 
+export const handlePageItemClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { itemId } = payload._event.detail; // Extract from forwarded event
+
+  store.setSelectedItemId(itemId);
+  render();
+};
+
 export const handleArrowClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.stopPropagation(); // Prevent triggering item click
