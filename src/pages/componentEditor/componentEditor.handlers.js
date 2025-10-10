@@ -69,20 +69,21 @@ const renderComponentPreview = async (deps) => {
 
   const selectedItem = store.selectSelectedItem();
 
-  const fileIds = extractFileIdsFromRenderState(renderStateElements);
+  const fileReferences = extractFileIdsFromRenderState(renderStateElements);
 
   const assets = {};
 
   // Get fileManager for this project
   const fileManager = await fileManagerFactory.getByProject(p);
 
-  for (const fileId of fileIds) {
+  for (const fileObj of fileReferences) {
+    const { url: fileId, type } = fileObj;
     const { url } = await fileManager.getFileContent({
       fileId: fileId,
     });
     assets[`file:${fileId}`] = {
       url: url,
-      type: "image/png",
+      type: type || "image/png",
     };
   }
 

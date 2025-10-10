@@ -4,23 +4,24 @@ import { extractFileIdsFromRenderState } from "../../utils/index.js";
 /**
  * Load assets (images and fonts) for rendering
  * @param {Object} deps - Component dependencies
- * @param {Array} fileIds - File IDs to load
+ * @param {Array} fileReferences - File references with url and type to load
  * @returns {Promise<Object>} Loaded assets
  */
-const loadAssets = async (deps, fileIds) => {
+const loadAssets = async (deps, fileReferences) => {
   const { fileManagerFactory, router } = deps;
   const { p } = router.getPayload();
   const assets = {};
 
   const fileManager = await fileManagerFactory.getByProject(p);
 
-  for (const fileId of fileIds) {
+  for (const fileObj of fileReferences) {
+    const { url: fileId, type } = fileObj;
     const result = await fileManager.getFileContent({
       fileId: fileId,
     });
     assets[`file:${fileId}`] = {
       url: result.url,
-      type: result.type || "image/png",
+      type: type || result.type || "image/png",
     };
   }
 
@@ -51,8 +52,8 @@ export const handleAfterMount = async (deps) => {
   const projectData = constructProjectData(state, {
     initialSceneId: attrs["scene-id"],
   });
-  const fileIds = extractFileIdsFromRenderState(projectData);
-  const assets = await loadAssets(deps, fileIds);
+  const fileReferences = extractFileIdsFromRenderState(projectData.resources);
+  const assets = await loadAssets(deps, fileReferences);
   await drenderer.loadAssets(assets);
   await drenderer.initRouteEngine(projectData);
 };
