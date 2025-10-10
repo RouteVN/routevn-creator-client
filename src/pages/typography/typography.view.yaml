@@ -14,7 +14,7 @@ refs:
       click-item:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
-        handler: handleFileExplorerDoubleClick
+        handler: handleTypographyItemDoubleClick
   groupview:
     eventListeners:
       item-click:

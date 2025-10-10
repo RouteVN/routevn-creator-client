@@ -11,16 +11,16 @@ export const handleAfterMount = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const { itemId } = payload._event.detail;
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId(itemId);
   render();
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
-  store.showFullImagePreview({ itemId: id });
+  const { itemId } = payload._event.detail;
+  store.showFullImagePreview({ itemId });
   render();
 };
 

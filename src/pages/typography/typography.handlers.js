@@ -34,11 +34,6 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
-export const handleFileExplorerDoubleClick = async (deps, payload) => {
-  const { id } = payload._event.detail;
-  handleTypographyItemDoubleClick(deps, { _event: { detail: { itemId: id } } });
-};
-
 // Helper function to generate typography preview image
 const generateTypographyPreview = (item, colorsData, fontsData) => {
   if (!item) {
@@ -384,7 +379,7 @@ export const handleAddTypographyClick = (deps, payload) => {
 
 export const handleTypographyItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = payload._event.detail;
+  const itemId = payload._event.detail.itemId;
 
   // Get the item from the store
   const item = store.selectItemById(itemId);

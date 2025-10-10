@@ -27,11 +27,6 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
-export const handleFileExplorerDoubleClick = async (deps, payload) => {
-  const { id } = payload._event.detail;
-  handleItemDoubleClick(deps, { _event: { detail: { itemId: id } } });
-};
-
 export const handleImageItemClick = (deps, payload) => {
   const { store, render, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
@@ -47,7 +42,7 @@ export const handleImageItemClick = (deps, payload) => {
 
 export const handleItemDoubleClick = (deps, payload) => {
   const { router, subject } = deps;
-  const { itemId } = payload._event.detail;
+  const itemId = payload._event.detail.itemId;
 
   // Get current payload to preserve projectId
   const currentPayload = router ? router.getPayload() : {};

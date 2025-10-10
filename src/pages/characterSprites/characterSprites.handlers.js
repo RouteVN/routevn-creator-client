@@ -42,9 +42,9 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const { itemId } = payload._event.detail;
 
-  store.showFullImagePreview({ itemId: id });
+  store.showFullImagePreview({ itemId });
   render();
 };
 

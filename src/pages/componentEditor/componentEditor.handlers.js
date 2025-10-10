@@ -133,7 +133,7 @@ export const handleTargetChanged = (deps) => {
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render } = deps;
-  const itemId = payload._event.detail.id;
+  const itemId = payload._event.detail.itemId;
   store.setSelectedItemId(itemId);
   render();
   await renderComponentPreview(deps);

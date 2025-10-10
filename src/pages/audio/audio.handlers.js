@@ -30,9 +30,9 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
 export const handleFileExplorerDoubleClick = async (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const { itemId } = payload._event.detail;
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
