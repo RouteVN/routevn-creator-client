@@ -9,6 +9,14 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  const { store, render } = deps;
+  const { id } = payload._event.detail;
+
+  store.setSelectedItemId(id);
+  render();
+};
+
 export const handleFileExplorerDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
@@ -88,6 +96,7 @@ export const handleFormExtraEvent = async (deps) => {
 export const handleImageItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
+
   store.setSelectedItemId(itemId);
 
   const selectedItem = store.selectSelectedItem();
@@ -102,6 +111,7 @@ export const handleImageItemClick = async (deps, payload) => {
       src: url,
     },
   });
+
   render();
 };
 
