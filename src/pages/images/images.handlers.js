@@ -17,6 +17,13 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { itemId } = payload._event.detail;
+  store.showFullImagePreview({ itemId });
+  render();
+};
+
 export const handleFileExplorerDataChanged = async (deps) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();

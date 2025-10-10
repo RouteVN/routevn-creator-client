@@ -55,6 +55,8 @@ refs:
         handler: handleItemContextMenu
       click:
         handler: handleItemClick
+      dblclick:
+        handler: handleItemDblClick
   arrow-*:
     eventListeners:
       click:
