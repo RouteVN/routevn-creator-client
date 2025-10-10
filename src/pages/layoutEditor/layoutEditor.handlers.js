@@ -433,7 +433,7 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const itemId = payload._event.detail.itemId;
+  const { itemId } = payload._event.detail;
   store.setSelectedItemId(itemId);
   render();
 

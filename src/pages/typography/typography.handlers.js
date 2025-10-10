@@ -379,7 +379,7 @@ export const handleAddTypographyClick = (deps, payload) => {
 
 export const handleTypographyItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const itemId = payload._event.detail.itemId;
+  const { itemId } = payload._event.detail;
 
   // Get the item from the store
   const item = store.selectItemById(itemId);
