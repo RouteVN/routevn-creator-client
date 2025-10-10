@@ -153,7 +153,10 @@ For cross-compilation to Windows from Linux/macOS:
 bun run tauri:dev:win
 ```
 
-**Building:**
+**Production Build:**
+
+For production we build installer using NSIS: https://v2.tauri.app/distribute/windows-installer/
+
 
 Build the desktop application:
 ```shell
