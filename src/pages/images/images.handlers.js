@@ -100,8 +100,8 @@ export const handleImageItemClick = async (deps, payload) => {
   store.setSelectedItemId(itemId);
 
   const { fileExplorer } = getRefIds();
-  fileExplorer.elm.handlers.handlePageItemClick({
-    _event: { detail: { id: itemId } },
+  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+    _event: { detail: { itemId } },
   });
 
   const selectedItem = store.selectSelectedItem();
