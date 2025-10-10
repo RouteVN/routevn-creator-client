@@ -75,11 +75,11 @@ const cancelKeyboardSave = () => {
 /**
  * Load assets (images and fonts) for rendering
  * @param {Object} deps - Component dependencies
- * @param {Array} fileIds - File IDs to load
+ * @param {Array} fileReferences - File references with url and type to load
  * @param {Object} fontsItems - Font items from repository
  * @returns {Promise<Object>} Loaded assets
  */
-const loadAssets = async (deps, fileIds, fontsItems) => {
+const loadAssets = async (deps, fileReferences, fontsItems) => {
   const { fileManagerFactory, router } = deps;
   const { p } = router.getPayload();
   const assets = {};
@@ -87,7 +87,9 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
   // Get fileManager for this project
   const fileManager = await fileManagerFactory.getByProject(p);
 
-  for (const fileId of fileIds) {
+  for (const fileObj of fileReferences) {
+    const { url: fileId, type: fileType } = fileObj;
+
     // Check cache first
     let url;
     const cacheKey = `${fileId}_${p}`;
@@ -104,8 +106,8 @@ const loadAssets = async (deps, fileIds, fontsItems) => {
       fileContentCache.set(cacheKey, url);
     }
 
-    // Determine file type
-    let type = "image/png"; // default for images
+    // Use type from fileObj, default to image/png
+    let type = fileType || "image/png";
 
     // Check if this is a font file by looking in fonts data
     const fontItem = Object.values(fontsItems).find(
@@ -280,8 +282,8 @@ const renderLayoutPreview = async (deps, options = {}) => {
 
   // Skip asset loading during drag for better performance
   if (!skipAssetLoading) {
-    const fileIds = extractFileIdsFromRenderState(renderStateElements);
-    const assets = await loadAssets(deps, fileIds, fontsItems);
+    const fileReferences = extractFileIdsFromRenderState(renderStateElements);
+    const assets = await loadAssets(deps, fileReferences, fontsItems);
     await drenderer.loadAssets(assets);
   }
 

@@ -4,32 +4,36 @@ import { extractFileIdsFromRenderState } from "../../utils/index.js";
 import { filter, tap, debounceTime } from "rxjs";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
-// Helper function to create assets object from fileIds
+// Helper function to create assets object from file references
 async function createAssetsFromFileIds(
-  fileIds,
+  fileReferences,
   fileManager,
   { audios, images, fonts = {} },
 ) {
   const assets = {};
-  for (const fileId of fileIds) {
+  for (const fileObj of fileReferences) {
+    const { url: fileId, type: fileType } = fileObj;
     try {
       const { url } = await fileManager.getFileContent({
         fileId,
       });
-      let type;
+      let type = fileType; // Use type from fileObj first
 
-      Object.entries(audios)
-        .concat(Object.entries(images))
-        .concat(Object.entries(fonts))
-        .forEach(([_key, item]) => {
-          if (item.fileId === fileId) {
-            type = item.fileType;
-          }
-        });
+      // If no type in fileObj, look it up in the resources
+      if (!type) {
+        Object.entries(audios)
+          .concat(Object.entries(images))
+          .concat(Object.entries(fonts))
+          .forEach(([_key, item]) => {
+            if (item.fileId === fileId) {
+              type = item.fileType;
+            }
+          });
+      }
 
       assets[`file:${fileId}`] = {
         url,
-        type,
+        type: type || "image/png", // fallback to image/png
       };
     } catch (error) {
       console.error(`Failed to load file ${fileId}:`, error);
@@ -42,10 +46,10 @@ async function createAssetsFromFileIds(
 // Helper function to render the scene state
 async function renderSceneState(store, drenderer, fileManager) {
   const renderState = store.selectRenderState();
-  const fileIds = extractFileIdsFromRenderState(renderState);
+  const fileReferences = extractFileIdsFromRenderState(renderState);
   const repositoryState = store.selectRepositoryState();
   const projectData = constructProjectData(repositoryState);
-  const assets = await createAssetsFromFileIds(fileIds, fileManager, {
+  const assets = await createAssetsFromFileIds(fileReferences, fileManager, {
     audios: projectData.resources.audio,
     images: projectData.resources.images,
     fonts: projectData.resources.fonts,

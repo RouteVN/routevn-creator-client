@@ -15,7 +15,10 @@ export const extractFileIdsFromRenderState = (obj) => {
     if (typeof value === "string") {
       // Check if this is a fileId (starts with 'file:')
       if (value.startsWith("file:")) {
-        fileIds.add(value.replace("file:", ""));
+        fileIds.add({
+          url: value.replace("file:", ""),
+          type: value.fileType || "image/png",
+        });
       }
       return;
     }
@@ -29,16 +32,21 @@ export const extractFileIdsFromRenderState = (obj) => {
       Object.keys(value).forEach((key) => {
         // Check if this property contains file references and extract fileId
         if (
-          (key === "url" ||
+          (key === "fileId" ||
+            key === "url" ||
             key === "src" ||
             key === "hoverUrl" ||
             key === "clickUrl" ||
             key === "fontFileId") &&
           typeof value[key] === "string"
         ) {
-          if (value[key].startsWith("file:")) {
-            fileIds.add(value[key].replace("file:", ""));
-          }
+          const fileId = value[key].startsWith("file:")
+            ? value[key].replace("file:", "")
+            : value[key];
+          fileIds.add({
+            url: fileId,
+            type: value.fileType || "image/png",
+          });
         }
         // Continue traversing nested objects
         traverse(value[key]);
