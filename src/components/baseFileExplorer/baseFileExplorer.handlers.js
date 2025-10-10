@@ -322,7 +322,7 @@ export const handleItemClick = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("click-item", {
       detail: {
-        itemId: id,
+        id: itemId,
       },
     }),
   );
