@@ -94,10 +94,15 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleImageItemClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, fileManagerFactory, router, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
   store.setSelectedItemId(itemId);
+
+  const { fileExplorer } = getRefIds();
+  fileExplorer.elm.handlers.handlePageItemClick({
+    _event: { detail: { id: itemId } },
+  });
 
   const selectedItem = store.selectSelectedItem();
 
