@@ -26,6 +26,18 @@ export const handleClickItem = (deps, payload) => {
   );
 };
 
+export const handleDblClickItem = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  // Just forward the event
+  dispatchEvent(
+    new CustomEvent("dblclick-item", {
+      detail: payload._event.detail,
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handlePageItemClick = (deps, payload) => {
   const { getRefIds } = deps;
   const { "base-file-explorer": baseFileExplorer } = getRefIds();

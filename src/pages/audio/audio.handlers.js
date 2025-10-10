@@ -28,6 +28,22 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = async (deps, payload) => {
+  const { store, render } = deps;
+  const { itemId } = payload._event.detail;
+
+  store.setSelectedItemId(itemId);
+
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem) {
+    store.openAudioPlayer({
+      fileId: selectedItem.fileId,
+      fileName: selectedItem.name,
+    });
+  }
+  render();
+};
+
 export const handleAudioItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event

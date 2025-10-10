@@ -25,6 +25,8 @@ refs:
         handler: handleDataChanged
       click-item:
         handler: handleFileExplorerSelectionChanged
+      dblclick-item:
+        handler: handleTransformItemDoubleClick
   groupview:
     eventListeners:
       item-click:

@@ -390,6 +390,19 @@ export const handleItemClick = (deps, payload) => {
   );
 };
 
+export const handleItemDblClick = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const itemId = payload._event.currentTarget.id.replace("item-", "");
+
+  dispatchEvent(
+    new CustomEvent("dblclick-item", {
+      detail: {
+        itemId,
+      },
+    }),
+  );
+};
+
 export const handlePageItemClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event

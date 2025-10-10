@@ -13,6 +13,8 @@ refs:
         handler: handleDataChanged
       click-item:
         handler: handleFileExplorerSelectionChanged
+      dblclick-item:
+        handler: handleColorItemDoubleClick
   groupview:
     eventListeners:
       item-click:

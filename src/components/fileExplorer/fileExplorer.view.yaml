@@ -34,6 +34,8 @@ refs:
     eventListeners:
       click-item:
         handler: handleClickItem
+      dblclick-item:
+        handler: handleDblClickItem
       target-changed:
         handler: handleTargetChanged
       file-action:
