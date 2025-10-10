@@ -27,6 +27,28 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = async (deps, payload) => {
+  const { store, render, fileManagerFactory, router } = deps;
+  const { id } = payload._event.detail;
+
+  store.setSelectedItemId(id);
+
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem) {
+    const { p: projectId } = router.getPayload();
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
+      fileId: selectedItem.fileId,
+    });
+
+    store.setVideoVisible({
+      url,
+      fileType: selectedItem.fileType,
+    });
+  }
+  render();
+};
+
 export const handleVideoItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event

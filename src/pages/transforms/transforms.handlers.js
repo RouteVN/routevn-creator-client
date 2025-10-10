@@ -86,6 +86,11 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = async (deps, payload) => {
+  const { id } = payload._event.detail;
+  handleTransformItemDoubleClick(deps, { _event: { detail: { itemId: id } } });
+};
+
 export const handleTransformItemClick = (deps, payload) => {
   const { store, render, getRefIds } = deps;
   const { itemId } = payload._event.detail;
@@ -102,6 +107,7 @@ export const handleTransformItemClick = (deps, payload) => {
 export const handleTransformItemDoubleClick = async (deps, payload) => {
   const { store, render, drenderer, getRefIds } = deps;
   const itemId = payload._event.detail.itemId;
+  console.log("Double click transform item:", itemId);
 
   // Find the item data using the same approach as fonts page
   const state = store.getState();

@@ -40,6 +40,14 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { id } = payload._event.detail;
+
+  store.showFullImagePreview({ itemId: id });
+  render();
+};
+
 export const handleImageItemClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event

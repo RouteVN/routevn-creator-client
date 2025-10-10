@@ -34,6 +34,11 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = async (deps, payload) => {
+  const { id } = payload._event.detail;
+  handleTypographyItemDoubleClick(deps, { _event: { detail: { itemId: id } } });
+};
+
 // Helper function to generate typography preview image
 const generateTypographyPreview = (item, colorsData, fontsData) => {
   if (!item) {
