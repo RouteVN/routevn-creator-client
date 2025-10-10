@@ -6,7 +6,7 @@ import Subject from "./deps/subject";
 import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
 import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
-import { createGlobalUI } from "https://cdn.jsdelivr.net/npm/@rettangoli/ui@0.1.2-rc35/+esm";
+import { createGlobalUI } from "@rettangoli/ui";
 // File management imports
 import { createFileManagerFactory } from "./deps/fileManagerFactory";
 import { createStorageAdapterFactory } from "./deps/storageAdapterFactory";
