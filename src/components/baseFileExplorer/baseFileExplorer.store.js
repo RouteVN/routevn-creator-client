@@ -24,6 +24,7 @@ export const createInitialState = () => ({
   targetDropPosition: "above",
   itemRects: {},
   containerTop: 0,
+  forbiddenIndices: [],
 
   // Track collapsed folder IDs
   collapsedIds: [],
@@ -44,11 +45,15 @@ export const createInitialState = () => ({
   },
 });
 
-export const startDragging = (state, { id, itemRects, containerTop }) => {
+export const startDragging = (
+  state,
+  { id, itemRects, containerTop, forbiddenIndices },
+) => {
   state.isDragging = true;
   state.selectedItemId = id;
   state.itemRects = itemRects;
   state.containerTop = containerTop;
+  state.forbiddenIndices = forbiddenIndices || [];
 };
 
 export const stopDragging = (state) => {
@@ -59,6 +64,7 @@ export const stopDragging = (state) => {
   state.targetDropPosition = "above";
   state.itemRects = {};
   state.containerTop = 0;
+  state.forbiddenIndices = [];
 };
 
 export const setTargetDragIndex = (state, index) => {
@@ -103,6 +109,14 @@ export const selectIsDragging = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
+};
+
+export const selectForbiddenIndices = ({ state }) => {
+  return state.forbiddenIndices;
+};
+
+export const selectCollapsedIds = ({ state }) => {
+  return state.collapsedIds;
 };
 
 export const toggleFolderExpand = (state, folderId) => {
