@@ -1,5 +1,41 @@
 import { fromEvent, tap } from "rxjs";
 
+const calculateForbiddenTargets = (sourceItem, allItems) => {
+  if (!sourceItem) return [];
+
+  const forbiddenIds = new Set();
+  forbiddenIds.add(sourceItem.id);
+
+  const findDescendants = (parentId) => {
+    const children = allItems.filter((item) => item.parentId === parentId);
+    children.forEach((child) => {
+      forbiddenIds.add(child.id);
+      findDescendants(child.id);
+    });
+  };
+
+  findDescendants(sourceItem.id);
+
+  return Array.from(forbiddenIds);
+};
+
+const getVisibleItems = (allItems, collapsedIds) => {
+  return allItems.filter((item) => {
+    if (item._level === 0) return true;
+
+    let currentParentId = item.parentId;
+    while (currentParentId) {
+      if (collapsedIds.includes(currentParentId)) {
+        return false;
+      }
+      const parent = allItems.find((p) => p.id === currentParentId);
+      currentParentId = parent?.parentId;
+    }
+
+    return true;
+  });
+};
+
 /**
  *  we need to find the item that is under the mouse
  *  if mouse is above 1st item, return -1
@@ -111,7 +147,7 @@ export const getSelectedItemIndex = (
 };
 
 export const handleItemMouseDown = (deps, payload) => {
-  const { store, getRefIds, render } = deps;
+  const { store, getRefIds, render, props } = deps;
   const refIds = getRefIds();
 
   // Get the container element to calculate relative positions
@@ -136,10 +172,18 @@ export const handleItemMouseDown = (deps, payload) => {
   }, {});
 
   const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const sourceItem = props.items.find((item) => item.id === itemId);
+  const forbiddenTargetIds = calculateForbiddenTargets(sourceItem, props.items);
+  const visibleItems = getVisibleItems(props.items, store.selectCollapsedIds());
+  const forbiddenIndices = forbiddenTargetIds
+    .map((id) => visibleItems.findIndex((item) => item.id === id))
+    .filter((index) => index !== -1);
+
   store.startDragging({
     id: itemId,
     itemRects,
     containerTop: containerRect.top,
+    forbiddenIndices,
   });
   render();
 };
@@ -155,6 +199,13 @@ export const handleWindowMouseUp = (deps) => {
   const sourceId = store.selectSelectedItemId();
   const targetItem = props.items[targetIndex];
   const sourceItem = props.items.find((item) => item.id === sourceId);
+  const forbiddenIndices = store.selectForbiddenIndices();
+
+  if (forbiddenIndices.includes(targetIndex)) {
+    store.stopDragging();
+    render();
+    return;
+  }
 
   store.stopDragging();
   render();
@@ -191,6 +242,7 @@ export const handleWindowMouseMove = (deps, payload) => {
   const containerTop = store.selectContainerTop();
   const items = props.items || [];
   const sourceId = store.selectSelectedItemId();
+  const forbiddenIndices = store.selectForbiddenIndices();
 
   const result = getSelectedItemIndex(
     payload._event.clientY,
@@ -200,6 +252,16 @@ export const handleWindowMouseMove = (deps, payload) => {
   );
 
   // Find the source item's index in the items array
+  const isForbiddenDrop = forbiddenIndices.includes(result.index);
+
+  if (isForbiddenDrop) {
+    store.setTargetDragIndex(-2);
+    store.setTargetDragPosition(0);
+    store.setTargetDropPosition("none");
+    render();
+    return;
+  }
+
   const sourceIndex = items.findIndex((item) => item.id === sourceId);
 
   // Check if the drop position would result in no movement
