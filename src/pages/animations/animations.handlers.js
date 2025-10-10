@@ -50,6 +50,14 @@ export const handleDataChanged = async (deps) => {
   render();
 };
 
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  const { store, render } = deps;
+  const { id } = payload._event.detail;
+
+  store.setSelectedItemId(id);
+  render();
+};
+
 export const handleAnimationItemClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
