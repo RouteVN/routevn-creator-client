@@ -28,9 +28,14 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export const handleVideoItemClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, fileManagerFactory, router, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
+
+  const { fileExplorer } = getRefIds();
+  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+    _event: { detail: { itemId } },
+  });
 
   const selectedItem = store.selectSelectedItem();
 

@@ -137,9 +137,14 @@ const generateTypographyPreview = (item, colorsData, fontsData) => {
 };
 
 export const handleTypographyItemClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, getRefIds } = deps;
   const { itemId } = payload._event.detail;
   store.setSelectedItemId(itemId);
+
+  const { fileExplorer } = getRefIds();
+  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+    _event: { detail: { itemId } },
+  });
 
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {

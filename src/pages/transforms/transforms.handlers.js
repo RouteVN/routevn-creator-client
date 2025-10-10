@@ -87,8 +87,14 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export const handleTransformItemClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, getRefIds } = deps;
   const { itemId } = payload._event.detail;
+
+  const { fileExplorer } = getRefIds();
+  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+    _event: { detail: { itemId } },
+  });
+
   store.setSelectedItemId(itemId);
   render();
 };
