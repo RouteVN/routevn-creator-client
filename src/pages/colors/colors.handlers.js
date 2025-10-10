@@ -46,9 +46,14 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export const handleColorItemClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
+
+  const { fileExplorer } = getRefIds();
+  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+    _event: { detail: { itemId } },
+  });
 
   const selectedItem = store.selectSelectedItem();
   if (selectedItem && selectedItem.hex) {
