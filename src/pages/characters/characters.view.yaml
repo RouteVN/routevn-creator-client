@@ -21,6 +21,8 @@ refs:
     eventListeners:
       item-click:
         handler: handleCharacterItemClick
+      item-dblclick:
+        handler: handleCharacterItemDoubleClick
       sprites-button-click:
         handler: handleSpritesButtonClick
       add-character-click:
@@ -53,6 +55,22 @@ refs:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
+  edit-dialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  edit-avatar-image:
+    eventListeners:
+      click:
+        handler: handleEditDialogAvatarClick
+  edit-avatar-placeholder:
+    eventListeners:
+      click:
+        handler: handleEditDialogAvatarClick
+  edit-form:
+    eventListeners:
+      action-click:
+        handler: handleEditFormAction
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -78,3 +96,11 @@ template:
                     $else:
                       - rtgl-view#avatar-placeholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p:
                           - rtgl-text c=mu-fg s=sm: Click to Upload
+  - rtgl-dialog#edit-dialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#edit-form key=${isEditDialogOpen} .defaultValues=editDefaultValues .form=editForm w=f:
+              - $if editAvatarFileId:
+                  - rvn-file-image#edit-avatar-image fileId=${editAvatarFileId} wh=120 slot=avatar-slot cur=p br=md:
+                $else:
+                  - rtgl-view#edit-avatar-placeholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p:
+                      - rtgl-text c=mu-fg s=sm: Click to Upload

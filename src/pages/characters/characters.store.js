@@ -68,6 +68,10 @@ export const createInitialState = () => ({
       ],
     },
   },
+  // Edit dialog state
+  isEditDialogOpen: false,
+  editItemId: null,
+  editAvatarFileId: null,
 });
 
 export const setContext = (state, context) => {
@@ -109,6 +113,26 @@ export const setAvatarFileId = (state, fileId) => {
 
 export const clearAvatarState = (state) => {
   state.avatarFileId = null;
+};
+
+export const openEditDialog = (state, itemId) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+
+  // Set the initial avatar file ID from the selected item
+  const flatItems = toFlatItems(state.charactersData);
+  const editItem = flatItems.find((item) => item.id === itemId);
+  state.editAvatarFileId = editItem?.fileId || null;
+};
+
+export const closeEditDialog = (state) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = null;
+  state.editAvatarFileId = null;
+};
+
+export const setEditAvatarFileId = (state, fileId) => {
+  state.editAvatarFileId = fileId;
 };
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
@@ -189,6 +213,55 @@ export const selectViewData = ({ state }) => {
         })),
   }));
 
+  // Get edit item details
+  const editItem = state.editItemId
+    ? flatItems.find((item) => item.id === state.editItemId)
+    : null;
+
+  let editDefaultValues = {};
+  let editForm = {
+    title: "Edit Character",
+    description: "Edit the character details",
+    fields: [
+      {
+        name: "name",
+        inputType: "inputText",
+        label: "Name",
+        description: "Enter the character name",
+        required: true,
+      },
+      {
+        name: "description",
+        inputType: "inputText",
+        label: "Description",
+        description: "Enter the character description",
+        required: false,
+      },
+      {
+        inputType: "slot",
+        slot: "avatar-slot",
+        label: "Avatar",
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          content: "Update Character",
+        },
+      ],
+    },
+  };
+
+  if (editItem) {
+    editDefaultValues = {
+      name: editItem.name || "",
+      description: editItem.description || "",
+    };
+  }
+
   return {
     flatItems,
     flatGroups,
@@ -206,5 +279,10 @@ export const selectViewData = ({ state }) => {
     dialogDefaultValues: state.dialogDefaultValues,
     dialogForm: state.dialogForm,
     avatarFileId: state.avatarFileId,
+    // Edit dialog data
+    isEditDialogOpen: state.isEditDialogOpen,
+    editDefaultValues,
+    editForm,
+    editAvatarFileId: state.editAvatarFileId,
   };
 };

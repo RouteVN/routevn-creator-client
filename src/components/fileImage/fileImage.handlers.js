@@ -68,7 +68,7 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleOnUpdate = async (changes, deps) => {
+export const handleOnUpdate = async (deps) => {
   const {
     store,
     attrs,
@@ -77,7 +77,6 @@ export const handleOnUpdate = async (changes, deps) => {
     repositoryFactory,
     router,
   } = deps;
-
   const fileId = await getFileIdFromProps(attrs, repositoryFactory, router);
 
   if (!fileId) {

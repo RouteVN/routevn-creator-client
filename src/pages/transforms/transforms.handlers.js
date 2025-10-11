@@ -309,7 +309,7 @@ export const handleTransformDialogClose = (deps) => {
 };
 
 export const handleTransformFormActionClick = (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
+  const { store, render } = deps;
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
@@ -338,12 +338,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
           rotation: parseInt(formData.rotation),
         },
       };
-      handleTransformEdited(editEvent, {
-        store,
-        render,
-        repositoryFactory,
-        router,
-      });
+      handleTransformEdited(deps, { _event: editEvent });
 
       // Force immediate render to update thumbnails
       render();
@@ -362,12 +357,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
           rotation: parseInt(formData.rotation),
         },
       };
-      handleTransformCreated(createEvent, {
-        store,
-        render,
-        repositoryFactory,
-        router,
-      });
+      handleTransformCreated(deps, { _event: createEvent });
     }
 
     // Close dialog and reset all state
