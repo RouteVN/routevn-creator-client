@@ -67,6 +67,6 @@ template:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#edit-dialog ?open=${isEditDialogOpen} s=sm:
-      - rtgl-form#edit-form slot=content .defaultValues=editDefaultValues .form=editForm:
+      - rtgl-form#edit-form key=${isEditDialogOpen} slot=content .defaultValues=editDefaultValues .form=editForm:
   - rtgl-dialog#add-color-dialog ?open=${isAddDialogOpen} s=sm:
       - rtgl-form#add-color-form slot=content .defaultValues=addDefaultValues .form=addForm w=f:

@@ -53,6 +53,39 @@ export const handleCharacterItemClick = async (deps, payload) => {
   render();
 };
 
+export const handleCharacterItemDoubleClick = async (deps, payload) => {
+  const { store, render, fileManagerFactory, router, getRefIds } = deps;
+  const { itemId } = payload._event.detail; // Extract from forwarded event
+
+  // Set the selected item (same as single click)
+  store.setSelectedItemId(itemId);
+
+  const { fileExplorer } = getRefIds();
+  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+    _event: { detail: { itemId } },
+  });
+
+  const selectedItem = store.selectSelectedItem();
+
+  if (selectedItem && selectedItem.fileId) {
+    const { p: projectId } = router.getPayload();
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
+      fileId: selectedItem.fileId,
+    });
+    store.setContext({
+      fileId: {
+        src: url,
+      },
+    });
+  }
+
+  // Open edit dialog for double-clicked character
+  store.openEditDialog(itemId);
+
+  render();
+};
+
 export const handleCharacterCreated = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
@@ -341,4 +374,91 @@ export const handleItemDelete = async (deps, payload) => {
   const data = repository.getState()[resourceType];
   store.setItems(data);
   render();
+};
+
+export const handleEditDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditDialogAvatarClick = async (deps) => {
+  const { store, render, filePicker, fileManagerFactory, router } = deps;
+
+  try {
+    const files = await filePicker.open({
+      accept: "image/*",
+      multiple: false,
+    });
+
+    if (files.length > 0) {
+      const file = files[0];
+      const { p } = router.getPayload();
+      const fileManager = await fileManagerFactory.getByProject(p);
+
+      const uploadResults = await fileManager.upload([file]);
+
+      if (!uploadResults || uploadResults.length === 0) {
+        throw new Error("Failed to upload avatar image");
+      }
+
+      const result = uploadResults[0];
+      store.setEditAvatarFileId(result.fileId);
+      render();
+    }
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+  }
+};
+
+export const handleEditFormAction = async (deps, payload) => {
+  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+
+  if (payload._event.detail.actionId === "submit") {
+    const formData = payload._event.detail.formValues;
+    const editItemId = store.getState().editItemId;
+    const editAvatarFileId = store.getState().editAvatarFileId;
+
+    // Update the character in the repository
+    const updateData = {
+      name: formData.name,
+      description: formData.description,
+    };
+
+    // Include avatar file ID if it was changed
+    if (editAvatarFileId) {
+      updateData.fileId = editAvatarFileId;
+    }
+
+    repository.addAction({
+      actionType: "treeUpdate",
+      target: "characters",
+      value: {
+        id: editItemId,
+        replace: false,
+        item: updateData,
+      },
+    });
+
+    const { characters } = repository.getState();
+    store.setItems(characters);
+
+    // If this is the currently selected item, update the context with new file URL
+    if (editItemId === store.getState().selectedItemId && editAvatarFileId) {
+      const fileManager = await fileManagerFactory.getByProject(p);
+      const { url } = await fileManager.getFileContent({
+        fileId: editAvatarFileId,
+      });
+      store.setContext({
+        fileId: {
+          src: url,
+        },
+      });
+    }
+
+    store.closeEditDialog();
+    render();
+  }
 };

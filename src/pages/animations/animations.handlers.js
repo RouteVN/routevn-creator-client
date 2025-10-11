@@ -217,27 +217,25 @@ export const handleFormActionClick = (deps, payload) => {
     const { targetGroupId, editItemId, editMode, properties } = formState;
 
     if (editMode && editItemId) {
-      handleAnimationUpdated(
-        {
+      handleAnimationUpdated(deps, {
+        _event: {
           detail: {
             itemId: editItemId,
             name: formData.name,
             properties,
           },
         },
-        deps,
-      );
+      });
     } else {
-      handleAnimationCreated(
-        {
+      handleAnimationCreated(deps, {
+        _event: {
           detail: {
             groupId: targetGroupId,
             name: formData.name,
             properties,
           },
         },
-        deps,
-      );
+      });
     }
 
     store.closeDialog();
