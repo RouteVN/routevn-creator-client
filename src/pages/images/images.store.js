@@ -11,6 +11,11 @@ const form = {
     },
     { name: "name", inputType: "popover-input", description: "Name" },
     {
+      name: "fileType",
+      inputType: "read-only-text",
+      description: "File Type",
+    },
+    {
       name: "fileSize",
       inputType: "read-only-text",
       description: "File Size",

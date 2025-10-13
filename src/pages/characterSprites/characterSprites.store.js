@@ -63,6 +63,10 @@ export const selectCharacterId = ({ state }) => {
   return state.characterId;
 };
 
+export const selectFlatItems = ({ state }) => {
+  return toFlatItems(state.spritesData);
+};
+
 export const showFullImagePreview = (state, { itemId }) => {
   const flatItems = toFlatItems(state.spritesData);
   const item = flatItems.find((item) => item.id === itemId);
@@ -146,7 +150,7 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characterSprites",
     selectedItemId: state.selectedItemId,
-    repositoryTarget: "characterSprites",
+    repositoryTarget: "character.sprites",
     form,
     context: state.context,
     defaultValues,

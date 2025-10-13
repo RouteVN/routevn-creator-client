@@ -20,11 +20,40 @@ export const handleDataChanged = async (deps) => {
   render();
 };
 
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const { id } = payload._event.detail;
+export const handleFileExplorerSelectionChanged = async (deps, payload) => {
+  const { store, render, fileManagerFactory, router } = deps;
+  const { id, item, isFolder } = payload._event.detail;
+
+  // If this is a folder, clear selection and context
+  if (isFolder) {
+    store.setSelectedItemId(null);
+    store.setContext({
+      fileId: {
+        waveformData: null,
+      },
+    });
+    render();
+    return;
+  }
 
   store.setSelectedItemId(id);
+
+  // If we have item data with waveformDataFileId, set up media context for preview
+  if (item && item.waveformDataFileId) {
+    const { p: projectId } = router.getPayload();
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+
+    const waveformData = await fileManager.downloadMetadata({
+      fileId: item.waveformDataFileId,
+    });
+
+    store.setContext({
+      fileId: {
+        waveformData,
+      },
+    });
+  }
+
   render();
 };
 
