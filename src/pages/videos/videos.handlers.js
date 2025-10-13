@@ -19,11 +19,26 @@ export const handleDataChanged = async (deps) => {
   render();
 };
 
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const { id } = payload._event.detail;
+export const handleFileExplorerSelectionChanged = async (deps, payload) => {
+  const { store, render, fileManagerFactory, router } = deps;
+  const { id, item } = payload._event.detail;
 
   store.setSelectedItemId(id);
+
+  // If we have item data with thumbnailFileId, set up media context for preview
+  if (item && item.thumbnailFileId) {
+    const { p: projectId } = router.getPayload();
+    const fileManager = await fileManagerFactory.getByProject(projectId);
+    const { url } = await fileManager.getFileContent({
+      fileId: item.thumbnailFileId,
+    });
+    store.setContext({
+      thumbnailFileId: {
+        src: url,
+      },
+    });
+  }
+
   render();
 };
 

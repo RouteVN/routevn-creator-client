@@ -14,12 +14,32 @@ const lodashGet = (obj, path, defaultValue) => {
 };
 
 // Forward click-item event from base component
-export const handleClickItem = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  // Just forward the event
+export const handleClickItem = async (deps, payload) => {
+  const { dispatchEvent, repositoryFactory, router, props } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const { id } = payload._event.detail;
+
+  // Get the clicked item from the repository based on repositoryTarget
+  const repositoryTarget = props.repositoryTarget;
+  if (!repositoryTarget) {
+    throw new Error(
+      "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
+    );
+  }
+
+  const repositoryState = repository.getState();
+  const targetData = lodashGet(repositoryState, repositoryTarget);
+  const selectedItem = targetData && targetData.items ? targetData.items[id] : null;
+
+  // Forward the event with enhanced detail containing item data
   dispatchEvent(
     new CustomEvent("click-item", {
-      detail: payload._event.detail,
+      detail: {
+        ...payload._event.detail,
+        item: selectedItem,
+        repositoryTarget,
+      },
       bubbles: true,
       composed: true,
     }),
