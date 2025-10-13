@@ -30,7 +30,8 @@ export const handleClickItem = async (deps, payload) => {
 
   const repositoryState = repository.getState();
   const targetData = lodashGet(repositoryState, repositoryTarget);
-  const selectedItem = targetData && targetData.items ? targetData.items[id] : null;
+  const selectedItem =
+    targetData && targetData.items ? targetData.items[id] : null;
 
   // Forward the event with enhanced detail containing item data
   dispatchEvent(
@@ -39,6 +40,7 @@ export const handleClickItem = async (deps, payload) => {
         ...payload._event.detail,
         item: selectedItem,
         repositoryTarget,
+        isFolder: selectedItem && selectedItem.type === "folder",
       },
       bubbles: true,
       composed: true,

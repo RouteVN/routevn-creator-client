@@ -22,7 +22,19 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render, fileManagerFactory, router } = deps;
-  const { id, item } = payload._event.detail;
+  const { id, item, isFolder } = payload._event.detail;
+
+  // If this is a folder, clear selection and context
+  if (isFolder) {
+    store.setSelectedItemId(null);
+    store.setContext({
+      fileId: {
+        waveformData: null,
+      },
+    });
+    render();
+    return;
+  }
 
   store.setSelectedItemId(id);
 

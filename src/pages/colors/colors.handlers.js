@@ -39,7 +39,19 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id, item } = payload._event.detail;
+  const { id, item, isFolder } = payload._event.detail;
+
+  // If this is a folder, clear selection and context
+  if (isFolder) {
+    store.setSelectedItemId(null);
+    store.setContext({
+      colorImage: {
+        src: null,
+      },
+    });
+    render();
+    return;
+  }
 
   store.setSelectedItemId(id);
 
