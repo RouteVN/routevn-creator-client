@@ -35,9 +35,22 @@ export const handleDataChanged = async (deps) => {
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render, fileManagerFactory, router } = deps;
   const { id, item, isFolder } = payload._event.detail;
+  console.log("Selection changed:", id, item, isFolder);
+
+  // For characterSprites, get item data from our own store since BaseFileExplorer
+  // can't access the nested character.sprites data structure
+  let actualItem = item;
+  if (!actualItem) {
+    // Get the item from our store's spritesData
+    const flatItems = store.selectFlatItems();
+    actualItem = flatItems.find((item) => item.id === id) || null;
+  }
+
+  // Check if this is a folder (either from BaseFileExplorer or from our own data)
+  const actualIsFolder = isFolder || (actualItem && actualItem.type === "folder");
 
   // If this is a folder, clear selection and context
-  if (isFolder) {
+  if (actualIsFolder) {
     store.setSelectedItemId(null);
     store.setContext({
       fileId: {
@@ -51,11 +64,11 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   store.setSelectedItemId(id);
 
   // If we have item data with fileId, set up media context for preview
-  if (item && item.fileId) {
+  if (actualItem && actualItem.fileId) {
     const { p: projectId } = router.getPayload();
     const fileManager = await fileManagerFactory.getByProject(projectId);
     const { url } = await fileManager.getFileContent({
-      fileId: item.fileId,
+      fileId: actualItem.fileId,
     });
     store.setContext({
       fileId: {
