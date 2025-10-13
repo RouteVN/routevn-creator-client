@@ -28,9 +28,48 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const { id, item, isFolder } = payload._event.detail;
+
+  // If this is a folder, clear selection and context
+  if (isFolder) {
+    store.setSelectedItemId(null);
+    store.setContext({
+      typographyPreview: {
+        src: null,
+      },
+    });
+    render();
+    return;
+  }
 
   store.setSelectedItemId(id);
+
+  if (item) {
+    try {
+      const colorsData = store.selectColorsData();
+      const fontsData = store.selectFontsData();
+
+      const previewImage = generateTypographyPreview(
+        item,
+        colorsData,
+        fontsData,
+      );
+
+      store.setContext({
+        typographyPreview: {
+          src: previewImage,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to generate typography preview:", error);
+      store.setContext({
+        typographyPreview: {
+          src: null,
+        },
+      });
+    }
+  }
+
   render();
 };
 
