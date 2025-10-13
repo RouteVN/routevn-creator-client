@@ -47,7 +47,8 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   }
 
   // Check if this is a folder (either from BaseFileExplorer or from our own data)
-  const actualIsFolder = isFolder || (actualItem && actualItem.type === "folder");
+  const actualIsFolder =
+    isFolder || (actualItem && actualItem.type === "folder");
 
   // If this is a folder, clear selection and context
   if (actualIsFolder) {
