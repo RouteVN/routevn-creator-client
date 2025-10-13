@@ -99,7 +99,7 @@ export const getSelectedItemIndex = (
       if (relativeY < topThreshold) {
         // Top 35% - drop above
         return {
-          index: i - 1,
+          index: i,
           position: currentItem.top,
           dropPosition: "above",
         };
@@ -271,8 +271,8 @@ export const handleWindowMouseMove = (deps, payload) => {
     // Dropping inside the source itself
     isNoOpDrop = items[result.index]?.id === sourceId;
   } else if (result.dropPosition === "above") {
-    // Dropping above the source (which means index would be sourceIndex - 1)
-    isNoOpDrop = result.index === sourceIndex - 1;
+    // Dropping above the source (which means index would be sourceIndex)
+    isNoOpDrop = result.index === sourceIndex;
   } else if (result.dropPosition === "below") {
     // Dropping below the source (which means index would be sourceIndex)
     isNoOpDrop = result.index === sourceIndex;
