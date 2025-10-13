@@ -39,9 +39,19 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const { id, item } = payload._event.detail;
 
   store.setSelectedItemId(id);
+
+  // If we have item data with hex value, set up color context for preview
+  if (item && item.hex) {
+    store.setContext({
+      colorImage: {
+        src: hexToBase64Image(item.hex),
+      },
+    });
+  }
+
   render();
 };
 
