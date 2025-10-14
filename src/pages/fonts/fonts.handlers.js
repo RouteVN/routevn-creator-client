@@ -213,7 +213,8 @@ export const handleFontItemDoubleClick = async (deps, payload) => {
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
   const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { itemId } = payload._event.detail;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
 
   // Find the font item
   const { fonts } = repository.getState();
