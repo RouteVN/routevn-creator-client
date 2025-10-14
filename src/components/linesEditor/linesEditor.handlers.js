@@ -249,6 +249,42 @@ export const handleAfterMount = async (deps) => {
   }, 0);
 };
 
+export const handlePreviewRightClick = async (deps, payload) => {
+  const { globalUI, dispatchEvent } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+  const { type, id } = event.currentTarget.dataset;
+
+  dispatchEvent(
+    new CustomEvent("line-navigation", {
+      detail: {
+        targetLineId: id,
+        mode: "block",
+        direction: "up",
+        targetCursorPosition: null,
+        lineRect: null,
+      },
+    }),
+  );
+
+  const result = await globalUI.showDropdownMenu({
+    items: [{ type: "item", label: "Remove", key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    placement: "bottom-start",
+  });
+
+  if (result.item.key === "remove") {
+    dispatchEvent(
+      new CustomEvent("delete-action", {
+        detail: {
+          actionType: type,
+        },
+      }),
+    );
+  }
+};
+
 export const handleContainerKeyDown = (deps, payload) => {
   const { store, props, dispatchEvent, getRefIds } = deps;
   const mode = store.selectMode();

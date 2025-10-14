@@ -24,6 +24,8 @@ refs:
         handler: handleLineNavigation
       mergeLines:
         handler: handleMergeLines
+      delete-action:
+        handler: handleLineDeleteActionItem
   actions-action-*:
     eventListeners:
       click:

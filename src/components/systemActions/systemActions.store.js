@@ -184,10 +184,12 @@ export const selectActionsData = ({ props }) => {
   if (actions.sectionTransition) {
     actionsObject.sectionTransition = actions.sectionTransition;
     const scene = scenes.items[actions.sectionTransition.sceneId];
-    preview.sectionTransition = {
-      scene,
-      section: scene.sections.items[actions.sectionTransition.sectionId],
-    };
+    if (scene) {
+      preview.sectionTransition = {
+        scene,
+        section: scene.sections.items[actions.sectionTransition.sectionId],
+      };
+    }
   }
 
   if (presentationState.dialogue) {
