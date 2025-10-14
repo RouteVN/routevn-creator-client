@@ -81,7 +81,7 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleOnUpdate = async (changes, deps) => {
+export const handleOnUpdate = async (deps, changes) => {
   const { oldProps } = changes;
   const { store, attrs, fileManagerFactory, render, audioManager, router } =
     deps;

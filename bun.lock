@@ -3,7 +3,7 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@rettangoli/fe": "0.0.9",
+        "@rettangoli/fe": "0.0.10",
         "@rettangoli/ui": "0.1.7",
         "@tauri-apps/api": "^2.8.0",
         "@tauri-apps/plugin-dialog": "^2.4.0",
@@ -140,7 +140,7 @@
 
     "@pixi/utils": ["@pixi/utils@7.4.3", "", { "dependencies": { "@pixi/color": "7.4.3", "@pixi/constants": "7.4.3", "@pixi/settings": "7.4.3", "@types/earcut": "^2.1.0", "earcut": "^2.2.4", "eventemitter3": "^4.0.0", "url": "^0.11.0" } }, "sha512-NO3Y9HAn2UKS1YdxffqsPp+kDpVm8XWvkZcS/E+rBzY9VTLnNOI7cawSRm+dacdET3a8Jad3aDKEDZ0HmAqAFA=="],
 
-    "@rettangoli/fe": ["@rettangoli/fe@0.0.9", "", { "dependencies": { "esbuild": "^0.25.5", "immer": "^10.1.1", "jempl": "0.3.2-rc2", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-lrMOIXEpJ/RyyPHFOqvLmQigxVACISJIVcFvuWtc09OJajkU+DwQk47Ll3mJmsSu8QG/pJItOK15Xb5Tna7Fcg=="],
+    "@rettangoli/fe": ["@rettangoli/fe@0.0.10", "", { "dependencies": { "esbuild": "^0.25.5", "immer": "^10.1.1", "jempl": "0.3.2-rc2", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-EjuW3zX3Y2p7GOhPdHWhO6Y67KCBhRLkbs842Q0j76a/z+KJfystMiaRaZgOeXMEukWnzd5bh6sB+3K9j1jiIA=="],
 
     "@rettangoli/ui": ["@rettangoli/ui@0.1.7", "", { "dependencies": { "@floating-ui/dom": "^1.6.13", "@rettangoli/fe": "0.0.7-rc16", "commander": "^13.1.0", "jempl": "0.1.4-rc1", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "snabbdom": "^3.6.2" } }, "sha512-q3bC+CH14AO+Wz6OIJ9i7UUADmBaYaWvHG/ognwhJupNzd18VN88PUEEMcMGx84et8VrnXqRJPDYUL6v/rXNTw=="],
 
