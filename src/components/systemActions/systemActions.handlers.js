@@ -4,7 +4,7 @@ export const handleBeforeMount = (deps) => {
   render();
 };
 
-export const handleOnUpdate = (changes, deps) => {
+export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
   store.updateActions(newProps.actions);

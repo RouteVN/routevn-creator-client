@@ -98,6 +98,8 @@ refs:
     eventListeners:
       click:
         handler: handleBackgroundImageClick
+      contextmenu:
+        handler: handleBackgroundImageRightClick
 
 template:
   - rtgl-view w=f h=f p=lg:

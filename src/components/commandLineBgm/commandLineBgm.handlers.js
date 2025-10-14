@@ -21,6 +21,27 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleAudioWaveformRightClick = async (deps, payload) => {
+  const { store, render, globalUI } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+
+  const result = await globalUI.showDropdownMenu({
+    items: [{ type: "item", label: "Remove", key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    placement: "bottom-start",
+  });
+
+  if (result.item.key === "remove") {
+    store.setSelectedResource({
+      resourceId: undefined,
+    });
+
+    render();
+  }
+};
+
 export const handleAudioWaveformClick = (deps) => {
   const { store, render } = deps;
 

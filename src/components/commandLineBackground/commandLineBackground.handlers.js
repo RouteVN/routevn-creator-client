@@ -47,6 +47,38 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleBackgroundImageRightClick = async (deps, payload) => {
+  const { store, render, globalUI } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+
+  const result = await globalUI.showDropdownMenu({
+    items: [{ type: "item", label: "Remove", key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    placement: "bottom-start",
+  });
+
+  if (result.item.key === "remove") {
+    store.setSelectedResource({
+      resourceId: undefined,
+      resourceType: undefined,
+    });
+
+    render();
+    console.log("result", result);
+    // new CustomEvent("submit", {
+    //   detail: {
+    //     background: {
+    //       resourceId: undefined
+    //     },
+    //   },
+    // })
+  }
+
+  // console.log('resul', result);
+};
+
 export const handleImageSelected = async (deps, payload) => {
   const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
   const { p: projectId } = router.getPayload();
@@ -125,13 +157,13 @@ export const handleSubmitClick = (deps) => {
   const selectedResource = store.selectSelectedResource();
   const selectedAnimationId = store.selectSelectedAnimation();
 
-  if (!selectedResource) {
-    return;
-  }
+  // if (!selectedResource) {
+  //   return;
+  // }
 
   const backgroundData = {
-    resourceId: selectedResource.resourceId,
-    resourceType: selectedResource.resourceType,
+    resourceId: selectedResource?.resourceId,
+    resourceType: selectedResource?.resourceType,
   };
 
   // Only add animations object if there's a valid animation selected

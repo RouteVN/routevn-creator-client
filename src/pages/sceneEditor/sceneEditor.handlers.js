@@ -955,6 +955,48 @@ export const handlePreviewClick = (deps) => {
   render();
 };
 
+export const handleLineDeleteActionItem = async (deps, payload) => {
+  const { store, subject, render, repositoryFactory, router } = deps;
+  const { p } = router.getPayload();
+  const { actionType } = payload._event.detail;
+  // Get current selected line
+  const selectedLine = store.selectSelectedLine();
+  if (!selectedLine || !selectedLine.actions) {
+    console.log("⚠️ No selected line or actions found");
+    return;
+  }
+  // Create a new actions object without the action to delete
+  const newActions = { ...selectedLine.actions };
+  if (newActions.hasOwnProperty(actionType)) {
+    delete newActions[actionType];
+  }
+  // Create updated line object
+  const updatedLine = {
+    ...selectedLine,
+    actions: newActions,
+  };
+
+  // Save directly to repository - this will update the state
+  const repository = await repositoryFactory.getByProject(p);
+  const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+    value: {
+      id: selectedLine.id,
+      replace: true,
+      item: updatedLine,
+    },
+  });
+  // Get sceneId and projectId from router
+  store.setRepositoryState(repository.getState());
+  // Trigger re-render
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {});
+};
+
 export const handleHidePreviewScene = async (deps) => {
   const { store, render, drenderer, getRefIds, fileManagerFactory, router } =
     deps;
@@ -1060,7 +1102,7 @@ export const handleBackClick = (deps) => {
 };
 
 export const handleSystemActionsActionDelete = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
+  const { store, render, repositoryFactory, router, subject } = deps;
   const { p } = router.getPayload();
   const { actionType } = payload._event.detail;
   // Get current selected line
@@ -1071,9 +1113,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   }
   // Create a new actions object without the action to delete
   const newActions = { ...selectedLine.actions };
-  if (newActions.hasOwnProperty(actionType)) {
-    delete newActions[actionType];
-  }
+  newActions[actionType] = {};
   // Create updated line object
   const updatedLine = {
     ...selectedLine,
@@ -1098,4 +1138,6 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   store.setRepositoryState(repository.getState());
   // Trigger re-render
   render();
+
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
