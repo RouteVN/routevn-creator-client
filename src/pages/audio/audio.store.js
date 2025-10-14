@@ -166,8 +166,6 @@ export const selectViewData = ({ state }) => {
     };
   }
 
-  console.log("flatGroups", flatGroups);
-
   return {
     flatItems,
     flatGroups,

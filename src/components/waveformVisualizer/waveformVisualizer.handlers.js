@@ -30,7 +30,6 @@ export const handleOnUpdate = async (changes, deps) => {
   }
 
   store.setLoading(true);
-  render();
 
   try {
     const { p: projectId } = router.getPayload();
