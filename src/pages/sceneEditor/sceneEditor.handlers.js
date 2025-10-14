@@ -216,8 +216,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   });
 
   store.setRepositoryState(repository.getState());
-  store.setMode("lines-editor");
-
   render();
 
   // Trigger debounced canvas render
@@ -667,12 +665,6 @@ export const handleLineNavigation = (deps, payload) => {
   }
 };
 
-export const handleBackToActions = (deps) => {
-  const { store, render } = deps;
-  store.setMode("actions");
-  render();
-};
-
 export const handleMergeLines = async (deps, payload) => {
   const { store, getRefIds, render, repositoryFactory, router, subject } = deps;
   const { p } = router.getPayload();
@@ -753,30 +745,6 @@ export const handleMergeLines = async (deps, payload) => {
 
   // Trigger debounced canvas render
   subject.dispatch("sceneEditor.renderCanvas", {});
-};
-
-export const handleOpenCommandLine = (deps, payload) => {
-  const { store, render } = deps;
-  const mode = payload._event.currentTarget.getAttribute("data-mode");
-  store.setMode(mode);
-  render();
-};
-
-export const handleActionsActionRightClick = (deps, payload) => {
-  const { store, render } = deps;
-  const mode = payload._event.currentTarget.getAttribute("data-mode");
-  payload._event.preventDefault();
-  store.showActionsDropdownMenu({
-    position: { x: payload._event.clientX, y: payload._event.clientY },
-    actionsType: mode,
-  });
-  render();
-};
-
-export const handleActionClicked = (deps, payload) => {
-  const { store, render } = deps;
-  store.setMode(payload._event.detail.item.mode);
-  render();
 };
 
 export const handleSectionTabRightClick = (deps, payload) => {

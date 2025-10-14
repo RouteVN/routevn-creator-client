@@ -10,7 +10,6 @@ export const createInitialState = () => ({
   sceneId: undefined,
   selectedLineId: undefined,
   sectionsGraphView: false,
-  mode: "lines-editor",
   selectedSectionId: "1",
   dropdownMenu: {
     isOpen: false,
@@ -162,10 +161,6 @@ export const selectSelectedLineId = ({ state }) => {
 
 export const setSelectedLineId = (state, selectedLineId) => {
   state.selectedLineId = selectedLineId;
-};
-
-export const setMode = (state, mode) => {
-  state.mode = mode;
 };
 
 export const setSelectedSectionId = (state, selectedSectionId) => {
@@ -368,7 +363,6 @@ export const selectViewData = ({ state }) => {
       currentLine: null,
       actionsData: [],
       presentationState: null,
-      mode: state.mode,
       dropdownMenu: state.dropdownMenu,
       popover: state.popover,
       selectedLineId: state.selectedLineId,
@@ -380,7 +374,6 @@ export const selectViewData = ({ state }) => {
         null,
         2,
       ),
-      isActionsDialogOpen: state.mode !== "lines-editor",
     };
   }
 
@@ -446,7 +439,6 @@ export const selectViewData = ({ state }) => {
       ? currentSection.lines
       : [],
     presentationState,
-    mode: state.mode,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: renameForm,
@@ -470,7 +462,6 @@ export const selectViewData = ({ state }) => {
       null,
       2,
     ),
-    isActionsDialogOpen: state.mode !== "lines-editor",
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
   };

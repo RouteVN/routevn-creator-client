@@ -101,7 +101,7 @@ template:
                 $else:
                   - $for item, i in items:
                       - 'rtgl-view#item-${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=p av=c bc=${item.bc} bw=xs':
-                          - $if item.hasChildren:
+                          - $if shrinkable && item.hasChildren:
                               - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
                             $else:
                               - rtgl-view wh=16:

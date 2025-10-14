@@ -147,7 +147,12 @@ export const getSelectedItemIndex = (
 };
 
 export const handleItemMouseDown = (deps, payload) => {
-  const { store, getRefIds, render, props } = deps;
+  const { store, getRefIds, render, props, attrs } = deps;
+
+  if (!attrs.draggable) {
+    return;
+  }
+
   const refIds = getRefIds();
 
   // Get the container element to calculate relative positions
@@ -320,8 +325,12 @@ export const subscriptions = (deps) => {
 };
 
 export const handleContainerContextMenu = (deps, payload) => {
-  const { store, render, props } = deps;
+  const { store, render, props, attrs } = deps;
   payload._event.preventDefault();
+
+  if (!attrs["dropdown-menu"]) {
+    return;
+  }
 
   // Show dropdown menu for empty space
   store.showDropdownMenuFileExplorerEmpty({
@@ -345,8 +354,12 @@ export const handleEmptyMessageClick = (deps, payload) => {
 };
 
 export const handleItemContextMenu = (deps, payload) => {
-  const { store, render, props } = deps;
+  const { store, render, props, attrs } = deps;
   payload._event.preventDefault();
+
+  if (!attrs["dropdown-menu"]) {
+    return;
+  }
 
   const itemId = payload._event.currentTarget.id.replace("item-", "");
 
