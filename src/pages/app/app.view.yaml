@@ -48,8 +48,6 @@ template:
               - rvn-videos: []
             $elif currentRoutePattern == "/project/resources/typography":
               - rvn-typography: []
-            $elif currentRoutePattern == "/project/resources/components":
-              - rvn-components: []
             $elif currentRoutePattern == "/project/resources/screens":
               - rvn-screens: []
             $elif currentRoutePattern == "/project/resources/choices":
@@ -74,7 +72,5 @@ template:
               - rvn-layouts: []
             $elif currentRoutePattern == "/project/resources/layout-editor":
               - rvn-layout-editor: []
-            $elif currentRoutePattern == "/project/resources/component-editor":
-              - rvn-component-editor: []
             $elif currentRoutePattern == "/project/releases/versions":
               - rvn-versions: []
