@@ -169,15 +169,7 @@ export const selectViewData = ({ state }) => {
     resourceType: "videos",
     searchPlaceholder: "Search videos...",
     uploadText: "Upload Video",
-    acceptedFileTypes: [
-      ".mp4",
-      ".avi",
-      ".mov",
-      ".wmv",
-      ".flv",
-      ".webm",
-      ".mkv",
-    ],
+    acceptedFileTypes: [".mp4"],
     videoVisible: state.videoVisible,
     selectedVideo: state.selectedVideo,
   };

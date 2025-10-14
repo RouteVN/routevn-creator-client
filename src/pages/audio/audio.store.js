@@ -166,8 +166,6 @@ export const selectViewData = ({ state }) => {
     };
   }
 
-  console.log("flatGroups", flatGroups);
-
   return {
     flatItems,
     flatGroups,
@@ -182,7 +180,7 @@ export const selectViewData = ({ state }) => {
     resourceType: "audio",
     searchPlaceholder: "Search audios...",
     uploadText: "Upload Audio",
-    acceptedFileTypes: [".mp3", ".wav", ".ogg", ".aac", ".flac", ".m4a"],
+    acceptedFileTypes: [".mp3", ".wav", ".ogg"],
     playingAudio: state.playingAudio,
     showAudioPlayer: state.showAudioPlayer,
     audioPlayerLeft: state.audioPlayerLeft,
