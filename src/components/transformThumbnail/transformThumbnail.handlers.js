@@ -24,7 +24,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleOnUpdate = (deps, changes) => {
+export const handleOnUpdate = (deps) => {
   const { props, render, getRefIds } = deps;
   const { item } = props;
   // TODO: check why there's no item sometimes

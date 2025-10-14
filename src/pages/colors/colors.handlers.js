@@ -161,7 +161,8 @@ export const handleFormChange = async (deps, payload) => {
 
 export const handleColorItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = payload._event.detail;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
   store.openEditDialog(itemId);
   render();
 };

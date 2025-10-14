@@ -101,7 +101,8 @@ export const handleTransformItemClick = (deps, payload) => {
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {
   const { store, render, drenderer, getRefIds } = deps;
-  const itemId = payload._event.detail.itemId;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
 
   // Find the item data using the same approach as fonts page
   const state = store.getState();
