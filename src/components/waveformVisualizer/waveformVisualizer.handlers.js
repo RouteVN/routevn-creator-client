@@ -22,7 +22,7 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleOnUpdate = async (changes, deps) => {
+export const handleOnUpdate = async (deps, changes) => {
   const { attrs, store, render, fileManagerFactory, router } = deps;
 
   if (!attrs.waveformDataFileId) {

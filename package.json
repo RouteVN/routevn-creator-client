@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@rettangoli/fe": "0.0.9",
+    "@rettangoli/fe": "0.0.10",
     "@rettangoli/ui": "0.1.7",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
