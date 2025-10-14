@@ -168,6 +168,15 @@ export const handleSubmitClick = (deps) => {
   );
 };
 
+export const handleFileExplorerClickItem = (deps, payload) => {
+  const { getRefIds } = deps;
+  const { id } = payload._event.detail;
+  const imageSelector = getRefIds()["rvn-image-selector"];
+  imageSelector.elm.transformedHandlers.handleScrollToItem({
+    id,
+  });
+};
+
 export const handleBackgroundImageClick = (deps) => {
   const { store, render } = deps;
   const selectedResource = store.selectSelectedResource();
