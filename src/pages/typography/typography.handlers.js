@@ -514,8 +514,8 @@ export const handleFormActionClick = (deps, payload) => {
 
     if (editMode && editingItemId) {
       // Handle typography update
-      handleTypographyUpdated(
-        {
+      handleTypographyUpdated(deps, {
+        _event: {
           detail: {
             itemId: editingItemId,
             name: formData.name,
@@ -527,12 +527,11 @@ export const handleFormActionClick = (deps, payload) => {
             previewText: formData.previewText,
           },
         },
-        deps,
-      );
+      });
     } else {
       // Handle typography creation
-      handleTypographyCreated(
-        {
+      handleTypographyCreated(deps, {
+        _event: {
           detail: {
             groupId: targetGroupId,
             name: formData.name,
@@ -544,8 +543,7 @@ export const handleFormActionClick = (deps, payload) => {
             previewText: formData.previewText,
           },
         },
-        deps,
-      );
+      });
     }
 
     // Reset form values, clear edit mode, and close dialog
