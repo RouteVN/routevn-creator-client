@@ -514,42 +514,36 @@ export const handleFormActionClick = (deps, payload) => {
 
     if (editMode && editingItemId) {
       // Handle typography update
-      handleTypographyUpdated(
-        deps,
-        {
-          _event: {
-            detail: {
-              itemId: editingItemId,
-              name: formData.name,
-              fontSize: formData.fontSize,
-              lineHeight: formData.lineHeight,
-              fontColor: formData.fontColor,
-              fontStyle: formData.fontStyle,
-              fontWeight: formData.fontWeight,
-              previewText: formData.previewText,
-            },
+      handleTypographyUpdated(deps, {
+        _event: {
+          detail: {
+            itemId: editingItemId,
+            name: formData.name,
+            fontSize: formData.fontSize,
+            lineHeight: formData.lineHeight,
+            fontColor: formData.fontColor,
+            fontStyle: formData.fontStyle,
+            fontWeight: formData.fontWeight,
+            previewText: formData.previewText,
           },
         },
-      );
+      });
     } else {
       // Handle typography creation
-      handleTypographyCreated(
-        deps,
-        {
-          _event: {
-            detail: {
-              groupId: targetGroupId,
-              name: formData.name,
-              fontSize: formData.fontSize,
-              lineHeight: formData.lineHeight,
-              fontColor: formData.fontColor,
-              fontStyle: formData.fontStyle,
-              fontWeight: formData.fontWeight,
-              previewText: formData.previewText,
-            },
+      handleTypographyCreated(deps, {
+        _event: {
+          detail: {
+            groupId: targetGroupId,
+            name: formData.name,
+            fontSize: formData.fontSize,
+            lineHeight: formData.lineHeight,
+            fontColor: formData.fontColor,
+            fontStyle: formData.fontStyle,
+            fontWeight: formData.fontWeight,
+            previewText: formData.previewText,
           },
         },
-      );
+      });
     }
 
     // Reset form values, clear edit mode, and close dialog
