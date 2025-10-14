@@ -100,6 +100,10 @@ refs:
         handler: handleBackgroundImageClick
       contextmenu:
         handler: handleBackgroundImageRightClick
+  base-file-explorer:
+    eventListeners:
+      click-item:
+        handler: handleFileExplorerClickItem
 
 template:
   - rtgl-view w=f h=f p=lg:
@@ -127,12 +131,12 @@ template:
 
       - $if mode == 'gallery':
           - rtgl-tabs#tabs selected-tab=${tab} .items=tabs:
-          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
+          - 'rtgl-view d=h w=f g=lg mt=sm flex=1 style="min-height: 0;"':
               - rtgl-view h=f flex=1 sv:
                   - rvn-base-file-explorer#base-file-explorer .items=items:
               - rtgl-view h=f flex=2 sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector .groups=groups .selectedImageId=tempSelectedResourceId:
+                      - rvn-image-selector#rvn-image-selector .groups=groups .selectedImageId=tempSelectedResourceId:
                     $elif tab == 'layout':
                       - $for group in groups:
                           - rtgl-view g=md:

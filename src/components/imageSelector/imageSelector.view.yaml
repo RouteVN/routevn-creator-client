@@ -23,10 +23,10 @@ refs:
         handler: handleImageItemClick
 
 template:
-  - rtgl-view h=400 sv g=lg oy=a:
-    - $for group, i in groups:
-      - rtgl-view g=md:
-        - rtgl-text: ${group.name}
-        - rtgl-view d=h w=f fw=w g=lg:
-          - $for item, j in group.children:
-            - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:
+  - rtgl-view#container flex=1 sv g=lg:
+      - $for group, i in groups:
+          - 'rtgl-view#item-${group.id} mb=sm w=f bgc=bg style="position: sticky; top: 0"':
+              - rtgl-text: ${group.name}
+          - rtgl-view d=h w=f fw=w g=lg:
+              - $for item, j in group.children:
+                  - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:

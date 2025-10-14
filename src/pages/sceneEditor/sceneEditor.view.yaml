@@ -26,12 +26,6 @@ refs:
         handler: handleMergeLines
       delete-action:
         handler: handleLineDeleteActionItem
-  actions-action-*:
-    eventListeners:
-      click:
-        handler: handleOpenCommandLine
-      contextmenu:
-        handler: handleActionsActionRightClick
   section-tab-*:
     eventListeners:
       click:
@@ -60,14 +54,6 @@ refs:
     eventListeners:
       click:
         handler: handleAddActionsButtonClick
-  command-line-*:
-    eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      actionClicked:
-        handler: handleActionClicked
-      submit:
-        handler: handleCommandLineSubmit
   toggle-sections-graph-view:
     eventListeners:
       click:
@@ -78,10 +64,6 @@ refs:
         handler: handleActionsDialogClose
   system-actions:
     eventListeners:
-      back-to-actions:
-        handler: handleBackToActions
-      actionClicked:
-        handler: handleActionClicked
       submit:
         handler: handleCommandLineSubmit
       action-delete:
@@ -145,7 +127,7 @@ template:
               - rtgl-view w=f h=1 bgc=mu:
               - rtgl-view w=f m=md:
                   - rtgl-view d=h av=c:
-                      - rtgl-text s=sm c=mu-fg: Actions
+                      - rtgl-text s=sm c=mu-fg: State
                   - rtgl-view g=md w=f pv=md:
                       - rvn-system-actions#system-actions .actions=selectedLineActions .repositoryState=repositoryState .selectedLineId=selectedLineId .selectedLine=selectedLine .currentSceneId=scene.id action-type="presentation" .presentationState=presentationState:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:

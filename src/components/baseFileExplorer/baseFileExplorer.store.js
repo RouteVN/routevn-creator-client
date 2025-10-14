@@ -321,6 +321,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     form: renameForm,
     attrs,
     noEmptyMessage: attrs["no-empty-message"],
+    shrinkable: attrs.shrinkable,
   };
 
   return viewData;

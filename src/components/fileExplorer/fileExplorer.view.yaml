@@ -42,4 +42,4 @@ refs:
         handler: handleFileAction
 
 template:
-  - rvn-base-file-explorer#base-file-explorer .items=items .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
+  - rvn-base-file-explorer#base-file-explorer draggable shrinkable dropdown-menu .items=items .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
