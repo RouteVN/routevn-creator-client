@@ -66,17 +66,7 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
     });
 
     render();
-    console.log("result", result);
-    // new CustomEvent("submit", {
-    //   detail: {
-    //     background: {
-    //       resourceId: undefined
-    //     },
-    //   },
-    // })
   }
-
-  // console.log('resul', result);
 };
 
 export const handleImageSelected = async (deps, payload) => {
@@ -156,10 +146,6 @@ export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
   const selectedAnimationId = store.selectSelectedAnimation();
-
-  // if (!selectedResource) {
-  //   return;
-  // }
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
