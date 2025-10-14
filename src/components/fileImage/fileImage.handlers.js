@@ -68,7 +68,7 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleOnUpdate = async (deps, changes) => {
+export const handleOnUpdate = async (deps) => {
   const {
     store,
     attrs,

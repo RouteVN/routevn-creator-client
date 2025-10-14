@@ -56,7 +56,8 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
 export const handleFileExplorerDoubleClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router } = deps;
-  const { itemId } = payload._event.detail;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
 
   store.setSelectedItemId(itemId);
 

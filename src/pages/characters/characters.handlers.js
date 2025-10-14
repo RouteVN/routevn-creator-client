@@ -82,7 +82,8 @@ export const handleCharacterItemClick = async (deps, payload) => {
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {
   const { store, render, fileManagerFactory, router, getRefIds } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
 
   // Set the selected item (same as single click)
   store.setSelectedItemId(itemId);

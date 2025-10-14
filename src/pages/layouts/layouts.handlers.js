@@ -42,7 +42,8 @@ export const handleImageItemClick = (deps, payload) => {
 
 export const handleItemDoubleClick = (deps, payload) => {
   const { router, subject } = deps;
-  const { itemId } = payload._event.detail;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
 
   // Get current payload to preserve projectId
   const currentPayload = router ? router.getPayload() : {};

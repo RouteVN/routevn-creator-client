@@ -47,7 +47,8 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
   const { store, render } = deps;
-  const { itemId } = payload._event.detail;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
   store.showFullImagePreview({ itemId });
   render();
 };

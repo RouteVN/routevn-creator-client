@@ -163,7 +163,8 @@ export const handleAddAnimationClick = async (deps, payload) => {
 
 export const handleAnimationItemDoubleClick = async (deps, payload) => {
   const { store, render, drenderer } = deps;
-  const { itemId } = payload._event.detail;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) return;
 
   const animationsData = store.selectAnimationsData();
 
