@@ -63,52 +63,59 @@ export const selectViewData = ({ state, props }) => {
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";
 
-    let backgroundFileId;
+    let background;
+    let bgm;
     if (line.actions?.background) {
-      const resourceId = line.actions.background.resourceId;
-      backgroundFileId = state.repositoryState.images.items[resourceId]?.fileId;
+      background = structuredClone(line.actions.background);
+      background.fileId =
+        state.repositoryState.images.items[background.resourceId]?.fileId;
     }
 
     // Character sprites for display (characters shown on screen)
-    let characterSprites = [];
-    if (
-      line.actions?.character?.items &&
-      line.actions.character.items.length > 0
-    ) {
+    let characterSprites;
+    if (line.actions?.character) {
       // Collect all character sprites
-      characterSprites = line.actions.character.items
-        .map((char) => {
-          const character = state.repositoryState.characters?.items?.[char.id];
-          let spriteFileId = null;
+      if (
+        line.actions.character.items &&
+        line.actions.character.items.length > 0
+      ) {
+        characterSprites = line.actions.character.items
+          ?.map((char) => {
+            const character =
+              state.repositoryState.characters?.items?.[char.id];
+            let spriteFileId = null;
 
-          if (char.sprites && char.sprites.length > 0 && character?.sprites) {
-            const firstSprite = char.sprites[0];
-            if (firstSprite.imageId) {
-              // First try to get from character sprites
-              const flatSprites = toFlatItems(character.sprites);
-              const sprite = flatSprites.find(
-                (s) => s.id === firstSprite.imageId,
-              );
-              if (sprite?.fileId) {
-                spriteFileId = sprite.fileId;
-              } else if (
-                state.repositoryState.images?.items?.[firstSprite.imageId]
-              ) {
-                // Fallback to images repository
-                spriteFileId =
-                  state.repositoryState.images.items[firstSprite.imageId]
-                    .fileId;
+            if (char.sprites && char.sprites.length > 0 && character?.sprites) {
+              const firstSprite = char.sprites[0];
+              if (firstSprite.imageId) {
+                // First try to get from character sprites
+                const flatSprites = toFlatItems(character.sprites);
+                const sprite = flatSprites.find(
+                  (s) => s.id === firstSprite.imageId,
+                );
+                if (sprite?.fileId) {
+                  spriteFileId = sprite.fileId;
+                } else if (
+                  state.repositoryState.images?.items?.[firstSprite.imageId]
+                ) {
+                  // Fallback to images repository
+                  spriteFileId =
+                    state.repositoryState.images.items[firstSprite.imageId]
+                      .fileId;
+                }
               }
             }
-          }
 
-          return {
-            characterId: char.id,
-            characterName: character?.name || "Unknown",
-            fileId: spriteFileId,
-          };
-        })
-        .filter((char) => char.fileId); // Only keep characters with valid sprites
+            return {
+              characterId: char.id,
+              characterName: character?.name || "Unknown",
+              fileId: spriteFileId,
+            };
+          })
+          .filter((char) => char.fileId); // Only keep characters with valid sprites
+      } else {
+        characterSprites = [];
+      }
     }
 
     // Dialogue character icon (who is speaking)
@@ -125,19 +132,20 @@ export const selectViewData = ({ state, props }) => {
       }
     }
 
-    let sceneTransition;
     let sectionTransition;
     let transitionTarget;
     let hasChoices;
     let choices;
-    let hasBgm = false;
     let hasSfx = false;
     let hasDialogueLayout = false;
     let hasScreen = false;
 
     // Check for BGM
-    if (line.actions?.bgm?.audioId) {
-      hasBgm = true;
+    if (line.actions?.bgm) {
+      bgm = {};
+      if (line.actions.bgm.audioId) {
+        bgm.audioId = line.actions.bgm.audioId;
+      }
     }
 
     // Check for SFX
@@ -162,7 +170,7 @@ export const selectViewData = ({ state, props }) => {
 
     if (sectionTransitionData) {
       if (sectionTransitionData.sceneId) {
-        sceneTransition = true;
+        sectionTransition = true;
         // Get scene name from repository
         const allScenes = toFlatItems(state.repositoryState.scenes || []);
         const targetScene = allScenes.find(
@@ -204,17 +212,16 @@ export const selectViewData = ({ state, props }) => {
       ...line,
       lineNumber: i + 1,
       lineColor: isSelected ? "fg" : "mu-fg",
+      background,
+      bgm,
       backgroundColor:
         isSelected && isBlockMode ? "var(--muted)" : "transparent",
-      backgroundFileId,
       characterFileId,
       characterSprites,
-      sceneTransition,
       sectionTransition,
       transitionTarget,
       hasChoices,
       choices,
-      hasBgm,
       hasSfx,
       hasDialogueLayout,
       hasScreen,

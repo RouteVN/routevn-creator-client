@@ -44,6 +44,10 @@ refs:
       #   handler: handleBlockCompositionStart
       keydown:
         handler: handleLineKeyDown
+  preview-*:
+    eventListeners:
+      contextmenu:
+        handler: handlePreviewRightClick
 
 styles:
   'div[contenteditable="true"]':
@@ -66,17 +70,13 @@ template:
                   - rtgl-view d=h w=f:
                       - rtgl-view w=f:
                           - 'div#line-${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=true': ${line.actions.dialogue.content[0].text}
-                          - $if line.sceneTransition:
-                              - rtgl-view d=h:
-                                  - rtgl-svg svg="transition" wh=16:
-                                  - rtgl-text s=sm: "Transition to scene: ${line.transitionTarget}"
                           - $if line.sectionTransition:
-                              - rtgl-view d=h:
+                              - rtgl-view#preview-sectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
                                   - rtgl-svg svg="transition" wh=16:
                                   - rtgl-svg svg="section" wh=16:
                                   - rtgl-text s=sm: "Transition to section: ${line.transitionTarget}"
                           - $if line.hasChoices:
-                              - rtgl-view d=v:
+                              - rtgl-view#preview-choice data-type="choice" data-id="${line.id}" d=v:
                                   - rtgl-view d=h:
                                       - rtgl-svg svg="choices" wh=16:
                                       - rtgl-text s=sm: "Choices:"
@@ -85,17 +85,25 @@ template:
                                           - rtgl-text s=sm: "• ${choice.content}"
 
                       - rtgl-view d=h:
-                          - $if line.backgroundFileId:
-                              - rvn-file-image w=36 h=24 fileId=${line.backgroundFileId} mr=sm:
-                          - $if line.characterSprites.length > 0:
-                              - rtgl-view d=h mr=sm:
-                                  - $for sprite in line.characterSprites:
-                                      - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
+                          - $if line.background:
+                              - rtgl-view#preview-background data-type="background" data-id="${line.id}":
+                                  - $if line.background.fileId:
+                                      - rvn-file-image w=36 h=24 fileId=${line.background.fileId} mr=sm:
+                                    $else:
+                                      - rtgl-svg svg=image wh=24:
+                          - $if line.characterSprites:
+                              - rtgl-view#preview-character data-type="character" data-id="${line.id}":
+                                  - $if line.characterSprites.length > 0:
+                                      - rtgl-view d=h mr=sm:
+                                          - $for sprite in line.characterSprites:
+                                              - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
+                                    $else:
+                                      - rtgl-svg svg=character wh=24:
                           - $if line.hasDialogueLayout:
-                              - rtgl-svg svg="dialogue" wh=24 mr=sm:
+                              - rtgl-svg#preview-dialogue data-type="dialogue" data-id="${line.id}" svg="dialogue" wh=24 mr=sm:
                           - $if line.hasScreen:
-                              - rtgl-svg svg="screen" wh=24 mr=sm:
-                          - $if line.hasBgm:
-                              - rtgl-svg svg="music" wh=24 mr=sm:
+                              - rtgl-svg#preview-screen data-type="screen" data-id="${line.id}" svg="screen" wh=24 mr=sm:
+                          - $if line.bgm:
+                              - rtgl-svg#preview-bgm data-type="bgm" data-id="${line.id}" svg="music" wh=24 mr=sm:
                           - $if line.hasSfx:
-                              - rtgl-svg svg="audio" wh=24:
+                              - rtgl-svg#preview-sfx data-type="sfx" data-id="${line.id}" svg="audio" wh=24:

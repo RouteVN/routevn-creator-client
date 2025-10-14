@@ -69,6 +69,8 @@ refs:
     eventListeners:
       click:
         handler: handleAudioWaveformClick
+      contextmenu:
+        handler: handleAudioWaveformRightClick
 
 template:
   - rtgl-view w=f h=f p=lg:
