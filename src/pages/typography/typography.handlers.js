@@ -515,36 +515,40 @@ export const handleFormActionClick = (deps, payload) => {
     if (editMode && editingItemId) {
       // Handle typography update
       handleTypographyUpdated(
+        deps,
         {
-          detail: {
-            itemId: editingItemId,
-            name: formData.name,
-            fontSize: formData.fontSize,
-            lineHeight: formData.lineHeight,
-            fontColor: formData.fontColor,
-            fontStyle: formData.fontStyle,
-            fontWeight: formData.fontWeight,
-            previewText: formData.previewText,
+          _event: {
+            detail: {
+              itemId: editingItemId,
+              name: formData.name,
+              fontSize: formData.fontSize,
+              lineHeight: formData.lineHeight,
+              fontColor: formData.fontColor,
+              fontStyle: formData.fontStyle,
+              fontWeight: formData.fontWeight,
+              previewText: formData.previewText,
+            },
           },
         },
-        deps,
       );
     } else {
       // Handle typography creation
       handleTypographyCreated(
+        deps,
         {
-          detail: {
-            groupId: targetGroupId,
-            name: formData.name,
-            fontSize: formData.fontSize,
-            lineHeight: formData.lineHeight,
-            fontColor: formData.fontColor,
-            fontStyle: formData.fontStyle,
-            fontWeight: formData.fontWeight,
-            previewText: formData.previewText,
+          _event: {
+            detail: {
+              groupId: targetGroupId,
+              name: formData.name,
+              fontSize: formData.fontSize,
+              lineHeight: formData.lineHeight,
+              fontColor: formData.fontColor,
+              fontStyle: formData.fontStyle,
+              fontWeight: formData.fontWeight,
+              previewText: formData.previewText,
+            },
           },
         },
-        deps,
       );
     }
 
