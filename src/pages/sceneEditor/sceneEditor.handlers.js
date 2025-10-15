@@ -478,7 +478,9 @@ export const handleSplitLine = async (deps, payload) => {
   // Use requestAnimationFrame for focus operations
   requestAnimationFrame(() => {
     if (linesEditorRef) {
-      linesEditorRef.elm.transformedHandlers.updateSelectedLine(newLineId);
+      linesEditorRef.elm.transformedHandlers.updateSelectedLine({
+        currentLineId: newLineId,
+      });
 
       // Also render the linesEditor
       linesEditorRef.elm.render();
@@ -649,7 +651,9 @@ export const handleLineNavigation = (deps, payload) => {
         linesEditorRef.elm.store.setNavigationDirection(direction);
       }
 
-      linesEditorRef.elm.transformedHandlers.updateSelectedLine(nextLineId);
+      linesEditorRef.elm.transformedHandlers.updateSelectedLine({
+        currentLineId: nextLineId,
+      });
     }
 
     // Force a render to update line colors after navigation
@@ -752,7 +756,9 @@ export const handleMergeLines = async (deps, payload) => {
 
   requestAnimationFrame(() => {
     if (linesEditorRef) {
-      linesEditorRef.elm.transformedHandlers.updateSelectedLine(prevLineId);
+      linesEditorRef.elm.transformedHandlers.updateSelectedLine({
+        currentLineId: prevLineId,
+      });
       linesEditorRef.elm.render();
     }
   });
