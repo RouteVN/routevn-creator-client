@@ -111,6 +111,7 @@ export const selectViewData = ({ state }) => {
 
   return {
     mode: state.mode,
+    audio: selectedResource?.item,
     items: flatItems,
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,

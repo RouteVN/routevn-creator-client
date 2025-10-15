@@ -102,27 +102,23 @@ refs:
 
 template:
   - rtgl-view w=f h=f p=lg:
+      - rtgl-view d=h g=md:
+      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
       - $if mode == 'current':
-          - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-          - rtgl-text: Sound Effects
-
-          # Form for sound effects
           - rtgl-form#form .form=form .defaultValues=defaultValues:
               - rtgl-view#sfx-container slot=sfx g=md:
                   - $for sfx in defaultValues.sfx:
                       - rtgl-view g=sm:
-                          - rvn-waveform-visualizer#sfx-${sfx.id} waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150 style="cursor: pointer"
+                          - rtgl-view#sfx-${sfx.id} cur=p:
+                              - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150:
                           - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
                   - rtgl-button#add-new-button v=ol w=f mt=md: + Add New Sound Effect
-
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submit-button: Submit
-        $elif mode == 'gallery':
-          - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
+
+      - $if mode == 'gallery':
+          - 'rtgl-view d=h w=f g=lg mt=sm flex=1 style="min-height: 0;"':
               - rtgl-view h=f flex=1 sv:
                   - rvn-base-file-explorer#base-file-explorer .items=items no-empty-message:
               - rtgl-view h=f flex=2 sv g=lg:
@@ -131,13 +127,12 @@ template:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f fw=w g=lg:
                               - $for item in group.children:
-                                  - rtgl-view#resource-item-${item.id} cur=p bw=${item.bw} bc=${item.bc}:
+                                  - rtgl-view#resource-item-${item.id} cur=p bw=${item.bw} bc=${item.bc} g=sm:
                                       - $if item.waveformDataFileId:
-                                          - rtgl-view:
-                                              - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 height=150:
-                                              - rtgl-text w=225 ellipsis=true mt=sm: ${item.name}
+                                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 h=120:
+                                          - rtgl-text s=sm ah=c: ${item.name}
                                         $else:
-                                          - rtgl-view w=225 h=150 av=c ah=c bgc=ac:
+                                          - rtgl-view w=225 h=120 av=c ah=c bgc=ac:
                                               - rtgl-text s=sm c=mu-fg: No waveform
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#button-select: Select
