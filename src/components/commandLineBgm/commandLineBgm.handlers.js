@@ -10,12 +10,8 @@ export const handleAfterMount = async (deps) => {
     audio,
   });
 
-  // Initialize with existing BGM data if available
-  const audioId = props?.bgm?.audioId;
-  if (audioId) {
-    store.setSelectedResource({
-      resourceId: audioId,
-    });
+  if (props.bgm) {
+    store.setBgm({ bgm: props?.bgm });
   }
 
   render();
@@ -34,8 +30,8 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
   });
 
   if (result.item.key === "remove") {
-    store.setSelectedResource({
-      resourceId: undefined,
+    store.setBgmAudio({
+      audioId: undefined,
     });
 
     render();
@@ -77,9 +73,15 @@ export const handleFormExtra = (deps, payload) => {
   render();
 };
 
-export const handleFormChange = (deps) => {
-  const { render } = deps;
-  // Handle any form field changes if needed
+export const handleFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  const { _event: event } = payload;
+  store.setBgm({
+    bgm: {
+      audioId: store.selectBgm().audioId,
+      ...event.detail.formValues,
+    },
+  });
   render();
 };
 
@@ -138,25 +140,12 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload._event.stopPropagation();
-
-  const { dispatchEvent, store, refs } = deps;
-  const selectedResource = store.selectSelectedResource();
-
-  // Get form values with fallback
-  let formValues = {};
-  if (refs && refs.form && typeof refs.form.getValues === "function") {
-    formValues = refs.form.getValues();
-  }
-
-  console.log("Submit - selectedResource:", selectedResource);
-  console.log("Submit - formValues:", formValues);
+  const { dispatchEvent, store } = deps;
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        bgm: {
-          audioId: selectedResource?.resourceId,
-        },
+        bgm: store.selectBgm(),
       },
       bubbles: true,
       composed: true,
@@ -197,8 +186,8 @@ export const handleButtonSelectClick = async (deps) => {
   );
 
   if (tempSelectedAudio) {
-    store.setSelectedResource({
-      resourceId: tempSelectedResourceId,
+    store.setBgmAudio({
+      audioId: tempSelectedResourceId,
     });
 
     store.setMode({

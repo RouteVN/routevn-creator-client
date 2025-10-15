@@ -7,6 +7,23 @@ const form = {
       slot: "audio",
       description: "Background Music",
     },
+    {
+      name: "loop",
+      description: "Loop",
+      inputType: "select",
+      options: [
+        { value: true, label: "Loop" },
+        { value: false, label: "Don't Loop" },
+      ],
+    },
+    {
+      name: "volume",
+      description: "Volume",
+      inputType: "slider-input",
+      min: 0,
+      max: 1,
+      step: 0.01,
+    },
   ],
 };
 
@@ -15,7 +32,20 @@ export const createInitialState = () => ({
   items: { items: {}, tree: [] },
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
+  bgm: {
+    audioId: undefined,
+    loop: true,
+    volume: 0.5,
+  },
 });
+
+export const setBgmAudio = (state, payload) => {
+  state.bgm.audioId = payload.audioId;
+};
+
+export const setBgm = (state, payload) => {
+  state.bgm = payload.bgm;
+};
 
 export const setMode = (state, payload) => {
   state.mode = payload.mode;
@@ -25,12 +55,12 @@ export const setRepositoryState = (state, payload) => {
   state.items = payload.audio;
 };
 
-export const selectTempSelectedResourceId = ({ state }) => {
-  return state.tempSelectedResourceId;
+export const selectBgm = ({ state }) => {
+  return state.bgm;
 };
 
-export const setSelectedResource = (state, payload) => {
-  state.selectedResourceId = payload.resourceId;
+export const selectTempSelectedResourceId = ({ state }) => {
+  return state.tempSelectedResourceId;
 };
 
 export const setTempSelectedResource = (state, payload) => {
@@ -38,19 +68,19 @@ export const setTempSelectedResource = (state, payload) => {
 };
 
 export const selectSelectedResource = ({ state }) => {
-  if (!state.selectedResourceId) {
+  if (!state.bgm.audioId) {
     return null;
   }
 
   const flatItems = toFlatItems(state.items);
-  const item = flatItems.find((item) => item.id === state.selectedResourceId);
+  const item = flatItems.find((item) => item.id === state.bgm.audioId);
 
   if (!item) {
     return null;
   }
 
   return {
-    resourceId: state.selectedResourceId,
+    resourceId: state.bgm.audioId,
     resourceType: "audio",
     fileId: item.fileId,
     name: item.name,
@@ -106,6 +136,9 @@ export const selectViewData = ({ state }) => {
   const breadcrumb = selectBreadcrumb({ state });
 
   const defaultValues = {
+    loop: state.bgm?.loop ?? true,
+    volume: state.bgm?.volume ?? 0.5,
+    delay: state.bgm?.delay,
     audioWaveformDataFileId: selectedResource?.item?.waveformDataFileId || "",
   };
 
