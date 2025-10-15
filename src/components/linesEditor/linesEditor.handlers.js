@@ -479,7 +479,7 @@ export const handleContainerKeyDown = (deps, payload) => {
             store.setNavigationDirection("end");
 
             // Use updateSelectedLine to properly position cursor at end
-            deps.handlers.updateSelectedLine(deps, { _event: currentLineId });
+            updateSelectedLine(deps, { currentLineId });
           }
         }
         break;
@@ -864,14 +864,15 @@ export const handleOnInput = (deps, payload) => {
   );
 };
 
-export const updateSelectedLine = (deps, lineId) => {
+export const updateSelectedLine = (deps, payload) => {
+  const { currentLineId } = payload;
   const { store, getRefIds } = deps;
   const refIds = getRefIds();
-  const lineRef = refIds[`line-${lineId}`];
+  const lineRef = refIds[`line-${currentLineId}`];
 
   // Check if lineRef exists and has the elm property
   if (!lineRef || !lineRef.elm) {
-    console.warn(`Line reference not found for lineId: ${lineId}`);
+    console.warn(`Line reference not found for lineId: ${currentLineId}`);
     return;
   }
 
