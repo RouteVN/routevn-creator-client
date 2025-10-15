@@ -41,12 +41,11 @@ export const handleResizeStart = (deps, payload) => {
   document.addEventListener("mouseup", handleMouseUp);
 };
 
-const handleResizeMove = (deps) => {
+const handleResizeMove = (deps, payload) => {
   const { store, render, attrs, subject } = deps;
 
   if (!store.selectIsResizing()) return;
-
-  const deltaX = payload._event.clientX - store.selectStartX();
+  const deltaX = payload.clientX - store.selectStartX();
 
   // Determine resize direction based on resize-side attr
   const isResizeFromLeft = attrs["resize-side"] === "left";
@@ -66,7 +65,7 @@ const handleResizeMove = (deps) => {
   render();
 };
 
-const handleResizeEnd = (deps, e, listeners) => {
+const handleResizeEnd = (deps, _, listeners) => {
   const { store, render, attrs, userConfig, subject } = deps;
   const { handleMouseMove, handleMouseUp } = listeners;
 

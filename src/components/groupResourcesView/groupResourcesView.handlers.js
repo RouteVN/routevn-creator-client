@@ -237,7 +237,7 @@ export const handleZoomIn = async (deps) => {
   const { store, render, userConfig } = deps;
 
   // Increase zoom by 0.1, max 4.0
-  const currentZoom = store.state.zoomLevel || 1.0;
+  const currentZoom = store.selectZoomLevel();
   const newZoom = Math.min(4.0, currentZoom + 0.1);
 
   // Update internal state
@@ -250,7 +250,7 @@ export const handleZoomOut = async (deps) => {
   const { store, render, userConfig } = deps;
 
   // Decrease zoom by 0.1, min 0.5
-  const currentZoom = store.state.zoomLevel || 1.0;
+  const currentZoom = store.selectZoomLevel();
   const newZoom = Math.max(0.5, currentZoom - 0.1);
 
   // Update internal state
