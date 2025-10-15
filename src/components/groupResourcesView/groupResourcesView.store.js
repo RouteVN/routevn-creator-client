@@ -14,6 +14,8 @@ export const setZoomLevel = (state, zoomLevel) => {
   state.zoomLevel = zoomLevel;
 };
 
+export const selectZoomLevel = ({ state }) => state.zoomLevel;
+
 export const toggleGroupCollapse = (state, { groupId }) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
