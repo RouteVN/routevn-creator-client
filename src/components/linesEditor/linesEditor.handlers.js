@@ -470,6 +470,7 @@ export const handleContainerKeyDown = (deps, payload) => {
         if (currentLineId) {
           // Focus the selected line to enter text-editor mode at the end
           const lineElement = deps.getRefIds()[`line-${currentLineId}`]?.elm;
+
           if (lineElement) {
             // Position cursor at the end before focusing
             const textLength = lineElement.textContent.length;
@@ -521,17 +522,15 @@ export const handleLineKeyDown = (deps, payload) => {
       if (mode === "text-editor") {
         // Check if cursor is at position 0
         const currentPos = getCursorPosition(payload._event.currentTarget);
+        const currentContent = payload._event.currentTarget.textContent;
+        const currentLineId = payload._event.currentTarget.id.replace(
+          /^line-/,
+          "",
+        );
 
         if (currentPos === 0) {
           payload._event.preventDefault();
           payload._event.stopPropagation();
-
-          // Get current line content
-          const currentContent = payload._event.currentTarget.textContent;
-          const currentLineId = payload._event.currentTarget.id.replace(
-            /^line-/,
-            "",
-          );
 
           // Find the previous line
           const currentIndex = props.lines.findIndex(
