@@ -77,13 +77,13 @@ template:
       - rtgl-view d=h g=md:
       - rtgl-breadcrumb#breadcumb .items=breadcrumb:
       - $if mode == 'current':
-          - rtgl-form#form .form=form .defaultValues=defaultValues:
+          - rtgl-form#form key=${audio.id} .form=form .defaultValues=defaultValues:
               - $if defaultValues.audioWaveformDataFileId:
                   - rtgl-view slot=audio:
                       - "rvn-waveform-visualizer#audio-waveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 cur=p":
                       - rtgl-text s=sm ah=c: ${audio.name}
                 $else:
-                  - rtgl-view#audio-waveform w=355 h=200 bgc=mu av=c ah=c cur=p slot=audio:
+                  - rtgl-view#audio-waveform w=250 h=150 bgc=mu av=c ah=c cur=p slot=audio:
                       - rtgl-text s=md c=mu-fg: Select BGM
           - rtgl-view flex=1:
           - rtgl-view d=h av=c ah=e w=f g=lg:
