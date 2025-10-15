@@ -5,23 +5,31 @@ import { filter, tap, debounceTime } from "rxjs";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 // Helper function to create assets object from file references
-async function createAssetsFromFileIds(
-  fileReferences,
-  fileManager,
-  { audios, images, fonts = {} },
-) {
+async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
+  const { audio, images, fonts = {} } = resources;
+  const allItems = Object.entries({
+    ...audio.items,
+    ...images.items,
+    ...fonts.items,
+  }).map(([key, val]) => {
+    return {
+      id: key,
+      ...val,
+    };
+  });
   const assets = {};
   for (const fileObj of fileReferences) {
-    const { url: fileId, type: fileType } = fileObj;
+    const { url: fileId } = fileObj;
+    const foundItem = allItems.find((item) => item.fileId === fileId);
     try {
       const { url } = await fileManager.getFileContent({
         fileId,
       });
-      let type = fileType; // Use type from fileObj first
+      let type = foundItem?.fileType; // Use type from fileObj first
 
       // If no type in fileObj, look it up in the resources
       if (!type) {
-        Object.entries(audios)
+        Object.entries(audio)
           .concat(Object.entries(images))
           .concat(Object.entries(fonts))
           .forEach(([_key, item]) => {
@@ -49,11 +57,11 @@ async function renderSceneState(store, drenderer, fileManager) {
   const fileReferences = extractFileIdsFromRenderState(renderState);
   const repositoryState = store.selectRepositoryState();
   const projectData = constructProjectData(repositoryState);
-  const assets = await createAssetsFromFileIds(fileReferences, fileManager, {
-    audios: projectData.resources.audio,
-    images: projectData.resources.images,
-    fonts: projectData.resources.fonts,
-  });
+  const assets = await createAssetsFromFileIds(
+    fileReferences,
+    fileManager,
+    projectData.resources,
+  );
   await drenderer.loadAssets(assets);
   drenderer.render(renderState);
 }
@@ -515,11 +523,11 @@ export const handleLineNavigation = (deps, payload) => {
   if (mode === "block") {
     const currentLineId = store.selectSelectedLineId();
 
-    console.log({
-      currentLineId,
-      targetLineId,
-      direction,
-    });
+    // console.log({
+    //   currentLineId,
+    //   targetLineId,
+    //   direction,
+    // });
 
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
@@ -679,13 +687,17 @@ export const handleMergeLines = async (deps, payload) => {
   const section = scene.sections.find((s) => s.id === sectionId);
   const prevLine = section.lines.find((s) => s.id === prevLineId);
 
-  if (!prevLine) return;
+  if (!prevLine) {
+    return;
+  }
 
-  const prevContent = prevLine.actions?.dialogue?.content || "";
-  const mergedContent = prevContent + contentToAppend;
+  // Get previous line content - it's an array of content objects
+  const prevContentArray = prevLine.actions?.dialogue?.content || [];
+  const prevContentText = prevContentArray.map((c) => c.text || "").join("");
+  const mergedContent = prevContentText + contentToAppend;
 
   // Store the length of the previous content for cursor positioning
-  const prevContentLength = prevContent.length;
+  const prevContentLength = prevContentText.length;
 
   // Get existing dialogue data to preserve layoutId and characterId
   let existingDialogue = {};
@@ -693,6 +705,7 @@ export const handleMergeLines = async (deps, payload) => {
     existingDialogue = prevLine.actions.dialogue;
   }
 
+  const finalContent = [{ text: mergedContent }];
   // Update previous line with merged content
   repository.addAction({
     actionType: "set",
@@ -702,7 +715,7 @@ export const handleMergeLines = async (deps, payload) => {
       item: {
         dialogue: {
           ...existingDialogue,
-          content: mergedContent,
+          content: finalContent,
         },
       },
     },
@@ -717,7 +730,8 @@ export const handleMergeLines = async (deps, payload) => {
     },
   });
 
-  // Update the scene data
+  // Update repository state in store to reflect the changes
+  store.setRepositoryState(repository.getState());
 
   // Update selected line to the previous one
   store.setSelectedLineId(prevLineId);

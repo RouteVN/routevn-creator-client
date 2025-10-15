@@ -281,8 +281,8 @@ export const selectRenderState = ({ state }) => {
   const projectData = constructProjectData(state.repositoryState);
   const resources = projectData.resources;
 
-  console.log("presentationState", presentationState);
-  console.log("resources", resources);
+  // console.log("presentationState", presentationState);
+  // console.log("resources", resources);
 
   const renderState = constructRenderState({
     presentationState,
@@ -348,7 +348,7 @@ export const selectRenderState = ({ state }) => {
     },
   });
 
-  console.log("renderState", renderState);
+  // console.log("renderState", renderState);
 
   return renderState;
 };
