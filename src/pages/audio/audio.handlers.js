@@ -1,11 +1,23 @@
 import { nanoid } from "nanoid";
+import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
+  const { store, repositoryFactory, router, render, userConfig } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { audio } = repository.getState();
   store.setItems(audio || { tree: [], items: {} });
+
+  // Initialize audio player positions from userConfig
+  const defaultLeft = parseInt(
+    userConfig.get("resizablePanel.file-explorerWidth"),
+  );
+  const defaultRight = parseInt(
+    userConfig.get("resizablePanel.detail-panelWidth"),
+  );
+  store.updateAudioPlayerLeft({ width: defaultLeft, userConfig });
+  store.updateAudioPlayerRight({ width: defaultRight, userConfig });
+
   render();
 };
 
@@ -292,4 +304,32 @@ export const handleItemDelete = async (deps, payload) => {
   const data = repository.getState()[resourceType];
   store.setItems(data);
   render();
+};
+
+export const handlePanelResize = (deps, payload) => {
+  const { store, render, userConfig } = deps;
+  const { panelType, width } = payload;
+  // Handle file-explorer panel resize to adjust audio player position
+  if (panelType === "file-explorer") {
+    store.updateAudioPlayerLeft({ width, userConfig });
+    render();
+  }
+
+  // Handle detail-panel resize to adjust audio player position
+  if (panelType === "detail-panel") {
+    store.updateAudioPlayerRight({ width, userConfig });
+    render();
+  }
+};
+
+export const subscriptions = (deps) => {
+  const { subject } = deps;
+  return [
+    subject.pipe(
+      filter(({ action }) => action === "panel-resize"),
+      tap(({ payload }) => {
+        handlePanelResize(deps, payload);
+      }),
+    ),
+  ];
 };
