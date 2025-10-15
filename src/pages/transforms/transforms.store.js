@@ -369,5 +369,6 @@ export const selectViewData = ({ state }) => {
     transformForm: state.transformForm,
     dialogDefaultValues: state.defaultValues,
     items,
+    selectedItem: items[state.selectedItemId],
   };
 };
