@@ -87,12 +87,12 @@ export const closeAudioPlayer = (state) => {
   };
 };
 
-export const updateAudioPlayerLeft = (state, left) => {
-  state.audioPlayerLeft = left;
+export const updateAudioPlayerLeft = (state, payload) => {
+  state.audioPlayerLeft = payload.width + 64;
 };
 
-export const updateAudioPlayerRight = (state, right) => {
-  state.audioPlayerRight = right;
+export const updateAudioPlayerRight = (state, payload) => {
+  state.audioPlayerRight = payload.width;
 };
 
 export const selectAudioPlayerLeft = (state) => {
