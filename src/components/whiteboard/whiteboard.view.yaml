@@ -89,13 +89,13 @@ template:
   - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px;"':
     - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; width: 0px; height: 0px;"':
       - $for item in items:
-        - 'rtgl-view#item-${item.id} w=300 h=60 d=h ah=e av=c cur=${itemCursor} pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+        - 'rtgl-view#item-${item.id} w=300 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
           - $if item.isInit == true:
             - rtgl-view d=h av=c:
               - rtgl-view p=md bgc=ac br=md bw=sm bc=${item.borderColor}:
                 - rtgl-text s=sm: "Initial Scene"
               - rtgl-view w=30 h=2 bgc=${item.borderColor}:
-          - rtgl-view w=120 h=f av=c ah=c p=md bgc=mu bw=sm bc=${item.borderColor} br=md:
+          - rtgl-view w=120 h=f av=c ah=c p=md bgc=mu bw=sm bc=${item.borderColor} br=md cur=${itemCursor}:
             - rtgl-text s=sm: "${item.name}"
     - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
       - rtgl-view d=h av=c gap=sm:
