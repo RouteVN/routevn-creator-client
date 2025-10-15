@@ -1,8 +1,6 @@
 export const handleAfterMount = async (deps) => {
   const { props, render, getRefIds } = deps;
   const { item } = props;
-  // TODO: check why there's no item sometimes
-  // This failure leads to the thumbnail not rendering at all in detail pannel
   if (!item) return;
 
   const config = {
@@ -24,10 +22,9 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleOnUpdate = (deps) => {
-  const { props, render, getRefIds } = deps;
-  const { item } = props;
-  // TODO: check why there's no item sometimes
+export const handleOnUpdate = (deps, changes) => {
+  const { render, getRefIds } = deps;
+  const { item } = changes.newProps;
   if (!item) return;
 
   const config = {
