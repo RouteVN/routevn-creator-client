@@ -176,8 +176,6 @@ export const handleItemMouseDown = (deps, payload) => {
   dragOffset.x = mouseInCanvasX - itemX;
   dragOffset.y = mouseInCanvasY - itemY;
 
-  if (itemX + 180 > mouseInCanvasX * zoomLevel) return;
-
   console.log(
     "Drag start - Mouse in canvas:",
     mouseInCanvasX,
