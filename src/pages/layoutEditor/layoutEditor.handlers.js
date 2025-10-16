@@ -295,7 +295,7 @@ const renderLayoutPreview = async (deps, options = {}) => {
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
   const data = {
     dialogue: {
-      content: dialogueDefaultValues["dialogue-content"],
+      content: [{ text: dialogueDefaultValues["dialogue-content"] }],
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
     },
     choice: choicesData,

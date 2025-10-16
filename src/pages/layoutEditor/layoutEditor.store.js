@@ -116,7 +116,7 @@ export const createInitialState = () => ({
   fontsData: { tree: [], items: {} },
   fieldResources: {},
   dialogueDefaultValues: {
-    "dialogue-character-name": "Character R",
+    "dialogue-character-name": "Character",
     "dialogue-content": "This is a sample dialogue content.",
   },
   choiceDefaultValues: {
