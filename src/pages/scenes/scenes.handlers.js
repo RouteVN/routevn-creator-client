@@ -19,8 +19,7 @@ export const handleAfterMount = async (deps) => {
       name: scene.name || `Scene ${sceneId}`,
       x: scene.position?.x || 200,
       y: scene.position?.y || 200,
-      // Add red color for initial scene
-      textColor: sceneId === initialSceneId ? "de" : undefined,
+      isInit: sceneId === initialSceneId,
     }));
 
   // Initialize whiteboard with scene items only
@@ -68,8 +67,7 @@ export const handleDataChanged = async (deps) => {
         // Use repository position if available, otherwise use existing whiteboard position, finally default to 200,200
         x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
         y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
-        // Add red color for initial scene
-        textColor: sceneId === initialSceneId ? "de" : undefined,
+        isInit: sceneId === initialSceneId,
       };
     });
 
@@ -429,8 +427,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     const initialSceneId = story?.initialSceneId;
     const updatedWhiteboardItems = currentWhiteboardItems.map((item) => ({
       ...item,
-      // Update text color based on whether it's the initial scene
-      textColor: item.id === initialSceneId ? "de" : undefined,
+      isInit: item.id === initialSceneId,
     }));
     store.setWhiteboardItems(updatedWhiteboardItems);
 
