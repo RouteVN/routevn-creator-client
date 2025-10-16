@@ -51,7 +51,7 @@ refs:
         handler: handleBackToProjects
 
 template:
-  - rtgl-button#backButton icon=chevronLeft ip=s v=gh mv=lg: Back to Projects
+  - rtgl-button#backButton icon=chevronLeft ip=s v=gh mt=lg: Back to Projects
   - rtgl-view w=f h=f ph=lg:
     - $if dataLoaded:
         - rtgl-form#form .form=form .context=context w=240 .defaultValues=defaultValues:
