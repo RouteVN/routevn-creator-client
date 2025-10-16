@@ -45,10 +45,14 @@ refs:
     eventListeners:
       click:
         handler: handleFormExtraEvent
+  backButton:
+    eventListeners:
+      click:
+        handler: handleBackToProjects
 
 template:
   - rtgl-view w=f h=f p=lg:
-    - rtgl-text s=h4: Project
+    - rtgl-button#backButton icon=chevronLeft ip=s v=gh: Back to Projects
     - $if dataLoaded:
         - rtgl-form#form .form=form .context=context w=240 .defaultValues=defaultValues:
           - rvn-file-image#icon-image fileId=${defaultValues.iconFileId} wh=128 slot=icon-file-id cur=p:
