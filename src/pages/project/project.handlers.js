@@ -64,3 +64,12 @@ export const handleFormExtraEvent = async (deps) => {
     console.error("Project image upload failed:", error);
   }
 };
+
+export const handleBackToProjects = async (deps) => {
+  const { subject } = deps;
+
+  // Navigate back to projects page
+  subject.dispatch("redirect", {
+    path: "/projects",
+  });
+};
