@@ -82,7 +82,6 @@ export const selectViewData = ({ state, props, attrs }) => {
 
   // Apply borderColor to all items in processedFlatGroups
   const finalProcessedGroups = setBorderColorForItems(processedFlatGroups);
-  console.log(finalProcessedGroups);
 
   return {
     fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
