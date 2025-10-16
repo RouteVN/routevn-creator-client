@@ -229,13 +229,6 @@ export const createFileManager = ({ storageAdapter, fontManager }) => {
 
       if (response.ok) {
         const data = await response.json();
-
-        // Convert byte values (0-255) back to normalized values (0-1) for waveform amplitudes
-        // This is the reverse of the compression done during storage
-        if (data && data.amplitudes && Array.isArray(data.amplitudes)) {
-          data.amplitudes = data.amplitudes.map((value) => value / 255);
-        }
-
         return data;
       }
 
