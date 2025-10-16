@@ -87,19 +87,19 @@ refs:
 
 template:
   - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px;"':
-    - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; width: 0px; height: 0px;"':
-      - $for item in items:
-        - 'rtgl-view#item-${item.id} cur=${itemCursor} w=120 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
-          - $if item.isInit == true:
-            - 'rtgl-view d=h av=c pos=abs style="left: -135px; top: 15px; z-index: 10; user-select: none;"':
-              - rtgl-view w=105 h=30 ah=c av=c p=md bgc=ac br=md bw=sm bc=${item.borderColor}:
-                - rtgl-text s=sm: "Initial Scene"
-              - rtgl-view w=30 h=2 bgc=${item.borderColor}:
-          - rtgl-view w=120 h=f av=c ah=c p=md bgc=mu bw=sm bc=${item.borderColor} br=md:
-            - rtgl-text s=sm: "${item.name}"
-    - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
-      - rtgl-view d=h av=c gap=sm:
-        - 'rtgl-button#zoom-out-btn v=se s=md sq': "-"
-        - 'rtgl-view bgc=co p=sm br=full w=50 ah=c av=c':
-          - rtgl-text s=sm: "${zoomLevelPercent}%"
-        - 'rtgl-button#zoom-in-btn v=se s=md sq': "+"
+      - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; width: 0px; height: 0px;"':
+          - $for item in items:
+              - 'rtgl-view#item-${item.id} cur=${itemCursor} w=120 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+                  - $if item.isInit == true:
+                      - 'rtgl-view d=h av=c pos=abs style="left: -135px; top: 15px; z-index: 10; user-select: none;"':
+                          - rtgl-view w=105 h=30 ah=c av=c p=md bgc=ac br=md bw=sm bc=${item.borderColor}:
+                              - rtgl-text s=sm: "Start"
+                          - rtgl-view w=30 h=2 bgc=${item.borderColor}:
+                  - rtgl-view w=120 h=f av=c ah=c p=md bgc=mu bw=sm bc=${item.borderColor} br=md:
+                      - rtgl-text s=sm: "${item.name}"
+      - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
+          - rtgl-view d=h av=c gap=sm:
+              - "rtgl-button#zoom-out-btn v=se s=md sq": "-"
+              - "rtgl-view bgc=co p=sm br=full w=50 ah=c av=c":
+                  - rtgl-text s=sm: "${zoomLevelPercent}%"
+              - "rtgl-button#zoom-in-btn v=se s=md sq": "+"
