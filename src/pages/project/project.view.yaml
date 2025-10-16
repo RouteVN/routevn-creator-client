@@ -51,8 +51,8 @@ refs:
         handler: handleBackToProjects
 
 template:
-  - rtgl-view w=f h=f p=lg:
-    - rtgl-button#backButton icon=chevronLeft ip=s v=gh: Back to Projects
+  - rtgl-button#backButton icon=chevronLeft ip=s v=gh mv=lg: Back to Projects
+  - rtgl-view w=f h=f ph=lg:
     - $if dataLoaded:
         - rtgl-form#form .form=form .context=context w=240 .defaultValues=defaultValues:
           - rvn-file-image#icon-image fileId=${defaultValues.iconFileId} wh=128 slot=icon-file-id cur=p:
