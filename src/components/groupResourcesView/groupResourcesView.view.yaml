@@ -210,7 +210,7 @@ template:
                                               - rtgl-view bc=${item.borderColor} w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=p style="${item.selectedStyle}":
                                                   - rtgl-view av=c ah=c:
                                                       - rtgl-text s=md: ${item.name}
-                                                      - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
+                                                      - rtgl-text s=sm c=mu-fg: ${item.layoutType}
                                             $elif resourceType == 'transforms':
                                               - 'rtgl-view#transform-item-${item.id} bc=${item.borderColor} p=md g=md cur=p style="${item.selectedStyle}" br=md bw=xs':
                                                   - rvn-transform-thumbnail .item=#{item}:
