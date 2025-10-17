@@ -168,13 +168,9 @@ export const selectViewData = ({ state, props }) => {
     (state.isPanning ? "grabbing" : state.isPanMode ? "grab" : undefined);
 
   // Calculate adaptive grid size for container background
-  // Grid should appear to scale with zoom, so visual density changes properly
   const getAdaptiveGridSize = (zoomLevel) => {
-    // Fixed canvas grid size (what we want: 20px in canvas coordinates)
+    // Fixed canvas grid size
     const canvasGridSize = 20;
-
-    // To make grid appear to scale with canvas, we need to scale the background size inversely
-    // When zoomed in, we want bigger grid cells visually, so use larger background-size
     const visualGridSize = canvasGridSize * zoomLevel;
 
     return visualGridSize;
