@@ -4,7 +4,7 @@
     "": {
       "dependencies": {
         "@rettangoli/fe": "0.0.10",
-        "@rettangoli/ui": "0.1.7",
+        "@rettangoli/ui": "0.1.12",
         "@tauri-apps/api": "^2.8.0",
         "@tauri-apps/plugin-dialog": "^2.4.0",
         "@tauri-apps/plugin-fs": "^2.4.2",
@@ -18,7 +18,7 @@
         "jsdom": "^26.1.0",
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
-        "route-engine-js": "0.0.3",
+        "route-engine-js": "0.0.4",
         "route-graphics": "0.0.3",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
@@ -142,7 +142,7 @@
 
     "@rettangoli/fe": ["@rettangoli/fe@0.0.10", "", { "dependencies": { "esbuild": "^0.25.5", "immer": "^10.1.1", "jempl": "0.3.2-rc2", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-EjuW3zX3Y2p7GOhPdHWhO6Y67KCBhRLkbs842Q0j76a/z+KJfystMiaRaZgOeXMEukWnzd5bh6sB+3K9j1jiIA=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@0.1.7", "", { "dependencies": { "@floating-ui/dom": "^1.6.13", "@rettangoli/fe": "0.0.7-rc16", "commander": "^13.1.0", "jempl": "0.1.4-rc1", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "snabbdom": "^3.6.2" } }, "sha512-q3bC+CH14AO+Wz6OIJ9i7UUADmBaYaWvHG/ognwhJupNzd18VN88PUEEMcMGx84et8VrnXqRJPDYUL6v/rXNTw=="],
+    "@rettangoli/ui": ["@rettangoli/ui@0.1.12", "", { "dependencies": { "@floating-ui/dom": "^1.6.13", "@rettangoli/fe": "0.0.9", "commander": "^13.1.0", "jempl": "0.1.4-rc1", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "snabbdom": "^3.6.2" } }, "sha512-mqBmUAsZNF6lFd40bz6EsoWM/Le5h7ddSpi5tBydul/MhV6PjL2Vthc2ufhOH4LQA7aedZ3KfaZoBoJOBB4S2w=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.41.0", "", { "os": "android", "cpu": "arm" }, "sha512-KxN+zCjOYHGwCl4UCtSfZ6jrq/qi88JDUtiEFk8LELEHq2Egfc/FgW+jItZiOLRuQfb/3xJSgFuNPC9jzggX+A=="],
 
@@ -426,7 +426,7 @@
 
     "rollup": ["rollup@4.41.0", "", { "dependencies": { "@types/estree": "1.0.7" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.41.0", "@rollup/rollup-android-arm64": "4.41.0", "@rollup/rollup-darwin-arm64": "4.41.0", "@rollup/rollup-darwin-x64": "4.41.0", "@rollup/rollup-freebsd-arm64": "4.41.0", "@rollup/rollup-freebsd-x64": "4.41.0", "@rollup/rollup-linux-arm-gnueabihf": "4.41.0", "@rollup/rollup-linux-arm-musleabihf": "4.41.0", "@rollup/rollup-linux-arm64-gnu": "4.41.0", "@rollup/rollup-linux-arm64-musl": "4.41.0", "@rollup/rollup-linux-loongarch64-gnu": "4.41.0", "@rollup/rollup-linux-powerpc64le-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-musl": "4.41.0", "@rollup/rollup-linux-s390x-gnu": "4.41.0", "@rollup/rollup-linux-x64-gnu": "4.41.0", "@rollup/rollup-linux-x64-musl": "4.41.0", "@rollup/rollup-win32-arm64-msvc": "4.41.0", "@rollup/rollup-win32-ia32-msvc": "4.41.0", "@rollup/rollup-win32-x64-msvc": "4.41.0", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-HqMFpUbWlf/tvcxBFNKnJyzc7Lk+XO3FGc3pbNBLqEbOz0gPLRgcrlS3UF4MfUrVlstOaP/q0kM6GVvi+LrLRg=="],
 
-    "route-engine-js": ["route-engine-js@0.0.3", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0-rc1", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-bQrPcm07sFZfNwu+BQ4XRlt0Q2zEZiMsfIHSgR+n2AxRu6mndzTWBwuMFIEdWMbAVRQ8/WnpCyBAHfdXXAOAHQ=="],
+    "route-engine-js": ["route-engine-js@0.0.4", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0-rc1", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-PnDJxPMy6bhuFjG39tUuMoS7E2GfLoL/m1jZhm1ZaBAnQUPXf41ZZadfnJKkbZYR5rN4vipWVlwl+oVapsTuyw=="],
 
     "route-graphics": ["route-graphics@0.0.3", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "pixi.js": "^8.7.1" } }, "sha512-cRa073iJW9n0nj3mN3WlUvbC9GM6/NJl2tDDxOyonS+t4xqQqXnUzt3VHrHVglA+fAC6oUtK4tnsy1kcCY6eKw=="],
 
@@ -518,7 +518,7 @@
 
     "@rettangoli/fe/jempl": ["jempl@0.3.2-rc2", "", {}, "sha512-8t6P7vO46Er0cpG00nYlmBIZw/5MhKCNnE0WBm+ZWMaGqi/MCexe1/Bl7SlbFQjgKsFXVC3cdT/K+4PD0XHUVg=="],
 
-    "@rettangoli/ui/@rettangoli/fe": ["@rettangoli/fe@0.0.7-rc16", "", { "dependencies": { "esbuild": "^0.25.5", "immer": "^10.1.1", "jempl": "0.3.2-rc2", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-J2OqG/rkico0Qvqd88prLFw2MHviDEWxqqK+BeDE7WNh0PIsj4m7LkVI/WWky2Cc12qJWm6+vbWW3wRu5xe3MA=="],
+    "@rettangoli/ui/@rettangoli/fe": ["@rettangoli/fe@0.0.9", "", { "dependencies": { "esbuild": "^0.25.5", "immer": "^10.1.1", "jempl": "0.3.2-rc2", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-lrMOIXEpJ/RyyPHFOqvLmQigxVACISJIVcFvuWtc09OJajkU+DwQk47Ll3mJmsSu8QG/pJItOK15Xb5Tna7Fcg=="],
 
     "@rettangoli/ui/commander": ["commander@13.1.0", "", {}, "sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw=="],
 
