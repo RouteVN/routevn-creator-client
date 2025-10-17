@@ -1,3 +1,5 @@
+import { drawArrowBetwweenScenes } from "../../utils/arrowUtils";
+
 // Natural zoom levels
 const ZOOM_LEVELS = [0.2, 0.3, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
@@ -186,8 +188,26 @@ export const selectViewData = ({ state, props }) => {
     return visualGridSize;
   };
 
+  const arrowsList = [];
+
+  // Generate arrows for each scene's transitions
+  items.forEach((sourceItem) => {
+    if (sourceItem.transitions && sourceItem.transitions.length > 0) {
+      sourceItem.transitions.forEach((targetSceneId) => {
+        const targetItem = items.find((item) => item.id === targetSceneId);
+        if (targetItem) {
+          const arrowData = drawArrowBetwweenScenes(sourceItem, targetItem);
+          // Add unique identifier for DOM reference
+          arrowData.id = `arrow-${sourceItem.id}-to-${targetSceneId}`;
+          arrowsList.push(arrowData);
+        }
+      });
+    }
+  });
+
   return {
     items,
+    arrowsList,
     selectedItemId: props.selectedItemId,
     isPanMode: state.isPanMode,
     panX: state.panX,
