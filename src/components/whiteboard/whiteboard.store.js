@@ -173,6 +173,16 @@ export const selectViewData = ({ state, props }) => {
     const canvasGridSize = 20;
     const visualGridSize = canvasGridSize * zoomLevel;
 
+    // This prevents dots from becoming too dense while maintaining grid alignment
+    if (visualGridSize < 8) {
+      // At very low zoom, merge 4x4 grid cells into one (multiply by 4)
+      return canvasGridSize * 4 * zoomLevel;
+    } else if (visualGridSize < 12) {
+      // At low zoom, merge 2x2 grid cells into one (multiply by 2)
+      return canvasGridSize * 2 * zoomLevel;
+    }
+
+    // Normal case: no merging needed
     return visualGridSize;
   };
 
