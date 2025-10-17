@@ -21,13 +21,8 @@ export const handleFormChange = (deps, payload) => {
     return;
   }
 
-  if (formValues.layoutId !== undefined) {
-    store.setSelectedLayoutId({ layoutId: formValues.layoutId });
-  }
-
-  if (formValues.characterId !== undefined) {
-    store.setSelectedCharacterId({ characterId: formValues.characterId });
-  }
+  store.setSelectedLayoutId({ layoutId: formValues.layoutId });
+  store.setSelectedCharacterId({ characterId: formValues.characterId });
 
   render();
 };
@@ -41,11 +36,9 @@ export const handleSubmitClick = (deps) => {
     mode: "adv",
   };
   if (selectedLayoutId && selectedLayoutId !== "") {
-    dialogue.layoutId = selectedLayoutId;
+    dialogue.clear = true;
   }
-  if (selectedCharacterId && selectedCharacterId !== "") {
-    dialogue.characterId = selectedCharacterId;
-  }
+  dialogue.characterId = selectedCharacterId;
 
   dispatchEvent(
     new CustomEvent("submit", {
