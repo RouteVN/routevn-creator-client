@@ -43,7 +43,9 @@ const getTransitionsForScene = (sections) => {
       // Iterate through all lines in this section
       for (const line of Object.values(section.lines.items)) {
         // Check for sectionTransition in actions
-        const sectionTransition = line.actions?.sectionTransition || line.actions?.actions?.sectionTransition;
+        const sectionTransition =
+          line.actions?.sectionTransition ||
+          line.actions?.actions?.sectionTransition;
         if (sectionTransition && sectionTransition.sceneId) {
           transitions.push(sectionTransition.sceneId);
         }
@@ -52,7 +54,7 @@ const getTransitionsForScene = (sections) => {
   }
 
   return transitions;
-}
+};
 
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
@@ -74,7 +76,7 @@ export const handleAfterMount = async (deps) => {
       x: scene.position?.x || 200,
       y: scene.position?.y || 200,
       isInit: sceneId === initialSceneId,
-      transitions: getTransitionsForScene(scene.sections)
+      transitions: getTransitionsForScene(scene.sections),
     }));
 
   // Initialize whiteboard with scene items only
@@ -123,7 +125,7 @@ export const handleDataChanged = async (deps) => {
         x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
         y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
         isInit: sceneId === initialSceneId,
-        transitions: getTransitionsForScene(scene.sections)
+        transitions: getTransitionsForScene(scene.sections),
       };
     });
 

@@ -1,5 +1,4 @@
 import { toFlatGroups, toFlatItems } from "../../deps/repository";
-import { getSmoothStepPath } from "../../utils/smoothstepedge";
 
 const form = {
   fields: [

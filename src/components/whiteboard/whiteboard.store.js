@@ -153,7 +153,6 @@ export const selectPan = ({ state }) => ({
 });
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
-
 export const selectViewData = ({ state, props }) => {
   const items = (props.items || []).map((item) => ({
     ...item,

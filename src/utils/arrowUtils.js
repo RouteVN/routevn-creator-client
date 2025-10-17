@@ -35,5 +35,10 @@ export const drawArrowBetweenPoints = (sourceX, sourceY, targetX, targetY) => {
 };
 
 export const drawArrowBetwweenScenes = (sourceScene, targetScene) => {
-  return drawArrowBetweenPoints(sourceScene.x + 120, sourceScene.y + 30, targetScene.x, targetScene.y + 30);
-}
+  return drawArrowBetweenPoints(
+    sourceScene.x + 120,
+    sourceScene.y + 30,
+    targetScene.x,
+    targetScene.y + 30,
+  );
+};
