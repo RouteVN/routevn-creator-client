@@ -1,34 +1,33 @@
 import { nanoid } from "nanoid";
 
 /**
- * 
- * @param {Object} sections 
+ *
+ * @param {Object} sections
  * @returns {Array} Array of transition objects with sceneId
  * @example
  * // should return: ["scene-1760679405214-0ueot8rb4"]
  * const sections = {
-		"items": {
-			"section-main": {
-				"name": "Section New",
-				"lines": {
-					"items": {
-						"line-2": {
-							"actions": {
-								"sectionTransition": {
-									"sceneId": "scene-1760679405214-0ueot8rb4",
-									"sectionId": "myCeTAvUhyCRHnyMx8Ua8",
-									"animation": "fade"
-								}
-							}
-						},
-					},
-					"tree": []
-				}
-			}
-		},
-	}
- * 
- * 
+ *   "items": {
+ *     "section-main": {
+ *       "name": "Section New",
+ *       "lines": {
+ *         "items": {
+ *           "line-2": {
+ *             "actions": {
+ *               "sectionTransition": {
+ *                 "sceneId": "scene-1760679405214-0ueot8rb4",
+ *                 "sectionId": "myCeTAvUhyCRHnyMx8Ua8",
+ *                 "animation": "fade"
+ *               }
+ *             }
+ *           },
+ *         },
+ *         "tree": []
+ *       }
+ *     }
+ *   }
+ * }
+ *
  */
 const getTransitionsForScene = (sections) => {
   if (!sections || !sections.items) {
