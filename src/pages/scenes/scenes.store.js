@@ -158,6 +158,7 @@ export const selectViewData = ({ state }, payload) => {
 
       // Transform only scene items (not folders) into whiteboard items
       const initialSceneId = story?.initialSceneId;
+
       const sceneItems = Object.entries(scenes.items || {})
         .filter(([, item]) => item.type === "scene")
         .map(([sceneId, scene]) => ({
@@ -165,8 +166,7 @@ export const selectViewData = ({ state }, payload) => {
           name: scene.name || `Scene ${sceneId}`,
           x: scene.position?.x || 200,
           y: scene.position?.y || 200,
-          // Add red color for initial scene
-          textColor: sceneId === initialSceneId ? "de" : undefined,
+          isInitial: sceneId === initialSceneId,
         }));
 
       state.whiteboardItems = sceneItems;
@@ -231,10 +231,10 @@ export const selectViewData = ({ state }, payload) => {
     },
   };
 
-  console.log({
-    selectedItemId: state.selectedItemId,
-    defaultValues: defaultValues,
-  });
+  // console.log({
+  //   selectedItemId: state.selectedItemId,
+  //   defaultValues: defaultValues,
+  // });
 
   return {
     flatItems,
