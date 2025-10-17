@@ -359,6 +359,7 @@ export const handleWindowKeyUp = (deps, payload) => {
   }
 };
 
+
 export const subscriptions = (deps) => {
   return [
     fromEvent(window, "mousemove").pipe(

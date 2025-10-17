@@ -1,5 +1,59 @@
 import { nanoid } from "nanoid";
 
+/**
+ * 
+ * @param {Object} sections 
+ * @returns {Array} Array of transition objects with sceneId
+ * @example
+ * // should return: ["scene-1760679405214-0ueot8rb4"]
+ * const sections = {
+		"items": {
+			"section-main": {
+				"name": "Section New",
+				"lines": {
+					"items": {
+						"line-2": {
+							"actions": {
+								"sectionTransition": {
+									"sceneId": "scene-1760679405214-0ueot8rb4",
+									"sectionId": "myCeTAvUhyCRHnyMx8Ua8",
+									"animation": "fade"
+								}
+							}
+						},
+					},
+					"tree": []
+				}
+			}
+		},
+	}
+ * 
+ * 
+ */
+const getTransitionsForScene = (sections) => {
+  if (!sections || !sections.items) {
+    return [];
+  }
+
+  const transitions = [];
+
+  // Iterate through all sections
+  for (const section of Object.values(sections.items)) {
+    if (section.lines && section.lines.items) {
+      // Iterate through all lines in this section
+      for (const line of Object.values(section.lines.items)) {
+        // Check for sectionTransition in actions
+        const sectionTransition = line.actions?.sectionTransition || line.actions?.actions?.sectionTransition;
+        if (sectionTransition && sectionTransition.sceneId) {
+          transitions.push(sectionTransition.sceneId);
+        }
+      }
+    }
+  }
+
+  return transitions;
+}
+
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
@@ -20,6 +74,7 @@ export const handleAfterMount = async (deps) => {
       x: scene.position?.x || 200,
       y: scene.position?.y || 200,
       isInit: sceneId === initialSceneId,
+      transitions: getTransitionsForScene(scene.sections)
     }));
 
   // Initialize whiteboard with scene items only
@@ -68,6 +123,7 @@ export const handleDataChanged = async (deps) => {
         x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
         y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
         isInit: sceneId === initialSceneId,
+        transitions: getTransitionsForScene(scene.sections)
       };
     });
 
