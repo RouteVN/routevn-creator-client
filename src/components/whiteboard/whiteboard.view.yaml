@@ -86,7 +86,7 @@ refs:
         handler: handleZoomOutClick
 
 template:
-  - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px;"':
+  - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: ${gridSize}px ${gridSize}px; background-position: ${panX}px ${panY}px;"':
       - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; width: 0px; height: 0px;"':
           - $for item in items:
               - 'rtgl-view#item-${item.id} cur=${itemCursor} w=120 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':

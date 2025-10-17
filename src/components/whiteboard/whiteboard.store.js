@@ -167,6 +167,19 @@ export const selectViewData = ({ state, props }) => {
     props.cursor ||
     (state.isPanning ? "grabbing" : state.isPanMode ? "grab" : undefined);
 
+  // Calculate adaptive grid size for container background
+  // Grid should appear to scale with zoom, so visual density changes properly
+  const getAdaptiveGridSize = (zoomLevel) => {
+    // Fixed canvas grid size (what we want: 20px in canvas coordinates)
+    const canvasGridSize = 20;
+
+    // To make grid appear to scale with canvas, we need to scale the background size inversely
+    // When zoomed in, we want bigger grid cells visually, so use larger background-size
+    const visualGridSize = canvasGridSize * zoomLevel;
+
+    return visualGridSize;
+  };
+
   return {
     items,
     selectedItemId: props.selectedItemId,
@@ -177,5 +190,6 @@ export const selectViewData = ({ state, props }) => {
     zoomLevelPercent: Math.round(state.zoomLevel * 100),
     containerCursor: containerCursor,
     itemCursor: state.isPanMode ? undefined : "m", // Use "m" for move cursor
+    gridSize: getAdaptiveGridSize(state.zoomLevel),
   };
 };
