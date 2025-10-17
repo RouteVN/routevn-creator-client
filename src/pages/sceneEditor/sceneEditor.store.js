@@ -267,6 +267,8 @@ export const selectPresentationState = ({ state }) => {
       : currentSection?.lines?.length || 0;
   const linesUpToSelectedLine = currentSection?.lines?.slice(0, endIndex) || [];
 
+  // console.log("linesUpToSelectedLine", linesUpToSelectedLine);
+
   const presentationState = constructPresentationState(
     linesUpToSelectedLine.map((line) => structuredClone(line.actions)),
   );
