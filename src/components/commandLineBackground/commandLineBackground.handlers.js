@@ -25,7 +25,7 @@ export const handleBeforeMount = (deps) => {
   // Set the selected animation if it exists
   if (backgroundAnimations?.in) {
     store.setSelectedAnimation({
-      animationId: backgroundAnimations.in,
+      animationId: backgroundAnimations.in?.animationId,
     });
   }
 };
@@ -155,7 +155,9 @@ export const handleSubmitClick = (deps) => {
   // Only add animations object if there's a valid animation selected
   if (selectedAnimationId && selectedAnimationId !== "none") {
     backgroundData.animations = {
-      in: selectedAnimationId,
+      in: {
+        animationId: selectedAnimationId,
+      },
     };
   }
 
