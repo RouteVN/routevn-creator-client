@@ -169,7 +169,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     });
 
     store.setRepositoryState(repository.getState());
-    store.setMode("lines-editor");
     render();
 
     // Render the canvas with the latest data
