@@ -249,6 +249,7 @@ export const handleItemContextMenu = (deps, payload) => {
 
 export const handleWindowMouseMove = (deps, payload) => {
   const { store, getRefIds, render } = deps;
+  console.log(store.selectIsDragging());
 
   if (store.selectIsPanning()) {
     // Handle panning
@@ -300,12 +301,17 @@ export const handleWindowMouseMove = (deps, payload) => {
     const snappedX = Math.round(constrainedX / 5) * 5;
     const snappedY = Math.round(constrainedY / 5) * 5;
 
-    // Update the element position directly for immediate visual feedback
-    const itemElement = getRefIds()[`item-${dragItemId}`];
-    if (itemElement && itemElement.elm) {
-      itemElement.elm.style.left = snappedX + "px";
-      itemElement.elm.style.top = snappedY + "px";
-    }
+    // Dispatch real-time position update to parent (scenes page)
+    console.log(snappedX, snappedY);
+    dispatchEvent(
+      new CustomEvent("item-position-updating", {
+        detail: {
+          itemId: dragItemId,
+          x: snappedX,
+          y: snappedY,
+        },
+      }),
+    );
   }
 };
 

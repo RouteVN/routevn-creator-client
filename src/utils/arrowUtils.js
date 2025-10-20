@@ -34,7 +34,7 @@ export const drawArrowBetweenPoints = (sourceX, sourceY, targetX, targetY) => {
   return { path, labelX, labelY, offsetX, offsetY, svgWidth, svgHeight, style };
 };
 
-export const drawArrowBetwweenScenes = (sourceScene, targetScene) => {
+export const drawArrowBetweenScenes = (sourceScene, targetScene) => {
   return drawArrowBetweenPoints(
     sourceScene.x + 120,
     sourceScene.y + 30,
