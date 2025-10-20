@@ -34,21 +34,6 @@ viewDataSchema:
       type: string
     itemCursor:
       type: string
-    arrowsList:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          path:
-            type: string
-          svgWidth:
-            type: number
-          svgHeight:
-            type: number
-          style:
-            type: string
 
 propsSchema:
   type: object
