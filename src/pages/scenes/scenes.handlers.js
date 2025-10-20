@@ -147,6 +147,16 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
+export const handleWhiteboardItemPositionUpdating = async (deps, payload) => {
+  const { store, render } = deps;
+  const { itemId, x, y } = payload._event.detail;
+
+  // Only update local whiteboard state for real-time feedback
+  // Don't update repository during drag (too expensive)
+  store.updateItemPosition({ itemId, x, y });
+  render();
+};
+
 export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
   const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
@@ -160,7 +170,7 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
     value: { x, y },
   });
 
-  // Update local whiteboard state
+  // Update local whiteboard state (already updated by position-updating, but keeping for consistency)
   store.updateItemPosition({ itemId, x, y });
   render();
 };
