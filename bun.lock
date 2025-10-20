@@ -18,7 +18,7 @@
         "jsdom": "^26.1.0",
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
-        "route-engine-js": "0.0.5",
+        "route-engine-js": "0.0.6",
         "route-graphics": "0.0.3",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
@@ -426,7 +426,7 @@
 
     "rollup": ["rollup@4.41.0", "", { "dependencies": { "@types/estree": "1.0.7" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.41.0", "@rollup/rollup-android-arm64": "4.41.0", "@rollup/rollup-darwin-arm64": "4.41.0", "@rollup/rollup-darwin-x64": "4.41.0", "@rollup/rollup-freebsd-arm64": "4.41.0", "@rollup/rollup-freebsd-x64": "4.41.0", "@rollup/rollup-linux-arm-gnueabihf": "4.41.0", "@rollup/rollup-linux-arm-musleabihf": "4.41.0", "@rollup/rollup-linux-arm64-gnu": "4.41.0", "@rollup/rollup-linux-arm64-musl": "4.41.0", "@rollup/rollup-linux-loongarch64-gnu": "4.41.0", "@rollup/rollup-linux-powerpc64le-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-gnu": "4.41.0", "@rollup/rollup-linux-riscv64-musl": "4.41.0", "@rollup/rollup-linux-s390x-gnu": "4.41.0", "@rollup/rollup-linux-x64-gnu": "4.41.0", "@rollup/rollup-linux-x64-musl": "4.41.0", "@rollup/rollup-win32-arm64-msvc": "4.41.0", "@rollup/rollup-win32-ia32-msvc": "4.41.0", "@rollup/rollup-win32-x64-msvc": "4.41.0", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-HqMFpUbWlf/tvcxBFNKnJyzc7Lk+XO3FGc3pbNBLqEbOz0gPLRgcrlS3UF4MfUrVlstOaP/q0kM6GVvi+LrLRg=="],
 
-    "route-engine-js": ["route-engine-js@0.0.5", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-pQfvBg/Q3xPS1SUj9UbUXHjpVtR0tcpXLxG92Zh6wDMjFgOfvRwUfders+jlGNnySTAXPVKgIuh17UZQugFl1g=="],
+    "route-engine-js": ["route-engine-js@0.0.6", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-op+53O6y2HgOLNlm7GOAqySkVYhd0Tv7Uqu8TKCIPNquHIdfK02+VYwCthgaQafMtwUn798nethFDX6khERNrg=="],
 
     "route-graphics": ["route-graphics@0.0.3", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "pixi.js": "^8.7.1" } }, "sha512-cRa073iJW9n0nj3mN3WlUvbC9GM6/NJl2tDDxOyonS+t4xqQqXnUzt3VHrHVglA+fAC6oUtK4tnsy1kcCY6eKw=="],
 

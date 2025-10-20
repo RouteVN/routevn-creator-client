@@ -454,7 +454,7 @@
           "items": {
             "choice-list": {
               "type": "container",
-              "name": "Choice Container",
+              "name": "Choice List",
               "x": 960,
               "y": 400,
               "width": 1920,
@@ -468,7 +468,7 @@
             },
             "choice-container-1": {
               "type": "container",
-              "name": "Choice Container 1",
+              "name": "Choice Container",
               "x": 0,
               "y": 0,
               "width": 100,
@@ -478,158 +478,17 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "$when": "choice.items[0]"
-            },
-            "choice-container-2": {
-              "type": "container",
-              "name": "Choice Container 2",
-              "x": 0,
-              "y": 0,
-              "width": 100,
-              "height": 120,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "$when": "choice.items[1]"
-            },
-            "choice-container-3": {
-              "type": "container",
-              "name": "Choice Container 3",
-              "x": 0,
-              "y": 0,
-              "width": 100,
-              "height": 120,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "$when": "choice.items[2]"
-            },
-            "choice-container-4": {
-              "type": "container",
-              "name": "Choice Container 4",
-              "x": 0,
-              "y": 0,
-              "width": 100,
-              "height": 120,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "$when": "choice.items[3]"
-            },
-            "choice-container-5": {
-              "type": "container",
-              "name": "Choice Container 5",
-              "x": 0,
-              "y": 0,
-              "width": 100,
-              "height": 120,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "$when": "choice.items[4]"
-            },
-            "choice-container-6": {
-              "type": "container",
-              "name": "Choice Container 6",
-              "x": 0,
-              "y": 0,
-              "width": 100,
-              "height": 120,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "$when": "choice.items[5]"
+              "$each": "item in choice.items"
             },
             "choice-box-1": {
               "type": "sprite",
-              "name": "Choice Box 1",
+              "name": "Choice Box",
               "x": 0,
               "y": 0,
-              "width": 1400,
-              "height": 100,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "imageId": "w4D_3F43eaKETNbBaAIaJ",
-              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
-            },
-            "choice-box-2": {
-              "type": "sprite",
-              "name": "Choice Box 2",
-              "x": 0,
-              "y": 0,
-              "width": 1400,
-              "height": 100,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "imageId": "w4D_3F43eaKETNbBaAIaJ",
-              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
-            },
-            "choice-box-3": {
-              "type": "sprite",
-              "name": "Choice Box 3",
-              "x": 0,
-              "y": 0,
-              "width": 1400,
-              "height": 100,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "imageId": "w4D_3F43eaKETNbBaAIaJ",
-              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
-            },
-            "choice-box-4": {
-              "type": "sprite",
-              "name": "Choice Box 4",
-              "x": 0,
-              "y": 0,
-              "width": 1400,
-              "height": 100,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "imageId": "w4D_3F43eaKETNbBaAIaJ",
-              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
-            },
-            "choice-box-5": {
-              "type": "sprite",
-              "name": "Choice Box 5",
-              "x": 0,
-              "y": 0,
-              "width": 1400,
-              "height": 100,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "imageId": "w4D_3F43eaKETNbBaAIaJ",
-              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
-            },
-            "choice-box-6": {
-              "type": "sprite",
-              "name": "Choice Box 6",
-              "x": 0,
-              "y": 0,
+              "eventName": "system",
+              "eventPayload": {
+                "actions": "${item.events.click.actions}"
+              },
               "width": 1400,
               "height": 100,
               "anchorX": 0.5,
@@ -642,7 +501,7 @@
             },
             "choice-text-1": {
               "type": "text",
-              "name": "Choice Text 1",
+              "name": "Choice Text",
               "x": 0,
               "y": 0,
               "width": 1300,
@@ -652,108 +511,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "contentType": "choice.items[0].content",
-              "text": "${choice.items[0].content}",
-              "typographyId": "typography-text-view",
-              "style": {
-                "wordWrapWidth": 1300,
-                "align": "center"
-              }
-            },
-            "choice-text-2": {
-              "type": "text",
-              "name": "Choice Text 2",
-              "x": 0,
-              "y": 0,
-              "width": 1300,
-              "height": 80,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "contentType": "choice.items[1].content",
-              "text": "${choice.items[1].content}",
-              "typographyId": "typography-text-view",
-              "style": {
-                "wordWrapWidth": 1300,
-                "align": "center"
-              }
-            },
-            "choice-text-3": {
-              "type": "text",
-              "name": "Choice Text 3",
-              "x": 0,
-              "y": 0,
-              "width": 1300,
-              "height": 80,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "contentType": "choice.items[2].content",
-              "text": "${choice.items[2].content}",
-              "typographyId": "typography-text-view",
-              "style": {
-                "wordWrapWidth": 1300,
-                "align": "center"
-              }
-            },
-            "choice-text-4": {
-              "type": "text",
-              "name": "Choice Text 4",
-              "x": 0,
-              "y": 0,
-              "width": 1300,
-              "height": 80,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "contentType": "choice.items[3].content",
-              "text": "${choice.items[3].content}",
-              "typographyId": "typography-text-view",
-              "style": {
-                "wordWrapWidth": 1300,
-                "align": "center"
-              }
-            },
-            "choice-text-5": {
-              "type": "text",
-              "name": "Choice Text 5",
-              "x": 0,
-              "y": 0,
-              "width": 1300,
-              "height": 80,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "contentType": "choice.items[4].content",
-              "text": "${choice.items[4].content}",
-              "typographyId": "typography-text-view",
-              "style": {
-                "wordWrapWidth": 1300,
-                "align": "center"
-              }
-            },
-            "choice-text-6": {
-              "type": "text",
-              "name": "Choice Text 6",
-              "x": 0,
-              "y": 0,
-              "width": 1300,
-              "height": 80,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "contentType": "choice.items[5].content",
-              "text": "${choice.items[5].content}",
+              "text": "${item.content}",
               "typographyId": "typography-text-view",
               "style": {
                 "wordWrapWidth": 1300,
@@ -775,314 +533,259 @@
                       "id": "choice-text-1"
                     }
                   ]
-                },
-                {
-                  "id": "choice-container-2",
-                  "children": [
-                    {
-                      "id": "choice-box-2"
-                    },
-                    {
-                      "id": "choice-text-2"
-                    }
-                  ]
-                },
-                {
-                  "id": "choice-container-3",
-                  "children": [
-                    {
-                      "id": "choice-box-3"
-                    },
-                    {
-                      "id": "choice-text-3"
-                    }
-                  ]
-                },
-                {
-                  "id": "choice-container-4",
-                  "children": [
-                    {
-                      "id": "choice-box-4"
-                    },
-                    {
-                      "id": "choice-text-4"
-                    }
-                  ]
-                },
-                {
-                  "id": "choice-container-5",
-                  "children": [
-                    {
-                      "id": "choice-box-5"
-                    },
-                    {
-                      "id": "choice-text-5"
-                    }
-                  ]
-                },
-                {
-                  "id": "choice-container-6",
-                  "children": [
-                    {
-                      "id": "choice-box-6"
-                    },
-                    {
-                      "id": "choice-text-6"
-                    }
-                  ]
                 }
               ]
             }
           ]
         }
       }
-    }
-  },
-  "story": {
-    "initialSceneId": "scene-prologue"
-  },
-  "scenes": {
-    "tree": [
-      {
-        "id": "default-scenes-folder",
-        "children": [
-          {
-            "id": "scene-prologue"
-          }
-        ]
-      }
-    ],
-    "items": {
-      "default-scenes-folder": {
-        "type": "folder",
-        "name": "Scenes"
-      },
-      "scene-prologue": {
-        "type": "scene",
-        "name": "Prologue",
-        "createdAt": "2024-01-01T00:00:00.000Z",
-        "position": {
-          "x": 0,
-          "y": 0
-        },
-        "sections": {
-          "items": {
-            "section-main": {
-              "name": "Section New",
-              "lines": {
-                "items": {
-                  "line-1": {
-                    "actions": {
-                      "dialogue": {
-                        "layoutId": "simple-dialogue",
-                        "mode": "adv"
-                      },
-                      "screen": {
-                        "resourceId": "default-screen",
-                        "resourceType": "layout"
-                      }
-                    }
-                  },
-                  "line-2": {
-                    "actions": {}
-                  },
-                  "line-3": {
-                    "actions": {}
-                  },
-                  "line-4": {
-                    "actions": {}
-                  },
-                  "line-5": {
-                    "actions": {}
-                  },
-                  "line-6": {
-                    "actions": {}
-                  },
-                  "line-7": {
-                    "actions": {}
-                  },
-                  "line-8": {
-                    "actions": {}
-                  },
-                  "line-9": {
-                    "actions": {}
-                  },
-                  "line-10": {
-                    "actions": {}
-                  },
-                  "line-11": {
-                    "actions": {}
-                  },
-                  "line-12": {
-                    "actions": {}
-                  },
-                  "line-13": {
-                    "actions": {}
-                  },
-                  "line-14": {
-                    "actions": {}
-                  },
-                  "line-15": {
-                    "actions": {}
-                  },
-                  "line-16": {
-                    "actions": {}
-                  },
-                  "line-17": {
-                    "actions": {}
-                  },
-                  "line-18": {
-                    "actions": {}
-                  },
-                  "line-19": {
-                    "actions": {}
-                  },
-                  "line-20": {
-                    "actions": {}
-                  },
-                  "line-21": {
-                    "actions": {}
-                  },
-                  "line-22": {
-                    "actions": {}
-                  },
-                  "line-23": {
-                    "actions": {}
-                  },
-                  "line-24": {
-                    "actions": {}
-                  },
-                  "line-25": {
-                    "actions": {}
-                  },
-                  "line-26": {
-                    "actions": {}
-                  },
-                  "line-27": {
-                    "actions": {}
-                  },
-                  "line-28": {
-                    "actions": {}
-                  },
-                  "line-29": {
-                    "actions": {}
-                  },
-                  "line-30": {
-                    "actions": {}
-                  },
-                  "line-31": {
-                    "actions": {}
-                  },
-                  "line-32": {
-                    "actions": {}
-                  }
-                },
-                "tree": [
-                  {
-                    "id": "line-1"
-                  },
-                  {
-                    "id": "line-2"
-                  },
-                  {
-                    "id": "line-3"
-                  },
-                  {
-                    "id": "line-4"
-                  },
-                  {
-                    "id": "line-5"
-                  },
-                  {
-                    "id": "line-6"
-                  },
-                  {
-                    "id": "line-7"
-                  },
-                  {
-                    "id": "line-8"
-                  },
-                  {
-                    "id": "line-9"
-                  },
-                  {
-                    "id": "line-10"
-                  },
-                  {
-                    "id": "line-11"
-                  },
-                  {
-                    "id": "line-12"
-                  },
-                  {
-                    "id": "line-13"
-                  },
-                  {
-                    "id": "line-14"
-                  },
-                  {
-                    "id": "line-15"
-                  },
-                  {
-                    "id": "line-16"
-                  },
-                  {
-                    "id": "line-17"
-                  },
-                  {
-                    "id": "line-18"
-                  },
-                  {
-                    "id": "line-19"
-                  },
-                  {
-                    "id": "line-20"
-                  },
-                  {
-                    "id": "line-21"
-                  },
-                  {
-                    "id": "line-22"
-                  },
-                  {
-                    "id": "line-23"
-                  },
-                  {
-                    "id": "line-24"
-                  },
-                  {
-                    "id": "line-25"
-                  },
-                  {
-                    "id": "line-26"
-                  },
-                  {
-                    "id": "line-27"
-                  },
-                  {
-                    "id": "line-28"
-                  },
-                  {
-                    "id": "line-29"
-                  },
-                  {
-                    "id": "line-30"
-                  },
-                  {
-                    "id": "line-31"
-                  },
-                  {
-                    "id": "line-32"
-                  }
-                ]
-              }
-            }
-          },
-          "tree": [
+    },
+    "story": {
+      "initialSceneId": "scene-prologue"
+    },
+    "scenes": {
+      "tree": [
+        {
+          "id": "default-scenes-folder",
+          "children": [
             {
-              "id": "section-main"
+              "id": "scene-prologue"
             }
           ]
+        }
+      ],
+      "items": {
+        "default-scenes-folder": {
+          "type": "folder",
+          "name": "Scenes"
+        },
+        "scene-prologue": {
+          "type": "scene",
+          "name": "Prologue",
+          "createdAt": "2024-01-01T00:00:00.000Z",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "sections": {
+            "items": {
+              "section-main": {
+                "name": "Section New",
+                "lines": {
+                  "items": {
+                    "line-1": {
+                      "actions": {
+                        "dialogue": {
+                          "layoutId": "simple-dialogue",
+                          "mode": "adv"
+                        },
+                        "screen": {
+                          "resourceId": "default-screen",
+                          "resourceType": "layout"
+                        }
+                      }
+                    },
+                    "line-2": {
+                      "actions": {}
+                    },
+                    "line-3": {
+                      "actions": {}
+                    },
+                    "line-4": {
+                      "actions": {}
+                    },
+                    "line-5": {
+                      "actions": {}
+                    },
+                    "line-6": {
+                      "actions": {}
+                    },
+                    "line-7": {
+                      "actions": {}
+                    },
+                    "line-8": {
+                      "actions": {}
+                    },
+                    "line-9": {
+                      "actions": {}
+                    },
+                    "line-10": {
+                      "actions": {}
+                    },
+                    "line-11": {
+                      "actions": {}
+                    },
+                    "line-12": {
+                      "actions": {}
+                    },
+                    "line-13": {
+                      "actions": {}
+                    },
+                    "line-14": {
+                      "actions": {}
+                    },
+                    "line-15": {
+                      "actions": {}
+                    },
+                    "line-16": {
+                      "actions": {}
+                    },
+                    "line-17": {
+                      "actions": {}
+                    },
+                    "line-18": {
+                      "actions": {}
+                    },
+                    "line-19": {
+                      "actions": {}
+                    },
+                    "line-20": {
+                      "actions": {}
+                    },
+                    "line-21": {
+                      "actions": {}
+                    },
+                    "line-22": {
+                      "actions": {}
+                    },
+                    "line-23": {
+                      "actions": {}
+                    },
+                    "line-24": {
+                      "actions": {}
+                    },
+                    "line-25": {
+                      "actions": {}
+                    },
+                    "line-26": {
+                      "actions": {}
+                    },
+                    "line-27": {
+                      "actions": {}
+                    },
+                    "line-28": {
+                      "actions": {}
+                    },
+                    "line-29": {
+                      "actions": {}
+                    },
+                    "line-30": {
+                      "actions": {}
+                    },
+                    "line-31": {
+                      "actions": {}
+                    },
+                    "line-32": {
+                      "actions": {}
+                    }
+                  },
+                  "tree": [
+                    {
+                      "id": "line-1"
+                    },
+                    {
+                      "id": "line-2"
+                    },
+                    {
+                      "id": "line-3"
+                    },
+                    {
+                      "id": "line-4"
+                    },
+                    {
+                      "id": "line-5"
+                    },
+                    {
+                      "id": "line-6"
+                    },
+                    {
+                      "id": "line-7"
+                    },
+                    {
+                      "id": "line-8"
+                    },
+                    {
+                      "id": "line-9"
+                    },
+                    {
+                      "id": "line-10"
+                    },
+                    {
+                      "id": "line-11"
+                    },
+                    {
+                      "id": "line-12"
+                    },
+                    {
+                      "id": "line-13"
+                    },
+                    {
+                      "id": "line-14"
+                    },
+                    {
+                      "id": "line-15"
+                    },
+                    {
+                      "id": "line-16"
+                    },
+                    {
+                      "id": "line-17"
+                    },
+                    {
+                      "id": "line-18"
+                    },
+                    {
+                      "id": "line-19"
+                    },
+                    {
+                      "id": "line-20"
+                    },
+                    {
+                      "id": "line-21"
+                    },
+                    {
+                      "id": "line-22"
+                    },
+                    {
+                      "id": "line-23"
+                    },
+                    {
+                      "id": "line-24"
+                    },
+                    {
+                      "id": "line-25"
+                    },
+                    {
+                      "id": "line-26"
+                    },
+                    {
+                      "id": "line-27"
+                    },
+                    {
+                      "id": "line-28"
+                    },
+                    {
+                      "id": "line-29"
+                    },
+                    {
+                      "id": "line-30"
+                    },
+                    {
+                      "id": "line-31"
+                    },
+                    {
+                      "id": "line-32"
+                    }
+                  ]
+                }
+              }
+            },
+            "tree": [
+              {
+                "id": "section-main"
+              }
+            ]
+          }
         }
       }
     }
