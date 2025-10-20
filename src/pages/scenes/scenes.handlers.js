@@ -148,21 +148,12 @@ export const selectSelectedItemId = ({ state }) => {
 };
 
 export const handleWhiteboardItemPositionUpdating = async (deps, payload) => {
-  console.log("handleWhiteboardItemPositionChanged called!");
   const { store, render } = deps;
   const { itemId, x, y } = payload._event.detail;
-
-  console.log("Updating item position:", { itemId, x, y });
 
   // Only update local whiteboard state for real-time feedback
   // Don't update repository during drag (too expensive)
   store.updateItemPosition({ itemId, x, y });
-
-  // Check if the update was applied
-  const updatedItems = store.selectWhiteboardItems();
-  const updatedItem = updatedItems.find((item) => item.id === itemId);
-  console.log("Updated item:", updatedItem);
-
   render();
 };
 
