@@ -539,253 +539,253 @@
           ]
         }
       }
-    },
-    "story": {
-      "initialSceneId": "scene-prologue"
-    },
-    "scenes": {
-      "tree": [
-        {
-          "id": "default-scenes-folder",
-          "children": [
-            {
-              "id": "scene-prologue"
-            }
-          ]
-        }
-      ],
-      "items": {
-        "default-scenes-folder": {
-          "type": "folder",
-          "name": "Scenes"
+    }
+  },
+  "story": {
+    "initialSceneId": "scene-prologue"
+  },
+  "scenes": {
+    "tree": [
+      {
+        "id": "default-scenes-folder",
+        "children": [
+          {
+            "id": "scene-prologue"
+          }
+        ]
+      }
+    ],
+    "items": {
+      "default-scenes-folder": {
+        "type": "folder",
+        "name": "Scenes"
+      },
+      "scene-prologue": {
+        "type": "scene",
+        "name": "Prologue",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "position": {
+          "x": 0,
+          "y": 0
         },
-        "scene-prologue": {
-          "type": "scene",
-          "name": "Prologue",
-          "createdAt": "2024-01-01T00:00:00.000Z",
-          "position": {
-            "x": 0,
-            "y": 0
-          },
-          "sections": {
-            "items": {
-              "section-main": {
-                "name": "Section New",
-                "lines": {
-                  "items": {
-                    "line-1": {
-                      "actions": {
-                        "dialogue": {
-                          "layoutId": "simple-dialogue",
-                          "mode": "adv"
-                        },
-                        "screen": {
-                          "resourceId": "default-screen",
-                          "resourceType": "layout"
-                        }
+        "sections": {
+          "items": {
+            "section-main": {
+              "name": "Section New",
+              "lines": {
+                "items": {
+                  "line-1": {
+                    "actions": {
+                      "dialogue": {
+                        "layoutId": "simple-dialogue",
+                        "mode": "adv"
+                      },
+                      "screen": {
+                        "resourceId": "default-screen",
+                        "resourceType": "layout"
                       }
-                    },
-                    "line-2": {
-                      "actions": {}
-                    },
-                    "line-3": {
-                      "actions": {}
-                    },
-                    "line-4": {
-                      "actions": {}
-                    },
-                    "line-5": {
-                      "actions": {}
-                    },
-                    "line-6": {
-                      "actions": {}
-                    },
-                    "line-7": {
-                      "actions": {}
-                    },
-                    "line-8": {
-                      "actions": {}
-                    },
-                    "line-9": {
-                      "actions": {}
-                    },
-                    "line-10": {
-                      "actions": {}
-                    },
-                    "line-11": {
-                      "actions": {}
-                    },
-                    "line-12": {
-                      "actions": {}
-                    },
-                    "line-13": {
-                      "actions": {}
-                    },
-                    "line-14": {
-                      "actions": {}
-                    },
-                    "line-15": {
-                      "actions": {}
-                    },
-                    "line-16": {
-                      "actions": {}
-                    },
-                    "line-17": {
-                      "actions": {}
-                    },
-                    "line-18": {
-                      "actions": {}
-                    },
-                    "line-19": {
-                      "actions": {}
-                    },
-                    "line-20": {
-                      "actions": {}
-                    },
-                    "line-21": {
-                      "actions": {}
-                    },
-                    "line-22": {
-                      "actions": {}
-                    },
-                    "line-23": {
-                      "actions": {}
-                    },
-                    "line-24": {
-                      "actions": {}
-                    },
-                    "line-25": {
-                      "actions": {}
-                    },
-                    "line-26": {
-                      "actions": {}
-                    },
-                    "line-27": {
-                      "actions": {}
-                    },
-                    "line-28": {
-                      "actions": {}
-                    },
-                    "line-29": {
-                      "actions": {}
-                    },
-                    "line-30": {
-                      "actions": {}
-                    },
-                    "line-31": {
-                      "actions": {}
-                    },
-                    "line-32": {
-                      "actions": {}
                     }
                   },
-                  "tree": [
-                    {
-                      "id": "line-1"
-                    },
-                    {
-                      "id": "line-2"
-                    },
-                    {
-                      "id": "line-3"
-                    },
-                    {
-                      "id": "line-4"
-                    },
-                    {
-                      "id": "line-5"
-                    },
-                    {
-                      "id": "line-6"
-                    },
-                    {
-                      "id": "line-7"
-                    },
-                    {
-                      "id": "line-8"
-                    },
-                    {
-                      "id": "line-9"
-                    },
-                    {
-                      "id": "line-10"
-                    },
-                    {
-                      "id": "line-11"
-                    },
-                    {
-                      "id": "line-12"
-                    },
-                    {
-                      "id": "line-13"
-                    },
-                    {
-                      "id": "line-14"
-                    },
-                    {
-                      "id": "line-15"
-                    },
-                    {
-                      "id": "line-16"
-                    },
-                    {
-                      "id": "line-17"
-                    },
-                    {
-                      "id": "line-18"
-                    },
-                    {
-                      "id": "line-19"
-                    },
-                    {
-                      "id": "line-20"
-                    },
-                    {
-                      "id": "line-21"
-                    },
-                    {
-                      "id": "line-22"
-                    },
-                    {
-                      "id": "line-23"
-                    },
-                    {
-                      "id": "line-24"
-                    },
-                    {
-                      "id": "line-25"
-                    },
-                    {
-                      "id": "line-26"
-                    },
-                    {
-                      "id": "line-27"
-                    },
-                    {
-                      "id": "line-28"
-                    },
-                    {
-                      "id": "line-29"
-                    },
-                    {
-                      "id": "line-30"
-                    },
-                    {
-                      "id": "line-31"
-                    },
-                    {
-                      "id": "line-32"
-                    }
-                  ]
-                }
+                  "line-2": {
+                    "actions": {}
+                  },
+                  "line-3": {
+                    "actions": {}
+                  },
+                  "line-4": {
+                    "actions": {}
+                  },
+                  "line-5": {
+                    "actions": {}
+                  },
+                  "line-6": {
+                    "actions": {}
+                  },
+                  "line-7": {
+                    "actions": {}
+                  },
+                  "line-8": {
+                    "actions": {}
+                  },
+                  "line-9": {
+                    "actions": {}
+                  },
+                  "line-10": {
+                    "actions": {}
+                  },
+                  "line-11": {
+                    "actions": {}
+                  },
+                  "line-12": {
+                    "actions": {}
+                  },
+                  "line-13": {
+                    "actions": {}
+                  },
+                  "line-14": {
+                    "actions": {}
+                  },
+                  "line-15": {
+                    "actions": {}
+                  },
+                  "line-16": {
+                    "actions": {}
+                  },
+                  "line-17": {
+                    "actions": {}
+                  },
+                  "line-18": {
+                    "actions": {}
+                  },
+                  "line-19": {
+                    "actions": {}
+                  },
+                  "line-20": {
+                    "actions": {}
+                  },
+                  "line-21": {
+                    "actions": {}
+                  },
+                  "line-22": {
+                    "actions": {}
+                  },
+                  "line-23": {
+                    "actions": {}
+                  },
+                  "line-24": {
+                    "actions": {}
+                  },
+                  "line-25": {
+                    "actions": {}
+                  },
+                  "line-26": {
+                    "actions": {}
+                  },
+                  "line-27": {
+                    "actions": {}
+                  },
+                  "line-28": {
+                    "actions": {}
+                  },
+                  "line-29": {
+                    "actions": {}
+                  },
+                  "line-30": {
+                    "actions": {}
+                  },
+                  "line-31": {
+                    "actions": {}
+                  },
+                  "line-32": {
+                    "actions": {}
+                  }
+                },
+                "tree": [
+                  {
+                    "id": "line-1"
+                  },
+                  {
+                    "id": "line-2"
+                  },
+                  {
+                    "id": "line-3"
+                  },
+                  {
+                    "id": "line-4"
+                  },
+                  {
+                    "id": "line-5"
+                  },
+                  {
+                    "id": "line-6"
+                  },
+                  {
+                    "id": "line-7"
+                  },
+                  {
+                    "id": "line-8"
+                  },
+                  {
+                    "id": "line-9"
+                  },
+                  {
+                    "id": "line-10"
+                  },
+                  {
+                    "id": "line-11"
+                  },
+                  {
+                    "id": "line-12"
+                  },
+                  {
+                    "id": "line-13"
+                  },
+                  {
+                    "id": "line-14"
+                  },
+                  {
+                    "id": "line-15"
+                  },
+                  {
+                    "id": "line-16"
+                  },
+                  {
+                    "id": "line-17"
+                  },
+                  {
+                    "id": "line-18"
+                  },
+                  {
+                    "id": "line-19"
+                  },
+                  {
+                    "id": "line-20"
+                  },
+                  {
+                    "id": "line-21"
+                  },
+                  {
+                    "id": "line-22"
+                  },
+                  {
+                    "id": "line-23"
+                  },
+                  {
+                    "id": "line-24"
+                  },
+                  {
+                    "id": "line-25"
+                  },
+                  {
+                    "id": "line-26"
+                  },
+                  {
+                    "id": "line-27"
+                  },
+                  {
+                    "id": "line-28"
+                  },
+                  {
+                    "id": "line-29"
+                  },
+                  {
+                    "id": "line-30"
+                  },
+                  {
+                    "id": "line-31"
+                  },
+                  {
+                    "id": "line-32"
+                  }
+                ]
               }
-            },
-            "tree": [
-              {
-                "id": "section-main"
-              }
-            ]
-          }
+            }
+          },
+          "tree": [
+            {
+              "id": "section-main"
+            }
+          ]
         }
       }
     }
