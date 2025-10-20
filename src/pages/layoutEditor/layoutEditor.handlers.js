@@ -1050,7 +1050,11 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   if (!selectedItem || !selectedItem.eventPayload?.actions) return;
 
   // Delete the action from the item's actions
-  delete selectedItem.eventPayload.actions[actionType];
+  if (actionType === "dialogue") {
+    selectedItem.eventPayload.actions[actionType].clear = true;
+  } else {
+    delete selectedItem.eventPayload.actions[actionType];
+  }
 
   // Update the item in the store
   store.updateSelectedItem(selectedItem);

@@ -35,9 +35,10 @@ export const handleSubmitClick = (deps) => {
   const dialogue = {
     mode: "adv",
   };
-  if (selectedLayoutId && selectedLayoutId !== "") {
+  if (!selectedLayoutId) {
     dialogue.clear = true;
   }
+  dialogue.layoutId = selectedLayoutId;
   dialogue.characterId = selectedCharacterId;
 
   dispatchEvent(
