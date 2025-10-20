@@ -350,6 +350,8 @@ export const selectRenderState = ({ state }) => {
     },
   });
 
+  console.log("renderState", renderState);
+
   return renderState;
 };
 

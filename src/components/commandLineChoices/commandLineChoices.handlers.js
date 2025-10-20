@@ -1,27 +1,19 @@
 export const handleBeforeMount = (deps) => {
-  const { store, render, props } = deps;
+  const { store, props } = deps;
+  store.setItems({ items: props.choice?.items || [] });
+  store.setSelectedLayoutId({
+    layoutId: props.choice?.layoutId,
+  });
+};
 
-  const choicesData = props?.choice;
-  if (choicesData) {
-    if (choicesData.items && choicesData.items.length > 0) {
-      const currentItems = store.selectItems();
-      currentItems.length = 0; // Clear existing
-      choicesData.items.forEach((item) => {
-        currentItems.push({
-          content: item.content,
-          action: item.action || { type: "continue" },
-        });
-      });
-    }
-
-    // Set selected layout
-    if (choicesData.layoutId && choicesData.layoutId !== "") {
-      store.setSelectedLayoutId({
-        layoutId: choicesData.layoutId,
-      });
-    }
-  }
-
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, router, store, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const { scenes } = repository.getState();
+  store.setScenes({
+    scenes,
+  });
   render();
 };
 
@@ -36,31 +28,14 @@ export const handleAddChoiceClick = (deps) => {
 export const handleChoiceClick = (deps, payload) => {
   const { store, render } = deps;
 
-  try {
-    const index = parseInt(
-      payload._event.currentTarget.getAttribute("data-index"),
-    );
+  const index = parseInt(
+    payload._event.currentTarget.getAttribute("data-index"),
+  );
 
-    store.setMode("editChoice");
-    store.setEditingIndex(index);
+  store.setMode("editChoice");
+  store.setEditingIndex(index);
 
-    // Validate state using selectors before rendering
-    const mode = store.selectMode();
-    const editForm = store.selectEditForm();
-
-    if (mode === "editChoice" && editForm) {
-      render();
-    } else {
-      console.error(
-        "[handleChoiceClick] Invalid state for rendering - mode:",
-        mode,
-        "editForm:",
-        editForm,
-      );
-    }
-  } catch (error) {
-    console.error("[handleChoiceClick] Error:", error);
-  }
+  render();
 };
 
 export const handleChoiceContextMenu = (deps, payload) => {
@@ -99,14 +74,6 @@ export const handleSaveChoiceClick = (deps) => {
   render();
 };
 
-// export const handleChoiceFormInput = (deps, payload) => {
-//   const { store, render } = deps;
-//   const { name, fieldValue } = payload._event.detail;
-//
-//   store.updateEditForm({ field: name, value: fieldValue });
-//   render();
-// };
-
 export const handleChoiceFormChange = (deps, payload) => {
   const { store, render } = deps;
   const { name, fieldValue } = payload._event.detail;
@@ -124,11 +91,12 @@ export const handleChoiceItemClick = (deps) => {
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const items = store.selectItems();
+  console.log("items", items);
   const selectedLayoutId = store.selectSelectedLayoutId();
 
   // Create choices object with new structure
   const choicesData = {
-    items: items.map((item) => ({ content: item.content })),
+    items,
   };
   if (selectedLayoutId && selectedLayoutId !== "") {
     choicesData.layoutId = selectedLayoutId;

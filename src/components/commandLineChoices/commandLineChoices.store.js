@@ -1,3 +1,5 @@
+import { toFlatItems } from "../../deps/repository";
+
 const CHOICE_FORM_TEMPLATE = Object.freeze({
   title: "Edit Choice",
   fields: [
@@ -15,33 +17,30 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
     //   required: false,
     //   placeholder: "Variable updates",
     // },
-    // {
-    //   name: "actionType",
-    //   inputType: "select",
-    //   label: "Action",
-    //   required: true,
-    //   options: [
-    //     { value: "continue", label: "Continue (Do Nothing)" },
-    //     { value: "moveToScene", label: "Move to Scene" },
-    //     { value: "moveToSection", label: "Move to Section" },
-    //   ],
-    // },
-    // {
-    //   name: "sceneId",
-    //   inputType: "inputText",
-    //   label: "Target Scene ID",
-    //   required: false,
-    //   placeholder: "Scene ID",
-    //   condition: { field: "actionType", value: "moveToScene" },
-    // },
-    // {
-    //   name: "sectionId",
-    //   inputType: "inputText",
-    //   label: "Target Section ID",
-    //   required: false,
-    //   placeholder: "Section ID",
-    //   condition: { field: "actionType", value: "moveToSection" },
-    // },
+    {
+      name: "actionType",
+      inputType: "select",
+      label: "Action",
+      required: true,
+      options: [
+        { value: "nextLine", label: "Continue (Do Nothing)" },
+        { value: "sectionTransition", label: "Move to Section" },
+      ],
+    },
+    {
+      $when: `values.actionType == 'sectionTransition'`,
+      name: "sceneId",
+      inputType: "select",
+      label: "Scene",
+      options: "${scenes}",
+    },
+    {
+      $when: `values.actionType == 'sectionTransition'`,
+      name: "sectionId",
+      inputType: "select",
+      label: "Section",
+      options: "${sections}",
+    },
   ],
 });
 
@@ -54,11 +53,10 @@ export const createInitialState = () => ({
   selectedLayoutId: "",
   editingIndex: -1,
   editForm: {
-    content: "",
-    variables: "", // placeholder for now
-    actionType: "continue", // "continue", "moveToScene", "moveToSection"
-    sceneId: "",
-    sectionId: "",
+    // content: "",
+    actionType: "nextLine",
+    // sceneId,
+    // sectionId,
   },
   choiceFormTemplate: CHOICE_FORM_TEMPLATE,
   dropdownMenu: {
@@ -66,6 +64,10 @@ export const createInitialState = () => ({
     position: { x: 0, y: 0 },
     choiceIndex: null,
     items: [{ label: "Delete", type: "item", value: "delete" }],
+  },
+  scenes: {
+    items: {},
+    tree: [],
   },
 });
 
@@ -80,16 +82,20 @@ export const setEditingIndex = (state, index) => {
     const choice = state.items[index];
 
     // Ensure all values are strings and properly escaped
-    state.editForm.content = String(choice.content || "");
-    state.editForm.variables = ""; // placeholder
-    state.editForm.actionType = String(choice.action?.type || "continue");
-    state.editForm.sceneId = String(choice.action?.sceneId || "");
-    state.editForm.sectionId = String(choice.action?.sectionId || "");
+    state.editForm.content = choice.content || "";
+    if (choice.events?.click?.actions?.sectionTransition) {
+      state.editForm.actionType = "sectionTransition";
+      state.editForm.sceneId =
+        choice.events?.click?.actions?.sectionTransition?.sceneId;
+      state.editForm.sectionId =
+        choice.events?.click?.actions?.sectionTransition?.sectionId;
+    } else if (choice.events?.click?.actions?.nextLine) {
+      state.editForm.actionType = "nextLine";
+    }
   } else {
     // New choice or reset
 
     state.editForm.content = "";
-    state.editForm.variables = "";
     state.editForm.actionType = "continue";
     state.editForm.sceneId = "";
     state.editForm.sectionId = "";
@@ -113,19 +119,31 @@ export const removeChoice = (state, index) => {
   }
 };
 
+export const setScenes = (state, payload) => {
+  const { scenes } = payload;
+  state.scenes = scenes;
+};
+
 export const saveChoice = (state) => {
   const { editingIndex, editForm } = state;
 
-  // const action = { type: editForm.actionType };
-  // if (editForm.actionType === "moveToScene" && editForm.sceneId) {
-  //   action.sceneId = editForm.sceneId;
-  // } else if (editForm.actionType === "moveToSection" && editForm.sectionId) {
-  //   action.sectionId = editForm.sectionId;
-  // }
+  const actions = {};
+  if (editForm.actionType === "nextLine") {
+    actions.nextLine = {};
+  } else if (editForm.actionType === "sectionTransition") {
+    actions.sectionTransition = {
+      sceneId: editForm.sceneId,
+      sectionId: editForm.sectionId,
+    };
+  }
 
   const choiceData = {
     content: editForm.content,
-    // action,
+    events: {
+      click: {
+        actions: actions,
+      },
+    },
   };
 
   if (editingIndex >= 0) {
@@ -161,6 +179,11 @@ export const showDropdownMenu = (state, { position, choiceIndex }) => {
 export const hideDropdownMenu = (state) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.choiceIndex = null;
+};
+
+export const setItems = (state, payload) => {
+  const { items } = payload;
+  state.items = items;
 };
 
 export const selectDropdownMenuChoiceIndex = ({ state }) => {
@@ -201,6 +224,31 @@ const form = {
 
 export const selectViewData = ({ state, props }) => {
   const layouts = props?.layouts || [];
+  const allScenes = toFlatItems(state.scenes).filter(
+    (item) => item.type === "scene",
+  );
+  const scenes = allScenes.map((item) => {
+    return {
+      label: item.name,
+      value: item.id,
+    };
+  });
+
+  const selectedScene = allScenes.find(
+    (scene) => scene.id === state.editForm.sceneId,
+  );
+
+  let sections = [];
+  if (selectedScene) {
+    sections = toFlatItems(selectedScene.sections).map((item) => {
+      return {
+        label: item.name,
+        value: item.id,
+      };
+    });
+  }
+
+  console.log("selectedScene", selectedScene);
 
   const layoutOptions = layouts
     .filter((layout) => layout.layoutType === "choice")
@@ -250,21 +298,30 @@ export const selectViewData = ({ state, props }) => {
     });
   }
 
+  console.log("editForm", state.editForm);
+
   // Create context for form template
   const context = {
     layoutOptions: layoutOptions,
   };
 
+  const editFormContext = {
+    values: state.editForm,
+    scenes,
+    sections,
+  };
+
   // Create defaultValues with items data
   const defaultValues = {
-    layoutId: state?.selectedLayoutId || "",
+    layoutId: state?.selectedLayoutId,
     items: processedItems,
     content: state?.editForm?.content || "",
-    variables: state?.editForm?.variables || "",
-    actionType: state?.editForm?.actionType || "continue",
-    sceneId: state?.editForm?.sceneId || "",
-    sectionId: state?.editForm?.sectionId || "",
+    actionType: state?.editForm?.actionType,
+    sceneId: state?.editForm?.sceneId,
+    sectionId: state?.editForm?.sectionId,
   };
+
+  console.log("editFormContext", editFormContext);
 
   const viewData = {
     mode: state?.mode || "list",
@@ -272,13 +329,8 @@ export const selectViewData = ({ state, props }) => {
     layouts: layoutOptions,
     selectedLayoutId: state?.selectedLayoutId || "",
     editingIndex: state?.editingIndex ?? -1,
-    editForm: state?.editForm || {
-      content: "",
-      variables: "",
-      actionType: "continue",
-      sceneId: "",
-      sectionId: "",
-    },
+    editForm: state?.editForm,
+    editFormContext,
     defaultValues,
     actionTypeOptions,
     editModeTitle,
