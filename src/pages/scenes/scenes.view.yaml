@@ -13,6 +13,8 @@ refs:
     eventListeners:
       item-position-changed:
         handler: handleWhiteboardItemPositionChanged
+      item-position-updating:
+        handler: handleWhiteboardItemPositionUpdating
       item-selected:
         handler: handleWhiteboardItemSelected
       item-double-click:

@@ -1,4 +1,4 @@
-import { drawArrowBetwweenScenes } from "../../utils/arrowUtils";
+import { drawArrowBetweenScenes } from "../../utils/arrowUtils";
 
 // Natural zoom levels
 const ZOOM_LEVELS = [0.2, 0.3, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -196,7 +196,7 @@ export const selectViewData = ({ state, props }) => {
       sourceItem.transitions.forEach((targetSceneId) => {
         const targetItem = items.find((item) => item.id === targetSceneId);
         if (targetItem) {
-          const arrowData = drawArrowBetwweenScenes(sourceItem, targetItem);
+          const arrowData = drawArrowBetweenScenes(sourceItem, targetItem);
           // Add unique identifier for DOM reference
           arrowData.id = `arrow-${sourceItem.id}-to-${targetSceneId}`;
           arrowsList.push(arrowData);
