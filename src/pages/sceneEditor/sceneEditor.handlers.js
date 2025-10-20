@@ -188,28 +188,17 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   // If this is a dialogue submission, preserve the existing content
   if (submissionData.dialogue) {
-    const { scenes } = repository.getState();
-    const scene = toFlatItems(scenes)
-      .filter((item) => item.type === "scene")
-      .find((item) => item.id === sceneId);
-
-    if (scene) {
-      const section = toFlatItems(scene.sections).find(
-        (s) => s.id === sectionId,
-      );
-      if (section) {
-        const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-        if (line && line.actions?.dialogue?.content) {
-          // Preserve existing text
-          submissionData = {
-            ...submissionData,
-            dialogue: {
-              ...submissionData.dialogue,
-              content: line.actions.dialogue.content,
-            },
-          };
-        }
-      }
+    const line = store.selectSelectedLine();
+    if (line && line.actions?.dialogue?.content) {
+      // Preserve existing text
+      submissionData = {
+        ...submissionData,
+        dialogue: {
+          content: line.actions.dialogue.content,
+          layoutId: line.actions.dialogue.layoutId,
+          ...submissionData.dialogue,
+        },
+      };
     }
   }
 
@@ -955,7 +944,13 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   // Create a new actions object without the action to delete
   const newActions = { ...selectedLine.actions };
   if (newActions.hasOwnProperty(actionType)) {
-    delete newActions[actionType];
+    if (actionType === "dialogue") {
+      newActions[actionType] = {
+        content: newActions[actionType].content,
+      };
+    } else {
+      delete newActions[actionType];
+    }
   }
   // Create updated line object
   const updatedLine = {
@@ -1099,8 +1094,12 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
     return;
   }
   // Create a new actions object without the action to delete
-  const newActions = { ...selectedLine.actions };
-  newActions[actionType] = {};
+  const newActions = structuredClone(selectedLine.actions);
+  if (actionType === "dialogue") {
+    newActions[actionType].clear = true;
+  } else {
+    newActions[actionType] = {};
+  }
   // Create updated line object
   const updatedLine = {
     ...selectedLine,
