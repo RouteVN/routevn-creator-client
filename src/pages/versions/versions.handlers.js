@@ -101,6 +101,12 @@ export const handleDownloadZipClick = async (deps, payload) => {
     globalUI,
   } = deps;
 
+  // Create bundle with transformed data
+  globalUI.showAlert({
+    message: `Please wait while the bundle is being created...`,
+    title: "Bundle in progress",
+  });
+
   // Get versionId from the button or data attributes
   const versionId = payload._event.currentTarget.id.replace(
     "version-download-",
@@ -167,14 +173,33 @@ export const handleDownloadZipClick = async (deps, payload) => {
     `✓ Bundle created: package.vnbundle (${(bundle.length / 1024).toFixed(1)} KB)`,
   );
 
-  // Create and download ZIP with bundle and static files
-  await bundleService.createDistributionZip(bundle, zipName);
-
-  console.log(`✓ Distribution ZIP created: ${zipName}.zip`);
-  globalUI.showAlert({
-    message: `Bundle ${zipName}.zip created and downloaded. You can find it in your Downloads folder.`,
-    title: "Success",
-  });
+  // Create and download ZIP with bundle and static files using save dialog
+  try {
+    const savedPath = await bundleService.createDistributionZip(
+      bundle,
+      zipName,
+    );
+    if (savedPath) {
+      console.log(`✓ Distribution ZIP created and saved to: ${savedPath}`);
+      globalUI.showAlert({
+        message: `Bundle ${zipName}.zip created and saved to: ${savedPath}`,
+        title: "Success",
+      });
+    } else {
+      // User cancelled the dialog
+      console.log("Save dialog cancelled by user");
+      globalUI.showAlert({
+        message: "Save operation was cancelled.",
+        title: "Cancelled",
+      });
+    }
+  } catch (error) {
+    console.error("Error saving ZIP with dialog:", error);
+    globalUI.showAlert({
+      message: `Failed to save ZIP file: ${error.message}`,
+      title: "Error",
+    });
+  }
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {

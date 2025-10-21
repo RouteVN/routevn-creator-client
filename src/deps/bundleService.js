@@ -6,6 +6,8 @@
  */
 
 import JSZip from "jszip";
+import { writeFile } from "@tauri-apps/plugin-fs";
+import { createTauriDialog } from "./tauriDialog.js";
 
 export const createBundleService = () => {
   /**
@@ -173,57 +175,91 @@ export const createBundleService = () => {
   };
 
   /**
-   * Downloads bundle data as a file
+   * Downloads bundle data as a file with path selection (Tauri only)
    * @param {Uint8Array} bundle - Bundle data
-   * @param {string} filename - Download filename
+   * @param {string} filename - Default filename
+   * @param {Object} options - Download options
    */
-  const downloadBundle = (bundle, filename) => {
-    const blob = new Blob([bundle], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
+  const downloadBundle = async (bundle, filename, options = {}) => {
+    try {
+      const dialog = createTauriDialog();
+
+      const selectedPath = await dialog.saveFileDialog({
+        title: options.title || "Save Bundle File",
+        defaultPath: filename,
+        filters: [
+          {
+            name: "Visual Novel Bundle",
+            extensions: ["vnbundle"],
+          },
+        ],
+      });
+
+      if (selectedPath) {
+        await writeFile(selectedPath, bundle);
+        return selectedPath;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error saving bundle with dialog:", error);
+      throw error;
+    }
   };
 
   /**
-   * Creates a ZIP file containing the bundle and static files
+   * Creates a ZIP file containing the bundle and static files with path selection (Tauri only)
    * @param {Uint8Array} bundle - Bundle data
    * @param {string} zipName - Name for the ZIP file (without extension)
+   * @param {Object} options - Options for the save dialog
    */
-  const createDistributionZip = async (bundle, zipName) => {
-    const zip = new JSZip();
-
-    // Add package.vnbundle
-    zip.file("package.vnbundle", bundle);
-
-    // Fetch and add static bundle files
+  const createDistributionZip = async (bundle, zipName, options = {}) => {
     try {
-      // Fetch index.html
-      const indexResponse = await fetch("/bundle/index.html");
-      const indexContent = await indexResponse.text();
-      zip.file("index.html", indexContent);
+      const zip = new JSZip();
 
-      // Fetch main.js
-      const mainJsResponse = await fetch("/bundle/main.js");
-      const mainJsContent = await mainJsResponse.text();
-      zip.file("main.js", mainJsContent);
+      // Add package.vnbundle
+      zip.file("package.vnbundle", bundle);
+
+      // Fetch and add static bundle files
+      try {
+        // Fetch index.html
+        const indexResponse = await fetch("/bundle/index.html");
+        const indexContent = await indexResponse.text();
+        zip.file("index.html", indexContent);
+
+        // Fetch main.js
+        const mainJsResponse = await fetch("/bundle/main.js");
+        const mainJsContent = await mainJsResponse.text();
+        zip.file("main.js", mainJsContent);
+      } catch (error) {
+        console.error("Failed to fetch static bundle files:", error);
+        // If static files can't be fetched, still create zip with just the bundle
+      }
+
+      // Generate ZIP file
+      const zipBlob = await zip.generateAsync({ type: "uint8array" });
+
+      const dialog = createTauriDialog();
+
+      const selectedPath = await dialog.saveFileDialog({
+        title: options.title || "Save Distribution ZIP",
+        defaultPath: `${zipName}.zip`,
+        filters: [
+          {
+            name: "ZIP Archive",
+            extensions: ["zip"],
+          },
+        ],
+      });
+
+      if (selectedPath) {
+        await writeFile(selectedPath, zipBlob);
+        return selectedPath;
+      }
+      return null;
     } catch (error) {
-      console.error("Failed to fetch static bundle files:", error);
-      // If static files can't be fetched, still create zip with just the bundle
+      console.error("Error saving distribution ZIP with dialog:", error);
+      throw error;
     }
-
-    // Generate ZIP file
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-
-    // Download the ZIP
-    const url = URL.createObjectURL(zipBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${zipName}.zip`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   // Public API
