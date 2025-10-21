@@ -181,17 +181,10 @@ export const handleDownloadZipClick = async (deps, payload) => {
     );
     if (savedPath) {
       console.log(`✓ Distribution ZIP created and saved to: ${savedPath}`);
-      globalUI.showAlert({
-        message: `Bundle ${zipName}.zip created and saved to: ${savedPath}`,
-        title: "Success",
-      });
+      globalUI.closeAll();
     } else {
       // User cancelled the dialog
       console.log("Save dialog cancelled by user");
-      globalUI.showAlert({
-        message: "Save operation was cancelled.",
-        title: "Cancelled",
-      });
     }
   } catch (error) {
     console.error("Error saving ZIP with dialog:", error);
