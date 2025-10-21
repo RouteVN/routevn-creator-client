@@ -195,7 +195,7 @@ export const selectViewData = ({ state, props }) => {
     if (sourceItem.transitions && sourceItem.transitions.length > 0) {
       sourceItem.transitions.forEach((targetSceneId) => {
         const targetItem = items.find((item) => item.id === targetSceneId);
-        if (targetItem) {
+        if (targetItem && targetItem.id !== sourceItem.id) {
           const arrowData = drawArrowBetweenScenes(sourceItem, targetItem);
           // Add unique identifier for DOM reference
           arrowData.id = `arrow-${sourceItem.id}-to-${targetSceneId}`;
