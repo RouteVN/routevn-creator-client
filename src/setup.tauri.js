@@ -21,6 +21,7 @@ import { createProjectsService } from "./deps/projectsService";
 import createUpdater from "./deps/tauriUpdater";
 import { createBundleService } from "./deps/bundleService";
 import { getVersion } from "@tauri-apps/api/app";
+import { setupCloseListener } from "./deps/windowClose";
 
 // Tauri-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -137,6 +138,8 @@ const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
 
 const updaterService = createUpdater(globalUI);
+
+setupCloseListener({ globalUI });
 
 const componentDependencies = {
   httpClient,
