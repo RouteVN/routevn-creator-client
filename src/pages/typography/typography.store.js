@@ -110,7 +110,7 @@ export const createInitialState = () => ({
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
-  selectedItemId: null,
+  selectedItemId: undefined,
   searchQuery: "",
   context: {
     typographyPreview: {
@@ -120,9 +120,9 @@ export const createInitialState = () => ({
 
   // Dialog state
   isDialogOpen: false,
-  targetGroupId: null,
+  targetGroupId: undefined,
   editMode: false,
-  editingItemId: null,
+  editingItemId: undefined,
 
   // Add color dialog state
   isAddColorDialogOpen: false,
@@ -134,7 +134,7 @@ export const createInitialState = () => ({
 
   // Add font dialog state
   isAddFontDialogOpen: false,
-  selectedFontFile: null,
+  selectedFontFile: undefined,
   hasSelectedFont: false,
   selectedFontFileName: "",
   dragDropText: "Click or drag font file here",
@@ -147,18 +147,18 @@ export const createInitialState = () => ({
     name: "",
     fontColor: "",
     fontStyle: "",
-    fontSize: null,
-    lineHeight: null,
-    fontWeight: null,
-    previewText: null,
+    fontSize: undefined,
+    lineHeight: undefined,
+    fontWeight: undefined,
+    previewText: undefined,
   },
 
   defaultValues: {
     name: "",
-    fontSize: null,
-    lineHeight: null,
-    fontWeight: null,
-    previewText: null,
+    fontSize: undefined,
+    lineHeight: undefined,
+    fontWeight: undefined,
+    previewText: undefined,
   },
 
   // Context menu items
@@ -213,7 +213,7 @@ export const setEditMode = (state, itemId) => {
 
 export const clearEditMode = (state) => {
   state.editMode = false;
-  state.editingItemId = null;
+  state.editingItemId = undefined;
 };
 
 export const updateFormValues = (state, formData) => {
@@ -225,10 +225,10 @@ export const resetFormValues = (state) => {
     name: "",
     fontColor: "",
     fontStyle: "",
-    fontSize: null,
-    lineHeight: null,
-    fontWeight: null,
-    previewText: null,
+    fontSize: undefined,
+    lineHeight: undefined,
+    fontWeight: undefined,
+    previewText: undefined,
   };
 };
 
@@ -272,7 +272,7 @@ export const openAddFontDialog = (state) => {
 
 export const closeAddFontDialog = (state) => {
   state.isAddFontDialogOpen = false;
-  state.selectedFontFile = null;
+  state.selectedFontFile = undefined;
   state.hasSelectedFont = false;
   state.selectedFontFileName = "";
   state.dragDropText = "Click or drag font file here";
@@ -294,15 +294,15 @@ export const setSelectedFontFile = (state, data) => {
 };
 
 export const clearSelectedFontFile = (state) => {
-  state.selectedFontFile = null;
+  state.selectedFontFile = undefined;
   state.hasSelectedFont = false;
   state.selectedFontFileName = "";
-  state.selectedFontUploadResult = null;
+  state.selectedFontUploadResult = undefined;
   state.dragDropText = "Drop font file here or click to browse";
 };
 
 export const selectSelectedItem = ({ state }) => {
-  if (!state.selectedItemId) return null;
+  if (!state.selectedItemId) return undefined;
   const flatItems = toFlatItems(state.typographyData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };
@@ -341,7 +341,7 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
   // Apply search filter
   const searchQuery = state.searchQuery.toLowerCase().trim();
@@ -365,7 +365,7 @@ export const selectViewData = ({ state }) => {
               children: filteredChildren,
               hasChildren: filteredChildren.length > 0,
             }
-          : null;
+          : undefined;
       })
       .filter(Boolean);
   }
@@ -382,14 +382,14 @@ export const selectViewData = ({ state }) => {
 
   // Helper function to get font data from ID
   const getFontData = (fontId) => {
-    if (!fontId) return { fontFamily: null, fileId: null };
+    if (!fontId) return { fontFamily: undefined, fileId: undefined };
     const fontItems = toFlatItems(state.fontsData);
     const font = fontItems.find(
       (item) => item.type === "font" && item.id === fontId,
     );
     return font
       ? { fontFamily: font.fontFamily, fileId: font.fileId }
-      : { fontFamily: fontId, fileId: null };
+      : { fontFamily: fontId, fileId: undefined };
   };
 
   // Apply selection styling and add typography-specific preview data (collapse state is now handled by groupResourcesView)
@@ -482,7 +482,7 @@ export const selectViewData = ({ state }) => {
       ? flatGroups
           ?.flatMap((group) => group.children || [])
           .find((item) => item.id === state.editingItemId)
-      : null;
+      : undefined;
 
   // Generate dynamic dialog form with dropdown options
   const dialogForm = {
@@ -594,23 +594,23 @@ export const selectViewData = ({ state }) => {
   // Get preview values based on current form values
   const getPreviewColor = () => {
     const colorId = state.currentFormValues.fontColor;
-    if (!colorId) return null;
+    if (!colorId) return undefined;
     try {
       return getColorHex(colorId);
     } catch (error) {
       console.error("Failed to get preview color:", error);
-      return null;
+      return undefined;
     }
   };
 
   const getPreviewFontData = () => {
     const fontId = state.currentFormValues.fontStyle;
-    if (!fontId) return { fontFamily: null, fileId: null };
+    if (!fontId) return { fontFamily: undefined, fileId: undefined };
     try {
       return getFontData(fontId);
     } catch (error) {
       console.error("Failed to get preview font data:", error);
-      return { fontFamily: null, fileId: null };
+      return { fontFamily: undefined, fileId: undefined };
     }
   };
 
@@ -645,6 +645,11 @@ export const selectViewData = ({ state }) => {
     }
   }
 
+  console.log("dialogDefaultValues", {
+    dialogForm,
+    dialogDefaultValues,
+  });
+
   return {
     flatItems,
     flatGroups,
@@ -663,8 +668,8 @@ export const selectViewData = ({ state }) => {
     // Dialog-related data
     isDialogOpen: state.isDialogOpen,
     dialogForm: dialogForm,
-    dialogDefaultValues: dialogDefaultValues,
-    formKey: state.editMode ? `edit-${state.editingItemId}` : "add-typography",
+    dialogDefaultValues,
+    formKey: `${state.selectedItemId}-${state.isDialogOpen || state.isAddFontDialogOpen}`,
 
     // Add color dialog data
     isAddColorDialogOpen: state.isAddColorDialogOpen,
