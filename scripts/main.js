@@ -1,5 +1,5 @@
-import { fileTypeFromBuffer } from "https://cdn.jsdelivr.net/npm/file-type@19.0.0/+esm";
-import createRouteEngine from 'https://cdn.jsdelivr.net/npm/route-engine-js@0.0.2-rc18/+esm'
+import { fileTypeFromBuffer } from "file-type";
+import createRouteEngine from 'route-engine-js'
 import RouteGraphics, {
   SpriteRendererPlugin,
   TextRendererPlugin,
@@ -10,7 +10,7 @@ import RouteGraphics, {
   SliderRendererPlugin,
   KeyframeTransitionPlugin,
   createAssetBufferManager,
-} from "https://cdn.jsdelivr.net/npm/route-graphics@0.0.2-rc30/+esm";
+} from "route-graphics";
 
 async function parseVNBundle(arrayBuffer) {
   const uint8View = new Uint8Array(arrayBuffer);
