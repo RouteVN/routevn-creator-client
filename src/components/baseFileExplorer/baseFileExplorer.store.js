@@ -306,7 +306,9 @@ export const selectViewData = ({ state, props, attrs }) => {
           ],
         },
       }
-    : null;
+    : {
+        fields: [],
+      };
 
   const viewData = {
     ...state,

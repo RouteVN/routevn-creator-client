@@ -481,8 +481,8 @@ export const handleFormActionClick = (deps, payload) => {
   const detail = payload._event.detail;
 
   // Extract action and values from detail (form structure may vary)
-  const action = detail.action || detail.actionId;
-  const values = detail.values || detail.formValues || detail;
+  const action = detail.actionId;
+  const values = detail.formValues;
 
   if (action === "cancel") {
     store.hidePopover();
