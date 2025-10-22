@@ -20,6 +20,38 @@ export const getImageDimensions = (file) => {
   });
 };
 
+export const validateIconDimensions = async (file) => {
+  const dimensions = await getImageDimensions(file);
+
+  if (!dimensions) {
+    return {
+      isValid: false,
+      message: "Unable to read image dimensions",
+    };
+  }
+
+  // Check if image is square
+  if (dimensions.width !== dimensions.height) {
+    return {
+      isValid: false,
+      message: `Image must be square. Current size: ${dimensions.width}x${dimensions.height}`,
+    };
+  }
+
+  // Check minimum size
+  if (dimensions.width < 64 || dimensions.height < 64) {
+    return {
+      isValid: false,
+      message: `Image size must be at least 64x64 pixels. Current size: ${dimensions.width}x${dimensions.height}`,
+    };
+  }
+
+  return {
+    isValid: true,
+    message: null,
+  };
+};
+
 // Audio waveform extraction and processing utilities
 export const extractWaveformData = async (audioFile, samples = 1000) => {
   try {

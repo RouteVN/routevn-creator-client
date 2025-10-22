@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
@@ -197,6 +198,7 @@ export const handleFormExtraEvent = async (deps) => {
     render,
     filePicker,
     fileManagerFactory,
+    globalUI,
   } = deps;
   const { p: projectId } = router.getPayload();
   const repository = await repositoryFactory.getByProject(projectId);
@@ -219,6 +221,12 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const file = files[0];
+
+  const { isValid, message } = await validateIconDimensions(file);
+  if (!isValid) {
+    globalUI.showAlert({ message, title: "Error" });
+    return;
+  }
 
   try {
     // Upload the new avatar file using fileManager
@@ -355,7 +363,8 @@ export const handleDialogFormActionClick = (deps, payload) => {
 };
 
 export const handleDialogAvatarClick = async (deps) => {
-  const { store, render, filePicker, fileManagerFactory, router } = deps;
+  const { store, render, filePicker, fileManagerFactory, router, globalUI } =
+    deps;
 
   try {
     const files = await filePicker.open({
@@ -365,6 +374,12 @@ export const handleDialogAvatarClick = async (deps) => {
 
     if (files.length > 0) {
       const file = files[0];
+      const { isValid, message } = await validateIconDimensions(file);
+      if (!isValid) {
+        globalUI.showAlert({ message, title: "Error" });
+        return;
+      }
+
       const { p } = router.getPayload();
       const fileManager = await fileManagerFactory.getByProject(p);
 
@@ -411,7 +426,8 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditDialogAvatarClick = async (deps) => {
-  const { store, render, filePicker, fileManagerFactory, router } = deps;
+  const { store, render, filePicker, fileManagerFactory, router, globalUI } =
+    deps;
 
   try {
     const files = await filePicker.open({
@@ -421,6 +437,11 @@ export const handleEditDialogAvatarClick = async (deps) => {
 
     if (files.length > 0) {
       const file = files[0];
+      const { isValid, message } = await validateIconDimensions(file);
+      if (!isValid) {
+        globalUI.showAlert({ message, title: "Error" });
+        return;
+      }
       const { p } = router.getPayload();
       const fileManager = await fileManagerFactory.getByProject(p);
 
