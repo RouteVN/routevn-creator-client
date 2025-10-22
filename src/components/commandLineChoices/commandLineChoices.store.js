@@ -10,20 +10,13 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
       required: true,
       placeholder: "Enter choice content",
     },
-    // {
-    //   name: "variables",
-    //   inputType: "inputText",
-    //   label: "Update Variables",
-    //   required: false,
-    //   placeholder: "Variable updates",
-    // },
     {
       name: "actionType",
       inputType: "select",
       label: "Action",
       required: true,
       options: [
-        { value: "nextLine", label: "Continue (Do Nothing)" },
+        { value: "nextLine", label: "Continue" },
         { value: "sectionTransition", label: "Move to Section" },
       ],
     },
@@ -320,8 +313,6 @@ export const selectViewData = ({ state, props }) => {
     sceneId: state?.editForm?.sceneId,
     sectionId: state?.editForm?.sectionId,
   };
-
-  console.log("editFormContext", editFormContext);
 
   const viewData = {
     mode: state?.mode || "list",

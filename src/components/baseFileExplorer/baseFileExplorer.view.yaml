@@ -113,4 +113,4 @@ template:
       - rtgl-view#container w=f h=f:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
-      - rtgl-form#form slot=content .form=form:
+      - rtgl-form#form key=${popover.isOpen} slot=content .form=form:

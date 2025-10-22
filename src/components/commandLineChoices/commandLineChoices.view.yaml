@@ -109,7 +109,7 @@ template:
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-              - rtgl-form#choice-form key=${mode} .form=choiceFormTemplate .defaultValues=editForm .context=editFormContext:
+              - rtgl-form#choice-form .form=choiceFormTemplate .context=editFormContext .defaultValues=editForm:
 
               - rtgl-view flex=1:
               - rtgl-view d=h av=c ah=e w=f g=lg:
