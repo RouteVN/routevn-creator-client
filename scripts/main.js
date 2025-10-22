@@ -204,6 +204,4 @@ const init = async () => {
 
 };
 
-(async () => {
-  await init();
-})();
+await init();
