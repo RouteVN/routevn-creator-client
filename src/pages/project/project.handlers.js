@@ -1,3 +1,5 @@
+import { checkIconDimensions } from "../../utils/fileProcessors";
+
 export const handleAfterMount = async (deps) => {
   const { repositoryFactory, store, render, router } = deps;
   const { p } = router.getPayload();
@@ -27,6 +29,7 @@ export const handleFormExtraEvent = async (deps) => {
     subject,
     render,
     store,
+    globalUI,
   } = deps;
 
   const { p } = router.getPayload();
@@ -43,6 +46,11 @@ export const handleFormExtraEvent = async (deps) => {
     }
 
     const file = files[0];
+
+    if (!(await checkIconDimensions(file, globalUI))) {
+      return;
+    }
+
     // Get fileManager for this project
     const fileManager = await fileManagerFactory.getByProject(p);
     const successfulUploads = await fileManager.upload([file]);

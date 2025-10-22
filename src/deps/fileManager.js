@@ -4,7 +4,7 @@ import {
   extractWaveformData,
   extractVideoThumbnail,
   detectFileType,
-} from "./fileProcessors";
+} from "../utils/fileProcessors";
 
 export const createFileManager = ({ storageAdapter, fontManager }) => {
   // Process file based on its type
