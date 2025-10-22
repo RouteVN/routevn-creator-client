@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { checkIconDimensions } from "../../utils/fileProcessors";
+import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
@@ -222,7 +222,9 @@ export const handleFormExtraEvent = async (deps) => {
 
   const file = files[0];
 
-  if (!(await checkIconDimensions(file, globalUI))) {
+  const { isValid, message } = await validateIconDimensions(file);
+  if (!isValid) {
+    globalUI.showAlert({ message, title: "Error" });
     return;
   }
 
@@ -372,7 +374,9 @@ export const handleDialogAvatarClick = async (deps) => {
 
     if (files.length > 0) {
       const file = files[0];
-      if (!(await checkIconDimensions(file, globalUI))) {
+      const { isValid, message } = await validateIconDimensions(file);
+      if (!isValid) {
+        globalUI.showAlert({ message, title: "Error" });
         return;
       }
 
@@ -433,7 +437,9 @@ export const handleEditDialogAvatarClick = async (deps) => {
 
     if (files.length > 0) {
       const file = files[0];
-      if (!(await checkIconDimensions(file, globalUI))) {
+      const { isValid, message } = await validateIconDimensions(file);
+      if (!isValid) {
+        globalUI.showAlert({ message, title: "Error" });
         return;
       }
       const { p } = router.getPayload();

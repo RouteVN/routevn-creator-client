@@ -20,36 +20,36 @@ export const getImageDimensions = (file) => {
   });
 };
 
-export const checkIconDimensions = async (file, globalUI) => {
+export const validateIconDimensions = async (file) => {
   const dimensions = await getImageDimensions(file);
 
   if (!dimensions) {
-    await globalUI.showAlert({
-      message: "Unable to read image dimensions, please select another image.",
-      title: "Error",
-    });
-    return false;
+    return {
+      isValid: false,
+      message: "Unable to read image dimensions",
+    };
   }
 
   // Check if image is square
   if (dimensions.width !== dimensions.height) {
-    await globalUI.showAlert({
+    return {
+      isValid: false,
       message: `Image must be square. Current size: ${dimensions.width}x${dimensions.height}`,
-      title: "Error",
-    });
-    return false;
+    };
   }
 
   // Check minimum size
   if (dimensions.width < 64 || dimensions.height < 64) {
-    await globalUI.showAlert({
+    return {
+      isValid: false,
       message: `Image size must be at least 64x64 pixels. Current size: ${dimensions.width}x${dimensions.height}`,
-      title: "Error",
-    });
-    return false;
+    };
   }
 
-  return true;
+  return {
+    isValid: true,
+    message: null,
+  };
 };
 
 // Audio waveform extraction and processing utilities

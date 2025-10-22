@@ -1,4 +1,4 @@
-import { checkIconDimensions } from "../../utils/fileProcessors";
+import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
   const { repositoryFactory, store, render, router } = deps;
@@ -47,7 +47,9 @@ export const handleFormExtraEvent = async (deps) => {
 
     const file = files[0];
 
-    if (!(await checkIconDimensions(file, globalUI))) {
+    const { isValid, message } = await validateIconDimensions(file);
+    if (!isValid) {
+      globalUI.showAlert({ message, title: "Error" });
       return;
     }
 
