@@ -1,0 +1,18 @@
+{
+  "name": "bundle",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "build": "esbuild main.js --bundle --format=iife --minify --outfile=bundle.min.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "file-type": "^21.0.0",
+    "route-engine-js": "^0.0.6",
+    "route-graphics": "^0.0.3"
+  }
+}
