@@ -1,3 +1,5 @@
+import { formatDate } from "../../utils/dateUtils";
+
 export const createInitialState = () => ({
   versions: [],
   showVersionForm: false,
@@ -18,7 +20,6 @@ export const openDropdownMenu = (state, { x, y, versionId }) => {
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetVersionId = versionId;
   state.dropdownMenu.items = [
-    { label: "Create Bundle", type: "item", value: "bundle" },
     { label: "Delete", type: "item", value: "delete" },
   ];
 };
@@ -70,8 +71,14 @@ export const selectViewData = ({ state }) => {
     },
   };
 
+  // Format dates in versions for display
+  const formattedVersions = (state.versions || []).map((version) => ({
+    ...version,
+    formattedCreatedAt: formatDate(version.createdAt),
+  }));
+
   return {
-    versions: state.versions || [],
+    versions: formattedVersions,
     showVersionForm: state.showVersionForm || false,
     versionFormFields,
     resourceCategory: "releases",
