@@ -14,6 +14,9 @@ RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
 
 echo "Building for ${BUILD_TYPE}..."
 
+echo "Generating bundle file..."
+bunx esbuild scripts/main.js --bundle --format=esm --minify --outfile=static/bundle/main.js
+
 # Download Rettangoli UI if needed
 echo "Checking Rettangoli UI..."
 if [ ! -f "${RETTANGOLI_FILE}" ]; then

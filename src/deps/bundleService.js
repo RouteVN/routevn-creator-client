@@ -226,10 +226,10 @@ export const createBundleService = () => {
         const indexContent = await indexResponse.text();
         zip.file("index.html", indexContent);
 
-        // Fetch bundle.min.js
-        const mainJsResponse = await fetch("/bundle/bundle.min.js");
+        // Fetch main.js
+        const mainJsResponse = await fetch("/bundle/main.js");
         const mainJsContent = await mainJsResponse.text();
-        zip.file("bundle.min.js", mainJsContent);
+        zip.file("main.js", mainJsContent);
       } catch (error) {
         console.error("Failed to fetch static bundle files:", error);
         // If static files can't be fetched, still create zip with just the bundle
