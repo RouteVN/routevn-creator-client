@@ -189,7 +189,6 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "images",
-    searchPlaceholder: "Search images...",
     uploadText: "Upload Image",
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
     imageHeight,

@@ -184,7 +184,6 @@ export const selectViewData = ({ state }) => {
     fieldResources: state.fieldResources,
     searchQuery: state.searchQuery,
     resourceType: "layouts",
-    searchPlaceholder: "Search layouts...",
     isAddDialogOpen: state.isAddDialogOpen,
     layoutForm: layoutForm,
     layoutFormDefaults: {

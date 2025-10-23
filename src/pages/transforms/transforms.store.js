@@ -43,13 +43,11 @@ export const createInitialState = () => ({
   },
   transformForm: {
     title: "Add Transform",
-    description: "Create a new transform configuration",
     fields: [
       {
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the transform name",
         required: true,
       },
       {
@@ -59,7 +57,6 @@ export const createInitialState = () => ({
         max: 1920,
         step: 1,
         label: "Position X",
-        description: "Enter the X coordinate (e.g., 100, 50%)",
         required: true,
       },
       {
@@ -69,7 +66,6 @@ export const createInitialState = () => ({
         max: 1080,
         step: 1,
         label: "Position Y",
-        description: "Enter the Y coordinate (e.g., 200, 25%)",
         required: true,
       },
       {
@@ -79,7 +75,6 @@ export const createInitialState = () => ({
         max: 3,
         step: 0.1,
         label: "Scale X",
-        description: "Enter the scale factor (e.g., 1, 0.5, 2)",
         required: true,
       },
       {
@@ -89,15 +84,12 @@ export const createInitialState = () => ({
         max: 3,
         step: 0.1,
         label: "Scale Y",
-        description: "Enter the scale factor (e.g., 1, 0.5, 2)",
         required: true,
       },
       {
         name: "anchor",
         inputType: "select",
         label: "Anchor",
-        description:
-          "Enter the anchor point (e.g., center, top-left, bottom-right)",
         placeholder: "Choose a anchor",
         options: [
           { id: "tl", label: "Top Left", value: { anchorX: 0, anchorY: 0 } },
@@ -143,7 +135,9 @@ export const createInitialState = () => ({
         max: 360,
         step: 1,
         label: "Rotation",
-        description: "Enter the rotation in degrees (e.g., 0, 45, 180)",
+        tooltip: {
+          content: "In degrees. 360 is a full rotation",
+        },
         required: true,
       },
     ],
@@ -198,11 +192,9 @@ export const openTransformFormDialog = (state, options = {}) => {
   // Update form based on edit mode
   if (editMode) {
     state.transformForm.title = "Edit Transform";
-    state.transformForm.description = "Edit the transform configuration";
     state.transformForm.actions.buttons[0].content = "Update Transform";
   } else {
     state.transformForm.title = "Add Transform";
-    state.transformForm.description = "Create a new transform configuration";
     state.transformForm.actions.buttons[0].content = "Add Transform";
   }
 
@@ -361,7 +353,6 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "transforms",
-    searchPlaceholder: "Search transforms...",
     // Dialog state for transforms (moved from groupTransformsView)
     isDialogOpen: state.isDialogOpen,
     editMode: state.editMode,

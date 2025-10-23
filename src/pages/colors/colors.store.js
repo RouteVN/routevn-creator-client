@@ -259,6 +259,5 @@ export const selectViewData = ({ state }) => {
     addForm,
     searchQuery: state.searchQuery,
     resourceType: "colors",
-    searchPlaceholder: "Search colors...",
   };
 };
