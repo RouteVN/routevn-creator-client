@@ -167,7 +167,6 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "videos",
-    searchPlaceholder: "Search videos...",
     uploadText: "Upload Video",
     acceptedFileTypes: [".mp4"],
     videoVisible: state.videoVisible,

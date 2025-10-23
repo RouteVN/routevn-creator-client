@@ -274,7 +274,6 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "characters",
-    searchPlaceholder: "Search characters...",
     isDialogOpen: state.isDialogOpen,
     dialogDefaultValues: state.dialogDefaultValues,
     dialogForm: state.dialogForm,

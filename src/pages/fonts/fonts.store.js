@@ -331,7 +331,6 @@ export const selectViewData = ({ state }) => {
     fontInfoValues,
     searchQuery: state.searchQuery,
     collapsedIds: state.collapsedIds,
-    searchPlaceholder: "Search fonts...",
     uploadText: "Upload Font",
     acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
     resourceType: "fonts",

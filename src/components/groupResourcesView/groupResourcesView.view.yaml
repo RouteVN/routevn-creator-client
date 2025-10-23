@@ -144,7 +144,7 @@ template:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md fw=w:
               - rtgl-view av=c g=md:
-                  - rtgl-input#search-input s=sm placeholder="${searchPlaceholder}" value=${searchQuery} flex=1:
+                  - rtgl-input#search-input s=sm placeholder="Search..." value=${searchQuery} flex=1:
               - $if showZoomControls:
                   - rtgl-view d=h av=e g=sm:
                       - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
@@ -178,8 +178,8 @@ template:
                                             $elif resourceType == 'audio':
                                               - $if item.waveformDataFileId:
                                                   - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
-                                                    - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}:
-                                                    - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
+                                                      - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                                 $else:
                                                   - rtgl-image bc=${item.borderColor} p=md g=md bw=xs br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png:
                                             $elif resourceType == 'images':

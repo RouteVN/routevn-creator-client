@@ -91,7 +91,6 @@ export const selectViewData = ({ state, props, attrs }) => {
     searchQuery: props.searchQuery || "",
     uploadText: props.uploadText || "Upload Files",
     acceptedFileTypes: props.acceptedFileTypes || [],
-    searchPlaceholder: props.searchPlaceholder || "Search...",
     emptyMessage:
       props.emptyMessage ||
       `No ${props.resourceType || "items"} found matching "${props.searchQuery || ""}"`,
