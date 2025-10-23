@@ -27,7 +27,7 @@ refs:
         handler: handleCharacterItemDoubleClick
       sprites-button-click:
         handler: handleSpritesButtonClick
-      add-character-click:
+      add-click:
         handler: handleAddCharacterClick
       search-input:
         handler: handleSearchInput

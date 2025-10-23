@@ -17,7 +17,7 @@ refs:
     eventListeners:
       item-click:
         handler: handleAnimationItemClick
-      add-animation-click:
+      add-click:
         handler: handleAddAnimationClick
       item-dblclick:
         handler: handleAnimationItemDoubleClick

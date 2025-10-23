@@ -37,6 +37,6 @@ refs:
         handler: handleDrop
 
 template:
-  - rtgl-view#dragDrop w=200 h=150 bw=xs br=md ah=c av=c g=md cur=p bgc=${bgc}:
+  - rtgl-view#dragDrop w=f h=150 bw=xs br=md ah=c av=c g=sm cur=p bgc=${bgc}:
     - rtgl-svg svg=upload wh=32:
     - rtgl-text: ${uploadText}

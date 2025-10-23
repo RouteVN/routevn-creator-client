@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
-import { getFileType } from "../../utils/getFileType";
+import { getFileType } from "../../utils/fileTypeUtils";
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = (store, repository) => {
