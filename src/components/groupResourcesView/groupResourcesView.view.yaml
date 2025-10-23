@@ -80,6 +80,14 @@ refs:
     eventListeners:
       click:
         handler: handleZoomIn
+  upload-btn-*:
+    eventListeners:
+      click:
+        handler: handleUploadButtonClick
+  add-btn-*:
+    eventListeners:
+      click:
+        handler: handleAddButtonClick
   drag-drop-item-*:
     eventListeners:
       file-selected:
@@ -155,13 +163,18 @@ template:
               - $for group in flatGroups:
                   - rtgl-view w=f ph=md:
                       - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 0px;"':
-                          - $if group.isCollapsed:
-                              - rtgl-svg wh=16 svg=folderArrowRight:
+                          - rtgl-view w=f d=h av=c:
+                            - $if group.isCollapsed:
+                                - rtgl-svg wh=16 svg=folderArrowRight:
+                              $else:
+                                - rtgl-svg wh=16 svg=folderArrowDown:
+                            - rtgl-view d=h av=c g=md:
+                                - rtgl-svg wh=16 svg=folder:
+                                - rtgl-text: ${group.fullLabel}
+                          - $if canUpload:   
+                              - rtgl-button#upload-btn-${group.id} s=sm flex=1 m=sm v=se ip=s: Upload
                             $else:
-                              - rtgl-svg wh=16 svg=folderArrowDown:
-                          - rtgl-view d=h av=c g=md:
-                              - rtgl-svg wh=16 svg=folder:
-                              - rtgl-text: ${group.fullLabel}
+                              - rtgl-button#add-btn-${group.id} s=sm flex=1 m=sm v=se ip=s: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f d=h p=sm fw=w g=md:
                               - $if group.hasChildren:
@@ -223,61 +236,31 @@ template:
                                             $else:
                                               - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v p=md bw=xs br=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
-                                  - $if resourceType == 'characters':
-                                      - rtgl-view mt=lg w=f:
-                                          - "rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
-                                              - rtgl-svg wh=24 svg=plus c=pr:
-                                              - rtgl-text s=md c=pr fw=500: Add Character
-                                    $elif resourceType == 'colors':
-                                      - "rtgl-view#add-color-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
-                                          - rtgl-svg svg=plus wh=24:
-                                          - rtgl-text: Add Color
-                                    $elif resourceType == 'typography':
-                                      - "rtgl-view#add-typography-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
-                                          - rtgl-svg svg=plus wh=24 c=pr:
-                                          - rtgl-text s=md c=pr fw=500: Add Typography
-                                    $elif resourceType == 'layouts':
-                                      - "rtgl-view#add-layout-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
-                                          - rtgl-svg svg=plus wh=24:
-                                          - rtgl-text: Add Layout
-                                    $elif resourceType == 'transforms':
-                                      - rtgl-view#add-transform-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c bw=xs br=md g=md cur=p:
-                                          - rtgl-svg svg=plus wh=24:
-                                          - rtgl-text: Add Transform
-                                    $elif resourceType == 'animations':
-                                      - rtgl-view w=f:
-                                          - rtgl-view#add-animation-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
-                                              - rtgl-svg svg=plus wh=24 c=pr:
-                                              - rtgl-text s=md c=pr fw=500: Add Animation
-                                    $elif resourceType == 'characterSprites':
-                                      - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
-                                    $else:
-                                      - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                                 $else:
                                   - $if resourceType == 'characters':
                                       - rtgl-view mt=lg w=f:
-                                          - "rtgl-view#add-character-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
+                                          - "rtgl-view#add-character-button-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
                                               - rtgl-svg wh=24 svg=plus c=pr:
                                               - rtgl-text s=md c=pr fw=500: Add Character
                                     $elif resourceType == 'colors':
-                                      - "rtgl-view#add-color-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                      - "rtgl-view#add-color-button-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                           - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Color
                                     $elif resourceType == 'typography':
-                                      - "rtgl-view#add-typography-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
+                                      - "rtgl-view#add-typography-button-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
                                           - rtgl-svg svg=plus wh=24 c=pr:
                                           - rtgl-text s=md c=pr fw=500: Add Typography
                                     $elif resourceType == 'layouts':
-                                      - "rtgl-view#add-layout-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                      - "rtgl-view#add-layout-button-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                           - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Layout
                                     $elif resourceType == 'transforms':
-                                      - rtgl-view#add-transform-button-${group.id} w=${mediaWidth} h=${mediaHeight} av=c ah=c bw=xs br=md g=md cur=p:
+                                      - rtgl-view#add-transform-button-${group.id} w=f h=150 av=c ah=c bw=xs br=md g=md cur=p:
                                           - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Transform
                                     $elif resourceType == 'animations':
                                       - rtgl-view w=f:
-                                          - rtgl-view#add-animation-button-${group.id} w=f d=h av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
+                                          - rtgl-view#add-animation-button-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
                                               - rtgl-svg svg=plus wh=24 c=pr:
                                               - rtgl-text s=md c=pr fw=500: Add Animation
                                     $elif resourceType == 'characterSprites':

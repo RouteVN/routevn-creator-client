@@ -1,3 +1,8 @@
+import {
+  getAcceptAttribute,
+  isFileTypeAccepted,
+} from "../../utils/fileTypeUtils.js";
+
 export const handleSearchInput = (deps, payload) => {
   const { dispatchEvent } = deps;
   const searchQuery = payload._event.detail.value || "";
@@ -49,6 +54,60 @@ export const handleItemDoubleClick = (deps, payload) => {
   );
 };
 
+export const handleUploadButtonClick = (deps, payload) => {
+  // Copy the logic in dragDrop.handlers.js
+  const { props } = deps;
+  payload._event.stopPropagation();
+  const targetGroupId = payload._event.currentTarget.id.replace(
+    "upload-btn-",
+    "",
+  );
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = getAcceptAttribute(props.acceptedFileTypes);
+  input.multiple = true;
+  input.onchange = (e) => {
+    if (e.target && e.target.files) {
+      const validFiles = Array.from(e.target.files).filter((file) =>
+        isFileTypeAccepted(file, props.acceptedFileTypes),
+      );
+
+      if (validFiles.length > 0) {
+        handleDragDropFileSelected(deps, {
+          _event: {
+            detail: { files: validFiles },
+            currentTarget: { id: `drag-drop-item-${targetGroupId}` },
+          },
+        });
+      }
+    }
+    input.remove();
+  };
+
+  input.click();
+};
+
+export const handleAddButtonClick = (deps, payload) => {
+  const { props } = deps;
+  const { resourceType } = props;
+  payload._event.stopPropagation();
+  const targetGroupId = payload._event.currentTarget.id.replace("add-btn-", "");
+  const newPayload = { _event: { currentTarget: { id: targetGroupId } } };
+  if (resourceType === "characters") {
+    handleAddCharacterClick(deps, newPayload);
+  } else if (resourceType === "colors") {
+    handleAddColorClick(deps, newPayload);
+  } else if (resourceType === "typography") {
+    handleAddTypographyClick(deps, newPayload);
+  } else if (resourceType === "layouts") {
+    handleAddLayoutClick(deps, newPayload);
+  } else if (resourceType === "transforms") {
+    handleAddTransformClick(deps, newPayload);
+  } else if (resourceType === "animations") {
+    handleAddAnimationClick(deps, newPayload);
+  }
+};
+
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { dispatchEvent, fontManager, props = {} } = deps;
   const { _event: event } = payload;
@@ -82,7 +141,9 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
 export const handleSpritesButtonClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent item click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const itemId = payload._event.currentTarget.id.replace("sprites-button-", "");
 
   // Forward sprites button click to parent
@@ -97,7 +158,9 @@ export const handleSpritesButtonClick = (deps, payload) => {
 
 export const handleAddCharacterClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const groupId = payload._event.currentTarget.id.replace(
     "add-character-button-",
     "",
@@ -115,7 +178,9 @@ export const handleAddCharacterClick = (deps, payload) => {
 
 export const handleAddColorClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const groupId = payload._event.currentTarget.id.replace(
     "add-color-button-",
     "",
@@ -133,7 +198,9 @@ export const handleAddColorClick = (deps, payload) => {
 
 export const handleAddTypographyClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const groupId = payload._event.currentTarget.id.replace(
     "add-typography-button-",
     "",
@@ -151,7 +218,9 @@ export const handleAddTypographyClick = (deps, payload) => {
 
 export const handleAddLayoutClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const groupId = payload._event.currentTarget.id.replace(
     "add-layout-button-",
     "",
@@ -169,7 +238,9 @@ export const handleAddLayoutClick = (deps, payload) => {
 
 export const handleAddTransformClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const groupId = payload._event.currentTarget.id.replace(
     "add-transform-button-",
     "",
@@ -187,7 +258,9 @@ export const handleAddTransformClick = (deps, payload) => {
 
 export const handleAddVariableClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const groupId = payload._event.currentTarget.id.replace(
     "add-variable-button-",
     "",
@@ -205,7 +278,9 @@ export const handleAddVariableClick = (deps, payload) => {
 
 export const handleAddAnimationClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const groupId = payload._event.currentTarget.id.replace(
     "add-animation-button-",
     "",

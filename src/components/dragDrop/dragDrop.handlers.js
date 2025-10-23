@@ -1,21 +1,7 @@
-const getAcceptAttribute = (acceptedFileTypes) => {
-  if (!acceptedFileTypes || acceptedFileTypes.length === 0) {
-    return "*/*"; // Accept all files if no types specified
-  }
-  return acceptedFileTypes.join(",");
-};
-
-const isFileTypeAccepted = (file, acceptedFileTypes) => {
-  if (!acceptedFileTypes || acceptedFileTypes.length === 0) {
-    return true; // Accept all files if no types specified
-  }
-
-  const fileName = file.name.toLowerCase();
-  return acceptedFileTypes.some((type) => {
-    const extension = type.toLowerCase();
-    return fileName.endsWith(extension);
-  });
-};
+import {
+  getAcceptAttribute,
+  isFileTypeAccepted,
+} from "../../utils/fileTypeUtils.js";
 
 export const handleClick = (deps) => {
   const { dispatchEvent, props } = deps;
