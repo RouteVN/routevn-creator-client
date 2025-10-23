@@ -23,7 +23,7 @@ refs:
         handler: handleTypographyItemDoubleClick
       files-uploaded:
         handler: handleDragDropFileSelected
-      add-typography-click:
+      add-click:
         handler: handleAddTypographyClick
       search-input:
         handler: handleSearchInput

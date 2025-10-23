@@ -137,16 +137,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 export const handleAddButtonClick = (deps, payload) => {
-  const { props, dispatchEvent } = deps;
-  const { resourceType } = props;
+  const { dispatchEvent } = deps;
   payload._event.stopPropagation();
-  const singularResourceType = resourceType.endsWith("s")
-    ? resourceType.slice(0, -1)
-    : resourceType;
   const groupId = payload._event.currentTarget.id.replace("add-btn-", "");
 
   dispatchEvent(
-    new CustomEvent(`add-${singularResourceType}-click`, {
+    new CustomEvent(`add-click`, {
       detail: { groupId },
       bubbles: true,
       composed: true,
