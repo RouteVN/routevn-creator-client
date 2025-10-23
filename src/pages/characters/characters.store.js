@@ -4,11 +4,8 @@ const form = {
   fields: [
     {
       name: "fileId",
-      inputType: "image",
-      src: "${fileId.src}",
-      width: 240,
-      clickable: true,
-      extraEvent: true,
+      inputType: "slot",
+      slot: "avatar",
     },
     { name: "name", inputType: "popover-input", description: "Name" },
     {
@@ -22,11 +19,6 @@ const form = {
 export const createInitialState = () => ({
   charactersData: { tree: [], items: {} },
   selectedItemId: null,
-  context: {
-    fileId: {
-      src: "",
-    },
-  },
   searchQuery: "",
   collapsedIds: [],
   isDialogOpen: false,
@@ -73,10 +65,6 @@ export const createInitialState = () => ({
   editItemId: null,
   editAvatarFileId: null,
 });
-
-export const setContext = (state, context) => {
-  state.context = context;
-};
 
 export const setItems = (state, charactersData) => {
   state.charactersData = charactersData;
@@ -268,9 +256,9 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
+    selectedItem,
     repositoryTarget: "characters",
     form,
-    context: state.context,
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "characters",

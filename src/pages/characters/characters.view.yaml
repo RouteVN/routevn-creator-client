@@ -53,8 +53,8 @@ refs:
         handler: handleDialogAvatarClick
   detail-form:
     eventListeners:
-      extra-event:
-        handler: handleFormExtraEvent
+      # extra-event:
+      #   handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
   edit-dialog:
@@ -73,6 +73,10 @@ refs:
     eventListeners:
       action-click:
         handler: handleEditFormAction
+  detail-panel-avatar:
+    eventListeners:
+      click:
+        handler: handleDetailPanelAvatarClick
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -86,7 +90,8 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .context=context .defaultValues=defaultValues:
+                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
+                          - rvn-file-image#detail-panel-avatar slot="avatar" cur=p wh=128 br=f fileId="${selectedItem.fileId}":
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
