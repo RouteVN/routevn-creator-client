@@ -122,30 +122,6 @@ refs:
         handler: handleSpritesButtonClick
       contextmenu:
         handler: handleItemContextMenu
-  add-character-button-*:
-    eventListeners:
-      click:
-        handler: handleAddCharacterClick
-  add-color-button-*:
-    eventListeners:
-      click:
-        handler: handleAddColorClick
-  add-typography-button-*:
-    eventListeners:
-      click:
-        handler: handleAddTypographyClick
-  add-layout-button-*:
-    eventListeners:
-      click:
-        handler: handleAddLayoutClick
-  add-transform-button-*:
-    eventListeners:
-      click:
-        handler: handleAddTransformClick
-  add-animation-button-*:
-    eventListeners:
-      click:
-        handler: handleAddAnimationClick
 
 template:
   - "rtgl-view w=f h=100vh g=lg":

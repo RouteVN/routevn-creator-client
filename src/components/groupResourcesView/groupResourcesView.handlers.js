@@ -76,7 +76,10 @@ export const handleUploadButtonClick = (deps, payload) => {
         // For fonts, load them for preview
         if (props.resourceType === "fonts" && fontManager) {
           for (const file of files) {
-            const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
+            const fontName = file.name.replace(
+              /\.(ttf|otf|woff|woff2|ttc)$/i,
+              "",
+            );
             const fontUrl = URL.createObjectURL(file);
             await fontManager.load(fontName, fontUrl);
           }
@@ -137,7 +140,9 @@ export const handleAddButtonClick = (deps, payload) => {
   const { props, dispatchEvent } = deps;
   const { resourceType } = props;
   payload._event.stopPropagation();
-  const singularResourceType = resourceType.endsWith('s') ? resourceType.slice(0, -1) : resourceType;
+  const singularResourceType = resourceType.endsWith("s")
+    ? resourceType.slice(0, -1)
+    : resourceType;
   const groupId = payload._event.currentTarget.id.replace("add-btn-", "");
 
   dispatchEvent(
