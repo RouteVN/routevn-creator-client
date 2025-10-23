@@ -26,11 +26,11 @@ export const createInitialState = () => ({
       path: "/project/resources/colors",
       icon: "color",
     },
-    {
-      title: "System",
-      path: "/project/resources/variables",
-      icon: "system",
-    },
+    // {
+    //   title: "System",
+    //   path: "/project/resources/variables",
+    //   icon: "system",
+    // },
     {
       title: "Scenes",
       path: "/project/scenes",

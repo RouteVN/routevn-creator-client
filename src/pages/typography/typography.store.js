@@ -696,6 +696,5 @@ export const selectViewData = ({ state }) => {
     previewFontFileId: previewFontData.fileId,
     searchQuery: state.searchQuery,
     resourceType: "typography",
-    searchPlaceholder: "Search typography...",
   };
 };
