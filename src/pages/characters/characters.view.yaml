@@ -53,8 +53,6 @@ refs:
         handler: handleDialogAvatarClick
   detail-form:
     eventListeners:
-      # extra-event:
-      #   handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
   edit-dialog:
