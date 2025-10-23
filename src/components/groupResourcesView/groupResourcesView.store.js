@@ -84,6 +84,13 @@ export const selectViewData = ({ state, props, attrs }) => {
   const finalProcessedGroups = setBorderColorForItems(processedFlatGroups);
 
   return {
+    canUpload: [
+      "images",
+      "videos",
+      "audio",
+      "characterSprites",
+      "fonts",
+    ].includes(props.resourceType),
     fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
     resourceType: props.resourceType || "default",
     flatGroups: finalProcessedGroups,

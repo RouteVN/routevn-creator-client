@@ -1,3 +1,8 @@
+import {
+  getAcceptAttribute,
+  isFileTypeAccepted,
+} from "../../utils/fileTypeUtils.js";
+
 export const handleSearchInput = (deps, payload) => {
   const { dispatchEvent } = deps;
   const searchQuery = payload._event.detail.value || "";
@@ -49,6 +54,57 @@ export const handleItemDoubleClick = (deps, payload) => {
   );
 };
 
+export const handleUploadButtonClick = (deps, payload) => {
+  // Copy the logic in dragDrop.handlers.js
+  const { props, dispatchEvent, fontManager } = deps;
+  payload._event.stopPropagation();
+  const targetGroupId = payload._event.currentTarget.id.replace(
+    "upload-btn-",
+    "",
+  );
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = getAcceptAttribute(props.acceptedFileTypes);
+  input.multiple = true;
+  input.onchange = async (e) => {
+    if (e.target && e.target.files) {
+      const files = Array.from(e.target.files).filter((file) =>
+        isFileTypeAccepted(file, props.acceptedFileTypes),
+      );
+
+      if (files.length > 0) {
+        // For fonts, load them for preview
+        if (props.resourceType === "fonts" && fontManager) {
+          for (const file of files) {
+            const fontName = file.name.replace(
+              /\.(ttf|otf|woff|woff2|ttc)$/i,
+              "",
+            );
+            const fontUrl = URL.createObjectURL(file);
+            await fontManager.load(fontName, fontUrl);
+          }
+        }
+
+        // Forward file uploads to parent (parent will handle the actual upload logic)
+        dispatchEvent(
+          new CustomEvent("files-uploaded", {
+            detail: {
+              files,
+              originalEvent: event,
+              targetGroupId,
+            },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }
+    }
+    input.remove();
+  };
+
+  input.click();
+};
+
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { dispatchEvent, fontManager, props = {} } = deps;
   const { _event: event } = payload;
@@ -80,141 +136,31 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   );
 };
 
+export const handleAddButtonClick = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  payload._event.stopPropagation();
+  const groupId = payload._event.currentTarget.id.replace("add-btn-", "");
+
+  dispatchEvent(
+    new CustomEvent(`add-click`, {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleSpritesButtonClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent item click
+  if (payload._event.stopPropagation) {
+    payload._event.stopPropagation(); // Prevent group click
+  }
   const itemId = payload._event.currentTarget.id.replace("sprites-button-", "");
 
   // Forward sprites button click to parent
   dispatchEvent(
     new CustomEvent("sprites-button-click", {
       detail: { itemId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddCharacterClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-character-button-",
-    "",
-  );
-
-  // Forward add character click to parent
-  dispatchEvent(
-    new CustomEvent("add-character-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddColorClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-color-button-",
-    "",
-  );
-
-  // Forward add color click to parent
-  dispatchEvent(
-    new CustomEvent("add-color-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddTypographyClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-typography-button-",
-    "",
-  );
-
-  // Forward add typography click to parent
-  dispatchEvent(
-    new CustomEvent("add-typography-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddLayoutClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-layout-button-",
-    "",
-  );
-
-  // Forward add layout click to parent
-  dispatchEvent(
-    new CustomEvent("add-layout-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddTransformClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-transform-button-",
-    "",
-  );
-
-  // Forward add transform click to parent
-  dispatchEvent(
-    new CustomEvent("add-transform-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddVariableClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-variable-button-",
-    "",
-  );
-
-  // Forward add variable click to parent
-  dispatchEvent(
-    new CustomEvent("add-variable-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddAnimationClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  payload._event.stopPropagation(); // Prevent group click
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-animation-button-",
-    "",
-  );
-
-  // Forward add animation click to parent
-  dispatchEvent(
-    new CustomEvent("add-animation-click", {
-      detail: { groupId },
       bubbles: true,
       composed: true,
     }),

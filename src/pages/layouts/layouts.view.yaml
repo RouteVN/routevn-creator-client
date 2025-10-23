@@ -23,7 +23,7 @@ refs:
         handler: handleItemDoubleClick
       files-uploaded:
         handler: handleDragDropFileSelected
-      add-layout-click:
+      add-click:
         handler: handleAddLayoutClick
       search-input:
         handler: handleSearchInput

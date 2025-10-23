@@ -33,7 +33,7 @@ refs:
         handler: handleTransformItemClick
       item-dblclick:
         handler: handleTransformItemDoubleClick
-      add-transform-click:
+      add-click:
         handler: handleAddTransformClick
       search-input:
         handler: handleSearchInput

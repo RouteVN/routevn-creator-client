@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { toFlatItems } from "../../deps/repository.js";
-import { getFileType } from "../../utils/getFileType";
+import { getFileType } from "../../utils/fileTypeUtils";
 
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;

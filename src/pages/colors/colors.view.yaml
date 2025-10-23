@@ -21,7 +21,7 @@ refs:
         handler: handleColorItemClick
       item-dblclick:
         handler: handleColorItemDoubleClick
-      add-color-click:
+      add-click:
         handler: handleAddColorClick
       search-input:
         handler: handleSearchInput
