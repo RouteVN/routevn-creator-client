@@ -87,27 +87,6 @@ export const handleUploadButtonClick = (deps, payload) => {
   input.click();
 };
 
-export const handleAddButtonClick = (deps, payload) => {
-  const { props } = deps;
-  const { resourceType } = props;
-  payload._event.stopPropagation();
-  const targetGroupId = payload._event.currentTarget.id.replace("add-btn-", "");
-  const newPayload = { _event: { currentTarget: { id: targetGroupId } } };
-  if (resourceType === "characters") {
-    handleAddCharacterClick(deps, newPayload);
-  } else if (resourceType === "colors") {
-    handleAddColorClick(deps, newPayload);
-  } else if (resourceType === "typography") {
-    handleAddTypographyClick(deps, newPayload);
-  } else if (resourceType === "layouts") {
-    handleAddLayoutClick(deps, newPayload);
-  } else if (resourceType === "transforms") {
-    handleAddTransformClick(deps, newPayload);
-  } else if (resourceType === "animations") {
-    handleAddAnimationClick(deps, newPayload);
-  }
-};
-
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { dispatchEvent, fontManager, props = {} } = deps;
   const { _event: event } = payload;
@@ -139,6 +118,22 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   );
 };
 
+export const handleAddButtonClick = (deps, payload) => {
+  const { props, dispatchEvent } = deps;
+  const { resourceType } = props;
+  payload._event.stopPropagation();
+  const singularResourceType = resourceType.endsWith('s') ? resourceType.slice(0, -1) : resourceType;
+  const groupId = payload._event.currentTarget.id.replace("add-btn-", "");
+
+  dispatchEvent(
+    new CustomEvent(`add-${singularResourceType}-click`, {
+      detail: { groupId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleSpritesButtonClick = (deps, payload) => {
   const { dispatchEvent } = deps;
   if (payload._event.stopPropagation) {
@@ -150,146 +145,6 @@ export const handleSpritesButtonClick = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("sprites-button-click", {
       detail: { itemId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddCharacterClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  if (payload._event.stopPropagation) {
-    payload._event.stopPropagation(); // Prevent group click
-  }
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-character-button-",
-    "",
-  );
-
-  // Forward add character click to parent
-  dispatchEvent(
-    new CustomEvent("add-character-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddColorClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  if (payload._event.stopPropagation) {
-    payload._event.stopPropagation(); // Prevent group click
-  }
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-color-button-",
-    "",
-  );
-
-  // Forward add color click to parent
-  dispatchEvent(
-    new CustomEvent("add-color-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddTypographyClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  if (payload._event.stopPropagation) {
-    payload._event.stopPropagation(); // Prevent group click
-  }
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-typography-button-",
-    "",
-  );
-
-  // Forward add typography click to parent
-  dispatchEvent(
-    new CustomEvent("add-typography-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddLayoutClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  if (payload._event.stopPropagation) {
-    payload._event.stopPropagation(); // Prevent group click
-  }
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-layout-button-",
-    "",
-  );
-
-  // Forward add layout click to parent
-  dispatchEvent(
-    new CustomEvent("add-layout-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddTransformClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  if (payload._event.stopPropagation) {
-    payload._event.stopPropagation(); // Prevent group click
-  }
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-transform-button-",
-    "",
-  );
-
-  // Forward add transform click to parent
-  dispatchEvent(
-    new CustomEvent("add-transform-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddVariableClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  if (payload._event.stopPropagation) {
-    payload._event.stopPropagation(); // Prevent group click
-  }
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-variable-button-",
-    "",
-  );
-
-  // Forward add variable click to parent
-  dispatchEvent(
-    new CustomEvent("add-variable-click", {
-      detail: { groupId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleAddAnimationClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  if (payload._event.stopPropagation) {
-    payload._event.stopPropagation(); // Prevent group click
-  }
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-animation-button-",
-    "",
-  );
-
-  // Forward add animation click to parent
-  dispatchEvent(
-    new CustomEvent("add-animation-click", {
-      detail: { groupId },
       bubbles: true,
       composed: true,
     }),

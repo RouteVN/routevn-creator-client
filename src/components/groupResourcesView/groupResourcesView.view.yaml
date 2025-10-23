@@ -172,9 +172,9 @@ template:
                                 - rtgl-svg wh=16 svg=folder:
                                 - rtgl-text: ${group.fullLabel}
                           - $if canUpload:   
-                              - rtgl-button#upload-btn-${group.id} s=sm flex=1 m=sm v=se ip=s: Upload
+                              - rtgl-button#upload-btn-${group.id} s=sm flex=1 m=sm ip=s icon=upload: Upload
                             $else:
-                              - rtgl-button#add-btn-${group.id} s=sm flex=1 m=sm v=se ip=s: Add
+                              - rtgl-button#add-btn-${group.id} s=sm flex=1 m=sm ip=s icon=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f d=h p=sm fw=w g=md:
                               - $if group.hasChildren:
@@ -210,7 +210,7 @@ template:
                                                       - rtgl-text s=h2: ${item.name}
                                                       - rtgl-text c=mu-fg: ${item.description}
                                                   - rtgl-view h=f av=c:
-                                                      - rtgl-button#sprites-button-${item.id}: Sprites
+                                                      - rtgl-button#sprites-button-${item.id} v=se: Sprites
                                             $elif resourceType == 'colors':
                                               - 'rtgl-view bc=${item.borderColor} p=md g=md br=md g=sm bw=xs style="overflow: hidden;"':
                                                   - 'rtgl-view w=${mediaWidth} h=${mediaHeight} style="background-color: ${item.hex}"':
@@ -239,28 +239,28 @@ template:
                                 $else:
                                   - $if resourceType == 'characters':
                                       - rtgl-view mt=lg w=f:
-                                          - "rtgl-view#add-character-button-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
+                                          - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
                                               - rtgl-svg wh=24 svg=plus c=pr:
                                               - rtgl-text s=md c=pr fw=500: Add Character
                                     $elif resourceType == 'colors':
-                                      - "rtgl-view#add-color-button-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                      - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                           - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Color
                                     $elif resourceType == 'typography':
-                                      - "rtgl-view#add-typography-button-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
+                                      - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
                                           - rtgl-svg svg=plus wh=24 c=pr:
                                           - rtgl-text s=md c=pr fw=500: Add Typography
                                     $elif resourceType == 'layouts':
-                                      - "rtgl-view#add-layout-button-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                      - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
                                           - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Layout
                                     $elif resourceType == 'transforms':
-                                      - rtgl-view#add-transform-button-${group.id} w=f h=150 av=c ah=c bw=xs br=md g=md cur=p:
+                                      - rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c bw=xs br=md g=md cur=p:
                                           - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Transform
                                     $elif resourceType == 'animations':
                                       - rtgl-view w=f:
-                                          - rtgl-view#add-animation-button-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
+                                          - rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
                                               - rtgl-svg svg=plus wh=24 c=pr:
                                               - rtgl-text s=md c=pr fw=500: Add Animation
                                     $elif resourceType == 'characterSprites':
