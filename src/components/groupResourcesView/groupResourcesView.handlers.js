@@ -56,7 +56,7 @@ export const handleItemDoubleClick = (deps, payload) => {
 
 export const handleUploadButtonClick = (deps, payload) => {
   // Copy the logic in dragDrop.handlers.js
-  const { props } = deps;
+  const { props, dispatchEvent, fontManager } = deps;
   payload._event.stopPropagation();
   const targetGroupId = payload._event.currentTarget.id.replace(
     "upload-btn-",
@@ -66,19 +66,34 @@ export const handleUploadButtonClick = (deps, payload) => {
   input.type = "file";
   input.accept = getAcceptAttribute(props.acceptedFileTypes);
   input.multiple = true;
-  input.onchange = (e) => {
+  input.onchange = async (e) => {
     if (e.target && e.target.files) {
-      const validFiles = Array.from(e.target.files).filter((file) =>
+      const files = Array.from(e.target.files).filter((file) =>
         isFileTypeAccepted(file, props.acceptedFileTypes),
       );
 
-      if (validFiles.length > 0) {
-        handleDragDropFileSelected(deps, {
-          _event: {
-            detail: { files: validFiles },
-            currentTarget: { id: `drag-drop-item-${targetGroupId}` },
-          },
-        });
+      if (files.length > 0) {
+        // For fonts, load them for preview
+        if (props.resourceType === "fonts" && fontManager) {
+          for (const file of files) {
+            const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
+            const fontUrl = URL.createObjectURL(file);
+            await fontManager.load(fontName, fontUrl);
+          }
+        }
+
+        // Forward file uploads to parent (parent will handle the actual upload logic)
+        dispatchEvent(
+          new CustomEvent("files-uploaded", {
+            detail: {
+              files,
+              originalEvent: event,
+              targetGroupId,
+            },
+            bubbles: true,
+            composed: true,
+          }),
+        );
       }
     }
     input.remove();
