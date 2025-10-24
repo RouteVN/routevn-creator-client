@@ -286,7 +286,6 @@ export const selectViewData = ({ state, props, attrs }) => {
             name: "name",
             inputType: "inputText",
             label: "Name",
-            value: currentItem.name || "",
             required: true,
           },
         ],
@@ -298,11 +297,6 @@ export const selectViewData = ({ state, props, attrs }) => {
               variant: "pr",
               content: "Rename",
             },
-            {
-              id: "cancel",
-              variant: "se",
-              content: "Cancel",
-            },
           ],
         },
       }
@@ -313,6 +307,9 @@ export const selectViewData = ({ state, props, attrs }) => {
   const viewData = {
     ...state,
     items: processedItems,
+    renameFormDefaultValues: {
+      name: currentItem?.name,
+    },
     targetDragIndex: state.targetDragIndex,
     targetDragPosition: state.targetDragPosition,
     targetDropPosition: state.targetDropPosition,
