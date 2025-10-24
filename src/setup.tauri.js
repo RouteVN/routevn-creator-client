@@ -21,6 +21,7 @@ import { createProjectsService } from "./deps/projectsService";
 import createUpdater from "./deps/tauriUpdater";
 import { createBundleService } from "./deps/bundleService";
 import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { setupCloseListener } from "./deps/windowClose";
 
 // Tauri-specific configuration
@@ -158,8 +159,9 @@ const componentDependencies = {
   projectsService,
   updaterService,
   globalUI,
-  appVersion: `v${appVersion}`,
+  appVersion,
   platform: "tauri",
+  openUrl,
 };
 
 const pageDependencies = {
@@ -180,8 +182,9 @@ const pageDependencies = {
   updaterService,
   bundleService,
   globalUI,
-  appVersion: `v${appVersion}`,
+  appVersion,
   platform: "tauri",
+  openUrl,
 };
 
 const deps = {

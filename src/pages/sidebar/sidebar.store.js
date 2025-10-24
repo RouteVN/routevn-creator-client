@@ -42,8 +42,8 @@ export const createInitialState = () => ({
       icon: "choices",
     },
     {
-      title: "Settings",
-      path: "/project/settings/general",
+      title: "About",
+      path: "/project/settings/about",
       icon: "settings",
     },
   ],
@@ -124,9 +124,7 @@ export const selectViewData = ({ state }) => {
 
     // For settings - match any route starting with /project/settings
     if (currentPath.startsWith("/project/settings")) {
-      const settingsItem = state.items.find(
-        (item) => item.title === "Settings",
-      );
+      const settingsItem = state.items.find((item) => item.title === "About");
       if (settingsItem) return settingsItem.path;
     }
 

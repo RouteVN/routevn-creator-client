@@ -1,0 +1,45 @@
+elementName: rvn-about
+
+viewDataSchema:
+  type: object
+  properties:
+    appVersion:
+      type: string
+      default: ""
+
+refs:
+  left-panel:
+    eventListeners:
+      data-changed:
+        handler: handleDataChanged
+  checkUpdateButton:
+    eventListeners:
+      click:
+        handler: handleCheckForUpdates
+  social-button-*:
+    eventListeners:
+      click:
+        handler: handleClickSocialButton
+
+template:
+  - rtgl-view d=h w=f h=f:
+      - rtgl-view d=h h=f:
+          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
+          - rtgl-view flex=1 h=f p=lg d=v:
+              - rtgl-text s=h2: About
+              - rtgl-view g=xl mt=lg flex=1:
+                  - rtgl-view g=lg:
+                      - rtgl-text s=h4: Version Information
+                      - rtgl-view av=c g=sm:
+                          - rtgl-text s=sm: RouteVN Creator ${appVersion}
+                      - rtgl-view d=h g=md:
+                          - rtgl-button#checkUpdateButton v=se: Check for Updates
+                          - rtgl-button#checkUpdateButton v=se: Changelog
+
+                  - rtgl-view g=md:
+                      - rtgl-text s=h4: Community
+                      - rtgl-view d=h  av=c g=md:
+                          - $for item in social:
+                              - rtgl-button#social-button-${item.id} data-id="${item.id}" v=se ip=s icon=${item.svg}: ${item.label}
