@@ -87,20 +87,8 @@ export const selectViewData = ({ state, props, attrs }) => {
     });
   };
 
-  const setDraggingStatusForGroups = (groups) => {
-    return groups.map((group) => {
-      const updatedGroup = {
-        ...group,
-        isDragging: group.id === state.draggingGroupId,
-      };
-      return updatedGroup;
-    });
-  };
-
   // Apply borderColor to all items in processedFlatGroups
-  const finalProcessedGroups = setDraggingStatusForGroups(
-    setBorderColorForItems(processedFlatGroups),
-  );
+  const finalProcessedGroups = setBorderColorForItems(processedFlatGroups);
 
   return {
     canUpload: [
