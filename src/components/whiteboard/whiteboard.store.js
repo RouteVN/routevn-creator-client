@@ -210,7 +210,7 @@ export const selectViewData = ({ state, props }) => {
     arrowsList,
     selectedItemId: props.selectedItemId,
     isPanMode: state.isPanMode,
-    panModeText: state.isPanMode ? "on" : "off",
+    panModeV: state.isPanMode ? "pr" : "gh",
     panX: state.panX,
     panY: state.panY,
     zoomLevel: state.zoomLevel,
