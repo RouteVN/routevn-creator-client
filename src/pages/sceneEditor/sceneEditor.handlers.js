@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
-import { filter, tap, debounceTime } from "rxjs";
+import { filter, tap, debounceTime, groupBy, mergeMap } from "rxjs";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 // Helper function to create assets object from file references
@@ -1033,11 +1033,6 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
       },
     },
   });
-
-  // Note: store.setLineTextContent is already called immediately in handleEditorDataChanged
-  // so we don't need to call it again here
-
-  // Trigger debounced canvas render
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
@@ -1055,10 +1050,12 @@ export const subscriptions = (deps) => {
   const { subject } = deps;
 
   return [
-    // Debounce dialogue content updates by 2000ms (2 seconds)
+    // Debounce dialogue content updates by 2000ms (2 seconds) per line ID
+    // TODO: Consider flushing pending debounced updates when subscription is cancelled to prevent data loss
     subject.pipe(
       filter(({ action }) => action === "updateDialogueContent"),
-      debounceTime(2000),
+      groupBy(({ payload }) => payload.lineId), // Group by line ID to debounce each line separately
+      mergeMap((group) => group.pipe(debounceTime(2000))),
       tap(({ payload }) => {
         deps.handlers.handleUpdateDialogueContent(deps, payload);
       }),
