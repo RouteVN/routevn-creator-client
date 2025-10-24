@@ -7,7 +7,7 @@ set -e
 
 BUILD_TYPE=${1:-web}
 SETUP_FILE="src/setup.${BUILD_TYPE}.js"
-RETTANGOLI_VERSION="0.1.16"
+RETTANGOLI_VERSION="0.1.17"
 RETTANGOLI_URL="https://cdn.jsdelivr.net/npm/@rettangoli/ui@${RETTANGOLI_VERSION}/dist/rettangoli-iife-ui.min.js"
 RETTANGOLI_DIR="static/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist"
 RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
