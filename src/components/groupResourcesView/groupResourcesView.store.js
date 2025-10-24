@@ -8,11 +8,18 @@ export const createInitialState = () => ({
     targetItemId: null,
     items: [],
   },
+  draggingGroupId: null,
 });
 
 export const setZoomLevel = (state, zoomLevel) => {
   state.zoomLevel = zoomLevel;
 };
+
+export const setDraggingGroupId = (state, groupId) => {
+  state.draggingGroupId = groupId;
+};
+
+export const selectDraggingGroupId = ({ state }) => state.draggingGroupId;
 
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
@@ -80,8 +87,20 @@ export const selectViewData = ({ state, props, attrs }) => {
     });
   };
 
+  const setDraggingStatusForGroups = (groups) => {
+    return groups.map((group) => {
+      const updatedGroup = {
+        ...group,
+        isDragging: group.id === state.draggingGroupId,
+      };
+      return updatedGroup;
+    });
+  };
+
   // Apply borderColor to all items in processedFlatGroups
-  const finalProcessedGroups = setBorderColorForItems(processedFlatGroups);
+  const finalProcessedGroups = setDraggingStatusForGroups(
+    setBorderColorForItems(processedFlatGroups),
+  );
 
   return {
     canUpload: [
@@ -91,6 +110,7 @@ export const selectViewData = ({ state, props, attrs }) => {
       "characterSprites",
       "fonts",
     ].includes(props.resourceType),
+    draggingGroupId: state.draggingGroupId,
     fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
     resourceType: props.resourceType || "default",
     flatGroups: finalProcessedGroups,
