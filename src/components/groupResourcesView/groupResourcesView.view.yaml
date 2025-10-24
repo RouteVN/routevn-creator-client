@@ -88,10 +88,6 @@ refs:
     eventListeners:
       click:
         handler: handleAddButtonClick
-  drag-drop-item-*:
-    eventListeners:
-      file-selected:
-        handler: handleDragDropFileSelected
   drag-drop-bar-*:
     eventListeners:
       file-selected:
@@ -122,6 +118,16 @@ refs:
         handler: handleSpritesButtonClick
       contextmenu:
         handler: handleItemContextMenu
+  group-dragDrop-*:
+    eventListeners:
+      dragenter:
+        handler: handleDragEnter
+      dragover:
+        handler: handleDragOver
+      dragleave:
+        handler: handleDragLeave
+      drop:
+        handler: handleDrop
 
 template:
   - "rtgl-view w=f h=100vh g=lg":
@@ -137,8 +143,12 @@ template:
       - rtgl-view flex=1 w=f sv:
           - $if flatGroups.length > 0:
               - $for group in flatGroups:
-                  - rtgl-view w=f ph=md:
-                      - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 0px;"':
+                  - rtgl-view#group-dragDrop-${group.id} w=f ph=md pos=rel:
+                      - $if draggingGroupId == group.id:
+                        - 'rtgl-view#overlay d=h av=c pos=abs w=f h=f bw=md bc=pr bgc=se op="0.5" style="top: 0; bottom: 0; left: 0; right: 0;"':  
+                          - rtgl-view#overlayText w=f f=h av=c ah=c:
+                            - rtgl-text s=lg: "Drag file to this area to upload"
+                      - 'rtgl-view#group-${group.id} d=h w=f av=c cur=p style="position: sticky; top: 0px;"':
                           - rtgl-view w=f d=h av=c:
                             - $if group.isCollapsed:
                                 - rtgl-svg wh=16 svg=folderArrowRight:
@@ -239,10 +249,10 @@ template:
                                           - rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
                                               - rtgl-svg svg=plus wh=24 c=pr:
                                               - rtgl-text s=md c=pr fw=500: Add Animation
-                                    $elif resourceType == 'characterSprites':
-                                      - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
                                     $else:
-                                      - rvn-drag-drop#drag-drop-item-${group.id} .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+                                      - rtgl-view#upload-btn-${group.id} w=f h=150 bw=xs br=md ah=c av=c g=sm cur=p bgc=${bgc}:
+                                        - rtgl-svg svg=upload wh=32:
+                                        - rtgl-text: ${uploadText}
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}
