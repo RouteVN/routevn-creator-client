@@ -32,6 +32,13 @@ export const handleContainerContextMenu = (deps, payload) => {
   );
 };
 
+export const handlePanButtonClick = (deps) => {
+  const { store, render } = deps;
+  const isPanMode = store.selectIsPanMode();
+  store.togglePanMode({ isPanMode: !isPanMode });
+  render();
+};
+
 export const handleContainerMouseDown = (deps, payload) => {
   const { store, getRefIds } = deps;
 
