@@ -247,7 +247,6 @@ export const closeTransformFormDialog = (state) => {
 
   // Reset form to add mode
   state.transformForm.title = "Add Transform";
-  state.transformForm.description = "Create a new transform configuration";
   state.transformForm.actions.buttons[0].content = "Add Transform";
 };
 

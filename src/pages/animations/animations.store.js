@@ -107,6 +107,8 @@ const createAddKeyframeForm = (property) => {
 
 const addKeyframeDefaultValues = {
   relative: false,
+  duration: 1000,
+  value: 0,
   easing: "linear",
 };
 

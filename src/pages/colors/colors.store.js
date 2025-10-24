@@ -166,20 +166,17 @@ export const selectViewData = ({ state }) => {
   let editDefaultValues = {};
   let editForm = {
     title: "Edit Color",
-    description: "Edit the color",
     fields: [
       {
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the color name",
         required: true,
       },
       {
         name: "hex",
         inputType: "colorPicker",
         label: "Hex Value",
-        description: "Enter the hex color value (e.g., #ff0000)",
         required: true,
       },
     ],
@@ -205,20 +202,17 @@ export const selectViewData = ({ state }) => {
   // Add form configuration
   const addForm = {
     title: "Add Color",
-    description: "Create a new color",
     fields: [
       {
         name: "name",
         inputType: "inputText",
         label: "Name",
-        description: "Enter the color name",
         required: true,
       },
       {
         name: "hex",
         inputType: "colorPicker",
         label: "Hex Value",
-        description: "Enter the hex color value (e.g., #ff0000)",
         required: true,
       },
     ],
@@ -236,7 +230,7 @@ export const selectViewData = ({ state }) => {
 
   const addDefaultValues = {
     name: "",
-    hex: "#ff0000",
+    hex: "#ffffff",
   };
 
   return {
