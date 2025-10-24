@@ -20,42 +20,22 @@ export const handleDataChanged = async (deps) => {
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
-  const { id, item, isFolder } = payload._event.detail;
+  const { store, render } = deps;
+  const { id, isFolder } = payload._event.detail;
 
-  // If this is a folder, clear selection and context
+  // If this is a folder, clear selection
   if (isFolder) {
     store.setSelectedItemId(null);
-    store.setContext({
-      fileId: {
-        src: null,
-      },
-    });
     render();
     return;
   }
 
   store.setSelectedItemId(id);
-
-  // If we have item data with fileId, set up media context for preview
-  if (item && item.fileId) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId: item.fileId,
-    });
-    store.setContext({
-      fileId: {
-        src: url,
-      },
-    });
-  }
-
   render();
 };
 
 export const handleCharacterItemClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router, getRefIds } = deps;
+  const { store, render, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
@@ -63,26 +43,11 @@ export const handleCharacterItemClick = async (deps, payload) => {
   fileExplorer.elm.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
-
-  const selectedItem = store.selectSelectedItem();
-
-  if (selectedItem && selectedItem.fileId) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId: selectedItem.fileId,
-    });
-    store.setContext({
-      fileId: {
-        src: url,
-      },
-    });
-  }
   render();
 };
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router, getRefIds } = deps;
+  const { store, render, getRefIds } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -93,25 +58,8 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
   fileExplorer.elm.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
-
-  const selectedItem = store.selectSelectedItem();
-
-  if (selectedItem && selectedItem.fileId) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId: selectedItem.fileId,
-    });
-    store.setContext({
-      fileId: {
-        src: url,
-      },
-    });
-  }
-
   // Open edit dialog for double-clicked character
   store.openEditDialog(itemId);
-
   render();
 };
 
@@ -190,7 +138,7 @@ export const handleSpritesButtonClick = (deps, payload) => {
   render();
 };
 
-export const handleFormExtraEvent = async (deps) => {
+export const handleDetailPanelAvatarClick = async (deps) => {
   const {
     repositoryFactory,
     router,
@@ -260,17 +208,6 @@ export const handleFormExtraEvent = async (deps) => {
 
       // Update the store with the new repository state and get new file URL
       const { characters } = repository.getState();
-
-      // Get the new file URL
-      const { url } = await fileManager.getFileContent({
-        fileId: uploadedFile.fileId,
-      });
-
-      store.setContext({
-        fileId: {
-          src: url,
-        },
-      });
       store.setItems(characters);
       render();
     } else {
@@ -461,7 +398,7 @@ export const handleEditDialogAvatarClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
+  const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
 
@@ -493,20 +430,6 @@ export const handleEditFormAction = async (deps, payload) => {
 
     const { characters } = repository.getState();
     store.setItems(characters);
-
-    // If this is the currently selected item, update the context with new file URL
-    if (editItemId === store.getState().selectedItemId && editAvatarFileId) {
-      const fileManager = await fileManagerFactory.getByProject(p);
-      const { url } = await fileManager.getFileContent({
-        fileId: editAvatarFileId,
-      });
-      store.setContext({
-        fileId: {
-          src: url,
-        },
-      });
-    }
-
     store.closeEditDialog();
     render();
   }

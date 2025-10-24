@@ -5,9 +5,7 @@ const getFileIdFromProps = async (attrs, repositoryFactory, router) => {
   const repository = await repositoryFactory.getByProject(p);
   // Validate that both fileId and imageId are not passed
   if (attrs.fileId && attrs.imageId) {
-    throw new Error(
-      "Cannot pass both fileId and imageId props to fileImage component",
-    );
+    return;
   }
 
   // If fileId is provided, use it directly
@@ -30,7 +28,7 @@ const getFileIdFromProps = async (attrs, repositoryFactory, router) => {
     throw new Error(`Image with imageId "${attrs.imageId}" not found`);
   }
 
-  return null;
+  return;
 };
 
 export const handleAfterMount = async (deps) => {
@@ -68,19 +66,16 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleOnUpdate = async (deps) => {
-  const {
-    store,
-    attrs,
-    fileManagerFactory,
-    render,
-    repositoryFactory,
-    router,
-  } = deps;
+export const handleOnUpdate = async (deps, payload) => {
+  const { store, fileManagerFactory, render, repositoryFactory, router } = deps;
+
+  const { newAttrs: attrs } = payload;
   const fileId = await getFileIdFromProps(attrs, repositoryFactory, router);
 
   if (!fileId) {
+    store.setSrc("/public/project_logo_placeholder.png");
     store.setIsLoading(false);
+    render();
     return;
   }
 
