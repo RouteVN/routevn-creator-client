@@ -35,7 +35,11 @@
     "fs:allow-read-dir",
     {
       "identifier": "fs:scope",
-      "allow": ["$APPDATA/**", "$APPDATA/routevn-creator/**", "**"]
+      "allow": [
+        "$APPDATA/**",
+        "$APPDATA/routevn-creator/**",
+        "**"
+      ]
     },
     "dialog:default",
     "dialog:allow-open",
@@ -44,6 +48,26 @@
     "updater:allow-check",
     "updater:allow-download",
     "updater:allow-install",
-    "updater:allow-download-and-install"
+    "updater:allow-download-and-install",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://routevn.com/creator/about"
+        },
+        {
+          "url": "https://routevn.com/discord"
+        },
+        {
+          "url": "https://x.com/routevn"
+        },
+        {
+          "url": "https://bsky.app/profile/routevn.bsky.social"
+        },
+        {
+          "url": "https://www.reddit.com/r/routevn"
+        }
+      ]
+    }
   ]
 }

@@ -64,15 +64,15 @@ export const systemConfigItems = [
 
 const settingsItems = [
   {
-    id: "general",
-    name: "General",
-    path: "/project/settings/general",
+    id: "about",
+    name: "About",
+    path: "/project/settings/about",
   },
-  {
-    id: "user",
-    name: "User",
-    path: "/project/settings/user",
-  },
+  // {
+  //   id: "user",
+  //   name: "User",
+  //   path: "/project/settings/user",
+  // },
 ];
 
 const releaseItems = [
