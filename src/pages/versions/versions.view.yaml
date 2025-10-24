@@ -67,7 +67,7 @@ template:
                           - rtgl-text s=sm c=mu-fg: Save your first version to track changes
                 $else:
                   - $for item in versions:
-                      - rtgl-view#version-${item.id} h=auto w=f bw=xs pt=md pb=sm ph=lg cur=p d=h av=c:
+                      - rtgl-view#version-${item.id} h=auto w=f bw=xs pt=md pb=sm ph=lg d=h av=c:
                           - rtgl-view flex=1 d=v g=xs:
                               - rtgl-text s=lg: ${item.name}
                               - rtgl-view flex=0 d=h g=sm av=c:

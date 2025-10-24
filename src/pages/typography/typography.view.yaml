@@ -104,4 +104,3 @@ template:
                   - $if hasSelectedFont:
                       - rtgl-view d=h g=sm av=c mt=sm:
                           - rtgl-text s=sm c=success: "Font selected: ${selectedFontFileName}"
-

@@ -86,7 +86,7 @@ refs:
 template:
   - rtgl-view w=f h=f:
       - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h:
-          - rtgl-button#back-button sq icon="chevronLeft" v="gh" s=sm mr=sm:
+          - rtgl-button#back-button sq icon="chevronLeft" v="gh" mr=sm:
           - rtgl-view flex=1:
               - rtgl-text c=mu-fg: ${scene.name}
           - rtgl-view flex=1:
