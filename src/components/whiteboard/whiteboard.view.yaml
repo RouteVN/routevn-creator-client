@@ -84,6 +84,10 @@ refs:
     eventListeners:
       click:
         handler: handleZoomOutClick
+  pan-btn:
+    eventListeners:
+      click:
+        handler: handlePanButtonClick
 
 template:
   - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: ${gridSize}px ${gridSize}px; background-position: ${panX}px ${panY}px;"':
@@ -105,6 +109,7 @@ template:
               - path d="${arrow.path}" stroke="#ccc" fill="none" z-index="1000" marker-end="url(#arrowhead)":
       - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
           - rtgl-view d=h av=c gap=sm:
+              - rtgl-button#pan-btn sq icon=hand v=${panModeV}:
               - "rtgl-button#zoom-out-btn v=se s=md sq": "-"
               - "rtgl-view bgc=co p=sm br=full w=50 ah=c av=c":
                   - rtgl-text s=sm: "${zoomLevelPercent}%"
