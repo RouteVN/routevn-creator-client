@@ -74,6 +74,10 @@ refs:
         handler: handleSystemActionsChange
       action-delete:
         handler: handleSystemActionsActionDelete
+  back-button:
+    eventListeners:
+      click:
+        handler: handleBackClick
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -83,13 +87,18 @@ template:
                   - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
                   - rvn-file-explorer#file-explorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
       - rtgl-view flex=1:
-          - 'rtgl-view w=f bgc=mu pos=rel style="aspect-ratio: 16/9;"':
-              - rtgl-view pos=abs cor=full:
-                  - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
-          - $if layoutType == 'dialogue':
-              - rtgl-form#dialogue-form w=f h=f .form=dialogueForm .defaultValues=dialogueDefaultValues:
-          - $if layoutType == 'choice':
-              - rtgl-form#choice-form w=f h=f .form=choiceForm .defaultValues=choiceDefaultValues .context=choicesContext:
+          - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
+              - rtgl-button#back-button sq icon="chevronLeft" v="gh" mr=sm:
+              - rtgl-view flex=1:
+                  - rtgl-text c=mu-fg: ${item.name}
+          - rtgl-view flex=1 sv w=f:
+              - 'rtgl-view w=f bgc=mu pos=rel style="margin-left: 1px; aspect-ratio: 16/9;"':
+                  - rtgl-view pos=abs cor=full:
+                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
+              - $if layoutType == 'dialogue':
+                  - rtgl-form#dialogue-form w=f h=f .form=dialogueForm .defaultValues=dialogueDefaultValues:
+              - $if layoutType == 'choice':
+                  - rtgl-form#choice-form w=f h=f .form=choiceForm .defaultValues=choiceDefaultValues .context=choicesContext:
       - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
               - $if true || selectedItemId:

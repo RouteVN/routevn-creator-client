@@ -413,8 +413,7 @@ export const handleAfterMount = async (deps) => {
   const repository = await repositoryFactory.getByProject(p);
   const { layouts, images, typography, colors, fonts } = repository.getState();
   const layout = layouts.items[layoutId];
-  store.setLayoutId(layoutId);
-  store.setLayoutType(layout.layoutType);
+  store.setLayout(layout);
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
   store.setTypographyData(typography || { items: {}, tree: [] });
@@ -426,6 +425,16 @@ export const handleAfterMount = async (deps) => {
 
   await renderLayoutPreview(deps);
   render();
+};
+
+export const handleBackClick = (deps) => {
+  const { subject, router } = deps;
+
+  const currentPayload = router.getPayload();
+  subject.dispatch("redirect", {
+    path: "/project/resources/layouts",
+    payload: currentPayload,
+  });
 };
 
 // Simple render handler for events that only need to trigger a re-render

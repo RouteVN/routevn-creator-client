@@ -108,8 +108,7 @@ export const createInitialState = () => ({
   },
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
-  layoutId: null,
-  layoutType: null,
+  layout: null,
   images: { tree: [], items: {} },
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
@@ -253,12 +252,8 @@ export const setItems = (state, layoutData) => {
   state.layoutData = layoutData;
 };
 
-export const setLayoutId = (state, layoutId) => {
-  state.layoutId = layoutId;
-};
-
-export const setLayoutType = (state, layoutType) => {
-  state.layoutType = layoutType;
+export const setLayout = (state, layout) => {
+  state.layout = layout;
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -325,11 +320,11 @@ export const selectDragging = ({ state }) => {
 };
 
 export const selectLayoutId = ({ state }) => {
-  return state.layoutId;
+  return state.layout?.id;
 };
 
 export const selectCurrentLayoutType = ({ state }) => {
-  return state.layoutType;
+  return state.layout?.layoutType;
 };
 
 export const selectDialogueDefaultValues = ({ state }) => {
@@ -441,6 +436,7 @@ export const selectFontsData = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
+  const item = selectSelectedItem({ state });
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
 
@@ -676,7 +672,7 @@ export const selectViewData = ({ state }) => {
     : {};
 
   const context = {
-    layoutType: state.layoutType,
+    layoutType: state.layout?.layoutType,
     ...defaultValues,
   };
 
@@ -696,10 +692,11 @@ export const selectViewData = ({ state }) => {
   console.log("defaultValues", defaultValues);
 
   return {
+    item,
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
-    repositoryTarget: `layouts.items.${state.layoutId}.elements`,
+    repositoryTarget: `layouts.items.${state.layout?.id}.elements`,
     repositoryStateForActions,
     resourceCategory: "userInterface",
     selectedResourceId: "layout-editor",
@@ -719,7 +716,7 @@ export const selectViewData = ({ state }) => {
     choiceForm,
     choiceDefaultValues: state.choiceDefaultValues,
     choicesContext,
-    layoutType: state.layoutType,
+    layoutType: state.layout?.layoutType,
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,
       groups: state.imageSelectorDialog.groups,
