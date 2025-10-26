@@ -40,52 +40,12 @@ const choiceForm = {
       placeholder: "Select number of choices",
       required: true,
     },
-    // TODO: think this can be done with $for choice, i in choices: ...
     {
-      name: "choices[0]",
+      $each: "choice, i in choices",
+      name: "choices[${i}]",
       inputType: "inputText",
-      description: "Choice Content 1 Text",
+      description: "Choice content ${i} text",
       placeholder: "Enter choice text",
-    },
-    {
-      "$if choicesNum > 1": {
-        name: "choices[1]",
-        inputType: "inputText",
-        description: "Choice Content 2 Text",
-        placeholder: "Enter choice text",
-      },
-    },
-    {
-      "$if choicesNum > 2": {
-        name: "choices[2]",
-        inputType: "inputText",
-        description: "Choice Content 3 Text",
-        placeholder: "Enter choice text",
-      },
-    },
-    {
-      "$if choicesNum > 3": {
-        name: "choices[3]",
-        inputType: "inputText",
-        description: "Choice Content 4 Text",
-        placeholder: "Enter choice text",
-      },
-    },
-    {
-      "$if choicesNum > 4": {
-        name: "choices[4]",
-        inputType: "inputText",
-        description: "Choice Content 5 Text",
-        placeholder: "Enter choice text",
-      },
-    },
-    {
-      "$if choicesNum > 5": {
-        name: "choices[5]",
-        inputType: "inputText",
-        description: "Choice Content 6 Text",
-        placeholder: "Enter choice text",
-      },
     },
   ],
 };
@@ -108,8 +68,7 @@ export const createInitialState = () => ({
   },
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
-  layoutId: null,
-  layoutType: null,
+  layout: null,
   images: { tree: [], items: {} },
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
@@ -121,7 +80,7 @@ export const createInitialState = () => ({
   },
   choiceDefaultValues: {
     choicesNum: 2,
-    choices: ["ChoiceA", "ChoiceB"],
+    choices: ["Choice 1", "Choice 2"],
   },
   contextMenuItems: [
     {
@@ -253,12 +212,12 @@ export const setItems = (state, layoutData) => {
   state.layoutData = layoutData;
 };
 
-export const setLayoutId = (state, layoutId) => {
-  state.layoutId = layoutId;
-};
-
-export const setLayoutType = (state, layoutType) => {
-  state.layoutType = layoutType;
+export const setLayout = (state, payload) => {
+  const { id, layout } = payload;
+  state.layout = {
+    ...layout,
+    id,
+  };
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -314,6 +273,13 @@ export const setChoiceDefaultValue = (state, { name, fieldValue }) => {
     state.choiceDefaultValues.choices[index] = fieldValue;
   } else {
     state.choiceDefaultValues[name] = fieldValue;
+    if (name === "choicesNum") {
+      const choices = [];
+      for (let i = 0; i < fieldValue; i++) {
+        choices.push(state.choiceDefaultValues.choices[i] || `Choice ${i + 1}`);
+      }
+      state.choiceDefaultValues.choices = choices;
+    }
   }
 };
 
@@ -325,11 +291,11 @@ export const selectDragging = ({ state }) => {
 };
 
 export const selectLayoutId = ({ state }) => {
-  return state.layoutId;
+  return state.layout?.id;
 };
 
 export const selectCurrentLayoutType = ({ state }) => {
-  return state.layoutType;
+  return state.layout?.layoutType;
 };
 
 export const selectDialogueDefaultValues = ({ state }) => {
@@ -350,17 +316,16 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const showImageSelectorDialog = (
   state,
-  { fieldIndex, groups, currentValue },
+  { fieldName, groups, currentValue },
 ) => {
   state.imageSelectorDialog.isOpen = true;
-  state.imageSelectorDialog.fieldIndex = fieldIndex;
+  state.imageSelectorDialog.fieldName = fieldName;
   state.imageSelectorDialog.groups = groups || [];
   state.imageSelectorDialog.selectedImageId = currentValue || null;
 };
 
 export const hideImageSelectorDialog = (state) => {
   state.imageSelectorDialog.isOpen = false;
-  state.imageSelectorDialog.fieldIndex = -1;
   state.imageSelectorDialog.groups = [];
   state.imageSelectorDialog.selectedImageId = null;
 };
@@ -369,24 +334,8 @@ export const setTempSelectedImageId = (state, { imageId }) => {
   state.imageSelectorDialog.selectedImageId = imageId;
 };
 
-export const selectDetailFieldNameByIndex = ({ state }, fieldIndex) => {
-  const selectedItem = selectSelectedItem({ state });
-  if (!selectedItem) return "imageId";
-
-  // For sprite type, we have 3 image selector fields
-  if (selectedItem.type === "sprite") {
-    // All the standard fields (name, type, x, y, width, height, etc.)
-    const baseFieldsCount = 11;
-
-    // The image selectors start after the base fields
-    const imageSelectorStartIndex = baseFieldsCount;
-
-    if (fieldIndex === imageSelectorStartIndex) return "imageId";
-    if (fieldIndex === imageSelectorStartIndex + 1) return "hoverImageId";
-    if (fieldIndex === imageSelectorStartIndex + 2) return "clickImageId";
-  }
-
-  return "imageId"; // default fallback
+export const selectImageSelectorDialog = ({ state }) => {
+  return state.imageSelectorDialog;
 };
 
 export const showDropdownMenuForImageField = (
@@ -441,6 +390,7 @@ export const selectFontsData = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
+  const item = selectSelectedItem({ state });
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
 
@@ -543,7 +493,7 @@ export const selectViewData = ({ state }) => {
           {
             name: "eventPayload",
             inputType: "slot",
-            slotName: "eventPayload",
+            slot: "eventPayload",
             description: "Event Payload",
           },
           ...(selectedItem.type === "text" ||
@@ -593,21 +543,21 @@ export const selectViewData = ({ state }) => {
             ? [
                 {
                   name: "imageId",
-                  inputType: "image",
+                  inputType: "slot",
                   description: "Image",
-                  src: state.fieldResources.imageId?.src,
+                  slot: "imageId",
                 },
                 {
                   name: "hoverImageId",
-                  inputType: "image",
+                  inputType: "slot",
                   description: "Hover Image",
-                  src: state.fieldResources.hoverImageId?.src,
+                  slot: "hoverImageId",
                 },
                 {
                   name: "clickImageId",
-                  inputType: "image",
+                  inputType: "slot",
                   description: "Click Image",
-                  src: state.fieldResources.clickImageId?.src,
+                  slot: "clickImageId",
                 },
               ]
             : []),
@@ -676,7 +626,7 @@ export const selectViewData = ({ state }) => {
     : {};
 
   const context = {
-    layoutType: state.layoutType,
+    layoutType: state.layout?.layoutType,
     ...defaultValues,
   };
 
@@ -693,13 +643,12 @@ export const selectViewData = ({ state }) => {
     scenes: { items: {}, tree: [] }, // No scenes data in layoutEditor
   };
 
-  console.log("defaultValues", defaultValues);
-
   return {
+    item,
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
-    repositoryTarget: `layouts.items.${state.layoutId}.elements`,
+    repositoryTarget: `layouts.items.${state.layout?.id}.elements`,
     repositoryStateForActions,
     resourceCategory: "userInterface",
     selectedResourceId: "layout-editor",
@@ -719,7 +668,7 @@ export const selectViewData = ({ state }) => {
     choiceForm,
     choiceDefaultValues: state.choiceDefaultValues,
     choicesContext,
-    layoutType: state.layoutType,
+    layout: state.layout,
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,
       groups: state.imageSelectorDialog.groups,

@@ -105,8 +105,6 @@ export const handleFileAction = async (deps, payload) => {
   const item = detail.item || detail;
   const itemId = detail.itemId;
 
-  console.log("item", item);
-
   if (item.value === "new-item") {
     repository.addAction({
       actionType: "treePush",

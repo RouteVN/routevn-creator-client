@@ -168,11 +168,7 @@ const getRenderState = async (deps) => {
   const storeElements = store.selectItems();
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
 
-  console.log("layoutElements", layoutElements);
-
   const layoutTreeStructure = toTreeStructure(layoutElements);
-
-  console.log("layoutTreeStructure", layoutTreeStructure);
 
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
@@ -181,8 +177,6 @@ const getRenderState = async (deps) => {
     { items: colorsItems },
     { items: fontsItems },
   );
-
-  console.log("renderStateElements", renderStateElements);
 
   return {
     renderStateElements,
@@ -413,8 +407,7 @@ export const handleAfterMount = async (deps) => {
   const repository = await repositoryFactory.getByProject(p);
   const { layouts, images, typography, colors, fonts } = repository.getState();
   const layout = layouts.items[layoutId];
-  store.setLayoutId(layoutId);
-  store.setLayoutType(layout.layoutType);
+  store.setLayout({ id: layoutId, layout });
   store.setItems(layout?.elements || { items: {}, tree: [] });
   store.setImages(images);
   store.setTypographyData(typography || { items: {}, tree: [] });
@@ -426,6 +419,16 @@ export const handleAfterMount = async (deps) => {
 
   await renderLayoutPreview(deps);
   render();
+};
+
+export const handleBackClick = (deps) => {
+  const { subject, router } = deps;
+
+  const currentPayload = router.getPayload();
+  subject.dispatch("redirect", {
+    path: "/project/resources/layouts",
+    payload: currentPayload,
+  });
 };
 
 // Simple render handler for events that only need to trigger a re-render
@@ -542,8 +545,6 @@ export const handleFormChange = async (deps, payload) => {
 
   let unflattenedUpdate;
 
-  console.log("payload._event.detail", payload._event.detail);
-
   // Handle anchor selection specially
   if (
     payload._event.detail.name === "anchor" &&
@@ -583,60 +584,43 @@ export const handleFormChange = async (deps, payload) => {
   await renderLayoutPreview(deps, { skipAssetLoading: true });
 };
 
-export const handleFormExtraEvent = async (deps, payload) => {
+export const handleFormImageClick = async (deps, payload) => {
   const { store, render } = deps;
-  const { trigger, name, fieldIndex } = payload._event.detail;
+  const { _event: event } = payload;
+  const name = event.currentTarget.dataset.name;
+  const selectedItem = store.selectSelectedItem();
+  if (selectedItem) {
+    // Get current value for the field
+    const currentValue = selectedItem[name] || null;
 
-  if (
-    !["imageId", "hoverImageId", "clickImageId", "typographyId"].includes(name)
-  ) {
-    return;
+    // Transform images to groups format for the selector
+    const imageGroups = store.selectViewData().imageGroups;
+
+    store.showImageSelectorDialog({
+      fieldName: name,
+      groups: imageGroups,
+      currentValue,
+    });
+    render();
   }
+};
 
-  // Handle image field click - check if name includes "imageId" or "ImageId"
-  if (
-    trigger === "click" &&
-    ["imageId", "hoverImageId", "clickImageId"].includes(name)
-  ) {
-    const selectedItem = store.selectSelectedItem();
-    if (selectedItem) {
-      // Get current value for the field
-      const currentValue = selectedItem[name] || null;
+export const handleFormImageRightClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { _event: event } = payload;
+  const name = event.target.dataset.name;
 
-      // Transform images to groups format for the selector
-      const imageGroups = store.selectViewData().imageGroups;
+  event.preventDefault();
 
-      // Find the field index by matching the field name
-      const form = store.selectViewData().form;
-      let actualFieldIndex = fieldIndex;
-      if (actualFieldIndex === undefined && form && form.fields) {
-        actualFieldIndex = form.fields.findIndex(
-          (field) => field.name === name,
-        );
-      }
+  store.showDropdownMenuForImageField({
+    position: {
+      x: event.clientX,
+      y: event.clientY,
+    },
+    fieldName: name,
+  });
 
-      store.showImageSelectorDialog({
-        fieldIndex: actualFieldIndex,
-        groups: imageGroups,
-        currentValue,
-      });
-      render();
-    }
-    return;
-  }
-
-  if (trigger === "contextmenu") {
-    const selectedItem = store.selectSelectedItem();
-    // Only show context menu if there's actually an image set for this field
-    if (selectedItem && selectedItem[name]) {
-      payload._event.preventDefault();
-      store.showDropdownMenuForImageField({
-        position: { x: payload._event.detail.x, y: payload._event.detail.y },
-        fieldName: name,
-      });
-      render();
-    }
-  }
+  render();
 };
 
 export const handleImageSelectorSelection = (deps, payload) => {
@@ -651,15 +635,9 @@ export const handleConfirmImageSelection = async (deps) => {
   const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-
-  const state = store.getState ? store.getState() : store._state || store.state;
-  const fieldIndex = state.imageSelectorDialog.fieldIndex;
-  const selectedImageId = state.imageSelectorDialog.selectedImageId;
-
+  const { selectedImageId, fieldName } = store.selectImageSelectorDialog();
   // Get the field name from the form
   const selectedItem = store.selectSelectedItem();
-  const form = store.selectViewData().form;
-  const fieldName = form?.fields[fieldIndex]?.name;
 
   if (fieldName && selectedItem && selectedImageId) {
     const layoutId = store.selectLayoutId();
@@ -705,26 +683,6 @@ export const handleConfirmImageSelection = async (deps) => {
       updatedItem: updateObject,
       replace: false,
     });
-
-    // Update fieldResources with the new image URL
-    try {
-      // Get fileManager for this project
-      const fileManager = await fileManagerFactory.getByProject(p);
-      const { url } = await fileManager.getFileContent({
-        fileId: selectedImage.fileId,
-      });
-
-      // Get current fieldResources and update with new image
-      const currentResources = state.fieldResources || {};
-      const newFieldResources = {
-        ...currentResources,
-        [fieldName]: { src: url },
-      };
-
-      store.setFieldResources(newFieldResources);
-    } catch (error) {
-      console.error(`Failed to fetch image for ${fieldName}:`, error);
-    }
   }
 
   // Hide dialog
@@ -754,7 +712,7 @@ export const handleDropdownMenuClose = (deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
+  const { subject, store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const detail = payload._event.detail;
@@ -777,13 +735,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     store.updateSelectedItem(updatedItemData);
 
     // Dispatch debounced update action to repository
-    const { subject } = deps;
-    subject.dispatch("layoutEditor.updateElement", {
-      layoutId,
-      selectedItemId,
-      updatedItem: { [fieldName]: null },
-      replace: false,
-    });
 
     // Sync store with updated data
     const { layouts, images } = repository.getState();
@@ -801,9 +752,13 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
     store.setFieldResources(newFieldResources);
     render();
-
-    // Re-render the preview
     await renderLayoutPreview(deps);
+    subject.dispatch("layoutEditor.updateElement", {
+      layoutId,
+      selectedItemId,
+      updatedItem: { [fieldName]: null },
+      replace: false,
+    });
   }
 };
 

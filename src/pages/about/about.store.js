@@ -27,7 +27,7 @@ const social = [
   {
     id: "x",
     label: "X",
-    svg: "x",
+    svg: "x-social",
     href: "https://x.com/routevn",
   },
 ];
