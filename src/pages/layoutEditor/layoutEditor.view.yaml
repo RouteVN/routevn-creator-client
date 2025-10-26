@@ -36,8 +36,16 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
-      extra-event:
-        handler: handleFormExtraEvent
+  file-image-*:
+    eventListeners:
+      click:
+        handler: handleFormImageClick
+      contextmenu:
+        handler: handleFormImageRightClick
+  file-placeholder-*:
+    eventListeners:
+      click:
+        handler: handleFormImageClick
   dialogue-form:
     eventListeners:
       form-change:
@@ -86,33 +94,47 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
                   - rvn-file-explorer#file-explorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
-      - rtgl-view flex=1:
+      - rtgl-view flex=1 h=f:
           - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
               - rtgl-button#back-button sq icon="chevronLeft" v="gh" mr=sm:
               - rtgl-view flex=1:
-                  - rtgl-text c=mu-fg: ${item.name}
+                  - rtgl-text c=mu-fg: ${layout.name}
           - rtgl-view flex=1 sv w=f:
               - 'rtgl-view w=f bgc=mu pos=rel style="margin-left: 1px; aspect-ratio: 16/9;"':
                   - rtgl-view pos=abs cor=full:
                       - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
-              - $if layoutType == 'dialogue':
+              - $if layout.layoutType == 'dialogue':
                   - rtgl-form#dialogue-form w=f h=f .form=dialogueForm .defaultValues=dialogueDefaultValues:
-              - $if layoutType == 'choice':
+              - $if layout.layoutType == 'choice':
                   - rtgl-form#choice-form w=f h=f .form=choiceForm .defaultValues=choiceDefaultValues .context=choicesContext:
       - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
-              - $if true || selectedItemId:
+              - $if selectedItemId:
                   - rtgl-view w=f h=100vh sv:
                       - rtgl-form#detail-form key=${formKey} w=f h=f .form=form .context=context .defaultValues=defaultValues:
-                          - slot name="eventPayload":
-                              - rvn-system-actions#system-actions .actions=defaultValues.actions .repositoryState=repositoryStateForActions .selectedLineId=selectedItemId action-type="system" .presentationState=presentationState:
+                          - rvn-system-actions#system-actions slot="eventPayload" .actions=defaultValues.actions .repositoryState=repositoryStateForActions .selectedLineId=selectedItemId action-type="system" .presentationState=presentationState:
+                          - $if item.imageId:
+                              - rvn-file-image#file-image-image-id data-name="imageId" slot="imageId" w=f imageId=${item.imageId}:
+                            $else:
+                              - rtgl-view#file-placeholder-image-id data-name="imageId" slot="imageId" w=f bw=md av=c ah=c cur=p h=48:
+                                  - rtgl-text c=mu-fg: No Image
+                          - $if item.hoverImageId:
+                              - rvn-file-image#file-image-hover-image-id data-name="hoverImageId" slot="hoverImageId" w=f imageId=${item.hoverImageId}:
+                            $else:
+                              - rtgl-view#file-placeholder-hover-image-id data-name="hoverImageId" slot="hoverImageId" w=f bw=md av=c ah=c cur=p h=48:
+                                  - rtgl-text c=mu-fg: No Image
+                          - $if item.clickImageId:
+                              - rvn-file-image#file-image-click-image-id data-name="clickImageId" slot="clickImageId" w=f imageId=${item.clickImageId}:
+                            $else:
+                              - rtgl-view#file-placeholder-click-image-id data-name="clickImageId" slot="clickImageId" w=f bw=md av=c ah=c cur=p h=48:
+                                  - rtgl-text c=mu-fg: No Image
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:
-          - rtgl-view g=sm:
+          - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#cancel-image-selection variant=se: Cancel
               - rtgl-button#confirm-image-selection variant=pr: OK
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen} placement=left:
