@@ -37,8 +37,7 @@
       "identifier": "fs:scope",
       "allow": [
         "$APPDATA/**",
-        "$APPDATA/routevn-creator/**",
-        "**"
+        "$APPDATA/routevn-creator/**"
       ]
     },
     "dialog:default",
