@@ -18,6 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_devtools::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_persisted_scope::init())
         .setup(|_app| {
             #[cfg(debug_assertions)]
             if let Some(window) = _app.get_webview_window("main") {
