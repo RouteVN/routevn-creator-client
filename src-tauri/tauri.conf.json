@@ -68,7 +68,8 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
-          "$APPDATA/**"
+          "$APPDATA/**",
+          "**/test-permissions.html"
         ]
       }
     }

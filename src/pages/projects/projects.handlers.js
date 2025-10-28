@@ -98,6 +98,12 @@ export const handleFormSubmit = async (deps, payload) => {
     }
 
     const { name, description, template } = payload._event.detail.formValues;
+
+    if (name === '_TEST_FILE_PERMISSIONS_') {
+      window.location.href = "/test-permissions.html";
+      return;
+    }
+
     const projectPath = store.selectProjectPath();
 
     // Validate input
