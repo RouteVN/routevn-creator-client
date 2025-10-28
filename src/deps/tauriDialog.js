@@ -8,6 +8,7 @@ export const createTauriDialog = () => {
           directory: true,
           multiple: false,
           title: options.title || "Select Folder",
+          recursive: true,
           ...options,
         });
         return selected;
