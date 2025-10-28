@@ -33,13 +33,6 @@
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",
-    {
-      "identifier": "fs:scope",
-      "allow": [
-        "$APPDATA/**",
-        "$APPDATA/routevn-creator/**"
-      ]
-    },
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
