@@ -24,7 +24,7 @@ log = "0.4"
 tauri = { version = "2.8.4", features = ["protocol-asset", "devtools"] }
 tauri-plugin-log = "2"
 tauri-plugin-devtools = "2"
-tauri-plugin-sql = { git = "https://github.com/han4wluc/plugins-workspace", branch = "sql-absolute-path", features = ["sqlite"] }
+tauri-plugin-sql = { git = "https://github.com/han4wluc/plugins-workspace", branch = "sql-absolute-path", features = ["sqlite", "fs-scope-validation"] }
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-updater = "2"
