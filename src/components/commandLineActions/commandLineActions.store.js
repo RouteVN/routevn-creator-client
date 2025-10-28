@@ -6,6 +6,12 @@ const SYSTEM_ACTIONS = [
     icon: "next-line",
     mode: "nextLine",
   },
+  {
+    id: "10",
+    label: "Transition",
+    icon: "transition",
+    mode: "sectionTransition",
+  },
 ];
 
 const PRESENTATION_ACTIONS = [

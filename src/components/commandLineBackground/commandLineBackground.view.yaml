@@ -136,7 +136,7 @@ template:
                   - rvn-base-file-explorer#base-file-explorer .items=items:
               - rtgl-view h=f flex=2 sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvn-image-selector .groups=groups .selectedImageId=tempSelectedResourceId:
+                      - rvn-image-selector#rvn-image-selector:
                     $elif tab == 'layout':
                       - $for group in groups:
                           - rtgl-view g=md:

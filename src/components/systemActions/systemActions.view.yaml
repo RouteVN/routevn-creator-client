@@ -5,8 +5,6 @@ propsSchema:
   properties:
     actions:
       type: object
-    repositoryState:
-      type: object
     selectedLineId:
       type: string
     selectedLine:
@@ -47,53 +45,54 @@ refs:
         handler: handleDropdownMenuClickItem
 
 template:
-  - rtgl-view g=md w=f:
-      - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.sectionTransition || preview.dialogue || preview.choice || preview.screen || preview.nextLine:
-          - $if preview.screen:
-              - rtgl-view#action-item-screen data-mode=screen g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=screen wh=24:
-                  - rtgl-text s=sm: ${preview.screen.name}
-          - $if preview.background:
-              - rtgl-view#action-item-background data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
-                  - rtgl-svg svg=image wh=24:
-                  - rvn-file-image fileId=${preview.background.fileId} w=50 h=35:
-                  - rtgl-text s=sm: ${preview.background.name}
-          - $if preview.bgm:
-              - rtgl-view#action-item-bgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=music wh=24:
-                  - rtgl-text s=sm: ${preview.bgm.name}
-          - $if preview.sfx:
-              - rtgl-view#action-item-sfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=audio wh=24:
-                  - rtgl-text s=sm: ${preview.sfx.names}
-          - $if preview.character:
-              - rtgl-view#action-item-character data-mode=character g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=character wh=24:
-                  - rtgl-view d=h g=sm av=c:
-                      - $for charData, i in preview.character:
-                          - rvn-file-image fileId=${charData.sprite.fileId} w=32 h=32:
-          - $if preview.sectionTransition:
-              - rtgl-view#action-item-sectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg="transition" wh=24:
-                  - rtgl-text s=sm: "Transition to scene: ${preview.sectionTransition.scene.name} section: ${preview.sectionTransition.section.name}"
-          - $if preview.dialogue:
-              - rtgl-view#action-item-dialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg=dialogue wh=24:
-                  - rtgl-text s=sm: ${preview.dialogue.name}
-          - $if preview.choice:
-              - rtgl-view#action-item-choices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=p pv=md:
-                  - rtgl-svg svg=choices wh=24:
-                  - rtgl-view d=v:
-                      - rtgl-text s=sm mb=sm: "${preview.choice.layout.name}"
-                      - $for choice in preview.choice.items:
-                          - rtgl-text s=xs c=mu-fg: "• ${choice.content}"
-          - $if preview.nextLine:
-              - rtgl-view#action-item-nextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                  - rtgl-svg svg="next-line" wh=24:
-                  - rtgl-text s=sm: Next Line
-        $else:
-          - rtgl-text s=sm c=mu-fg: No actions added yet
-      - rtgl-button#add-action-button v=ol w=f: +
+  - $if showSelected:
+      - rtgl-view g=md w=f:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.sectionTransition || preview.dialogue || preview.choice || preview.screen || preview.nextLine:
+              - $if preview.screen:
+                  - rtgl-view#action-item-screen data-mode=screen g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=screen wh=24:
+                      - rtgl-text s=sm: ${preview.screen.name}
+              - $if preview.background:
+                  - rtgl-view#action-item-background data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                      - rtgl-svg svg=image wh=24:
+                      - rvn-file-image fileId=${preview.background.fileId} w=50 h=35:
+                      - rtgl-text s=sm: ${preview.background.name}
+              - $if preview.bgm:
+                  - rtgl-view#action-item-bgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=music wh=24:
+                      - rtgl-text s=sm: ${preview.bgm.name}
+              - $if preview.sfx:
+                  - rtgl-view#action-item-sfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=audio wh=24:
+                      - rtgl-text s=sm: ${preview.sfx.names}
+              - $if preview.character:
+                  - rtgl-view#action-item-character data-mode=character g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=character wh=24:
+                      - rtgl-view d=h g=sm av=c:
+                          - $for charData, i in preview.character:
+                              - rvn-file-image fileId=${charData.sprite.fileId} w=32 h=32:
+              - $if preview.sectionTransition:
+                  - rtgl-view#action-item-sectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg="transition" wh=24:
+                      - rtgl-text s=sm: "Transition to scene: ${preview.sectionTransition.scene.name} section: ${preview.sectionTransition.section.name}"
+              - $if preview.dialogue:
+                  - rtgl-view#action-item-dialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=dialogue wh=24:
+                      - rtgl-text s=sm: ${preview.dialogue.name}
+              - $if preview.choice:
+                  - rtgl-view#action-item-choices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=p pv=md:
+                      - rtgl-svg svg=choices wh=24:
+                      - rtgl-view d=v:
+                          - rtgl-text s=sm mb=sm: "${preview.choice.layout.name}"
+                          - $for choice in preview.choice.items:
+                              - rtgl-text s=xs c=mu-fg: "• ${choice.content}"
+              - $if preview.nextLine:
+                  - rtgl-view#action-item-nextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg="next-line" wh=24:
+                      - rtgl-text s=sm: Next Line
+            $else:
+              - rtgl-text s=sm c=mu-fg: No actions added yet
+          - rtgl-button#add-action-button v=ol w=f: +
   - rtgl-dialog#actions-dialog key=${mode} ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh:
           - $if mode == "actions":
