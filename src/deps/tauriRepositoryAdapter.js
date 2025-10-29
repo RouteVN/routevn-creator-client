@@ -95,27 +95,22 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     action_type TEXT NOT NULL,
     target TEXT,
-    value TEXT,
+    value BLOB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
   await db.execute(`CREATE TABLE IF NOT EXISTS app (
     key TEXT PRIMARY KEY,
-    value TEXT
+    value BLOB
   )`);
 
   return {
     async addAction(action) {
-      // Encode to MessagePack, then convert to Base64 string for storage
+      // Encode to MessagePack and store directly as Uint8Array
       const binaryData = encode(action.value);
-      let binaryString = "";
-      for (let i = 0; i < binaryData.length; i++) {
-        binaryString += String.fromCharCode(binaryData[i]);
-      }
-      const base64Value = btoa(binaryString);
       await db.execute(
         "INSERT INTO actions (action_type, target, value) VALUES (?, ?, ?)",
-        [action.actionType, action.target || null, base64Value],
+        [action.actionType, action.target || null, binaryData],
       );
     },
 
@@ -123,28 +118,11 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
       const results = await db.select(
         "SELECT action_type, target, value FROM actions ORDER BY id",
       );
-      return results.map((row) => {
-        if (!row.value) {
-          return {
-            actionType: row.action_type,
-            target: row.target,
-            value: null,
-          };
-        }
-
-        // Decode from Base64 string to Uint8Array, then decode MessagePack
-        const binaryString = atob(row.value);
-        const binaryData = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          binaryData[i] = binaryString.charCodeAt(i);
-        }
-
-        return {
-          actionType: row.action_type,
-          target: row.target,
-          value: decode(binaryData),
-        };
-      });
+      return results.map((row) => ({
+        actionType: row.action_type,
+        target: row.target,
+        value: row.value ? decode(new Uint8Array(JSON.parse(row.value))) : null,
+      }));
     },
 
     app: {
@@ -154,27 +132,19 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
         ]);
 
         if (result && result.length > 0) {
-          // Decode from Base64 string to Uint8Array, then decode MessagePack
-          const binaryString = atob(result[0].value);
-          const binaryData = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            binaryData[i] = binaryString.charCodeAt(i);
-          }
+          // Tauri SQL returns JSON array as string, parse it first
+          const numberArray = JSON.parse(result[0].value);
+          const binaryData = new Uint8Array(numberArray);
           return decode(binaryData);
         }
         return null;
       },
       set: async (key, value) => {
-        // Encode to MessagePack, then convert to Base64 string for storage
+        // Encode to MessagePack and store directly as Uint8Array
         const binaryData = encode(value);
-        let binaryString = "";
-        for (let i = 0; i < binaryData.length; i++) {
-          binaryString += String.fromCharCode(binaryData[i]);
-        }
-        const base64Value = btoa(binaryString);
         await db.execute(
           "INSERT OR REPLACE INTO app (key, value) VALUES ($1, $2)",
-          [key, base64Value],
+          [key, binaryData],
         );
       },
       remove: async (key) => {

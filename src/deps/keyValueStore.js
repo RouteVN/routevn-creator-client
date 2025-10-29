@@ -9,7 +9,7 @@ export const createKeyValueStore = async () => {
     await db.execute(`
       CREATE TABLE IF NOT EXISTS ItemTable (
         key TEXT PRIMARY KEY,
-        value TEXT
+        value BLOB
       )
     `);
   };
@@ -21,28 +21,20 @@ export const createKeyValueStore = async () => {
     );
 
     if (result && result.length > 0) {
-      // Decode from Base64 string to Uint8Array, then decode MessagePack
-      const binaryString = atob(result[0].value);
-      const binaryData = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        binaryData[i] = binaryString.charCodeAt(i);
-      }
+      // Tauri SQL returns JSON array as string, parse it first
+      const numberArray = JSON.parse(result[0].value);
+      const binaryData = new Uint8Array(numberArray);
       return decode(binaryData);
     }
     return null;
   };
 
   const set = async (key, value) => {
-    // Encode to MessagePack, then convert to Base64 string for storage
+    // Encode to MessagePack and store directly as Uint8Array
     const binaryData = encode(value);
-    let binaryString = "";
-    for (let i = 0; i < binaryData.length; i++) {
-      binaryString += String.fromCharCode(binaryData[i]);
-    }
-    const base64Value = btoa(binaryString);
     await db.execute(
       "INSERT OR REPLACE INTO ItemTable (key, value) VALUES ($1, $2)",
-      [key, base64Value],
+      [key, binaryData],
     );
   };
 
