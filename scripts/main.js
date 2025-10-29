@@ -13,11 +13,10 @@ import RouteGraphics, {
 } from "route-graphics";
 
 async function parseVNBundle(arrayBuffer) {
-  const uint8View = new Uint8Array(arrayBuffer);
   const dataView = new DataView(arrayBuffer);
 
-  // Read version (byte 0) - not used for now but good to have
-  const version = uint8View[0];
+  // Read version (byte 0)
+  const version = dataView.getUint8(0);
   if (version !== 1) {
     throw new Error(`Unsupported bundle version: ${version}`);
   }
@@ -29,7 +28,8 @@ async function parseVNBundle(arrayBuffer) {
   const headerSize = 16;
 
   // Read index (starts after 16-byte header)
-  const index = JSON.parse(new TextDecoder().decode(uint8View.subarray(headerSize, headerSize + indexLength)));
+  const indexBuffer = new Uint8Array(arrayBuffer, headerSize, indexLength);
+  const index = JSON.parse(new TextDecoder().decode(indexBuffer));
   const assets = {};
   let instructions = null;
 
@@ -37,7 +37,9 @@ async function parseVNBundle(arrayBuffer) {
   const dataBlockOffset = headerSize + indexLength;
 
   for (const [id, metadata] of Object.entries(index)) {
-    const content = uint8View.subarray(metadata.start + dataBlockOffset, metadata.end + dataBlockOffset + 1);
+    const contentStart = metadata.start + dataBlockOffset;
+    const contentEnd = metadata.end + dataBlockOffset + 1;
+    const content = new Uint8Array(arrayBuffer, contentStart, contentEnd - contentStart);
     if (id === 'instructions') {
       instructions = JSON.parse(new TextDecoder().decode(content));
     } else {
