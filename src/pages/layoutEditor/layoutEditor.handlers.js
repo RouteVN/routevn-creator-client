@@ -632,7 +632,7 @@ export const handleImageSelectorSelection = (deps, payload) => {
 };
 
 export const handleConfirmImageSelection = async (deps) => {
-  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
+  const { store, render, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { selectedImageId, fieldName } = store.selectImageSelectorDialog();
@@ -1028,4 +1028,50 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
       item: selectedItem,
     },
   });
+};
+
+export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
+  const { store, render } = deps;
+  const layoutId = store.selectLayoutId();
+  const selectedItemId = store.selectSelectedItemId();
+
+  let unflattenedUpdate;
+
+  // Handle anchor selection specially
+  if (
+    payload._event.detail.name === "anchor" &&
+    payload._event.detail.value &&
+    typeof payload._event.detail.value === "object"
+  ) {
+    // When anchor is selected, update both anchorX and anchorY
+    unflattenedUpdate = {
+      anchorX: payload._event.detail.value.x,
+      anchorY: payload._event.detail.value.y,
+    };
+  } else {
+    unflattenedUpdate = unflattenKey(
+      payload._event.detail.name,
+      payload._event.detail.value,
+    );
+  }
+
+  const currentItem = store.selectSelectedItem();
+  const updatedItem = deepMerge(currentItem, unflattenedUpdate);
+  updatedItem[payload._event.detail.name] = payload._event.detail.value;
+
+  // Update store optimistically for immediate UI feedback
+  store.updateSelectedItem(updatedItem);
+  render();
+
+  // Dispatch debounced update action to repository
+  const { subject } = deps;
+  subject.dispatch("layoutEditor.updateElement", {
+    layoutId,
+    selectedItemId,
+    updatedItem,
+    replace: true,
+  });
+
+  // Render preview immediately for user feedback (skip asset loading for speed)
+  await renderLayoutPreview(deps, { skipAssetLoading: true });
 };

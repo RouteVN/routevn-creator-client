@@ -86,6 +86,10 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
+  layout-edit-panel:
+    eventListeners:
+      update:
+        handler: handleLayoutEditPanelUpdateHandler
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -100,7 +104,7 @@ template:
               - rtgl-view flex=1:
                   - rtgl-text c=mu-fg: ${layout.name}
           - rtgl-view flex=1 sv w=f:
-              - 'rtgl-view w=f bgc=mu pos=rel style="margin-left: 1px; aspect-ratio: 16/9;"':
+              - 'rtgl-view w=f bgc=mu pos=rel bwb=xs style="margin-left: 1px; aspect-ratio: 16/9;"':
                   - rtgl-view pos=abs cor=full:
                       - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
               - $if layout.layoutType == 'dialogue':
@@ -110,31 +114,10 @@ template:
       - rvn-resizable-panel#resizable-detail-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
               - $if selectedItemId:
-                  - rtgl-view w=f h=100vh sv:
-                      - rtgl-form#detail-form key=${formKey} w=f h=f .form=form .context=context .defaultValues=defaultValues:
-                          - rvn-system-actions#system-actions slot="eventPayload" .actions=defaultValues.actions .repositoryState=repositoryStateForActions .selectedLineId=selectedItemId action-type="system" .presentationState=presentationState:
-                          - $if item.imageId:
-                              - rvn-file-image#file-image-image-id data-name="imageId" slot="imageId" w=f imageId=${item.imageId}:
-                            $else:
-                              - rtgl-view#file-placeholder-image-id data-name="imageId" slot="imageId" w=f bw=md av=c ah=c cur=p h=48:
-                                  - rtgl-text c=mu-fg: No Image
-                          - $if item.hoverImageId:
-                              - rvn-file-image#file-image-hover-image-id data-name="hoverImageId" slot="hoverImageId" w=f imageId=${item.hoverImageId}:
-                            $else:
-                              - rtgl-view#file-placeholder-hover-image-id data-name="hoverImageId" slot="hoverImageId" w=f bw=md av=c ah=c cur=p h=48:
-                                  - rtgl-text c=mu-fg: No Image
-                          - $if item.clickImageId:
-                              - rvn-file-image#file-image-click-image-id data-name="clickImageId" slot="clickImageId" w=f imageId=${item.clickImageId}:
-                            $else:
-                              - rtgl-view#file-placeholder-click-image-id data-name="clickImageId" slot="clickImageId" w=f bw=md av=c ah=c cur=p h=48:
-                                  - rtgl-text c=mu-fg: No Image
+                  - rtgl-view h=48 w=f av=c ph=md:
+                      - rtgl-text c=mu-fg: ${item.name} (${item.type})
+                  - rtgl-view w=f flex=1 sv pv=md:
+                      - rvn-layout-edit-panel#layout-edit-panel key=${item.id} item-type=${item.type} .values=item:
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
-  - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
-      - rtgl-view slot=content g=md:
-          - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:
-          - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancel-image-selection variant=se: Cancel
-              - rtgl-button#confirm-image-selection variant=pr: OK
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen} placement=left:

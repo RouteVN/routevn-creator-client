@@ -2,19 +2,11 @@ elementName: rvn-image-selector
 
 propsSchema:
   type: object
-  properties:
-    groups:
-      type: array
-    selectedImageId:
-      type: string
+  properties: {}
 
 viewDataSchema:
   type: object
-  properties:
-    groups:
-      type: array
-    selectedImageId:
-      type: string
+  properties: {}
 
 refs:
   image-item-*:

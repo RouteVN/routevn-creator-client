@@ -129,7 +129,7 @@ template:
                   - rtgl-view d=h av=c:
                       - rtgl-text s=sm c=mu-fg: State
                   - rtgl-view g=md w=f pv=md:
-                      - rvn-system-actions#system-actions .actions=selectedLineActions .repositoryState=repositoryState .selectedLineId=selectedLineId .selectedLine=selectedLine .currentSceneId=scene.id action-type="presentation" .presentationState=presentationState:
+                      - rvn-system-actions#system-actions show-selected .actions=selectedLineActions .selectedLineId=selectedLineId .selectedLine=selectedLine .currentSceneId=scene.id action-type="presentation" .presentationState=presentationState:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:

@@ -1,5 +1,8 @@
+import { toFlatGroups } from "../../deps/repository";
+
 export const createInitialState = () => ({
   selectedImageId: undefined,
+  images: { items: {}, tree: [] }, // Add this - raw repository images data
 });
 
 export const selectSelectedImageId = ({ state }) => {
@@ -10,11 +13,20 @@ export const setSelectedImageId = (state, payload) => {
   state.selectedImageId = payload.imageId;
 };
 
-export const selectViewData = ({ props }) => {
-  const groups = props.groups || [];
-  const selectedImageId = props.selectedImageId;
+export const selectImages = ({ state }) => {
+  return state.images;
+};
 
-  const processedGroups = groups.map((group) => {
+export const setImages = (state, images) => {
+  state.images = images;
+};
+
+export const selectViewData = ({ state }) => {
+  const images = state.images || { items: {}, tree: [] }; // Raw data from state
+  const selectedImageId = state.selectedImageId; // Use state instead of props
+
+  // Process images into groups here, like in commandLineBackground
+  const groups = toFlatGroups(images).map((group) => {
     return {
       ...group,
       children: group.children.map((child) => {
@@ -28,6 +40,7 @@ export const selectViewData = ({ props }) => {
   });
 
   return {
-    groups: processedGroups,
+    groups: groups, // Processed groups for template
+    selectedImageId: selectedImageId,
   };
 };
