@@ -1,8 +1,8 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
 // TODO: get global screen size from store
-const SCREEN_WIDTH = 1920;
-const SCREEN_HEIGHT = 1080;
+// const SCREEN_WIDTH = 1920;
+// const SCREEN_HEIGHT = 1080;
 
 const dialogueForm = {
   title: "Preview",
@@ -414,8 +414,6 @@ export const selectViewData = ({ state }) => {
   const form = selectedItem
     ? {
         fields: [
-          { name: "name", inputType: "popover-input", description: "Name" },
-          { name: "type", inputType: "read-only-text", description: "Type" },
           {
             name: "$when",
             inputType: "inputText",
@@ -425,76 +423,6 @@ export const selectViewData = ({ state }) => {
             name: "$each",
             inputType: "inputText",
             description: "$each",
-          },
-          {
-            name: "x",
-            inputType: "slider-input",
-            description: "X Position",
-            max: SCREEN_WIDTH,
-          },
-          {
-            name: "y",
-            inputType: "slider-input",
-            description: "Y Position",
-            max: SCREEN_HEIGHT,
-          },
-          {
-            name: "width",
-            inputType: "slider-input",
-            description: "Width",
-            max: SCREEN_WIDTH,
-          },
-          {
-            name: "height",
-            inputType: "slider-input",
-            description: "Height",
-            max: SCREEN_HEIGHT,
-          },
-          {
-            name: "scaleX",
-            inputType: "slider-input",
-            description: "Scale X",
-            min: 0.1,
-            max: 4,
-            step: 0.1,
-          },
-          {
-            name: "scaleY",
-            inputType: "slider-input",
-            description: "Scale Y",
-            min: 0.1,
-            max: 4,
-            step: 0.1,
-          },
-          {
-            name: "rotation",
-            inputType: "slider-input",
-            description: "Rotation",
-            min: -360,
-            max: 360,
-            step: 1,
-          },
-          {
-            name: "anchor",
-            inputType: "select",
-            description: "Anchor Point",
-            options: [
-              { label: "Top Left", value: { x: 0, y: 0 } },
-              { label: "Top Center", value: { x: 0.5, y: 0 } },
-              { label: "Top Right", value: { x: 1, y: 0 } },
-              { label: "Center Left", value: { x: 0, y: 0.5 } },
-              { label: "Center", value: { x: 0.5, y: 0.5 } },
-              { label: "Center Right", value: { x: 1, y: 0.5 } },
-              { label: "Bottom Left", value: { x: 0, y: 1 } },
-              { label: "Bottom Center", value: { x: 0.5, y: 1 } },
-              { label: "Bottom Right", value: { x: 1, y: 1 } },
-            ],
-          },
-          {
-            name: "eventPayload",
-            inputType: "slot",
-            slot: "eventPayload",
-            description: "Event Payload",
           },
           ...(selectedItem.type === "text" ||
           selectedItem.type === "text-revealing"
@@ -539,28 +467,7 @@ export const selectViewData = ({ state }) => {
                 },
               ]
             : []),
-          ...(selectedItem.type === "sprite"
-            ? [
-                {
-                  name: "imageId",
-                  inputType: "slot",
-                  description: "Image",
-                  slot: "imageId",
-                },
-                {
-                  name: "hoverImageId",
-                  inputType: "slot",
-                  description: "Hover Image",
-                  slot: "hoverImageId",
-                },
-                {
-                  name: "clickImageId",
-                  inputType: "slot",
-                  description: "Click Image",
-                  slot: "clickImageId",
-                },
-              ]
-            : []),
+          ...(selectedItem.type === "sprite" ? [] : []),
           ...(selectedItem.type === "container"
             ? [
                 {
@@ -677,5 +584,23 @@ export const selectViewData = ({ state }) => {
     dropdownMenu: state.dropdownMenu,
     formKey: `${state.selectedItemId}-${state.formKeyCheckpoint}`,
     presentationState: {},
+    anchorOptions: [
+      { label: "Top Left", value: { x: 0, y: 0 } },
+      { label: "Top Center", value: { x: 0.5, y: 0 } },
+      { label: "Top Right", value: { x: 1, y: 0 } },
+      { label: "Center Left", value: { x: 0, y: 0.5 } },
+      { label: "Center", value: { x: 0.5, y: 0.5 } },
+      { label: "Center Right", value: { x: 1, y: 0.5 } },
+      { label: "Bottom Left", value: { x: 0, y: 1 } },
+      { label: "Bottom Center", value: { x: 0.5, y: 1 } },
+      { label: "Bottom Right", value: { x: 1, y: 1 } },
+    ],
+    directionOption: [
+      [
+        { label: "None", value: undefined },
+        { label: "Horizontal", value: "horizontal" },
+        { label: "Vertical", value: "vertical" },
+      ],
+    ],
   };
 };

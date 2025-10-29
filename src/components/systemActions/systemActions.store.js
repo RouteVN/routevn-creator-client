@@ -13,13 +13,17 @@ export const createInitialState = () => ({
       },
     ],
   },
+  repositoryState: {}, // Add this - default to empty object
 });
 
 export const selectViewData = ({ state, props, attrs }) => {
   const displayActions = selectDisplayActions({ state });
-  const { actions: actionsObject, preview } = selectActionsData({ props });
+  const { actions: actionsObject, preview } = selectActionsData({
+    props,
+    state,
+  });
 
-  const repositoryState = props.repositoryState || {};
+  const repositoryState = state.repositoryState;
   const choiceLayouts = Object.entries(repositoryState.layouts?.items || {})
     .filter(([_, layout]) => layout.layoutType === "choice")
     .map(([id, layout]) => ({
@@ -59,7 +63,7 @@ export const selectViewData = ({ state, props, attrs }) => {
   return {
     currentSceneId: props.currentSceneId,
     mode: state.mode,
-    isActionsDialogOpen: state.isActionsDialogOpen,
+    isActionsDialogOpen: !!attrs["open"] || state.isActionsDialogOpen,
     dropdownMenu: state.dropdownMenu,
     displayActions,
     actions: actionsObject,
@@ -73,7 +77,16 @@ export const selectViewData = ({ state, props, attrs }) => {
     allCharacters: filteredCharacters,
     selectedLine: props.selectedLine,
     actionsType: attrs["action-type"],
+    showSelected: !!attrs["show-selected"],
   };
+};
+
+export const selectRepositoryState = ({ state }) => {
+  return state.repositoryState;
+};
+
+export const setRepositoryState = (state, repositoryState) => {
+  state.repositoryState = repositoryState;
 };
 
 export const selectDisplayActions = ({ state }) => {
@@ -111,14 +124,14 @@ export const setMode = (state, payload) => {
 };
 
 // Moved from sceneEditor.store.js - now returns object instead of array
-export const selectActionsData = ({ props }) => {
-  const { actions, repositoryState, presentationState } = props;
+export const selectActionsData = ({ props, state }) => {
+  const { actions, presentationState } = props;
 
-  if (!actions) {
+  if (!actions || !presentationState) {
     return {};
   }
 
-  const repositoryStateData = repositoryState || {};
+  const repositoryStateData = state.repositoryState;
   // Images and audios: accessed directly by ID (e.g., images[id])
   const images = repositoryStateData.images?.items || {};
   const audios = repositoryStateData.audio?.items || {};

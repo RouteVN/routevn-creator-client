@@ -1,3 +1,13 @@
+export const handleAfterMount = async (deps) => {
+  const { store, repositoryFactory, router, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const repositoryState = repository.getState();
+
+  store.setRepositoryState(repositoryState);
+  render();
+};
+
 export const handleBeforeMount = (deps) => {
   const { props, render, store } = deps;
   store.updateActions(props.actions);
@@ -46,9 +56,11 @@ export const handleAddActionButtonClicked = (deps) => {
 };
 
 export const handleActionsDialogClose = (deps) => {
-  const { store, render } = deps;
+  const { store, render, dispatchEvent } = deps;
   store.hideActionsDialog();
   render();
+  dispatchEvent(new CustomEvent("close"));
+  store.setMode({ mode: "actions" });
 };
 
 export const handleActionItemClick = (deps, payload) => {

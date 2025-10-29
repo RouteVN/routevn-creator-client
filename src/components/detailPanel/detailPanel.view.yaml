@@ -115,7 +115,7 @@ refs:
         handler: handleCloseImageSelectorDialog
 
 template:
-  - 'rtgl-view w=f h=f p=md':
+  - "rtgl-view w=f h=f p=md":
       - $if hasContent:
           - $if title:
               - rtgl-text s=lg: ${title}
@@ -218,7 +218,7 @@ template:
 
   - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
       - rtgl-view slot=content g=md:
-          - rvn-image-selector#image-selector .groups=imageSelectorDialog.groups .selectedImageId=imageSelectorDialog.selectedImageId:
-          - rtgl-view d=f jc=fe g=sm:
+          - rvn-image-selector#image-selector:
+          - rtgl-view d=f g=sm:
               - rtgl-button#cancel-image-selection variant=se: Cancel
               - rtgl-button#confirm-image-selection variant=pr: OK
