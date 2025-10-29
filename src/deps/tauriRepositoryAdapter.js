@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 import { loadTemplate, getTemplateFiles } from "../utils/templateLoader";
+import { encode, decode } from "@msgpack/msgpack";
 
 /**
  * Initialize a new project with folder structure and database
@@ -105,13 +106,16 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
 
   return {
     async addAction(action) {
+      // Encode to MessagePack, then convert to Base64 string for storage
+      const binaryData = encode(action.value);
+      let binaryString = "";
+      for (let i = 0; i < binaryData.length; i++) {
+        binaryString += String.fromCharCode(binaryData[i]);
+      }
+      const base64Value = btoa(binaryString);
       await db.execute(
         "INSERT INTO actions (action_type, target, value) VALUES (?, ?, ?)",
-        [
-          action.actionType,
-          action.target || null,
-          JSON.stringify(action.value),
-        ],
+        [action.actionType, action.target || null, base64Value],
       );
     },
 
@@ -119,11 +123,28 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
       const results = await db.select(
         "SELECT action_type, target, value FROM actions ORDER BY id",
       );
-      return results.map((row) => ({
-        actionType: row.action_type,
-        target: row.target,
-        value: row.value ? JSON.parse(row.value) : null,
-      }));
+      return results.map((row) => {
+        if (!row.value) {
+          return {
+            actionType: row.action_type,
+            target: row.target,
+            value: null,
+          };
+        }
+
+        // Decode from Base64 string to Uint8Array, then decode MessagePack
+        const binaryString = atob(row.value);
+        const binaryData = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          binaryData[i] = binaryString.charCodeAt(i);
+        }
+
+        return {
+          actionType: row.action_type,
+          target: row.target,
+          value: decode(binaryData),
+        };
+      });
     },
 
     app: {
@@ -133,19 +154,27 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
         ]);
 
         if (result && result.length > 0) {
-          try {
-            return JSON.parse(result[0].value);
-          } catch {
-            return result[0].value;
+          // Decode from Base64 string to Uint8Array, then decode MessagePack
+          const binaryString = atob(result[0].value);
+          const binaryData = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            binaryData[i] = binaryString.charCodeAt(i);
           }
+          return decode(binaryData);
         }
         return null;
       },
       set: async (key, value) => {
-        const jsonValue = JSON.stringify(value);
+        // Encode to MessagePack, then convert to Base64 string for storage
+        const binaryData = encode(value);
+        let binaryString = "";
+        for (let i = 0; i < binaryData.length; i++) {
+          binaryString += String.fromCharCode(binaryData[i]);
+        }
+        const base64Value = btoa(binaryString);
         await db.execute(
           "INSERT OR REPLACE INTO app (key, value) VALUES ($1, $2)",
-          [key, jsonValue],
+          [key, base64Value],
         );
       },
       remove: async (key) => {
