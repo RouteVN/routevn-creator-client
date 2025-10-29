@@ -170,7 +170,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
   const zipName = `${projectData.project.name}_${version.name}`;
 
   console.log(
-    `✓ Bundle created: package.vnbundle (${(bundle.length / 1024).toFixed(1)} KB)`,
+    `✓ Bundle created: package.bin (${(bundle.length / 1024).toFixed(1)} KB)`,
   );
 
   // Create and download ZIP with bundle and static files using save dialog

@@ -44,6 +44,9 @@ export const initializeProject = async ({
     target: null,
     value: initData,
   });
+
+  // Set creator_version to 1 in app table
+  await adapter.app.set("creator_version", "1");
 };
 
 async function copyTemplateFiles(templateId, targetPath) {
