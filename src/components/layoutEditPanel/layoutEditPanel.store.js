@@ -21,7 +21,7 @@ const groupItemEditForm = {
 const config = {
   sections: [
     {
-      label: "Dimensions",
+      label: "Position",
       type: "group",
       fields: [
         {
@@ -42,6 +42,7 @@ const config = {
       ],
     },
     {
+      $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
       label: "Layout",
       type: "group",
       fields: [
@@ -84,6 +85,7 @@ const config = {
       ],
     },
     {
+      $when: 'itemType == "container"',
       label: "Direction",
       type: "select",
       fields: [
@@ -99,6 +101,7 @@ const config = {
       ],
     },
     {
+      $when: 'itemType == "sprite"',
       label: "Image",
       "$if !values.imageId || !values.hoverImageId || !values.clickImageId": {
         labelAction: "plus",
@@ -126,6 +129,7 @@ const config = {
       ],
     },
     {
+      $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
       label: "Actions",
       labelAction: "plus",
       type: "list-item",
@@ -250,8 +254,9 @@ export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, attrs }) => {
   const context = {
+    itemType: attrs["item-type"],
     values: {
       ...state.values,
       actions: Object.entries(state.values?.actions || {}).map(

@@ -28,7 +28,7 @@ export const handleGroupItemClick = (deps, payload) => {
   render();
 };
 
-export const handlerPopverFormClose = (deps) => {
+export const handlePopverFormClose = (deps) => {
   const { render, store } = deps;
   store.closePopoverForm();
   render();
@@ -66,6 +66,7 @@ export const handleSectionActionClick = async (deps, payload) => {
 
   if (id === "actions") {
     store.openActionsDialog();
+    render();
   } else if (id === "images") {
     const items = [];
     const { imageId, hoverImageId, clickImageId } = store.selectValues();
@@ -78,12 +79,16 @@ export const handleSectionActionClick = async (deps, payload) => {
     if (!clickImageId) {
       items.push({ type: "item", label: "Click", key: "clickImageId" });
     }
-    const { item } = await globalUI.showDropdownMenu({
+    const result = await globalUI.showDropdownMenu({
       items,
       x: _event.clientX,
       y: _event.clientY,
       placement: "bottom-start",
     });
+    if (!result) {
+      return;
+    }
+    const { item } = result;
 
     if (item.key) {
       store.openImageSelectorDialog({
@@ -91,8 +96,6 @@ export const handleSectionActionClick = async (deps, payload) => {
       });
       render();
     }
-
-    render();
   }
 };
 
@@ -153,6 +156,17 @@ export const handleActionsChange = (deps, payload) => {
   );
 };
 
+export const handleListBarItemClick = async (deps, payload) => {
+  const { render, store } = deps;
+  const { _event: event } = payload;
+  const { name } = event.currentTarget.dataset;
+  // console.log('bbbbbbbbbbbb')
+  store.openImageSelectorDialog({
+    name,
+  });
+  render();
+};
+
 export const handleListBarItemRightClick = async (deps, payload) => {
   const { render, store, globalUI } = deps;
   const { _event: event } = payload;
@@ -188,6 +202,13 @@ export const handleListBarItemRightClick = async (deps, payload) => {
   );
 };
 
+// --- List Item ---
+export const handleListItemClick = async (deps) => {
+  const { render, store } = deps;
+  store.openActionsDialog();
+  render();
+};
+
 export const handleListItemRightClick = async (deps, payload) => {
   const { render, store, globalUI } = deps;
   const { _event: event } = payload;
@@ -204,27 +225,27 @@ export const handleListItemRightClick = async (deps, payload) => {
   }
   const { item } = result;
   if (item.key === "remove") {
-    const actions = structuredClone(store.selectValues().actions);
     delete actions[id];
+    const actions = structuredClone(store.selectValues().actions);
     store.updateValueProperty({
       name: "actions",
       value: actions,
     });
+    const formValues = store.selectValues();
+    dispatchEvent(
+      new CustomEvent("update", {
+        detail: {
+          formValues,
+          name: "actions",
+          value: actions,
+        },
+      }),
+    );
   }
   render();
-
-  const formValues = store.selectValues();
-  dispatchEvent(
-    new CustomEvent("update", {
-      detail: {
-        formValues,
-        name: "actions",
-        value: actions,
-      },
-    }),
-  );
 };
 
+// --- Image Selector ---
 export const handleImageSelectorImageSelected = (deps, payload) => {
   const { store } = deps;
   const { _event } = payload;
@@ -234,7 +255,7 @@ export const handleImageSelectorImageSelected = (deps, payload) => {
 };
 
 export const handleImageSelectorSubmit = (deps) => {
-  const { store, render } = deps;
+  const { store, render, dispatchEvent } = deps;
   const imageId = store.selectTempSelectedImageId();
   const { name } = store.selectImageSelectorDialog();
 

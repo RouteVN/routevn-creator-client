@@ -35,9 +35,15 @@ refs:
         handler: handleSystemActionsClose
   list-item-*:
     eventListeners:
+      click:
+        handler: handleListItemClick
       contextmenu:
         handler: handleListItemRightClick
 
+  image-selector-dialog:
+    eventListeners:
+      close:
+        action: closeImageSelectorDialog
   image-selector:
     eventListeners:
       image-selected:
@@ -50,6 +56,8 @@ refs:
 
   list-bar-item-*:
     eventListeners:
+      click:
+        handler: handleListBarItemClick
       contextmenu:
         handler: handleListBarItemRightClick
 
@@ -92,9 +100,11 @@ template:
                       - rtgl-view flex=1:
                       - rvn-file-image bw=xs bc=bo imageId=${item.imageId} h=32:
 
+  - rtgl-view h=1 w=f bgc=mu mv=lg:
+
   - rvn-system-actions#system-actions .actions=values.actions  action-type="system" ?open=${actionsDialogOpen}:
 
-  - rtgl-popover#popover-form ?open=${popover.open} x=${popover.x} y=${popover.y}:
+  - rtgl-popover#popover-form ?open=${popover.open} placement=bottom-end x=${popover.x} y=${popover.y}:
       - rtgl-form#form key=${popover.open} slot=content .form=popover.form .defaultValues=popover.defaultValues:
 
   - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.open}:
