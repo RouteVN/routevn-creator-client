@@ -114,7 +114,6 @@ export const createBundleService = () => {
     return finalBundle;
   };
 
-  
   /**
    * Exports a project as a bundle file
    * @param {Object} projectData - Project data

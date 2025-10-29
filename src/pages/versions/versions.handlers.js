@@ -166,7 +166,11 @@ export const handleDownloadZipClick = async (deps, payload) => {
   }
 
   // Create bundle with transformed data
-  const bundle = await bundleService.exportProject(transformedData, files, repository);
+  const bundle = await bundleService.exportProject(
+    transformedData,
+    files,
+    repository,
+  );
   const zipName = `${projectData.project.name}_${version.name}`;
 
   console.log(
