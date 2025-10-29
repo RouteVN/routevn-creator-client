@@ -15,10 +15,9 @@ export const createBundleService = () => {
    * Bundles project data and assets into a single file
    * @param {Object} projectData - Project data object
    * @param {Object} assets - Map of asset URLs to buffer/mime data
-   * @param {Object} repository - Repository object to get app data (optional)
    * @returns {Uint8Array} Bundled file as byte array
    */
-  const createBundle = async (projectData, assets = {}, repository = null) => {
+  const createBundle = async (projectData, assets = {}) => {
     const arrayBuffers = [];
     let currentOffset = 0;
 
@@ -66,24 +65,14 @@ export const createBundleService = () => {
     const indexFileBytes = new TextEncoder().encode(JSON.stringify(indexFile));
 
     // Create header
-    // Get version from repository app table, fallback to 1
-    let version = 1;
-    if (repository && repository.app) {
-      try {
-        const creatorVersion = await repository.app.get("creator_version");
-        if (creatorVersion !== null) {
-          version = parseInt(creatorVersion, 10);
-        }
-      } catch (error) {
-        console.warn("Failed to get creator_version from app table:", error);
-        version = 0;
-      }
-    }
+    // Use hardcoded engine version (currently 1)
+    const engineVersion = 1;
+
     // Create fixed 16-byte header
     const headerBuffer = new Uint8Array(16);
 
-    // Byte 0: Version (1 byte)
-    headerBuffer[0] = version;
+    // Byte 0: Engine version (1 byte)
+    headerBuffer[0] = engineVersion;
 
     // Bytes 1-4: JSON length (4 bytes, big-endian)
     const lengthView = new DataView(headerBuffer.buffer);
@@ -118,11 +107,10 @@ export const createBundleService = () => {
    * Exports a project as a bundle file
    * @param {Object} projectData - Project data
    * @param {Object} files - Pre-fetched file buffers keyed by fileId
-   * @param {Object} repository - Repository object to get app data (optional)
    * @returns {Uint8Array} Bundle data
    */
-  const exportProject = async (projectData, files = {}, repository = null) => {
-    return createBundle(projectData, files, repository);
+  const exportProject = async (projectData, files = {}) => {
+    return createBundle(projectData, files);
   };
 
   /**
