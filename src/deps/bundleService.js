@@ -2,7 +2,8 @@
  * Bundle Service - Handles project bundling and unbundling
  *
  * File format structure:
- * [version(1)] [indexLength(8)] [index(JSON)] [assets...] [instructions(JSON)]
+ * [version(1)] [indexLength(4)] [reserved(11)] [index(JSON)] [assets...] [instructions(JSON)]
+ * Total header size: 16 bytes
  */
 
 import JSZip from "jszip";
@@ -64,104 +65,42 @@ export const createBundleService = () => {
     const indexFileBytes = new TextEncoder().encode(JSON.stringify(indexFile));
 
     // Create header
-    const version = 1;
-    const versionBuffer = new Uint8Array([version]);
-    const indexLengthBuffer = new Uint8Array(8);
-    const dataView = new DataView(indexLengthBuffer.buffer);
-    dataView.setBigUint64(0, BigInt(indexFileBytes.length), false);
+    // Use hardcoded engine version (currently 1)
+    const engineVersion = 1;
 
-    const headerSize =
-      versionBuffer.length + indexLengthBuffer.length + indexFileBytes.length;
+    // Create fixed 16-byte header
+    const headerBuffer = new Uint8Array(16);
 
-    // Merge all parts
-    const finalBundle = new Uint8Array(headerSize + currentOffset);
-    finalBundle.set(versionBuffer, 0);
-    finalBundle.set(indexLengthBuffer, versionBuffer.length);
-    finalBundle.set(
-      indexFileBytes,
-      versionBuffer.length + indexLengthBuffer.length,
-    );
+    // Byte 0: Engine version (1 byte)
+    headerBuffer[0] = engineVersion;
+
+    // Bytes 1-4: JSON length (4 bytes, big-endian)
+    const lengthView = new DataView(headerBuffer.buffer);
+    lengthView.setUint32(1, indexFileBytes.length, false);
+
+    // Bytes 5-15: Reserved for future use (11 bytes)
+    // These remain as zeros
+
+    const headerSize = headerBuffer.length;
+
+    // Calculate total bundle size: header + index + data
+    const totalSize = headerSize + indexFileBytes.length + currentOffset;
+    const finalBundle = new Uint8Array(totalSize);
+    finalBundle.set(headerBuffer, 0);
+    finalBundle.set(indexFileBytes, headerSize);
 
     // Add all assets and instructions
+    // Calculate data block start position (after header and index)
+    const dataBlockStart = headerSize + indexFileBytes.length;
+
     for (const arrayBuffer of arrayBuffers) {
       finalBundle.set(
         new Uint8Array(arrayBuffer.responseArrayBuffer),
-        arrayBuffer.start + headerSize,
+        arrayBuffer.start + dataBlockStart,
       );
     }
 
     return finalBundle;
-  };
-
-  /**
-   * Extracts project data and assets from a bundle
-   * @param {ArrayBuffer|Uint8Array|string} input - Bundle data or URL
-   * @returns {Object} Object containing assets and instructions
-   */
-  const extractBundle = async (input) => {
-    let bufferData;
-
-    // Handle different input types
-    if (typeof input === "string") {
-      const response = await fetch(input, {
-        headers: { "Content-Type": "application/octet-stream" },
-      });
-      bufferData = await response.arrayBuffer();
-    } else if (input instanceof ArrayBuffer) {
-      bufferData = input;
-    } else if (input instanceof Uint8Array) {
-      bufferData = input.buffer.slice(
-        input.byteOffset,
-        input.byteOffset + input.byteLength,
-      );
-    } else {
-      throw new Error("Invalid input type for bundle extraction");
-    }
-
-    const uint8View = new Uint8Array(bufferData);
-
-    // Read version
-    const version = uint8View[0];
-    if (version !== 1) {
-      throw new Error(`Unsupported bundle version: ${version}`);
-    }
-
-    // Read index length
-    const lengthBuffer = uint8View.subarray(1, 9);
-    const lengthArrayBuffer = lengthBuffer.buffer.slice(
-      lengthBuffer.byteOffset,
-      lengthBuffer.byteOffset + lengthBuffer.length,
-    );
-    const lengthView = new DataView(lengthArrayBuffer);
-    const indexLength = Number(lengthView.getBigUint64(0));
-
-    // Read index
-    const headerSize = 9 + indexLength;
-    const indexBuffer = uint8View.subarray(9, headerSize);
-    const indexString = new TextDecoder().decode(indexBuffer);
-    const index = JSON.parse(indexString);
-
-    // Extract assets and instructions
-    const assets = {};
-    let instructions = null;
-
-    for (const [id, metadata] of Object.entries(index)) {
-      const contentBuffer = uint8View.subarray(
-        metadata.start + headerSize,
-        metadata.end + headerSize + 1,
-      );
-
-      if (id === "instructions") {
-        instructions = JSON.parse(new TextDecoder().decode(contentBuffer));
-      } else {
-        assets[id] = {
-          buffer: contentBuffer,
-          type: metadata.mime,
-        };
-      }
-    }
-
-    return { assets, instructions };
   };
 
   /**
@@ -171,7 +110,7 @@ export const createBundleService = () => {
    * @returns {Uint8Array} Bundle data
    */
   const exportProject = async (projectData, files = {}) => {
-    return await createBundle(projectData, files);
+    return createBundle(projectData, files);
   };
 
   /**
@@ -190,7 +129,7 @@ export const createBundleService = () => {
         filters: [
           {
             name: "Visual Novel Bundle",
-            extensions: ["vnbundle"],
+            extensions: ["bin"],
           },
         ],
       });
@@ -216,8 +155,8 @@ export const createBundleService = () => {
     try {
       const zip = new JSZip();
 
-      // Add package.vnbundle
-      zip.file("package.vnbundle", bundle);
+      // Add package.bin
+      zip.file("package.bin", bundle);
 
       // Fetch and add static bundle files
       try {
@@ -265,7 +204,6 @@ export const createBundleService = () => {
   // Public API
   return {
     createBundle,
-    extractBundle,
     exportProject,
     downloadBundle,
     createDistributionZip,

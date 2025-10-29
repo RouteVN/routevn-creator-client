@@ -13,13 +13,33 @@ import RouteGraphics, {
 } from "route-graphics";
 
 async function parseVNBundle(arrayBuffer) {
-  const uint8View = new Uint8Array(arrayBuffer);
-  const headerSize = 9 + Number(new DataView(uint8View.buffer, 1, 8).getBigUint64(0));
-  const index = JSON.parse(new TextDecoder().decode(uint8View.subarray(9, headerSize)));
+  const dataView = new DataView(arrayBuffer);
+
+  // Read version (byte 0)
+  const version = dataView.getUint8(0);
+  if (version !== 1) {
+    throw new Error(`Unsupported bundle version: ${version}`);
+  }
+
+  // Read index length (bytes 1-4, big-endian)
+  const indexLength = dataView.getUint32(1, false);
+
+  // Fixed header size is 16 bytes
+  const headerSize = 16;
+
+  // Read index (starts after 16-byte header)
+  const indexBuffer = new Uint8Array(arrayBuffer, headerSize, indexLength);
+  const index = JSON.parse(new TextDecoder().decode(indexBuffer));
   const assets = {};
   let instructions = null;
+
+  // Data block starts after header and index
+  const dataBlockOffset = headerSize + indexLength;
+
   for (const [id, metadata] of Object.entries(index)) {
-    const content = uint8View.subarray(metadata.start + headerSize, metadata.end + headerSize + 1);
+    const contentStart = metadata.start + dataBlockOffset;
+    const contentEnd = metadata.end + dataBlockOffset + 1;
+    const content = new Uint8Array(arrayBuffer, contentStart, contentEnd - contentStart);
     if (id === 'instructions') {
       instructions = JSON.parse(new TextDecoder().decode(content));
     } else {
@@ -36,8 +56,8 @@ async function parseVNBundle(arrayBuffer) {
 }
 
 const init = async () => {
-  const response = await fetch('./package.vnbundle');
-  if (!response.ok) throw new Error(`Failed to fetch VNBundle: ${response.statusText}`);
+  const response = await fetch('./package.bin');
+  if (!response.ok) throw new Error(`Failed to fetch BIN bundle: ${response.statusText}`);
   const { assets: vnbundleAssets, instructions: vnbundleInstructions } = await parseVNBundle(await response.arrayBuffer());
   console.log('VNBundle assets:', vnbundleAssets);
   console.log('VNBundle instructions:', vnbundleInstructions);
