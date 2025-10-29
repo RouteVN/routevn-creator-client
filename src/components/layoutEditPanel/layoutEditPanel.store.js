@@ -30,7 +30,7 @@ const config = {
           value: "${values.x}",
         },
         {
-          svg: "x",
+          svg: "y",
           name: "y",
           value: "${values.y}",
         },
@@ -47,12 +47,12 @@ const config = {
       type: "group",
       fields: [
         {
-          svg: "x",
+          svg: "w",
           name: "width",
           value: "${values.width}",
         },
         {
-          svg: "x",
+          svg: "h",
           name: "height",
           value: "${values.height}",
         },

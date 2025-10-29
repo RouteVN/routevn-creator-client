@@ -121,10 +121,3 @@ template:
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
-  # - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.isOpen}:
-  #     - rtgl-view slot=content g=md:
-  #         - rvn-image-selector#image-selector:
-  #         - rtgl-view d=h g=sm w=f ah=e:
-  #             - rtgl-button#cancel-image-selection variant=se: Cancel
-  #             - rtgl-button#confirm-image-selection variant=pr: OK
-  # - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen} placement=left:

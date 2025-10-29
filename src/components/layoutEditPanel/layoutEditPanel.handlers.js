@@ -160,7 +160,6 @@ export const handleListBarItemClick = async (deps, payload) => {
   const { render, store } = deps;
   const { _event: event } = payload;
   const { name } = event.currentTarget.dataset;
-  // console.log('bbbbbbbbbbbb')
   store.openImageSelectorDialog({
     name,
   });
