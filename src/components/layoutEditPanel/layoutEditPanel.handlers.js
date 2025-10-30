@@ -35,9 +35,10 @@ export const handlePopverFormClose = (deps) => {
 };
 
 export const handleOptionSelected = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, dispatchEvent } = deps;
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
+
   store.updateValueProperty({
     name: name,
     value: _event.detail.value,
