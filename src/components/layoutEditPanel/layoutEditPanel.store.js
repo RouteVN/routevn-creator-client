@@ -1,4 +1,5 @@
 import { parseAndRender } from "jempl";
+import { toFlatGroups } from "../../deps/repository";
 
 const groupItemEditForm = {
   fields: [
@@ -129,6 +130,51 @@ const config = {
       ],
     },
     {
+      $when: 'itemType == "text"',
+      label: "Text",
+      name: "text",
+      type: "popover-input",
+      value: "${values.text}",
+    },
+    {
+      $when: 'itemType == "text"',
+      label: "Typography",
+      type: "select",
+      fields: [
+        {
+          name: "typographyId",
+          value: "${values.typographyId}",
+          options: "${typographyItems}",
+        },
+        {
+          name: "hoverTypographyId",
+          value: "${values.hoverTypographyId}",
+          options: "${typographyItemsWithNone}",
+        },
+        {
+          name: "clickedTypographyId",
+          value: "${values.clickedTypographyId}",
+          options: "${typographyItemsWithNone}",
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "text"',
+      label: "Text Alignment",
+      type: "select",
+      fields: [
+        {
+          name: "style.align",
+          value: "${values.style.align}",
+          options: [
+            { label: "Left", value: "left" },
+            { label: "Center", value: "center" },
+            { label: "Right", value: "right" },
+          ],
+        },
+      ],
+    },
+    {
       $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
       label: "Actions",
       labelAction: "plus",
@@ -142,13 +188,42 @@ const config = {
       //   label: 'Background',
       // }]
     },
+    {
+      label: "$when",
+      type: "select",
+      fields: [
+        {
+          name: "$when",
+          value: "${values.$when}",
+          options: [
+            { label: "None", value: "" },
+            { label: "Condition 1", value: "condition1" },
+            { label: "Condition 2", value: "condition2" },
+          ],
+        },
+      ],
+    },
+    {
+      label: "$each",
+      type: "select",
+      fields: [
+        {
+          name: "$each",
+          value: "${values.$each}",
+          options: [
+            { label: "None", value: "" },
+            { label: "Iterator 1", value: "iterator1" },
+            { label: "Iterator 2", value: "iterator2" },
+          ],
+        },
+      ],
+    },
   ],
 };
 
 export const createInitialState = () => {
   return {
     tempSelectedImageId: undefined,
-    actionsDialogOpen: false,
     imageSelectorDialog: {
       open: false,
       name: undefined,
@@ -160,6 +235,7 @@ export const createInitialState = () => {
       defaultValues: {},
       name: undefined,
     },
+    typographyData: { tree: [], items: {} },
     values: {
       x: 0,
       y: 0,
@@ -211,14 +287,6 @@ export const selectPopoverForm = ({ state }) => {
   return state.popover;
 };
 
-export const openActionsDialog = (state) => {
-  state.actionsDialogOpen = true;
-};
-
-export const closeActionsDialog = (state) => {
-  state.actionsDialogOpen = false;
-};
-
 export const openImageSelectorDialog = (state, payload) => {
   state.imageSelectorDialog = {
     open: true,
@@ -238,6 +306,10 @@ export const setValues = (state, payload) => {
   state.values = payload.values;
 };
 
+export const setTypographyData = (state, typographyData) => {
+  state.typographyData = typographyData;
+};
+
 export const selectValues = ({ state }) => {
   return state.values;
 };
@@ -255,8 +327,23 @@ export const selectTempSelectedImageId = ({ state }) => {
 };
 
 export const selectViewData = ({ state, attrs }) => {
+  // Transform typography data to options format
+  const typographyGroups = toFlatGroups(state.typographyData);
+  const typographyItems = typographyGroups.flatMap((group) =>
+    group.children.map((item) => ({
+      label: item.name,
+      value: item.id,
+    })),
+  );
+  const typographyItemsWithNone = [
+    { label: "None", value: "" },
+    ...typographyItems,
+  ];
+
   const context = {
     itemType: attrs["item-type"],
+    typographyItems: typographyItems,
+    typographyItemsWithNone: typographyItemsWithNone,
     values: {
       ...state.values,
       actions: Object.entries(state.values?.actions || {}).map(

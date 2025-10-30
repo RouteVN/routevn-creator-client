@@ -99,10 +99,15 @@ template:
                       - rtgl-text s=xs: ${item.label}
                       - rtgl-view flex=1:
                       - rvn-file-image bw=xs bc=bo imageId=${item.imageId} h=32:
+            $elif section.type == 'popover-input':
+              - rtgl-view d=h w=f av=c:
+                  - rtgl-text s=sm: ${section.label}
+              - rtgl-view#group-item-${section.name} data-name=${section.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=p bw=xs bc=bg h-bc=ac h=32 w=f:
+                  - rtgl-text s=sm: ${section.value}
 
   - rtgl-view h=1 w=f bgc=mu mv=lg:
 
-  - rvn-system-actions#system-actions .actions=values.actions  action-type="system" ?open=${actionsDialogOpen}:
+  - rvn-system-actions#system-actions .actions=values.actions  action-type="system":
 
   - rtgl-popover#popover-form ?open=${popover.open} placement=bottom-end x=${popover.x} y=${popover.y}:
       - rtgl-form#form key=${popover.open} slot=content .form=popover.form .defaultValues=popover.defaultValues:

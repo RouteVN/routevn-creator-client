@@ -63,7 +63,7 @@ export const selectViewData = ({ state, props, attrs }) => {
   return {
     currentSceneId: props.currentSceneId,
     mode: state.mode,
-    isActionsDialogOpen: !!attrs["open"] || state.isActionsDialogOpen,
+    isActionsDialogOpen: state.isActionsDialogOpen,
     dropdownMenu: state.dropdownMenu,
     displayActions,
     actions: actionsObject,
