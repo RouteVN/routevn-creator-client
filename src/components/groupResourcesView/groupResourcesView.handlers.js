@@ -351,3 +351,13 @@ export const handleContextMenuClickItem = async (deps, payload) => {
   store.hideContextMenu();
   render();
 };
+
+export const handleBackClick = (deps) => {
+  const { subject, router, props } = deps;
+
+  const currentPayload = router.getPayload();
+  subject.dispatch("redirect", {
+    path: props.backUrl,
+    payload: currentPayload,
+  });
+};

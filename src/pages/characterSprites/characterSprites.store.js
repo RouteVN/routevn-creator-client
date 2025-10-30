@@ -23,6 +23,7 @@ export const createInitialState = () => ({
   spritesData: { tree: [], items: {} },
   selectedItemId: undefined,
   characterId: undefined,
+  characterName: undefined,
   context: {
     fileId: {
       src: "",
@@ -43,6 +44,10 @@ export const setItems = (state, spritesData) => {
 
 export const setCharacterId = (state, characterId) => {
   state.characterId = characterId;
+};
+
+export const setCharacterName = (state, characterName) => {
+  state.characterName = characterName;
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -158,5 +163,7 @@ export const selectViewData = ({ state }) => {
     resourceType: "characterSprites",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    title: state.characterName,
+    backUrl: "/project/resources/characters",
   };
 };

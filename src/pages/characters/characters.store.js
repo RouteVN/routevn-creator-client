@@ -262,6 +262,7 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "characters",
+    title: "Characters",
     isDialogOpen: state.isDialogOpen,
     dialogDefaultValues: state.dialogDefaultValues,
     dialogForm: state.dialogForm,

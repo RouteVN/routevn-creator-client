@@ -854,5 +854,6 @@ export const selectViewData = ({ state }) => {
       useInitialValue: false,
     },
     resourceType: "animations",
+    title: "Animations",
   };
 };
