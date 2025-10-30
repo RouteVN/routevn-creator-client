@@ -113,12 +113,6 @@ export const handleSectionActionClick = async (deps, payload) => {
   }
 };
 
-export const handleSystemActionsClose = (deps) => {
-  const { render, store } = deps;
-  store.closeActionsDialog();
-  render();
-};
-
 export const handleFormActions = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
   const { _event } = payload;

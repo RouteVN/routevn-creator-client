@@ -69,6 +69,7 @@ const config = {
       type: "select",
       fields: [
         {
+          label: "Anchor",
           name: "anchor",
           value: "${values.anchor}",
           options: [
@@ -91,6 +92,7 @@ const config = {
       type: "select",
       fields: [
         {
+          label: "Direction",
           name: "direction",
           value: "${values.direction}",
           options: [
@@ -142,16 +144,19 @@ const config = {
       type: "select",
       fields: [
         {
+          label: "Default",
           name: "typographyId",
           value: "${values.typographyId}",
           options: "${typographyItems}",
         },
         {
+          label: "Hover",
           name: "hoverTypographyId",
           value: "${values.hoverTypographyId}",
           options: "${typographyItemsWithNone}",
         },
         {
+          label: "Clicked",
           name: "clickedTypographyId",
           value: "${values.clickedTypographyId}",
           options: "${typographyItemsWithNone}",
@@ -164,6 +169,7 @@ const config = {
       type: "select",
       fields: [
         {
+          label: "Alignment",
           name: "style.align",
           value: "${values.style.align}",
           options: [
@@ -189,10 +195,11 @@ const config = {
       // }]
     },
     {
-      label: "$when",
+      label: "Conditionals",
       type: "select",
       fields: [
         {
+          label: "$when",
           name: "$when",
           value: "${values.$when}",
           options: [
@@ -201,13 +208,8 @@ const config = {
             { label: "Condition 2", value: "condition2" },
           ],
         },
-      ],
-    },
-    {
-      label: "$each",
-      type: "select",
-      fields: [
         {
+          label: "$each",
           name: "$each",
           value: "${values.$each}",
           options: [

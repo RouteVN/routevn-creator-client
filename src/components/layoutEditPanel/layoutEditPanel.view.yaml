@@ -31,8 +31,6 @@ refs:
     eventListeners:
       actions-change:
         handler: handleActionsChange
-      close:
-        handler: handleSystemActionsClose
   list-item-*:
     eventListeners:
       click:
@@ -77,7 +75,9 @@ template:
               - rtgl-view d=h w=f av=c:
                   - rtgl-text s=sm: ${section.label}
               - $for field in section.fields:
-                  - rtgl-select#select-item-${field.name} data-name=${field.name} w=f no-clear .selectedValue=#{field.value}  .options=#{field.options}:
+                  - rtgl-view d=h av=c g=md w=f:
+                      - rtgl-text s=xs w=80: ${field.label}
+                      - rtgl-select#select-item-${field.name} data-name=${field.name} w=f no-clear .selectedValue=#{field.value}  .options=#{field.options}:
             $elif section.type == 'list-item':
               - rtgl-view d=h w=f av=c:
                   - rtgl-text s=sm: ${section.label}
