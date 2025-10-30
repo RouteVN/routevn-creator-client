@@ -5,6 +5,17 @@ export const handleBeforeMount = (deps) => {
   });
 };
 
+export const handleAfterMount = async (deps) => {
+  const { repositoryFactory, router, store, render } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const { typography } = repository.getState();
+
+  // Store raw typography data
+  store.setTypographyData(typography || { items: {}, tree: [] });
+  render();
+};
+
 export const handleOnUpdate = (deps, payload) => {
   const { oldAttrs, newAttrs, newProps } = payload;
   const { store, render } = deps;
@@ -61,13 +72,15 @@ export const handleOptionSelected = (deps, payload) => {
 };
 
 export const handleSectionActionClick = async (deps, payload) => {
-  const { render, store, globalUI } = deps;
+  const { render, store, globalUI, getRefIds } = deps;
   const { _event } = payload;
   const id = _event.currentTarget.dataset.id;
 
   if (id === "actions") {
-    store.openActionsDialog();
-    render();
+    const systemActions = getRefIds()["system-actions"];
+    systemActions.elm.transformedHandlers.open({
+      mode: "actions",
+    });
   } else if (id === "images") {
     const items = [];
     const { imageId, hoverImageId, clickImageId } = store.selectValues();
@@ -98,12 +111,6 @@ export const handleSectionActionClick = async (deps, payload) => {
       render();
     }
   }
-};
-
-export const handleSystemActionsClose = (deps) => {
-  const { render, store } = deps;
-  store.closeActionsDialog();
-  render();
 };
 
 export const handleFormActions = (deps, payload) => {
@@ -203,9 +210,14 @@ export const handleListBarItemRightClick = async (deps, payload) => {
 };
 
 // --- List Item ---
-export const handleListItemClick = async (deps) => {
-  const { render, store } = deps;
-  store.openActionsDialog();
+export const handleListItemClick = async (deps, payload) => {
+  const { render, getRefIds } = deps;
+  const { _event: event } = payload;
+  const systemActions = getRefIds()["system-actions"];
+  const { id } = event.currentTarget.dataset;
+  systemActions.elm.transformedHandlers.open({
+    mode: id,
+  });
   render();
 };
 

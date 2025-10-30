@@ -1,9 +1,5 @@
 import { toFlatItems, toFlatGroups } from "../../deps/repository";
 
-// TODO: get global screen size from store
-// const SCREEN_WIDTH = 1920;
-// const SCREEN_HEIGHT = 1080;
-
 const dialogueForm = {
   title: "Preview",
   description: "Edit to see how the layout will look like with different data",
@@ -51,21 +47,8 @@ const choiceForm = {
 };
 
 export const createInitialState = () => ({
-  formKeyCheckpoint: 0,
   isDragging: false,
   dragOffset: { x: 0, y: 0 },
-  imageSelectorDialog: {
-    isOpen: false,
-    fieldIndex: -1,
-    groups: [],
-    selectedImageId: null,
-  },
-  dropdownMenu: {
-    isOpen: false,
-    position: { x: 0, y: 0 },
-    items: [],
-    fieldName: null,
-  },
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   layout: null,
@@ -73,7 +56,6 @@ export const createInitialState = () => ({
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
-  fieldResources: {},
   dialogueDefaultValues: {
     "dialogue-character-name": "Character",
     "dialogue-content": "This is a sample dialogue content.",
@@ -204,10 +186,6 @@ export const createInitialState = () => ({
   ],
 });
 
-export const incrementFormKeyCheckpoint = (state) => {
-  state.formKeyCheckpoint = state.formKeyCheckpoint + 1;
-};
-
 export const setItems = (state, layoutData) => {
   state.layoutData = layoutData;
 };
@@ -257,10 +235,6 @@ export const setColorsData = (state, colorsData) => {
 
 export const setFontsData = (state, fontsData) => {
   state.fontsData = fontsData;
-};
-
-export const setFieldResources = (state, resources) => {
-  state.fieldResources = resources;
 };
 
 export const setDialogueDefaultValue = (state, { name, fieldValue }) => {
@@ -314,51 +288,6 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const showImageSelectorDialog = (
-  state,
-  { fieldName, groups, currentValue },
-) => {
-  state.imageSelectorDialog.isOpen = true;
-  state.imageSelectorDialog.fieldName = fieldName;
-  state.imageSelectorDialog.groups = groups || [];
-  state.imageSelectorDialog.selectedImageId = currentValue || null;
-};
-
-export const hideImageSelectorDialog = (state) => {
-  state.imageSelectorDialog.isOpen = false;
-  state.imageSelectorDialog.groups = [];
-  state.imageSelectorDialog.selectedImageId = null;
-};
-
-export const setTempSelectedImageId = (state, { imageId }) => {
-  state.imageSelectorDialog.selectedImageId = imageId;
-};
-
-export const selectImageSelectorDialog = ({ state }) => {
-  return state.imageSelectorDialog;
-};
-
-export const showDropdownMenuForImageField = (
-  state,
-  { position, fieldName },
-) => {
-  state.dropdownMenu = {
-    isOpen: true,
-    position,
-    items: [{ label: "Delete", type: "item", value: "delete-image" }],
-    fieldName,
-  };
-};
-
-export const hideDropdownMenu = (state) => {
-  state.dropdownMenu = {
-    isOpen: false,
-    position: { x: 0, y: 0 },
-    items: [],
-    fieldName: null,
-  };
-};
-
 export const selectChoicesData = ({ state }) => {
   const choices = [];
 
@@ -371,10 +300,6 @@ export const selectChoicesData = ({ state }) => {
   return {
     items: choices,
   };
-};
-
-export const selectDropdownMenuFieldName = ({ state }) => {
-  return state.dropdownMenu.fieldName;
 };
 
 export const selectItems = ({ state }) => {
@@ -394,160 +319,8 @@ export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
 
-  const selectedItem = state.selectedItemId
-    ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
-
-  // Helper to transform images data into groups
-  const imageGroups = toFlatGroups(state.images);
-
-  // Helper to transform typography data into groups
-  const typographyGroups = toFlatGroups(state.typographyData);
-  const typographyItems = typographyGroups.flatMap((group) =>
-    group.children.map((item) => ({
-      label: item.name,
-      value: item.id,
-    })),
-  );
-
-  // Create form configuration based on selected item type
-  const form = selectedItem
-    ? {
-        fields: [
-          {
-            name: "$when",
-            inputType: "inputText",
-            description: "$when",
-          },
-          {
-            name: "$each",
-            inputType: "inputText",
-            description: "$each",
-          },
-          ...(selectedItem.type === "text" ||
-          selectedItem.type === "text-revealing"
-            ? [
-                {
-                  name: "text",
-                  inputType: "popover-input",
-                  description: "Text Content",
-                },
-                {
-                  name: "typographyId",
-                  inputType: "select",
-                  description: "Typography Style",
-                  options: [...typographyItems],
-                },
-                {
-                  name: "style_wordWrapWidth",
-                  inputType: "popover-input",
-                  description: "Word Wrap Width",
-                },
-                {
-                  name: "style_align",
-                  inputType: "select",
-                  description: "Text Alignment",
-                  options: [
-                    { label: "Left", value: "left" },
-                    { label: "Center", value: "center" },
-                    { label: "Right", value: "right" },
-                  ],
-                },
-                {
-                  name: "hoverTypographyId",
-                  inputType: "select",
-                  description: "Hover Style",
-                  options: [{ label: "None", value: "" }, ...typographyItems],
-                },
-                {
-                  name: "clickedTypographyId",
-                  inputType: "select",
-                  description: "Clicked Style",
-                  options: [{ label: "None", value: "" }, ...typographyItems],
-                },
-              ]
-            : []),
-          ...(selectedItem.type === "sprite" ? [] : []),
-          ...(selectedItem.type === "container"
-            ? [
-                {
-                  name: "direction",
-                  inputType: "select",
-                  description: "Direction",
-                  options: [
-                    { label: "None", value: undefined },
-                    { label: "Horizontal", value: "horizontal" },
-                    { label: "Vertical", value: "vertical" },
-                  ],
-                  required: true,
-                },
-              ]
-            : []),
-        ],
-      }
-    : null;
-
-  // Create default values for the form
-  const defaultValues = selectedItem
-    ? {
-        actions: selectedItem?.eventPayload?.actions || {},
-        $when: selectedItem.$when,
-        $each: selectedItem.$each,
-        name: selectedItem.name,
-        type: selectedItem.type,
-        x: selectedItem.x,
-        y: selectedItem.y,
-        width: selectedItem.width,
-        height: selectedItem.height,
-        anchor: { x: selectedItem.anchorX, y: selectedItem.anchorY },
-        scaleX: selectedItem.scaleX,
-        scaleY: selectedItem.scaleY,
-        rotation: selectedItem.rotation,
-        ...(selectedItem.type === "text"
-          ? {
-              contentType: selectedItem.contentType,
-              text: selectedItem.text,
-              typographyId: selectedItem.typographyId ?? "",
-              hoverTypographyId: selectedItem.hoverTypographyId ?? "",
-              clickedTypographyId: selectedItem.clickedTypographyId ?? "",
-              style_align: selectedItem.style?.align ?? "left",
-              style_wordWrapWidth: parseInt(
-                selectedItem.style?.wordWrapWidth ?? 300,
-              ),
-            }
-          : {}),
-        ...(selectedItem.type === "sprite"
-          ? {
-              imageId: selectedItem.imageId ?? "",
-              hoverImageId: selectedItem.hoverImageId ?? "",
-              clickImageId: selectedItem.clickImageId ?? "",
-            }
-          : {}),
-        ...(selectedItem.type === "container"
-          ? {
-              direction: selectedItem.direction,
-              containerType: selectedItem.containerType,
-            }
-          : {}),
-      }
-    : {};
-
-  const context = {
-    layoutType: state.layout?.layoutType,
-    ...defaultValues,
-  };
-
   const choicesContext = {
     ...state.choiceDefaultValues,
-  };
-
-  // Create mock repository state for systemActions component
-  const repositoryStateForActions = {
-    images: state.images,
-    audio: { items: {} }, // No audio data in layoutEditor
-    layouts: { items: {}, tree: [] }, // No layouts data needed in layoutEditor context
-    characters: { items: {} }, // No characters data in layoutEditor
-    scenes: { items: {}, tree: [] }, // No scenes data in layoutEditor
   };
 
   return {
@@ -556,51 +329,16 @@ export const selectViewData = ({ state }) => {
     flatGroups,
     selectedItemId: state.selectedItemId,
     repositoryTarget: `layouts.items.${state.layout?.id}.elements`,
-    repositoryStateForActions,
     resourceCategory: "userInterface",
     selectedResourceId: "layout-editor",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
-    images: state.images,
-    imageGroups,
-    typographyData: state.typographyData,
-    typographyGroups,
-    colorsData: state.colorsData,
-    fontsData: state.fontsData,
-    form,
-    context,
-    defaultValues,
     dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
     choiceForm,
     choiceDefaultValues: state.choiceDefaultValues,
     choicesContext,
     layout: state.layout,
-    imageSelectorDialog: {
-      isOpen: state.imageSelectorDialog.isOpen,
-      groups: state.imageSelectorDialog.groups,
-      selectedImageId: state.imageSelectorDialog.selectedImageId,
-    },
-    dropdownMenu: state.dropdownMenu,
-    formKey: `${state.selectedItemId}-${state.formKeyCheckpoint}`,
     presentationState: {},
-    anchorOptions: [
-      { label: "Top Left", value: { x: 0, y: 0 } },
-      { label: "Top Center", value: { x: 0.5, y: 0 } },
-      { label: "Top Right", value: { x: 1, y: 0 } },
-      { label: "Center Left", value: { x: 0, y: 0.5 } },
-      { label: "Center", value: { x: 0.5, y: 0.5 } },
-      { label: "Center Right", value: { x: 1, y: 0.5 } },
-      { label: "Bottom Left", value: { x: 0, y: 1 } },
-      { label: "Bottom Center", value: { x: 0.5, y: 1 } },
-      { label: "Bottom Right", value: { x: 1, y: 1 } },
-    ],
-    directionOption: [
-      [
-        { label: "None", value: undefined },
-        { label: "Horizontal", value: "horizontal" },
-        { label: "Vertical", value: "vertical" },
-      ],
-    ],
   };
 };
