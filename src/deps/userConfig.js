@@ -2,6 +2,11 @@ const DEFAULT_USER_CONFIG = {
   groupImagesView: {
     zoomLevel: 1.0,
   },
+  scenesMap: {
+    zoomLevel: 1.0,
+    panX: 0,
+    panY: 0,
+  },
 };
 
 function createUserConfig(

@@ -153,16 +153,17 @@ export const selectPan = ({ state }) => ({
 });
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
+export const setInitialZoomAndPan = (state, { zoomLevel, panX, panY }) => {
+  state.zoomLevel = zoomLevel;
+  state.panX = panX;
+  state.panY = panY;
+};
+
 export const selectViewData = ({ state, props }) => {
   const items = (props.items || []).map((item) => ({
     ...item,
     borderColor: props.selectedItemId === item.id ? "fg" : "ac",
   }));
-
-  // Initialize zoom level from props if provided and not already set
-  if (props.initialZoomLevel && state.zoomLevel === 1) {
-    state.zoomLevel = props.initialZoomLevel;
-  }
 
   // Use framework cursor values: grab, grabbing, or undefined (for default)
   const containerCursor =
