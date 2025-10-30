@@ -178,6 +178,7 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "audio",
+    title: "Audio",
     uploadText: "Upload Audio",
     acceptedFileTypes: [".mp3", ".wav", ".ogg"],
     playingAudio: state.playingAudio,

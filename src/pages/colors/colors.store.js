@@ -240,6 +240,7 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "colors",
     selectedItemId: state.selectedItemId,
     repositoryTarget: "colors",
+    title: "Colors",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     form,

@@ -12,6 +12,7 @@ export const handleAfterMount = async (deps) => {
   }
 
   store.setCharacterId(characterId);
+  store.setCharacterName(character.name);
   store.setItems(character.sprites);
   render();
 };
@@ -28,6 +29,7 @@ export const handleDataChanged = async (deps) => {
     return;
   }
 
+  store.setCharacterName(character.name);
   store.setItems(character.sprites);
   render();
 };
