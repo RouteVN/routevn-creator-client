@@ -147,17 +147,17 @@ export const createInitialState = () => ({
     name: "",
     fontColor: "",
     fontStyle: "",
-    fontSize: undefined,
-    lineHeight: undefined,
-    fontWeight: undefined,
+    fontSize: 16,
+    lineHeight: 1.5,
+    fontWeight: "400",
     previewText: undefined,
   },
 
   defaultValues: {
     name: "",
-    fontSize: undefined,
-    lineHeight: undefined,
-    fontWeight: undefined,
+    fontSize: 16,
+    lineHeight: 1.5,
+    fontWeight: "400",
     previewText: undefined,
   },
 
@@ -225,9 +225,9 @@ export const resetFormValues = (state) => {
     name: "",
     fontColor: "",
     fontStyle: "",
-    fontSize: undefined,
-    lineHeight: undefined,
-    fontWeight: undefined,
+    fontSize: 16,
+    lineHeight: 1.5,
+    fontWeight: "400",
     previewText: undefined,
   };
 };
