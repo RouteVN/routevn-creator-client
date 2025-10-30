@@ -23,52 +23,49 @@ const config = {
   sections: [
     {
       label: "Position",
-      type: "group",
-      fields: [
+      items: [
         {
-          svg: "x",
-          name: "x",
-          value: "${values.x}",
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              svg: "x",
+              name: "x",
+              value: "${values.x}",
+            },
+            {
+              type: "clickable-value",
+              svg: "y",
+              name: "y",
+              value: "${values.y}",
+            },
+          ],
         },
-        {
-          svg: "y",
-          name: "y",
-          value: "${values.y}",
-        },
-        //   {
-        //   svg: 'x',
-        //   name: 'z',
-        //   value: '${values.z}'
-        // }
       ],
     },
     {
       $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
       label: "Layout",
-      type: "group",
-      fields: [
+      items: [
         {
-          svg: "w",
-          name: "width",
-          value: "${values.width}",
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              svg: "w",
+              name: "width",
+              value: "${values.width}",
+            },
+            {
+              type: "clickable-value",
+              svg: "h",
+              name: "height",
+              value: "${values.height}",
+            },
+          ],
         },
         {
-          svg: "h",
-          name: "height",
-          value: "${values.height}",
-        },
-        //     {
-        //   svg: 'x',
-        //   name: 'rotation',
-        //   value: '${values.rotation}'
-        // }
-      ],
-    },
-    {
-      label: "Anchor",
-      type: "select",
-      fields: [
-        {
+          type: "select",
           label: "Anchor",
           name: "anchor",
           value: "${values.anchor}",
@@ -89,9 +86,9 @@ const config = {
     {
       $when: 'itemType == "container"',
       label: "Direction",
-      type: "select",
-      fields: [
+      items: [
         {
+          type: "select",
           label: "Direction",
           name: "direction",
           value: "${values.direction}",
@@ -105,57 +102,68 @@ const config = {
     },
     {
       $when: 'itemType == "sprite"',
+      id: "images",
       label: "Image",
       "$if !values.imageId || !values.hoverImageId || !values.clickImageId": {
         labelAction: "plus",
       },
-      type: "list-bar",
       items: [
         {
-          $when: "values.imageId",
-          name: "imageId",
-          label: "Default",
-          imageId: "${values.imageId}",
-        },
-        {
-          $when: "values.hoverImageId",
-          name: "hoverImageId",
-          label: "Hover",
-          imageId: "${values.hoverImageId}",
-        },
-        {
-          name: "clickImageId",
-          $when: "values.clickImageId",
-          label: "Click",
-          imageId: "${values.clickImageId}",
+          type: "list-bar",
+          items: [
+            {
+              $when: "values.imageId",
+              name: "imageId",
+              label: "Default",
+              imageId: "${values.imageId}",
+            },
+            {
+              $when: "values.hoverImageId",
+              name: "hoverImageId",
+              label: "Hover",
+              imageId: "${values.hoverImageId}",
+            },
+            {
+              name: "clickImageId",
+              $when: "values.clickImageId",
+              label: "Click",
+              imageId: "${values.clickImageId}",
+            },
+          ],
         },
       ],
     },
     {
       $when: 'itemType == "text"',
       label: "Text",
-      name: "text",
-      type: "popover-input",
-      value: "${values.text}",
+      items: [
+        {
+          type: "popover-input",
+          name: "text",
+          value: "${values.text}",
+        },
+      ],
     },
     {
       $when: 'itemType == "text"',
       label: "Typography",
-      type: "select",
-      fields: [
+      items: [
         {
+          type: "select",
           label: "Default",
           name: "typographyId",
           value: "${values.typographyId}",
           options: "${typographyItems}",
         },
         {
+          type: "select",
           label: "Hover",
           name: "hoverTypographyId",
           value: "${values.hoverTypographyId}",
           options: "${typographyItemsWithNone}",
         },
         {
+          type: "select",
           label: "Clicked",
           name: "clickedTypographyId",
           value: "${values.clickedTypographyId}",
@@ -166,9 +174,9 @@ const config = {
     {
       $when: 'itemType == "text"',
       label: "Text Alignment",
-      type: "select",
-      fields: [
+      items: [
         {
+          type: "select",
           label: "Alignment",
           name: "style.align",
           value: "${values.style.align}",
@@ -182,23 +190,21 @@ const config = {
     },
     {
       $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
+      id: "actions",
       label: "Actions",
       labelAction: "plus",
-      type: "list-item",
-      items: "${values.actions}",
-      // items: [{
-      //   svg: 'text',
-      //   label: 'Text',
-      // }, {
-      //   svg: 'image',
-      //   label: 'Background',
-      // }]
+      items: [
+        {
+          type: "list-item",
+          items: "${values.actions}",
+        },
+      ],
     },
     {
       label: "Conditionals",
-      type: "select",
-      fields: [
+      items: [
         {
+          type: "select",
           label: "$when",
           name: "$when",
           value: "${values.$when}",
@@ -209,6 +215,7 @@ const config = {
           ],
         },
         {
+          type: "select",
           label: "$each",
           name: "$each",
           value: "${values.$each}",
