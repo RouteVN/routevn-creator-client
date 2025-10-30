@@ -1,3 +1,11 @@
+export const open = (deps, payload) => {
+  const { store, render } = deps;
+  const { mode } = payload;
+  store.showActionsDialog();
+  store.setMode({ mode });
+  render();
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();

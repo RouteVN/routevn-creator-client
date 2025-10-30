@@ -1,4 +1,5 @@
 import { parseAndRender } from "jempl";
+import { toFlatGroups } from "../../deps/repository";
 
 const groupItemEditForm = {
   fields: [
@@ -22,52 +23,50 @@ const config = {
   sections: [
     {
       label: "Position",
-      type: "group",
-      fields: [
+      items: [
         {
-          svg: "x",
-          name: "x",
-          value: "${values.x}",
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              svg: "x",
+              name: "x",
+              value: "${values.x}",
+            },
+            {
+              type: "clickable-value",
+              svg: "y",
+              name: "y",
+              value: "${values.y}",
+            },
+          ],
         },
-        {
-          svg: "y",
-          name: "y",
-          value: "${values.y}",
-        },
-        //   {
-        //   svg: 'x',
-        //   name: 'z',
-        //   value: '${values.z}'
-        // }
       ],
     },
     {
       $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
       label: "Layout",
-      type: "group",
-      fields: [
+      items: [
         {
-          svg: "w",
-          name: "width",
-          value: "${values.width}",
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              svg: "w",
+              name: "width",
+              value: "${values.width}",
+            },
+            {
+              type: "clickable-value",
+              svg: "h",
+              name: "height",
+              value: "${values.height}",
+            },
+          ],
         },
         {
-          svg: "h",
-          name: "height",
-          value: "${values.height}",
-        },
-        //     {
-        //   svg: 'x',
-        //   name: 'rotation',
-        //   value: '${values.rotation}'
-        // }
-      ],
-    },
-    {
-      label: "Anchor",
-      type: "select",
-      fields: [
-        {
+          type: "select",
+          label: "Anchor",
           name: "anchor",
           value: "${values.anchor}",
           options: [
@@ -87,9 +86,10 @@ const config = {
     {
       $when: 'itemType == "container"',
       label: "Direction",
-      type: "select",
-      fields: [
+      items: [
         {
+          type: "select",
+          label: "Direction",
           name: "direction",
           value: "${values.direction}",
           options: [
@@ -102,45 +102,130 @@ const config = {
     },
     {
       $when: 'itemType == "sprite"',
+      id: "images",
       label: "Image",
       "$if !values.imageId || !values.hoverImageId || !values.clickImageId": {
         labelAction: "plus",
       },
-      type: "list-bar",
       items: [
         {
-          $when: "values.imageId",
-          name: "imageId",
+          type: "list-bar",
+          items: [
+            {
+              $when: "values.imageId",
+              name: "imageId",
+              label: "Default",
+              imageId: "${values.imageId}",
+            },
+            {
+              $when: "values.hoverImageId",
+              name: "hoverImageId",
+              label: "Hover",
+              imageId: "${values.hoverImageId}",
+            },
+            {
+              name: "clickImageId",
+              $when: "values.clickImageId",
+              label: "Click",
+              imageId: "${values.clickImageId}",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "text"',
+      label: "Text",
+      items: [
+        {
+          type: "popover-input",
+          name: "text",
+          value: "${values.text}",
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "text"',
+      label: "Typography",
+      items: [
+        {
+          type: "select",
           label: "Default",
-          imageId: "${values.imageId}",
+          name: "typographyId",
+          value: "${values.typographyId}",
+          options: "${typographyItems}",
         },
         {
-          $when: "values.hoverImageId",
-          name: "hoverImageId",
+          type: "select",
           label: "Hover",
-          imageId: "${values.hoverImageId}",
+          name: "hoverTypographyId",
+          value: "${values.hoverTypographyId}",
+          options: "${typographyItemsWithNone}",
         },
         {
-          name: "clickImageId",
-          $when: "values.clickImageId",
-          label: "Click",
-          imageId: "${values.clickImageId}",
+          type: "select",
+          label: "Clicked",
+          name: "clickedTypographyId",
+          value: "${values.clickedTypographyId}",
+          options: "${typographyItemsWithNone}",
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "text"',
+      label: "Text Alignment",
+      items: [
+        {
+          type: "select",
+          label: "Alignment",
+          name: "style.align",
+          value: "${values.style.align}",
+          options: [
+            { label: "Left", value: "left" },
+            { label: "Center", value: "center" },
+            { label: "Right", value: "right" },
+          ],
         },
       ],
     },
     {
       $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
+      id: "actions",
       label: "Actions",
       labelAction: "plus",
-      type: "list-item",
-      items: "${values.actions}",
-      // items: [{
-      //   svg: 'text',
-      //   label: 'Text',
-      // }, {
-      //   svg: 'image',
-      //   label: 'Background',
-      // }]
+      items: [
+        {
+          type: "list-item",
+          items: "${values.actions}",
+        },
+      ],
+    },
+    {
+      label: "Conditionals",
+      items: [
+        {
+          type: "select",
+          label: "$when",
+          name: "$when",
+          value: "${values.$when}",
+          options: [
+            { label: "None", value: "" },
+            { label: "Condition 1", value: "condition1" },
+            { label: "Condition 2", value: "condition2" },
+          ],
+        },
+        {
+          type: "select",
+          label: "$each",
+          name: "$each",
+          value: "${values.$each}",
+          options: [
+            { label: "None", value: "" },
+            { label: "Iterator 1", value: "iterator1" },
+            { label: "Iterator 2", value: "iterator2" },
+          ],
+        },
+      ],
     },
   ],
 };
@@ -148,7 +233,6 @@ const config = {
 export const createInitialState = () => {
   return {
     tempSelectedImageId: undefined,
-    actionsDialogOpen: false,
     imageSelectorDialog: {
       open: false,
       name: undefined,
@@ -160,6 +244,7 @@ export const createInitialState = () => {
       defaultValues: {},
       name: undefined,
     },
+    typographyData: { tree: [], items: {} },
     values: {
       x: 0,
       y: 0,
@@ -211,14 +296,6 @@ export const selectPopoverForm = ({ state }) => {
   return state.popover;
 };
 
-export const openActionsDialog = (state) => {
-  state.actionsDialogOpen = true;
-};
-
-export const closeActionsDialog = (state) => {
-  state.actionsDialogOpen = false;
-};
-
 export const openImageSelectorDialog = (state, payload) => {
   state.imageSelectorDialog = {
     open: true,
@@ -238,6 +315,10 @@ export const setValues = (state, payload) => {
   state.values = payload.values;
 };
 
+export const setTypographyData = (state, typographyData) => {
+  state.typographyData = typographyData;
+};
+
 export const selectValues = ({ state }) => {
   return state.values;
 };
@@ -255,8 +336,23 @@ export const selectTempSelectedImageId = ({ state }) => {
 };
 
 export const selectViewData = ({ state, attrs }) => {
+  // Transform typography data to options format
+  const typographyGroups = toFlatGroups(state.typographyData);
+  const typographyItems = typographyGroups.flatMap((group) =>
+    group.children.map((item) => ({
+      label: item.name,
+      value: item.id,
+    })),
+  );
+  const typographyItemsWithNone = [
+    { label: "None", value: "" },
+    ...typographyItems,
+  ];
+
   const context = {
     itemType: attrs["item-type"],
+    typographyItems: typographyItems,
+    typographyItemsWithNone: typographyItemsWithNone,
     values: {
       ...state.values,
       actions: Object.entries(state.values?.actions || {}).map(

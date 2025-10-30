@@ -32,20 +32,6 @@ refs:
     eventListeners:
       layout-add-click:
         handler: handleAddLayoutClick
-  detail-form:
-    eventListeners:
-      form-change:
-        handler: handleFormChange
-  file-image-*:
-    eventListeners:
-      click:
-        handler: handleFormImageClick
-      contextmenu:
-        handler: handleFormImageRightClick
-  file-placeholder-*:
-    eventListeners:
-      click:
-        handler: handleFormImageClick
   dialogue-form:
     eventListeners:
       form-change:
@@ -54,28 +40,6 @@ refs:
     eventListeners:
       form-change:
         handler: handleChoiceFormChange
-  image-selector:
-    eventListeners:
-      image-selected:
-        handler: handleImageSelectorSelection
-  confirm-image-selection:
-    eventListeners:
-      click:
-        handler: handleConfirmImageSelection
-  cancel-image-selection:
-    eventListeners:
-      click:
-        handler: handleCancelImageSelection
-  image-selector-dialog:
-    eventListeners:
-      close:
-        handler: handleCloseImageSelectorDialog
-  dropdown-menu:
-    eventListeners:
-      close:
-        handler: handleDropdownMenuClose
-      click-item:
-        handler: handleDropdownMenuClickItem
   system-actions:
     eventListeners:
       actions-change:
