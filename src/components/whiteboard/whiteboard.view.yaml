@@ -51,8 +51,6 @@ propsSchema:
             type: number
           y:
             type: number
-    initialZoomLevel:
-      type: number
     cursor:
       type: string
     selectedItemId:
