@@ -84,9 +84,9 @@ export const handleAfterMount = async (deps) => {
 
   // Restore viewport state from userConfig
   const userConfig = createUserConfig();
-  const savedZoomLevel = userConfig.get("scenesView.zoomLevel");
-  const savedPanX = userConfig.get("scenesView.panX");
-  const savedPanY = userConfig.get("scenesView.panY");
+  const savedZoomLevel = userConfig.get("scenesMap.zoomLevel");
+  const savedPanX = userConfig.get("scenesMap.panX");
+  const savedPanY = userConfig.get("scenesMap.panY");
 
   const { whiteboard } = getRefIds();
 
@@ -559,12 +559,12 @@ export const handleClickShowScenePreview = (deps, payload) => {
 export const handleWhiteboardZoomChanged = (deps, payload) => {
   const userConfig = createUserConfig();
   const { zoomLevel } = payload._event.detail;
-  userConfig.set("scenesView.zoomLevel", zoomLevel);
+  userConfig.set("scenesMap.zoomLevel", zoomLevel);
 };
 
 export const handleWhiteboardPanChanged = (deps, payload) => {
   const userConfig = createUserConfig();
   const { panX, panY } = payload._event.detail;
-  userConfig.set("scenesView.panX", panX);
-  userConfig.set("scenesView.panY", panY);
+  userConfig.set("scenesMap.panX", panX);
+  userConfig.set("scenesMap.panY", panY);
 };
