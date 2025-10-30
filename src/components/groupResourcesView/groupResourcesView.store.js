@@ -115,7 +115,9 @@ export const selectViewData = ({ state, props, attrs }) => {
     mediaWidth,
     mediaHeight,
     zoomLevel: state.zoomLevel,
-    showZoomControls: props.resourceType === "images" || props.resourceType === "characterSprites", // Only show for image related resources
+    showZoomControls:
+      props.resourceType === "images" ||
+      props.resourceType === "characterSprites", // Only show for image related resources
     itemProperties: props.itemProperties || {},
     items: props.items || {},
     dropdownMenu: state.dropdownMenu,
