@@ -163,6 +163,7 @@ export const selectViewData = ({ state }) => {
     resourceType: "characterSprites",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
-    title: state.characterName ? `${state.characterName} - Sprites` : null,
+    title: state.characterName,
+    backUrl: "/project/resources/characters",
   };
 };

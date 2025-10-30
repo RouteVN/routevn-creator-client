@@ -353,11 +353,11 @@ export const handleContextMenuClickItem = async (deps, payload) => {
 };
 
 export const handleBackClick = (deps) => {
-  const { subject, router } = deps;
+  const { subject, router, props } = deps;
 
   const currentPayload = router.getPayload();
   subject.dispatch("redirect", {
-    path: "/project/resources/characters",
+    path: props.backUrl,
     payload: currentPayload,
   });
 };

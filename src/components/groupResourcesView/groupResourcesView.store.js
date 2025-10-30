@@ -104,7 +104,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     flatGroups: finalProcessedGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: props.searchQuery || "",
-    title: props.title || null,
+    title: props.title,
     uploadText: props.uploadText || "Upload Files",
     acceptedFileTypes: props.acceptedFileTypes || [],
     emptyMessage:
@@ -115,9 +115,8 @@ export const selectViewData = ({ state, props, attrs }) => {
     mediaWidth,
     mediaHeight,
     zoomLevel: state.zoomLevel,
-    showZoomControls:
-      props.resourceType === "images" ||
-      props.resourceType === "characterSprites", // Only show for image related resources
+    showZoomControls: attrs["show-zoom-controls"] === true,
+    backUrl: props.backUrl,
     itemProperties: props.itemProperties || {},
     items: props.items || {},
     dropdownMenu: state.dropdownMenu,
