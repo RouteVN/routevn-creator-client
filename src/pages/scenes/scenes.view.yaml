@@ -27,6 +27,10 @@ refs:
         handler: handleWhiteboardItemDelete
       item-context-menu:
         handler: handleWhiteboardItemContextMenu
+      zoom-changed:
+        handler: handleWhiteboardZoomChanged
+      pan-changed:
+        handler: handleWhiteboardPanChanged
   add-scene-btn:
     eventListeners:
       click:
@@ -67,7 +71,7 @@ template:
                   - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
                   - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
           - rtgl-view flex=1 h=f:
-              - rvn-whiteboard#whiteboard .items=whiteboardItems .initialZoomLevel=1 .cursor=whiteboardCursor .selectedItemId=selectedItemId:
+              - rvn-whiteboard#whiteboard .items=whiteboardItems .cursor=whiteboardCursor .selectedItemId=selectedItemId:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:

@@ -263,6 +263,17 @@ export const handleWindowMouseMove = (deps, payload) => {
       mouseX: payload._event.clientX,
       mouseY: payload._event.clientY,
     });
+
+    // Dispatch pan changed event
+    const pan = store.selectPan();
+    dispatchEvent(
+      new CustomEvent("pan-changed", {
+        detail: { panX: pan.x, panY: pan.y },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
     render();
   } else if (store.selectIsDragging()) {
     // Handle item dragging
@@ -391,4 +402,11 @@ export const subscriptions = (deps) => {
       tap((event) => deps.handlers.handleWindowKeyUp(deps, { _event: event })),
     ),
   ];
+};
+
+export const handleInitialZoomAndPanSetup = (deps, payload) => {
+  const { store } = deps;
+  const { zoomLevel, panX, panY } = payload;
+
+  store.setInitialZoomAndPan({ zoomLevel, panX, panY });
 };
