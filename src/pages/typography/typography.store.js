@@ -657,6 +657,7 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "typography",
     selectedItemId: state.selectedItemId,
     repositoryTarget: "typography",
+    title: "Typography",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     colorsData: state.colorsData,

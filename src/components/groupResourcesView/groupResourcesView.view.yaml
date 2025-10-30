@@ -11,6 +11,8 @@ viewDataSchema:
       type: number
     maxWidth:
       type: number
+    title:
+      type: string
 
 propsSchema:
   type: object
@@ -30,6 +32,9 @@ propsSchema:
     collapsedIds:
       type: array
       description: Array of collapsed group IDs (controlled by parent)
+    title:
+      type: string
+      description: Optional title to display in the header
     uploadText:
       type: string
       description: Text to display in upload zone
@@ -128,18 +133,28 @@ refs:
         handler: handleDragLeave
       drop:
         handler: handleDrop
+  back-button:
+    eventListeners:
+      click:
+        handler: handleBackClick
 
 template:
   - "rtgl-view w=f h=100vh g=lg":
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md fw=w:
-              - rtgl-view av=c g=md:
-                  - rtgl-input#search-input s=sm placeholder="Search..." value=${searchQuery} flex=1:
-              - $if showZoomControls:
-                  - rtgl-view d=h av=e g=sm:
-                      - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
-                      - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
-                      - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
+              - rtgl-view av=c g=sm d=h flex=1:
+                - $if resourceType == 'characterSprites':
+                  - rtgl-button#back-button sq icon="chevronLeft" v="gh" mr=sm:
+                - $if title:
+                    - rtgl-text c=mu-fg: ${title}
+              - rtgl-view d=h av=c g=md flex=0:
+                - rtgl-view av=c g=md:
+                    - rtgl-input#search-input s=sm placeholder="Search..." value=${searchQuery} flex=1:
+                - $if showZoomControls:
+                    - rtgl-view d=h av=e g=sm:
+                        - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
+                        - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
+                        - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
       - rtgl-view flex=1 w=f sv:
           - $if flatGroups.length > 0:
               - $for group in flatGroups:

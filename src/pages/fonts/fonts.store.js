@@ -321,6 +321,7 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "fonts",
     selectedItemId: state.selectedItemId,
     repositoryTarget: "fonts",
+    title: "Fonts",
     form: formWithPreview,
     defaultValues,
     context: state.context,

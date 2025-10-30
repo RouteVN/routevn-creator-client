@@ -162,6 +162,7 @@ export const selectViewData = ({ state }) => {
     detailFields,
     detailEmptyMessage,
     repositoryTarget: "videos",
+    title: "Videos",
     form,
     context: state.context,
     defaultValues,

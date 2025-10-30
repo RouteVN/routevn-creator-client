@@ -352,6 +352,7 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "transforms",
+    title: "Transforms",
     // Dialog state for transforms (moved from groupTransformsView)
     isDialogOpen: state.isDialogOpen,
     editMode: state.editMode,
