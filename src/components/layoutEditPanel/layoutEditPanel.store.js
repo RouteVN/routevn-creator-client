@@ -1,24 +1,6 @@
 import { parseAndRender } from "jempl";
 import { toFlatGroups } from "../../deps/repository";
 
-const groupItemEditForm = {
-  fields: [
-    {
-      name: "value",
-      inputType: "inputText",
-    },
-  ],
-  actions: {
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        content: "Submit",
-      },
-    ],
-  },
-};
-
 const config = {
   sections: [
     {
@@ -32,12 +14,46 @@ const config = {
               svg: "x",
               name: "x",
               value: "${values.x}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
             },
             {
               type: "clickable-value",
               svg: "y",
               name: "y",
               value: "${values.y}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
             },
           ],
         },
@@ -55,12 +71,46 @@ const config = {
               svg: "w",
               name: "width",
               value: "${values.width}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
             },
             {
               type: "clickable-value",
               svg: "h",
               name: "height",
               value: "${values.height}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
             },
           ],
         },
@@ -138,9 +188,31 @@ const config = {
       label: "Text",
       items: [
         {
-          type: "popover-input",
-          name: "text",
-          value: "${values.text}",
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              name: "text",
+              value: "${values.text}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-text",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+          ],
         },
       ],
     },
@@ -201,33 +273,52 @@ const config = {
       ],
     },
     {
-      label: "Conditionals",
+      $when: 'layoutType == "choice"',
+      label: "Control Statements",
       items: [
+        // {
+        //   type: "select",
+        //   label: "Filter",
+        //   name: "$when",
+        //   value: "${values.$when}",
+        //   options: [
+        //     { label: "None", value: "" },
+        //     { label: "Condition 1", value: "condition1" },
+        //     { label: "Condition 2", value: "condition2" },
+        //   ],
+        // },
         {
           type: "select",
-          label: "$when",
-          name: "$when",
-          value: "${values.$when}",
-          options: [
-            { label: "None", value: "" },
-            { label: "Condition 1", value: "condition1" },
-            { label: "Condition 2", value: "condition2" },
-          ],
-        },
-        {
-          type: "select",
-          label: "$each",
+          label: "Repeat",
           name: "$each",
           value: "${values.$each}",
           options: [
-            { label: "None", value: "" },
-            { label: "Iterator 1", value: "iterator1" },
-            { label: "Iterator 2", value: "iterator2" },
+            { label: "None", value: undefined },
+            { label: "Choices", value: "item in choice.items" },
           ],
         },
       ],
     },
   ],
+};
+
+const selectFieldPopoverFormFromConfig = (fieldName) => {
+  for (const section of config.sections || []) {
+    for (const item of section.items || []) {
+      if (item.type !== "group") {
+        continue;
+      }
+
+      const match = (item.fields || []).find(
+        (field) => field.name === fieldName,
+      );
+      if (match) {
+        return match.popoverForm;
+      }
+    }
+  }
+
+  return undefined;
 };
 
 export const createInitialState = () => {
@@ -243,6 +334,7 @@ export const createInitialState = () => {
       open: false,
       defaultValues: {},
       name: undefined,
+      form: undefined,
     },
     typographyData: { tree: [], items: {} },
     values: {
@@ -279,6 +371,7 @@ export const openPopoverForm = (state, payload) => {
       value: state.values[payload.name],
     },
     name: payload.name,
+    form: payload.form,
   };
 };
 
@@ -289,7 +382,12 @@ export const closePopoverForm = (state) => {
     y: undefined,
     defaultValues: {},
     name: undefined,
+    form: undefined,
   };
+};
+
+export const selectFieldPopoverForm = (_deps, name) => {
+  return selectFieldPopoverFormFromConfig(name);
 };
 
 export const selectPopoverForm = ({ state }) => {
@@ -349,8 +447,14 @@ export const selectViewData = ({ state, attrs }) => {
     ...typographyItems,
   ];
 
+  const actionsLabelMap = {
+    nextLine: "Next Line",
+    sectionTransition: "Section Transition",
+  };
+
   const context = {
     itemType: attrs["item-type"],
+    layoutType: attrs["layout-type"],
     typographyItems: typographyItems,
     typographyItemsWithNone: typographyItemsWithNone,
     values: {
@@ -358,8 +462,8 @@ export const selectViewData = ({ state, attrs }) => {
       actions: Object.entries(state.values?.actions || {}).map(
         ([key, _value]) => ({
           id: key,
-          label: key,
-          svg: key,
+          label: actionsLabelMap[key],
+          svg: `action-${key}`,
         }),
       ),
     },
@@ -370,10 +474,7 @@ export const selectViewData = ({ state, attrs }) => {
     actionsDialogOpen: state.actionsDialogOpen,
     values: state.values,
     config: finalConfig,
-    popover: {
-      ...state.popover,
-      form: groupItemEditForm,
-    },
+    popover: state.popover,
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
   };

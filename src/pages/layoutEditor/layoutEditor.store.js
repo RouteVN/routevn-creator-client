@@ -47,6 +47,7 @@ const choiceForm = {
 };
 
 export const createInitialState = () => ({
+  lastUpdateDate: undefined,
   isDragging: false,
   dragOffset: { x: 0, y: 0 },
   layoutData: { tree: [], items: {} },
@@ -206,6 +207,7 @@ export const updateSelectedItem = (state, updatedItem) => {
   if (state.selectedItemId && state.layoutData && state.layoutData.items) {
     state.layoutData.items[state.selectedItemId] = updatedItem;
   }
+  state.lastUpdateDate = Date.now();
 };
 
 export const setImages = (state, images) => {
@@ -325,6 +327,7 @@ export const selectViewData = ({ state }) => {
 
   return {
     item,
+    layoutEditPanelKey: `${item?.id}-${state.lastUpdateDate}`,
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
