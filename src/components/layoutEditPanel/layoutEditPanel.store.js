@@ -197,6 +197,32 @@ const config = {
               popoverForm: {
                 fields: [
                   {
+                    name: "contentType",
+                    description: "Content Type",
+                    inputType: "select",
+                    options: [
+                      { label: "Variable", value: "variable" },
+                      { label: "Plain Text", value: "plain" },
+                    ],
+                  },
+                  {
+                    $when: 'popoverFormValues.contentType == "variable"',
+                    name: "value",
+                    description: "Variable",
+                    inputType: "select",
+                    options: [
+                      {
+                        label: "Dialogue Character Name",
+                        value: "\\${dialogue.character.name}",
+                      },
+                      {
+                        label: "Dialogue Content",
+                        value: "\\${dialogue.content[0].text}",
+                      },
+                    ],
+                  },
+                  {
+                    $when: 'popoverFormValues.contentType == "plain"',
                     name: "value",
                     inputType: "input-text",
                   },
@@ -329,12 +355,14 @@ export const createInitialState = () => {
       name: undefined,
     },
     popover: {
+      key: 0,
       x: undefined,
       y: undefined,
       open: false,
       defaultValues: {},
       name: undefined,
       form: undefined,
+      context: {},
     },
     typographyData: { tree: [], items: {} },
     values: {
@@ -363,20 +391,43 @@ export const updateValueProperty = (state, payload) => {
 };
 
 export const openPopoverForm = (state, payload) => {
+  const value = state.values[payload.name];
+
+  const popoverFormValues = {
+    value,
+  };
+
+  if (value && typeof value === "string" && value.startsWith("${")) {
+    popoverFormValues.contentType = "variable";
+  } else {
+    popoverFormValues.contentType = "plain";
+  }
+
   state.popover = {
+    key: state.popover.key + 1,
     open: true,
     x: payload.x,
     y: payload.y,
-    defaultValues: {
-      value: state.values[payload.name],
-    },
+    defaultValues: popoverFormValues,
     name: payload.name,
     form: payload.form,
+    context: {
+      popoverFormValues,
+    },
   };
+};
+
+export const updatePopoverFormContext = (state, payload) => {
+  state.popover.context = {
+    popoverFormValues: payload.values,
+  };
+  state.popover.defaultValues = payload.values;
+  state.popover.key = state.popover.key + 1;
 };
 
 export const closePopoverForm = (state) => {
   state.popover = {
+    key: 0,
     open: false,
     x: undefined,
     y: undefined,
@@ -470,6 +521,7 @@ export const selectViewData = ({ state, attrs }) => {
   };
 
   const finalConfig = parseAndRender(config, context);
+
   return {
     actionsDialogOpen: state.actionsDialogOpen,
     values: state.values,
