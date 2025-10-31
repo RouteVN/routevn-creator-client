@@ -159,6 +159,64 @@ export const setInitialZoomAndPan = (state, { zoomLevel, panX, panY }) => {
   state.panY = panY;
 };
 
+const generateMinimapData = (items, pan) => {
+  if (!items || items.length === 0) {
+    return {};
+  }
+
+  let x_tl = Infinity;
+  let y_tl = Infinity;
+  let x_br = -Infinity;
+  let y_br = -Infinity;
+
+  items.forEach((item) => {
+    x_tl = Math.min(x_tl, item.x);
+    y_tl = Math.min(y_tl, item.y);
+    x_br = Math.max(x_br, item.x);
+    y_br = Math.max(y_br, item.y);
+  });
+
+  const minimapWidth = 200;
+  const minimapHeight = 150;
+  const itemWidth = 120;
+  const itemHeight = 60;
+  const padding = 30;
+  const standardWidth = x_br - x_tl + itemWidth + 60;
+  const standardHeight = y_br - y_tl + itemHeight + 60;
+
+  const scale = Math.min(
+    minimapWidth / standardWidth,
+    minimapHeight / standardHeight,
+  );
+  const scaledWidth = standardWidth * scale;
+  const scaledHeight = standardHeight * scale;
+  const scaledItemWidth = 120 * scale;
+  const scaledItemHeight = 60 * scale;
+
+  const offsetX = (minimapWidth - scaledWidth) / 2;
+  const offsetY = (minimapHeight - scaledHeight) / 2;
+
+  const minimapItems = items.map((item) => ({
+    id: item.id,
+    x: (item.x - x_tl + padding) * scale + offsetX,
+    y: (item.y - y_tl + padding) * scale + offsetY,
+  }));
+
+  const scaledPanX = pan.x * scale;
+  const scaledPanY = pan.y * scale;
+  console.log(scaledPanX, scaledPanY);
+
+  return {
+    items: minimapItems,
+    scale,
+    minimap: { width: minimapWidth, height: minimapHeight },
+    scaledScreen: { width: scaledWidth, height: scaledHeight },
+    scaledItem: { width: scaledItemWidth, height: scaledItemHeight },
+    offset: { x: offsetX, y: offsetY },
+    scaledPan: { x: scaledPanX, y: scaledPanY },
+  };
+};
+
 export const selectViewData = ({ state, props }) => {
   const items = (props.items || []).map((item) => ({
     ...item,
@@ -208,6 +266,7 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     items,
+    minimapData: generateMinimapData(items, { x: state.panX, y: state.panY }),
     arrowsList,
     selectedItemId: props.selectedItemId,
     isPanMode: state.isPanMode,
