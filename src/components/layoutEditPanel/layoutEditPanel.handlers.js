@@ -177,6 +177,16 @@ export const handleListBarItemClick = async (deps, payload) => {
   render();
 };
 
+export const handlePopoverFormChange = async (deps, payload) => {
+  const { store, render } = deps;
+  const { _event } = payload;
+
+  store.updatePopoverFormContext({
+    values: _event.detail.formValues,
+  });
+  render();
+};
+
 export const handleListBarItemRightClick = async (deps, payload) => {
   const { render, store, globalUI } = deps;
   const { _event: event } = payload;
