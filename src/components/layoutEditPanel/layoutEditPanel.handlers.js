@@ -30,10 +30,13 @@ export const handleOnUpdate = (deps, payload) => {
 export const handleGroupItemClick = (deps, payload) => {
   const { render, store } = deps;
   const { _event } = payload;
+  const name = _event.currentTarget.dataset.name;
+  const popoverForm = store.selectFieldPopoverForm(name);
   store.openPopoverForm({
     x: _event.clientX,
     y: _event.clientY,
-    name: _event.currentTarget.dataset.name,
+    name,
+    form: popoverForm,
   });
 
   render();
@@ -131,20 +134,23 @@ export const handleFormActions = (deps, payload) => {
       detail: {
         formValues,
         name,
-        value: Number(_event.detail.formValues.value),
+        value: _event.detail.formValues.value,
       },
     }),
   );
 };
 
 export const handleActionsChange = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, dispatchEvent } = deps;
+
+  const newActions = {
+    ...store.selectValues().actions,
+    ...payload._event.detail,
+  };
+
   store.updateValueProperty({
     name: "actions",
-    value: {
-      ...store.selectValues().actions,
-      ...payload._event.detail,
-    },
+    value: newActions,
   });
 
   render();
@@ -155,10 +161,7 @@ export const handleActionsChange = (deps, payload) => {
       detail: {
         formValues,
         name: "actions",
-        value: {
-          ...store.selectValues().actions,
-          ...payload._event.detail,
-        },
+        value: newActions,
       },
     }),
   );

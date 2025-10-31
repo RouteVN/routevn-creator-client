@@ -521,6 +521,7 @@ export const handleChoiceFormChange = async (deps, payload) => {
 
 export const handleArrowKeyDown = async (deps, payload) => {
   const { store, render } = deps;
+  const { _event: e } = payload;
 
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
@@ -667,12 +668,16 @@ async function handleDebouncedUpdate(deps, payload, skipUIUpdate = false) {
 }
 
 export const subscriptions = (deps) => {
-  const { subject } = deps;
+  const { subject, isInputFocused } = deps;
   return [
     fromEvent(window, "keydown").pipe(
-      filter(() => {
+      filter((e) => {
+        const isInput = isInputFocused();
+        if (isInput) {
+          return;
+        }
         return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
-          payload._event.key,
+          e.key,
         );
       }),
       tap((e) => {
@@ -704,95 +709,32 @@ export const subscriptions = (deps) => {
   ];
 };
 
-export const handleSystemActionsChange = async (deps, payload) => {
-  const { store, render, router, repositoryFactory } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const layoutId = store.selectLayoutId();
-  const selectedItemId = store.selectSelectedItemId();
-  const selectedItem = store.selectSelectedItem();
-  selectedItem.eventPayload = {
-    actions: payload._event.detail,
-  };
-  store.updateSelectedItem(selectedItem);
-  render();
-
-  // Save to repository
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `layouts.items.${layoutId}.elements`,
-    value: {
-      id: selectedItemId,
-      replace: true,
-      item: selectedItem,
-    },
-  });
-};
-
-export const handleSystemActionsActionDelete = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const { actionType } = payload._event.detail;
-
-  // Get current selected item
-  const selectedItemId = store.selectSelectedItemId();
-  const selectedItem = structuredClone(store.selectSelectedItem());
-  if (!selectedItem || !selectedItem.eventPayload?.actions) return;
-
-  // Delete the action from the item's actions
-  if (actionType === "dialogue") {
-    selectedItem.eventPayload.actions[actionType].clear = true;
-  } else {
-    delete selectedItem.eventPayload.actions[actionType];
-  }
-
-  // Update the item in the store
-  store.updateSelectedItem(selectedItem);
-  render();
-
-  // Save to repository
-  const layoutId = store.selectLayoutId();
-  const repository = await repositoryFactory.getByProject(p);
-
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `layouts.items.${layoutId}.elements`,
-    value: {
-      id: selectedItemId,
-      replace: true,
-      item: selectedItem,
-    },
-  });
-};
-
 export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   const { store, render } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
+  const detail = payload._event.detail;
 
   let unflattenedUpdate;
 
   // Handle anchor selection specially
   if (
-    payload._event.detail.name === "anchor" &&
-    payload._event.detail.value &&
-    typeof payload._event.detail.value === "object"
+    detail.name === "anchor" &&
+    detail.value &&
+    typeof detail.value === "object"
   ) {
     // When anchor is selected, update both anchorX and anchorY
     unflattenedUpdate = {
-      anchorX: payload._event.detail.value.x,
-      anchorY: payload._event.detail.value.y,
+      anchorX: detail.value.x,
+      anchorY: detail.value.y,
     };
   } else {
-    unflattenedUpdate = unflattenKey(
-      payload._event.detail.name,
-      payload._event.detail.value,
-    );
+    unflattenedUpdate = unflattenKey(detail.name, detail.value);
   }
 
   const currentItem = store.selectSelectedItem();
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
-  updatedItem[payload._event.detail.name] = payload._event.detail.value;
+  updatedItem[detail.name] = detail.value;
 
   // Update store optimistically for immediate UI feedback
   store.updateSelectedItem(updatedItem);

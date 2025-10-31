@@ -19,6 +19,7 @@ import { initializeProject } from "./deps/tauriRepositoryAdapter";
 import { createRepositoryFactory } from "./deps/repository";
 import { createProjectsService } from "./deps/projectsService";
 import createUpdater from "./deps/tauriUpdater";
+import isInputFocused from "./deps/isInputFocused.js";
 import { createBundleService } from "./deps/bundleService";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -162,6 +163,7 @@ const componentDependencies = {
   appVersion,
   platform: "tauri",
   openUrl,
+  isInputFocused,
 };
 
 const pageDependencies = {
@@ -185,6 +187,7 @@ const pageDependencies = {
   appVersion,
   platform: "tauri",
   openUrl,
+  isInputFocused,
 };
 
 const deps = {

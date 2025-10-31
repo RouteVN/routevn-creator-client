@@ -125,9 +125,9 @@ export const setMode = (state, payload) => {
 
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
-  const { actions, presentationState } = props;
+  const { actions, presentationState = {} } = props;
 
-  if (!actions || !presentationState) {
+  if (!actions) {
     return {};
   }
 
