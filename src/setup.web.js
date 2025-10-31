@@ -13,6 +13,7 @@ import { createWebStorageAdapterFactory } from "./deps/storageAdapterFactory";
 import { createFontManager } from "./deps/fontManager";
 import { create2dRenderer } from "./deps/2drenderer";
 import { createFilePicker } from "./deps/filePicker";
+import isInputFocused from "./deps/isInputFocused.js";
 import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
 import { initializeWebProject } from "./deps/webProjectInitializer";
 
@@ -136,6 +137,7 @@ const componentDependencies = {
   globalUI,
   // Platform-specific info
   platform: "web",
+  isInputFocused,
 };
 
 const pageDependencies = {
@@ -152,6 +154,7 @@ const pageDependencies = {
   globalUI,
   // Platform-specific info
   platform: "web",
+  isInputFocused,
 };
 
 const deps = {
