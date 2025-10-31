@@ -204,7 +204,6 @@ const generateMinimapData = (items, pan) => {
 
   const scaledPanX = pan.x * scale;
   const scaledPanY = pan.y * scale;
-  console.log(scaledPanX, scaledPanY);
 
   return {
     items: minimapItems,
