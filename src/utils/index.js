@@ -69,15 +69,15 @@ export const layoutTreeStructureToRenderState = (
     let element = {
       id: node.id,
       type: node.type,
-      x: parseInt(node.x || 0),
-      y: parseInt(node.y || 0),
-      width: parseInt(node.width || 100),
-      height: parseInt(node.height || 100),
-      anchorX: parseFloat(node.anchorX || 0),
-      anchorY: parseFloat(node.anchorY || 0),
-      scaleX: parseFloat(node.scaleX || 1),
-      scaleY: parseFloat(node.scaleY || 1),
-      rotation: parseInt(node.rotation || 0),
+      x: node.x,
+      y: node.y,
+      width: node.width,
+      height: node.height,
+      anchorX: node.anchorX ?? 0,
+      anchorY: node.anchorY ?? 0,
+      scaleX: node.scaleX ?? 1,
+      scaleY: node.scaleY ?? 1,
+      rotation: node.rotation ?? 0,
       eventPayload: node.eventPayload,
     };
 
@@ -211,6 +211,7 @@ export const layoutTreeStructureToRenderState = (
     if (node.type === "container") {
       // For containers, we need to handle direction and children
       element.direction = node.direction;
+      element.gap = node.gap;
       element.containerType = node.containerType;
     }
 

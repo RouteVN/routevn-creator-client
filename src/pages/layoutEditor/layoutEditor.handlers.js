@@ -230,33 +230,25 @@ const calculateAbsolutePosition = (
   for (const element of elements) {
     if (element.id === targetId) {
       // Simple absolute position: parent position + element relative position
-      const absoluteX = parentX + element.x;
-      const absoluteY = parentY + element.y;
-
-      let startX = absoluteX - (element.width ?? 0) * (element.anchorX ?? 0);
-      let startY = absoluteY - (element.height ?? 0) * (element.anchorY ?? 0);
+      const x = parentX + element.x;
+      const y = parentY + element.y;
 
       return {
-        x: absoluteX,
-        y: absoluteY,
+        x,
+        y,
         width: element.width,
         height: element.height,
-        startX,
-        startY,
+        originX: element.originX,
+        originY: element.originY,
       };
     }
 
     if (element.children && element.children.length > 0) {
       // Container's absolute position for its children
-      const containerAbsoluteX = parentX + element.x;
-      const containerAbsoluteY = parentY + element.y;
+      const x = parentX + element.x;
+      const y = parentY + element.y;
 
-      const found = calculateAbsolutePosition(
-        element.children,
-        targetId,
-        containerAbsoluteX,
-        containerAbsoluteY,
-      );
+      const found = calculateAbsolutePosition(element.children, targetId, x, y);
       if (found) return found;
     }
   }
@@ -282,9 +274,6 @@ const renderLayoutPreview = async (deps, options = {}) => {
   }
 
   let elementsToRender = renderStateElements;
-
-  if (selectedItem) {
-  }
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
   const data = {
@@ -323,33 +312,28 @@ const renderLayoutPreview = async (deps, options = {}) => {
   if (!selectedItem) {
     return;
   }
-  const result = calculateAbsolutePosition(
-    renderStateElements,
-    selectedItem.id,
-  );
+
+  const parsed = drenderer.parse(renderStateElements);
+
+  const result = calculateAbsolutePosition(parsed, selectedItem.id);
 
   if (result) {
     const redDot = {
       id: "selected-anchor",
       type: "rect",
-      x: result.x - 6,
-      y: result.y - 6,
+      x: result.x + result.originX - 6,
+      y: result.y + result.originY - 6,
       radius: 6,
       width: 12,
       height: 12,
       fill: "white",
     };
 
-    // Always use calculated position for consistency
-    // This ensures immediate updates for all changes (form, keyboard, drag)
-    const borderX = result.startX;
-    const borderY = result.startY;
-
     const border = {
       id: "selected-border",
       type: "rect",
-      x: borderX,
-      y: borderY,
+      x: result.x,
+      y: result.y,
       fill: "transparent",
       width: result.width ?? 0,
       height: result.height ?? 0,
