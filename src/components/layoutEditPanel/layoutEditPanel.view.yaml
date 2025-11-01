@@ -75,8 +75,10 @@ template:
               - rtgl-text s=sm: ${section.label}
           - $for item in section.items:
               - $if item.type == 'group':
-                  - rtgl-view d=h w=f g=md:
+                  - rtgl-view d=h w=f g=md av=c:
                       - $for field in item.fields:
+                          - $if field.label:
+                              - rtgl-text s=sm w=60: ${field.label}
                           - rtgl-view#group-item-${field.name} data-name=${field.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=p bw=xs bc=bg h-bc=ac h=28:
                               - $if field.svg:
                                   - rtgl-svg svg=${field.svg} wh=16:
@@ -104,7 +106,7 @@ template:
 
   - rvn-system-actions#system-actions .actions=values.actions  action-type="system":
 
-  - rtgl-popover#popover-form ?open=${popover.open} placement=bottom-end x=${popover.x} y=${popover.y}:
+  - rtgl-popover#popover-form ?open=${popover.open} placement=bottom x=${popover.x} y=${popover.y}:
       - rtgl-form#form key=${popover.key} slot=content .form=popover.form .defaultValues=popover.defaultValues .context=popover.context:
 
   - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.open}:

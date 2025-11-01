@@ -72,7 +72,7 @@ export const createInitialState = () => ({
       value: {
         action: "new-child-item",
         type: "container",
-        name: "New Container",
+        name: "Container",
         x: 0,
         y: 0,
         width: 100,
@@ -90,7 +90,7 @@ export const createInitialState = () => ({
       value: {
         action: "new-child-item",
         type: "sprite",
-        name: "New Sprite",
+        name: "Sprite",
         x: 0,
         y: 0,
         width: 0,
@@ -108,12 +108,11 @@ export const createInitialState = () => ({
       value: {
         action: "new-child-item",
         type: "text",
-        name: "New Text",
+        name: "Text",
         x: 0,
         y: 0,
         text: "text",
         style: {
-          wordWrapWidth: 300,
           align: "left",
         },
         anchorX: 0,
@@ -133,7 +132,7 @@ export const createInitialState = () => ({
       value: {
         action: "new-child-item",
         type: "container",
-        name: "New Container",
+        name: "Container",
         x: 0,
         y: 0,
         width: 100,
@@ -151,7 +150,7 @@ export const createInitialState = () => ({
       value: {
         action: "new-child-item",
         type: "sprite",
-        name: "New Sprite",
+        name: "Sprite",
         x: 0,
         y: 0,
         width: 0,
@@ -169,7 +168,7 @@ export const createInitialState = () => ({
       value: {
         action: "new-child-item",
         type: "text",
-        name: "New Text",
+        name: "Text",
         x: 0,
         y: 0,
         text: "text",
@@ -285,7 +284,15 @@ export const selectChoiceDefaultValues = ({ state }) => {
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.layoutData);
-  return flatItems.find((item) => item.id === state.selectedItemId);
+  const item = flatItems.find((item) => item.id === state.selectedItemId);
+
+  return {
+    ...item,
+    anchor: {
+      x: item.anchorX,
+      y: item.anchorY,
+    },
+  };
 };
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
