@@ -1,4 +1,4 @@
-import { filter, fromEvent, tap, debounceTime } from "rxjs";
+import { filter, fromEvent, tap } from "rxjs";
 import { toTreeStructure } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
@@ -8,7 +8,6 @@ import { parseAndRender } from "jempl";
 
 const DEBOUNCE_DELAYS = {
   UPDATE: 500, // Regular updates (forms, etc)
-  DRAG: 1000, // Drag operations
   KEYBOARD: 1000, // Keyboard final save
 };
 
@@ -60,16 +59,6 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
 
     keyboardNavigationTimeout = null;
   }, DEBOUNCE_DELAYS.KEYBOARD);
-};
-
-/**
- * Cancel any pending keyboard save
- */
-const cancelKeyboardSave = () => {
-  if (keyboardNavigationTimeout) {
-    clearTimeout(keyboardNavigationTimeout);
-    keyboardNavigationTimeout = null;
-  }
 };
 
 /**
@@ -149,7 +138,6 @@ const getRenderState = async (deps) => {
   const { store, repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-
   const {
     layouts,
     images: { items: imageItems },
@@ -157,19 +145,14 @@ const getRenderState = async (deps) => {
     colors: colorsData,
     fonts: fontsData,
   } = repository.getState();
-
-  // Extract items from structured data
   const typographyItems = typographyData?.items || {};
   const colorsItems = colorsData?.items || {};
   const fontsItems = fontsData?.items || {};
 
-  // Use store's elements which have optimistic updates, fallback to repository data
   const layoutId = store.selectLayoutId();
   const storeElements = store.selectItems();
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
-
   const layoutTreeStructure = toTreeStructure(layoutElements);
-
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
@@ -186,38 +169,6 @@ const getRenderState = async (deps) => {
     typographyItems,
     colorsItems,
   };
-};
-
-/**
- * Update element properties with optimistic UI updates and debounced saves
- * @param {Object} deps - Component dependencies
- * @param {Object} changes - Properties to update
- * @param {string} source - Update source: 'form', 'keyboard', 'drag'
- */
-const updateElementOptimistically = (deps, changes, source = "form") => {
-  const { store, subject } = deps;
-  const currentItem = store.selectSelectedItem();
-  if (!currentItem) return;
-
-  const layoutId = store.selectLayoutId();
-
-  // Update store immediately for UI feedback
-  const updatedItem = { ...currentItem, ...changes };
-  store.updateSelectedItem(updatedItem);
-
-  // Determine which action to dispatch based on source
-  const action =
-    source === "drag"
-      ? "layoutEditor.updateElementDrag"
-      : "layoutEditor.updateElement";
-
-  // Dispatch debounced save
-  subject.dispatch(action, {
-    layoutId,
-    selectedItemId: currentItem.id,
-    updatedItem: changes,
-    replace: source === "form",
-  });
 };
 
 // Calculate absolute position by traversing the hierarchy
@@ -255,23 +206,18 @@ const calculateAbsolutePosition = (
   return null;
 };
 
-const renderLayoutPreview = async (deps, options = {}) => {
-  const { store, drenderer, render } = deps;
-  const { skipAssetLoading = false } = options;
+const renderLayoutPreview = async (deps) => {
+  const { store, drenderer } = deps;
 
-  // Get consolidated render state
   const { renderStateElements, fontsItems } = await getRenderState(deps);
 
   const choicesData = store.selectChoicesData();
 
   const selectedItem = store.selectSelectedItem();
 
-  // Skip asset loading during drag for better performance
-  if (!skipAssetLoading) {
-    const fileReferences = extractFileIdsFromRenderState(renderStateElements);
-    const assets = await loadAssets(deps, fileReferences, fontsItems);
-    await drenderer.loadAssets(assets);
-  }
+  const fileReferences = extractFileIdsFromRenderState(renderStateElements);
+  const assets = await loadAssets(deps, fileReferences, fontsItems);
+  await drenderer.loadAssets(assets);
 
   let elementsToRender = renderStateElements;
 
@@ -282,38 +228,19 @@ const renderLayoutPreview = async (deps, options = {}) => {
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
     },
     choice: choicesData,
-    variables: {
-      titleItems: [
-        {
-          label: "Start",
-        },
-        {
-          label: "Load",
-        },
-        {
-          label: "Options",
-        },
-        {
-          label: "Exit",
-        },
-      ],
-    },
   };
 
-  // const filteredElements = filterChoiceContainers(elementsToRender);
   const finalElements = parseAndRender(elementsToRender, data);
 
-  // Render all elements including red dot
-  drenderer.render({
-    elements: finalElements,
-    transitions: [],
-  });
+  const parsed = drenderer.parse(renderStateElements);
 
   if (!selectedItem) {
+    drenderer.render({
+      elements: finalElements,
+      transitions: [],
+    });
     return;
   }
-
-  const parsed = drenderer.parse(renderStateElements);
 
   const result = calculateAbsolutePosition(parsed, selectedItem.id);
 
@@ -380,7 +307,6 @@ const renderLayoutPreview = async (deps, options = {}) => {
       transitions: [],
     });
   }
-  render();
 };
 
 export const handleAfterMount = async (deps) => {
@@ -422,7 +348,6 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   const itemId = payload._event.detail.id;
   store.setSelectedItemId(itemId);
   render();
-
   await renderLayoutPreview(deps);
 };
 
@@ -485,7 +410,6 @@ export const handleDialogueFormChange = async (deps, payload) => {
   const { store, render } = deps;
   const { name, fieldValue } = payload._event.detail;
 
-  // Update the dialogue default values in the store
   store.setDialogueDefaultValue({ name, fieldValue });
   render();
 
@@ -496,7 +420,6 @@ export const handleChoiceFormChange = async (deps, payload) => {
   const { store, render } = deps;
   const { name, fieldValue } = payload._event.detail;
 
-  // Update the choice default values in the store
   store.setChoiceDefaultValue({ name, fieldValue });
   render();
 
@@ -558,98 +481,12 @@ export const handleArrowKeyDown = async (deps, payload) => {
     }
   }
 
-  // Update store optimistically for immediate UI feedback
   const updatedItem = { ...currentItem, ...change };
   store.updateSelectedItem(updatedItem);
   render();
-
-  // Render preview immediately for user feedback
-  await renderLayoutPreview(deps, { skipAssetLoading: true });
-
-  // Schedule final save after navigation stops
+  await renderLayoutPreview(deps);
   scheduleKeyboardSave(deps, currentItem.id, layoutId);
 };
-
-export const handle2dRenderEvent = async (deps, payload) => {
-  const { store } = deps;
-  const { eventName } = payload;
-
-  const { isDragging, dragOffset } = store.selectDragging();
-
-  const currentItem = store.selectSelectedItem();
-  if (!currentItem) {
-    return;
-  }
-
-  if (eventName.startsWith("layout-editor-pointer-down")) {
-    // Cancel any pending keyboard save when starting drag
-    cancelKeyboardSave();
-
-    store.startDragging({
-      x: Math.round(payload.x - currentItem.x),
-      y: Math.round(payload.y - currentItem.y),
-    });
-  } else if (eventName.startsWith("layout-editor-pointer-up")) {
-    store.stopDragging(false);
-    // Final render after drag ends
-    setTimeout(() => {
-      renderLayoutPreview(deps, { skipAssetLoading: true });
-    }, 100);
-  } else if (eventName.startsWith("layout-editor-pointer-move")) {
-    if (!isDragging) {
-      return;
-    }
-
-    const change = {
-      x: Math.round(payload.x - dragOffset.x),
-      y: Math.round(payload.y - dragOffset.y),
-    };
-
-    // Update element with optimistic UI (includes dispatch)
-    updateElementOptimistically(deps, change, "drag");
-
-    // Render immediately for smooth dragging
-    // Skip asset loading during drag since assets don't change
-    renderLayoutPreview(deps, { skipAssetLoading: true });
-  }
-};
-
-/**
- * Handler for debounced element updates (saves to repository)
- * @param {Object} payload - Update payload
- * @param {Object} deps - Component dependencies
- * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
- */
-async function handleDebouncedUpdate(deps, payload, skipUIUpdate = false) {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { layoutId, selectedItemId, updatedItem, replace } = payload;
-
-  // Save to repository
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `layouts.items.${layoutId}.elements`,
-    value: {
-      id: selectedItemId,
-      replace: replace,
-      item: updatedItem,
-    },
-  });
-
-  // For drag operations, UI is already updated optimistically
-  if (skipUIUpdate) return;
-
-  // For form/keyboard updates, sync store with repository
-  const { layouts, images } = repository.getState();
-  const layout = layouts.items[layoutId];
-
-  store.setItems(layout?.elements || { items: {}, tree: [] });
-  store.setImages(images);
-  render();
-
-  await renderLayoutPreview(deps);
-}
 
 export const subscriptions = (deps) => {
   const { subject, isInputFocused } = deps;
@@ -668,26 +505,34 @@ export const subscriptions = (deps) => {
         handleArrowKeyDown(deps, { _event: e });
       }),
     ),
+    fromEvent(window, "keydown").pipe(
+      filter((e) => {
+        const isInput = isInputFocused();
+        if (isInput) {
+          return;
+        }
+        return ["Control"].includes(e.key);
+      }),
+      tap((e) => {
+        handleCtrlKeyDown(deps, { _event: e });
+      }),
+    ),
+    fromEvent(window, "keyup").pipe(
+      filter((e) => {
+        const isInput = isInputFocused();
+        if (isInput) {
+          return;
+        }
+        return ["Control"].includes(e.key);
+      }),
+      tap((e) => {
+        handleCtrlKeyUp(deps, { _event: e });
+      }),
+    ),
     subject.pipe(
       filter(({ action }) => action === "2drendererEvent"),
       tap(({ payload }) => {
-        handle2dRenderEvent(deps, payload);
-      }),
-    ),
-    // Debounce regular element updates
-    subject.pipe(
-      filter(({ action }) => action === "layoutEditor.updateElement"),
-      debounceTime(DEBOUNCE_DELAYS.UPDATE),
-      tap(async ({ payload }) => {
-        await handleDebouncedUpdate(deps, payload, false);
-      }),
-    ),
-    // Debounce drag saves to repository (UI already updated immediately)
-    subject.pipe(
-      filter(({ action }) => action === "layoutEditor.updateElementDrag"),
-      debounceTime(DEBOUNCE_DELAYS.DRAG),
-      tap(async ({ payload }) => {
-        await handleDebouncedUpdate(deps, payload, true);
+        handleCanvasMouseMove(deps, payload);
       }),
     ),
   ];
@@ -701,13 +546,11 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
 
   let unflattenedUpdate;
 
-  // Handle anchor selection specially
   if (
     detail.name === "anchor" &&
     detail.value &&
     typeof detail.value === "object"
   ) {
-    // When anchor is selected, update both anchorX and anchorY
     unflattenedUpdate = {
       anchorX: detail.value.x,
       anchorY: detail.value.y,
@@ -720,11 +563,9 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   const updatedItem = deepMerge(currentItem, unflattenedUpdate);
   updatedItem[detail.name] = detail.value;
 
-  // Update store optimistically for immediate UI feedback
   store.updateSelectedItem(updatedItem);
   render();
 
-  // Dispatch debounced update action to repository
   const { subject } = deps;
   subject.dispatch("layoutEditor.updateElement", {
     layoutId,
@@ -732,7 +573,56 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     updatedItem,
     replace: true,
   });
+  await renderLayoutPreview(deps, { skipAssetLoading: false });
+};
 
-  // Render preview immediately for user feedback (skip asset loading for speed)
-  await renderLayoutPreview(deps, { skipAssetLoading: true });
+export const handleCanvasMouseMove = (deps, payload) => {
+  const { store } = deps;
+  const { x, y } = payload;
+  const drag = store.selectDragging();
+
+  if (!drag.isDragging) {
+    return;
+  }
+
+  const item = store.selectSelectedItem();
+  if (!drag.dragStartPosition) {
+    store.setDragStartPosition({
+      x,
+      y,
+      itemStartX: item.x,
+      itemStartY: item.y,
+    });
+    return;
+  }
+
+  const updatedItem = {
+    ...item,
+    x: drag.dragStartPosition.itemStartX + x - drag.dragStartPosition.x,
+    y: drag.dragStartPosition.itemStartY + y - drag.dragStartPosition.y,
+  };
+
+  store.updateSelectedItem(updatedItem);
+  renderLayoutPreview(deps);
+};
+
+export const handleCtrlKeyDown = (deps) => {
+  const { store, render } = deps;
+  const currentItem = store.selectSelectedItem();
+  if (!currentItem) {
+    return;
+  }
+  store.startDragging(null);
+  render();
+};
+
+export const handleCtrlKeyUp = (deps) => {
+  const { store, render } = deps;
+
+  const currentItem = store.selectSelectedItem();
+  if (!currentItem) {
+    return;
+  }
+  store.stopDragging();
+  render();
 };

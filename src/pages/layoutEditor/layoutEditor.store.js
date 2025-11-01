@@ -49,7 +49,7 @@ const choiceForm = {
 export const createInitialState = () => ({
   lastUpdateDate: undefined,
   isDragging: false,
-  dragOffset: { x: 0, y: 0 },
+  dragStartPosition: undefined,
   layoutData: { tree: [], items: {} },
   selectedItemId: null,
   layout: null,
@@ -217,17 +217,23 @@ export const setTypographyData = (state, typographyData) => {
   state.typographyData = typographyData;
 };
 
-export const startDragging = (state, payload) => {
+export const startDragging = (state) => {
   state.isDragging = true;
-  state.dragOffset = {
-    x: payload.x,
-    y: payload.y,
+};
+
+export const setDragStartPosition = (state, payload) => {
+  const { x, y, itemStartX, itemStartY } = payload;
+  state.dragStartPosition = {
+    x,
+    y,
+    itemStartX,
+    itemStartY,
   };
 };
 
 export const stopDragging = (state, isDragging) => {
   state.isDragging = isDragging;
-  state.dragOffset = { x: 0, y: 0 };
+  state.dragStartPosition = undefined;
 };
 
 export const setColorsData = (state, colorsData) => {
@@ -261,7 +267,7 @@ export const setChoiceDefaultValue = (state, { name, fieldValue }) => {
 export const selectDragging = ({ state }) => {
   return {
     isDragging: state.isDragging,
-    dragOffset: state.dragOffset,
+    dragStartPosition: state.dragStartPosition,
   };
 };
 
@@ -285,6 +291,10 @@ export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.layoutData);
   const item = flatItems.find((item) => item.id === state.selectedItemId);
+
+  if (!item) {
+    return null;
+  }
 
   return {
     ...item,
@@ -334,6 +344,7 @@ export const selectViewData = ({ state }) => {
 
   return {
     item,
+    canvasCursor: state.isDragging ? "all-scroll" : "default",
     layoutEditPanelKey: `${item?.id}-${state.lastUpdateDate}`,
     flatItems,
     flatGroups,

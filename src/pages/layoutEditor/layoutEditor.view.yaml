@@ -64,7 +64,7 @@ template:
           - rtgl-view flex=1 sv w=f:
               - 'rtgl-view w=f bgc=mu pos=rel bwb=xs style="margin-left: 1px; aspect-ratio: 16/9;"':
                   - rtgl-view pos=abs cor=full:
-                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
+                      - 'div#canvas style="width: 100%; height: 100%;display: flex; cursor: ${canvasCursor}"':
               - $if layout.layoutType == 'dialogue':
                   - rtgl-form#dialogue-form w=f h=f .form=dialogueForm .defaultValues=dialogueDefaultValues:
               - $if layout.layoutType == 'choice':
