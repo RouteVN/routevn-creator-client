@@ -60,7 +60,6 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
       label: "Layout",
       items: [
         {
@@ -90,10 +89,40 @@ const config = {
               },
             },
             {
+              $when: 'itemType != "text"',
               type: "clickable-value",
               svg: "h",
               name: "height",
               value: "${values.height}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        {
+          $when: 'itemType == "container"',
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              label: "Gap",
+              name: "gap",
+              value: "${values.gap}",
               popoverForm: {
                 fields: [
                   {
@@ -376,6 +405,7 @@ export const createInitialState = () => {
         y: 0,
       },
       direction: undefined,
+      gap: 0,
       actions: {},
     },
   };

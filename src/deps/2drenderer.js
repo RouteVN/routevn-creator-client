@@ -8,6 +8,7 @@ import RouteGraphics, {
   AudioPlugin,
   SliderRendererPlugin,
   KeyframeTransitionPlugin,
+  parse,
 } from "route-graphics";
 import createRouteEngine from "route-engine-js";
 
@@ -91,6 +92,7 @@ export const create2dRenderer = async ({ subject }) => {
         }
       };
     },
+    parse: parse,
     render: (payload) => app.render(payload),
     destroy: () => {
       if (!app) {
