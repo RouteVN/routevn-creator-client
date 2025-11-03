@@ -1,4 +1,4 @@
-import { filter, fromEvent, tap } from "rxjs";
+import { filter, fromEvent, tap, debounceTime } from "rxjs";
 import { toTreeStructure } from "../../deps/repository";
 import {
   extractFileIdsFromRenderState,
@@ -275,33 +275,8 @@ const renderLayoutPreview = async (deps) => {
       cursor: "all-scroll",
     };
 
-    const baseContainer = {
-      id: "selected-border",
-      type: "rect",
-      x: 0,
-      y: 0,
-      fill: "transparent",
-      width: 1920,
-      height: 1080,
-      pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
-      pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
-    };
-
-    // Wrap red dot in a container to ensure it's on top
-    const redDotContainer = {
-      id: "red-dot-container",
-      type: "container",
-      x: 0,
-      y: 0,
-      width: 1920,
-      height: 1080,
-      anchorX: 0,
-      anchorY: 0,
-      children: [baseContainer, border, redDot],
-    };
-
     drenderer.render({
-      elements: [...finalElements, redDotContainer],
+      elements: [...finalElements, border, redDot],
       transitions: [],
     });
   }
@@ -486,6 +461,37 @@ export const handleArrowKeyDown = async (deps, payload) => {
   scheduleKeyboardSave(deps, currentItem.id, layoutId);
 };
 
+/**
+ * Handler for debounced element updates (saves to repository)
+ * @param {Object} payload - Update payload
+ * @param {Object} deps - Component dependencies
+ * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
+ */
+async function handleDebouncedUpdate(deps, payload) {
+  const { repositoryFactory, router, store } = deps;
+  const { p } = router.getPayload();
+  const repository = await repositoryFactory.getByProject(p);
+  const { layoutId, selectedItemId, updatedItem, replace } = payload;
+
+  // Save to repository
+  repository.addAction({
+    actionType: "treeUpdate",
+    target: `layouts.items.${layoutId}.elements`,
+    value: {
+      id: selectedItemId,
+      replace: replace,
+      item: updatedItem,
+    },
+  });
+
+  // For form/keyboard updates, sync store with repository
+  const { layouts, images } = repository.getState();
+  const layout = layouts.items[layoutId];
+
+  store.setItems(layout?.elements || { items: {}, tree: [] });
+  store.setImages(images);
+}
+
 export const subscriptions = (deps) => {
   const { subject, isInputFocused } = deps;
   return [
@@ -533,6 +539,13 @@ export const subscriptions = (deps) => {
         handleCanvasMouseMove(deps, payload);
       }),
     ),
+    subject.pipe(
+      filter(({ action }) => action === "layoutEditor.updateElement"),
+      debounceTime(DEBOUNCE_DELAYS.UPDATE),
+      tap(async ({ payload }) => {
+        await handleDebouncedUpdate(deps, payload);
+      }),
+    ),
   ];
 };
 
@@ -575,7 +588,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
 };
 
 export const handleCanvasMouseMove = (deps, payload) => {
-  const { store } = deps;
+  const { store, subject } = deps;
   const { x, y } = payload;
   const drag = store.selectDragging();
 
@@ -602,6 +615,13 @@ export const handleCanvasMouseMove = (deps, payload) => {
 
   store.updateSelectedItem(updatedItem);
   renderLayoutPreview(deps);
+
+  subject.dispatch("layoutEditor.updateElement", {
+    layoutId: store.selectLayoutId(),
+    selectedItemId: item.id,
+    updatedItem,
+    replace: true,
+  });
 };
 
 export const handleCtrlKeyDown = (deps) => {
