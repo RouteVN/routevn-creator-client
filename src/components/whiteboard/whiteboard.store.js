@@ -161,7 +161,9 @@ export const setInitialZoomAndPan = (state, { zoomLevel, panX, panY }) => {
 
 const generateMinimapData = (items, pan) => {
   if (!items || items.length === 0) {
-    return {};
+    return {
+      items: [],
+    };
   }
 
   let x_tl = Infinity;

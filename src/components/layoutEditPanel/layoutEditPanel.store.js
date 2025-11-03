@@ -115,35 +115,6 @@ const config = {
           ],
         },
         {
-          $when: 'itemType == "container"',
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              label: "Gap",
-              name: "gap",
-              value: "${values.gap}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    inputType: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      content: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-        {
           type: "select",
           label: "Anchor",
           name: "anchor",
@@ -175,6 +146,36 @@ const config = {
             { label: "Absolute", value: undefined },
             { label: "Horizontal", value: "horizontal" },
             { label: "Vertical", value: "vertical" },
+          ],
+        },
+        {
+          $when:
+            'itemType == "container" && (values.direction == "vertical" || values.direction == "horizontal") ',
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              label: "Gap",
+              name: "gap",
+              value: "${values.gap}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
           ],
         },
       ],
