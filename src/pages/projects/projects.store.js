@@ -50,13 +50,14 @@ export const createInitialState = () => ({
           },
         ],
       },
-      {
-        name: "template",
-        inputType: "select",
-        label: "Template",
-        required: true,
-        options: [{ value: "default", label: "Default" }],
-      },
+      // comment since we only have 1 template
+      // {
+      //   name: "template",
+      //   inputType: "select",
+      //   label: "Template",
+      //   required: true,
+      //   options: [{ value: "default", label: "Default" }],
+      // },
       {
         name: "projectPath",
         inputType: "slot",

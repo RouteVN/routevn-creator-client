@@ -300,8 +300,6 @@ const renderLayoutPreview = async (deps) => {
       children: [baseContainer, border, redDot],
     };
 
-    // Add container as the LAST top-level element
-
     drenderer.render({
       elements: [...finalElements, redDotContainer],
       transitions: [],
