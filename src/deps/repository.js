@@ -439,27 +439,39 @@ export const createWebRepositoryFactory = (initialState, store) => {
 
 // For Tauri version - creates a factory with multi-project support
 export const createRepositoryFactory = (initialState, keyValueStore) => {
+  const repositoriesByProject = new Map();
+  const repositoriesByPath = new Map();
+
+  const getOrCreateRepositoryByPath = async (projectPath) => {
+    if (repositoriesByPath.has(projectPath)) {
+      return repositoriesByPath.get(projectPath);
+    }
+
+    const store = await createTauriSQLiteRepositoryAdapter(projectPath);
+    const repository = createRepositoryInternal(initialState, store);
+    await repository.init();
+    repositoriesByPath.set(projectPath, repository);
+    return repository;
+  };
+
   const repositoryFactory = {
     getByProject: async (projectId) => {
+      if (repositoriesByProject.has(projectId)) {
+        return repositoriesByProject.get(projectId);
+      }
+
       const projects = (await keyValueStore.get("projects")) || [];
       const project = projects.find((project) => project.id === projectId);
       if (!project) {
         throw new Error("project not found");
       }
 
-      const store = await createTauriSQLiteRepositoryAdapter(
-        project.projectPath,
-      );
-      const repository = createRepositoryInternal(initialState, store);
-      await repository.init();
+      const repository = await getOrCreateRepositoryByPath(project.projectPath);
+      repositoriesByProject.set(projectId, repository);
       return repository;
     },
     getByPath: async (projectPath) => {
-      console.log("Getting repository for path:", projectPath);
-      const store = await createTauriSQLiteRepositoryAdapter(projectPath);
-      const repository = createRepositoryInternal(initialState, store);
-      await repository.init();
-      return repository;
+      return await getOrCreateRepositoryByPath(projectPath);
     },
   };
 
@@ -467,52 +479,116 @@ export const createRepositoryFactory = (initialState, keyValueStore) => {
 };
 
 const createRepositoryInternal = (initialState, store) => {
+  const CHECKPOINT_INTERVAL = 50;
+
   let cachedActionStreams = [];
+  const checkpoints = new Map();
+  const checkpointIndexes = [];
+
+  let latestComputedIndex = 0;
+  let latestState = structuredClone(initialState);
+
+  const storeCheckpoint = (index, state) => {
+    if (!checkpoints.has(index)) {
+      checkpointIndexes.push(index);
+    }
+    checkpoints.set(index, state);
+  };
+
+  const resetCheckpoints = () => {
+    checkpoints.clear();
+    checkpointIndexes.length = 0;
+    latestComputedIndex = 0;
+    latestState = structuredClone(initialState);
+    storeCheckpoint(0, latestState);
+  };
+
+  const applyActionToState = (state, action) => {
+    const { actionType, target, value } = action;
+    if (actionType === "set") {
+      return set(state, target, value);
+    } else if (actionType === "unset") {
+      return unset(state, target);
+    } else if (actionType === "treePush") {
+      return treePush(state, target, value);
+    } else if (actionType === "treeDelete") {
+      return treeDelete(state, target, value);
+    } else if (actionType === "treeUpdate") {
+      return treeUpdate(state, target, value);
+    } else if (actionType === "treeMove") {
+      return treeMove(state, target, value);
+    } else if (actionType === "treeCopy") {
+      return treeCopy(state, target, value);
+    } else if (actionType === "init") {
+      const newState = structuredClone(state);
+      for (const [key, data] of Object.entries(value)) {
+        if (newState[key] !== undefined) {
+          newState[key] = data;
+        }
+      }
+      return newState;
+    }
+    return state;
+  };
 
   const init = async () => {
     cachedActionStreams = (await store.getAllEvents()) || [];
+    resetCheckpoints();
+
+    cachedActionStreams.forEach((action, index) => {
+      latestState = applyActionToState(latestState, action);
+      latestComputedIndex = index + 1;
+
+      if (latestComputedIndex % CHECKPOINT_INTERVAL === 0) {
+        // Store reference to current latestState as checkpoint
+        storeCheckpoint(latestComputedIndex, latestState);
+      }
+    });
+
+    if (latestComputedIndex !== 0 && !checkpoints.has(latestComputedIndex)) {
+      storeCheckpoint(latestComputedIndex, latestState);
+    }
   };
 
   const addAction = async (action) => {
     cachedActionStreams.push(action);
+    latestState = applyActionToState(latestState, action);
+    latestComputedIndex += 1;
+
+    if (latestComputedIndex % CHECKPOINT_INTERVAL === 0) {
+      storeCheckpoint(latestComputedIndex, latestState);
+    }
+
     await store.addAction(action);
   };
 
-  const getState = (untilActionIndex) => {
-    // If untilActionIndex is provided, only compute state up to that action
-    const events =
-      untilActionIndex !== undefined
-        ? cachedActionStreams.slice(0, untilActionIndex)
-        : cachedActionStreams;
-
-    // Compute state from action stream
-    return events.reduce((acc, action) => {
-      const { actionType, target, value } = action;
-      if (actionType === "set") {
-        return set(acc, target, value);
-      } else if (actionType === "unset") {
-        return unset(acc, target);
-      } else if (actionType === "treePush") {
-        return treePush(acc, target, value);
-      } else if (actionType === "treeDelete") {
-        return treeDelete(acc, target, value);
-      } else if (actionType === "treeUpdate") {
-        return treeUpdate(acc, target, value);
-      } else if (actionType === "treeMove") {
-        return treeMove(acc, target, value);
-      } else if (actionType === "treeCopy") {
-        return treeCopy(acc, target, value);
-      } else if (actionType === "init") {
-        const newState = structuredClone(acc);
-        for (const [key, data] of Object.entries(value)) {
-          if (newState[key] !== undefined) {
-            newState[key] = data;
-          }
-        }
-        return newState;
+  const findCheckpointIndex = (targetIndex) => {
+    for (let i = checkpointIndexes.length - 1; i >= 0; i--) {
+      if (checkpointIndexes[i] <= targetIndex) {
+        return checkpointIndexes[i];
       }
-      return acc;
-    }, structuredClone(initialState));
+    }
+    return 0;
+  };
+
+  const getState = (untilActionIndex) => {
+    const targetIndex =
+      untilActionIndex !== undefined
+        ? Math.max(0, Math.min(untilActionIndex, cachedActionStreams.length))
+        : cachedActionStreams.length;
+
+    if (targetIndex === latestComputedIndex) {
+      return structuredClone(latestState);
+    }
+
+    const checkpointIndex = findCheckpointIndex(targetIndex);
+    let state = structuredClone(checkpoints.get(checkpointIndex));
+
+    for (let i = checkpointIndex; i < targetIndex; i++) {
+      state = applyActionToState(state, cachedActionStreams[i]);
+    }
+
+    return state;
   };
 
   const getAllEvents = () => {

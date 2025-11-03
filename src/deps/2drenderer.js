@@ -15,8 +15,6 @@ import createRouteEngine from "route-engine-js";
 export const create2dRenderer = async ({ subject }) => {
   let app;
   let assetBufferManager;
-  let eventHandler = () => {};
-
   return {
     init: async (options = {}) => {
       if (app) {
@@ -28,19 +26,9 @@ export const create2dRenderer = async ({ subject }) => {
       assetBufferManager = createAssetBufferManager();
       app = new RouteGraphics();
 
-      eventHandler = (eventName, payload) => {
-        subject.dispatch("2drendererEvent", {
-          eventName,
-          payload,
-        });
-      };
-
       await app.init({
         width: 1920,
         height: 1080,
-        eventHandler: (eventName, payload) => {
-          eventHandler(eventName, payload);
-        },
         plugins: [
           new SpriteRendererPlugin(),
           new TextRendererPlugin(),
@@ -52,6 +40,15 @@ export const create2dRenderer = async ({ subject }) => {
           new KeyframeTransitionPlugin(),
         ],
       });
+
+      app._app.stage.eventMode = "static";
+      app._app.stage.on("globalpointermove", (event) => {
+        subject.dispatch("2drendererEvent", {
+          x: Math.round(event.global.x),
+          y: Math.round(event.global.y),
+        });
+      });
+
       if (canvas) {
         if (canvas.children.length > 0) {
           canvas.removeChild(canvas.children[0]);

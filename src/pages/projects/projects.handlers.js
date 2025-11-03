@@ -97,7 +97,11 @@ export const handleFormSubmit = async (deps, payload) => {
       return;
     }
 
-    const { name, description, template } = payload._event.detail.formValues;
+    const {
+      name,
+      description,
+      template = "default",
+    } = payload._event.detail.formValues;
 
     if (name === "_TEST_FILE_PERMISSIONS_") {
       window.location.href = "/test-permissions.html";

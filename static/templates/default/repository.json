@@ -333,6 +333,7 @@
               "name": "Dialogue Container",
               "x": 35,
               "y": 695,
+              "gap": 0,
               "width": 1850,
               "height": 350,
               "anchorX": 0,
@@ -370,12 +371,11 @@
               "text": "${dialogue.character.name}",
               "typographyId": "typography-character-name",
               "style": {
-                "wordWrapWidth": 600,
                 "align": "left"
               }
             },
             "dialogue-content": {
-              "type": "text-revealing",
+              "type": "text",
               "name": "Dialogue Content",
               "x": 40,
               "y": 110,
@@ -386,11 +386,10 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "content": "${dialogue.content}",
+              "text": "${dialogue.content[0].text}",
               "displaySpeed": 100,
               "typographyId": "typography-text-view",
               "style": {
-                "wordWrapWidth": 1700,
                 "align": "left"
               }
             }
