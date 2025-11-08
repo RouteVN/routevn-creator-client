@@ -15,7 +15,7 @@
         "esbuild": "^0.25.11",
         "file-type": "^21.0.0",
         "immer": "^10.1.1",
-        "insieme": "^0.0.1",
+        "insieme": "0.0.2",
         "jempl": "1.0.0",
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
@@ -373,7 +373,7 @@
 
     "ini": ["ini@1.3.8", "", {}, "sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew=="],
 
-    "insieme": ["insieme@0.0.1", "", {}, "sha512-wCUql9GZBwz8/2ZCirIdw5uBPJq0sFpUesuAmNoQREH4pu0+dmDZr4Zs8N3HZJcbKP7UgyTF2w3ToMFfjZ7eLA=="],
+    "insieme": ["insieme@0.0.2", "", {}, "sha512-zrfaZPc3wwJGPPJvYU4BlbkXp8AQ8BFxZOOf13uRiE/qK+S9OvDCYwUkAFhSuitisFsTmX9Dpm099mJCrgVJiQ=="],
 
     "is-fullwidth-code-point": ["is-fullwidth-code-point@5.1.0", "", { "dependencies": { "get-east-asian-width": "^1.3.1" } }, "sha512-5XHYaSyiqADb4RnZ1Bdad6cPp8Toise4TzEjcOYDHZkTCbKgiUl7WTUCpNWHuxmDt91wnsZBc9xinNzopv3JMQ=="],
 
