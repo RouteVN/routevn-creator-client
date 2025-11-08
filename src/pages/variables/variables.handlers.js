@@ -37,19 +37,21 @@ export const handleVariableCreated = async (deps, payload) => {
   const { groupId, name, type, initialValue, readonly } = payload._event.detail;
 
   // Add new variable to repository
-  repository.addAction({
-    actionType: "treePush",
-    target: "variables",
-    value: {
-      parent: groupId,
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: "variables",
+      value: {
         id: nanoid(),
         type: "variable",
         name: name,
         variableType: type,
         initialValue: initialValue,
         readonly: readonly,
+      },
+      options: {
+        parent: groupId,
+        position: "last",
       },
     },
   });
@@ -64,14 +66,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "variables",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "variables",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });

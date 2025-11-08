@@ -77,19 +77,21 @@ export const handleAnimationCreated = async (deps, payload) => {
   const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, properties } = payload._event.detail;
 
-  repository.addAction({
-    actionType: "treePush",
-    target: "animations",
-    value: {
-      parent: groupId,
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: "animations",
+      value: {
         id: nanoid(),
         type: "animation",
         name: name,
         duration: "4s",
         keyframes: 3,
         properties,
+      },
+      options: {
+        parent: groupId,
+        position: "last",
       },
     },
   });
@@ -105,15 +107,17 @@ export const handleAnimationUpdated = async (deps, payload) => {
   const repository = await repositoryFactory.getByProject(p);
   const { itemId, name, properties } = payload._event.detail;
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "animations",
-    value: {
-      id: itemId,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "animations",
+      value: {
         name: name,
         properties,
+      },
+      options: {
+        id: itemId,
+        replace: false,
       },
     },
   });
@@ -127,14 +131,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "animations",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "animations",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -505,11 +511,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      value: {
+        id: itemId,
+      },
     },
   });
 

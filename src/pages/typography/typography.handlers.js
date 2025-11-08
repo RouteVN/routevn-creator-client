@@ -231,14 +231,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   // uploadResults already contains only successful uploads
   const successfulUploads = uploadResults;
 
-  successfulUploads.forEach((result) => {
-    repository.addAction({
-      actionType: "treePush",
-      target: "typography",
-      value: {
-        parent: id,
-        position: "last",
-        item: {
+  for (const result of successfulUploads) {
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "typography",
+        value: {
           id: nanoid(),
           type: "typography",
           fileId: result.fileId,
@@ -246,9 +244,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
           fileType: result.file.type,
           fileSize: result.file.size,
         },
+        options: {
+          parent: id,
+          position: "last",
+        },
       },
     });
-  });
+  }
 
   if (successfulUploads.length > 0) {
     syncRepositoryToStore(store, repository);
@@ -275,13 +277,11 @@ const handleTypographyCreated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  repository.addAction({
-    actionType: "treePush",
-    target: "typography",
-    value: {
-      parent: groupId,
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: "typography",
+      value: {
         id: nanoid(),
         type: "typography",
         name: name,
@@ -291,6 +291,10 @@ const handleTypographyCreated = async (deps, payload) => {
         fontId: fontStyle, // Store font ID
         fontWeight: fontWeight,
         previewText: previewText,
+      },
+      options: {
+        parent: groupId,
+        position: "last",
       },
     },
   });
@@ -314,13 +318,11 @@ const handleTypographyUpdated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "typography",
-    value: {
-      id: itemId,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "typography",
+      value: {
         name: name,
         fontSize: fontSize,
         lineHeight: lineHeight,
@@ -328,6 +330,10 @@ const handleTypographyUpdated = async (deps, payload) => {
         fontId: fontStyle, // Store font ID
         fontWeight: fontWeight,
         previewText: previewText,
+      },
+      options: {
+        id: itemId,
+        replace: false,
       },
     },
   });
@@ -340,14 +346,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "typography",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "typography",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -572,17 +580,19 @@ export const handleAddColorFormAction = async (deps, payload) => {
     const newColorId = nanoid();
 
     // Create the color in the repository
-    repository.addAction({
-      actionType: "treePush",
-      target: "colors",
-      value: {
-        parent: formData.folderId || "_root",
-        position: "last",
-        item: {
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "colors",
+        value: {
           id: newColorId,
           type: "color",
           name: formData.name,
           hex: formData.hex,
+        },
+        options: {
+          parent: formData.folderId || "_root",
+          position: "last",
         },
       },
     });
@@ -669,13 +679,11 @@ export const handleAddFontFormAction = async (deps, payload) => {
     const newFontId = nanoid();
 
     // Create the font in the repository using the already uploaded file
-    repository.addAction({
-      actionType: "treePush",
-      target: "fonts",
-      value: {
-        parent: formData.folderId || "_root",
-        position: "last",
-        item: {
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "fonts",
+        value: {
           id: newFontId,
           type: "font",
           name: fontName,
@@ -684,6 +692,10 @@ export const handleAddFontFormAction = async (deps, payload) => {
           fileName: fontData.file.name,
           fileType: getFileType(fontData.uploadResult),
           fileSize: fontData.file.size,
+        },
+        options: {
+          parent: formData.folderId || "_root",
+          position: "last",
         },
       },
     });
@@ -711,11 +723,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      value: {
+        id: itemId,
+      },
     },
   });
 

@@ -100,18 +100,20 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "fonts",
-    value: {
-      id: selectedItem.id,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "fonts",
+      value: {
         fileId: uploadResult.fileId,
         name: uploadResult.file.name,
         fontFamily: uploadResult.fontName,
         fileType: getFileType(uploadResult),
         fileSize: uploadResult.file.size,
+      },
+      options: {
+        id: selectedItem.id,
+        replace: false,
       },
     },
   });
@@ -160,7 +162,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   // Add successfully uploaded files to repository and collect new font items
   const newFontItems = [];
-  successfulUploads.forEach((result) => {
+  for (const result of successfulUploads) {
     const fontItem = {
       id: nanoid(),
       type: "font",
@@ -171,18 +173,20 @@ export const handleDragDropFileSelected = async (deps, payload) => {
       fileSize: result.file.size,
     };
 
-    repository.addAction({
-      actionType: "treePush",
-      target: "fonts",
-      value: {
-        parent: id,
-        position: "last",
-        item: fontItem,
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "fonts",
+        value: fontItem,
+        options: {
+          parent: id,
+          position: "last",
+        },
       },
     });
 
     newFontItems.push(fontItem);
-  });
+  }
 
   if (successfulUploads.length > 0) {
     const { fonts } = repository.getState();
@@ -251,14 +255,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "fonts",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "fonts",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -291,11 +297,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      value: {
+        id: itemId,
+      },
     },
   });
 

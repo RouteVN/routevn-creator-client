@@ -105,8 +105,8 @@ export const handleSetInitialScene = async (sceneId, deps) => {
   const repository = await repositoryFactory.getByProject(p);
 
   // Set the initialSceneId in the story object
-  await repository.addAction({
-    actionType: "set",
+  await repository.addEvent({
+    type: "set",
     target: "story.initialSceneId",
     value: sceneId,
   });
@@ -179,8 +179,8 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
   const { itemId, x, y } = payload._event.detail;
 
   // Update position in repository using 'set' action
-  repository.addAction({
-    actionType: "set",
+  repository.addEvent({
+    type: "set",
     target: `scenes.items.${itemId}.position`,
     value: { x, y },
   });
@@ -228,14 +228,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "scenes",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "scenes",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -365,7 +367,7 @@ export const handleSceneFormAction = async (deps, payload) => {
 
     // Add new scene to repository
     const repositoryAction = {
-      actionType: "treePush",
+      type: "treePush",
       target: "scenes",
       value: {
         parent: formData.folderId || "_root",
@@ -399,7 +401,17 @@ export const handleSceneFormAction = async (deps, payload) => {
       },
     };
 
-    repository.addAction(repositoryAction);
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "scenes",
+        value: repositoryAction.value.item,
+        options: {
+          parent: repositoryAction.value.parent,
+          position: repositoryAction.value.position,
+        },
+      },
+    });
 
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
@@ -430,11 +442,13 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { itemId } = payload._event.detail;
 
   // Remove from repository
-  repository.addAction({
-    actionType: "treeDelete",
-    target: "scenes",
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: "scenes",
+      value: {
+        id: itemId,
+      },
     },
   });
 
@@ -494,8 +508,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   // Handle set initial scene action
   if (item.value === "set-initial" && itemId) {
     // Set the initialSceneId in the story object
-    await repository.addAction({
-      actionType: "set",
+    await repository.addEvent({
+      type: "set",
       target: "story.initialSceneId",
       value: itemId,
     });
@@ -519,8 +533,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
     // Remove from repository
-    repository.addAction({
-      actionType: "treeDelete",
+    repository.addEvent({
+      type: "treeDelete",
       target: "scenes",
       value: {
         id: itemId,

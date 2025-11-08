@@ -100,13 +100,15 @@ export const handleCharacterCreated = async (deps, payload) => {
     }
 
     // Add character to repository
-    repository.addAction({
-      actionType: "treePush",
-      target: "characters",
-      value: {
-        parent: groupId,
-        position: "last",
-        item: characterData,
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "characters",
+        value: characterData,
+        options: {
+          parent: groupId,
+          position: "last",
+        },
       },
     });
 
@@ -196,13 +198,15 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       };
 
       // Update the selected character in the repository with the new avatar
-      repository.addAction({
-        actionType: "treeUpdate",
-        target: "characters",
-        value: {
-          id: selectedItem.id,
-          replace: false,
-          item: updateData,
+      await repository.addEvent({
+        type: "treeUpdate",
+        payload: {
+          target: "characters",
+          value: updateData,
+          options: {
+            id: selectedItem.id,
+            replace: false,
+          },
         },
       });
 
@@ -222,14 +226,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "characters",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "characters",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -342,11 +348,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      value: {
+        id: itemId,
+      },
     },
   });
 
@@ -418,13 +426,15 @@ export const handleEditFormAction = async (deps, payload) => {
       updateData.fileId = editAvatarFileId;
     }
 
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: "characters",
-      value: {
-        id: editItemId,
-        replace: false,
-        item: updateData,
+    await repository.addEvent({
+      type: "treeUpdate",
+      payload: {
+        target: "characters",
+        value: updateData,
+        options: {
+          id: editItemId,
+          replace: false,
+        },
       },
     });
 

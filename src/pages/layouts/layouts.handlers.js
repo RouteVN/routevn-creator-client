@@ -81,14 +81,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   // uploadResults already contains only successful uploads
   const successfulUploads = uploadResults;
 
-  successfulUploads.forEach((result) => {
-    repository.addAction({
-      actionType: "treePush",
-      target: "layouts",
-      value: {
-        parent: id,
-        position: "last",
-        item: {
+  for (const result of successfulUploads) {
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "layouts",
+        value: {
           id: nanoid(),
           type: "layout",
           fileId: result.fileId,
@@ -100,9 +98,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
             tree: [],
           },
         },
+        options: {
+          parent: id,
+          position: "last",
+        },
       },
     });
-  });
+  }
 
   if (successfulUploads.length > 0) {
     const { layouts } = repository.getState();
@@ -119,14 +121,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "layouts",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "layouts",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -173,13 +177,11 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   }
 
   // Create the layout directly in the repository (like colors page does)
-  repository.addAction({
-    actionType: "treePush",
-    target: "layouts",
-    value: {
-      parent: targetGroupId,
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: "layouts",
+      value: {
         id: nanoid(),
         type: "layout",
         name: formData.name,
@@ -188,6 +190,10 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
           items: {},
           tree: [],
         },
+      },
+      options: {
+        parent: targetGroupId,
+        position: "last",
       },
     },
   });
@@ -205,11 +211,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      value: {
+        id: itemId,
+      },
     },
   });
 

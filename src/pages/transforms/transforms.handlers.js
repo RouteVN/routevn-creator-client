@@ -204,15 +204,11 @@ export const handleTransformCreated = async (deps, payload) => {
   const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     payload._event.detail;
 
-  console.log("22222222222222 created", payload._event.detail);
-
-  repository.addAction({
-    actionType: "treePush",
-    target: "transforms",
-    value: {
-      parent: groupId,
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: "transforms",
+      value: {
         id: nanoid(),
         type: "transform",
         name: name,
@@ -223,6 +219,10 @@ export const handleTransformCreated = async (deps, payload) => {
         anchorX: anchorX,
         anchorY: anchorY,
         rotation: rotation,
+      },
+      options: {
+        parent: groupId,
+        position: "last",
       },
     },
   });
@@ -236,14 +236,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "transforms",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "transforms",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -261,13 +263,11 @@ export const handleTransformEdited = async (deps, payload) => {
     payload._event.detail;
 
   // Update repository directly
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "transforms",
-    value: {
-      id: itemId,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "transforms",
+      value: {
         name,
         x,
         y,
@@ -276,6 +276,10 @@ export const handleTransformEdited = async (deps, payload) => {
         anchorX,
         anchorY,
         rotation,
+      },
+      options: {
+        id: itemId,
+        replace: false,
       },
     },
   });
@@ -408,11 +412,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      value: {
+        id: itemId,
+      },
     },
   });
 

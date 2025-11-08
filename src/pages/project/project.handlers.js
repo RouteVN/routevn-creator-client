@@ -13,8 +13,8 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  await repository.addAction({
-    actionType: "set",
+  await repository.addEvent({
+    type: "set",
     target: `project.${payload._event.detail.name}`,
     value: payload._event.detail.fieldValue,
   });
@@ -60,8 +60,8 @@ export const handleFormExtraEvent = async (deps) => {
     // TODO better handle failed uploads
     if (successfulUploads.length > 0) {
       const result = successfulUploads[0];
-      await repository.addAction({
-        actionType: "set",
+      await repository.addEvent({
+        type: "set",
         target: "project.iconFileId",
         value: result.fileId,
       });

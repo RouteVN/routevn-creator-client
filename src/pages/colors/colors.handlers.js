@@ -94,17 +94,19 @@ export const handleColorCreated = async (deps, payload) => {
   const repository = await repositoryFactory.getByProject(p);
   const { groupId, name, hex } = payload._event.detail;
 
-  repository.addAction({
-    actionType: "treePush",
-    target: "colors",
-    value: {
-      parent: groupId,
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: "colors",
+      value: {
         id: nanoid(),
         type: "color",
         name: name,
         hex: hex,
+      },
+      options: {
+        parent: groupId,
+        position: "last",
       },
     },
   });
@@ -132,14 +134,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "colors",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "colors",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -190,15 +194,17 @@ export const handleEditFormAction = async (deps, payload) => {
     const editItemId = store.getState().editItemId;
 
     // Update the color in the repository
-    repository.addAction({
-      actionType: "treeUpdate",
-      target: "colors",
-      value: {
-        id: editItemId,
-        replace: false,
-        item: {
+    await repository.addEvent({
+      type: "treeUpdate",
+      payload: {
+        target: "colors",
+        value: {
           name: formData.name,
           hex: formData.hex,
+        },
+        options: {
+          id: editItemId,
+          replace: false,
         },
       },
     });
@@ -250,17 +256,19 @@ export const handleAddFormAction = async (deps, payload) => {
     const newColorId = nanoid();
 
     // Create the color in the repository
-    repository.addAction({
-      actionType: "treePush",
-      target: "colors",
-      value: {
-        parent: targetGroupId,
-        position: "last",
-        item: {
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "colors",
+        value: {
           id: newColorId,
           type: "color",
           name: formData.name,
           hex: formData.hex,
+        },
+        options: {
+          parent: targetGroupId,
+          position: "last",
         },
       },
     });
@@ -293,11 +301,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      value: {
+        id: itemId,
+      },
     },
   });
 

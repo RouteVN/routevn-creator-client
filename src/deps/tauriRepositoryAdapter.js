@@ -21,7 +21,7 @@ export const initializeProject = async ({
   await mkdir(filesPath, { recursive: true });
 
   // Initialize database
-  const adapter = await createTauriSQLiteRepositoryAdapter(projectPath);
+  const adapter = await createInsiemeTauriStoreAdapter(projectPath);
 
   // Load template data from static files
   const templateData = await loadTemplate(template);
@@ -38,11 +38,10 @@ export const initializeProject = async ({
     },
   };
 
-  // Add the init action directly through adapter
-  await adapter.addAction({
-    actionType: "init",
-    target: null,
-    value: initData,
+  // Add the init action directly through adapter (temporary - will be replaced with insieme)
+  await adapter.appendEvent({
+    type: "init",
+    payload: initData,
   });
 
   // Set creator_version to 1 in app table
@@ -80,10 +79,88 @@ async function copyTemplateFiles(templateId, targetPath) {
 }
 
 /**
- * Tauri SQLite Repository Adapter
+ * Insieme-compatible Tauri SQLite Store Adapter
  * @param {string} projectPath - Required project path for project-specific database
  */
+export const createInsiemeTauriStoreAdapter = async (projectPath) => {
+  if (!projectPath) {
+    throw new Error(
+      "Project path is required. Database must be stored in project folder.",
+    );
+  }
+
+  const dbPath = await join(projectPath, "repository.db");
+  const db = await Database.load(`sqlite:${dbPath}`);
+
+  await db.execute(`CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    payload TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  await db.execute(`CREATE TABLE IF NOT EXISTS app (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )`);
+
+  return {
+    // Insieme store interface
+    async getEvents() {
+      const results = await db.select(
+        "SELECT type, payload FROM events ORDER BY id",
+      );
+      return results.map((row) => ({
+        type: row.type,
+        payload: row.payload ? JSON.parse(row.payload) : null,
+      }));
+    },
+
+    async appendEvent(event) {
+      await db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
+        event.type,
+        JSON.stringify(event.payload),
+      ]);
+    },
+
+    // Preserve app methods for compatibility
+    app: {
+      get: async (key) => {
+        const result = await db.select("SELECT value FROM app WHERE key = $1", [
+          key,
+        ]);
+        if (result && result.length > 0) {
+          try {
+            return JSON.parse(result[0].value);
+          } catch {
+            return result[0].value;
+          }
+        }
+        return null;
+      },
+      set: async (key, value) => {
+        const jsonValue = JSON.stringify(value);
+        await db.execute(
+          "INSERT OR REPLACE INTO app (key, value) VALUES ($1, $2)",
+          [key, jsonValue],
+        );
+      },
+      remove: async (key) => {
+        await db.execute("DELETE FROM app WHERE key = $1", [key]);
+      },
+    },
+  };
+};
+
+/**
+ * Legacy Tauri SQLite Repository Adapter (kept for backward compatibility during transition)
+ * @deprecated Use createInsiemeTauriStoreAdapter instead
+ */
 export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
+  console.warn(
+    "createTauriSQLiteRepositoryAdapter is deprecated. Use createInsiemeTauriStoreAdapter instead.",
+  );
+
   if (!projectPath) {
     throw new Error(
       "Project path is required. Database must be stored in project folder.",
