@@ -245,12 +245,14 @@ export const handleFormChange = async (deps, payload) => {
   const repository = await repositoryFactory.getByProject(p);
   repository.addEvent({
     type: "treeUpdate",
-    target: "audio",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+    payload: {
+      target: "audio",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -300,7 +302,7 @@ export const handleItemDelete = async (deps, payload) => {
     type: "treeDelete",
     payload: {
       target: resourceType,
-      value: {
+      options: {
         id: itemId,
       },
     },

@@ -15,8 +15,10 @@ export const handleFormChange = async (deps, payload) => {
   const repository = await repositoryFactory.getByProject(p);
   await repository.addEvent({
     type: "set",
-    target: `project.${payload._event.detail.name}`,
-    value: payload._event.detail.fieldValue,
+    payload: {
+      target: `project.${payload._event.detail.name}`,
+      value: payload._event.detail.fieldValue,
+    },
   });
 };
 
@@ -62,8 +64,10 @@ export const handleFormExtraEvent = async (deps) => {
       const result = successfulUploads[0];
       await repository.addEvent({
         type: "set",
-        target: "project.iconFileId",
-        value: result.fileId,
+        payload: {
+          target: "project.iconFileId",
+          value: result.fileId,
+        },
       });
 
       store.setIconFileId(result.fileId);

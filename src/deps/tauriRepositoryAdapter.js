@@ -41,7 +41,9 @@ export const initializeProject = async ({
   // Add the init action directly through adapter (temporary - will be replaced with insieme)
   await adapter.appendEvent({
     type: "init",
-    payload: initData,
+    payload: {
+      value: initData,
+    },
   });
 
   // Set creator_version to 1 in app table

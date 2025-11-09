@@ -23,7 +23,13 @@ export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  const { colors } = repository.getState();
+
+  console.log("repository", repository);
+  const events = repository.getEvents();
+  console.log("events", events);
+  const res = repository.getState();
+  console.log("res", res);
+  const { colors } = res;
   store.setItems(colors);
   render();
 };
@@ -305,7 +311,7 @@ export const handleItemDelete = async (deps, payload) => {
     type: "treeDelete",
     payload: {
       target: resourceType,
-      value: {
+      options: {
         id: itemId,
       },
     },

@@ -229,17 +229,17 @@ export const createProjectsService = (deps) => {
   };
 
   const addVersionToProject = async (projectId, version) => {
-    const repository = await repositoryFactory.getByProject(projectId);
-    const versions = (await repository.app.get("versions")) || [];
-    versions.unshift(version);
-    await repository.app.set("versions", versions);
+    // TODO: get project key value store
+    // const versions = (await keyValueStore.get("versions")) || [];
+    // versions.unshift(version);
+    // await keyValueStore.set("versions", versions);
   };
 
   const deleteVersionFromProject = async (projectId, versionId) => {
-    const repository = await repositoryFactory.getByProject(projectId);
-    const versions = (await repository.app.get("versions")) || [];
-    const newVersions = versions.filter((v) => v.id !== versionId);
-    await repository.app.set("versions", newVersions);
+    // TODO: get project key value store
+    // const versions = (await keyValueStore.get("versions")) || [];
+    // const newVersions = versions.filter((v) => v.id !== versionId);
+    // await keyValueStore.set("versions", newVersions);
   };
 
   return {

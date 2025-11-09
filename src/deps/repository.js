@@ -57,7 +57,7 @@ export const createWebRepositoryFactory = (initialState) => {
 };
 
 // For Tauri version - creates a factory with multi-project support
-export const createRepositoryFactory = (initialData, keyValueStore) => {
+export const createRepositoryFactory = (initialState, keyValueStore) => {
   const repositoriesByProject = new Map();
   const repositoriesByPath = new Map();
 
@@ -66,19 +66,9 @@ export const createRepositoryFactory = (initialData, keyValueStore) => {
       return repositoriesByPath.get(projectPath);
     }
 
-    // Create insieme-compatible store adapter for the project path
     const store = await createInsiemeTauriStoreAdapter(projectPath);
-
-    // Create insieme repository
     const repository = createRepository({ originStore: store });
-
-    // Initialize with provided initial data (fallback to project-specific if available)
-    const projects = (await keyValueStore.get("projects")) || [];
-    const project = projects.find((p) => p.projectPath === projectPath);
-    const initialState = project?.initialState || initialData;
-
     await repository.init({ initialState });
-
     repositoriesByPath.set(projectPath, repository);
     return repository;
   };

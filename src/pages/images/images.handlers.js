@@ -234,7 +234,7 @@ export const handleItemDelete = async (deps, payload) => {
     type: "treeDelete",
     payload: {
       target: resourceType,
-      value: {
+      options: {
         id: itemId,
       },
     },

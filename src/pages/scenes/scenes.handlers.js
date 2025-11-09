@@ -107,8 +107,10 @@ export const handleSetInitialScene = async (sceneId, deps) => {
   // Set the initialSceneId in the story object
   await repository.addEvent({
     type: "set",
-    target: "story.initialSceneId",
-    value: sceneId,
+    payload: {
+      target: "story.initialSceneId",
+      value: sceneId,
+    },
   });
 };
 
@@ -181,8 +183,10 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
   // Update position in repository using 'set' action
   repository.addEvent({
     type: "set",
-    target: `scenes.items.${itemId}.position`,
-    value: { x, y },
+    payload: {
+      target: `scenes.items.${itemId}.position`,
+      value: { x, y },
+    },
   });
 
   // Update local whiteboard state (already updated by position-updating, but keeping for consistency)
@@ -446,7 +450,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
     type: "treeDelete",
     payload: {
       target: "scenes",
-      value: {
+      options: {
         id: itemId,
       },
     },
@@ -510,8 +514,10 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     // Set the initialSceneId in the story object
     await repository.addEvent({
       type: "set",
-      target: "story.initialSceneId",
-      value: itemId,
+      payload: {
+        target: "story.initialSceneId",
+        value: itemId,
+      },
     });
 
     // Get updated scenes data
@@ -535,9 +541,11 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     // Remove from repository
     repository.addEvent({
       type: "treeDelete",
-      target: "scenes",
-      value: {
-        id: itemId,
+      payload: {
+        target: "scenes",
+        options: {
+          id: itemId,
+        },
       },
     });
 

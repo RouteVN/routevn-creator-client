@@ -161,10 +161,12 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     repository.addEvent({
       type: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-      value: {
-        replace: false,
-        item: payload._event.detail,
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+        value: payload._event.detail,
+        options: {
+          replace: false,
+        },
       },
     });
 
@@ -204,10 +206,12 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   repository.addEvent({
     type: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-    value: {
-      replace: false,
-      item: submissionData,
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+      value: submissionData,
+      options: {
+        replace: false,
+      },
     },
   });
 
@@ -370,8 +374,10 @@ export const handleSplitLine = async (deps, payload) => {
           // Persist this line's content to the repository
           repository.addEvent({
             type: "set",
-            target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
-            value: line.actions.dialogue.content,
+            payload: {
+              target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
+              value: line.actions.dialogue.content,
+            },
           });
         }
       });
@@ -404,16 +410,20 @@ export const handleSplitLine = async (deps, payload) => {
     // If dialogue exists, update only the content
     repository.addEvent({
       type: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
-      value: leftContentArray,
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
+        value: leftContentArray,
+      },
     });
   } else if (leftContent) {
     // If no dialogue exists but we have content, create minimal dialogue
     repository.addEvent({
       type: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-      value: {
-        content: leftContentArray,
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
+        value: {
+          content: leftContentArray,
+        },
       },
     });
   }
@@ -707,14 +717,16 @@ export const handleMergeLines = async (deps, payload) => {
   // Update previous line with merged content
   repository.addEvent({
     type: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions`,
-    value: {
-      replace: false,
-      item: {
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions`,
+      value: {
         dialogue: {
           ...existingDialogue,
           content: finalContent,
         },
+      },
+      options: {
+        replace: false,
       },
     },
   });
@@ -724,7 +736,7 @@ export const handleMergeLines = async (deps, payload) => {
     type: "treeDelete",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: {
+      options: {
         id: currentLineId,
       },
     },
@@ -813,7 +825,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       type: "treeDelete",
       payload: {
         target: `scenes.items.${sceneId}.sections`,
-        value: {
+        options: {
           id: sectionId,
         },
       },
@@ -854,15 +866,19 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
           repository.addEvent({
             type: "set",
-            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
-            value: updatedDialogue,
+            payload: {
+              target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
+              value: updatedDialogue,
+            },
           });
         }
       } else {
         // For all other actions types, use unset to remove completely
         repository.addEvent({
           type: "unset",
-          target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
+          payload: {
+            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
+          },
         });
       }
 
@@ -1036,14 +1052,16 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
   repository.addEvent({
     type: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-    value: {
-      replace: false,
-      item: {
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+      value: {
         dialogue: {
           ...existingDialogue,
           content: content,
         },
+      },
+      options: {
+        replace: false,
       },
     },
   });

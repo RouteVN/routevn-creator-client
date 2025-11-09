@@ -5,10 +5,11 @@ export const handleAfterMount = async (deps) => {
   const { store, render, router, repositoryFactory } = deps;
   const { p } = router.getPayload();
 
+  // TODO: get project key value store
   // Load projects and get versions for current project
-  const repository = await repositoryFactory.getByProject(p);
-  const versions = (await repository.app.get("versions")) || [];
-  store.setVersions(versions);
+  // const repository = await repositoryFactory.getByProject(p);
+  // const versions = (await repository.app.get("versions")) || [];
+  // store.setVersions(versions);
 
   render();
 };
@@ -40,7 +41,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     const repository = await repositoryFactory.getByProject(p);
 
     // Get current action count from repository
-    const allEvents = repository.getAllEvents();
+    const allEvents = repository.getEvents();
     const currentActionIndex = allEvents.length;
 
     // Create simple version object
