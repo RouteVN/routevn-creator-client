@@ -4,12 +4,10 @@ import { constructProjectData } from "../../utils/projectDataConstructor.js";
 export const handleAfterMount = async (deps) => {
   const { store, render, router, repositoryFactory } = deps;
   const { p } = router.getPayload();
-
-  // TODO: get project key value store
-  // Load projects and get versions for current project
-  // const repository = await repositoryFactory.getByProject(p);
-  // const versions = (await repository.app.get("versions")) || [];
-  // store.setVersions(versions);
+  // TODO: replace with project key value store
+  const repository = await repositoryFactory.getByProject(p);
+  const versions = (await repository.app.get("versions")) || [];
+  store.setVersions(versions);
 
   render();
 };

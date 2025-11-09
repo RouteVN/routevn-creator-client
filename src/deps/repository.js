@@ -70,6 +70,8 @@ export const createRepositoryFactory = (initialState, keyValueStore) => {
     const repository = createRepository({ originStore: store });
     await repository.init({ initialState });
     repositoriesByPath.set(projectPath, repository);
+    // TODO: remove this
+    repository.app = store.app;
     return repository;
   };
 
