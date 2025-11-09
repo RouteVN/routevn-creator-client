@@ -15,6 +15,7 @@ static/bundle/main.js
 /test-versions
 /test-update-server
 /src-tauri/*.bak
+.env
 
 # Generated setup file
 src/setup.js
