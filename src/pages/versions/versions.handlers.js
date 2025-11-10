@@ -4,8 +4,7 @@ import { constructProjectData } from "../../utils/projectDataConstructor.js";
 export const handleAfterMount = async (deps) => {
   const { store, render, router, repositoryFactory } = deps;
   const { p } = router.getPayload();
-
-  // Load projects and get versions for current project
+  // TODO: replace with project key value store
   const repository = await repositoryFactory.getByProject(p);
   const versions = (await repository.app.get("versions")) || [];
   store.setVersions(versions);
@@ -40,7 +39,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     const repository = await repositoryFactory.getByProject(p);
 
     // Get current action count from repository
-    const allEvents = repository.getAllEvents();
+    const allEvents = repository.getEvents();
     const currentActionIndex = allEvents.length;
 
     // Create simple version object

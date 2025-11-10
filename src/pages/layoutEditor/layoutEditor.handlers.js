@@ -474,13 +474,15 @@ async function handleDebouncedUpdate(deps, payload) {
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
   // Save to repository
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `layouts.items.${layoutId}.elements`,
-    value: {
-      id: selectedItemId,
-      replace: replace,
-      item: updatedItem,
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: `layouts.items.${layoutId}.elements`,
+      value: updatedItem,
+      options: {
+        id: selectedItemId,
+        replace: replace,
+      },
     },
   });
 

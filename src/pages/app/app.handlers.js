@@ -40,13 +40,17 @@ export const handleUpdateTransform = async (deps, payload) => {
   const repository = await repositoryFactory.getByProject(p);
   const { itemId, updates } = payload;
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "transforms",
-    value: {
-      id: itemId,
-      replace: false,
-      item: updates,
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "transforms",
+      value: {
+        id: itemId,
+        item: updates,
+      },
+      options: {
+        replace: false,
+      },
     },
   });
 };
@@ -57,12 +61,17 @@ export const handleUpdateColor = async (deps, payload) => {
   const repository = await repositoryFactory.getByProject(p);
   const { itemId, updates } = payload;
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "colors",
-    value: {
-      itemId: itemId,
-      updates: updates,
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "colors",
+      value: {
+        id: itemId,
+        item: updates,
+      },
+      options: {
+        replace: false,
+      },
     },
   });
 };

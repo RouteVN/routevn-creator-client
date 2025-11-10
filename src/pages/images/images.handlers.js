@@ -101,19 +101,21 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "images",
-    value: {
-      id: selectedItem.id,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "images",
+      value: {
         fileId: uploadResult.fileId,
         name: uploadResult.displayName,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
         width: uploadResult.dimensions.width,
         height: uploadResult.dimensions.height,
+      },
+      options: {
+        id: selectedItem.id,
+        replace: false,
       },
     },
   });
@@ -166,15 +168,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const id = targetGroupId;
 
   const successfulUploads = await fileManager.upload(files);
-  successfulUploads.forEach((result) => {
+  for (const result of successfulUploads) {
     console.log("Uploaded file:", result);
-    repository.addAction({
-      actionType: "treePush",
-      target: "images",
-      value: {
-        parent: id,
-        position: "last",
-        item: {
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "images",
+        value: {
           id: nanoid(),
           type: "image",
           fileId: result.fileId,
@@ -184,9 +184,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
           width: result.dimensions.width,
           height: result.dimensions.height,
         },
+        options: {
+          parent: id,
+          position: "last",
+        },
       },
     });
-  });
+  }
 
   if (successfulUploads.length > 0) {
     const { images } = repository.getState();
@@ -200,14 +204,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "images",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "images",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -224,11 +230,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      options: {
+        id: itemId,
+      },
     },
   });
 

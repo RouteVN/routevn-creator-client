@@ -106,72 +106,82 @@ export const handleFileAction = async (deps, payload) => {
   const itemId = detail.itemId;
 
   if (item.value === "new-item") {
-    repository.addAction({
-      actionType: "treePush",
-      target: repositoryTarget,
-      value: {
-        parent: "_root",
-        position: "last",
-        item: {
+    repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: repositoryTarget,
+        value: {
           id: nanoid(),
           type: "folder",
           name: "New Folder",
         },
+        options: {
+          parent: "_root",
+          position: "last",
+        },
       },
     });
   } else if (item.value === "add-container") {
-    repository.addAction({
-      actionType: "treePush",
-      target: repositoryTarget,
-      value: {
-        parent: "_root",
-        position: "last",
-        item: {
+    repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: repositoryTarget,
+        value: {
           id: nanoid(),
           type: "container",
           name: "Container",
         },
+        options: {
+          parent: "_root",
+          position: "last",
+        },
       },
     });
   } else if (item.value === "add-sprite") {
-    repository.addAction({
-      actionType: "treePush",
-      target: repositoryTarget,
-      value: {
-        parent: "_root",
-        position: "last",
-        item: {
+    repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: repositoryTarget,
+        value: {
           id: nanoid(),
           type: "sprite",
           name: "Sprite",
         },
+        options: {
+          parent: "_root",
+          position: "last",
+        },
       },
     });
   } else if (item.value === "add-text") {
-    repository.addAction({
-      actionType: "treePush",
-      target: repositoryTarget,
-      value: {
-        parent: "_root",
-        position: "last",
-        item: {
+    repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: repositoryTarget,
+        value: {
           id: nanoid(),
           type: "text",
           name: "Text",
+        },
+        options: {
+          parent: "_root",
+          position: "last",
         },
       },
     });
   } else if (item.value === "rename-item-confirmed") {
     // Handle rename confirmation from popover form
     if (itemId && detail.newName) {
-      repository.addAction({
-        actionType: "treeUpdate",
-        target: repositoryTarget,
-        value: {
-          id: itemId,
-          replace: false,
-          item: {
+      repository.addEvent({
+        type: "treeUpdate",
+        payload: {
+          target: repositoryTarget,
+          value: {
             name: detail.newName,
+          },
+          options: {
+            id: itemId,
+            replace: false,
           },
         },
       });
@@ -183,11 +193,13 @@ export const handleFileAction = async (deps, payload) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
-      repository.addAction({
-        actionType: "treeDelete",
-        target: repositoryTarget,
-        value: {
-          id: itemId,
+      repository.addEvent({
+        type: "treeDelete",
+        payload: {
+          target: repositoryTarget,
+          options: {
+            id: itemId,
+          },
         },
       });
     }
@@ -197,31 +209,35 @@ export const handleFileAction = async (deps, payload) => {
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
     if (currentItem) {
-      repository.addAction({
-        actionType: "treePush",
-        target: repositoryTarget,
-        value: {
-          parent: itemId,
-          position: "last",
-          item: {
+      repository.addEvent({
+        type: "treePush",
+        payload: {
+          target: repositoryTarget,
+          value: {
             id: nanoid(),
             type: "folder",
             name: "New Folder",
+          },
+          options: {
+            parent: itemId,
+            position: "last",
           },
         },
       });
     }
   } else if (item.value.action === "new-child-item") {
     const { ...restItem } = item.value;
-    repository.addAction({
-      actionType: "treePush",
-      target: repositoryTarget,
-      value: {
-        parent: itemId || "_root",
-        position: "last",
-        item: {
+    repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: repositoryTarget,
+        value: {
           ...restItem,
           id: nanoid(),
+        },
+        options: {
+          parent: itemId || "_root",
+          position: "last",
         },
       },
     });
@@ -236,12 +252,14 @@ export const handleFileAction = async (deps, payload) => {
     }
 
     // Add the duplicated item with random number as seed
-    repository.addAction({
-      actionType: "treeCopy",
-      target: repositoryTarget,
-      value: {
-        id: itemId,
-        seed: Math.floor(Math.random() * 0x7fffffff), // Max 31-bit integer
+    repository.addEvent({
+      type: "treeCopy",
+      payload: {
+        target: repositoryTarget,
+        value: {
+          id: itemId,
+          seed: Math.floor(Math.random() * 0x7fffffff), // Max 31-bit integer
+        },
       },
     });
   }
@@ -307,13 +325,17 @@ export const handleTargetChanged = async (deps, payload) => {
     return;
   }
 
-  repository.addAction({
-    actionType: "treeMove",
-    target: repositoryTarget,
-    value: {
-      id: source.id,
-      parent: parent,
-      position: repositoryPosition,
+  repository.addEvent({
+    type: "treeMove",
+    payload: {
+      target: repositoryTarget,
+      value: {
+        id: source.id,
+      },
+      options: {
+        parent: parent,
+        position: repositoryPosition,
+      },
     },
   });
 

@@ -114,14 +114,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   const successfulUploads = await fileManager.upload(files);
 
-  successfulUploads.forEach((result) => {
-    repository.addAction({
-      actionType: "treePush",
-      target: "videos",
-      value: {
-        parent: id,
-        position: "last",
-        item: {
+  for (const result of successfulUploads) {
+    await repository.addEvent({
+      type: "treePush",
+      payload: {
+        target: "videos",
+        value: {
           id: nanoid(),
           type: "video",
           fileId: result.fileId,
@@ -130,9 +128,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
           fileType: result.file.type,
           fileSize: result.file.size,
         },
+        options: {
+          parent: id,
+          position: "last",
+        },
       },
     });
-  });
+  }
 
   if (successfulUploads.length > 0) {
     const { videos } = repository.getState();
@@ -181,18 +183,20 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "videos",
-    value: {
-      id: selectedItem.id,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "videos",
+      value: {
         fileId: uploadResult.fileId,
         thumbnailFileId: uploadResult.thumbnailFileId,
         name: uploadResult.file.name,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
+      },
+      options: {
+        id: selectedItem.id,
+        replace: false,
       },
     },
   });
@@ -212,14 +216,16 @@ export const handleFormChange = async (deps, payload) => {
   const { repositoryFactory, router, render, store } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: "videos",
-    value: {
-      id: store.selectSelectedItemId(),
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "videos",
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: store.selectSelectedItemId(),
+        replace: false,
       },
     },
   });
@@ -280,11 +286,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      options: {
+        id: itemId,
+      },
     },
   });
 
