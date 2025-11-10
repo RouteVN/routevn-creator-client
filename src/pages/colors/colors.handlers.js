@@ -23,13 +23,7 @@ export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
-
-  console.log("repository", repository);
-  const events = repository.getEvents();
-  console.log("events", events);
-  const res = repository.getState();
-  console.log("res", res);
-  const { colors } = res;
+  const { colors } = repository.getState();
   store.setItems(colors);
   render();
 };
@@ -234,7 +228,6 @@ export const handleEditFormAction = async (deps, payload) => {
 
 export const handleFormFieldClick = (deps, payload) => {
   const { store, render } = deps;
-  console.log("payload._event.detail", payload._event.detail);
   // Check if the clicked field is the color image
   if (payload._event.detail.name === "colorImage") {
     const selectedItemId = store.selectSelectedItemId();
