@@ -30,19 +30,19 @@ export const createIndexeddbRepositoryAdapter = () => {
   };
 
   return {
-    async addAction(action) {
+    async appendEvent(event) {
       const database = await openDB();
       const transaction = database.transaction([STORE_NAME], "readwrite");
       const store = transaction.objectStore(STORE_NAME);
 
       return new Promise((resolve, reject) => {
-        const request = store.add(action);
+        const request = store.add(event);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
     },
 
-    async getAllEvents() {
+    async getEvents() {
       const database = await openDB();
       const transaction = database.transaction([STORE_NAME], "readonly");
       const store = transaction.objectStore(STORE_NAME);

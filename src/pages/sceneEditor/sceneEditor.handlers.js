@@ -159,12 +159,14 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    repository.addAction({
-      actionType: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-      value: {
-        replace: false,
-        item: payload._event.detail,
+    repository.addEvent({
+      type: "set",
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+        value: payload._event.detail,
+        options: {
+          replace: false,
+        },
       },
     });
 
@@ -202,12 +204,14 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     }
   }
 
-  repository.addAction({
-    actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-    value: {
-      replace: false,
-      item: submissionData,
+  repository.addEvent({
+    type: "set",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+      value: submissionData,
+      options: {
+        replace: false,
+      },
     },
   });
 
@@ -300,13 +304,11 @@ export const handleSectionAddClick = async (deps) => {
         },
       };
 
-  repository.addAction({
-    actionType: "treePush",
-    target: `scenes.items.${sceneId}.sections`,
-    value: {
-      parent: "_root",
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: `scenes.items.${sceneId}.sections`,
+      value: {
         id: newSectionId,
         name: newSectionName,
         lines: {
@@ -321,6 +323,10 @@ export const handleSectionAddClick = async (deps) => {
             },
           ],
         },
+      },
+      options: {
+        parent: "_root",
+        position: "last",
       },
     },
   });
@@ -366,10 +372,12 @@ export const handleSplitLine = async (deps, payload) => {
           line.actions?.dialogue?.content !== undefined
         ) {
           // Persist this line's content to the repository
-          repository.addAction({
-            actionType: "set",
-            target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
-            value: line.actions.dialogue.content,
+          repository.addEvent({
+            type: "set",
+            payload: {
+              target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
+              value: line.actions.dialogue.content,
+            },
           });
         }
       });
@@ -400,18 +408,22 @@ export const handleSplitLine = async (deps, payload) => {
   const leftContentArray = leftContent ? [{ text: leftContent }] : [];
   if (existingDialogue && Object.keys(existingDialogue).length > 0) {
     // If dialogue exists, update only the content
-    repository.addAction({
-      actionType: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
-      value: leftContentArray,
+    repository.addEvent({
+      type: "set",
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
+        value: leftContentArray,
+      },
     });
   } else if (leftContent) {
     // If no dialogue exists but we have content, create minimal dialogue
-    repository.addAction({
-      actionType: "set",
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-      value: {
-        content: leftContentArray,
+    repository.addEvent({
+      type: "set",
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
+        value: {
+          content: leftContentArray,
+        },
       },
     });
   }
@@ -428,15 +440,17 @@ export const handleSplitLine = async (deps, payload) => {
       }
     : {};
 
-  repository.addAction({
-    actionType: "treePush",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-    value: {
-      parent: "_root",
-      position: { after: lineId },
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+      value: {
         id: newLineId,
         actions: newLineActions,
+      },
+      options: {
+        parent: "_root",
+        position: { after: lineId },
       },
     },
   });
@@ -488,15 +502,17 @@ export const handleNewLine = async (deps) => {
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
 
-  repository.addAction({
-    actionType: "treePush",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-    value: {
-      parent: "_root",
-      position: "last",
-      item: {
+  await repository.addEvent({
+    type: "treePush",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+      value: {
         id: newLineId,
         actions: {},
+      },
+      options: {
+        parent: "_root",
+        position: "last",
       },
     },
   });
@@ -699,26 +715,30 @@ export const handleMergeLines = async (deps, payload) => {
 
   const finalContent = [{ text: mergedContent }];
   // Update previous line with merged content
-  repository.addAction({
-    actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions`,
-    value: {
-      replace: false,
-      item: {
+  repository.addEvent({
+    type: "set",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions`,
+      value: {
         dialogue: {
           ...existingDialogue,
           content: finalContent,
         },
       },
+      options: {
+        replace: false,
+      },
     },
   });
 
   // Delete current line
-  repository.addAction({
-    actionType: "treeDelete",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-    value: {
-      id: currentLineId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+      options: {
+        id: currentLineId,
+      },
     },
   });
 
@@ -801,11 +821,13 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   if (action === "delete-section") {
     // Delete section from repository
-    repository.addAction({
-      actionType: "treeDelete",
-      target: `scenes.items.${sceneId}.sections`,
-      value: {
-        id: sectionId,
+    await repository.addEvent({
+      type: "treeDelete",
+      payload: {
+        target: `scenes.items.${sceneId}.sections`,
+        options: {
+          id: sectionId,
+        },
       },
     });
 
@@ -842,17 +864,21 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
             content: currentActions.dialogue.content,
           };
 
-          repository.addAction({
-            actionType: "set",
-            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
-            value: updatedDialogue,
+          repository.addEvent({
+            type: "set",
+            payload: {
+              target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
+              value: updatedDialogue,
+            },
           });
         }
       } else {
         // For all other actions types, use unset to remove completely
-        repository.addAction({
-          actionType: "unset",
-          target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
+        repository.addEvent({
+          type: "unset",
+          payload: {
+            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
+          },
         });
       }
 
@@ -898,14 +924,16 @@ export const handleFormActionClick = async (deps, payload) => {
 
     // Update section name in repository
     if (sectionId && values.name && sceneId) {
-      repository.addAction({
-        actionType: "treeUpdate",
-        target: `scenes.items.${sceneId}.sections`,
-        value: {
-          id: sectionId,
-          replace: false,
-          item: {
+      await repository.addEvent({
+        type: "treeUpdate",
+        payload: {
+          target: `scenes.items.${sceneId}.sections`,
+          value: {
             name: values.name,
+          },
+          options: {
+            id: sectionId,
+            replace: false,
           },
         },
       });
@@ -963,13 +991,15 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-    value: {
-      id: selectedLine.id,
-      replace: true,
-      item: updatedLine,
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+      value: updatedLine,
+      options: {
+        id: selectedLine.id,
+        replace: true,
+      },
     },
   });
   // Get sceneId and projectId from router
@@ -1020,16 +1050,18 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
     }
   }
 
-  repository.addAction({
-    actionType: "set",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-    value: {
-      replace: false,
-      item: {
+  repository.addEvent({
+    type: "set",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+      value: {
         dialogue: {
           ...existingDialogue,
           content: content,
         },
+      },
+      options: {
+        replace: false,
       },
     },
   });
@@ -1108,13 +1140,15 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-    value: {
-      id: selectedLine.id,
-      replace: true,
-      item: updatedLine,
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
+      value: updatedLine,
+      options: {
+        id: selectedLine.id,
+        replace: true,
+      },
     },
   });
   // Get sceneId and projectId from router

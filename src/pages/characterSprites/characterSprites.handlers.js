@@ -148,14 +148,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const successfulUploads = uploadResults;
 
   if (successfulUploads.length > 0) {
-    successfulUploads.forEach((result) => {
-      repository.addAction({
-        actionType: "treePush",
-        target: `characters.items.${characterId}.sprites`,
-        value: {
-          parent: id,
-          position: "last",
-          item: {
+    for (const result of successfulUploads) {
+      await repository.addEvent({
+        type: "treePush",
+        payload: {
+          target: `characters.items.${characterId}.sprites`,
+          value: {
             id: nanoid(),
             type: "image",
             fileId: result.fileId,
@@ -163,9 +161,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
             fileType: result.file.type,
             fileSize: result.file.size,
           },
+          options: {
+            parent: id,
+            position: "last",
+          },
         },
       });
-    });
+    }
 
     // Update store with the latest repository state
     const { characters } = repository.getState();
@@ -187,14 +189,16 @@ export const handleFormChange = async (deps, payload) => {
   const characterId = store.selectCharacterId();
   const selectedItemId = store.selectSelectedItemId();
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `characters.items.${characterId}.sprites`,
-    value: {
-      id: selectedItemId,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: `characters.items.${characterId}.sprites`,
+      value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
+      },
+      options: {
+        id: selectedItemId,
+        replace: false,
       },
     },
   });
@@ -246,19 +250,21 @@ export const handleFormExtraEvent = async (deps) => {
   const uploadResult = uploadedFiles[0];
   const characterId = store.selectCharacterId();
 
-  repository.addAction({
-    actionType: "treeUpdate",
-    target: `characters.items.${characterId}.sprites`,
-    value: {
-      id: selectedItem.id,
-      replace: false,
-      item: {
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: `characters.items.${characterId}.sprites`,
+      value: {
         fileId: uploadResult.fileId,
         name: uploadResult.file.name,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
         width: uploadResult.dimensions.width,
         height: uploadResult.dimensions.height,
+      },
+      options: {
+        id: selectedItem.id,
+        replace: false,
       },
     },
   });
@@ -289,11 +295,13 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  repository.addAction({
-    actionType: "treeDelete",
-    target: resourceType,
-    value: {
-      id: itemId,
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: resourceType,
+      options: {
+        id: itemId,
+      },
     },
   });
 

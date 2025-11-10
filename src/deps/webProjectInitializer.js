@@ -30,10 +30,12 @@ export const initializeWebProject = async ({
   await copyTemplateFilesToIndexedDB(template, storageAdapter);
 
   // Initialize repository with template data (no modifications needed)
-  await repository.addAction({
-    actionType: "init",
-    target: null,
-    value: templateData,
+  await repository.addEvent({
+    type: "init",
+    payload: {
+      target: null,
+      value: templateData,
+    },
   });
 
   console.log("Template data loaded and saved to repository");

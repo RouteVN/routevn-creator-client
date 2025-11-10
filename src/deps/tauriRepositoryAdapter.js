@@ -21,7 +21,7 @@ export const initializeProject = async ({
   await mkdir(filesPath, { recursive: true });
 
   // Initialize database
-  const adapter = await createTauriSQLiteRepositoryAdapter(projectPath);
+  const adapter = await createInsiemeTauriStoreAdapter(projectPath);
 
   // Load template data from static files
   const templateData = await loadTemplate(template);
@@ -38,11 +38,12 @@ export const initializeProject = async ({
     },
   };
 
-  // Add the init action directly through adapter
-  await adapter.addAction({
-    actionType: "init",
-    target: null,
-    value: initData,
+  // Add the init action directly through adapter (temporary - will be replaced with insieme)
+  await adapter.appendEvent({
+    type: "init",
+    payload: {
+      value: initData,
+    },
   });
 
   // Set creator_version to 1 in app table
@@ -80,10 +81,10 @@ async function copyTemplateFiles(templateId, targetPath) {
 }
 
 /**
- * Tauri SQLite Repository Adapter
+ * Insieme-compatible Tauri SQLite Store Adapter
  * @param {string} projectPath - Required project path for project-specific database
  */
-export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
+export const createInsiemeTauriStoreAdapter = async (projectPath) => {
   if (!projectPath) {
     throw new Error(
       "Project path is required. Database must be stored in project folder.",
@@ -93,11 +94,10 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
   const dbPath = await join(projectPath, "repository.db");
   const db = await Database.load(`sqlite:${dbPath}`);
 
-  await db.execute(`CREATE TABLE IF NOT EXISTS actions (
+  await db.execute(`CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    action_type TEXT NOT NULL,
-    target TEXT,
-    value TEXT,
+    type TEXT NOT NULL,
+    payload TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
@@ -107,34 +107,30 @@ export const createTauriSQLiteRepositoryAdapter = async (projectPath) => {
   )`);
 
   return {
-    async addAction(action) {
-      await db.execute(
-        "INSERT INTO actions (action_type, target, value) VALUES (?, ?, ?)",
-        [
-          action.actionType,
-          action.target || null,
-          JSON.stringify(action.value),
-        ],
-      );
-    },
-
-    async getAllEvents() {
+    // Insieme store interface
+    async getEvents() {
       const results = await db.select(
-        "SELECT action_type, target, value FROM actions ORDER BY id",
+        "SELECT type, payload FROM events ORDER BY id",
       );
       return results.map((row) => ({
-        actionType: row.action_type,
-        target: row.target,
-        value: row.value ? JSON.parse(row.value) : null,
+        type: row.type,
+        payload: row.payload ? JSON.parse(row.payload) : null,
       }));
     },
 
+    async appendEvent(event) {
+      await db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
+        event.type,
+        JSON.stringify(event.payload),
+      ]);
+    },
+
+    // Preserve app methods for compatibility
     app: {
       get: async (key) => {
         const result = await db.select("SELECT value FROM app WHERE key = $1", [
           key,
         ]);
-
         if (result && result.length > 0) {
           try {
             return JSON.parse(result[0].value);

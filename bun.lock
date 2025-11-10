@@ -15,13 +15,14 @@
         "esbuild": "^0.25.11",
         "file-type": "^21.0.0",
         "immer": "^10.1.1",
+        "insieme": "0.0.3",
         "jempl": "1.0.0",
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
         "route-engine-js": "0.0.6",
-        "route-graphics": "0.0.5",
+        "route-graphics": "0.0.6",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
         "snabbdom-to-html": "^7.1.0",
@@ -372,6 +373,8 @@
 
     "ini": ["ini@1.3.8", "", {}, "sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew=="],
 
+    "insieme": ["insieme@0.0.3", "", {}, "sha512-kOfyZ4AzyGcCPFOUdhtVgkoqI2vuWOqhjSDrZbdWgOVyXTfWZyCphTxIdCbXyj7OH1Hhy+zeGrIdnuAt9YteDQ=="],
+
     "is-fullwidth-code-point": ["is-fullwidth-code-point@5.1.0", "", { "dependencies": { "get-east-asian-width": "^1.3.1" } }, "sha512-5XHYaSyiqADb4RnZ1Bdad6cPp8Toise4TzEjcOYDHZkTCbKgiUl7WTUCpNWHuxmDt91wnsZBc9xinNzopv3JMQ=="],
 
     "is-number": ["is-number@7.0.0", "", {}, "sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng=="],
@@ -492,7 +495,7 @@
 
     "route-engine-js": ["route-engine-js@0.0.6", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.0.4-rc2" } }, "sha512-op+53O6y2HgOLNlm7GOAqySkVYhd0Tv7Uqu8TKCIPNquHIdfK02+VYwCthgaQafMtwUn798nethFDX6khERNrg=="],
 
-    "route-graphics": ["route-graphics@0.0.5", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "pixi.js": "^8.7.1" } }, "sha512-3gZNS4+a3Ykz44W95PRACDHWxGx6FhFLIOb71/ErHIO4p2TWDsILo+i0C+kqosXrixFV0sQkVLmcvnbr4pGnFw=="],
+    "route-graphics": ["route-graphics@0.0.6", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "pixi.js": "^8.7.1" } }, "sha512-Oz7KPOvIF127X2r/tWvwxS1QkfkGbbnIFgU1ZDMd5qlSXGb9xUgrkP4IZipE1ZFhIXUPsp+TJVBhWLKtSawZJg=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
