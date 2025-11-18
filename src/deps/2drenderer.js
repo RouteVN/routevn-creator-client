@@ -33,15 +33,11 @@ export const create2dRenderer = async ({ subject }) => {
           spritePlugin,
           sliderPlugin,
           containerPlugin,
-          textRevealingPlugin
+          textRevealingPlugin,
         ],
-        animations: [
-          tweenPlugin
-        ],
-        audios: [
-          soundPlugin
-        ]  
-      }
+        animations: [tweenPlugin],
+        audios: [soundPlugin],
+      };
 
       await app.init({
         width: 1920,
@@ -49,7 +45,7 @@ export const create2dRenderer = async ({ subject }) => {
         plugins,
       });
 
-      app.assignStageEvent("globalpointermove",(event) => {
+      app.assignStageEvent("globalpointermove", (event) => {
         subject.dispatch("2drendererEvent", {
           x: Math.round(event.global.x),
           y: Math.round(event.global.y),

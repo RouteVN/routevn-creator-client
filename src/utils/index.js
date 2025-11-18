@@ -107,8 +107,7 @@ export const layoutTreeStructureToRenderState = (
           fontFamily: fontItem?.fontFamily || "sans-serif",
           fontWeight: typography.fontWeight || "normal",
           fill: colorItem?.hex || "white",
-          lineHeight:
-            (typography.lineHeight || 1.5),
+          lineHeight: typography.lineHeight || 1.5,
           fontFileId: fontItem?.fileId ? `file:${fontItem.fileId}` : undefined,
         };
       } else {
@@ -141,8 +140,7 @@ export const layoutTreeStructureToRenderState = (
             fontFamily: hoverFontItem?.fontFamily || "sans-serif",
             fontWeight: hoverTypography.fontWeight || "normal",
             fill: hoverColorItem?.hex || "white",
-            lineHeight:
-              (hoverTypography.lineHeight || 1.5),
+            lineHeight: hoverTypography.lineHeight || 1.5,
             fontFileId: hoverFontItem?.fileId
               ? `${hoverFontItem.fileId}`
               : undefined,
@@ -164,8 +162,7 @@ export const layoutTreeStructureToRenderState = (
             fontFamily: clickedFontItem?.fontFamily || "sans-serif",
             fontWeight: clickedTypography.fontWeight || "normal",
             fill: clickedColorItem?.hex || "white",
-            lineHeight:
-              (clickedTypography.lineHeight || 1.5),
+            lineHeight: clickedTypography.lineHeight || 1.5,
             fontFileId: clickedFontItem?.fileId
               ? `file:${clickedFontItem.fileId}`
               : undefined,

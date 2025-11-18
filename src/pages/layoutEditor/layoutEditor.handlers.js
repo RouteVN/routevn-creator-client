@@ -274,9 +274,9 @@ const renderLayoutPreview = async (deps) => {
       // pointerDown: `layout-editor-pointer-down-${selectedItem.id}`,
       // pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
       // cursor: "all-scroll",
-      hover:{
-        cursor: "all-scroll"
-      }
+      hover: {
+        cursor: "all-scroll",
+      },
     };
 
     drenderer.render({
