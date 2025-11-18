@@ -108,7 +108,7 @@ export const layoutTreeStructureToRenderState = (
           fontWeight: typography.fontWeight || "normal",
           fill: colorItem?.hex || "white",
           lineHeight:
-            (typography.lineHeight || 1.5) * (typography.fontSize || 24),
+            (typography.lineHeight || 1.5),
           fontFileId: fontItem?.fileId ? `file:${fontItem.fileId}` : undefined,
         };
       } else {
@@ -116,7 +116,7 @@ export const layoutTreeStructureToRenderState = (
         textStyle = {
           fontSize: 24,
           fill: "white",
-          lineHeight: 1.5 * 24,
+          lineHeight: 1.5,
         };
       }
 
@@ -142,10 +142,9 @@ export const layoutTreeStructureToRenderState = (
             fontWeight: hoverTypography.fontWeight || "normal",
             fill: hoverColorItem?.hex || "white",
             lineHeight:
-              (hoverTypography.lineHeight || 1.5) *
-              (hoverTypography.fontSize || 24),
+              (hoverTypography.lineHeight || 1.5),
             fontFileId: hoverFontItem?.fileId
-              ? `file:${hoverFontItem.fileId}`
+              ? `${hoverFontItem.fileId}`
               : undefined,
           };
         }
@@ -166,8 +165,7 @@ export const layoutTreeStructureToRenderState = (
             fontWeight: clickedTypography.fontWeight || "normal",
             fill: clickedColorItem?.hex || "white",
             lineHeight:
-              (clickedTypography.lineHeight || 1.5) *
-              (clickedTypography.fontSize || 24),
+              (clickedTypography.lineHeight || 1.5),
             fontFileId: clickedFontItem?.fileId
               ? `file:${clickedFontItem.fileId}`
               : undefined,
@@ -178,8 +176,8 @@ export const layoutTreeStructureToRenderState = (
       element = {
         ...element,
         text: node.text,
-        content: node.content,
-        style: finalStyle,
+        content: node.text,
+        textStyle: finalStyle,
         ...interactionStyles,
       };
     }
@@ -189,7 +187,7 @@ export const layoutTreeStructureToRenderState = (
         // node.imageId contains an imageId, so we need to look up the image
         const image = imageItems[node.imageId];
         if (image && image.fileId) {
-          element.url = `file:${image.fileId}`;
+          element.src = `file:${image.fileId}`;
         }
       }
       if (node.hoverImageId && imageItems) {

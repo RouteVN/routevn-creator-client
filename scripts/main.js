@@ -1,15 +1,15 @@
 import { fileTypeFromBuffer } from "file-type";
 import createRouteEngine from 'route-engine-js'
-import RouteGraphics, {
-  SpriteRendererPlugin,
-  TextRendererPlugin,
-  ContainerRendererPlugin,
-  TextRevealingRendererPlugin,
-  RectRendererPlugin,
-  AudioPlugin,
-  SliderRendererPlugin,
-  KeyframeTransitionPlugin,
-  createAssetBufferManager,
+import createRouteGraphics, {
+  textPlugin,
+  rectPlugin,
+  spritePlugin,
+  sliderPlugin,
+  containerPlugin,
+  textRevealingPlugin,
+  tweenPlugin,
+  soundPlugin,
+  createAssetBufferManager
 } from "route-graphics";
 
 async function parseVNBundle(arrayBuffer) {
@@ -107,7 +107,24 @@ const init = async () => {
   await assetBufferManager.load(assets);
   const assetBufferMap = assetBufferManager.getBufferMap();
 
-  const app = new RouteGraphics();
+  const plugins = {
+    elements: [
+      textPlugin,
+      rectPlugin,
+      spritePlugin,
+      sliderPlugin,
+      containerPlugin,
+      textRevealingPlugin
+    ],
+    animations: [
+      tweenPlugin
+    ],
+    audios: [
+      soundPlugin
+    ]  
+  }
+
+  const app = createRouteGraphics();
   await app.init({
     width: 1920,
     height: 1080,
@@ -126,16 +143,7 @@ const init = async () => {
         engine.handleEvent({ payload });
       }
     },
-    plugins: [
-      new SpriteRendererPlugin(),
-      new TextRendererPlugin(),
-      new ContainerRendererPlugin(),
-      new TextRevealingRendererPlugin(),
-      new RectRendererPlugin(),
-      new AudioPlugin(),
-      new SliderRendererPlugin(),
-      new KeyframeTransitionPlugin(),
-    ],
+    plugins,
   });
   await app.loadAssets(assetBufferMap);
 

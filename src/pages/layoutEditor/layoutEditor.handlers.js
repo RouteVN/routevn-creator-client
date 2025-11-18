@@ -231,13 +231,14 @@ const renderLayoutPreview = async (deps) => {
   };
 
   const finalElements = parseAndRender(elementsToRender, data);
+  console.log("Final elements:", finalElements);
 
   const parsed = drenderer.parse(renderStateElements);
 
   if (!selectedItem) {
     drenderer.render({
       elements: finalElements,
-      transitions: [],
+      animations: [],
     });
     return;
   }
@@ -269,15 +270,18 @@ const renderLayoutPreview = async (deps) => {
         width: 2,
         alpha: 1,
       },
-      pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
-      pointerDown: `layout-editor-pointer-down-${selectedItem.id}`,
-      pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
-      cursor: "all-scroll",
+      // pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
+      // pointerDown: `layout-editor-pointer-down-${selectedItem.id}`,
+      // pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
+      // cursor: "all-scroll",
+      hover:{
+        cursor: "all-scroll"
+      }
     };
 
     drenderer.render({
       elements: [...finalElements, border, redDot],
-      transitions: [],
+      animations: [],
     });
   }
 };

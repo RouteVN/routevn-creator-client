@@ -1,14 +1,14 @@
-import RouteGraphics, {
-  createAssetBufferManager,
-  SpriteRendererPlugin,
-  TextRendererPlugin,
-  ContainerRendererPlugin,
-  TextRevealingRendererPlugin,
-  RectRendererPlugin,
-  AudioPlugin,
-  SliderRendererPlugin,
-  KeyframeTransitionPlugin,
+import createRouteGraphics, {
   parse,
+  createAssetBufferManager,
+  textPlugin,
+  rectPlugin,
+  spritePlugin,
+  sliderPlugin,
+  containerPlugin,
+  textRevealingPlugin,
+  tweenPlugin,
+  soundPlugin,
 } from "route-graphics";
 import createRouteEngine from "route-engine-js";
 
@@ -24,25 +24,32 @@ export const create2dRenderer = async ({ subject }) => {
 
       const { canvas } = options;
       assetBufferManager = createAssetBufferManager();
-      app = new RouteGraphics();
+      app = createRouteGraphics();
+
+      const plugins = {
+        elements: [
+          textPlugin,
+          rectPlugin,
+          spritePlugin,
+          sliderPlugin,
+          containerPlugin,
+          textRevealingPlugin
+        ],
+        animations: [
+          tweenPlugin
+        ],
+        audios: [
+          soundPlugin
+        ]  
+      }
 
       await app.init({
         width: 1920,
         height: 1080,
-        plugins: [
-          new SpriteRendererPlugin(),
-          new TextRendererPlugin(),
-          new ContainerRendererPlugin(),
-          new TextRevealingRendererPlugin(),
-          new RectRendererPlugin(),
-          new AudioPlugin(),
-          new SliderRendererPlugin(),
-          new KeyframeTransitionPlugin(),
-        ],
+        plugins,
       });
 
-      app._app.stage.eventMode = "static";
-      app._app.stage.on("globalpointermove", (event) => {
+      app.assignStageEvent("globalpointermove",(event) => {
         subject.dispatch("2drendererEvent", {
           x: Math.round(event.global.x),
           y: Math.round(event.global.y),
@@ -70,7 +77,7 @@ export const create2dRenderer = async ({ subject }) => {
 
       engine.init({
         projectData,
-        ticker: app._app.ticker,
+        // ticker: app._app.ticker,
         // captureElement,
         loadAssets: app.loadAssets,
       });
@@ -89,8 +96,8 @@ export const create2dRenderer = async ({ subject }) => {
         }
       };
     },
-    parse: parse,
     render: (payload) => app.render(payload),
+    parse: parse,
     destroy: () => {
       if (!app) {
         return;
