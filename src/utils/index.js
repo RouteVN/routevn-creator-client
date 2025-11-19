@@ -107,15 +107,14 @@ export const layoutTreeStructureToRenderState = (
           fontFamily: fontItem?.fontFamily || "sans-serif",
           fontWeight: typography.fontWeight || "normal",
           fill: colorItem?.hex || "white",
-          lineHeight: typography.lineHeight || 1.5,
-          fontFileId: fontItem?.fileId ? `file:${fontItem.fileId}` : undefined,
+          lineHeight: typography.lineHeight || 1.2,
         };
       } else {
         // Use default settings
         textStyle = {
           fontSize: 24,
           fill: "white",
-          lineHeight: 1.5,
+          lineHeight: 1.2,
         };
       }
 
@@ -135,15 +134,14 @@ export const layoutTreeStructureToRenderState = (
           const hoverColorItem = colorsData.items?.[hoverTypography.colorId];
           const hoverFontItem = fontsData.items?.[hoverTypography.fontId];
 
-          interactionStyles.hoverStyle = {
-            fontSize: hoverTypography.fontSize || 24,
-            fontFamily: hoverFontItem?.fontFamily || "sans-serif",
-            fontWeight: hoverTypography.fontWeight || "normal",
-            fill: hoverColorItem?.hex || "white",
-            lineHeight: hoverTypography.lineHeight || 1.5,
-            fontFileId: hoverFontItem?.fileId
-              ? `${hoverFontItem.fileId}`
-              : undefined,
+          interactionStyles.hover = {
+            textStyle:{
+              fontSize: hoverTypography.fontSize || 24,
+              fontFamily: hoverFontItem?.fontFamily || "sans-serif",
+              fontWeight: hoverTypography.fontWeight || "normal",
+              fill: hoverColorItem?.hex || "white",
+              lineHeight: hoverTypography.lineHeight || 1.2,
+            }
           };
         }
       }
@@ -157,15 +155,14 @@ export const layoutTreeStructureToRenderState = (
             colorsData.items?.[clickedTypography.colorId];
           const clickedFontItem = fontsData.items?.[clickedTypography.fontId];
 
-          interactionStyles.clickedStyle = {
-            fontSize: clickedTypography.fontSize || 24,
-            fontFamily: clickedFontItem?.fontFamily || "sans-serif",
-            fontWeight: clickedTypography.fontWeight || "normal",
-            fill: clickedColorItem?.hex || "white",
-            lineHeight: clickedTypography.lineHeight || 1.5,
-            fontFileId: clickedFontItem?.fileId
-              ? `file:${clickedFontItem.fileId}`
-              : undefined,
+          interactionStyles.click = {
+            textStyle:{
+              fontSize: clickedTypography.fontSize || 24,
+              fontFamily: clickedFontItem?.fontFamily || "sans-serif",
+              fontWeight: clickedTypography.fontWeight || "normal",
+              fill: clickedColorItem?.hex || "white",
+              lineHeight: clickedTypography.lineHeight || 1.2,
+            }
           };
         }
       }
@@ -191,14 +188,18 @@ export const layoutTreeStructureToRenderState = (
         // node.hoverImageId contains an imageId, so we need to look up the image
         const hoverImage = imageItems[node.hoverImageId];
         if (hoverImage && hoverImage.fileId) {
-          element.hoverUrl = `file:${hoverImage.fileId}`;
+          element.hover = {
+            src: `file:${hoverImage.fileId}`
+          };
         }
       }
       if (node.clickImageId && imageItems) {
         // node.clickImageId contains an imageId, so we need to look up the image
         const clickImage = imageItems[node.clickImageId];
         if (clickImage && clickImage.fileId) {
-          element.clickUrl = `file:${clickImage.fileId}`;
+          element.click = {
+            src: `file:${clickImage.fileId}`
+          };
         }
       }
     }
