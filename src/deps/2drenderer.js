@@ -73,7 +73,7 @@ export const create2dRenderer = async ({ subject }) => {
 
       engine.init({
         projectData,
-        // ticker: app._app.ticker,
+        ticker: app._app.ticker,
         // captureElement,
         loadAssets: app.loadAssets,
       });
