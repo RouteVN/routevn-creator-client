@@ -135,13 +135,13 @@ export const layoutTreeStructureToRenderState = (
           const hoverFontItem = fontsData.items?.[hoverTypography.fontId];
 
           interactionStyles.hover = {
-            textStyle:{
+            textStyle: {
               fontSize: hoverTypography.fontSize || 24,
               fontFamily: hoverFontItem?.fontFamily || "sans-serif",
               fontWeight: hoverTypography.fontWeight || "normal",
               fill: hoverColorItem?.hex || "white",
               lineHeight: hoverTypography.lineHeight || 1.2,
-            }
+            },
           };
         }
       }
@@ -156,13 +156,13 @@ export const layoutTreeStructureToRenderState = (
           const clickedFontItem = fontsData.items?.[clickedTypography.fontId];
 
           interactionStyles.click = {
-            textStyle:{
+            textStyle: {
               fontSize: clickedTypography.fontSize || 24,
               fontFamily: clickedFontItem?.fontFamily || "sans-serif",
               fontWeight: clickedTypography.fontWeight || "normal",
               fill: clickedColorItem?.hex || "white",
               lineHeight: clickedTypography.lineHeight || 1.2,
-            }
+            },
           };
         }
       }
@@ -189,7 +189,7 @@ export const layoutTreeStructureToRenderState = (
         const hoverImage = imageItems[node.hoverImageId];
         if (hoverImage && hoverImage.fileId) {
           element.hover = {
-            src: `file:${hoverImage.fileId}`
+            src: `file:${hoverImage.fileId}`,
           };
         }
       }
@@ -198,7 +198,7 @@ export const layoutTreeStructureToRenderState = (
         const clickImage = imageItems[node.clickImageId];
         if (clickImage && clickImage.fileId) {
           element.click = {
-            src: `file:${clickImage.fileId}`
+            src: `file:${clickImage.fileId}`,
           };
         }
       }
