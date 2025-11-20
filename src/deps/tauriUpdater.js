@@ -96,6 +96,15 @@ const createUpdater = (globalUI) => {
         }
       });
     }, 5000);
+
+    const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
+    setInterval(() => {
+      checkForUpdates(true).then((info) => {
+        if (info) {
+          console.log("Update available on interval check:", info);
+        }
+      });
+    }, SIX_HOURS_IN_MS);
   };
 
   return {
