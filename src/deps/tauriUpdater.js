@@ -20,14 +20,14 @@ const createUpdater = (globalUI) => {
       updateAvailable = true;
       updateInfo = {
         version: update.version,
-        date: update.date,
-        body: update.body,
+        date: update.pub_date,
+        body: update.notes,
       };
 
       if (!silent && globalUI) {
         // Use globalUI service when available
         const shouldUpdate = await globalUI.showConfirm({
-          message: `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
+          message: `Update ${update.version} is available!\n\nRelease notes:\n${update.notes}`,
           title: "Update Available",
           confirmText: "Update Now",
           cancelText: "Later",
@@ -90,7 +90,7 @@ const createUpdater = (globalUI) => {
 
   const checkForUpdatesOnStartup = () => {
     setTimeout(() => {
-      checkForUpdates(false).then((info) => {
+      checkForUpdates(true).then((info) => {
         if (info) {
           console.log("Update available on startup:", info);
         }
