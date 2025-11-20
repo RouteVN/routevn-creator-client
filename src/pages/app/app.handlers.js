@@ -17,7 +17,7 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = (deps) => {
   // Start checking for updates on app startup (Tauri only)
   if (deps.updaterService) {
-    // deps.updaterService.checkForUpdatesOnStartup();
+      deps.updaterService.startAutomaticChecks();
   }
 };
 

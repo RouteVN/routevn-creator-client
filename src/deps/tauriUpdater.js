@@ -1,7 +1,7 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-const createUpdater = (globalUI) => {
+const createUpdater = ({ globalUI, keyValueStore }) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
@@ -20,14 +20,13 @@ const createUpdater = (globalUI) => {
       updateAvailable = true;
       updateInfo = {
         version: update.version,
-        date: update.pub_date,
-        body: update.notes,
+        date: update.date,
+        body: update.body,
       };
 
-      if (!silent && globalUI) {
-        // Use globalUI service when available
+      if (globalUI) {
         const shouldUpdate = await globalUI.showConfirm({
-          message: `Update ${update.version} is available!\n\nRelease notes:\n${update.notes}`,
+          message: `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
           title: "Update Available",
           confirmText: "Update Now",
           cancelText: "Later",
@@ -88,29 +87,32 @@ const createUpdater = (globalUI) => {
     }
   };
 
-  const checkForUpdatesOnStartup = () => {
-    setTimeout(() => {
-      checkForUpdates(true).then((info) => {
-        if (info) {
-          console.log("Update available on startup:", info);
-        }
-      });
-    }, 5000);
-
+  const startAutomaticChecks = () => {
+    const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
     const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
-    setInterval(() => {
-      checkForUpdates(true).then((info) => {
-        if (info) {
-          console.log("Update available on interval check:", info);
+
+    const performCheck = async () => {
+      const lastCheckTime = await keyValueStore.get("lastCheckTime");
+      const currentTime = Date.now();
+
+      if (!lastCheckTime || currentTime - lastCheckTime > SIX_HOURS_IN_MS) {
+        try {
+          await checkForUpdates(true); 
+        } finally {
+          await keyValueStore.set("lastCheckTime", currentTime);
         }
-      });
-    }, SIX_HOURS_IN_MS);
+      }
+    };
+
+    performCheck();
+
+    setInterval(performCheck, TEN_MINUTES_IN_MS);
   };
 
   return {
     checkForUpdates,
     downloadAndInstall,
-    checkForUpdatesOnStartup,
+    startAutomaticChecks,
     getUpdateInfo: () => updateInfo,
     getDownloadProgress: () => downloadProgress,
     isUpdateAvailable: () => updateAvailable,
