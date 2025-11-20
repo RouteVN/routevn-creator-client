@@ -112,6 +112,19 @@ export const handleFormSubmit = async (deps, payload) => {
 
     // Validate input
     if (!name || !description || !projectPath) {
+      let message = "Please fill in all required fields.";
+      if (!name) {
+        message = "Project Name is required.";
+      } else if (!description) {
+        message = "Project Description is required.";
+      } else if (!projectPath) {
+        message = "Project Location is required.";
+      }
+
+      globalUI.showAlert({
+        message,
+        title: "Error",
+      });
       return;
     }
 
