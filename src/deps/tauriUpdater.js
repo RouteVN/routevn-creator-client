@@ -97,7 +97,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
 
       if (!lastCheckTime || currentTime - lastCheckTime > SIX_HOURS_IN_MS) {
         try {
-          await checkForUpdates(true); 
+          await checkForUpdates(true);
         } finally {
           await keyValueStore.set("lastCheckTime", currentTime);
         }
