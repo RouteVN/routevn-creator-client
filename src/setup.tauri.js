@@ -139,7 +139,7 @@ const globalUIElement = document.querySelector("rtgl-global-ui");
 
 const globalUI = createGlobalUI(globalUIElement);
 
-const updaterService = createUpdater(globalUI);
+const updaterService = createUpdater({ globalUI, keyValueStore });
 
 setupCloseListener({ globalUI });
 

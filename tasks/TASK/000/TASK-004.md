@@ -1,6 +1,6 @@
 ---
 title: Update dialog, better handling of update error and feedback when there is a new version
-status: todo
+status: done
 priority: high
 ---
 

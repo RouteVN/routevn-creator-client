@@ -1,6 +1,6 @@
 ---
 title: Improve automated update. should check every interval instead of only when app is opened
-status: todo
+status: done
 priority: high
 ---
 

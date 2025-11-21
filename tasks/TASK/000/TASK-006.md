@@ -1,6 +1,6 @@
 ---
 title: Update nsis installation template to add user agreement
-status: todo
+status: done
 priority: high
 ---
 
