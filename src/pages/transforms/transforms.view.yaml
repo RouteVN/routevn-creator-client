@@ -70,7 +70,7 @@ template:
                       - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                      - rtgl-text s=md c=mu-fg: "No selection"
+                          - rtgl-text s=md c=mu-fg: "No selection"
   - "rtgl-dialog#transform-dialog ?open=${isDialogOpen} s=lg":
       - 'rtgl-view slot="content" d=h ah=c g=lg w=f':
           - "$if isDialogOpen":
