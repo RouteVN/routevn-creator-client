@@ -1,7 +1,7 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-const createUpdater = (globalUI) => {
+const createUpdater = ({ globalUI, keyValueStore }) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
@@ -24,8 +24,7 @@ const createUpdater = (globalUI) => {
         body: update.body,
       };
 
-      if (!silent && globalUI) {
-        // Use globalUI service when available
+      if (globalUI) {
         const shouldUpdate = await globalUI.showConfirm({
           message: `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
           title: "Update Available",
@@ -88,20 +87,32 @@ const createUpdater = (globalUI) => {
     }
   };
 
-  const checkForUpdatesOnStartup = () => {
-    setTimeout(() => {
-      checkForUpdates(false).then((info) => {
-        if (info) {
-          console.log("Update available on startup:", info);
+  const startAutomaticChecks = () => {
+    const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
+    const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
+
+    const performCheck = async () => {
+      const lastCheckTime = await keyValueStore.get("lastCheckTime");
+      const currentTime = Date.now();
+
+      if (!lastCheckTime || currentTime - lastCheckTime > SIX_HOURS_IN_MS) {
+        try {
+          await checkForUpdates(true);
+        } finally {
+          await keyValueStore.set("lastCheckTime", currentTime);
         }
-      });
-    }, 5000);
+      }
+    };
+
+    performCheck();
+
+    setInterval(performCheck, TEN_MINUTES_IN_MS);
   };
 
   return {
     checkForUpdates,
     downloadAndInstall,
-    checkForUpdatesOnStartup,
+    startAutomaticChecks,
     getUpdateInfo: () => updateInfo,
     getDownloadProgress: () => downloadProgress,
     isUpdateAvailable: () => updateAvailable,
