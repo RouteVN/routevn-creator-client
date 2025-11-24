@@ -1,12 +1,14 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-const createUpdater = ({ globalUI, keyValueStore }) => {
+const createUpdater = ({ globalUI, keyValueStore, platform }) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
 
   const checkForUpdates = async (silent = false) => {
+    if (platform === "web") return null;
+
     try {
       const update = await check();
 
@@ -51,6 +53,8 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
   };
 
   const downloadAndInstall = async (update) => {
+    if (platform === "web") return;
+
     try {
       let downloaded = 0;
       let contentLength = 0;
@@ -88,6 +92,8 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
   };
 
   const startAutomaticChecks = () => {
+    if (platform === "web") return;
+
     const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
     const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
 

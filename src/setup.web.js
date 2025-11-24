@@ -18,6 +18,9 @@ import isInputFocused from "./deps/isInputFocused.js";
 import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
 import { initializeWebProject } from "./deps/webProjectInitializer";
 import { createWebBundleService } from "./deps/webBundleService.js";
+import { createWebKeyValueStore } from "./deps/webKeyValueStore.js";
+import { createWebProjectsService } from "./deps/webProjectsService.js";
+import createUpdater from "./deps/tauriUpdater.js";
 
 // Web-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -122,12 +125,28 @@ const audioManager = new AudioManager();
 const filePicker = createFilePicker();
 const bundleService = createWebBundleService();
 
+// Web-specific services
+const keyValueStore = await createWebKeyValueStore();
+const projectsService = createWebProjectsService({
+  keyValueStore,
+  initializeWebProject,
+  fileManagerFactory,
+  repositoryFactory,
+  storageAdapterFactory,
+});
+
 // Initialize async resources first
 const drenderer = await create2dRenderer({ subject });
 
 const globalUIElement = document.querySelector("rtgl-global-ui");
 
 const globalUI = createGlobalUI(globalUIElement);
+
+const updaterService = createUpdater({
+  globalUI,
+  keyValueStore,
+  platform: "web",
+});
 
 const componentDependencies = {
   httpClient,
@@ -144,6 +163,7 @@ const componentDependencies = {
   // Platform-specific info
   platform: "web",
   isInputFocused,
+  openUrl,
 };
 
 const pageDependencies = {
@@ -159,6 +179,8 @@ const pageDependencies = {
   filePicker,
   globalUI,
   bundleService,
+  projectsService,
+  updaterService,
   // Platform-specific info
   platform: "web",
   isInputFocused,

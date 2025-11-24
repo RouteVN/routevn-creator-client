@@ -15,7 +15,7 @@ export const initializeWebProject = async ({
   const repository = await repositoryFactory.getByProject();
 
   // Check if already initialized
-  const actionStream = repository.getAllEvents();
+  const actionStream = repository.getEvents();
   if (actionStream.length > 0) {
     return; // Already initialized
   }

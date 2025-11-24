@@ -9,46 +9,15 @@ import { createInsiemeTauriStoreAdapter } from "./tauriRepositoryAdapter";
 // Re-export utility functions from insieme for backward compatibility
 export { toFlatItems, toFlatGroups, toTreeStructure };
 
-// Web store adapter (temporary placeholder)
-const createWebStore = () => {
-  // TODO: Implement proper web store using localStorage or IndexedDB
-  // For now, return a mock that stores events in memory
-  let events = [];
-
-  return {
-    async getEvents() {
-      return events;
-    },
-
-    async appendEvent(event) {
-      events.push(event);
-    },
-
-    app: {
-      get: async (key) => {
-        const value = localStorage.getItem(`app_${key}`);
-        return value ? JSON.parse(value) : null;
-      },
-      set: async (key, value) => {
-        localStorage.setItem(`app_${key}`, JSON.stringify(value));
-      },
-      remove: async (key) => {
-        localStorage.removeItem(`app_${key}`);
-      },
-    },
-  };
-};
-
 // For web version - creates a simple factory with a single repository
-export const createWebRepositoryFactory = (initialState) => {
+export const createWebRepositoryFactory = (initialState, repositoryAdapter) => {
   let repository = null;
 
   return {
     async getByProject(_projectId) {
       // Web version ignores projectId - always returns the same repository
       if (!repository) {
-        const store = createWebStore();
-        repository = createRepository({ originStore: store });
+        repository = createRepository({ originStore: repositoryAdapter });
         await repository.init({ initialState });
       }
       return repository;
