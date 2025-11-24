@@ -7,6 +7,7 @@ import Subject from "./deps/subject";
 import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
 import Router from "./deps/router";
 import AudioManager from "./deps/audioManager";
+import { createGlobalUI } from "@rettangoli/ui";
 // File management imports
 import { createWebFileManagerFactory } from "./deps/fileManagerFactory";
 import { createWebStorageAdapterFactory } from "./deps/storageAdapterFactory";
@@ -16,6 +17,7 @@ import { createFilePicker } from "./deps/filePicker";
 import isInputFocused from "./deps/isInputFocused.js";
 import { createIndexeddbRepositoryAdapter } from "./deps/webRepositoryAdapter";
 import { initializeWebProject } from "./deps/webProjectInitializer";
+import { createWebBundleService } from "./deps/webBundleService.js";
 
 // Web-specific configuration
 const httpClient = createRouteVnHttpClient({
@@ -115,6 +117,7 @@ const subject = new Subject();
 const router = new Router();
 const audioManager = new AudioManager();
 const filePicker = createFilePicker();
+const bundleService = createWebBundleService();
 
 // Initialize async resources first
 const drenderer = await create2dRenderer({ subject });
@@ -152,6 +155,7 @@ const pageDependencies = {
   drenderer,
   filePicker,
   globalUI,
+  bundleService,
   // Platform-specific info
   platform: "web",
   isInputFocused,
