@@ -6,6 +6,7 @@ export const createInitialState = () => ({
   isOpen: false,
   projectPath: "",
   projectPathDisplay: "No folder selected",
+  platform: "tauri",
 
   dropdownMenu: {
     isOpen: false,

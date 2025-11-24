@@ -3,7 +3,9 @@ export const handleBeforeMount = () => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, appVersion } = deps;
+  const { store, render, appVersion, platform } = deps;
+
+  store.setPlatform(platform);
 
   // Set app version from deps
   if (appVersion) {

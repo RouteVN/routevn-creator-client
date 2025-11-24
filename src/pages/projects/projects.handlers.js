@@ -1,5 +1,12 @@
 export const handleAfterMount = async (deps) => {
-  const { projectsService, store, render } = deps;
+  const { projectsService, store, render, platform, router } = deps;
+
+  store.setPlatform(platform);
+
+  if (platform === "web") {
+    router.redirect("/project", { p: "default-web-project" });
+    return;
+  }
 
   const projects = await projectsService.loadAllProjects();
   store.setProjects(projects);
@@ -7,12 +14,6 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleCreateButtonClick = async (deps) => {
-  const { render, store } = deps;
-  store.toggleDialog();
-  render();
-};
-
-export const handleOpenButtonClick = async (deps) => {
   const { projectsService, store, render, tauriDialog, globalUI } = deps;
 
   try {

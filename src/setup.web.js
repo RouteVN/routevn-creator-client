@@ -27,6 +27,9 @@ const httpClient = createRouteVnHttpClient({
   },
 });
 
+const openUrl = (url) => {
+  window.open(url, "_blank", "noopener,noreferrer");
+};
 // Create font manager (shared for the single web project)
 const fontManager = createFontManager();
 
@@ -159,6 +162,7 @@ const pageDependencies = {
   // Platform-specific info
   platform: "web",
   isInputFocused,
+  openUrl,
 };
 
 const deps = {

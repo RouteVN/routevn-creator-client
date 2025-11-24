@@ -28,6 +28,8 @@ viewDataSchema:
     projectPath:
       type: string
       default: ""
+    platform:
+      type: string
 
 refs:
   createButton:
@@ -72,9 +74,10 @@ template:
           - rtgl-view d=h w=f av=c mb=xl mt=xl:
               - rtgl-text s=h2: "${title}"
               - rtgl-view flex=1:
-              - rtgl-view d=h g=sm:
-                  - rtgl-button#createButton: ${createButtonText}
-                  - rtgl-button#openButton variant=se: ${openButtonText}
+              - $if platform != 'web':
+                  - rtgl-view d=h g=sm:
+                      - rtgl-button#createButton: ${createButtonText}
+                      - rtgl-button#openButton variant=se: ${openButtonText}
           - rtgl-view w=f g=md flex=1 oy=a:
               - $if emptyMessage:
                   - rtgl-view w=f h=200 ah=c av=c:
