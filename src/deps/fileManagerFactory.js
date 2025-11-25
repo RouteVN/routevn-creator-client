@@ -1,20 +1,32 @@
 // File Manager Factory - provides project-specific file managers
 import { createFileManager } from "./fileManager";
 
-// For Web version - creates a simple factory with a single file manager
 export const createWebFileManagerFactory = (
   fontManager,
   storageAdapterFactory,
 ) => {
-  let manager = null;
+  const managerCache = new Map();
 
   return {
-    async getByProject(_projectId) {
-      // Web version ignores projectId - always returns the same manager
-      if (!manager) {
-        const storageAdapter = await storageAdapterFactory.getByProject();
-        manager = createFileManager({ storageAdapter, fontManager });
+    async getByProject(projectId) {
+      if (!projectId) {
+        throw new Error("projectId is required for web file manager");
       }
+
+      if (managerCache.has(projectId)) {
+        return managerCache.get(projectId);
+      }
+
+      const storageAdapter =
+        await storageAdapterFactory.getByProject(projectId);
+
+      const manager = createFileManager({
+        storageAdapter,
+        fontManager,
+      });
+
+      // Cache the manager
+      managerCache.set(projectId, manager);
       return manager;
     },
   };
