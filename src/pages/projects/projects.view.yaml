@@ -78,6 +78,8 @@ template:
                   - rtgl-view d=h g=sm:
                       - rtgl-button#createButton: ${createButtonText}
                       - rtgl-button#openButton variant=se: ${openButtonText}
+                $else:
+                  - rtgl-button#createButton: ${createButtonText}
           - rtgl-view w=f g=md flex=1 oy=a:
               - $if emptyMessage:
                   - rtgl-view w=f h=200 ah=c av=c:
@@ -93,15 +95,17 @@ template:
                       - rtgl-view flex=1:
                           - rtgl-text: "${project.name}"
                           #- rtgl-text s=sm c=mu-fg: "${project.description}"
-                          - rtgl-view d=h g=sm av=c mt=xs:
-                              - rtgl-svg wh=14 svg=folder c=mu-fg:
-                              - rtgl-text s=xs c=mu-fg: "${project.projectPath}"
+                          - $if platform != 'web':
+                              - rtgl-view d=h g=sm av=c mt=xs:
+                                  - rtgl-svg wh=14 svg=folder c=mu-fg:
+                                  - rtgl-text s=xs c=mu-fg: "${project.projectPath}"
 
   - rtgl-dialog#create-project-dialog ?open=${isOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#form .defaultValues=defaultValues .form=form w=f:
-              - rtgl-view w=f slot=project-path-selector d=h g=sm av=c:
-                  - rtgl-input#pathInput w=f .value=projectPathDisplay disabled=true placeholder="No folder selected":
-                  - rtgl-button#browseButton variant=se: Browse
+              - $if platform != 'web':
+                  - rtgl-view w=f slot=project-path-selector d=h g=sm av=c:
+                      - rtgl-input#pathInput w=f .value=projectPathDisplay disabled=true placeholder="No folder selected":
+                      - rtgl-button#browseButton variant=se: Browse
 
   - rtgl-dropdown-menu#dropdown-menu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} .items=dropdownMenu.items:

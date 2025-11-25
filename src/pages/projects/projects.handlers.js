@@ -9,6 +9,12 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleCreateButtonClick = async (deps) => {
+  const { render, store } = deps;
+  store.toggleDialog();
+  render();
+};
+
+export const handleOpenButtonClick = async (deps) => {
   const { projectsService, store, render, tauriDialog, globalUI } = deps;
 
   try {
@@ -52,7 +58,6 @@ export const handleCloseDialogue = (deps) => {
 export const handleProjectsClick = async (deps, payload) => {
   const { subject } = deps;
   const id = payload._event.currentTarget.id.replace("project-", "");
-  console.log("id", id);
   subject.dispatch("redirect", {
     path: `/project`,
     payload: {
@@ -85,7 +90,7 @@ export const handleBrowseFolder = async (deps) => {
 };
 
 export const handleFormSubmit = async (deps, payload) => {
-  const { projectsService, initializeProject, store, render, globalUI } = deps;
+  const { projectsService, initializeProject, store, render, globalUI, platform } = deps;
 
   try {
     // Check if it's the submit button
@@ -106,20 +111,20 @@ export const handleFormSubmit = async (deps, payload) => {
 
     const projectPath = store.selectProjectPath();
 
-    // Validate input
-    if (!name || !description || !projectPath) {
+    const isPathRequired = platform !== "web";
+    if (!name || !description || (isPathRequired && !projectPath)) {
       let message = "Please fill in all required fields.";
       if (!name) {
         message = "Project Name is required.";
       } else if (!description) {
         message = "Project Description is required.";
-      } else if (!projectPath) {
+      } else if (isPathRequired && !projectPath) {
         message = "Project Location is required.";
       }
 
       globalUI.showAlert({
         message,
-        title: "Error",
+        title: "Validation Error",
       });
       return;
     }
@@ -131,6 +136,8 @@ export const handleFormSubmit = async (deps, payload) => {
       projectPath,
       template,
       initializeProject,
+      repositoryFactory: deps.repositoryFactory,
+      storageAdapterFactory: deps.storageAdapterFactory,
     });
 
     // Update store with new project
@@ -139,7 +146,7 @@ export const handleFormSubmit = async (deps, payload) => {
 
     render();
 
-    console.log(`Project created at: ${projectPath}`);
+    console.log(`Project created: ${name}`);
   } catch (error) {
     console.error("Error creating project:", error);
     globalUI.showAlert({

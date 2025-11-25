@@ -51,15 +51,8 @@ export const createInitialState = () => ({
           },
         ],
       },
-      // comment since we only have 1 template
-      // {
-      //   name: "template",
-      //   inputType: "select",
-      //   label: "Template",
-      //   required: true,
-      //   options: [{ value: "default", label: "Default" }],
-      // },
       {
+        $when: "context.platform != 'web'",
         name: "projectPath",
         inputType: "slot",
         slot: "project-path-selector",
@@ -74,7 +67,7 @@ export const createInitialState = () => ({
       },
     ],
     actions: {
-      layout: "", // vertical, fill, right, left
+      layout: "",
       buttons: [
         {
           id: "submit",
@@ -116,6 +109,10 @@ export const setProjectPath = (state, path) => {
   state.projectPath = path; // Update top-level for binding
   state.defaultValues.projectPath = path; // Update defaultValues for form
   state.projectPathDisplay = path || "No folder selected";
+};
+
+export const setPlatform = (state, platform) => {
+  state.platform = platform;
 };
 
 export const selectDefaultValues = ({ state }) => {
