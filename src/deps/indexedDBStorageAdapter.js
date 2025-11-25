@@ -146,10 +146,14 @@ export const createIndexedDBStorageAdapter = () => {
     // Store a file locally in IndexedDB
     storeFile: async (file) => {
       try {
-        const fileId = nanoid();
+        if (!file.name) {
+          throw new Error("File must have a name");
+        }
+        //todo this will break multiple uploads currently reverting as i misunderstood the task
+        const fileId = file.name.replace(/\.[^/.]+$/, "");
 
         if (!fileId) {
-          throw new Error("Could not determine a valid fileId for the file.");
+          throw new Error("Invalid file name - cannot extract fileId");
         }
 
         // Store the file
