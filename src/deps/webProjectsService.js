@@ -43,10 +43,12 @@ export const createWebProjectsService = (deps) => {
       lastOpenedAt: null,
       iconFileId: null,
     };
+
     await initializeWebProject({
       repositoryFactory,
       storageAdapterFactory,
       template,
+      projectId, 
     });
 
     const projectEntries = (await keyValueStore.get("projects")) || [];
