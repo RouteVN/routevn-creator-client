@@ -1,12 +1,7 @@
 export const handleAfterMount = async (deps) => {
-  const { projectsService, store, render, platform, router } = deps;
+  const { projectsService, store, render, platform } = deps;
 
   store.setPlatform(platform);
-
-  if (platform === "web") {
-    router.redirect("/project", { p: "default-web-project" });
-    return;
-  }
 
   const projects = await projectsService.loadAllProjects();
   store.setProjects(projects);
