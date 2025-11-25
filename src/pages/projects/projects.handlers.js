@@ -90,7 +90,14 @@ export const handleBrowseFolder = async (deps) => {
 };
 
 export const handleFormSubmit = async (deps, payload) => {
-  const { projectsService, initializeProject, store, render, globalUI, platform } = deps;
+  const {
+    projectsService,
+    initializeProject,
+    store,
+    render,
+    globalUI,
+    platform,
+  } = deps;
 
   try {
     // Check if it's the submit button

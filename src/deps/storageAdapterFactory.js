@@ -8,7 +8,6 @@ export const createWebStorageAdapterFactory = () => {
 
   return {
     async getByProject(projectId) {
-
       if (!projectId) {
         throw new Error("A projectId is required.");
       }

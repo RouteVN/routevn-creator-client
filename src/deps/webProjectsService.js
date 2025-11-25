@@ -48,7 +48,7 @@ export const createWebProjectsService = (deps) => {
       repositoryFactory,
       storageAdapterFactory,
       template,
-      projectId, 
+      projectId,
     });
 
     const projectEntries = (await keyValueStore.get("projects")) || [];
