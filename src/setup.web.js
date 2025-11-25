@@ -105,18 +105,10 @@ const initialData = {
   },
 };
 
-const repositoryAdapter = createIndexeddbRepositoryAdapter();
 const repositoryFactory = createWebRepositoryFactory(
   initialData,
-  repositoryAdapter,
+  createIndexeddbRepositoryAdapter,
 );
-
-// Initialize template data for first-time users (necessary startup initialization)
-await initializeWebProject({
-  repositoryFactory,
-  storageAdapterFactory,
-  template: "default",
-});
 
 const userConfig = createUserConfig();
 const subject = new Subject();

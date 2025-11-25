@@ -9,17 +9,23 @@ import { createInsiemeTauriStoreAdapter } from "./tauriRepositoryAdapter";
 // Re-export utility functions from insieme for backward compatibility
 export { toFlatItems, toFlatGroups, toTreeStructure };
 
-// For web version - creates a simple factory with a single repository
-export const createWebRepositoryFactory = (initialState, repositoryAdapter) => {
-  let repository = null;
+export const createWebRepositoryFactory = (
+  initialState,
+  createRepositoryAdapter,
+) => {
+  const repositoryCache = new Map();
 
   return {
-    async getByProject(_projectId) {
-      // Web version ignores projectId - always returns the same repository
-      if (!repository) {
-        repository = createRepository({ originStore: repositoryAdapter });
-        await repository.init({ initialState });
+    async getByProject(projectId) {
+      if (repositoryCache.has(projectId)) {
+        return repositoryCache.get(projectId);
       }
+
+      const repositoryAdapter = createRepositoryAdapter(projectId);
+      const repository = createRepository({ originStore: repositoryAdapter });
+      await repository.init({ initialState });
+
+      repositoryCache.set(projectId, repository);
       return repository;
     },
   };

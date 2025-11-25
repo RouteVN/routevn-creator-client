@@ -1,4 +1,3 @@
-// Web project initialization - follows the same logic as Tauri
 import { loadTemplate, getTemplateFiles } from "../utils/templateLoader";
 
 /**
@@ -10,9 +9,10 @@ export const initializeWebProject = async ({
   repositoryFactory,
   storageAdapterFactory,
   template = "default",
+  projectId,
 }) => {
-  // Get repository for the single web project
-  const repository = await repositoryFactory.getByProject();
+  // Get repository for the specific web project
+  const repository = await repositoryFactory.getByProject(projectId);
 
   // Check if already initialized
   const actionStream = repository.getEvents();
@@ -25,8 +25,7 @@ export const initializeWebProject = async ({
   // Load template data from static files
   const templateData = await loadTemplate(template);
 
-  // Copy template files to IndexedDB (using the same filenames as in template)
-  const storageAdapter = await storageAdapterFactory.getByProject();
+  const storageAdapter = await storageAdapterFactory.getByProject(projectId);
   await copyTemplateFilesToIndexedDB(template, storageAdapter);
 
   // Initialize repository with template data (no modifications needed)
@@ -40,7 +39,6 @@ export const initializeWebProject = async ({
 
   console.log("Template data loaded and saved to repository");
 };
-
 /**
  * Copy template files to IndexedDB, keeping original filenames
  * This mirrors Tauri's copyTemplateFiles but stores in IndexedDB

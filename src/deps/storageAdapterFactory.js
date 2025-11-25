@@ -4,16 +4,33 @@ import { createTauriFileSystemStorageAdapter } from "./tauriFileSystemStorageAda
 
 // For Web version - creates a simple factory with a single adapter
 export const createWebStorageAdapterFactory = () => {
-  let adapter = null;
+  const adapterCache = new Map();
 
   return {
-    async getByProject(_projectId) {
-      // Web version ignores projectId - always returns the same adapter
-      if (!adapter) {
-        adapter = createIndexedDBStorageAdapter();
-        await adapter.init();
+    async getByProject(projectId) {
+
+      if (!projectId) {
+        throw new Error("A projectId is required.");
       }
+
+      if (adapterCache.has(projectId)) {
+        return adapterCache.get(projectId);
+      }
+
+      const adapter = createIndexedDBStorageAdapter(projectId);
+      await adapter.init();
+
+      adapterCache.set(projectId, adapter);
       return adapter;
+    },
+    // No-op cleanup functions for web consistency
+    async clearProject(projectId) {
+      if (adapterCache.has(projectId)) {
+        adapterCache.delete(projectId);
+      }
+    },
+    async clearAll() {
+      adapterCache.clear();
     },
   };
 };

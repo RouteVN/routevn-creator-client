@@ -3,8 +3,12 @@
 /**
  * IndexedDB Repository Adapter for web environment
  */
-export const createIndexeddbRepositoryAdapter = () => {
-  const DB_NAME = "RouteVNRepository";
+export const createIndexeddbRepositoryAdapter = (projectId) => {
+  if (!projectId) {
+    throw new Error("A projectId is required for the web repository adapter.");
+  }
+
+  const DB_NAME = `RouteVNRepository_${projectId}`;
   const STORE_NAME = "actionStream";
   let db = null;
 
