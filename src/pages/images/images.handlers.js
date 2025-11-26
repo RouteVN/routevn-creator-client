@@ -101,24 +101,47 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await repository.addEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "images",
-      value: {
-        fileId: uploadResult.fileId,
-        name: uploadResult.displayName,
-        fileType: uploadResult.file.type,
-        fileSize: uploadResult.file.size,
-        width: uploadResult.dimensions.width,
-        height: uploadResult.dimensions.height,
-      },
-      options: {
-        id: selectedItem.id,
-        replace: false,
-      },
-    },
-  });
+
+  // ProjectService.js
+  const createProjectService = () => {
+    const updateImage = async (id, image) => {
+      await repository.addEvent({
+        type: "treeUpdate",
+        payload: {
+          target: "images",
+          value: image,
+          options: {
+            id,
+            replace: false,
+          },
+        },
+      });
+    }
+    return {
+      updateImage
+    }
+  }
+
+  // await repository.addEvent({
+  //   type: "treeUpdate",
+  //   payload: {
+  //     target: "images",
+  //     value: {
+  //       fileId: uploadResult.fileId,
+  //       name: uploadResult.displayName,
+  //       fileType: uploadResult.file.type,
+  //       fileSize: uploadResult.file.size,
+  //       width: uploadResult.dimensions.width,
+  //       height: uploadResult.dimensions.height,
+  //     },
+  //     options: {
+  //       id: selectedItem.id,
+  //       replace: false,
+  //     },
+  //   },
+  // });
+
+  projectService.updateImage(selectedItem.id, uploadResult)
 
   // Update the store with the new repository state
   const { images } = repository.getState();
