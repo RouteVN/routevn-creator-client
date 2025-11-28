@@ -233,7 +233,9 @@ const renderLayoutPreview = async (deps) => {
   const finalElements = parseAndRender(elementsToRender, data);
   console.log("Final elements:", finalElements);
 
-  const parsed = drenderer.parse(renderStateElements);
+  const parsedState = drenderer.parse({
+    elements: renderStateElements,
+  });
 
   if (!selectedItem) {
     drenderer.render({
@@ -243,7 +245,10 @@ const renderLayoutPreview = async (deps) => {
     return;
   }
 
-  const result = calculateAbsolutePosition(parsed, selectedItem.id);
+  const result = calculateAbsolutePosition(
+    parsedState.elements,
+    selectedItem.id,
+  );
 
   if (result) {
     const redDot = {
