@@ -1,5 +1,4 @@
 import createRouteGraphics, {
-  parse,
   createAssetBufferManager,
   textPlugin,
   rectPlugin,
@@ -44,6 +43,8 @@ export const create2dRenderer = async ({ subject }) => {
         height: 1080,
         plugins,
       });
+
+      console.log("app.parse", app.parse);
 
       app.assignStageEvent("globalpointermove", (event) => {
         subject.dispatch("2drendererEvent", {
@@ -93,7 +94,7 @@ export const create2dRenderer = async ({ subject }) => {
       };
     },
     render: (payload) => app.render(payload),
-    parse: parse,
+    parse: (payload) => app.parse(payload),
     destroy: () => {
       if (!app) {
         return;
