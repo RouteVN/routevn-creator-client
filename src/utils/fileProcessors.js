@@ -55,9 +55,8 @@ export const validateIconDimensions = async (file) => {
 // Audio waveform extraction and processing utilities
 export const extractWaveformData = async (audioFile, samples = 1000) => {
   try {
-    const audioContext = new (
-      window.AudioContext || window.webkitAudioContext
-    )();
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
     const arrayBuffer = await audioFile.arrayBuffer();
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 

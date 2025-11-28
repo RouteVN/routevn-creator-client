@@ -2,7 +2,6 @@ import { nanoid } from "nanoid";
 import { toFlatItems } from "../../deps/repository";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
 import { filter, tap, debounceTime, groupBy, mergeMap } from "rxjs";
-import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 // Helper function to create assets object from file references
 async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
@@ -39,7 +38,7 @@ async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
           });
       }
 
-      assets[`file:${fileId}`] = {
+      assets[fileId] = {
         url,
         type: type || "image/png", // fallback to image/png
       };
@@ -52,18 +51,20 @@ async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
 }
 
 // Helper function to render the scene state
-async function renderSceneState(store, drenderer, fileManager) {
-  const renderState = store.selectRenderState();
-  const fileReferences = extractFileIdsFromRenderState(renderState);
-  const repositoryState = store.selectRepositoryState();
-  const projectData = constructProjectData(repositoryState);
-  const assets = await createAssetsFromFileIds(
-    fileReferences,
-    fileManager,
-    projectData.resources,
-  );
-  await drenderer.loadAssets(assets);
-  drenderer.render(renderState);
+async function renderSceneState(store, drenderer) {
+  const projectData = store.selectProjectData();
+  drenderer.engineRenderCurrentState();
+  const sectionId = store.selectSelectedSectionId();
+  const lineId = store.selectSelectedLineId();
+  drenderer.engineHandleActions({
+    updateProjectData: {
+      projectData,
+    },
+    jumpToLine: {
+      sectionId,
+      lineId,
+    },
+  });
 }
 
 export const handleBeforeMount = (deps) => {
@@ -104,15 +105,23 @@ export const handleAfterMount = async (deps) => {
     }
   }
 
-  // Initialize drenderer with canvas
   const { canvas } = getRefIds();
   await drenderer.init({ canvas: canvas.elm });
 
-  // Get fileManager for this project
+  const projectData = store.selectProjectData();
+  drenderer.initRouteEngine(projectData);
   const fileManager = await fileManagerFactory.getByProject(p);
-  // Render the canvas with the initial selected line's actions data
-  await renderSceneState(store, drenderer, fileManager);
-
+  // TODO don't load all data... only ones necessary for this scene
+  const fileReferences = extractFileIdsFromRenderState(projectData);
+  const assets = await createAssetsFromFileIds(
+    fileReferences,
+    fileManager,
+    projectData.resources,
+  );
+  await drenderer.loadAssets(assets);
+  // don't know why but it needs to be called twice the first time to work...
+  renderSceneState(store, drenderer, fileManager);
+  renderSceneState(store, drenderer, fileManager);
   render();
 };
 

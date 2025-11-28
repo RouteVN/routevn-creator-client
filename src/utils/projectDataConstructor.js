@@ -233,10 +233,9 @@ export function constructProjectData(state, options = {}) {
       initialSceneId: getInitialSceneId(state.scenes, state.story),
       scenes: constructStory(state.scenes),
     },
-    i18n: {
-      defaultPackId: "english",
-      packs: {
-        english: {
+    l10n: {
+      packages: {
+        abcd: {
           label: "English",
           lang: "en",
           keys: {},
