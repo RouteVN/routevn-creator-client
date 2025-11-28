@@ -44,8 +44,6 @@ export const create2dRenderer = async ({ subject }) => {
         plugins,
       });
 
-      console.log("app.parse", app.parse);
-
       app.assignStageEvent("globalpointermove", (event) => {
         subject.dispatch("2drendererEvent", {
           x: Math.round(event.global.x),
