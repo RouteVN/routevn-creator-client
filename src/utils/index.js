@@ -78,7 +78,7 @@ export const layoutTreeStructureToRenderState = (
       scaleX: node.scaleX ?? 1,
       scaleY: node.scaleY ?? 1,
       rotation: node.rotation ?? 0,
-      eventPayload: node.eventPayload,
+      // eventPayload: node.eventPayload,
     };
 
     if (element.eventPayload) {
@@ -181,7 +181,7 @@ export const layoutTreeStructureToRenderState = (
         // node.imageId contains an imageId, so we need to look up the image
         const image = imageItems[node.imageId];
         if (image && image.fileId) {
-          element.src = `file:${image.fileId}`;
+          element.src = `${image.fileId}`;
         }
       }
       if (node.hoverImageId && imageItems) {
@@ -189,7 +189,7 @@ export const layoutTreeStructureToRenderState = (
         const hoverImage = imageItems[node.hoverImageId];
         if (hoverImage && hoverImage.fileId) {
           element.hover = {
-            src: `file:${hoverImage.fileId}`,
+            src: `${hoverImage.fileId}`,
           };
         }
       }
@@ -198,7 +198,7 @@ export const layoutTreeStructureToRenderState = (
         const clickImage = imageItems[node.clickImageId];
         if (clickImage && clickImage.fileId) {
           element.click = {
-            src: `file:${clickImage.fileId}`,
+            src: `${clickImage.fileId}`,
           };
         }
       }

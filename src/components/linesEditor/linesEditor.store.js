@@ -154,7 +154,10 @@ export const selectViewData = ({ state, props }) => {
     }
 
     // Check for Dialogue Layout
-    if (line.actions?.dialogue?.layoutId || line.actions?.dialogue?.clear) {
+    if (
+      line.actions?.dialogue?.gui?.resourceId ||
+      line.actions?.dialogue?.clear
+    ) {
       hasDialogueLayout = true;
     }
 

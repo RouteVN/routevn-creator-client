@@ -207,7 +207,8 @@ export const selectActionsData = ({ props, state }) => {
 
   if (presentationState.dialogue) {
     actionsObject.dialogue = presentationState.dialogue;
-    preview.dialogue = layoutsTree.items[presentationState.dialogue.layoutId];
+    preview.dialogue =
+      layoutsTree.items[presentationState.dialogue.gui?.resourceId];
   }
 
   if (actions.choice) {

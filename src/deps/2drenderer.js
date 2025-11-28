@@ -105,6 +105,7 @@ export const create2dRenderer = async () => {
 
     engineRenderCurrentState: () => {
       const renderState = engine.selectRenderState();
+      console.log("renderState", renderState);
       routeGraphics.render(renderState);
     },
 
