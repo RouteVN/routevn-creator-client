@@ -52,8 +52,6 @@ template:
               - rvn-screens: []
             $elif currentRoutePattern == "/project/resources/choices":
               - rvn-choices: []
-            $elif currentRoutePattern == "/project/resources/dialogue":
-              - rvn-dialogue: []
             $elif currentRoutePattern == "/project/resources/variables":
               - rvn-variables: []
             $elif currentRoutePattern == "/project/scenes":

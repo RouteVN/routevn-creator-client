@@ -1,8 +1,8 @@
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
-  if (props?.dialogue?.layoutId) {
-    store.setSelectedLayoutId({
-      layoutId: props.dialogue.layoutId,
+  if (props?.dialogue?.gui?.resourceId) {
+    store.setSelectedResource({
+      resourceId: props.dialogue.gui.resourceId,
     });
   }
 
@@ -21,7 +21,7 @@ export const handleFormChange = (deps, payload) => {
     return;
   }
 
-  store.setSelectedLayoutId({ layoutId: formValues.layoutId });
+  store.setSelectedResource({ resourceId: formValues.resourceId });
   store.setSelectedCharacterId({ characterId: formValues.characterId });
 
   render();
@@ -29,16 +29,18 @@ export const handleFormChange = (deps, payload) => {
 
 export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent } = deps;
-  const { selectedLayoutId, selectedCharacterId } = store.getState();
+  const { selectedResourceId, selectedCharacterId } = store.getState();
 
   // Create dialogue object with only non-empty values
   const dialogue = {
     mode: "adv",
   };
-  if (!selectedLayoutId) {
+  if (!selectedResourceId) {
     dialogue.clear = true;
   }
-  dialogue.layoutId = selectedLayoutId;
+  dialogue.gui = {
+    resourceId: selectedResourceId,
+  };
   dialogue.characterId = selectedCharacterId;
 
   dispatchEvent(

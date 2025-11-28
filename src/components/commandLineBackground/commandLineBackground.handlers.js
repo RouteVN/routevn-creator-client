@@ -7,19 +7,14 @@ export const handleBeforeMount = (deps) => {
     return;
   }
 
-  const {
-    resourceId,
-    resourceType,
-    animations: backgroundAnimations,
-  } = props.background;
+  const { resourceId, animations: backgroundAnimations } = props.background;
 
-  if (!resourceId || !resourceType) {
+  if (!resourceId) {
     return;
   }
 
   store.setSelectedResource({
     resourceId,
-    resourceType,
   });
 
   // Set the selected animation if it exists
@@ -149,7 +144,6 @@ export const handleSubmitClick = (deps) => {
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
-    resourceType: selectedResource?.resourceType,
   };
 
   // Only add animations object if there's a valid animation selected
@@ -186,7 +180,6 @@ export const handleBackgroundImageClick = (deps) => {
   if (selectedResource) {
     store.setTempSelectedResource({
       resourceId: selectedResource.resourceId,
-      resourceType: selectedResource.resourceType,
     });
   }
 
@@ -226,25 +219,29 @@ export const handleButtonSelectClick = async (deps) => {
   }
 
   let fileId;
-  if (tempSelectedResourceType === "image") {
-    const { images } = repository.getState();
-    const tempSelectedImage = toFlatItems(images).find(
-      (image) => image.id === tempSelectedResourceId,
-    );
-    fileId = tempSelectedImage?.fileId;
-  } else if (tempSelectedResourceType === "layout") {
+  // if (tempSelectedResourceType === "image") {
+  const { images } = repository.getState();
+  const tempSelectedImage = toFlatItems(images).find(
+    (image) => image.id === tempSelectedResourceId,
+  );
+  fileId = tempSelectedImage?.fileId;
+  // } else if (tempSelectedResourceType === "layout") {
+  if (!fileId) {
     const { layouts } = repository.getState();
     const tempSelectedLayout = toFlatItems(layouts).find(
       (layout) => layout.id === tempSelectedResourceId,
     );
     fileId = tempSelectedLayout?.thumbnailFileId;
-  } else if (tempSelectedResourceType === "video") {
+  }
+  // } else if (tempSelectedResourceType === "video") {
+  if (!fileId) {
     const { videos } = repository.getState();
     const tempSelectedVideo = toFlatItems(videos).find(
       (video) => video.id === tempSelectedResourceId,
     );
     fileId = tempSelectedVideo?.fileId;
   }
+  // }
 
   store.setSelectedResource({
     resourceId: tempSelectedResourceId,

@@ -29,7 +29,6 @@ export const selectCurrentRoutePattern = (state) => {
     "/project/resources/typography",
     "/project/resources/screens",
     "/project/resources/choices",
-    "/project/resources/dialogue",
     "/project/resources/variables",
     "/project/scenes",
     "/project/scene-editor",
