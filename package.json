@@ -32,8 +32,8 @@
     "watch:web": "rtgl fe watch -s src/setup.web.js",
     "watch:tauri": "rtgl fe watch -s src/setup.tauri.js",
     "serve": "bunx serve _site -p 3001",
-    "lint": "oxlint && bunx prettier --check src",
-    "lint:fix": "oxlint && bunx prettier --check --write src",
+    "lint": "oxlint && bun prettier --check src",
+    "lint:fix": "oxlint && bun prettier --check --write src",
     "prepare": "husky",
     "tauri": "tauri",
     "tauri:dev:win": "tauri dev --target x86_64-pc-windows-gnu",
@@ -44,11 +44,12 @@
     "@tauri-apps/cli": "^2.8.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
-    "oxlint": "^1.19.0"
+    "oxlint": "^1.19.0",
+    "prettier": "3.6.2"
   },
   "lint-staged": {
     "src/**/*.{js}": [
-      "oxlint && bunx prettier --write"
+      "oxlint && bun prettier --write"
     ]
   }
 }
