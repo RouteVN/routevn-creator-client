@@ -1,7 +1,3 @@
-import {
-  constructPresentationState,
-  constructRenderState,
-} from "route-engine-js";
 import { toFlatItems, toTreeStructure } from "../../deps/repository";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
@@ -248,111 +244,8 @@ export const setLineTextContent = (state, { lineId, content }) => {
   line.actions.dialogue.content = content;
 };
 
-export const selectPresentationState = ({ state }) => {
-  const scene = selectScene({ state });
-  if (!scene) return null;
-
-  const currentSection = scene.sections.find(
-    (section) => section.id === state.selectedSectionId,
-  );
-
-  const selectedLineIndex = currentSection?.lines?.findIndex(
-    (line) => line.id === state.selectedLineId,
-  );
-
-  // If selected line not found, default to all lines
-  const endIndex =
-    selectedLineIndex !== -1
-      ? selectedLineIndex + 1
-      : currentSection?.lines?.length || 0;
-  const linesUpToSelectedLine = currentSection?.lines?.slice(0, endIndex) || [];
-
-  // console.log("linesUpToSelectedLine", linesUpToSelectedLine);
-
-  const presentationState = constructPresentationState(
-    linesUpToSelectedLine.map((line) => structuredClone(line.actions)),
-  );
-
-  return presentationState;
-};
-
-export const selectRenderState = ({ state }) => {
-  const presentationState = selectPresentationState({ state });
-  if (!presentationState) return null;
-
-  const projectData = constructProjectData(state.repositoryState);
-  const resources = projectData.resources;
-
-  console.log("presentationState", presentationState);
-  console.log("resources", resources);
-
-  const renderState = constructRenderState({
-    presentationState,
-    screen: {
-      width: 1920,
-      height: 1080,
-      backgroundColor: "#cccccc",
-    },
-    resolveFile: (f) => `file:${f}`,
-    resources,
-    i18n: {},
-    systemState: {
-      pendingEffects: [],
-      variables: {},
-      saveData: {},
-      lastLineAction: undefined,
-      dialogueUIHidden: false,
-      autoMode: false,
-      skipMode: false,
-      currentLanguagePackId: "",
-      history: {
-        entries: [],
-      },
-      globalAudios: [],
-      historyEntryIndex: undefined,
-      currentMode: "main",
-      nextConfig: {},
-      modes: {
-        main: {
-          currentPointer: "read",
-          modals: [],
-          read: {
-            sectionId: "",
-            lineId: "",
-          },
-          history: {
-            sectionId: undefined,
-            lineId: undefined,
-            historyEntryIndex: undefined,
-          },
-        },
-        replay: {
-          currentPointer: "read",
-          modals: [],
-          read: {
-            sectionId: undefined,
-            lineId: undefined,
-          },
-          history: {
-            sectionId: undefined,
-            lineId: undefined,
-            historyEntryIndex: undefined,
-          },
-        },
-      },
-    },
-    systemStore: {
-      selectSaveDataPage: () => {},
-      selectAutoMode: () => {},
-      selectSkipMode: () => {},
-      selectCurrentLanguagePackId: () => {},
-      selectCurrentLanguagePackKeys: () => {},
-    },
-  });
-
-  console.log("renderState", renderState);
-
-  return renderState;
+export const selectProjectData = ({ state }) => {
+  return constructProjectData(state.repositoryState);
 };
 
 export const selectViewData = ({ state }) => {
@@ -432,7 +325,7 @@ export const selectViewData = ({ state }) => {
   }
 
   const repositoryState = selectRepositoryState({ state });
-  const presentationState = selectPresentationState({ state });
+  // const presentationState = selectPresentationState({ state });
 
   return {
     scene: scene,
@@ -440,7 +333,6 @@ export const selectViewData = ({ state }) => {
     currentLines: Array.isArray(currentSection?.lines)
       ? currentSection.lines
       : [],
-    presentationState,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: renameForm,
