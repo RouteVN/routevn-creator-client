@@ -1,18 +1,18 @@
 export const createInitialState = () => ({
   layouts: [],
-  selectedLayoutId: "",
+  selectedResourceId: "",
   characters: [],
   selectedCharacterId: "",
 
   defaultValues: {
-    layoutId: "",
+    resourceId: "",
     characterId: "",
   },
 
   form: {
     fields: [
       {
-        name: "layoutId",
+        name: "resourceId",
         inputType: "select",
         label: "Dialogue Layout",
         description: "",
@@ -41,9 +41,9 @@ export const setLayouts = (state, layouts) => {
   state.layouts = layouts;
 };
 
-export const setSelectedLayoutId = (state, { layoutId }) => {
-  state.selectedLayoutId = layoutId;
-  state.defaultValues.layoutId = layoutId;
+export const setSelectedResource = (state, { resourceId }) => {
+  state.selectedResourceId = resourceId;
+  state.defaultValues.resourceId = resourceId;
 };
 
 export const setSelectedCharacterId = (state, { characterId }) => {
@@ -83,11 +83,11 @@ export const selectViewData = ({ state, props }) => {
   const form = {
     ...state.form,
     fields: state.form.fields.map((field) => {
-      if (field.name === "layoutId") {
+      if (field.name === "resourceId") {
         return {
           ...field,
           options: layoutOptions,
-          value: state.selectedLayoutId,
+          value: state.selectedResourceId,
         };
       }
       if (field.name === "characterId") {
@@ -103,14 +103,14 @@ export const selectViewData = ({ state, props }) => {
 
   // Update default values with current selections
   const defaultValues = {
-    layoutId: state.selectedLayoutId,
+    resourceId: state.selectedResourceId,
     characterId: state.selectedCharacterId,
   };
 
   return {
     layouts: layoutOptions,
     characters: characterOptions,
-    selectedLayoutId: state.selectedLayoutId,
+    selectedResourceId: state.selectedResourceId,
     selectedCharacterId: state.selectedCharacterId,
     submitDisabled: false,
     breadcrumb,

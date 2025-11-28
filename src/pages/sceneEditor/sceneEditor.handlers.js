@@ -53,7 +53,6 @@ async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
 // Helper function to render the scene state
 async function renderSceneState(store, drenderer) {
   const projectData = store.selectProjectData();
-  drenderer.engineRenderCurrentState();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
   drenderer.engineHandleActions({
@@ -65,6 +64,7 @@ async function renderSceneState(store, drenderer) {
       lineId,
     },
   });
+  drenderer.engineRenderCurrentState();
 }
 
 export const handleBeforeMount = (deps) => {
@@ -121,7 +121,6 @@ export const handleAfterMount = async (deps) => {
   await drenderer.loadAssets(assets);
   // don't know why but it needs to be called twice the first time to work...
   renderSceneState(store, drenderer, fileManager);
-  renderSceneState(store, drenderer, fileManager);
   render();
 };
 
@@ -129,8 +128,6 @@ export const handleSectionTabClick = (deps, payload) => {
   const { store, render, subject } = deps;
   const id = payload._event.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
-
-  // Reset selected line to first line of new section
   const scene = store.selectScene();
   const newSection = scene.sections.find((section) => section.id === id);
   if (newSection && newSection.lines && newSection.lines.length > 0) {
@@ -138,10 +135,7 @@ export const handleSectionTabClick = (deps, payload) => {
   } else {
     store.setSelectedLineId(undefined);
   }
-
   render();
-
-  // Trigger debounced canvas render
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
@@ -206,7 +200,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
         ...submissionData,
         dialogue: {
           content: line.actions.dialogue.content,
-          layoutId: line.actions.dialogue.layoutId,
+          // layoutId: line.actions.dialogue.layoutId,
           ...submissionData.dialogue,
         },
       };
@@ -301,7 +295,9 @@ export const handleSectionAddClick = async (deps) => {
   const actions = dialogueLayoutId
     ? {
         dialogue: {
-          layoutId: dialogueLayoutId,
+          gui: {
+            resourceId: dialogueLayoutId,
+          },
           mode: "adv",
           content: [{ text: "" }],
         },
