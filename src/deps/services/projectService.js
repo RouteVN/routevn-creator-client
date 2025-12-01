@@ -358,6 +358,21 @@ export const createProjectService = ({ router, db, filePicker }) => {
       return repository.getEvents();
     },
 
+    // Version management
+    async addVersionToProject(projectId, version) {
+      const repository = await getRepositoryByProject(projectId);
+      const versions = (await repository.app.get("versions")) || [];
+      versions.unshift(version);
+      await repository.app.set("versions", versions);
+    },
+
+    async deleteVersionFromProject(projectId, versionId) {
+      const repository = await getRepositoryByProject(projectId);
+      const versions = (await repository.app.get("versions")) || [];
+      const newVersions = versions.filter((v) => v.id !== versionId);
+      await repository.app.set("versions", newVersions);
+    },
+
     // Initialize a new project at a given path
     async initializeProject({ name, description, projectPath, template }) {
       if (!template) {

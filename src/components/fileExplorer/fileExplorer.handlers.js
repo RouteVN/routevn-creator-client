@@ -16,6 +16,7 @@ const lodashGet = (obj, path, defaultValue) => {
 // Forward click-item event from base component
 export const handleClickItem = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
+  await projectService.ensureRepository();
   const state = projectService.getState();
   const { id } = payload._event.detail;
 
@@ -48,6 +49,7 @@ export const handleClickItem = async (deps, payload) => {
 
 export const handleDblClickItem = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
+  await projectService.ensureRepository();
   const state = projectService.getState();
   const { itemId } = payload._event.detail;
 
@@ -86,6 +88,7 @@ export const handlePageItemClick = (deps, payload) => {
 
 export const handleFileAction = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
+  await projectService.ensureRepository();
   const detail = payload._event.detail;
   const repositoryTarget = props.repositoryTarget;
 
@@ -270,6 +273,7 @@ export const handleFileAction = async (deps, payload) => {
 
 export const handleTargetChanged = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
+  await projectService.ensureRepository();
   const repositoryTarget = props.repositoryTarget;
 
   if (!repositoryTarget) {
@@ -321,10 +325,8 @@ export const handleTargetChanged = async (deps, payload) => {
     type: "treeMove",
     payload: {
       target: repositoryTarget,
-      value: {
-        id: source.id,
-      },
       options: {
+        id: source.id,
         parent: parent,
         position: repositoryPosition,
       },

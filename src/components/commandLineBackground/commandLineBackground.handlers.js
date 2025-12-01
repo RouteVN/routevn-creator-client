@@ -26,11 +26,10 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, render } = deps;
+  const { projectService, store, render } = deps;
 
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { images, layouts, videos, animations } = repository.getState();
+  await projectService.ensureRepository();
+  const { images, layouts, videos, animations } = projectService.getState();
 
   store.setRepositoryState({
     images,
@@ -65,10 +64,9 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
 };
 
 export const handleImageSelected = async (deps, payload) => {
-  const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const { images } = repository.getState();
+  const { store, render, projectService } = deps;
+  await projectService.ensureRepository();
+  const { images } = projectService.getState();
 
   const { imageId } = payload._event.detail;
 
@@ -82,11 +80,7 @@ export const handleImageSelected = async (deps, payload) => {
   const flatImageItems = toFlatItems(images);
   const existingImage = flatImageItems.find((item) => item.id === imageId);
 
-  // Get fileManager for this project
-  const fileManager = await fileManagerFactory.getByProject(projectId);
-  await fileManager.getFileContent({
-    fileId: existingImage.fileId,
-  });
+  await projectService.getFileContent(existingImage.fileId);
 
   render();
 };
@@ -208,9 +202,8 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
 };
 
 export const handleButtonSelectClick = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
+  const repository = await projectService.getRepository();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
   const tempSelectedResourceType = store.selectTab();
 

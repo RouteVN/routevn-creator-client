@@ -69,27 +69,21 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileReferences, fontsItems) => {
-  const { fileManagerFactory, router } = deps;
-  const { p } = router.getPayload();
+  const { projectService } = deps;
   const assets = {};
-
-  // Get fileManager for this project
-  const fileManager = await fileManagerFactory.getByProject(p);
 
   for (const fileObj of fileReferences) {
     const { url: fileId, type: fileType } = fileObj;
 
     // Check cache first
     let url;
-    const cacheKey = `${fileId}_${p}`;
+    const cacheKey = fileId;
 
     if (fileContentCache.has(cacheKey)) {
       url = fileContentCache.get(cacheKey);
     } else {
       // Fetch from API if not in cache
-      const result = await fileManager.getFileContent({
-        fileId: fileId,
-      });
+      const result = await projectService.getFileContent(fileId);
       url = result.url;
       // Store in cache for future use
       fileContentCache.set(cacheKey, url);
@@ -135,9 +129,8 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
  * @returns {Object} Render state data
  */
 const getRenderState = async (deps) => {
-  const { store, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, projectService } = deps;
+  const repository = await projectService.getRepository();
   const {
     layouts,
     images: { items: imageItems },
@@ -292,10 +285,10 @@ const renderLayoutPreview = async (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { router, store, repositoryFactory, render, getRefIds, drenderer } =
+  const { appService, store, projectService, render, getRefIds, drenderer } =
     deps;
-  const { layoutId, p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { layoutId } = appService.getPayload();
+  const repository = await projectService.getRepository();
   const { layouts, images, typography, colors, fonts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setLayout({ id: layoutId, layout });
@@ -313,13 +306,10 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleBackClick = (deps) => {
-  const { subject, router } = deps;
+  const { appService } = deps;
 
-  const currentPayload = router.getPayload();
-  subject.dispatch("redirect", {
-    path: "/project/resources/layouts",
-    payload: currentPayload,
-  });
+  const { p } = appService.getPayload();
+  appService.navigate("/project/resources/layouts", { p });
 };
 
 // Simple render handler for events that only need to trigger a re-render
@@ -338,9 +328,9 @@ export const handleTargetChanged = handleRenderOnly;
 export const handleAddLayoutClick = handleRenderOnly;
 
 export const handleDataChanged = async (deps) => {
-  const { router, store, repositoryFactory, render } = deps;
-  const { layoutId, p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { appService, store, projectService, render } = deps;
+  const { layoutId } = appService.getPayload();
+  const repository = await projectService.getRepository();
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
   store.setItems(layout?.elements || { items: {}, tree: [] });
@@ -477,9 +467,8 @@ export const handleArrowKeyDown = async (deps, payload) => {
  * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
  */
 async function handleDebouncedUpdate(deps, payload) {
-  const { repositoryFactory, router, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService, store } = deps;
+  const repository = await projectService.getRepository();
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
   // Save to repository
@@ -504,7 +493,8 @@ async function handleDebouncedUpdate(deps, payload) {
 }
 
 export const subscriptions = (deps) => {
-  const { subject, isInputFocused } = deps;
+  const { subject, appService } = deps;
+  const { isInputFocused } = appService;
   return [
     fromEvent(window, "keydown").pipe(
       filter((e) => {

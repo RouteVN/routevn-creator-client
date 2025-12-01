@@ -33,6 +33,7 @@ const getFileIdFromProps = (attrs, projectService) => {
 export const handleAfterMount = async (deps) => {
   const { store, attrs, projectService, render } = deps;
 
+  await projectService.ensureRepository();
   const fileId = getFileIdFromProps(attrs, projectService);
 
   if (!fileId) {
@@ -54,6 +55,7 @@ export const handleAfterMount = async (deps) => {
 export const handleOnUpdate = async (deps, payload) => {
   const { store, projectService, render } = deps;
 
+  await projectService.ensureRepository();
   const { newAttrs: attrs } = payload;
   const fileId = getFileIdFromProps(attrs, projectService);
 

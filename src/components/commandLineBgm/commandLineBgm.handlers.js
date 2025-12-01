@@ -1,10 +1,9 @@
 import { toFlatItems } from "insieme";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { audio } = repository.getState();
+  const { projectService, store, props, render } = deps;
+  await projectService.ensureRepository();
+  const { audio } = projectService.getState();
 
   store.setRepositoryState({
     audio,
@@ -100,12 +99,10 @@ export const handleResourceItemClick = (deps, payload) => {
 };
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
-  const { store, render, downloadWaveformData, repositoryFactory, router } =
-    deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, downloadWaveformData, projectService } = deps;
+  await projectService.ensureRepository();
   const itemId = payload._event.detail.id;
-  const { audio } = repository.getState();
+  const { audio } = projectService.getState();
 
   store.setTempSelectedResource({
     resourceId: itemId,
@@ -171,10 +168,9 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
 };
 
 export const handleButtonSelectClick = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { audio } = repository.getState();
+  const { store, render, projectService } = deps;
+  await projectService.ensureRepository();
+  const { audio } = projectService.getState();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
 
   if (!tempSelectedResourceId) {

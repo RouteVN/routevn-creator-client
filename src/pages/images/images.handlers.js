@@ -50,8 +50,9 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 
 export const handleFileExplorerDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { images } = projectService.getState();
-  store.setItems(images);
+  const repository = await projectService.getRepository();
+  const state = repository.getState();
+  store.setItems(state.images);
   render();
 };
 

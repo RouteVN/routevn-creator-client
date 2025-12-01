@@ -1,10 +1,9 @@
 import { toFlatItems } from "insieme";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { characters, transforms } = repository.getState();
+  const { projectService, store, props, render } = deps;
+  await projectService.ensureRepository();
+  const { characters, transforms } = projectService.getState();
   store.setItems({
     items: characters || { tree: [], items: {} },
   });

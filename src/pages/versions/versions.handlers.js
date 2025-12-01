@@ -25,7 +25,7 @@ export const handleVersionFormClose = (deps) => {
 };
 
 export const handleVersionFormAction = async (deps, payload) => {
-  const { store, render, projectService, projectsService, appService } = deps;
+  const { store, render, projectService, appService } = deps;
   const { p } = appService.getPayload();
   const actionId = payload._event.detail.actionId;
 
@@ -49,7 +49,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     };
 
     // Save version to project
-    await projectsService.addVersionToProject(p, newVersion);
+    await projectService.addVersionToProject(p, newVersion);
 
     // Update UI
     store.addVersion(newVersion);
@@ -179,7 +179,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, projectsService, appService } = deps;
+  const { store, render, projectService, appService } = deps;
   const detail = payload._event.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
@@ -219,7 +219,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { p } = appService.getPayload();
 
   // Delete the version entry using service
-  await projectsService.deleteVersionFromProject(p, versionId);
+  await projectService.deleteVersionFromProject(p, versionId);
 
   // Update store by removing from current versions
   store.deleteVersion(versionId);

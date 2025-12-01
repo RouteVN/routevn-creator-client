@@ -155,7 +155,7 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characterSprites",
     selectedItemId: state.selectedItemId,
-    repositoryTarget: "character.sprites",
+    repositoryTarget: `characters.items.${state.characterId}.sprites`,
     form,
     context: state.context,
     defaultValues,

@@ -74,6 +74,7 @@ const componentDependencies = {
   drenderer: graphicsService,
   appService,
   projectService,
+  audioService,
 };
 
 const pageDependencies = {
@@ -82,6 +83,9 @@ const pageDependencies = {
   drenderer: graphicsService,
   appService,
   projectService,
+  appVersion,
+  updaterService: updater,
+  openUrl,
 };
 
 const deps = {
