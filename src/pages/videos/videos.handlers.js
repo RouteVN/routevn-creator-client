@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 
 export const handleAfterMount = async (deps) => {
   const { store, repositoryFactory, router, render } = deps;

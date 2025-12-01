@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "../../deps/repository";
+import { toFlatGroups, toFlatItems } from "insieme";
 
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({

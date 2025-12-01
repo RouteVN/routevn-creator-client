@@ -422,10 +422,11 @@
               "type": "sprite",
               "anchorX": 0,
               "anchorY": 0,
-              "eventName": "system",
-              "eventPayload": {
-                "actions": {
-                  "nextLine": {}
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "nextLine": {}
+                  }
                 }
               },
               "height": 1080,
@@ -485,8 +486,10 @@
               "x": 0,
               "y": 0,
               "eventName": "system",
-              "eventPayload": {
-                "actions": "${item.events.click.actions}"
+              "click": {
+                "actionPayload": {
+                  "actions": "${item.events.click.actions}"
+                }
               },
               "width": 1400,
               "height": 100,

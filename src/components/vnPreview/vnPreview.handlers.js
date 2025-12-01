@@ -8,18 +8,13 @@ import { extractFileIdsFromRenderState } from "../../utils/index.js";
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileReferences) => {
-  const { fileManagerFactory, router } = deps;
-  const { p } = router.getPayload();
+  const { projectService } = deps;
   const assets = {};
-
-  const fileManager = await fileManagerFactory.getByProject(p);
 
   for (const fileObj of fileReferences) {
     const { url: fileId, type } = fileObj;
-    const result = await fileManager.getFileContent({
-      fileId: fileId,
-    });
-    assets[`file:${fileId}`] = {
+    const result = await projectService.getFileContent(fileId);
+    assets[fileId] = {
       url: result.url,
       type: type || result.type || "image/png",
     };
@@ -43,17 +38,36 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { router, repositoryFactory, drenderer, getRefIds, attrs } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const state = repository.getState();
+  const { projectService, graphicsService, getRefIds, attrs } = deps;
+  console.log("vnPreview: handleAfterMount started");
+  console.log("vnPreview: attrs", attrs);
+
+  await projectService.ensureRepository();
+  const state = projectService.getState();
+  console.log("vnPreview: repository state", state);
+
   const { canvas } = getRefIds();
-  await drenderer.init({ canvas: canvas.elm });
+  console.log("vnPreview: canvas", canvas);
+
+  await graphicsService.init({ canvas: canvas.elm });
+  console.log("vnPreview: graphicsService initialized");
+
   const projectData = constructProjectData(state, {
     initialSceneId: attrs["scene-id"],
   });
+  console.log("vnPreview: projectData", projectData);
+
   const fileReferences = extractFileIdsFromRenderState(projectData.resources);
+  console.log("vnPreview: fileReferences", fileReferences);
+
   const assets = await loadAssets(deps, fileReferences);
-  await drenderer.loadAssets(assets);
-  await drenderer.initRouteEngine(projectData);
+  console.log("vnPreview: assets loaded", assets);
+
+  await graphicsService.loadAssets(assets);
+  console.log("vnPreview: graphicsService assets loaded");
+
+  await graphicsService.initRouteEngine(projectData);
+  console.log("vnPreview: graphicsService initRouteEngine complete");
+
+  graphicsService.engineRenderCurrentState();
 };

@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "../../deps/repository";
+import { toFlatGroups, toFlatItems } from "insieme";
 import { formatFileSize } from "../../utils/index.js";
 
 const form = {
@@ -64,8 +64,8 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setSearchQuery = (state, { query }) => {
-  state.searchQuery = query;
+export const setSearchQuery = (state, { value }) => {
+  state.searchQuery = value || "";
 };
 
 export const showFullImagePreview = (state, { itemId }) => {
@@ -86,7 +86,7 @@ export const hideFullImagePreview = (state) => {
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.imagesData);
   const rawFlatGroups = toFlatGroups(state.imagesData);
-  const searchQuery = state.searchQuery.toLowerCase();
+  const searchQuery = (state.searchQuery || "").toLowerCase();
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {

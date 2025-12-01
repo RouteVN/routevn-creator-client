@@ -20,19 +20,16 @@ const hexToBase64Image = (hex) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { colors } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { colors } = projectService.getState();
   store.setItems(colors);
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { colors } = repository.getState();
+  const { store, render, projectService } = deps;
+  const { colors } = projectService.getState();
   store.setItems(colors);
   render();
 };
@@ -89,12 +86,10 @@ export const handleColorItemClick = (deps, payload) => {
 };
 
 export const handleColorCreated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { groupId, name, hex } = payload._event.detail;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: "colors",
@@ -111,7 +106,7 @@ export const handleColorCreated = async (deps, payload) => {
     },
   });
 
-  const { colors } = repository.getState();
+  const { colors } = projectService.getState();
   store.setItems(colors);
   render();
 };
@@ -131,10 +126,8 @@ export const handleColorEdited = (deps, payload) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "colors",
@@ -148,7 +141,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { colors } = repository.getState();
+  const { colors } = projectService.getState();
   store.setItems(colors);
 
   // Update context if hex value changed
@@ -185,16 +178,14 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
     const editItemId = store.getState().editItemId;
 
     // Update the color in the repository
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treeUpdate",
       payload: {
         target: "colors",
@@ -209,7 +200,7 @@ export const handleEditFormAction = async (deps, payload) => {
       },
     });
 
-    const { colors } = repository.getState();
+    const { colors } = projectService.getState();
     store.setItems(colors);
 
     // Update context if this is the selected item
@@ -245,9 +236,7 @@ export const handleAddDialogClose = (deps) => {
 };
 
 export const handleAddFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
@@ -255,7 +244,7 @@ export const handleAddFormAction = async (deps, payload) => {
     const newColorId = nanoid();
 
     // Create the color in the repository
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "colors",
@@ -272,7 +261,7 @@ export const handleAddFormAction = async (deps, payload) => {
       },
     });
 
-    const { colors } = repository.getState();
+    const { colors } = projectService.getState();
     store.setItems(colors);
     store.closeAddDialog();
     render();
@@ -294,13 +283,11 @@ export const handleGroupToggle = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -311,7 +298,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

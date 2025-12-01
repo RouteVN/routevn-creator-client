@@ -1,16 +1,15 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { images } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { images } = projectService.getState();
   store.setItems(images);
   render();
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, projectService } = deps;
   const { id, item, isFolder } = payload._event.detail;
 
   // If this is a folder, clear selection and context
@@ -29,11 +28,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If we have item data with fileId, set up media context for preview
   if (item && item.fileId) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId: item.fileId,
-    });
+    const { url } = await projectService.getFileContent(item.fileId);
 
     store.setContext({
       fileId: {
@@ -54,26 +49,15 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 };
 
 export const handleFileExplorerDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { images } = repository.getState();
-  store.setItems(images);
+  const { store, render, projectService } = deps;
+  const repository = await projectService.getRepository();
+  const state = repository.getState();
+  store.setItems(state.images);
   render();
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const {
-    repositoryFactory,
-    router,
-    store,
-    render,
-    filePicker,
-    fileManagerFactory,
-  } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { appService, projectService, store, render } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -81,7 +65,7 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const files = await filePicker.open({
+  const files = await appService.pickFiles({
     accept: "image/*",
     multiple: false,
   });
@@ -92,7 +76,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await fileManager.upload([file]);
+  const uploadedFiles = await projectService.uploadFiles([file]);
 
   // TODO improve error handling
   if (uploadedFiles.length === 0) {
@@ -101,7 +85,7 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "images",
@@ -121,7 +105,7 @@ export const handleFormExtraEvent = async (deps) => {
   });
 
   // Update the store with the new repository state
-  const { images } = repository.getState();
+  const { images } = projectService.getState();
   store.setContext({
     fileId: {
       src: uploadResult.downloadUrl,
@@ -132,7 +116,7 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleImageItemClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router, getRefIds } = deps;
+  const { store, render, projectService, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
   store.setSelectedItemId(itemId);
@@ -144,11 +128,7 @@ export const handleImageItemClick = async (deps, payload) => {
 
   const selectedItem = store.selectSelectedItem();
 
-  const { p: projectId } = router.getPayload();
-  const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { url } = await fileManager.getFileContent({
-    fileId: selectedItem.fileId,
-  });
+  const { url } = await projectService.getFileContent(selectedItem.fileId);
   store.setContext({
     fileId: {
       src: url,
@@ -159,18 +139,15 @@ export const handleImageItemClick = async (deps, payload) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { store, render, projectService } = deps;
   console.log(" payload._event.detail", payload._event.detail);
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await fileManager.upload(files);
+  const successfulUploads = await projectService.uploadFiles(files);
   for (const result of successfulUploads) {
     console.log("Uploaded file:", result);
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "images",
@@ -193,7 +170,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { images } = repository.getState();
+    const { images } = projectService.getState();
     store.setItems(images);
   }
 
@@ -201,10 +178,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "images",
@@ -218,19 +193,17 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { images } = repository.getState();
+  const { images } = projectService.getState();
   store.setItems(images);
   render();
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -241,7 +214,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

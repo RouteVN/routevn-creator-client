@@ -202,8 +202,8 @@ export const handleWindowMouseUp = (deps) => {
   const targetIndex = store.selectTargetDragIndex();
   const dropPosition = store.selectTargetDropPosition();
   const sourceId = store.selectSelectedItemId();
-  const targetItem = props.items[targetIndex];
-  const sourceItem = props.items.find((item) => item.id === sourceId);
+  const targetItem = props.items?.[targetIndex];
+  const sourceItem = props.items?.find((item) => item.id === sourceId);
   const forbiddenIndices = store.selectForbiddenIndices();
 
   if (forbiddenIndices.includes(targetIndex)) {

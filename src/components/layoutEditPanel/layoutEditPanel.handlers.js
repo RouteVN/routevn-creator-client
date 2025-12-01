@@ -6,10 +6,9 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { typography } = repository.getState();
+  const { projectService, store, render } = deps;
+  await projectService.ensureRepository();
+  const { typography } = projectService.getState();
 
   // Store raw typography data
   store.setTypographyData(typography || { items: {}, tree: [] });
@@ -19,7 +18,7 @@ export const handleAfterMount = async (deps) => {
 export const handleOnUpdate = (deps, payload) => {
   const { oldAttrs, newAttrs, newProps } = payload;
   const { store, render } = deps;
-  if (oldAttrs.key !== newAttrs.key) {
+  if (oldAttrs?.key !== newAttrs?.key) {
     store.setValues({
       values: newProps.values || {},
     });

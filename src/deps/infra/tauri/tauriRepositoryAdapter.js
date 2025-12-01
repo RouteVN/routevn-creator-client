@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
-import { loadTemplate, getTemplateFiles } from "../utils/templateLoader";
+import { loadTemplate, getTemplateFiles } from "../../../utils/templateLoader";
 
 /**
  * Initialize a new project with folder structure and database

@@ -1,17 +1,14 @@
 export const handleAfterMount = async (deps) => {
-  const { attrs, store, render, fileManagerFactory, router } = deps;
+  const { attrs, store, render, projectService } = deps;
 
   if (!attrs.waveformDataFileId) {
     return;
   }
 
   try {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-
-    const waveformData = await fileManager.downloadMetadata({
-      fileId: attrs.waveformDataFileId,
-    });
+    const waveformData = await projectService.downloadMetadata(
+      attrs.waveformDataFileId,
+    );
 
     store.setWaveformData(waveformData);
     store.setLoading(false);
@@ -22,28 +19,25 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleOnUpdate = async (deps) => {
-  const { attrs, store, render, fileManagerFactory, router } = deps;
+export const handleOnUpdate = async (deps, payload) => {
+  const { store, render, projectService } = deps;
+  const { newAttrs: attrs } = payload;
 
-  if (!attrs.waveformDataFileId) {
+  if (!attrs?.waveformDataFileId) {
     return;
   }
 
   store.setLoading(true);
 
   try {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-
-    const waveformData = await fileManager.downloadMetadata({
-      fileId: attrs.waveformDataFileId,
-    });
+    const waveformData = await projectService.downloadMetadata(
+      attrs.waveformDataFileId,
+    );
 
     store.setWaveformData(waveformData);
     store.setLoading(false);
     render();
   } catch {
-    // store.setError(true);
     store.setLoading(false);
     render();
   }

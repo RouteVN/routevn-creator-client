@@ -1,8 +1,7 @@
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { scenes } = repository.getState();
+  const { projectService, store, props, render } = deps;
+  await projectService.ensureRepository();
+  const { scenes } = projectService.getState();
 
   // Safe access to nested properties
   const sectionTransition = props?.sectionTransition;

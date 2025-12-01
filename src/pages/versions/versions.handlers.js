@@ -2,10 +2,8 @@ import { nanoid } from "nanoid";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, router, repositoryFactory } = deps;
-  const { p } = router.getPayload();
-  // TODO: replace with project key value store
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
+  const repository = await projectService.getRepository();
   const versions = (await repository.app.get("versions")) || [];
   store.setVersions(versions);
 
@@ -27,8 +25,8 @@ export const handleVersionFormClose = (deps) => {
 };
 
 export const handleVersionFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, projectsService } = deps;
-  const { p } = router.getPayload();
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "cancel") {
@@ -36,7 +34,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     render();
   } else if (actionId === "submit") {
     const formData = payload._event.detail.formValues;
-    const repository = await repositoryFactory.getByProject(p);
+    const repository = await projectService.getRepository();
 
     // Get current action count from repository
     const allEvents = repository.getEvents();
@@ -51,7 +49,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     };
 
     // Save version to project
-    await projectsService.addVersionToProject(p, newVersion);
+    await projectService.addVersionToProject(p, newVersion);
 
     // Update UI
     store.addVersion(newVersion);
@@ -90,19 +88,10 @@ export const handleDropdownMenuClose = (deps) => {
 };
 
 export const handleDownloadZipClick = async (deps, payload) => {
-  const {
-    store,
-    render,
-    router,
-    bundleService,
-    repositoryFactory,
-    fileManagerFactory,
-    globalUI,
-  } = deps;
+  const { store, render, projectService, appService } = deps;
 
   // Create bundle with transformed data
-  globalUI.showAlert({
-    message: `Please wait while the bundle is being created...`,
+  appService.showToast("Please wait while the bundle is being created...", {
     title: "Bundle in progress",
   });
 
@@ -123,10 +112,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
   store.closeDropdownMenu();
   render();
 
-  // Get project id from router
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const fileManager = await fileManagerFactory.getByProject(p);
+  const repository = await projectService.getRepository();
 
   // Get state at specific action
   const projectData = repository.getState(version.actionIndex);
@@ -152,7 +138,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
   const files = {};
   for (const fileId of fileIds) {
     try {
-      const content = await fileManager.getFileContent({ fileId });
+      const content = await projectService.getFileContent(fileId);
       const response = await fetch(content.url);
       const buffer = await response.arrayBuffer();
       files[fileId] = {
@@ -165,7 +151,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
   }
 
   // Create bundle with transformed data
-  const bundle = await bundleService.exportProject(transformedData, files);
+  const bundle = await projectService.exportProject(transformedData, files);
   const zipName = `${projectData.project.name}_${version.name}`;
 
   console.log(
@@ -174,28 +160,26 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
   // Create and download ZIP with bundle and static files using save dialog
   try {
-    const savedPath = await bundleService.createDistributionZip(
+    const savedPath = await projectService.createDistributionZip(
       bundle,
       zipName,
     );
     if (savedPath) {
       console.log(`✓ Distribution ZIP created and saved to: ${savedPath}`);
-      globalUI.closeAll();
     } else {
       // User cancelled the dialog
       console.log("Save dialog cancelled by user");
     }
   } catch (error) {
     console.error("Error saving ZIP with dialog:", error);
-    globalUI.showAlert({
-      message: `Failed to save ZIP file: ${error.message}`,
+    appService.showToast(`Failed to save ZIP file: ${error.message}`, {
       title: "Error",
     });
   }
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, projectsService, router } = deps;
+  const { store, render, projectService, appService } = deps;
   const detail = payload._event.detail;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
@@ -231,11 +215,11 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   store.closeDropdownMenu();
   render();
 
-  // Get project id from router
-  const { p } = router.getPayload();
+  // Get project id from appService
+  const { p } = appService.getPayload();
 
   // Delete the version entry using service
-  await projectsService.deleteVersionFromProject(p, versionId);
+  await projectService.deleteVersionFromProject(p, versionId);
 
   // Update store by removing from current versions
   store.deleteVersion(versionId);

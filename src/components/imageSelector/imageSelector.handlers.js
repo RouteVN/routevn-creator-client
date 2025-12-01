@@ -1,11 +1,9 @@
-export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const repositoryState = repository.getState();
+export const handleAfterMount = (deps) => {
+  const { store, projectService, render } = deps;
+  const state = projectService.getState();
 
   // Extract images from repository state (raw data)
-  const images = repositoryState.images || { items: {}, tree: [] };
+  const images = state.images || { items: {}, tree: [] };
 
   // Store raw images data - processing will happen in selectViewData
   store.setImages(images);
