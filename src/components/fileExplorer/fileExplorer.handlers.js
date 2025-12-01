@@ -16,7 +16,7 @@ const lodashGet = (obj, path, defaultValue) => {
 // Forward click-item event from base component
 export const handleClickItem = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
-  const state = await projectService.getState();
+  const state = projectService.getState();
   const { id } = payload._event.detail;
 
   // Get the clicked item from the repository based on repositoryTarget
@@ -48,7 +48,7 @@ export const handleClickItem = async (deps, payload) => {
 
 export const handleDblClickItem = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
-  const state = await projectService.getState();
+  const state = projectService.getState();
   const { itemId } = payload._event.detail;
 
   // Get the clicked item from the repository based on repositoryTarget
@@ -181,7 +181,7 @@ export const handleFileAction = async (deps, payload) => {
       });
     }
   } else if (item.value === "delete-item") {
-    const state = await projectService.getState();
+    const state = projectService.getState();
     const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
@@ -198,7 +198,7 @@ export const handleFileAction = async (deps, payload) => {
       });
     }
   } else if (item.value === "new-child-folder") {
-    const state = await projectService.getState();
+    const state = projectService.getState();
     const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
@@ -236,7 +236,7 @@ export const handleFileAction = async (deps, payload) => {
       },
     });
   } else if (item.value === "duplicate-item") {
-    const state = await projectService.getState();
+    const state = projectService.getState();
     const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;

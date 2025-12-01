@@ -2,7 +2,8 @@ import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
-  const state = await projectService.getState();
+  await projectService.ensureRepository();
+  const state = projectService.getState();
   const { project } = state;
   store.setProject(project);
   render();
@@ -20,13 +21,7 @@ export const handleFormChange = async (deps, payload) => {
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const {
-    appService,
-    projectService,
-    subject,
-    render,
-    store,
-  } = deps;
+  const { appService, projectService, subject, render, store } = deps;
 
   try {
     const files = await appService.pickFiles({

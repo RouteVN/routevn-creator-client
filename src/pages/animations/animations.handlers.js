@@ -18,12 +18,18 @@ const resetState = {
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, drenderer, getRefIds } = deps;
-  const { animations } = await projectService.getState();
+  await projectService.ensureRepository();
+  const { animations } = projectService.getState();
   store.setItems(animations || { tree: [], items: {} });
 
   // Initialize drenderer if canvas is present
   const { canvas } = getRefIds();
-  if (drenderer && canvas && canvas.elm && !store.selectIsDrendererInitialized()) {
+  if (
+    drenderer &&
+    canvas &&
+    canvas.elm &&
+    !store.selectIsDrendererInitialized()
+  ) {
     await drenderer.init({
       canvas: canvas.elm,
     });
@@ -35,7 +41,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { animations } = await projectService.getState();
+  const { animations } = projectService.getState();
 
   const animationData = animations || { tree: [], items: {} };
 
@@ -87,7 +93,7 @@ export const handleAnimationCreated = async (deps, payload) => {
     },
   });
 
-  const { animations } = await projectService.getState();
+  const { animations } = projectService.getState();
   store.setItems(animations);
   render();
 };
@@ -111,7 +117,7 @@ export const handleAnimationUpdated = async (deps, payload) => {
     },
   });
 
-  const { animations } = await projectService.getState();
+  const { animations } = projectService.getState();
   store.setItems(animations);
   render();
 };
@@ -132,7 +138,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { animations } = await projectService.getState();
+  const { animations } = projectService.getState();
   store.setItems(animations);
   render();
 };
@@ -511,7 +517,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = (await projectService.getState())[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

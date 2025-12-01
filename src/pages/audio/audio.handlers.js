@@ -3,7 +3,8 @@ import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, appService } = deps;
-  const { audio } = await projectService.getState();
+  await projectService.ensureRepository();
+  const { audio } = projectService.getState();
   store.setItems(audio || { tree: [], items: {} });
 
   // Initialize audio player positions from userConfig
@@ -21,7 +22,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { audio } = await projectService.getState();
+  const { audio } = projectService.getState();
   const audioData = audio || { tree: [], items: {} };
 
   store.setItems(audioData);
@@ -146,7 +147,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { audio } = await projectService.getState();
+    const { audio } = projectService.getState();
     store.setItems(audio);
   }
 
@@ -201,7 +202,7 @@ export const handleFormExtraEvent = async (deps) => {
   });
 
   // Update the store with the new repository state
-  const { audio } = await projectService.getState();
+  const { audio } = projectService.getState();
 
   // Use the waveform data directly (already normalized)
   const waveformData = uploadResult.waveformData;
@@ -231,7 +232,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { audio } = await projectService.getState();
+  const { audio } = projectService.getState();
   store.setItems(audio);
   render();
 };
@@ -281,7 +282,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = (await projectService.getState())[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

@@ -1,6 +1,6 @@
 import { toFlatItems } from "insieme";
 
-const getFileIdFromProps = async (attrs, projectService) => {
+const getFileIdFromProps = (attrs, projectService) => {
   // Validate that both fileId and imageId are not passed
   if (attrs.fileId && attrs.imageId) {
     return;
@@ -13,7 +13,7 @@ const getFileIdFromProps = async (attrs, projectService) => {
 
   // If imageId is provided, convert it to fileId
   if (attrs.imageId) {
-    const state = await projectService.getState();
+    const state = projectService.getState();
     const { images } = state;
     const flatImageItems = toFlatItems(images);
     const existingImage = flatImageItems.find(
@@ -33,7 +33,7 @@ const getFileIdFromProps = async (attrs, projectService) => {
 export const handleAfterMount = async (deps) => {
   const { store, attrs, projectService, render } = deps;
 
-  const fileId = await getFileIdFromProps(attrs, projectService);
+  const fileId = getFileIdFromProps(attrs, projectService);
 
   if (!fileId) {
     return;
@@ -55,7 +55,7 @@ export const handleOnUpdate = async (deps, payload) => {
   const { store, projectService, render } = deps;
 
   const { newAttrs: attrs } = payload;
-  const fileId = await getFileIdFromProps(attrs, projectService);
+  const fileId = getFileIdFromProps(attrs, projectService);
 
   if (!fileId) {
     store.setSrc("/public/project_logo_placeholder.png");

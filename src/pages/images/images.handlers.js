@@ -2,7 +2,8 @@ import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
-  const { images } = await projectService.getState();
+  await projectService.ensureRepository();
+  const { images } = projectService.getState();
   store.setItems(images);
   render();
 };
@@ -49,7 +50,7 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 
 export const handleFileExplorerDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { images } = await projectService.getState();
+  const { images } = projectService.getState();
   store.setItems(images);
   render();
 };
@@ -103,7 +104,7 @@ export const handleFormExtraEvent = async (deps) => {
   });
 
   // Update the store with the new repository state
-  const { images } = await projectService.getState();
+  const { images } = projectService.getState();
   store.setContext({
     fileId: {
       src: uploadResult.downloadUrl,
@@ -168,7 +169,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { images } = await projectService.getState();
+    const { images } = projectService.getState();
     store.setItems(images);
   }
 
@@ -191,7 +192,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { images } = await projectService.getState();
+  const { images } = projectService.getState();
   store.setItems(images);
   render();
 };
@@ -212,7 +213,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = (await projectService.getState())[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

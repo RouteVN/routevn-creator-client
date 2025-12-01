@@ -57,14 +57,15 @@ const createRenderState = ({
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
-  const { transforms } = await projectService.getState();
+  await projectService.ensureRepository();
+  const { transforms } = projectService.getState();
   store.setItems(transforms || { tree: [], items: {} });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { transforms } = await projectService.getState();
+  const { transforms } = projectService.getState();
 
   const transformData = transforms || { tree: [], items: {} };
 
@@ -219,7 +220,7 @@ export const handleTransformCreated = async (deps, payload) => {
     },
   });
 
-  const { transforms } = await projectService.getState();
+  const { transforms } = projectService.getState();
   store.setItems(transforms);
   render();
 };
@@ -240,7 +241,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { transforms } = await projectService.getState();
+  const { transforms } = projectService.getState();
   store.setItems(transforms);
   render();
 };
@@ -273,7 +274,7 @@ export const handleTransformEdited = async (deps, payload) => {
   });
 
   // Update local state and render immediately
-  const { transforms } = await projectService.getState();
+  const { transforms } = projectService.getState();
   store.setItems(transforms);
   render();
 };
@@ -409,7 +410,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = (await projectService.getState())[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

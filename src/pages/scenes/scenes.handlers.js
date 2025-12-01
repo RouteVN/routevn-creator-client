@@ -56,11 +56,9 @@ const getTransitionsForScene = (sections) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render, getRefIds, appService } =
-    deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { scenes, story } = repository.getState();
+  const { store, projectService, render, getRefIds, appService } = deps;
+  await projectService.ensureRepository();
+  const { scenes, story } = projectService.getState();
   const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
@@ -99,12 +97,10 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleSetInitialScene = async (sceneId, deps) => {
-  const { repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService } = deps;
 
   // Set the initialSceneId in the story object
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "set",
     payload: {
       target: "story.initialSceneId",
@@ -114,10 +110,8 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { scenes, story } = repository.getState();
+  const { store, render, projectService } = deps;
+  const { scenes, story } = projectService.getState();
   const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
@@ -151,12 +145,9 @@ export const handleDataChanged = async (deps) => {
 };
 
 export const handleFileExplorerClickItem = (deps) => {
-  const { subject, router } = deps;
-  const currentPayload = router.getPayload();
-  subject.dispatch("redirect", {
-    path: "/project/scene-editor",
-    payload: currentPayload, // Preserve existing payload (including p for projectId)
-  });
+  const { appService } = deps;
+  const currentPayload = appService.getPayload();
+  appService.navigate("/project/scene-editor", currentPayload);
 };
 
 export const selectSelectedItemId = ({ state }) => {
@@ -174,13 +165,11 @@ export const handleWhiteboardItemPositionUpdating = async (deps, payload) => {
 };
 
 export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { itemId, x, y } = payload._event.detail;
 
   // Update position in repository using 'set' action
-  repository.addEvent({
+  projectService.appendEvent({
     type: "set",
     payload: {
       target: `scenes.items.${itemId}.position`,
@@ -203,7 +192,7 @@ export const handleWhiteboardItemSelected = (deps, payload) => {
 };
 
 export const handleWhiteboardItemDoubleClick = (deps, payload) => {
-  const { subject, router } = deps;
+  const { appService } = deps;
   const { itemId } = payload._event.detail;
 
   if (!itemId) {
@@ -212,10 +201,10 @@ export const handleWhiteboardItemDoubleClick = (deps, payload) => {
   }
 
   // Redirect to scene editor with sceneId in payload
-  const currentPayload = router.getPayload();
-  subject.dispatch("redirect", {
-    path: "/project/scene-editor",
-    payload: { ...currentPayload, sceneId: itemId }, // Preserve p and add sceneId
+  const currentPayload = appService.getPayload();
+  appService.navigate("/project/scene-editor", {
+    ...currentPayload,
+    sceneId: itemId,
   });
 };
 
@@ -228,10 +217,8 @@ export const handleAddSceneClick = (deps) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "scenes",
@@ -245,7 +232,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { scenes } = repository.getState();
+  const { scenes } = projectService.getState();
   store.setItems(scenes);
   render();
 };
@@ -291,9 +278,7 @@ export const handleSceneFormClose = (deps) => {
 };
 
 export const handleSceneFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "cancel") {
@@ -319,7 +304,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
 
     // Get layouts from repository to find first dialogue layout
-    const { layouts } = repository.getState();
+    const { layouts } = projectService.getState();
     let dialogueLayoutId = null;
 
     if (layouts && layouts.items) {
@@ -406,7 +391,7 @@ export const handleSceneFormAction = async (deps, payload) => {
       },
     };
 
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "scenes",
@@ -427,7 +412,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     });
 
     // Update store with new scenes data
-    const { scenes: updatedScenes } = repository.getState();
+    const { scenes: updatedScenes } = projectService.getState();
     store.setItems(updatedScenes);
 
     // Reset form
@@ -441,13 +426,11 @@ export const handleSceneFormAction = async (deps, payload) => {
 };
 
 export const handleWhiteboardItemDelete = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { itemId } = payload._event.detail;
 
   // Remove from repository
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: "scenes",
@@ -458,7 +441,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   });
 
   // Update store with new scenes data
-  const { scenes: updatedScenes } = repository.getState();
+  const { scenes: updatedScenes } = projectService.getState();
   store.setItems(updatedScenes);
 
   // Remove from whiteboard items
@@ -497,9 +480,7 @@ export const handleDropdownMenuClose = (deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const detail = payload._event.detail;
   const itemId = store.selectDropdownMenuItemId();
 
@@ -513,7 +494,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   // Handle set initial scene action
   if (item.value === "set-initial" && itemId) {
     // Set the initialSceneId in the story object
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "set",
       payload: {
         target: "story.initialSceneId",
@@ -522,7 +503,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     });
 
     // Get updated scenes data
-    const { scenes: updatedScenes, story } = repository.getState();
+    const { scenes: updatedScenes, story } = projectService.getState();
     store.setItems(updatedScenes);
 
     // Update whiteboard items with new colors
@@ -540,7 +521,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
     // Remove from repository
-    repository.addEvent({
+    projectService.appendEvent({
       type: "treeDelete",
       payload: {
         target: "scenes",
@@ -551,7 +532,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     });
 
     // Update store with new scenes data
-    const { scenes: updatedScenes } = repository.getState();
+    const { scenes: updatedScenes } = projectService.getState();
     store.setItems(updatedScenes);
 
     // Remove from whiteboard items

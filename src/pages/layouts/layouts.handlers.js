@@ -1,20 +1,17 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { layouts } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { layouts } = projectService.getState();
   console.log("Layouts loaded:", layouts);
   store.setItems(layouts);
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { layouts } = repository.getState();
+  const { store, render, projectService } = deps;
+  const { layouts } = projectService.getState();
   store.setItems(layouts);
   render();
 };
@@ -41,19 +38,16 @@ export const handleImageItemClick = (deps, payload) => {
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
-  const { router, subject } = deps;
+  const { appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
   // Get current payload to preserve projectId
-  const currentPayload = router ? router.getPayload() : {};
+  const currentPayload = appService.getPayload();
 
-  subject.dispatch("redirect", {
-    path: "/project/resources/layout-editor",
-    payload: {
-      ...currentPayload, // Preserve existing payload (including p for projectId)
-      layoutId: itemId,
-    },
+  appService.navigate("/project/resources/layout-editor", {
+    ...currentPayload, // Preserve existing payload (including p for projectId)
+    layoutId: itemId,
   });
 };
 
@@ -66,23 +60,15 @@ export const handleAddLayoutClick = (deps, payload) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Get fileManager for this project
-  const fileManager = await fileManagerFactory.getByProject(p);
-
   // Upload all files
-  const uploadResults = await fileManager.upload(files);
-
-  // uploadResults already contains only successful uploads
-  const successfulUploads = uploadResults;
+  const successfulUploads = await projectService.uploadFiles(files);
 
   for (const result of successfulUploads) {
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "layouts",
@@ -107,7 +93,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { layouts } = repository.getState();
+    const { layouts } = projectService.getState();
     store.setItems(layouts);
   }
 
@@ -118,10 +104,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "layouts",
@@ -135,7 +119,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { layouts } = repository.getState();
+  const { layouts } = projectService.getState();
   store.setItems(layouts);
   render();
 };
@@ -153,31 +137,23 @@ export const handleAddDialogClose = (deps) => {
 };
 
 export const handleLayoutFormActionClick = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, globalUI } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService, appService } = deps;
 
   const formData = payload._event.detail.formValues;
   const targetGroupId = store.getState().targetGroupId;
 
   // Validate required fields
   if (!formData.name) {
-    globalUI.showAlert({
-      message: "Please enter a layout name",
-      title: "Warning",
-    });
+    appService.showToast("Please enter a layout name", { title: "Warning" });
     return;
   }
   if (!formData.layoutType) {
-    globalUI.showAlert({
-      message: "Please select a layout type",
-      title: "Warning",
-    });
+    appService.showToast("Please select a layout type", { title: "Warning" });
     return;
   }
 
   // Create the layout directly in the repository (like colors page does)
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: "layouts",
@@ -198,20 +174,18 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     },
   });
 
-  const { layouts } = repository.getState();
+  const { layouts } = projectService.getState();
   store.setItems(layouts);
   store.closeAddDialog();
   render();
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -222,7 +196,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

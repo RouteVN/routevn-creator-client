@@ -7,10 +7,10 @@ export const open = (deps, payload) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const repositoryState = repository.getState();
+  const { store, projectService, render } = deps;
+
+  await projectService.ensureRepository();
+  const repositoryState = projectService.getState();
 
   store.setRepositoryState(repositoryState);
   render();

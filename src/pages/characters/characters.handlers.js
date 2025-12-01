@@ -3,14 +3,15 @@ import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
-  const { characters } = await projectService.getState();
+  await projectService.ensureRepository();
+  const { characters } = projectService.getState();
   store.setItems(characters);
   render();
 };
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { characters } = await projectService.getState();
+  const { characters } = projectService.getState();
   store.setItems(characters);
   render();
 };
@@ -107,7 +108,7 @@ export const handleCharacterCreated = async (deps, payload) => {
     });
 
     // Update store with new data
-    const { characters } = await projectService.getState();
+    const { characters } = projectService.getState();
     store.setItems(characters);
     render();
   } catch (error) {
@@ -191,7 +192,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       });
 
       // Update the store with the new repository state and get new file URL
-      const { characters } = await projectService.getState();
+      const { characters } = projectService.getState();
       store.setItems(characters);
       render();
     } else {
@@ -218,7 +219,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { characters } = await projectService.getState();
+  const { characters } = projectService.getState();
   store.setItems(characters);
   render();
 };
@@ -331,7 +332,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = (await projectService.getState())[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };
@@ -405,7 +406,7 @@ export const handleEditFormAction = async (deps, payload) => {
       },
     });
 
-    const { characters } = await projectService.getState();
+    const { characters } = projectService.getState();
     store.setItems(characters);
     store.closeEditDialog();
     render();

@@ -2,7 +2,8 @@ import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
-  const state = await projectService.getState();
+  await projectService.ensureRepository();
+  const state = projectService.getState();
   const project = state.project;
 
   if (!project.iconFileId) {
@@ -34,7 +35,7 @@ export const handleHeaderClick = (deps) => {
 
 export const handleProjectImageUpdate = async (deps) => {
   const { projectService, store, render } = deps;
-  const state = await projectService.getState();
+  const state = projectService.getState();
   const project = state.project;
 
   if (!project.iconFileId) {

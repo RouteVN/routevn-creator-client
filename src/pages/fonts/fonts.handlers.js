@@ -4,19 +4,16 @@ import { toFlatItems } from "insieme";
 import { getFileType } from "../../utils/fileTypeUtils";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { fonts } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { fonts } = projectService.getState();
   store.setItems(fonts);
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { fonts } = repository.getState();
+  const { store, render, projectService } = deps;
+  const { fonts } = projectService.getState();
   store.setItems(fonts);
   render();
 };
@@ -51,18 +48,7 @@ export const handleFontItemClick = (deps, payload) => {
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const {
-    repositoryFactory,
-    router,
-    store,
-    render,
-    filePicker,
-    fileManagerFactory,
-    globalUI,
-  } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { appService, projectService, store, render } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -71,7 +57,7 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const files = await filePicker.open({
+  const files = await appService.pickFiles({
     accept: ".ttf,.otf,.woff,.woff2,.ttc",
     multiple: false,
   });
@@ -84,15 +70,14 @@ export const handleFormExtraEvent = async (deps) => {
 
   // Validate file format
   if (!file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i)) {
-    globalUI.showAlert({
-      message:
-        "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, or .ttc)",
-      title: "Warning",
-    });
+    appService.showToast(
+      "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, or .ttc)",
+      { title: "Warning" },
+    );
     return;
   }
 
-  const uploadedFiles = await fileManager.upload([file]);
+  const uploadedFiles = await projectService.uploadFiles([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");
@@ -100,7 +85,7 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "fonts",
@@ -119,7 +104,7 @@ export const handleFormExtraEvent = async (deps) => {
   });
 
   // Update the store with the new repository state
-  const { fonts } = repository.getState();
+  const { fonts } = projectService.getState();
   store.setContext({
     fileId: {
       fontFamily: uploadResult.fontName,
@@ -130,17 +115,7 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const {
-    store,
-    render,
-    fileManagerFactory,
-    repositoryFactory,
-    router,
-    globalUI,
-  } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { store, render, projectService, appService } = deps;
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -149,16 +124,15 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     (file) => !file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i),
   );
   if (invalidFiles.length > 0) {
-    globalUI.showAlert({
-      message:
-        "Invalid file format. Please upload only font files (.ttf, .otf, .woff, .woff2, or .ttc)",
-      title: "Warning",
-    });
+    appService.showToast(
+      "Invalid file format. Please upload only font files (.ttf, .otf, .woff, .woff2, or .ttc)",
+      { title: "Warning" },
+    );
     return;
   }
 
   // Upload files
-  const successfulUploads = await fileManager.upload(files);
+  const successfulUploads = await projectService.uploadFiles(files);
 
   // Add successfully uploaded files to repository and collect new font items
   const newFontItems = [];
@@ -173,7 +147,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
       fileSize: result.file.size,
     };
 
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "fonts",
@@ -189,12 +163,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { fonts } = repository.getState();
+    const { fonts } = projectService.getState();
     store.setItems(fonts);
 
     // Load the newly uploaded fonts to ensure they're available
     const loadPromises = newFontItems.map((item) =>
-      fileManager.loadFontFile({
+      projectService.loadFontFile({
         fontName: item.fontFamily,
         fileId: item.fileId,
       }),
@@ -206,22 +180,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 export const handleFontItemDoubleClick = async (deps, payload) => {
-  const {
-    store,
-    render,
-    repositoryFactory,
-    router,
-    fileManagerFactory,
-    fontManager,
-  } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { store, render, projectService, fontManager } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
   // Find the font item
-  const { fonts } = repository.getState();
+  const { fonts } = projectService.getState();
   const flatItems = toFlatItems(fonts);
   const fontItem = flatItems.find((item) => item.id === itemId);
 
@@ -232,7 +196,7 @@ export const handleFontItemDoubleClick = async (deps, payload) => {
 
   // Extract font information
   const fontInfoExtractor = createFontInfoExtractor({
-    getFileContent: fileManager.getFileContent,
+    getFileContent: (fileId) => projectService.getFileContent(fileId),
     fontManager,
   });
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
@@ -252,10 +216,8 @@ export const handleCloseModal = (deps) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "fonts",
@@ -269,7 +231,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { fonts } = repository.getState();
+  const { fonts } = projectService.getState();
   store.setItems(fonts);
   render();
 };
@@ -291,13 +253,11 @@ export const handleGroupToggle = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -308,7 +268,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

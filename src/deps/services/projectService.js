@@ -108,6 +108,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
   const repositoriesByProject = new Map();
   const repositoriesByPath = new Map();
 
+  // Current repository cache (for sync access after ensureRepository is called)
+  let currentRepository = null;
+  let currentProjectId = null;
+
   // Get current projectId from URL query params
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
@@ -145,13 +149,28 @@ export const createProjectService = ({ router, db, filePicker }) => {
     return repository;
   };
 
-  // Get current project's repository
+  // Get current project's repository (updates cache)
   const getCurrentRepository = async () => {
     const projectId = getCurrentProjectId();
     if (!projectId) {
       throw new Error("No project selected (missing ?p= in URL)");
     }
-    return getRepositoryByProject(projectId);
+    const repository = await getRepositoryByProject(projectId);
+    // Update cache
+    currentRepository = repository;
+    currentProjectId = projectId;
+    return repository;
+  };
+
+  // Get cached repository (sync) - throws if not initialized
+  const getCachedRepository = () => {
+    const projectId = getCurrentProjectId();
+    if (!currentRepository || currentProjectId !== projectId) {
+      throw new Error(
+        "Repository not initialized. Call ensureRepository() first.",
+      );
+    }
+    return currentRepository;
   };
 
   // Get current project's path
@@ -317,14 +336,20 @@ export const createProjectService = ({ router, db, filePicker }) => {
       return getRepositoryByPath(projectPath);
     },
 
+    // Must be called before using sync methods (typically in handleAfterMount)
+    async ensureRepository() {
+      return getCurrentRepository();
+    },
+
     // Event sourcing - automatically uses current project
     async appendEvent(event) {
       const repository = await getCurrentRepository();
       await repository.addEvent(event);
     },
 
-    async getState() {
-      const repository = await getCurrentRepository();
+    // Sync state access - requires ensureRepository() to be called first
+    getState() {
+      const repository = getCachedRepository();
       return repository.getState();
     },
 

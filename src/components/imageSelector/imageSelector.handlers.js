@@ -1,6 +1,6 @@
-export const handleAfterMount = async (deps) => {
+export const handleAfterMount = (deps) => {
   const { store, projectService, render } = deps;
-  const state = await projectService.getState();
+  const state = projectService.getState();
 
   // Extract images from repository state (raw data)
   const images = state.images || { items: {}, tree: [] };
