@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "../../deps/repository";
+import { toFlatGroups, toFlatItems } from "insieme";
 
 const form = {
   fields: [
@@ -290,7 +290,7 @@ export const selectViewData = ({ state }) => {
   }
 
   // Apply search filter
-  const searchQuery = state.searchQuery.toLowerCase().trim();
+  const searchQuery = (state.searchQuery || "").toLowerCase().trim();
   let filteredGroups = rawFlatGroups;
 
   if (searchQuery) {

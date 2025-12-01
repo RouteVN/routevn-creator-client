@@ -78,12 +78,8 @@ export const layoutTreeStructureToRenderState = (
       scaleX: node.scaleX ?? 1,
       scaleY: node.scaleY ?? 1,
       rotation: node.rotation ?? 0,
-      // eventPayload: node.eventPayload,
+      click: node.click,
     };
-
-    if (element.eventPayload) {
-      element.eventName = "system";
-    }
 
     if (node["$when"]) {
       element["$when"] = node["$when"];

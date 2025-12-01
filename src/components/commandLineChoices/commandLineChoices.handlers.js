@@ -7,10 +7,9 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { scenes } = repository.getState();
+  const { projectService, store, render } = deps;
+  await projectService.ensureRepository();
+  const { scenes } = projectService.getState();
   store.setScenes({
     scenes,
   });

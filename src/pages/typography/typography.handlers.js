@@ -1,28 +1,25 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 import { getFileType } from "../../utils/fileTypeUtils";
 
 // Helper function to sync repository state to store
-const syncRepositoryToStore = (store, repository) => {
-  const { typography, colors, fonts } = repository.getState();
+const syncRepositoryToStore = (store, projectService) => {
+  const { typography, colors, fonts } = projectService.getState();
   store.setItems(typography);
   store.setColorsData(colors);
   store.setFontsData(fonts);
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  syncRepositoryToStore(store, repository);
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  syncRepositoryToStore(store, projectService);
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  syncRepositoryToStore(store, repository);
+  const { store, render, projectService } = deps;
+  syncRepositoryToStore(store, projectService);
   render();
 };
 
@@ -217,22 +214,18 @@ export const handleTypographyItemClick = (deps, payload) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, fileManagerFactory, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  // Get fileManager for this project
-  const fileManager = await fileManagerFactory.getByProject(p);
   // Upload all files
-  const uploadResults = await fileManager.upload(files);
+  const uploadResults = await projectService.uploadFiles(files);
 
   // uploadResults already contains only successful uploads
   const successfulUploads = uploadResults;
 
   for (const result of successfulUploads) {
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "typography",
@@ -253,7 +246,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    syncRepositoryToStore(store, repository);
+    syncRepositoryToStore(store, projectService);
   }
 
   console.log(
@@ -263,9 +256,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 const handleTypographyCreated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const {
     groupId,
     name,
@@ -277,7 +268,7 @@ const handleTypographyCreated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: "typography",
@@ -299,14 +290,12 @@ const handleTypographyCreated = async (deps, payload) => {
     },
   });
 
-  syncRepositoryToStore(store, repository);
+  syncRepositoryToStore(store, projectService);
   render();
 };
 
 const handleTypographyUpdated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const {
     itemId,
     name,
@@ -318,7 +307,7 @@ const handleTypographyUpdated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "typography",
@@ -338,15 +327,13 @@ const handleTypographyUpdated = async (deps, payload) => {
     },
   });
 
-  syncRepositoryToStore(store, repository);
+  syncRepositoryToStore(store, projectService);
   render();
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "typography",
@@ -360,7 +347,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  syncRepositoryToStore(store, repository);
+  syncRepositoryToStore(store, projectService);
 
   // Update context with new preview after form change
   const selectedItem = store.selectSelectedItem();
@@ -462,7 +449,7 @@ export const handleCloseDialog = (deps) => {
 };
 
 export const handleFormActionClick = (deps, payload) => {
-  const { store, render, globalUI } = deps;
+  const { store, render, appService } = deps;
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
@@ -505,18 +492,16 @@ export const handleFormActionClick = (deps, payload) => {
       !formData.fontStyle ||
       !formData.fontWeight
     ) {
-      globalUI.showAlert({
-        message: "Please fill in all required fields",
-        type: "warning",
+      appService.showToast("Please fill in all required fields", {
+        title: "Warning",
       });
       return;
     }
 
     // Validate font size is a number
     if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
-      globalUI.showAlert({
-        message: "Please enter a valid font size (positive number)",
-        type: "warning",
+      appService.showToast("Please enter a valid font size (positive number)", {
+        title: "Warning",
       });
       return;
     }
@@ -571,16 +556,14 @@ export const handleAddColorDialogClose = (deps) => {
 };
 
 export const handleAddColorFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
     const newColorId = nanoid();
 
     // Create the color in the repository
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "colors",
@@ -598,7 +581,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
     });
 
     // Sync repository to store to ensure all data is updated
-    syncRepositoryToStore(store, repository);
+    syncRepositoryToStore(store, projectService);
 
     // Don't update the form values - keep preview consistent with form state
     // The user can manually select the new color from the dropdown
@@ -617,7 +600,7 @@ export const handleAddFontDialogClose = (deps) => {
 };
 
 export const handleFontFileSelected = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router, globalUI } = deps;
+  const { store, render, projectService, appService } = deps;
   const { files } = payload._event.detail;
 
   if (files && files.length > 0) {
@@ -626,17 +609,11 @@ export const handleFontFileSelected = async (deps, payload) => {
     const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
 
     try {
-      // Get fileManager for this project
-      const { p } = router.getPayload();
-      const fileManager = await fileManagerFactory.getByProject(p);
       // Upload the file immediately when selected
-      const uploadResults = await fileManager.upload([file]);
+      const uploadResults = await projectService.uploadFiles([file]);
 
       if (uploadResults.length === 0) {
-        globalUI.showAlert({
-          message: "Failed to upload font file",
-          type: "error",
-        });
+        appService.showToast("Failed to upload font file", { title: "Error" });
         return;
       }
 
@@ -649,18 +626,13 @@ export const handleFontFileSelected = async (deps, payload) => {
       render();
     } catch (error) {
       console.error("Failed to upload font file:", error);
-      globalUI.showAlert({
-        message: "Failed to upload font file",
-        title: "Error",
-      });
+      appService.showToast("Failed to upload font file", { title: "Error" });
     }
   }
 };
 
 export const handleAddFontFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, globalUI } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService, appService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
@@ -668,10 +640,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
 
     // Check if a font file was selected and uploaded
     if (!fontData || !fontData.uploadResult) {
-      globalUI.showAlert({
-        message: "Please select a font file",
-        type: "warning",
-      });
+      appService.showToast("Please select a font file", { title: "Warning" });
       return;
     }
 
@@ -679,7 +648,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
     const newFontId = nanoid();
 
     // Create the font in the repository using the already uploaded file
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "fonts",
@@ -701,7 +670,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
     });
 
     // Sync repository to store to ensure all data is updated
-    syncRepositoryToStore(store, repository);
+    syncRepositoryToStore(store, projectService);
 
     // Clear selected font data and close dialog
     store.clearSelectedFontFile();
@@ -717,13 +686,11 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -734,7 +701,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

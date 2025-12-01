@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 
 export const createInitialState = () => ({
   ready: false,

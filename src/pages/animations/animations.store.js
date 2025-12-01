@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "../../deps/repository";
+import { toFlatGroups, toFlatItems } from "insieme";
 
 const form = {
   fields: [
@@ -374,7 +374,7 @@ export const createInitialState = () => ({
   // Animation dialog state
   searchQuery: "",
   isDialogOpen: false,
-  isDrendererInitialized: false,
+  isGraphicsServiceInitialized: false,
   targetGroupId: null,
   selectedProperties: [],
   initialValue: 0,
@@ -479,12 +479,12 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
 
-export const setDrendererInitialized = (state, initialized) => {
-  state.isDrendererInitialized = initialized;
+export const setGraphicsServiceInitialized = (state, initialized) => {
+  state.isGraphicsServiceInitialized = initialized;
 };
 
-export const selectIsDrendererInitialized = ({ state }) => {
-  return state.isDrendererInitialized;
+export const selectIsGraphicsServiceInitialized = ({ state }) => {
+  return state.isGraphicsServiceInitialized;
 };
 
 // Constants for preview rendering
@@ -701,7 +701,7 @@ export const selectViewData = ({ state }) => {
   }
 
   // Apply search filtering to flatGroups (collapse state is now handled by groupResourcesView)
-  const searchQuery = state.searchQuery.toLowerCase();
+  const searchQuery = (state.searchQuery || "").toLowerCase();
   const matchesSearch = (item) => {
     if (!searchQuery) return true;
     const name = (item.name || "").toLowerCase();

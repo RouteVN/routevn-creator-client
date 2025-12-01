@@ -1,5 +1,5 @@
 import { parseAndRender } from "jempl";
-import { toFlatGroups } from "../../deps/repository";
+import { toFlatGroups } from "insieme";
 
 const config = {
   sections: [

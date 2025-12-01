@@ -1,10 +1,14 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
 import { filter, tap, debounceTime, groupBy, mergeMap } from "rxjs";
 
 // Helper function to create assets object from file references
-async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
+async function createAssetsFromFileIds(
+  fileReferences,
+  projectService,
+  resources,
+) {
   const { audio, images, fonts = {} } = resources;
   const allItems = Object.entries({
     ...audio.items,
@@ -21,9 +25,7 @@ async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
     const { url: fileId } = fileObj;
     const foundItem = allItems.find((item) => item.fileId === fileId);
     try {
-      const { url } = await fileManager.getFileContent({
-        fileId,
-      });
+      const { url } = await projectService.getFileContent(fileId);
       let type = foundItem?.fileType; // Use type from fileObj first
 
       // If no type in fileObj, look it up in the resources
@@ -51,11 +53,11 @@ async function createAssetsFromFileIds(fileReferences, fileManager, resources) {
 }
 
 // Helper function to render the scene state
-async function renderSceneState(store, drenderer) {
+async function renderSceneState(store, graphicsService) {
   const projectData = store.selectProjectData();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  drenderer.engineHandleActions({
+  graphicsService.engineHandleActions({
     updateProjectData: {
       projectData,
     },
@@ -64,34 +66,36 @@ async function renderSceneState(store, drenderer) {
       lineId,
     },
   });
-  drenderer.engineRenderCurrentState();
+  graphicsService.engineRenderCurrentState();
 }
 
 export const handleBeforeMount = (deps) => {
-  const { drenderer } = deps;
+  const { graphicsService } = deps;
 
   return () => {
-    drenderer.destroy();
+    graphicsService.destroy();
   };
 };
 
 export const handleAfterMount = async (deps) => {
   const {
     getRefIds,
-    drenderer,
+    graphicsService,
     store,
-    fileManagerFactory,
-    router,
-    repositoryFactory,
+    projectService,
+    appService,
     render,
   } = deps;
 
-  // Get sceneId and projectId from router
-  const { sceneId, p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  // Ensure repository is loaded for sync access
+  await projectService.ensureRepository();
+
+  // Get sceneId from router payload
+  const { sceneId } = appService.getPayload();
+  const state = projectService.getState();
 
   store.setSceneId(sceneId);
-  store.setRepositoryState(repository.getState());
+  store.setRepositoryState(state);
 
   // Get scene to set first section and first line
   const scene = store.selectScene();
@@ -106,21 +110,23 @@ export const handleAfterMount = async (deps) => {
   }
 
   const { canvas } = getRefIds();
-  await drenderer.init({ canvas: canvas.elm });
+  await graphicsService.init({ canvas: canvas.elm });
 
   const projectData = store.selectProjectData();
-  drenderer.initRouteEngine(projectData);
-  const fileManager = await fileManagerFactory.getByProject(p);
+
+  console.log("Resources:", projectData.resources);
+
+  graphicsService.initRouteEngine(projectData);
   // TODO don't load all data... only ones necessary for this scene
   const fileReferences = extractFileIdsFromRenderState(projectData);
   const assets = await createAssetsFromFileIds(
     fileReferences,
-    fileManager,
+    projectService,
     projectData.resources,
   );
-  await drenderer.loadAssets(assets);
+  await graphicsService.loadAssets(assets);
   // don't know why but it needs to be called twice the first time to work...
-  renderSceneState(store, drenderer, fileManager);
+  renderSceneState(store, graphicsService);
   render();
 };
 
@@ -140,17 +146,7 @@ export const handleSectionTabClick = (deps, payload) => {
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
-  const {
-    store,
-    render,
-    repositoryFactory,
-    router,
-    subject,
-    drenderer,
-    fileManagerFactory,
-  } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService, subject, graphicsService } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -162,7 +158,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "set",
       payload: {
         target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
@@ -173,14 +169,13 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       },
     });
 
-    store.setRepositoryState(repository.getState());
+    const state = projectService.getState();
+    store.setRepositoryState(state);
     render();
 
     // Render the canvas with the latest data
     setTimeout(async () => {
-      // Get fileManager for this project
-      const fileManager = await fileManagerFactory.getByProject(p);
-      await renderSceneState(store, drenderer, fileManager);
+      await renderSceneState(store, graphicsService);
     }, 10);
     return;
   }
@@ -207,7 +202,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     }
   }
 
-  repository.addEvent({
+  await projectService.appendEvent({
     type: "set",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
@@ -218,7 +213,8 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     },
   });
 
-  store.setRepositoryState(repository.getState());
+  const state = projectService.getState();
+  store.setRepositoryState(state);
   render();
 
   // Trigger debounced canvas render
@@ -257,16 +253,7 @@ export const handleAddActionsButtonClick = (deps) => {
 };
 
 export const handleSectionAddClick = async (deps) => {
-  const {
-    store,
-    repositoryFactory,
-    router,
-    render,
-    drenderer,
-    fileManagerFactory,
-  } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, projectService, render, graphicsService } = deps;
 
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
@@ -278,7 +265,7 @@ export const handleSectionAddClick = async (deps) => {
   const newSectionName = `Section ${sectionCount + 1}`;
 
   // Get layouts from repository to find first dialogue layout
-  const { layouts } = repository.getState();
+  const { layouts } = projectService.getState();
   let dialogueLayoutId = null;
 
   if (layouts && layouts.items) {
@@ -309,7 +296,7 @@ export const handleSectionAddClick = async (deps) => {
         },
       };
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: `scenes.items.${sceneId}.sections`,
@@ -337,7 +324,8 @@ export const handleSectionAddClick = async (deps) => {
   });
 
   // Update store with new repository state
-  store.setRepositoryState(repository.getState());
+  const state = projectService.getState();
+  store.setRepositoryState(state);
 
   store.setSelectedSectionId(newSectionId);
   store.setSelectedLineId(newLineId);
@@ -345,16 +333,12 @@ export const handleSectionAddClick = async (deps) => {
 
   // Render the canvas with the new section's data
   setTimeout(async () => {
-    // Get fileManager for this project
-    const fileManager = await fileManagerFactory.getByProject(p);
-    await renderSceneState(store, drenderer, fileManager);
+    await renderSceneState(store, graphicsService);
   }, 10);
 };
 
 export const handleSplitLine = async (deps, payload) => {
-  const { repositoryFactory, router, store, render, getRefIds, subject } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService, store, render, getRefIds, subject } = deps;
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
@@ -369,15 +353,15 @@ export const handleSplitLine = async (deps, payload) => {
     .find((item) => item.id === sceneId);
 
   if (storeScene) {
-    toFlatItems(storeScene.sections).forEach((section) => {
-      toFlatItems(section.lines).forEach((line) => {
+    for (const section of toFlatItems(storeScene.sections)) {
+      for (const line of toFlatItems(section.lines)) {
         // Skip the line being split
         if (
           line.id !== lineId &&
           line.actions?.dialogue?.content !== undefined
         ) {
           // Persist this line's content to the repository
-          repository.addEvent({
+          await projectService.appendEvent({
             type: "set",
             payload: {
               target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
@@ -385,12 +369,12 @@ export const handleSplitLine = async (deps, payload) => {
             },
           });
         }
-      });
-    });
+      }
+    }
   }
 
   // Get existing actions data to preserve everything except dialogue content
-  const { scenes } = repository.getState();
+  const { scenes } = projectService.getState();
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
     .find((item) => item.id === sceneId);
@@ -413,7 +397,7 @@ export const handleSplitLine = async (deps, payload) => {
   const leftContentArray = leftContent ? [{ text: leftContent }] : [];
   if (existingDialogue && Object.keys(existingDialogue).length > 0) {
     // If dialogue exists, update only the content
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "set",
       payload: {
         target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
@@ -422,7 +406,7 @@ export const handleSplitLine = async (deps, payload) => {
     });
   } else if (leftContent) {
     // If no dialogue exists but we have content, create minimal dialogue
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "set",
       payload: {
         target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
@@ -445,7 +429,7 @@ export const handleSplitLine = async (deps, payload) => {
       }
     : {};
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
@@ -461,7 +445,8 @@ export const handleSplitLine = async (deps, payload) => {
   });
 
   // Update store with new repository state (pending updates were already flushed)
-  store.setRepositoryState(repository.getState());
+  const state = projectService.getState();
+  store.setRepositoryState(state);
 
   // Handle UI updates immediately for responsiveness
   // Pre-configure the linesEditor before rendering
@@ -499,15 +484,13 @@ export const handleSplitLine = async (deps, payload) => {
 };
 
 export const handleNewLine = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
@@ -526,7 +509,7 @@ export const handleNewLine = async (deps) => {
 };
 
 export const handleLineNavigation = (deps, payload) => {
-  const { store, getRefIds, render, subject, drenderer } = deps;
+  const { store, getRefIds, render, subject, graphicsService } = deps;
   const { targetLineId, mode, direction, targetCursorPosition, lineRect } =
     payload._event.detail;
 
@@ -543,7 +526,7 @@ export const handleLineNavigation = (deps, payload) => {
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
       // First line - show animation effects
-      drenderer.render({
+      graphicsService.render({
         elements: [],
         transitions: [],
       });
@@ -678,7 +661,7 @@ export const handleLineNavigation = (deps, payload) => {
     }, 0);
   } else if (direction === "up" && currentLineId === targetLineId) {
     // First line - show animation effects
-    drenderer.render({
+    graphicsService.render({
       elements: [],
       transitions: [],
     });
@@ -687,9 +670,7 @@ export const handleLineNavigation = (deps, payload) => {
 };
 
 export const handleMergeLines = async (deps, payload) => {
-  const { store, getRefIds, render, repositoryFactory, router, subject } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, getRefIds, render, projectService, subject } = deps;
   const { prevLineId, currentLineId, contentToAppend } = payload._event.detail;
 
   const sceneId = store.selectSceneId();
@@ -720,7 +701,7 @@ export const handleMergeLines = async (deps, payload) => {
 
   const finalContent = [{ text: mergedContent }];
   // Update previous line with merged content
-  repository.addEvent({
+  await projectService.appendEvent({
     type: "set",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions`,
@@ -737,7 +718,7 @@ export const handleMergeLines = async (deps, payload) => {
   });
 
   // Delete current line
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
@@ -748,7 +729,8 @@ export const handleMergeLines = async (deps, payload) => {
   });
 
   // Update repository state in store to reflect the changes
-  store.setRepositoryState(repository.getState());
+  const state = projectService.getState();
+  store.setRepositoryState(state);
 
   // Update selected line to the previous one
   store.setSelectedLineId(prevLineId);
@@ -810,9 +792,7 @@ export const handleDropdownMenuClickOverlay = (deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, subject } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService, subject } = deps;
   const action = payload._event.detail.item.value; // Access value from item object
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
@@ -826,7 +806,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   if (action === "delete-section") {
     // Delete section from repository
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treeDelete",
       payload: {
         target: `scenes.items.${sceneId}.sections`,
@@ -837,7 +817,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     });
 
     // Update store with new repository state
-    store.setRepositoryState(repository.getState());
+    const state = projectService.getState();
+    store.setRepositoryState(state);
 
     // Update scene data and select first remaining section
     const newScene = store.selectScene();
@@ -857,7 +838,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     if (actionsType && selectedLineId && selectedSectionId) {
       // Special handling for dialogue - keep content, remove only layoutId and characterId
       if (actionsType === "dialogue") {
-        const stateBefore = repository.getState();
+        const stateBefore = projectService.getState();
         const currentActions =
           stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
             selectedSectionId
@@ -869,7 +850,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
             content: currentActions.dialogue.content,
           };
 
-          repository.addEvent({
+          await projectService.appendEvent({
             type: "set",
             payload: {
               target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
@@ -879,7 +860,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
         }
       } else {
         // For all other actions types, use unset to remove completely
-        repository.addEvent({
+        await projectService.appendEvent({
           type: "unset",
           payload: {
             target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
@@ -887,7 +868,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
         });
       }
 
-      store.setRepositoryState(repository.getState());
+      const state = projectService.getState();
+      store.setRepositoryState(state);
 
       // Trigger re-render to update the view
       subject.dispatch("sceneEditor.renderCanvas", {});
@@ -904,9 +886,7 @@ export const handlePopoverClickOverlay = (deps) => {
 };
 
 export const handleFormActionClick = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const detail = payload._event.detail;
 
   // Extract action and values from detail
@@ -929,7 +909,7 @@ export const handleFormActionClick = async (deps, payload) => {
 
     // Update section name in repository
     if (sectionId && values.name && sceneId) {
-      await repository.addEvent({
+      await projectService.appendEvent({
         type: "treeUpdate",
         payload: {
           target: `scenes.items.${sceneId}.sections`,
@@ -944,7 +924,8 @@ export const handleFormActionClick = async (deps, payload) => {
       });
 
       // Update store with new repository state
-      store.setRepositoryState(repository.getState());
+      const state = projectService.getState();
+      store.setRepositoryState(state);
     }
 
     render();
@@ -965,8 +946,7 @@ export const handlePreviewClick = (deps) => {
 };
 
 export const handleLineDeleteActionItem = async (deps, payload) => {
-  const { store, subject, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
+  const { store, subject, render, projectService } = deps;
   const { actionType } = payload._event.detail;
   // Get current selected line
   const selectedLine = store.selectSelectedLine();
@@ -992,11 +972,10 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   };
 
   // Save directly to repository - this will update the state
-  const repository = await repositoryFactory.getByProject(p);
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
@@ -1007,39 +986,35 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
       },
     },
   });
-  // Get sceneId and projectId from router
-  store.setRepositoryState(repository.getState());
+  // Update store with new repository state
+  const state = projectService.getState();
+  store.setRepositoryState(state);
   // Trigger re-render
   render();
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleHidePreviewScene = async (deps) => {
-  const { store, render, drenderer, getRefIds, fileManagerFactory, router } =
-    deps;
+  const { store, render, graphicsService, getRefIds } = deps;
 
-  const { p } = router.getPayload();
   store.hidePreviewScene();
   render();
 
   const { canvas } = getRefIds();
-  await drenderer.init({ canvas: canvas.elm });
-  const fileManager = await fileManagerFactory.getByProject(p);
-  await renderSceneState(store, drenderer, fileManager);
+  await graphicsService.init({ canvas: canvas.elm });
+  await renderSceneState(store, graphicsService);
 };
 
 // Handler for throttled/debounced dialogue content updates
 export const handleUpdateDialogueContent = async (deps, payload) => {
-  const { repositoryFactory, router, store, subject } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService, store, subject } = deps;
   const { lineId, content } = payload;
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
   // Get existing dialogue data to preserve layoutId and characterId
-  const { scenes } = repository.getState();
+  const { scenes } = projectService.getState();
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
     .find((item) => item.id === sceneId);
@@ -1055,7 +1030,7 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
     }
   }
 
-  repository.addEvent({
+  await projectService.appendEvent({
     type: "set",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
@@ -1075,11 +1050,8 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps) {
-  const { store, drenderer, fileManagerFactory, router } = deps;
-  const { p } = router.getPayload();
-  // Get fileManager for this project
-  const fileManager = await fileManagerFactory.getByProject(p);
-  await renderSceneState(store, drenderer, fileManager);
+  const { store, graphicsService } = deps;
+  await renderSceneState(store, graphicsService);
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing
@@ -1109,17 +1081,13 @@ export const subscriptions = (deps) => {
 };
 
 export const handleBackClick = (deps) => {
-  const { router, subject } = deps;
-  const { p } = router.getPayload();
-  subject.dispatch("redirect", {
-    path: "/project/scenes",
-    payload: { p },
-  });
+  const { appService } = deps;
+  const { p } = appService.getPayload();
+  appService.navigate("/project/scenes", { p });
 };
 
 export const handleSystemActionsActionDelete = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, subject } = deps;
-  const { p } = router.getPayload();
+  const { store, render, projectService, subject } = deps;
   const { actionType } = payload._event.detail;
   // Get current selected line
   const selectedLine = store.selectSelectedLine();
@@ -1141,11 +1109,10 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   };
 
   // Save directly to repository - this will update the state
-  const repository = await repositoryFactory.getByProject(p);
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
@@ -1156,8 +1123,9 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
       },
     },
   });
-  // Get sceneId and projectId from router
-  store.setRepositoryState(repository.getState());
+  // Update store with new repository state
+  const state = projectService.getState();
+  store.setRepositoryState(state);
   // Trigger re-render
   render();
 

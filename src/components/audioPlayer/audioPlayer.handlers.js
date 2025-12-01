@@ -4,75 +4,68 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, attrs, render, audioManager, globalUI } = deps;
+  const { store, attrs, render, audioService, appService } = deps;
 
   if (!attrs) {
-    globalUI.showAlert({ message: "Missing fileId", title: "Error" });
+    appService.showAlert({ message: "Missing fileId", title: "Error" });
     return;
   }
 
-  audioManager.init();
+  audioService.init();
 
   const handleTimeUpdate = (currentTime) => {
     store.setCurrentTime(currentTime);
     render();
   };
-  audioManager.on("timeupdate", handleTimeUpdate);
+  audioService.on("timeupdate", handleTimeUpdate);
 
   const handlePlay = () => {
     store.setPlaying(true);
     render();
   };
-  audioManager.on("play", handlePlay);
+  audioService.on("play", handlePlay);
 
   const handlePause = () => {
     store.setPlaying(false);
     render();
   };
-  audioManager.on("pause", handlePause);
+  audioService.on("pause", handlePause);
 
   const handleEnded = () => {
     store.setPlaying(false);
     store.setCurrentTime(0);
     render();
   };
-  audioManager.on("ended", handleEnded);
+  audioService.on("ended", handleEnded);
 
   const handleLoaded = ({ duration }) => {
     store.setDuration(duration);
     store.setLoading(false);
     render();
   };
-  audioManager.on("loaded", handleLoaded);
+  audioService.on("loaded", handleLoaded);
 
   const handleError = (error) => {
     console.error("Audio error:", error);
     store.setLoading(false);
     render();
   };
-  audioManager.on("error", handleError);
-  return audioManager.cleanup;
+  audioService.on("error", handleError);
+  return audioService.cleanup;
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, fileManagerFactory, render, audioManager, router } =
-    deps;
+  const { store, attrs, projectService, render, audioService } = deps;
   const { fileId, autoPlay } = attrs;
   try {
     store.setLoading(true);
     render();
 
-    // Get the current project ID from router
-    const { p: projectId } = router.getPayload();
-    // Get fileManager for this project
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId,
-    });
-    await audioManager.loadAudio(url);
+    const { url } = await projectService.getFileContent(fileId);
+    await audioService.loadAudio(url);
 
     if (autoPlay) {
-      await audioManager.play();
+      await audioService.play();
     }
   } catch (error) {
     console.error("Error loading audio:", error);
@@ -83,8 +76,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleOnUpdate = async (deps, changes) => {
   const { oldProps } = changes;
-  const { store, attrs, fileManagerFactory, render, audioManager, router } =
-    deps;
+  const { store, attrs, projectService, render, audioService } = deps;
   const { fileId, autoPlay } = attrs;
 
   if (oldProps.fileId === fileId) {
@@ -95,19 +87,13 @@ export const handleOnUpdate = async (deps, changes) => {
     store.setLoading(true);
     render();
 
-    audioManager.stop();
+    audioService.stop();
 
-    // Get the current project ID from router
-    const { p: projectId } = router.getPayload();
-    // Get fileManager for this project
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId,
-    });
-    await audioManager.loadAudio(url);
+    const { url } = await projectService.getFileContent(fileId);
+    await audioService.loadAudio(url);
 
     if (autoPlay) {
-      await audioManager.play();
+      await audioService.play();
     }
   } catch (error) {
     console.error("Error loading audio:", error);
@@ -118,17 +104,17 @@ export const handleOnUpdate = async (deps, changes) => {
 
 export const handlePlayPause = async (deps, payload) => {
   payload._event.preventDefault();
-  const { audioManager } = deps;
+  const { audioService } = deps;
 
-  if (audioManager.isPlaying()) {
-    audioManager.pause();
+  if (audioService.isPlaying()) {
+    audioService.pause();
     return;
   }
-  await audioManager.play();
+  await audioService.play();
 };
 
 export const handleProgressBarClick = async (deps, payload) => {
-  const { store, audioManager } = deps;
+  const { store, audioService } = deps;
   const duration = store.selectDuration();
 
   if (!duration) return;
@@ -137,14 +123,14 @@ export const handleProgressBarClick = async (deps, payload) => {
   const clickX = payload._event.clientX - rect.left;
   const seekTime = calculateSeekPosition(clickX, rect.width, duration);
 
-  await audioManager.seek(seekTime);
+  await audioService.seek(seekTime);
 };
 
 export const handleClose = (deps, payload) => {
   payload._event.preventDefault();
-  const { dispatchEvent, audioManager } = deps;
+  const { dispatchEvent, audioService } = deps;
 
-  audioManager.stop();
+  audioService.stop();
 
   dispatchEvent(
     new CustomEvent("audio-player-close", {

@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "../../deps/repository";
+import { toFlatGroups, toFlatItems } from "insieme";
 
 const form = {
   fields: [
@@ -155,7 +155,7 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characterSprites",
     selectedItemId: state.selectedItemId,
-    repositoryTarget: "character.sprites",
+    repositoryTarget: `characters.items.${state.characterId}.sprites`,
     form,
     context: state.context,
     defaultValues,

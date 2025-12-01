@@ -233,11 +233,10 @@ const isCursorOnLastLine = (element) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, getRefIds, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, getRefIds, projectService } = deps;
 
-  store.setRepositoryState(repository.getState());
+  await projectService.ensureRepository();
+  store.setRepositoryState(projectService.getState());
   store.setReady();
 
   // Focus container on mount to enable keyboard navigation

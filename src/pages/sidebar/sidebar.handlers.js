@@ -1,30 +1,23 @@
 import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, fileManagerFactory, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const state = repository.getState();
+  const { projectService, store, render } = deps;
+  await projectService.ensureRepository();
+  const state = projectService.getState();
   const project = state.project;
 
   if (!project.iconFileId) {
     return;
   }
 
-  // Get fileManager for this project
-  const fileManager = await fileManagerFactory.getByProject(p);
-  const { url } = await fileManager.getFileContent({
-    fileId: project.iconFileId,
-  });
-
+  const { url } = await projectService.getFileContent(project.iconFileId);
   store.setProjectImageUrl(url);
-
   render();
 };
 
 export const handleItemClick = async (deps, payload) => {
-  const { subject, router } = deps;
-  const currentPayload = router.getPayload();
+  const { subject, appService } = deps;
+  const currentPayload = appService.getPayload();
   subject.dispatch("redirect", {
     path: payload._event.detail.item.id,
     payload: currentPayload, // Pass through current payload (including projectId)
@@ -32,8 +25,8 @@ export const handleItemClick = async (deps, payload) => {
 };
 
 export const handleHeaderClick = (deps) => {
-  const { subject, router } = deps;
-  const currentPayload = router.getPayload();
+  const { subject, appService } = deps;
+  const currentPayload = appService.getPayload();
   subject.dispatch("redirect", {
     path: "/project",
     payload: currentPayload, // Pass through current payload (including projectId)
@@ -41,24 +34,16 @@ export const handleHeaderClick = (deps) => {
 };
 
 export const handleProjectImageUpdate = async (deps) => {
-  const { repositoryFactory, router, store, render, fileManagerFactory } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const state = repository.getState();
+  const { projectService, store, render } = deps;
+  const state = projectService.getState();
   const project = state.project;
 
   if (!project.iconFileId) {
     return;
   }
 
-  // Get fileManager for this project
-  const fileManager = await fileManagerFactory.getByProject(p);
-  const { url } = await fileManager.getFileContent({
-    fileId: project.iconFileId,
-  });
-
+  const { url } = await projectService.getFileContent(project.iconFileId);
   store.setProjectImageUrl(url);
-
   render();
 };
 

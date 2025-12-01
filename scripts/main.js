@@ -86,10 +86,11 @@ const init = async () => {
         "width": 1920,
         "height": 1080,
         "fill": "#000000",
-        "clickEventName": "system",
-        "clickEventPayload": {
-          "actions": {
-            "nextLine": {}
+        "click": {
+          "actionPayload": {
+            "actions": {
+              "nextLine": {}
+            }
           }
         }
       }
@@ -121,7 +122,7 @@ const init = async () => {
     ],
     audios: [
       soundPlugin
-    ]  
+    ]
   }
 
   const app = createRouteGraphics();

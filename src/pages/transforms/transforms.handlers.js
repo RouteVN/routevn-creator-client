@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository.js";
+import { toFlatItems } from "insieme";
 
-// Constants for drenderer integration (moved from groupTransformsView)
+// Constants for graphicsService integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
@@ -56,21 +56,16 @@ const createRenderState = ({
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { transforms } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { transforms } = projectService.getState();
   store.setItems(transforms || { tree: [], items: {} });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-
-  const repositoryState = repository.getState();
-  const { transforms } = repositoryState;
+  const { store, render, projectService } = deps;
+  const { transforms } = projectService.getState();
 
   const transformData = transforms || { tree: [], items: {} };
 
@@ -100,7 +95,7 @@ export const handleTransformItemClick = (deps, payload) => {
 };
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {
-  const { store, render, drenderer, getRefIds } = deps;
+  const { store, render, graphicsService, getRefIds } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -122,10 +117,10 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
   });
   render();
 
-  // Initialize drenderer after dialog is opened and canvas is in DOM
+  // Initialize graphicsService after dialog is opened and canvas is in DOM
   const { canvas } = getRefIds();
   if (canvas && canvas.elm) {
-    await drenderer.init({
+    await graphicsService.init({
       canvas: canvas.elm,
     });
   }
@@ -147,11 +142,11 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
     anchorX: anchor.anchorX,
     anchorY: anchor.anchorY,
   });
-  drenderer.render(renderState);
+  graphicsService.render(renderState);
 };
 
 export const handleAddTransformClick = async (deps, payload) => {
-  const { store, render, drenderer, getRefIds } = deps;
+  const { store, render, graphicsService, getRefIds } = deps;
   payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
@@ -167,13 +162,13 @@ export const handleAddTransformClick = async (deps, payload) => {
   render();
 
   const { canvas } = getRefIds();
-  if (!canvas?.elm || drenderer.initialized) {
+  if (!canvas?.elm || graphicsService.initialized) {
     return;
   }
-  await drenderer.init({
+  await graphicsService.init({
     canvas: canvas.elm,
   });
-  drenderer.initialized = true;
+  graphicsService.initialized = true;
 
   // Render initial state with default values (scale=1, anchor=center-center)
   const renderState = createRenderState({
@@ -185,7 +180,7 @@ export const handleAddTransformClick = async (deps, payload) => {
     anchorX: 0,
     anchorY: 0,
   });
-  drenderer.render(renderState);
+  graphicsService.render(renderState);
 };
 
 export const handleGroupClick = (deps, payload) => {
@@ -198,13 +193,11 @@ export const handleGroupClick = (deps, payload) => {
 };
 
 export const handleTransformCreated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     payload._event.detail;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: "transforms",
@@ -227,16 +220,14 @@ export const handleTransformCreated = async (deps, payload) => {
     },
   });
 
-  const { transforms } = repository.getState();
+  const { transforms } = projectService.getState();
   store.setItems(transforms);
   render();
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "transforms",
@@ -250,20 +241,18 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { transforms } = repository.getState();
+  const { transforms } = projectService.getState();
   store.setItems(transforms);
   render();
 };
 
 export const handleTransformEdited = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { itemId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     payload._event.detail;
 
   // Update repository directly
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "transforms",
@@ -285,7 +274,7 @@ export const handleTransformEdited = async (deps, payload) => {
   });
 
   // Update local state and render immediately
-  const { transforms } = repository.getState();
+  const { transforms } = projectService.getState();
   store.setItems(transforms);
   render();
 };
@@ -374,7 +363,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
 };
 
 export const handleTransformFormChange = async (deps, payload) => {
-  const { render, drenderer } = deps;
+  const { render, graphicsService } = deps;
 
   const formValues = payload._event.detail.formValues;
 
@@ -400,19 +389,17 @@ export const handleTransformFormChange = async (deps, payload) => {
     anchorY,
   });
 
-  drenderer.render(renderState);
+  graphicsService.render(renderState);
 
   render();
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -423,7 +410,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

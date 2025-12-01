@@ -1,11 +1,10 @@
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, router, store, props, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { audio } = repository.getState();
+  const { projectService, store, props, render } = deps;
+  await projectService.ensureRepository();
+  const { audio } = projectService.getState();
 
   store.setRepositoryState({
     audio,
@@ -176,11 +175,10 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
 };
 
 export const handleButtonSelectClick = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
+  await projectService.ensureRepository();
 
-  const { audio } = repository.getState();
+  const { audio } = projectService.getState();
 
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
   const tempSelectedAudio = toFlatItems(audio).find(
