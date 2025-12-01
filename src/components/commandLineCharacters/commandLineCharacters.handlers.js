@@ -230,7 +230,8 @@ export const handleButtonSelectClick = (deps) => {
         store.updateCharacterSprite({
           index: selectedCharacterIndex,
           spriteId: tempSelectedSpriteId,
-          spriteFileId: tempSelectedSprite.fileId || tempSelectedSprite.imageId,
+          spriteFileId:
+            tempSelectedSprite.fileId || tempSelectedSprite.resourceId,
         });
       }
     }

@@ -374,7 +374,7 @@ export const createInitialState = () => ({
   // Animation dialog state
   searchQuery: "",
   isDialogOpen: false,
-  isDrendererInitialized: false,
+  isGraphicsServiceInitialized: false,
   targetGroupId: null,
   selectedProperties: [],
   initialValue: 0,
@@ -479,12 +479,12 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
 
-export const setDrendererInitialized = (state, initialized) => {
-  state.isDrendererInitialized = initialized;
+export const setGraphicsServiceInitialized = (state, initialized) => {
+  state.isGraphicsServiceInitialized = initialized;
 };
 
-export const selectIsDrendererInitialized = ({ state }) => {
-  return state.isDrendererInitialized;
+export const selectIsGraphicsServiceInitialized = ({ state }) => {
+  return state.isGraphicsServiceInitialized;
 };
 
 // Constants for preview rendering

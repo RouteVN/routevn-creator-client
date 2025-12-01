@@ -132,6 +132,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     for (const result of successfulUploads) {
+      console.log("Upload result:", result);
       await repository.addEvent({
         type: "treePush",
         payload: {
@@ -143,6 +144,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
             name: result.displayName,
             fileType: result.file.type,
             fileSize: result.file.size,
+            width: result.dimensions.width,
+            height: result.dimensions.height,
           },
           options: {
             parent: id,
@@ -262,21 +265,24 @@ export const handleSearchInput = (deps, payload) => {
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, store, render } = deps;
   const repository = await projectService.getRepository();
-  const { resourceType, itemId } = payload._event.detail;
+  const { itemId } = payload._event.detail;
+
+  const characterId = store.selectCharacterId();
 
   // Perform the delete operation
   await repository.addEvent({
     type: "treeDelete",
     payload: {
-      target: resourceType,
+      target: `characters.items.${characterId}.sprites`,
       options: {
         id: itemId,
       },
     },
   });
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  // Refresh data and update store
+  const { characters } = projectService.getState();
+  const character = characters.items[characterId];
+  store.setItems(character?.sprites || { items: {}, tree: [] });
   render();
 };

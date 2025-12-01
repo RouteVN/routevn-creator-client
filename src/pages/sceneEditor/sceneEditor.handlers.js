@@ -53,11 +53,11 @@ async function createAssetsFromFileIds(
 }
 
 // Helper function to render the scene state
-async function renderSceneState(store, drenderer) {
+async function renderSceneState(store, graphicsService) {
   const projectData = store.selectProjectData();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  drenderer.engineHandleActions({
+  graphicsService.engineHandleActions({
     updateProjectData: {
       projectData,
     },
@@ -66,20 +66,26 @@ async function renderSceneState(store, drenderer) {
       lineId,
     },
   });
-  drenderer.engineRenderCurrentState();
+  graphicsService.engineRenderCurrentState();
 }
 
 export const handleBeforeMount = (deps) => {
-  const { drenderer } = deps;
+  const { graphicsService } = deps;
 
   return () => {
-    drenderer.destroy();
+    graphicsService.destroy();
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { getRefIds, drenderer, store, projectService, appService, render } =
-    deps;
+  const {
+    getRefIds,
+    graphicsService,
+    store,
+    projectService,
+    appService,
+    render,
+  } = deps;
 
   // Ensure repository is loaded for sync access
   await projectService.ensureRepository();
@@ -104,10 +110,13 @@ export const handleAfterMount = async (deps) => {
   }
 
   const { canvas } = getRefIds();
-  await drenderer.init({ canvas: canvas.elm });
+  await graphicsService.init({ canvas: canvas.elm });
 
   const projectData = store.selectProjectData();
-  drenderer.initRouteEngine(projectData);
+
+  console.log("Resources:", projectData.resources);
+
+  graphicsService.initRouteEngine(projectData);
   // TODO don't load all data... only ones necessary for this scene
   const fileReferences = extractFileIdsFromRenderState(projectData);
   const assets = await createAssetsFromFileIds(
@@ -115,9 +124,9 @@ export const handleAfterMount = async (deps) => {
     projectService,
     projectData.resources,
   );
-  await drenderer.loadAssets(assets);
+  await graphicsService.loadAssets(assets);
   // don't know why but it needs to be called twice the first time to work...
-  renderSceneState(store, drenderer);
+  renderSceneState(store, graphicsService);
   render();
 };
 
@@ -137,7 +146,7 @@ export const handleSectionTabClick = (deps, payload) => {
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
-  const { store, render, projectService, subject, drenderer } = deps;
+  const { store, render, projectService, subject, graphicsService } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -166,7 +175,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     // Render the canvas with the latest data
     setTimeout(async () => {
-      await renderSceneState(store, drenderer);
+      await renderSceneState(store, graphicsService);
     }, 10);
     return;
   }
@@ -244,7 +253,7 @@ export const handleAddActionsButtonClick = (deps) => {
 };
 
 export const handleSectionAddClick = async (deps) => {
-  const { store, projectService, render, drenderer } = deps;
+  const { store, projectService, render, graphicsService } = deps;
 
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
@@ -324,7 +333,7 @@ export const handleSectionAddClick = async (deps) => {
 
   // Render the canvas with the new section's data
   setTimeout(async () => {
-    await renderSceneState(store, drenderer);
+    await renderSceneState(store, graphicsService);
   }, 10);
 };
 
@@ -500,7 +509,7 @@ export const handleNewLine = async (deps) => {
 };
 
 export const handleLineNavigation = (deps, payload) => {
-  const { store, getRefIds, render, subject, drenderer } = deps;
+  const { store, getRefIds, render, subject, graphicsService } = deps;
   const { targetLineId, mode, direction, targetCursorPosition, lineRect } =
     payload._event.detail;
 
@@ -517,7 +526,7 @@ export const handleLineNavigation = (deps, payload) => {
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
       // First line - show animation effects
-      drenderer.render({
+      graphicsService.render({
         elements: [],
         transitions: [],
       });
@@ -652,7 +661,7 @@ export const handleLineNavigation = (deps, payload) => {
     }, 0);
   } else if (direction === "up" && currentLineId === targetLineId) {
     // First line - show animation effects
-    drenderer.render({
+    graphicsService.render({
       elements: [],
       transitions: [],
     });
@@ -986,14 +995,14 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
 };
 
 export const handleHidePreviewScene = async (deps) => {
-  const { store, render, drenderer, getRefIds } = deps;
+  const { store, render, graphicsService, getRefIds } = deps;
 
   store.hidePreviewScene();
   render();
 
   const { canvas } = getRefIds();
-  await drenderer.init({ canvas: canvas.elm });
-  await renderSceneState(store, drenderer);
+  await graphicsService.init({ canvas: canvas.elm });
+  await renderSceneState(store, graphicsService);
 };
 
 // Handler for throttled/debounced dialogue content updates
@@ -1041,8 +1050,8 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps) {
-  const { store, drenderer } = deps;
-  await renderSceneState(store, drenderer);
+  const { store, graphicsService } = deps;
+  await renderSceneState(store, graphicsService);
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing

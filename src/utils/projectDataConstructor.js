@@ -57,20 +57,7 @@ export function constructProjectData(state, options = {}) {
           variables: {
             name: character.name || "Unnamed Character",
           },
-          sprites: {},
         };
-
-        // Process sprite parts if they exist
-        if (character.sprites && character.sprites.items) {
-          Object.keys(character.sprites.items).forEach((spriteId) => {
-            const sprite = character.sprites.items[spriteId];
-            if (sprite.fileId) {
-              processedCharacters[characterId].sprites[spriteId] = {
-                fileId: sprite.fileId,
-              };
-            }
-          });
-        }
       }
     });
 
@@ -120,10 +107,22 @@ export function constructProjectData(state, options = {}) {
     return processedLayouts;
   }
 
-  function extractCharacterImages(characters) {
+  function extractCharacterImages(repositoryCharacters = {}) {
     const characterImages = {};
-    Object.entries(characters).forEach(([, character]) => {
-      Object.assign(characterImages, character.sprites);
+    Object.entries(repositoryCharacters).forEach(([, character]) => {
+      if (character.type === "character" && character.sprites?.items) {
+        Object.entries(character.sprites.items).forEach(
+          ([spriteId, sprite]) => {
+            if (sprite.fileId) {
+              characterImages[spriteId] = {
+                fileId: sprite.fileId,
+                width: sprite.width,
+                height: sprite.height,
+              };
+            }
+          },
+        );
+      }
     });
     return characterImages;
   }
@@ -140,7 +139,7 @@ export function constructProjectData(state, options = {}) {
     const fonts = repositoryState.fonts?.items || {};
 
     const processedCharacters = constructCharacters(characters);
-    const characterImages = extractCharacterImages(processedCharacters);
+    const characterImages = extractCharacterImages(characters);
 
     return {
       images: { ...constructImages(images), ...characterImages },

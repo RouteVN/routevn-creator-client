@@ -17,23 +17,23 @@ const resetState = {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, render, drenderer, getRefIds } = deps;
+  const { store, projectService, render, graphicsService, getRefIds } = deps;
   await projectService.ensureRepository();
   const { animations } = projectService.getState();
   store.setItems(animations || { tree: [], items: {} });
 
-  // Initialize drenderer if canvas is present
+  // Initialize graphicsService if canvas is present
   const { canvas } = getRefIds();
   if (
-    drenderer &&
+    graphicsService &&
     canvas &&
     canvas.elm &&
-    !store.selectIsDrendererInitialized()
+    !store.selectIsGraphicsServiceInitialized()
   ) {
-    await drenderer.init({
+    await graphicsService.init({
       canvas: canvas.elm,
     });
-    store.setDrendererInitialized(true);
+    store.setGraphicsServiceInitialized(true);
   }
 
   render();
@@ -152,18 +152,18 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleAddAnimationClick = async (deps, payload) => {
-  const { store, render, drenderer } = deps;
+  const { store, render, graphicsService } = deps;
   const { groupId } = payload._event.detail;
   store.setTargetGroupId(groupId);
   store.openDialog();
-  if (drenderer) {
-    drenderer.render(resetState);
+  if (graphicsService) {
+    graphicsService.render(resetState);
   }
   render();
 };
 
 export const handleAnimationItemDoubleClick = async (deps, payload) => {
-  const { store, render, drenderer } = deps;
+  const { store, render, graphicsService } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -185,8 +185,8 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
       }
     }
 
-    if (drenderer) {
-      drenderer.render(resetState);
+    if (graphicsService) {
+      graphicsService.render(resetState);
     }
     store.openDialog({
       editMode: true,
@@ -455,17 +455,17 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
 };
 
 export const handleReplayAnimation = async (deps) => {
-  const { store, drenderer } = deps;
+  const { store, graphicsService } = deps;
 
-  if (!drenderer || !store.selectIsDrendererInitialized()) {
+  if (!graphicsService || !store.selectIsGraphicsServiceInitialized()) {
     return;
   }
 
-  await drenderer.render(resetState);
+  await graphicsService.render(resetState);
 
   setTimeout(() => {
     const renderState = store.selectAnimationRenderStateWithAnimations();
-    drenderer.render(renderState);
+    graphicsService.render(renderState);
   }, 100);
 };
 

@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
 
-// Constants for drenderer integration (moved from groupTransformsView)
+// Constants for graphicsService integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
@@ -95,7 +95,7 @@ export const handleTransformItemClick = (deps, payload) => {
 };
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {
-  const { store, render, drenderer, getRefIds } = deps;
+  const { store, render, graphicsService, getRefIds } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -117,10 +117,10 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
   });
   render();
 
-  // Initialize drenderer after dialog is opened and canvas is in DOM
+  // Initialize graphicsService after dialog is opened and canvas is in DOM
   const { canvas } = getRefIds();
   if (canvas && canvas.elm) {
-    await drenderer.init({
+    await graphicsService.init({
       canvas: canvas.elm,
     });
   }
@@ -142,11 +142,11 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
     anchorX: anchor.anchorX,
     anchorY: anchor.anchorY,
   });
-  drenderer.render(renderState);
+  graphicsService.render(renderState);
 };
 
 export const handleAddTransformClick = async (deps, payload) => {
-  const { store, render, drenderer, getRefIds } = deps;
+  const { store, render, graphicsService, getRefIds } = deps;
   payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
@@ -162,13 +162,13 @@ export const handleAddTransformClick = async (deps, payload) => {
   render();
 
   const { canvas } = getRefIds();
-  if (!canvas?.elm || drenderer.initialized) {
+  if (!canvas?.elm || graphicsService.initialized) {
     return;
   }
-  await drenderer.init({
+  await graphicsService.init({
     canvas: canvas.elm,
   });
-  drenderer.initialized = true;
+  graphicsService.initialized = true;
 
   // Render initial state with default values (scale=1, anchor=center-center)
   const renderState = createRenderState({
@@ -180,7 +180,7 @@ export const handleAddTransformClick = async (deps, payload) => {
     anchorX: 0,
     anchorY: 0,
   });
-  drenderer.render(renderState);
+  graphicsService.render(renderState);
 };
 
 export const handleGroupClick = (deps, payload) => {
@@ -363,7 +363,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
 };
 
 export const handleTransformFormChange = async (deps, payload) => {
-  const { render, drenderer } = deps;
+  const { render, graphicsService } = deps;
 
   const formValues = payload._event.detail.formValues;
 
@@ -389,7 +389,7 @@ export const handleTransformFormChange = async (deps, payload) => {
     anchorY,
   });
 
-  drenderer.render(renderState);
+  graphicsService.render(renderState);
 
   render();
 };

@@ -113,7 +113,7 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
       };
     } else {
       // For non-fonts (like images), use the file reference
-      assets[`file:${fileId}`] = {
+      assets[`${fileId}`] = {
         url: url,
         type: type,
       };
@@ -200,7 +200,7 @@ const calculateAbsolutePosition = (
 };
 
 const renderLayoutPreview = async (deps) => {
-  const { store, drenderer } = deps;
+  const { store, graphicsService } = deps;
 
   const { renderStateElements, fontsItems } = await getRenderState(deps);
 
@@ -210,7 +210,8 @@ const renderLayoutPreview = async (deps) => {
 
   const fileReferences = extractFileIdsFromRenderState(renderStateElements);
   const assets = await loadAssets(deps, fileReferences, fontsItems);
-  await drenderer.loadAssets(assets);
+  console.log("assets", assets);
+  await graphicsService.loadAssets(assets);
 
   let elementsToRender = renderStateElements;
 
@@ -226,12 +227,12 @@ const renderLayoutPreview = async (deps) => {
   const finalElements = parseAndRender(elementsToRender, data);
   console.log("Final elements:", finalElements);
 
-  const parsedState = drenderer.parse({
+  const parsedState = graphicsService.parse({
     elements: renderStateElements,
   });
 
   if (!selectedItem) {
-    drenderer.render({
+    graphicsService.render({
       elements: finalElements,
       animations: [],
     });
@@ -277,7 +278,7 @@ const renderLayoutPreview = async (deps) => {
       },
     };
 
-    drenderer.render({
+    graphicsService.render({
       elements: [...finalElements, border, redDot],
       animations: [],
     });
@@ -285,8 +286,14 @@ const renderLayoutPreview = async (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, store, projectService, render, getRefIds, drenderer } =
-    deps;
+  const {
+    appService,
+    store,
+    projectService,
+    render,
+    getRefIds,
+    graphicsService,
+  } = deps;
   const { layoutId } = appService.getPayload();
   const repository = await projectService.getRepository();
   const { layouts, images, typography, colors, fonts } = repository.getState();
@@ -299,7 +306,7 @@ export const handleAfterMount = async (deps) => {
   store.setFontsData(fonts || { items: {}, tree: [] });
 
   const { canvas } = getRefIds();
-  await drenderer.init({ canvas: canvas.elm });
+  await graphicsService.init({ canvas: canvas.elm });
 
   await renderLayoutPreview(deps);
   render();
@@ -535,7 +542,7 @@ export const subscriptions = (deps) => {
       }),
     ),
     subject.pipe(
-      filter(({ action }) => action === "2drendererEvent"),
+      filter(({ action }) => action === "graphicsServiceEvent"),
       tap(({ payload }) => {
         handleCanvasMouseMove(deps, payload);
       }),

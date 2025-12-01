@@ -9,7 +9,7 @@ export const createInitialState = () => ({
    * {
    *   id: string,              // Character ID from repository
    *   transformId: string,     // Transform ID
-   *   sprites: array,          // Array of sprites with imageId
+   *   sprites: array,          // Array of sprites with resourceId
    *   spriteName: string       // Display name for sprite
    * }
    */
@@ -69,7 +69,7 @@ export const updateCharacterSprite = (state, { index, spriteId }) => {
     state.selectedCharacters[index].sprites = [
       {
         id: "base",
-        imageId: spriteId,
+        resourceId: spriteId,
       },
     ];
   }
@@ -153,7 +153,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
         id: char.id,
         name: "Unknown Character",
         transformId: char.transformId,
-        spriteId: char.sprites?.[0]?.imageId,
+        spriteId: char.sprites?.[0]?.resourceId,
         spriteFileId: undefined,
         spriteName: char.spriteName || "",
       };
@@ -161,9 +161,9 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
 
     // Find sprite data if available
     let spriteFileId = undefined;
-    if (char.sprites?.[0]?.imageId && characterData.sprites) {
+    if (char.sprites?.[0]?.resourceId && characterData.sprites) {
       const sprite = toFlatItems(characterData.sprites).find(
-        (s) => s.id === char.sprites[0].imageId,
+        (s) => s.id === char.sprites[0].resourceId,
       );
       if (sprite) {
         spriteFileId = sprite.fileId;
@@ -173,7 +173,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
     return {
       ...characterData,
       transformId: char.transformId,
-      spriteId: char.sprites?.[0]?.imageId,
+      spriteId: char.sprites?.[0]?.resourceId,
       spriteFileId: spriteFileId,
       spriteName: char.spriteName || "",
     };

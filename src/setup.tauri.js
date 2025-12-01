@@ -71,7 +71,6 @@ setupCloseListener({ globalUI });
 const componentDependencies = {
   subject,
   graphicsService,
-  drenderer: graphicsService,
   appService,
   projectService,
   audioService,
@@ -80,7 +79,6 @@ const componentDependencies = {
 const pageDependencies = {
   subject,
   graphicsService,
-  drenderer: graphicsService,
   appService,
   projectService,
   appVersion,
