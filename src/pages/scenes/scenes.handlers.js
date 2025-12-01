@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-import { createUserConfig } from "../../deps/userConfig";
 
 /**
  *
@@ -57,7 +56,8 @@ const getTransitionsForScene = (sections) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render, getRefIds } = deps;
+  const { store, repositoryFactory, router, render, getRefIds, appService } =
+    deps;
   const { p } = router.getPayload();
   const repository = await repositoryFactory.getByProject(p);
   const { scenes, story } = repository.getState();
@@ -83,10 +83,9 @@ export const handleAfterMount = async (deps) => {
   store.setWhiteboardItems(sceneItems);
 
   // Restore viewport state from userConfig
-  const userConfig = createUserConfig();
-  const savedZoomLevel = userConfig.get("scenesMap.zoomLevel");
-  const savedPanX = userConfig.get("scenesMap.panX");
-  const savedPanY = userConfig.get("scenesMap.panY");
+  const savedZoomLevel = appService.getUserConfig("scenesMap.zoomLevel");
+  const savedPanX = appService.getUserConfig("scenesMap.panX");
+  const savedPanY = appService.getUserConfig("scenesMap.panY");
 
   const { whiteboard } = getRefIds();
 
@@ -581,14 +580,14 @@ export const handleClickShowScenePreview = (deps, payload) => {
 };
 
 export const handleWhiteboardZoomChanged = (deps, payload) => {
-  const userConfig = createUserConfig();
+  const { appService } = deps;
   const { zoomLevel } = payload._event.detail;
-  userConfig.set("scenesMap.zoomLevel", zoomLevel);
+  appService.setUserConfig("scenesMap.zoomLevel", zoomLevel);
 };
 
 export const handleWhiteboardPanChanged = (deps, payload) => {
-  const userConfig = createUserConfig();
+  const { appService } = deps;
   const { panX, panY } = payload._event.detail;
-  userConfig.set("scenesMap.panX", panX);
-  userConfig.set("scenesMap.panY", panY);
+  appService.setUserConfig("scenesMap.panX", panX);
+  appService.setUserConfig("scenesMap.panY", panY);
 };

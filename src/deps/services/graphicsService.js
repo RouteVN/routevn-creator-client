@@ -11,7 +11,7 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine from "route-engine-js";
 
-export const create2dRenderer = async () => {
+export const createGraphicsService = async () => {
   let routeGraphics;
   let engine;
   let assetBufferManager;

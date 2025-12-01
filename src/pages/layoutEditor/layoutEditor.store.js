@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from "../../deps/repository";
+import { toFlatItems, toFlatGroups } from "insieme";
 
 const dialogueForm = {
   title: "Preview",

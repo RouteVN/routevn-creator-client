@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository.js";
+import { toFlatItems } from "insieme";
 
 // Constants for drenderer integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;

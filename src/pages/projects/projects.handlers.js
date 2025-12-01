@@ -1,7 +1,7 @@
 export const handleAfterMount = async (deps) => {
-  const { projectsService, store, render } = deps;
+  const { appService, store, render } = deps;
 
-  const projects = await projectsService.loadAllProjects();
+  const projects = await appService.loadAllProjects();
   store.setProjects(projects);
   render();
 };
@@ -13,37 +13,28 @@ export const handleCreateButtonClick = async (deps) => {
 };
 
 export const handleOpenButtonClick = async (deps) => {
-  const { projectsService, store, render, tauriDialog, globalUI } = deps;
+  const { appService, store, render } = deps;
 
   try {
-    // Open folder selection dialog
-    const selectedPath = await tauriDialog.openFolderDialog({
+    const selectedPath = await appService.openFolderPicker({
       title: "Select Existing Project Folder",
     });
 
     if (!selectedPath) {
-      return; // User cancelled
+      return;
     }
 
-    // Open the project using service
-    const importedProject =
-      await projectsService.openExistingProject(selectedPath);
+    const importedProject = await appService.openExistingProject(selectedPath);
 
-    // Update store with new project
     store.addProject(importedProject);
-
     render();
 
-    globalUI.showAlert({
-      message: `Project "${importedProject.name}" has been successfully imported.`,
-      title: "Success",
-    });
+    appService.showToast(
+      `Project "${importedProject.name}" has been successfully imported.`,
+    );
   } catch (error) {
     console.error("Error importing project:", error);
-    globalUI.showAlert({
-      message: `Failed to import project: ${error.message || error}`,
-      title: "Error",
-    });
+    appService.showToast(`Failed to import project: ${error.message || error}`);
   }
 };
 
@@ -54,45 +45,33 @@ export const handleCloseDialogue = (deps) => {
 };
 
 export const handleProjectsClick = async (deps, payload) => {
-  const { subject } = deps;
+  const { appService } = deps;
   const id = payload._event.currentTarget.id.replace("project-", "");
-  console.log("id", id);
-  subject.dispatch("redirect", {
-    path: `/project`,
-    payload: {
-      p: id,
-    },
-  });
+  appService.navigate(`/project?p=${id}`);
 };
 
 export const handleBrowseFolder = async (deps) => {
-  const { store, render, tauriDialog, globalUI } = deps;
+  const { appService, store, render } = deps;
 
   try {
-    // Open folder selection dialog using tauriDialog from deps
-    const selected = await tauriDialog.openFolderDialog({
+    const selected = await appService.openFolderPicker({
       title: "Select Project Location",
     });
 
     if (selected) {
-      // Update the form's default value for projectPath
       store.setProjectPath(selected);
       render();
     }
   } catch (error) {
     console.error("Error selecting folder:", error);
-    globalUI.showAlert({
-      message: `Error selecting folder: ${error.message || error}`,
-      title: "Error",
-    });
+    appService.showToast(`Error selecting folder: ${error.message || error}`);
   }
 };
 
 export const handleFormSubmit = async (deps, payload) => {
-  const { projectsService, initializeProject, store, render, globalUI } = deps;
+  const { appService, store, render } = deps;
 
   try {
-    // Check if it's the submit button
     if (payload._event.detail.actionId !== "submit") {
       return;
     }
@@ -110,7 +89,6 @@ export const handleFormSubmit = async (deps, payload) => {
 
     const projectPath = store.selectProjectPath();
 
-    // Validate input
     if (!name || !description || !projectPath) {
       let message = "Please fill in all required fields.";
       if (!name) {
@@ -121,35 +99,25 @@ export const handleFormSubmit = async (deps, payload) => {
         message = "Project Location is required.";
       }
 
-      globalUI.showAlert({
-        message,
-        title: "Error",
-      });
+      appService.showToast(message);
       return;
     }
 
-    // Create new project using service
-    const newProject = await projectsService.createNewProject({
+    const newProject = await appService.createNewProject({
       name,
       description,
       projectPath,
       template,
-      initializeProject,
     });
 
-    // Update store with new project
     store.addProject(newProject);
     store.toggleDialog();
-
     render();
 
     console.log(`Project created at: ${projectPath}`);
   } catch (error) {
     console.error("Error creating project:", error);
-    globalUI.showAlert({
-      message: `Failed to create project: ${error.message}`,
-      title: "Error",
-    });
+    appService.showToast(`Failed to create project: ${error.message}`);
   }
 };
 
@@ -180,20 +148,17 @@ export const handleDropdownMenuClose = (deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, projectsService, globalUI } = deps;
+  const { appService, store, render } = deps;
   const detail = payload._event.detail;
 
-  // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
 
   if (item.value !== "delete") {
-    // Hide dropdown for non-delete actions
     store.closeDropdownMenu();
     render();
     return;
   }
 
-  // Get projectId BEFORE closing dropdown (important!)
   const projectId = store.selectDropdownMenuTargetProjectId();
 
   if (!projectId) {
@@ -213,12 +178,10 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     return;
   }
 
-  // Close dropdown before showing confirm dialog
   store.closeDropdownMenu();
   render();
 
-  // Use globalUI service for confirmation
-  const confirmed = await globalUI.showConfirm({
+  const confirmed = await appService.showDialog({
     message: `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
     title: "Delete Project",
     confirmText: "Delete",
@@ -229,10 +192,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     return;
   }
 
-  // Delete the project entry using service
-  await projectsService.removeProjectEntry(projectId);
+  await appService.removeProjectEntry(projectId);
 
-  // Update store by removing from current projects
   store.removeProject(projectId);
   render();
 };

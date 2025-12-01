@@ -1,4 +1,4 @@
-import { toFlatGroups } from "../../deps/repository";
+import { toFlatGroups } from "insieme";
 
 export const createInitialState = () => ({
   selectedImageId: undefined,

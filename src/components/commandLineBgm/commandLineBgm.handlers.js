@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 
 export const handleAfterMount = async (deps) => {
   const { repositoryFactory, router, store, props, render } = deps;

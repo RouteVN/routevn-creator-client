@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
 import { filter, tap, debounceTime, groupBy, mergeMap } from "rxjs";
 

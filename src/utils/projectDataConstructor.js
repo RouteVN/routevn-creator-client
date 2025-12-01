@@ -1,4 +1,4 @@
-import { toTreeStructure } from "../deps/repository";
+import { toTreeStructure } from "insieme";
 import { layoutTreeStructureToRenderState } from "./index.js";
 
 export function constructProjectData(state, options = {}) {

@@ -1,11 +1,12 @@
 import { filter, fromEvent, tap } from "rxjs";
 
 export const handleBeforeMount = (deps) => {
-  console.log("handleBeforeMount", deps.router.getPathName());
-  const currentPath = deps.router.getPathName();
+  const { appService } = deps;
+  console.log("handleBeforeMount", appService.getPath());
+  const currentPath = appService.getPath();
 
   if (currentPath === "/") {
-    deps.router.redirect("/projects");
+    appService.navigate("/projects");
     deps.store.setCurrentRoute("/projects");
   } else {
     deps.store.setCurrentRoute(currentPath);
@@ -22,25 +23,25 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleRedirect = (deps, payload) => {
+  const { appService } = deps;
   deps.store.setCurrentRoute(payload.path);
-  deps.router.redirect(payload.path, payload.payload);
+  appService.navigate(payload.path, payload.payload);
   deps.render();
 };
 
 export const handleWindowPop = (deps) => {
+  const { appService } = deps;
   // console.log('handleWindowPop', payload._event);
-  console.log("pathname", deps.router.getPathName());
-  deps.store.setCurrentRoute(deps.router.getPathName());
+  console.log("pathname", appService.getPath());
+  deps.store.setCurrentRoute(appService.getPath());
   deps.render();
 };
 
 export const handleUpdateTransform = async (deps, payload) => {
-  const { repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService } = deps;
   const { itemId, updates } = payload;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "transforms",
@@ -56,12 +57,10 @@ export const handleUpdateTransform = async (deps, payload) => {
 };
 
 export const handleUpdateColor = async (deps, payload) => {
-  const { repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService } = deps;
   const { itemId, updates } = payload;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "colors",

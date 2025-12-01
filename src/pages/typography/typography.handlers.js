@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../deps/repository";
+import { toFlatItems } from "insieme";
 import { getFileType } from "../../utils/fileTypeUtils";
 
 // Helper function to sync repository state to store

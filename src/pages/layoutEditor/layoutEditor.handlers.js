@@ -1,5 +1,5 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
-import { toTreeStructure } from "../../deps/repository";
+import { toTreeStructure } from "insieme";
 import {
   extractFileIdsFromRenderState,
   layoutTreeStructureToRenderState,

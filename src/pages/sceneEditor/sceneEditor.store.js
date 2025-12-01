@@ -1,4 +1,4 @@
-import { toFlatItems, toTreeStructure } from "../../deps/repository";
+import { toFlatItems, toTreeStructure } from "insieme";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 

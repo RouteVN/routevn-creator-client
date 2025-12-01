@@ -1,193 +1,83 @@
 import { createWebPatch } from "@rettangoli/fe";
+import { createGlobalUI } from "@rettangoli/ui";
 import { h } from "snabbdom/build/h";
 
-import { createUserConfig } from "./deps/userConfig";
-import Subject from "./deps/subject";
-import createRouteVnHttpClient from "./deps/createRouteVnHttpClient";
-import Router from "./deps/router";
-import AudioManager from "./deps/audioManager";
-import { createGlobalUI } from "@rettangoli/ui";
-// File management imports
-import { createFileManagerFactory } from "./deps/fileManagerFactory";
-import { createStorageAdapterFactory } from "./deps/storageAdapterFactory";
-import { createFontManager } from "./deps/fontManager";
-import { create2dRenderer } from "./deps/2drenderer";
-import { createFilePicker } from "./deps/filePicker";
-import { createKeyValueStore } from "./deps/keyValueStore";
-import { createTauriDialog } from "./deps/tauriDialog";
-import { initializeProject } from "./deps/tauriRepositoryAdapter";
-import { createRepositoryFactory } from "./deps/repository";
-import { createProjectsService } from "./deps/projectsService";
-import createUpdater from "./deps/tauriUpdater";
-import isInputFocused from "./deps/isInputFocused.js";
-import { createBundleService } from "./deps/bundleService";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { setupCloseListener } from "./deps/windowClose";
 
-// Tauri-specific configuration
-const httpClient = createRouteVnHttpClient({
-  baseUrl: "http://localhost:8788",
-  headers: {
-    "X-Platform": "tauri",
-  },
-});
+// Infra - Tauri
+import { createDb } from "./deps/infra/tauri/db";
+import { createTauriFilePicker } from "./deps/infra/tauri/filePicker";
+import createUpdater from "./deps/infra/tauri/updater";
+import { setupCloseListener } from "./deps/infra/tauri/windowClose";
 
-// Create font manager (shared across all projects)
-const fontManager = createFontManager();
+// Services
+import { createAppService } from "./deps/services/appService";
+import { createAudioService } from "./deps/services/audioService";
+import { createProjectService } from "./deps/services/projectService";
 
-// Empty initial data structure
-const initialData = {
-  project: {
-    name: "Project 1",
-    description: "Project 1 description",
-  },
-  story: {
-    initialSceneId: "",
-  },
-  images: {
-    items: {},
-    tree: [],
-  },
-  animations: {
-    items: {},
-    tree: [],
-  },
-  audio: {
-    items: {},
-    tree: [],
-  },
-  videos: {
-    items: {},
-    tree: [],
-  },
-  characters: {
-    items: {},
-    tree: [],
-  },
-  fonts: {
-    items: {},
-    tree: [],
-  },
-  transforms: {
-    items: {},
-    tree: [],
-  },
-  colors: {
-    items: {},
-    tree: [],
-  },
-  typography: {
-    items: {},
-    tree: [],
-  },
-  variables: {
-    items: {},
-    tree: [],
-  },
-  components: {
-    items: {},
-    tree: [],
-  },
-  layouts: {
-    items: {},
-    tree: [],
-  },
-  scenes: {
-    items: {},
-    tree: [],
-  },
-};
+// Legacy deps (to be migrated)
+import Subject from "./deps/subject";
+import Router from "./deps/infra/router";
+import { createGraphicsService } from "./deps/services/graphicsService";
 
-// Initialize key-value store
-const keyValueStore = await createKeyValueStore();
+// Initialize app database
+const appDb = createDb({ path: "sqlite:app.db" });
+await appDb.init();
 
-// Create storage adapter factory
-const storageAdapterFactory = createStorageAdapterFactory(keyValueStore);
-
-// Create factories for multi-project support
-const repositoryFactory = createRepositoryFactory(initialData, keyValueStore);
-const fileManagerFactory = createFileManagerFactory(
-  fontManager,
-  storageAdapterFactory,
-);
-
-const userConfig = createUserConfig();
-const subject = new Subject();
+// Create instances needed for app service
 const router = new Router();
-const audioManager = new AudioManager();
-const filePicker = createFilePicker();
-const tauriDialog = createTauriDialog();
-
-// Create projects service
-const projectsService = createProjectsService({
-  keyValueStore,
-  repositoryFactory,
-  fileManagerFactory,
-});
-
-// Initialize async resources first
-const drenderer = await create2dRenderer({ subject });
+const filePicker = createTauriFilePicker();
+const globalUIElement = document.querySelector("rtgl-global-ui");
+const globalUI = createGlobalUI(globalUIElement);
+const audioService = createAudioService();
 
 // Get app version
 const appVersion = await getVersion();
 
-// Create bundle service
-const bundleService = createBundleService();
+// Create updater
+const updater = createUpdater({ globalUI, keyValueStore: appDb });
 
-const globalUIElement = document.querySelector("rtgl-global-ui");
+// Create project service (manages repositories and project operations)
+const projectService = createProjectService({
+  router,
+  db: appDb,
+  filePicker,
+});
 
-const globalUI = createGlobalUI(globalUIElement);
+// Create app service
+const appService = createAppService({
+  db: appDb,
+  router,
+  globalUI,
+  filePicker,
+  openUrl,
+  appVersion,
+  platform: "tauri",
+  updater,
+  audioService,
+  projectService,
+});
 
-const updaterService = createUpdater({ globalUI, keyValueStore });
+const subject = new Subject();
+
+// Initialize async resources first
+const graphicsService = await createGraphicsService();
 
 setupCloseListener({ globalUI });
 
 const componentDependencies = {
-  httpClient,
   subject,
-  router,
-  repositoryFactory,
-  fileManagerFactory,
-  userConfig,
-  audioManager,
-  fontManager,
-  drenderer,
-  filePicker,
-  keyValueStore,
-  tauriDialog,
-  initializeProject,
-  projectsService,
-  updaterService,
-  globalUI,
-  appVersion,
-  platform: "tauri",
-  openUrl,
-  isInputFocused,
+  graphicsService,
+  appService,
+  projectService,
 };
 
 const pageDependencies = {
-  httpClient,
   subject,
-  router,
-  repositoryFactory,
-  fileManagerFactory,
-  userConfig,
-  audioManager,
-  fontManager,
-  drenderer,
-  filePicker,
-  keyValueStore,
-  tauriDialog,
-  initializeProject,
-  projectsService,
-  updaterService,
-  bundleService,
-  globalUI,
-  appVersion,
-  platform: "tauri",
-  openUrl,
-  isInputFocused,
+  graphicsService,
+  appService,
+  projectService,
 };
 
 const deps = {
