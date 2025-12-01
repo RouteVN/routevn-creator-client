@@ -15,21 +15,19 @@ const lodashGet = (obj, path, defaultValue) => {
 
 // Forward click-item event from base component
 export const handleClickItem = async (deps, payload) => {
-  const { dispatchEvent, repositoryFactory, router, props } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { dispatchEvent, projectService, props } = deps;
+  const state = await projectService.getState();
   const { id } = payload._event.detail;
 
   // Get the clicked item from the repository based on repositoryTarget
   const repositoryTarget = props.repositoryTarget;
   if (!repositoryTarget) {
     throw new Error(
-      "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
+      "REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
     );
   }
 
-  const repositoryState = repository.getState();
-  const targetData = lodashGet(repositoryState, repositoryTarget);
+  const targetData = lodashGet(state, repositoryTarget);
   const selectedItem =
     targetData && targetData.items ? targetData.items[id] : null;
 
@@ -49,21 +47,19 @@ export const handleClickItem = async (deps, payload) => {
 };
 
 export const handleDblClickItem = async (deps, payload) => {
-  const { dispatchEvent, repositoryFactory, router, props } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { dispatchEvent, projectService, props } = deps;
+  const state = await projectService.getState();
   const { itemId } = payload._event.detail;
 
   // Get the clicked item from the repository based on repositoryTarget
   const repositoryTarget = props.repositoryTarget;
   if (!repositoryTarget) {
     throw new Error(
-      "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
+      "REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
     );
   }
 
-  const repositoryState = repository.getState();
-  const targetData = lodashGet(repositoryState, repositoryTarget);
+  const targetData = lodashGet(state, repositoryTarget);
   const selectedItem =
     targetData && targetData.items ? targetData.items[itemId] : null;
 
@@ -89,15 +85,13 @@ export const handlePageItemClick = (deps, payload) => {
 };
 
 export const handleFileAction = async (deps, payload) => {
-  const { dispatchEvent, repositoryFactory, router, props } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { dispatchEvent, projectService, props } = deps;
   const detail = payload._event.detail;
   const repositoryTarget = props.repositoryTarget;
 
   if (!repositoryTarget) {
     throw new Error(
-      "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
+      "REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
     );
   }
 
@@ -106,7 +100,7 @@ export const handleFileAction = async (deps, payload) => {
   const itemId = detail.itemId;
 
   if (item.value === "new-item") {
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: repositoryTarget,
@@ -122,7 +116,7 @@ export const handleFileAction = async (deps, payload) => {
       },
     });
   } else if (item.value === "add-container") {
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: repositoryTarget,
@@ -138,7 +132,7 @@ export const handleFileAction = async (deps, payload) => {
       },
     });
   } else if (item.value === "add-sprite") {
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: repositoryTarget,
@@ -154,7 +148,7 @@ export const handleFileAction = async (deps, payload) => {
       },
     });
   } else if (item.value === "add-text") {
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: repositoryTarget,
@@ -172,7 +166,7 @@ export const handleFileAction = async (deps, payload) => {
   } else if (item.value === "rename-item-confirmed") {
     // Handle rename confirmation from popover form
     if (itemId && detail.newName) {
-      repository.addEvent({
+      await projectService.appendEvent({
         type: "treeUpdate",
         payload: {
           target: repositoryTarget,
@@ -187,13 +181,13 @@ export const handleFileAction = async (deps, payload) => {
       });
     }
   } else if (item.value === "delete-item") {
-    const repositoryState = repository.getState();
-    const targetData = lodashGet(repositoryState, repositoryTarget);
+    const state = await projectService.getState();
+    const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
-      repository.addEvent({
+      await projectService.appendEvent({
         type: "treeDelete",
         payload: {
           target: repositoryTarget,
@@ -204,12 +198,12 @@ export const handleFileAction = async (deps, payload) => {
       });
     }
   } else if (item.value === "new-child-folder") {
-    const repositoryState = repository.getState();
-    const targetData = lodashGet(repositoryState, repositoryTarget);
+    const state = await projectService.getState();
+    const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
     if (currentItem) {
-      repository.addEvent({
+      await projectService.appendEvent({
         type: "treePush",
         payload: {
           target: repositoryTarget,
@@ -227,7 +221,7 @@ export const handleFileAction = async (deps, payload) => {
     }
   } else if (item.value.action === "new-child-item") {
     const { ...restItem } = item.value;
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: repositoryTarget,
@@ -242,8 +236,8 @@ export const handleFileAction = async (deps, payload) => {
       },
     });
   } else if (item.value === "duplicate-item") {
-    const repositoryState = repository.getState();
-    const targetData = lodashGet(repositoryState, repositoryTarget);
+    const state = await projectService.getState();
+    const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
 
@@ -252,7 +246,7 @@ export const handleFileAction = async (deps, payload) => {
     }
 
     // Add the duplicated item with random number as seed
-    repository.addEvent({
+    await projectService.appendEvent({
       type: "treeCopy",
       payload: {
         target: repositoryTarget,
@@ -275,14 +269,12 @@ export const handleFileAction = async (deps, payload) => {
 };
 
 export const handleTargetChanged = async (deps, payload) => {
-  const { dispatchEvent, repositoryFactory, router, props } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { dispatchEvent, projectService, props } = deps;
   const repositoryTarget = props.repositoryTarget;
 
   if (!repositoryTarget) {
     throw new Error(
-      "🔧 REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
+      "REQUIRED: repositoryTarget prop is missing! Please pass .repositoryTarget=targetName to fileExplorer component",
     );
   }
 
@@ -325,7 +317,7 @@ export const handleTargetChanged = async (deps, payload) => {
     return;
   }
 
-  repository.addEvent({
+  await projectService.appendEvent({
     type: "treeMove",
     payload: {
       target: repositoryTarget,

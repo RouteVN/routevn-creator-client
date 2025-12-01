@@ -290,7 +290,7 @@ export const selectViewData = ({ state }) => {
   }
 
   // Apply search filter
-  const searchQuery = state.searchQuery.toLowerCase().trim();
+  const searchQuery = (state.searchQuery || "").toLowerCase().trim();
   let filteredGroups = rawFlatGroups;
 
   if (searchQuery) {

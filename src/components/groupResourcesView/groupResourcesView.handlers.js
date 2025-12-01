@@ -256,20 +256,20 @@ export const handleSpritesButtonClick = (deps, payload) => {
   );
 };
 
-export const handleZoomChange = async (deps, payload) => {
-  const { store, render, userConfig } = deps;
+export const handleZoomChange = (deps, payload) => {
+  const { store, render, appService } = deps;
   const zoomLevel = parseFloat(
     payload._event.detail?.value || payload._event.target?.value,
   );
 
   // Update internal state
   store.setZoomLevel(zoomLevel);
-  await userConfig.set("images.zoomLevel", zoomLevel);
+  appService.setUserConfig("images.zoomLevel", zoomLevel);
   render();
 };
 
-export const handleZoomIn = async (deps) => {
-  const { store, render, userConfig } = deps;
+export const handleZoomIn = (deps) => {
+  const { store, render, appService } = deps;
 
   // Increase zoom by 0.1, max 4.0
   const currentZoom = store.selectZoomLevel();
@@ -277,12 +277,12 @@ export const handleZoomIn = async (deps) => {
 
   // Update internal state
   store.setZoomLevel(newZoom);
-  await userConfig.set("images.zoomLevel", newZoom);
+  appService.setUserConfig("images.zoomLevel", newZoom);
   render();
 };
 
-export const handleZoomOut = async (deps) => {
-  const { store, render, userConfig } = deps;
+export const handleZoomOut = (deps) => {
+  const { store, render, appService } = deps;
 
   // Decrease zoom by 0.1, min 0.5
   const currentZoom = store.selectZoomLevel();
@@ -290,13 +290,13 @@ export const handleZoomOut = async (deps) => {
 
   // Update internal state
   store.setZoomLevel(newZoom);
-  await userConfig.set("images.zoomLevel", newZoom);
+  appService.setUserConfig("images.zoomLevel", newZoom);
   render();
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, render, userConfig } = deps;
-  const savedZoom = await userConfig.get("images.zoomLevel");
+export const handleAfterMount = (deps) => {
+  const { store, render, appService } = deps;
+  const savedZoom = appService.getUserConfig("images.zoomLevel");
   if (savedZoom !== null && savedZoom !== undefined) {
     store.setZoomLevel(savedZoom);
     render();
@@ -353,11 +353,8 @@ export const handleContextMenuClickItem = async (deps, payload) => {
 };
 
 export const handleBackClick = (deps) => {
-  const { subject, router, props } = deps;
+  const { appService, props } = deps;
 
-  const currentPayload = router.getPayload();
-  subject.dispatch("redirect", {
-    path: props.backUrl,
-    payload: currentPayload,
-  });
+  const currentPayload = appService.getPayload();
+  appService.navigate(props.backUrl, currentPayload);
 };

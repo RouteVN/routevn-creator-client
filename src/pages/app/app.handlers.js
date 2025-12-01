@@ -25,7 +25,7 @@ export const handleAfterMount = (deps) => {
 export const handleRedirect = (deps, payload) => {
   const { appService } = deps;
   deps.store.setCurrentRoute(payload.path);
-  appService.navigate(payload.path, payload.payload);
+  appService.redirect(payload.path, payload.payload);
   deps.render();
 };
 

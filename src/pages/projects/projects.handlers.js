@@ -47,7 +47,7 @@ export const handleCloseDialogue = (deps) => {
 export const handleProjectsClick = async (deps, payload) => {
   const { appService } = deps;
   const id = payload._event.currentTarget.id.replace("project-", "");
-  appService.navigate(`/project?p=${id}`);
+  appService.navigate("/project", { p: id });
 };
 
 export const handleBrowseFolder = async (deps) => {

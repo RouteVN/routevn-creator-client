@@ -701,7 +701,7 @@ export const selectViewData = ({ state }) => {
   }
 
   // Apply search filtering to flatGroups (collapse state is now handled by groupResourcesView)
-  const searchQuery = state.searchQuery.toLowerCase();
+  const searchQuery = (state.searchQuery || "").toLowerCase();
   const matchesSearch = (item) => {
     if (!searchQuery) return true;
     const name = (item.name || "").toLowerCase();

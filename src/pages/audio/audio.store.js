@@ -106,7 +106,7 @@ export const selectAudioPlayerRight = (state) => {
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.audioData);
   const rawFlatGroups = toFlatGroups(state.audioData);
-  const searchQuery = state.searchQuery.toLowerCase();
+  const searchQuery = (state.searchQuery || "").toLowerCase();
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {

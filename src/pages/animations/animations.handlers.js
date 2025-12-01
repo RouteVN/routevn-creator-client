@@ -17,16 +17,13 @@ const resetState = {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render, drenderer, getRefIds } =
-    deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { animations } = repository.getState();
+  const { store, projectService, render, drenderer, getRefIds } = deps;
+  const { animations } = await projectService.getState();
   store.setItems(animations || { tree: [], items: {} });
 
   // Initialize drenderer if canvas is present
   const { canvas } = getRefIds();
-  if (canvas && canvas.elm && !store.selectIsDrendererInitialized()) {
+  if (drenderer && canvas && canvas.elm && !store.selectIsDrendererInitialized()) {
     await drenderer.init({
       canvas: canvas.elm,
     });
@@ -37,12 +34,8 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-
-  const repositoryState = repository.getState();
-  const { animations } = repositoryState;
+  const { store, render, projectService } = deps;
+  const { animations } = await projectService.getState();
 
   const animationData = animations || { tree: [], items: {} };
 
@@ -72,12 +65,10 @@ export const handleAnimationItemClick = (deps, payload) => {
 };
 
 export const handleAnimationCreated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { groupId, name, properties } = payload._event.detail;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: "animations",
@@ -96,18 +87,16 @@ export const handleAnimationCreated = async (deps, payload) => {
     },
   });
 
-  const { animations } = repository.getState();
+  const { animations } = await projectService.getState();
   store.setItems(animations);
   render();
 };
 
 export const handleAnimationUpdated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { itemId, name, properties } = payload._event.detail;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "animations",
@@ -122,16 +111,14 @@ export const handleAnimationUpdated = async (deps, payload) => {
     },
   });
 
-  const { animations } = repository.getState();
+  const { animations } = await projectService.getState();
   store.setItems(animations);
   render();
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "animations",
@@ -145,7 +132,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { animations } = repository.getState();
+  const { animations } = await projectService.getState();
   store.setItems(animations);
   render();
 };
@@ -163,7 +150,9 @@ export const handleAddAnimationClick = async (deps, payload) => {
   const { groupId } = payload._event.detail;
   store.setTargetGroupId(groupId);
   store.openDialog();
-  drenderer.render(resetState);
+  if (drenderer) {
+    drenderer.render(resetState);
+  }
   render();
 };
 
@@ -190,7 +179,9 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
       }
     }
 
-    drenderer.render(resetState);
+    if (drenderer) {
+      drenderer.render(resetState);
+    }
     store.openDialog({
       editMode: true,
       itemId,
@@ -460,7 +451,7 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
 export const handleReplayAnimation = async (deps) => {
   const { store, drenderer } = deps;
 
-  if (!store.selectIsDrendererInitialized()) {
+  if (!drenderer || !store.selectIsDrendererInitialized()) {
     return;
   }
 
@@ -505,13 +496,11 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -522,7 +511,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = (await projectService.getState())[resourceType];
   store.setItems(data);
   render();
 };

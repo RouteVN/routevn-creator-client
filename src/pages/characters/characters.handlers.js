@@ -2,19 +2,15 @@ import { nanoid } from "nanoid";
 import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { characters } = repository.getState();
+  const { store, projectService, render } = deps;
+  const { characters } = await projectService.getState();
   store.setItems(characters);
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { characters } = repository.getState();
+  const { store, render, projectService } = deps;
+  const { characters } = await projectService.getState();
   store.setItems(characters);
   render();
 };
@@ -64,9 +60,7 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
 };
 
 export const handleCharacterCreated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
   const { groupId, name, description, avatarFileId } = payload._event.detail;
 
   try {
@@ -100,7 +94,7 @@ export const handleCharacterCreated = async (deps, payload) => {
     }
 
     // Add character to repository
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "characters",
@@ -113,7 +107,7 @@ export const handleCharacterCreated = async (deps, payload) => {
     });
 
     // Update store with new data
-    const { characters } = repository.getState();
+    const { characters } = await projectService.getState();
     store.setItems(characters);
     render();
   } catch (error) {
@@ -124,35 +118,21 @@ export const handleCharacterCreated = async (deps, payload) => {
 };
 
 export const handleSpritesButtonClick = (deps, payload) => {
-  const { subject, render, router } = deps;
+  const { appService, render } = deps;
   const { itemId } = payload._event.detail;
-  const { p } = router.getPayload();
+  const { p } = appService.getPayload();
 
-  // Dispatch redirect with path and payload for query params
-  subject.dispatch("redirect", {
-    path: "/project/resources/character-sprites",
-    payload: {
-      characterId: itemId,
-      p: p,
-    },
+  // Navigate to character sprites page
+  appService.navigate("/project/resources/character-sprites", {
+    characterId: itemId,
+    p: p,
   });
 
   render();
 };
 
 export const handleDetailPanelAvatarClick = async (deps) => {
-  const {
-    repositoryFactory,
-    router,
-    store,
-    render,
-    filePicker,
-    fileManagerFactory,
-    globalUI,
-  } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { appService, projectService, store, render } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -161,7 +141,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
     return;
   }
 
-  const files = await filePicker.open({
+  const files = await appService.pickFiles({
     accept: "image/*",
     multiple: false,
   });
@@ -174,13 +154,13 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 
   const { isValid, message } = await validateIconDimensions(file);
   if (!isValid) {
-    globalUI.showAlert({ message, title: "Error" });
+    appService.showToast(message, { title: "Error" });
     return;
   }
 
   try {
-    // Upload the new avatar file using fileManager
-    const uploadedFiles = await fileManager.upload([file]);
+    // Upload the new avatar file using projectService
+    const uploadedFiles = await projectService.uploadFiles([file]);
 
     if (uploadedFiles && uploadedFiles.length > 0) {
       const uploadedFile = uploadedFiles[0];
@@ -198,7 +178,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       };
 
       // Update the selected character in the repository with the new avatar
-      await repository.addEvent({
+      await projectService.appendEvent({
         type: "treeUpdate",
         payload: {
           target: "characters",
@@ -211,7 +191,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       });
 
       // Update the store with the new repository state and get new file URL
-      const { characters } = repository.getState();
+      const { characters } = await projectService.getState();
       store.setItems(characters);
       render();
     } else {
@@ -223,10 +203,8 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "characters",
@@ -240,7 +218,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { characters } = repository.getState();
+  const { characters } = await projectService.getState();
   store.setItems(characters);
   render();
 };
@@ -306,11 +284,10 @@ export const handleDialogFormActionClick = (deps, payload) => {
 };
 
 export const handleDialogAvatarClick = async (deps) => {
-  const { store, render, filePicker, fileManagerFactory, router, globalUI } =
-    deps;
+  const { store, render, appService, projectService } = deps;
 
   try {
-    const files = await filePicker.open({
+    const files = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
     });
@@ -319,14 +296,11 @@ export const handleDialogAvatarClick = async (deps) => {
       const file = files[0];
       const { isValid, message } = await validateIconDimensions(file);
       if (!isValid) {
-        globalUI.showAlert({ message, title: "Error" });
+        appService.showToast(message, { title: "Error" });
         return;
       }
 
-      const { p } = router.getPayload();
-      const fileManager = await fileManagerFactory.getByProject(p);
-
-      const uploadResults = await fileManager.upload([file]);
+      const uploadResults = await projectService.uploadFiles([file]);
 
       if (!uploadResults || uploadResults.length === 0) {
         throw new Error("Failed to upload avatar image");
@@ -342,13 +316,11 @@ export const handleDialogAvatarClick = async (deps) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -359,7 +331,7 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = (await projectService.getState())[resourceType];
   store.setItems(data);
   render();
 };
@@ -371,11 +343,10 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditDialogAvatarClick = async (deps) => {
-  const { store, render, filePicker, fileManagerFactory, router, globalUI } =
-    deps;
+  const { store, render, appService, projectService } = deps;
 
   try {
-    const files = await filePicker.open({
+    const files = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
     });
@@ -384,13 +355,11 @@ export const handleEditDialogAvatarClick = async (deps) => {
       const file = files[0];
       const { isValid, message } = await validateIconDimensions(file);
       if (!isValid) {
-        globalUI.showAlert({ message, title: "Error" });
+        appService.showToast(message, { title: "Error" });
         return;
       }
-      const { p } = router.getPayload();
-      const fileManager = await fileManagerFactory.getByProject(p);
 
-      const uploadResults = await fileManager.upload([file]);
+      const uploadResults = await projectService.uploadFiles([file]);
 
       if (!uploadResults || uploadResults.length === 0) {
         throw new Error("Failed to upload avatar image");
@@ -406,9 +375,7 @@ export const handleEditDialogAvatarClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
@@ -426,7 +393,7 @@ export const handleEditFormAction = async (deps, payload) => {
       updateData.fileId = editAvatarFileId;
     }
 
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treeUpdate",
       payload: {
         target: "characters",
@@ -438,7 +405,7 @@ export const handleEditFormAction = async (deps, payload) => {
       },
     });
 
-    const { characters } = repository.getState();
+    const { characters } = await projectService.getState();
     store.setItems(characters);
     store.closeEditDialog();
     render();

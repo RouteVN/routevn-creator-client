@@ -2,30 +2,26 @@ import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render, userConfig } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { audio } = repository.getState();
+  const { store, projectService, render, appService } = deps;
+  const { audio } = await projectService.getState();
   store.setItems(audio || { tree: [], items: {} });
 
   // Initialize audio player positions from userConfig
   const defaultLeft = parseInt(
-    userConfig.get("resizablePanel.file-explorerWidth"),
+    appService.getUserConfig("resizablePanel.file-explorerWidth"),
   );
   const defaultRight = parseInt(
-    userConfig.get("resizablePanel.detail-panelWidth"),
+    appService.getUserConfig("resizablePanel.detail-panelWidth"),
   );
-  store.updateAudioPlayerLeft({ width: defaultLeft, userConfig });
-  store.updateAudioPlayerRight({ width: defaultRight, userConfig });
+  store.updateAudioPlayerLeft({ width: defaultLeft, appService });
+  store.updateAudioPlayerRight({ width: defaultRight, appService });
 
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { audio } = repository.getState();
+  const { store, render, projectService } = deps;
+  const { audio } = await projectService.getState();
   const audioData = audio || { tree: [], items: {} };
 
   store.setItems(audioData);
@@ -33,7 +29,7 @@ export const handleDataChanged = async (deps) => {
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, projectService } = deps;
   const { id, item, isFolder } = payload._event.detail;
 
   // If this is a folder, clear selection and context
@@ -52,12 +48,9 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If we have item data with waveformDataFileId, set up media context for preview
   if (item && item.waveformDataFileId) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-
-    const waveformData = await fileManager.downloadMetadata({
-      fileId: item.waveformDataFileId,
-    });
+    const waveformData = await projectService.downloadMetadata(
+      item.waveformDataFileId,
+    );
 
     store.setContext({
       fileId: {
@@ -87,7 +80,7 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
 };
 
 export const handleAudioItemClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router, getRefIds } = deps;
+  const { store, render, projectService, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
 
@@ -109,13 +102,9 @@ export const handleAudioItemClick = async (deps, payload) => {
     return;
   }
 
-  // Get the fileManager for the current project
-  const { p: projectId } = router.getPayload();
-  const fileManager = await fileManagerFactory.getByProject(projectId);
-
-  const waveformData = await fileManager.downloadMetadata({
-    fileId: selectedItem.waveformDataFileId,
-  });
+  const waveformData = await projectService.downloadMetadata(
+    selectedItem.waveformDataFileId,
+  );
 
   store.setContext({
     fileId: {
@@ -126,18 +115,15 @@ export const handleAudioItemClick = async (deps, payload) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { store, render, projectService } = deps;
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await fileManager.upload(files);
+  const successfulUploads = await projectService.uploadFiles(files);
 
   // Add all items to repository
   for (const result of successfulUploads) {
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "audio",
@@ -160,7 +146,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { audio } = repository.getState();
+    const { audio } = await projectService.getState();
     store.setItems(audio);
   }
 
@@ -168,17 +154,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const {
-    repositoryFactory,
-    router,
-    store,
-    render,
-    filePicker,
-    fileManagerFactory,
-  } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { appService, projectService, store, render } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -187,7 +163,7 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const files = await filePicker.open({
+  const files = await appService.pickFiles({
     accept: "audio/*",
     multiple: false,
   });
@@ -198,7 +174,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await fileManager.upload([file]);
+  const uploadedFiles = await projectService.uploadFiles([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");
@@ -206,7 +182,7 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "audio",
@@ -225,7 +201,7 @@ export const handleFormExtraEvent = async (deps) => {
   });
 
   // Update the store with the new repository state
-  const { audio } = repository.getState();
+  const { audio } = await projectService.getState();
 
   // Use the waveform data directly (already normalized)
   const waveformData = uploadResult.waveformData;
@@ -240,10 +216,8 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "audio",
@@ -257,7 +231,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { audio } = repository.getState();
+  const { audio } = await projectService.getState();
   store.setItems(audio);
   render();
 };
@@ -292,13 +266,11 @@ export const handleAudioPlayerClose = (deps) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -309,23 +281,23 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  const data = (await projectService.getState())[resourceType];
   store.setItems(data);
   render();
 };
 
 export const handlePanelResize = (deps, payload) => {
-  const { store, render, userConfig } = deps;
+  const { store, render, appService } = deps;
   const { panelType, width } = payload;
   // Handle file-explorer panel resize to adjust audio player position
   if (panelType === "file-explorer") {
-    store.updateAudioPlayerLeft({ width, userConfig });
+    store.updateAudioPlayerLeft({ width, appService });
     render();
   }
 
   // Handle detail-panel resize to adjust audio player position
   if (panelType === "detail-panel") {
-    store.updateAudioPlayerRight({ width, userConfig });
+    store.updateAudioPlayerRight({ width, appService });
     render();
   }
 };

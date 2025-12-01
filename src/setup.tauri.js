@@ -38,6 +38,9 @@ const appVersion = await getVersion();
 // Create updater
 const updater = createUpdater({ globalUI, keyValueStore: appDb });
 
+// Create subject for inter-component communication
+const subject = new Subject();
+
 // Create project service (manages repositories and project operations)
 const projectService = createProjectService({
   router,
@@ -57,9 +60,8 @@ const appService = createAppService({
   updater,
   audioService,
   projectService,
+  subject,
 });
-
-const subject = new Subject();
 
 // Initialize async resources first
 const graphicsService = await createGraphicsService();

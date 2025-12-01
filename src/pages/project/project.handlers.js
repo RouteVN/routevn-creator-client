@@ -1,19 +1,16 @@
 import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
-  const { repositoryFactory, store, render, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { project } = repository.getState();
+  const { projectService, store, render } = deps;
+  const state = await projectService.getState();
+  const { project } = state;
   store.setProject(project);
   render();
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService } = deps;
+  await projectService.appendEvent({
     type: "set",
     payload: {
       target: `project.${payload._event.detail.name}`,
@@ -24,26 +21,20 @@ export const handleFormChange = async (deps, payload) => {
 
 export const handleFormExtraEvent = async (deps) => {
   const {
-    filePicker,
-    fileManagerFactory,
-    repositoryFactory,
-    router,
+    appService,
+    projectService,
     subject,
     render,
     store,
-    globalUI,
   } = deps;
 
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-
   try {
-    const files = await filePicker.open({
+    const files = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
     });
 
-    if (files.length === 0) {
+    if (!files || files.length === 0) {
       return; // User cancelled
     }
 
@@ -51,18 +42,15 @@ export const handleFormExtraEvent = async (deps) => {
 
     const { isValid, message } = await validateIconDimensions(file);
     if (!isValid) {
-      globalUI.showAlert({ message, title: "Error" });
+      appService.showToast(message, { title: "Error" });
       return;
     }
 
-    // Get fileManager for this project
-    const fileManager = await fileManagerFactory.getByProject(p);
-    const successfulUploads = await fileManager.upload([file]);
+    const successfulUploads = await projectService.uploadFiles([file]);
 
-    // TODO better handle failed uploads
     if (successfulUploads.length > 0) {
       const result = successfulUploads[0];
-      await repository.addEvent({
+      await projectService.appendEvent({
         type: "set",
         payload: {
           target: "project.iconFileId",
@@ -80,10 +68,6 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleBackToProjects = async (deps) => {
-  const { subject } = deps;
-
-  // Navigate back to projects page
-  subject.dispatch("redirect", {
-    path: "/projects",
-  });
+  const { appService } = deps;
+  appService.navigate("/projects");
 };

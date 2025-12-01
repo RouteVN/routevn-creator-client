@@ -71,6 +71,7 @@ export const createAppService = ({
   updater,
   audioService,
   projectService,
+  subject,
 }) => {
   // Initialize user config from localStorage
   const storedConfig = localStorage.getItem(USER_CONFIG_KEY);
@@ -318,6 +319,10 @@ export const createAppService = ({
 
     // Navigation
     navigate(path, payload) {
+      subject.dispatch("redirect", { path, payload });
+    },
+
+    redirect(path, payload) {
       router.redirect(path, payload);
     },
 
@@ -359,6 +364,33 @@ export const createAppService = ({
 
     saveFilePicker(options) {
       return filePicker.saveFilePicker(options);
+    },
+
+    // Browser-style file picker that returns File objects (for uploads)
+    pickFiles(options = {}) {
+      return new Promise((resolve) => {
+        const { accept = "*/*", multiple = false } = options;
+
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = accept;
+        input.multiple = multiple;
+        input.style.display = "none";
+
+        input.onchange = (event) => {
+          const files = Array.from(event.target.files || []);
+          document.body.removeChild(input);
+          resolve(files);
+        };
+
+        input.oncancel = () => {
+          document.body.removeChild(input);
+          resolve([]);
+        };
+
+        document.body.appendChild(input);
+        input.click();
+      });
     },
 
     // Utils
