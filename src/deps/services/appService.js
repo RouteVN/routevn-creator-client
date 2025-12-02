@@ -353,7 +353,7 @@ export const createAppService = ({
       return globalUI.showConfirm(options);
     },
 
-    closeAll(){
+    closeAll() {
       return globalUI.closeAll();
     },
 
