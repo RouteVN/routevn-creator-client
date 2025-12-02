@@ -21,8 +21,8 @@ const form = {
       description: "Volume",
       inputType: "slider-input",
       min: 0,
-      max: 1,
-      step: 0.01,
+      max: 1000,
+      step: 1,
     },
   ],
 };
@@ -35,7 +35,7 @@ export const createInitialState = () => ({
   bgm: {
     audioId: undefined,
     loop: true,
-    volume: 0.5,
+    volume: 500,
   },
 });
 
@@ -137,7 +137,7 @@ export const selectViewData = ({ state }) => {
 
   const defaultValues = {
     loop: state.bgm?.loop ?? true,
-    volume: state.bgm?.volume ?? 0.5,
+    volume: state.bgm?.volume ?? 500,
     delay: state.bgm?.delay,
     audioWaveformDataFileId: selectedResource?.item?.waveformDataFileId || "",
   };
