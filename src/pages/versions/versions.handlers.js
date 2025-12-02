@@ -170,6 +170,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
       // User cancelled the dialog
       console.log("Save dialog cancelled by user");
     }
+    appService.closeAll();
   } catch (error) {
     console.error("Error saving ZIP with dialog:", error);
     appService.showToast(`Failed to save ZIP file: ${error.message}`, {
