@@ -100,20 +100,10 @@ export const createGraphicsService = async () => {
           projectData,
         },
       });
+    },
 
-      // eventHandler = (eventType, payload) => {
-      //   if (eventType === "completed") {
-      //     engine.handleEvent({
-      //       payload: {
-      //         actions: {
-      //           handleCompleted: {},
-      //         },
-      //       },
-      //     });
-      //   } else if (eventType === "system") {
-      //     engine.handleEvent({ payload });
-      //   }
-      // };
+    engineSelectPresentationState: () => {
+      return engine.selectPresentationState();
     },
 
     engineRenderCurrentState: () => {
@@ -136,9 +126,6 @@ export const createGraphicsService = async () => {
       if (engine) {
         engine = undefined;
       }
-    },
-    getStageElementBounds: () => {
-      return routeGraphics.getStageElementBounds();
     },
   };
 };
