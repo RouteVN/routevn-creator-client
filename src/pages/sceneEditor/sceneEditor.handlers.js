@@ -67,6 +67,10 @@ async function renderSceneState(store, graphicsService) {
     },
   });
   graphicsService.engineRenderCurrentState();
+
+  // Update presentation state after rendering
+  const presentationState = graphicsService.engineSelectPresentationState();
+  store.setPresentationState(presentationState);
 }
 
 export const handleBeforeMount = (deps) => {
@@ -113,8 +117,6 @@ export const handleAfterMount = async (deps) => {
   await graphicsService.init({ canvas: canvas.elm });
 
   const projectData = store.selectProjectData();
-
-  console.log("Resources:", projectData.resources);
 
   graphicsService.initRouteEngine(projectData);
   // TODO don't load all data... only ones necessary for this scene
@@ -1050,8 +1052,9 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps) {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
+  render();
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing
