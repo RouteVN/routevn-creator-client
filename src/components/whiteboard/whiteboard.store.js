@@ -51,7 +51,7 @@ export const createInitialState = () => ({
   panStartMouseX: 0,
   panStartMouseY: 0,
   // Zoom state
-  zoomLevel: 1,
+  zoomLevel: 1.5,
 });
 
 export const startDragging = (state, { itemId }) => {
