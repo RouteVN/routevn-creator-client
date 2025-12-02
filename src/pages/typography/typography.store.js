@@ -150,7 +150,7 @@ export const createInitialState = () => ({
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
-    previewText: undefined,
+    previewText: "",
   },
 
   defaultValues: {
@@ -158,7 +158,7 @@ export const createInitialState = () => ({
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
-    previewText: undefined,
+    previewText: "",
   },
 
   // Context menu items
@@ -217,7 +217,11 @@ export const clearEditMode = (state) => {
 };
 
 export const updateFormValues = (state, formData) => {
-  state.currentFormValues = { ...state.currentFormValues, ...formData };
+  const newValues = { ...state.currentFormValues, ...formData };
+  if (newValues.previewText == null) {
+    newValues.previewText = "";
+  }
+  state.currentFormValues = newValues;
 };
 
 export const resetFormValues = (state) => {
@@ -228,7 +232,7 @@ export const resetFormValues = (state) => {
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
-    previewText: undefined,
+    previewText: "",
   };
 };
 
@@ -243,7 +247,7 @@ export const setFormValuesFromItem = (state, item) => {
     fontSize: item.fontSize,
     lineHeight: item.lineHeight,
     fontWeight: item.fontWeight,
-    previewText: item.previewText,
+    previewText: item.previewText || "",
   };
 };
 
@@ -581,7 +585,7 @@ export const selectViewData = ({ state }) => {
           fontSize: editingItem.fontSize,
           lineHeight: editingItem.lineHeight,
           fontWeight: editingItem.fontWeight,
-          previewText: editingItem.previewText,
+          previewText: editingItem.previewText ?? "",
         }
       : state.defaultValues;
 
@@ -688,7 +692,7 @@ export const selectViewData = ({ state }) => {
     fontFileTypes: [".ttf", ".otf", ".woff", ".woff2"],
 
     // Preview values for dialog
-    previewText: state.currentFormValues.previewText,
+    previewText: state.currentFormValues.previewText ?? "",
     previewFontSize: state.currentFormValues.fontSize,
     previewLineHeight: state.currentFormValues.lineHeight,
     previewFontWeight: state.currentFormValues.fontWeight,

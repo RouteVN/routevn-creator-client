@@ -69,4 +69,4 @@ template:
   - rtgl-dialog#edit-dialog ?open=${isEditDialogOpen} s=sm:
       - rtgl-form#edit-form key=${isEditDialogOpen} slot=content .defaultValues=editDefaultValues .form=editForm:
   - rtgl-dialog#add-color-dialog ?open=${isAddDialogOpen} s=sm:
-      - rtgl-form#add-color-form slot=content .defaultValues=addDefaultValues .form=addForm w=f:
+      - rtgl-form#add-color-form key=${isAddDialogOpen} slot=content .defaultValues=addDefaultValues .form=addForm w=f:

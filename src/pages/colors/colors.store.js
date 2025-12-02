@@ -33,6 +33,10 @@ export const createInitialState = () => ({
       src: "",
     },
   },
+  addDefaultValues: {
+    name: "",
+    hex: "#ffffff",
+  },
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
     { label: "Duplicate", type: "item", value: "duplicate-item" },
@@ -74,6 +78,10 @@ export const openAddDialog = (state, groupId) => {
 export const closeAddDialog = (state) => {
   state.isAddDialogOpen = false;
   state.targetGroupId = null;
+  state.addDefaultValues = {
+    name: "",
+    hex: "#ffffff",
+  };
 };
 
 export const setSearchQuery = (state, query) => {
@@ -206,7 +214,7 @@ export const selectViewData = ({ state }) => {
       {
         name: "name",
         inputType: "inputText",
-        label: "Name",
+        label: "Color Name",
         required: true,
       },
       {
@@ -228,11 +236,6 @@ export const selectViewData = ({ state }) => {
     },
   };
 
-  const addDefaultValues = {
-    name: "",
-    hex: "#ffffff",
-  };
-
   return {
     flatItems,
     flatGroups,
@@ -250,7 +253,7 @@ export const selectViewData = ({ state }) => {
     editDefaultValues,
     editForm,
     isAddDialogOpen: state.isAddDialogOpen,
-    addDefaultValues,
+    addDefaultValues: state.addDefaultValues,
     addForm,
     searchQuery: state.searchQuery,
     resourceType: "colors",
