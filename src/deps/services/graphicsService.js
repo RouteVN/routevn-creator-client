@@ -43,6 +43,11 @@ export const createGraphicsService = async () => {
         width: 1920,
         height: 1080,
         plugins,
+        eventHandler: (eventName, payload) => {
+          if (payload.actions) {
+            engine.handleActions(payload.actions);
+          }
+        },
       });
 
       // app.assignStageEvent("globalpointermove", (event) => {
@@ -63,22 +68,30 @@ export const createGraphicsService = async () => {
       await assetBufferManager.load(assets);
       await routeGraphics.loadAssets(assetBufferManager.getBufferMap());
     },
-    initRouteEngine: (projectData) => {
+    initRouteEngine: (projectData, options = {}) => {
+      const { handleEffects = false } = options;
       const handlePendingEffects = (effects) => {
-        console.log("Pending Effects:", effects);
+        if (!handleEffects) return;
+
+        // Deduplicate effects by name, keeping only the last occurrence
+        const deduplicatedEffects = effects.reduce((acc, effect) => {
+          acc[effect.name] = effect;
+          return acc;
+        }, {});
+
+        // Convert back to array and process deduplicated effects
+        const uniqueEffects = Object.values(deduplicatedEffects);
+
+        for (const effect of uniqueEffects) {
+          if (effect.name === "render") {
+            const renderState = engine.selectRenderState();
+            routeGraphics.render(renderState);
+          } else if (effect.name === "handleLineActions") {
+            engine.handleLineActions();
+          }
+        }
       };
       engine = createRouteEngine({ handlePendingEffects });
-      // engine.onEvent(({ eventType, payload }) => {
-      //   if (eventType === "render") {
-      //     routeGraphics.render(payload);
-      //   }
-      // });
-      // engine.init({
-      //   projectData,
-      //   // ticker: app._app.ticker,
-      //   // loadAssets: app.loadAssets,
-      //   // captureElement,
-      // });
       engine.init({
         initialState: {
           global: {
