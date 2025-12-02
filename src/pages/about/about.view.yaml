@@ -36,7 +36,7 @@ template:
                           - rtgl-text s=sm: RouteVN Creator ${appVersion}
                       - rtgl-view d=h g=md:
                           - rtgl-button#checkUpdateButton v=se: Check for Updates
-                          - rtgl-button#checkUpdateButton v=se: Changelog
+                          #- rtgl-button#checkUpdateButton v=se: Changelog
 
                   - rtgl-view g=md:
                       - rtgl-text s=h4: Community
