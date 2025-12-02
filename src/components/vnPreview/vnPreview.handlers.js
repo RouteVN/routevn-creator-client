@@ -39,35 +39,18 @@ export const handleBeforeMount = (deps) => {
 
 export const handleAfterMount = async (deps) => {
   const { projectService, graphicsService, getRefIds, attrs } = deps;
-  console.log("vnPreview: handleAfterMount started");
-  console.log("vnPreview: attrs", attrs);
-
   await projectService.ensureRepository();
   const state = projectService.getState();
-  console.log("vnPreview: repository state", state);
-
   const { canvas } = getRefIds();
-  console.log("vnPreview: canvas", canvas);
-
   await graphicsService.init({ canvas: canvas.elm });
-  console.log("vnPreview: graphicsService initialized");
-
   const projectData = constructProjectData(state, {
     initialSceneId: attrs["scene-id"],
   });
-  console.log("vnPreview: projectData", projectData);
-
   const fileReferences = extractFileIdsFromRenderState(projectData.resources);
-  console.log("vnPreview: fileReferences", fileReferences);
-
   const assets = await loadAssets(deps, fileReferences);
-  console.log("vnPreview: assets loaded", assets);
-
   await graphicsService.loadAssets(assets);
-  console.log("vnPreview: graphicsService assets loaded");
-
-  await graphicsService.initRouteEngine(projectData);
-  console.log("vnPreview: graphicsService initRouteEngine complete");
-
+  await graphicsService.initRouteEngine(projectData, {
+    handleEffects: true,
+  });
   graphicsService.engineRenderCurrentState();
 };
