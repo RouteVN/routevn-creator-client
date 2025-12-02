@@ -11,7 +11,7 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine from "route-engine-js";
 
-export const createGraphicsService = async () => {
+export const createGraphicsService = async ({subject}) => {
   let routeGraphics;
   let engine;
   let assetBufferManager;
@@ -45,12 +45,12 @@ export const createGraphicsService = async () => {
         plugins,
       });
 
-      // app.assignStageEvent("globalpointermove", (event) => {
-      //   subject.dispatch("2drendererEvent", {
-      //     x: Math.round(event.global.x),
-      //     y: Math.round(event.global.y),
-      //   });
-      // });
+      routeGraphics.assignStageEvent("globalpointermove", (event) => {
+        subject.dispatch("graphicsServiceEvent", {
+          x: Math.round(event.global.x),
+          y: Math.round(event.global.y),
+        });
+      });
 
       if (canvas) {
         if (canvas.children.length > 0) {
