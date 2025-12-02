@@ -585,7 +585,7 @@ export const selectViewData = ({ state }) => {
           fontSize: editingItem.fontSize,
           lineHeight: editingItem.lineHeight,
           fontWeight: editingItem.fontWeight,
-          previewText: editingItem.previewText || "",
+          previewText: editingItem.previewText ?? "",
         }
       : state.defaultValues;
 
