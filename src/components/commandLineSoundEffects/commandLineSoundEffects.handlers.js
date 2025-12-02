@@ -123,6 +123,7 @@ export const handleSubmitClick = (deps, payload) => {
           items: filteredEffects.map((sfx) => ({
             id: sfx.id,
             audioId: sfx.audioId,
+            volume: sfx.volume,
           })),
         },
       },
