@@ -579,7 +579,9 @@
                   "line-1": {
                     "actions": {
                       "dialogue": {
-                        "layoutId": "simple-dialogue",
+                        "gui": {
+                          "resourceId": "simple-dialogue"
+                        },
                         "mode": "adv"
                       },
                       "screen": {
