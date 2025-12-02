@@ -74,7 +74,7 @@ export const handleOptionSelected = (deps, payload) => {
 };
 
 export const handleSectionActionClick = async (deps, payload) => {
-  const { render, store, globalUI, getRefIds } = deps;
+  const { render, store, appService, getRefIds } = deps;
   const { _event } = payload;
   const id = _event.currentTarget.dataset.id;
 
@@ -95,7 +95,7 @@ export const handleSectionActionClick = async (deps, payload) => {
     if (!clickImageId) {
       items.push({ type: "item", label: "Click", key: "clickImageId" });
     }
-    const result = await globalUI.showDropdownMenu({
+    const result = await appService.showDropdownMenu({
       items,
       x: _event.clientX,
       y: _event.clientY,
@@ -187,11 +187,11 @@ export const handlePopoverFormChange = async (deps, payload) => {
 };
 
 export const handleListBarItemRightClick = async (deps, payload) => {
-  const { render, store, globalUI } = deps;
+  const { render, store, appService, dispatchEvent } = deps;
   const { _event: event } = payload;
   event.preventDefault();
   const { name } = event.currentTarget.dataset;
-  const result = await globalUI.showDropdownMenu({
+  const result = await appService.showDropdownMenu({
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
@@ -234,11 +234,11 @@ export const handleListItemClick = async (deps, payload) => {
 };
 
 export const handleListItemRightClick = async (deps, payload) => {
-  const { render, store, globalUI } = deps;
+  const { render, store, appService, dispatchEvent } = deps;
   const { _event: event } = payload;
   event.preventDefault();
   const id = event.currentTarget.dataset.id;
-  const result = await globalUI.showDropdownMenu({
+  const result = await appService.showDropdownMenu({
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,

@@ -94,7 +94,7 @@ template:
                           - rtgl-text s=xs: ${listItem.label}
                 $elif item.type == 'list-bar':
                   - $for barItem in item.items:
-                      - rtgl-view#list-bar-item-${barItem.id} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=p:
+                      - rtgl-view#list-bar-item-${barItem.name} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=p:
                           - rtgl-text s=xs: ${barItem.label}
                           - rtgl-view flex=1:
                           - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32:

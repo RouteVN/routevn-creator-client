@@ -81,9 +81,7 @@ const pageDependencies = {
   graphicsService,
   appService,
   projectService,
-  appVersion,
   updaterService: updater,
-  openUrl,
 };
 
 const deps = {
