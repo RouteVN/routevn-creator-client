@@ -1,5 +1,5 @@
 export const handleAfterMount = async (deps) => {
-  const { attrs = {}, fileManagerFactory, render, router } = deps;
+  const { attrs = {}, projectService, render } = deps;
   const { fontFamily, fileId } = attrs;
 
   // Only load font if fontFamily and fileId are provided and not a generic fallback
@@ -12,10 +12,7 @@ export const handleAfterMount = async (deps) => {
     fontFamily !== "monospace"
   ) {
     try {
-      const { p: projectId } = router.getPayload();
-      const fileManager = await fileManagerFactory.getByProject(projectId);
-
-      await fileManager.loadFontFile({
+      await projectService.loadFontFile({
         fontName: fontFamily,
         fileId: fileId,
       });

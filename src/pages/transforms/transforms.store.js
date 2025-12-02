@@ -9,7 +9,7 @@ const form = {
     { name: "scaleY", inputType: "read-only-text", description: "Scale Y" },
     { name: "anchorX", inputType: "read-only-text", description: "Anchor X" },
     { name: "anchorY", inputType: "read-only-text", description: "Anchor Y" },
-    { name: "rotation", inputType: "read-only-text", description: "Rotation" },
+    //{ name: "rotation", inputType: "read-only-text", description: "Rotation" },
   ],
 };
 
@@ -128,18 +128,18 @@ export const createInitialState = () => ({
         ],
         required: true,
       },
-      {
-        name: "rotation",
-        inputType: "slider-input",
-        min: -360,
-        max: 360,
-        step: 1,
-        label: "Rotation",
-        tooltip: {
-          content: "In degrees. 360 is a full rotation",
-        },
-        required: true,
-      },
+      // {
+      //   name: "rotation",
+      //   inputType: "slider-input",
+      //   min: -360,
+      //   max: 360,
+      //   step: 1,
+      //   label: "Rotation",
+      //   tooltip: {
+      //     content: "In degrees. 360 is a full rotation",
+      //   },
+      //   required: true,
+      // },
     ],
     actions: {
       layout: "",
@@ -207,7 +207,7 @@ export const openTransformFormDialog = (state, options = {}) => {
       scaleX: String(itemData.scaleX || "1"),
       scaleY: String(itemData.scaleY || "1"),
       anchor: { anchorX: itemData.anchorX, anchorY: itemData.anchorY },
-      rotation: String(itemData.rotation || "0"),
+      //rotation: String(itemData.rotation || "0"),
     };
   } else {
     state.defaultValues = {
@@ -217,7 +217,7 @@ export const openTransformFormDialog = (state, options = {}) => {
       scaleX: "1",
       scaleY: "1",
       anchor: { anchorX: 0.5, anchorY: 0.5 },
-      rotation: "0",
+      //rotation: "0",
     };
   }
 
@@ -242,7 +242,7 @@ export const closeTransformFormDialog = (state) => {
     scaleX: "1",
     scaleY: "1",
     anchor: { anchorX: 0.5, anchorY: 0.5 },
-    rotation: "0",
+    //rotation: "0",
   };
 
   // Reset form to add mode
@@ -285,7 +285,7 @@ export const selectViewData = ({ state }) => {
       scaleY: selectedItem.scaleY || "",
       anchorX: selectedItem.anchorX || "",
       anchorY: selectedItem.anchorY || "",
-      rotation: selectedItem.rotation || "",
+      //rotation: selectedItem.rotation || "",
     };
   }
 
