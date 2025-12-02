@@ -357,6 +357,10 @@ export const createAppService = ({
       return globalUI.closeAll();
     },
 
+    showDropdownMenu(options) {
+      return globalUI.showDropdownMenu(options);
+    },
+
     // File pickers
     openFolderPicker(options) {
       return filePicker.openFolderPicker(options);
