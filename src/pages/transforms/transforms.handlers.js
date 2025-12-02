@@ -329,7 +329,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
           scaleX: parseFloat(formData.scaleX),
           anchorY: parseFloat(formData.anchor.anchorY),
           anchorX: parseFloat(formData.anchor.anchorX),
-          rotation: parseInt(formData.rotation),
+          rotation: parseInt(formData.rotation) || 0, //quick fix for now have to remove when we add implemetataion in graphics
         },
       };
       handleTransformEdited(deps, { _event: editEvent });
@@ -348,7 +348,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
           scaleY: parseFloat(formData.scaleY),
           anchorX: parseFloat(formData.anchor.anchorX),
           anchorY: parseFloat(formData.anchor.anchorY),
-          rotation: parseInt(formData.rotation),
+          rotation: parseInt(formData.rotation) || 0,
         },
       };
       handleTransformCreated(deps, { _event: createEvent });
