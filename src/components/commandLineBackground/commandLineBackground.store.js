@@ -194,13 +194,13 @@ export const selectViewData = ({ state }) => {
         slot: "background",
         description: "Background",
       },
-      {
-        name: "animation",
-        label: "Animation",
-        required: true,
-        inputType: "select",
-        options: animationOptions,
-      },
+      // {
+      //   name: "animation",
+      //   label: "Animation",
+      //   required: true,
+      //   inputType: "select",
+      //   options: animationOptions,
+      // },
     ],
   };
 
