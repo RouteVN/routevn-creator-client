@@ -105,11 +105,12 @@ template:
                 - marker id="arrowhead" fill="#ccc" markerWidth=10 markerHeight=10 refX=10 refY=5 orient="auto":
                   - polygon points="0 0, 10 5, 0 10":
               - path d="${arrow.path}" stroke="#ccc" fill="none" z-index="1000" marker-end="url(#arrowhead)":
-      - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px;"':
-        - $for item in minimapData.items:
-          - 'rtgl-view d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
-            - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac:
-        #- 'rtgl-view d=h pos=abs w=10 h=10 bgc=de style="left: ${minimapData.scaledPan.x}px; top: ${minimapData.scaledPan.y}px; z-index: 10; user-select: none;"':
+      - $if showMinimap:
+        - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px;"':
+          - $for item in minimapData.items:
+            - 'rtgl-view d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+              - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac:
+          #- 'rtgl-view d=h pos=abs w=10 h=10 bgc=de style="left: ${minimapData.scaledPan.x}px; top: ${minimapData.scaledPan.y}px; z-index: 10; user-select: none;"':
       - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
           - rtgl-view d=h av=c gap=sm:
               - rtgl-button#pan-btn sq icon=hand v=${panModeV}:

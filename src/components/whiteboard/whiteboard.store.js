@@ -267,6 +267,7 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     items,
+    showMinimap: items.length > 1,
     minimapData: generateMinimapData(items, { x: state.panX, y: state.panY }),
     arrowsList,
     selectedItemId: props.selectedItemId,
