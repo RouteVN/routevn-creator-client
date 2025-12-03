@@ -1,4 +1,4 @@
-elementName: rvn-command-line-screen
+elementName: rvn-command-line-base
 
 viewDataSchema:
   type: object
@@ -31,7 +31,7 @@ propsSchema:
             type: string
           name:
             type: string
-    screen:
+    base:
       type: object
       properties:
         resourceId:
@@ -42,7 +42,7 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
-  screen-form:
+  base-form:
     eventListeners:
       form-change:
         handler: handleFormChange
@@ -55,7 +55,7 @@ template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-      - rtgl-form#screen-form .defaultValues=defaultValues .form=form w=f:
+      - rtgl-form#base-form .defaultValues=defaultValues .form=form w=f:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:

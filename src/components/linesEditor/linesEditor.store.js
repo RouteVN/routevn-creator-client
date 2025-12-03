@@ -138,7 +138,7 @@ export const selectViewData = ({ state, props }) => {
     let choices;
     let hasSfx = false;
     let hasDialogueLayout = false;
-    let hasScreen = false;
+    let hasBase = false;
 
     // Check for BGM
     if (line.actions?.bgm) {
@@ -161,9 +161,9 @@ export const selectViewData = ({ state, props }) => {
       hasDialogueLayout = true;
     }
 
-    // Check for Screen
-    if (line.actions?.screen?.resourceId) {
-      hasScreen = true;
+    // Check for Base
+    if (line.actions?.base?.resourceId) {
+      hasBase = true;
     }
 
     // Handle both nested and non-nested structures
@@ -227,7 +227,7 @@ export const selectViewData = ({ state, props }) => {
       choices,
       hasSfx,
       hasDialogueLayout,
-      hasScreen,
+      hasBase,
     };
   });
 

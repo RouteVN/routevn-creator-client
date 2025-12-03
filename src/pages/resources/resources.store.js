@@ -53,9 +53,9 @@ export const createInitialState = () => ({
       route: "/project/resources/components",
     },
     {
-      id: "screens",
-      label: "Screens",
-      route: "/project/resources/screens",
+      id: "bases",
+      label: "Bases",
+      route: "/project/resources/bases",
     },
     {
       id: "choices",
