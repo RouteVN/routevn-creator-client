@@ -276,10 +276,13 @@ const renderLayoutPreview = async (deps) => {
       hover: {
         cursor: "all-scroll",
       },
+      drag: {
+        move: {},
+      },
     };
 
     graphicsService.render({
-      elements: [...finalElements, border, redDot],
+      elements: [border, redDot, ...finalElements],
       animations: [],
     });
   }
@@ -598,22 +601,17 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
 export const handleCanvasMouseMove = (deps, payload) => {
   const { store, subject } = deps;
   const { x, y } = payload;
-  const drag = store.selectDragging();
-
-  if (!drag.isDragging) {
-    return;
-  }
 
   const item = store.selectSelectedItem();
-  if (!drag.dragStartPosition) {
-    store.setDragStartPosition({
-      x,
-      y,
-      itemStartX: item.x,
-      itemStartY: item.y,
-    });
-    return;
-  }
+  // if (!drag.dragStartPosition) {
+  //   store.setDragStartPosition({
+  //     x,
+  //     y,
+  //     itemStartX: item.x,
+  //     itemStartY: item.y,
+  //   });
+  //   return;
+  // }
 
   const updatedItem = {
     ...item,

@@ -11,7 +11,7 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine from "route-engine-js";
 
-export const createGraphicsService = async ({subject}) => {
+export const createGraphicsService = async ({ subject }) => {
   let routeGraphics;
   let engine;
   let assetBufferManager;
@@ -43,13 +43,16 @@ export const createGraphicsService = async ({subject}) => {
         width: 1920,
         height: 1080,
         plugins,
-      });
-
-      routeGraphics.assignStageEvent("globalpointermove", (event) => {
-        subject.dispatch("graphicsServiceEvent", {
-          x: Math.round(event.global.x),
-          y: Math.round(event.global.y),
-        });
+        eventHandler: (eventName, payload) => {
+          if (eventName === "drag-move") {
+            console.log("Payload: ", payload);
+            if (payload._event.id === "selected-border")
+              subject.dispatch("graphicsServiceEvent", {
+                x: Math.round(payload._event.x),
+                y: Math.round(payload._event.y),
+              });
+          }
+        },
       });
 
       if (canvas) {
