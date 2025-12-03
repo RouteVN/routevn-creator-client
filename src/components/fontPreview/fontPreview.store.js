@@ -53,7 +53,7 @@ export const selectViewData = ({ attrs }) => {
 
   return {
     previewText:
-      attrs.previewText === "undefined" ? "" : attrs.previewText || "Aa",
+      attrs.previewText === "undefined" ? "" : attrs.previewText || "",
     fontFamily: attrs.fontFamily || "sans-serif",
     fontSize: parseInt(attrs.fontSize) || 100,
     lineHeight: attrs.lineHeight || "1.5",
