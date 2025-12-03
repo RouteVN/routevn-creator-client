@@ -345,7 +345,9 @@ export const handleDataChanged = async (deps) => {
 };
 
 const unflattenKey = (key, value) => {
-  const parts = key.split("_");
+  // Support both "." and "_" as separators
+  const separator = key.includes(".") ? "." : "_";
+  const parts = key.split(separator);
   if (parts.length === 1) {
     return { [key]: value };
   }
@@ -371,7 +373,10 @@ const deepMerge = (target, source) => {
       typeof source[key] === "object" &&
       !Array.isArray(source[key])
     ) {
-      if (result[key] && typeof result[key] === "object") {
+      // If source is empty object, replace instead of merge
+      if (Object.keys(source[key]).length === 0) {
+        result[key] = source[key];
+      } else if (result[key] && typeof result[key] === "object") {
         result[key] = deepMerge(result[key], source[key]);
       } else {
         result[key] = source[key];
@@ -550,24 +555,37 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   const selectedItemId = store.selectSelectedItemId();
   const detail = payload._event.detail;
 
-  let unflattenedUpdate;
+  let updatedItem;
 
   if (
     detail.name === "anchor" &&
     detail.value &&
     typeof detail.value === "object"
   ) {
-    unflattenedUpdate = {
+    const currentItem = store.selectSelectedItem();
+    updatedItem = deepMerge(currentItem, {
       anchorX: detail.value.x,
       anchorY: detail.value.y,
-    };
+    });
+  } else if (detail.name.includes(".")) {
+    // For nested paths, directly set the value instead of merging
+    const currentItem = store.selectSelectedItem();
+    updatedItem = structuredClone(currentItem);
+    const parts = detail.name.split(".");
+    let current = updatedItem;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!current[parts[i]]) {
+        current[parts[i]] = {};
+      }
+      current = current[parts[i]];
+    }
+    current[parts[parts.length - 1]] = detail.value;
   } else {
-    unflattenedUpdate = unflattenKey(detail.name, detail.value);
+    const currentItem = store.selectSelectedItem();
+    const unflattenedUpdate = unflattenKey(detail.name, detail.value);
+    updatedItem = deepMerge(currentItem, unflattenedUpdate);
+    updatedItem[detail.name] = detail.value;
   }
-
-  const currentItem = store.selectSelectedItem();
-  const updatedItem = deepMerge(currentItem, unflattenedUpdate);
-  updatedItem[detail.name] = detail.value;
 
   store.updateSelectedItem(updatedItem);
   render();

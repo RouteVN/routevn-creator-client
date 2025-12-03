@@ -414,11 +414,32 @@ export const createInitialState = () => {
 
 export const updateValueProperty = (state, payload) => {
   const { value, name } = payload;
-  if (value === undefined) {
-    delete state.values[name];
+  const keys = name.split(".");
+
+  if (keys.length === 1) {
+    if (value === undefined) {
+      delete state.values[name];
+    } else {
+      state.values[name] = value;
+    }
     return;
   }
-  state.values[payload.name] = payload.value;
+
+  // Handle nested path
+  let current = state.values;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (!current[keys[i]]) {
+      current[keys[i]] = {};
+    }
+    current = current[keys[i]];
+  }
+
+  const lastKey = keys[keys.length - 1];
+  if (value === undefined) {
+    delete current[lastKey];
+  } else {
+    current[lastKey] = value;
+  }
 };
 
 export const openPopoverForm = (state, payload) => {
@@ -541,13 +562,13 @@ export const selectViewData = ({ state, attrs }) => {
     typographyItemsWithNone: typographyItemsWithNone,
     values: {
       ...state.values,
-      actions: Object.entries(state.values?.actions || {}).map(
-        ([key, _value]) => ({
-          id: key,
-          label: actionsLabelMap[key],
-          svg: `action-${key}`,
-        }),
-      ),
+      actions: Object.entries(
+        state.values?.click?.actionPayload?.actions || {},
+      ).map(([key, _value]) => ({
+        id: key,
+        label: actionsLabelMap[key],
+        svg: `action-${key}`,
+      })),
     },
   };
 
