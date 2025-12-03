@@ -142,13 +142,15 @@ export const handleFormActions = (deps, payload) => {
 export const handleActionsChange = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
 
+  const currentActions =
+    store.selectValues().click?.actionPayload?.actions || {};
   const newActions = {
-    ...store.selectValues().actions,
+    ...currentActions,
     ...payload._event.detail,
   };
 
   store.updateValueProperty({
-    name: "actions",
+    name: "click.actionPayload.actions",
     value: newActions,
   });
 
@@ -159,7 +161,7 @@ export const handleActionsChange = (deps, payload) => {
     new CustomEvent("update", {
       detail: {
         formValues,
-        name: "actions",
+        name: "click.actionPayload.actions",
         value: newActions,
       },
     }),
@@ -249,18 +251,21 @@ export const handleListItemRightClick = async (deps, payload) => {
   }
   const { item } = result;
   if (item.key === "remove") {
+    const currentActions =
+      store.selectValues().click?.actionPayload?.actions || {};
+    const actions = structuredClone(currentActions);
     delete actions[id];
-    const actions = structuredClone(store.selectValues().actions);
     store.updateValueProperty({
-      name: "actions",
+      name: "click.actionPayload.actions",
       value: actions,
     });
     const formValues = store.selectValues();
     dispatchEvent(
       new CustomEvent("update", {
+        bubbles: true,
         detail: {
           formValues,
-          name: "actions",
+          name: "click.actionPayload.actions",
           value: actions,
         },
       }),
