@@ -43,7 +43,7 @@ export const createInitialState = () => ({
     { content: "Choice 1", action: { type: "continue" } },
     { content: "Choice 2", action: { type: "continue" } },
   ],
-  selectedLayoutId: "",
+  selectedResourceId: "",
   editingIndex: -1,
   editForm: {
     // content: "",
@@ -159,8 +159,8 @@ export const updateChoice = (state, { index, content, target }) => {
   }
 };
 
-export const setSelectedLayoutId = (state, payload) => {
-  state.selectedLayoutId = payload.layoutId;
+export const setSelectedResourceId = (state, payload) => {
+  state.selectedResourceId = payload.resourceId;
 };
 
 export const showDropdownMenu = (state, { position, choiceIndex }) => {
@@ -195,17 +195,17 @@ export const selectEditForm = ({ state }) =>
     sectionId: "",
   };
 export const selectItems = ({ state }) => state?.items || [];
-export const selectSelectedLayoutId = ({ state }) =>
-  state?.selectedLayoutId || "";
+export const selectSelectedResourceId = ({ state }) =>
+  state?.selectedResourceId || "";
 
 const form = {
   fields: [
     {
-      name: "layoutId",
+      name: "resourceId",
       inputType: "select",
       label: "Choices Layout",
       required: false,
-      options: "${layoutOptions}",
+      options: "${resourceOptions}",
     },
     {
       inputType: "slot",
@@ -243,7 +243,7 @@ export const selectViewData = ({ state, props }) => {
 
   console.log("selectedScene", selectedScene);
 
-  const layoutOptions = layouts
+  const resourceOptions = layouts
     .filter((layout) => layout.layoutType === "choice")
     .map((layout) => ({
       value: layout?.id || "",
@@ -295,7 +295,7 @@ export const selectViewData = ({ state, props }) => {
 
   // Create context for form template
   const context = {
-    layoutOptions: layoutOptions,
+    resourceOptions: resourceOptions,
   };
 
   const editFormContext = {
@@ -306,7 +306,7 @@ export const selectViewData = ({ state, props }) => {
 
   // Create defaultValues with items data
   const defaultValues = {
-    layoutId: state?.selectedLayoutId,
+    resourceId: state?.selectedResourceId,
     items: processedItems,
     content: state?.editForm?.content || "",
     actionType: state?.editForm?.actionType,
@@ -317,8 +317,8 @@ export const selectViewData = ({ state, props }) => {
   const viewData = {
     mode: state?.mode || "list",
     items: processedItems,
-    layouts: layoutOptions,
-    selectedLayoutId: state?.selectedLayoutId || "",
+    layouts: resourceOptions,
+    selectedResourceId: state?.selectedResourceId || "",
     editingIndex: state?.editingIndex ?? -1,
     editForm: state?.editForm,
     editFormContext,
