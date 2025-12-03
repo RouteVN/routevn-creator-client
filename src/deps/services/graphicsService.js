@@ -45,12 +45,17 @@ export const createGraphicsService = async ({ subject }) => {
         plugins,
         eventHandler: (eventName, payload) => {
           if (eventName === "drag-move") {
-            console.log("Payload: ", payload);
             if (payload._event.id === "selected-border")
-              subject.dispatch("graphicsServiceEvent", {
+              subject.dispatch("border-drag-move", {
                 x: Math.round(payload._event.x),
                 y: Math.round(payload._event.y),
               });
+          }
+          else if(eventName === "drag-start") {
+            if (payload._event.id === "selected-border") subject.dispatch("border-drag-start");
+          }
+          else if(eventName === "drag-end"){
+            if (payload._event.id === "selected-border") subject.dispatch("border-drag-end");
           }
         },
       });
