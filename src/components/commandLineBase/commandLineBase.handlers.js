@@ -1,9 +1,9 @@
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
-  // Initialize with existing screen data if available
-  if (props?.screen?.resourceId) {
+  // Initialize with existing base data if available
+  if (props?.base?.resourceId) {
     store.setSelectedResourceId({
-      resourceId: props.screen.resourceId,
+      resourceId: props.base.resourceId,
     });
   }
 };
@@ -27,18 +27,18 @@ export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent } = deps;
   const { selectedLayoutId } = store.getState();
 
-  // Create screen object with only non-empty values
-  const screen = {
+  // Create base object with only non-empty values
+  const base = {
     resourceType: "layout",
   };
   if (selectedLayoutId && selectedLayoutId !== "") {
-    screen.resourceId = selectedLayoutId;
+    base.resourceId = selectedLayoutId;
   }
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        screen,
+        base,
       },
     }),
   );

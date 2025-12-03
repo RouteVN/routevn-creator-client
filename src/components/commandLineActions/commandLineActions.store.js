@@ -59,9 +59,9 @@ const PRESENTATION_ACTIONS = [
   },
   {
     id: "11",
-    label: "Screen",
+    label: "Base",
     icon: "screen",
-    mode: "screen",
+    mode: "base",
   },
 ];
 

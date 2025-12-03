@@ -32,8 +32,8 @@ export const selectViewData = ({ state, props, attrs }) => {
       layoutType: layout.layoutType,
     }));
 
-  const screenLayouts = Object.entries(repositoryState.layouts?.items || {})
-    .filter(([_, layout]) => layout.layoutType === "screen")
+  const baseLayouts = Object.entries(repositoryState.layouts?.items || {})
+    .filter(([_, layout]) => layout.layoutType === "base")
     .map(([id, layout]) => ({
       id,
       name: layout.name,
@@ -72,7 +72,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     selectedLineId: props.selectedLineId,
     layouts: choiceLayouts, // Default to choice layouts for backward compatibility
     choiceLayouts,
-    screenLayouts,
+    baseLayouts,
     dialogueLayouts,
     allCharacters: filteredCharacters,
     selectedLine: props.selectedLine,
@@ -219,9 +219,9 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  if (presentationState.screen) {
-    actionsObject.screen = presentationState.screen;
-    preview.screen = layoutsTree.items[presentationState.screen.resourceId];
+  if (presentationState.base) {
+    actionsObject.base = presentationState.base;
+    preview.base = layoutsTree.items[presentationState.base.resourceId];
   }
 
   // Next Line

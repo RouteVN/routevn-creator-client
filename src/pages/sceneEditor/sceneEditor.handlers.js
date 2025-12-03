@@ -266,26 +266,26 @@ export const handleSectionAddClick = async (deps) => {
   const sectionCount = scene?.sections?.length || 0;
   const newSectionName = `Section ${sectionCount + 1}`;
 
-  // Get layouts from repository to find first dialogue and screen layouts
+  // Get layouts from repository to find first dialogue and base layouts
   const { layouts } = projectService.getState();
   let dialogueLayoutId = null;
-  let screenLayoutId = null;
+  let baseLayoutId = null;
 
   if (layouts && layouts.items) {
     for (const [layoutId, layout] of Object.entries(layouts.items)) {
       if (!dialogueLayoutId && layout.layoutType === "dialogue") {
         dialogueLayoutId = layoutId;
       }
-      if (!screenLayoutId && layout.layoutType === "screen") {
-        screenLayoutId = layoutId;
+      if (!baseLayoutId && layout.layoutType === "base") {
+        baseLayoutId = layoutId;
       }
-      if (dialogueLayoutId && screenLayoutId) {
+      if (dialogueLayoutId && baseLayoutId) {
         break;
       }
     }
   }
 
-  // Create actions object with dialogue and screen layouts if found
+  // Create actions object with dialogue and base layouts if found
   const actions = {
     dialogue: dialogueLayoutId
       ? {
@@ -301,9 +301,9 @@ export const handleSectionAddClick = async (deps) => {
         },
   };
 
-  if (screenLayoutId) {
-    actions.screen = {
-      resourceId: screenLayoutId,
+  if (baseLayoutId) {
+    actions.base = {
+      resourceId: baseLayoutId,
       resourceType: "layout",
     };
   }
