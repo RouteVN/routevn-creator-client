@@ -45,12 +45,12 @@ const PRESENTATION_ACTIONS = [
     icon: "character",
     mode: "character",
   },
-  {
-    id: "3",
-    label: "Choices",
-    icon: "choices",
-    mode: "choice",
-  },
+  // {
+  //   id: "3",
+  //   label: "Choices",
+  //   icon: "choices",
+  //   mode: "choice",
+  // },
   {
     id: "10",
     label: "Transition",
