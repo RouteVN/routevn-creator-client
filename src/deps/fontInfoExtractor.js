@@ -1,18 +1,15 @@
-export const createFontInfoExtractor = ({ getFileContent, fontManager }) => {
+export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
   const extractFontInfo = async (fontItem) => {
     try {
       // Get font file data
-      const response = await getFileContent({
-        fileId: fontItem.fileId,
-        projectId: "someprojectId",
-      });
+      const response = await getFileContent(fontItem.fileId);
 
       if (!response?.url) {
         throw new Error("Could not get font file URL");
       }
 
       // Load font for analysis
-      const fontFace = await fontManager.load(
+      const fontFace = await loadFont(
         fontItem.fontFamily,
         response.url,
       );
