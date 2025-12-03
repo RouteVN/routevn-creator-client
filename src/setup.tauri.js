@@ -64,7 +64,7 @@ const appService = createAppService({
 });
 
 // Initialize async resources first
-const graphicsService = await createGraphicsService({subject});
+const graphicsService = await createGraphicsService({ subject });
 
 setupCloseListener({ globalUI });
 
