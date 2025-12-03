@@ -9,24 +9,6 @@
         "type": "folder",
         "name": "Template Images"
       },
-      "w4D_3F43eaKETNbBaAIaJ": {
-        "type": "image",
-        "fileId": "dFVjRAgExl3smbbTHf2Yf",
-        "name": "choice_box",
-        "fileType": "image/png",
-        "fileSize": 2120,
-        "width": 1400,
-        "height": 100
-      },
-      "sY5qgcGzlgoXC3Nf88tGa": {
-        "type": "image",
-        "fileId": "pmR6Jl5Tk3FthCYe7QEQ5",
-        "name": "choice_box_activated",
-        "fileType": "image/png",
-        "fileSize": 862,
-        "width": 1400,
-        "height": 100
-      },
       "iN20__bg4TaS80gh7-XcL": {
         "type": "image",
         "fileId": "iXuoDMU56sb6F4x6xrNqa",
@@ -41,14 +23,6 @@
       {
         "id": "zZO4u50ZEEt1WIugqEiW4",
         "children": [
-          {
-            "id": "w4D_3F43eaKETNbBaAIaJ",
-            "children": []
-          },
-          {
-            "id": "sY5qgcGzlgoXC3Nf88tGa",
-            "children": []
-          },
           {
             "id": "iN20__bg4TaS80gh7-XcL",
             "children": []
@@ -309,9 +283,6 @@
             "id": "simple-dialogue"
           },
           {
-            "id": "simple-choice"
-          },
-          {
             "id": "default-screen"
           }
         ]
@@ -442,101 +413,6 @@
           "tree": [
             {
               "id": "jkfeklaf"
-            }
-          ]
-        }
-      },
-      "simple-choice": {
-        "type": "layout",
-        "name": "Simple Choice",
-        "layoutType": "choice",
-        "elements": {
-          "items": {
-            "choice-list": {
-              "type": "container",
-              "name": "Choice List",
-              "x": 960,
-              "y": 400,
-              "width": 1920,
-              "height": 1080,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "direction": "vertical"
-            },
-            "choice-container-1": {
-              "type": "container",
-              "name": "Choice Container",
-              "x": 0,
-              "y": 0,
-              "width": 100,
-              "height": 120,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "$each": "item in choice.items"
-            },
-            "choice-box-1": {
-              "type": "sprite",
-              "name": "Choice Box",
-              "x": 0,
-              "y": 0,
-              "eventName": "system",
-              "click": {
-                "actionPayload": {
-                  "actions": "${item.events.click.actions}"
-                }
-              },
-              "width": 1400,
-              "height": 100,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "imageId": "w4D_3F43eaKETNbBaAIaJ",
-              "hoverImageId": "sY5qgcGzlgoXC3Nf88tGa"
-            },
-            "choice-text-1": {
-              "type": "text",
-              "name": "Choice Text",
-              "x": 0,
-              "y": 0,
-              "width": 1300,
-              "height": 80,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "${item.content}",
-              "typographyId": "typography-text-view",
-              "style": {
-                "wordWrapWidth": 1300,
-                "align": "center"
-              }
-            }
-          },
-          "tree": [
-            {
-              "id": "choice-list",
-              "children": [
-                {
-                  "id": "choice-container-1",
-                  "children": [
-                    {
-                      "id": "choice-box-1"
-                    },
-                    {
-                      "id": "choice-text-1"
-                    }
-                  ]
-                }
-              ]
             }
           ]
         }

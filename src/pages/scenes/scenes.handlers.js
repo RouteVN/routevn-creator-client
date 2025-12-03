@@ -303,37 +303,48 @@ export const handleSceneFormAction = async (deps, payload) => {
     // Generate 31 additional line IDs
     const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
 
-    // Get layouts from repository to find first dialogue layout
+    // Get layouts from repository to find first dialogue and base layouts
     const { layouts } = projectService.getState();
     let dialogueLayoutId = null;
+    let baseLayoutId = null;
 
     if (layouts && layouts.items) {
-      // Find first layout with layoutType: "dialogue"
+      // Find first layout with layoutType: "dialogue" and "base"
       for (const [layoutId, layout] of Object.entries(layouts.items)) {
-        if (layout.layoutType === "dialogue") {
+        if (!dialogueLayoutId && layout.layoutType === "dialogue") {
           dialogueLayoutId = layoutId;
+        }
+        if (!baseLayoutId && layout.layoutType === "base") {
+          baseLayoutId = layoutId;
+        }
+        if (dialogueLayoutId && baseLayoutId) {
           break;
         }
       }
     }
 
-    // Create actions object with dialogue layout if found
-    const actions = dialogueLayoutId
-      ? {
-          dialogue: {
+    // Create actions object with dialogue and base layouts if found
+    const actions = {
+      dialogue: dialogueLayoutId
+        ? {
             gui: {
               resourceId: dialogueLayoutId,
             },
             mode: "adv",
             content: [{ text: "" }],
-          },
-        }
-      : {
-          dialogue: {
+          }
+        : {
             mode: "adv",
             content: [{ text: "" }],
           },
-        };
+    };
+
+    if (baseLayoutId) {
+      actions.base = {
+        resourceId: baseLayoutId,
+        resourceType: "layout",
+      };
+    }
 
     // Create items object with first line having actions, rest with empty actions
     const lineItems = {
