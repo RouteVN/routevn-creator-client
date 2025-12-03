@@ -11,7 +11,7 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine from "route-engine-js";
 
-export const createGraphicsService = async () => {
+export const createGraphicsService = async ({ subject }) => {
   let routeGraphics;
   let engine;
   let assetBufferManager;
@@ -44,18 +44,24 @@ export const createGraphicsService = async () => {
         height: 1080,
         plugins,
         eventHandler: (eventName, payload) => {
+          if (eventName === "drag-move") {
+            if (payload._event.id === "selected-border")
+              subject.dispatch("border-drag-move", {
+                x: Math.round(payload._event.x),
+                y: Math.round(payload._event.y),
+              });
+          } else if (eventName === "drag-start") {
+            if (payload._event.id === "selected-border")
+              subject.dispatch("border-drag-start");
+          } else if (eventName === "drag-end") {
+            if (payload._event.id === "selected-border")
+              subject.dispatch("border-drag-end");
+          }
           if (payload.actions) {
             engine.handleActions(payload.actions);
           }
         },
       });
-
-      // app.assignStageEvent("globalpointermove", (event) => {
-      //   subject.dispatch("2drendererEvent", {
-      //     x: Math.round(event.global.x),
-      //     y: Math.round(event.global.y),
-      //   });
-      // });
 
       if (canvas) {
         if (canvas.children.length > 0) {
