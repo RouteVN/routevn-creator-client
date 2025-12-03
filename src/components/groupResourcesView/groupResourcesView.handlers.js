@@ -62,7 +62,7 @@ export const handleDragLeave = (deps, payload) => {
 };
 
 export const handleDrop = async (deps, payload) => {
-  const { dispatchEvent, store, render, props } = deps;
+  const { dispatchEvent, store, render, props, appService } = deps;
   payload._event.preventDefault();
   payload._event.stopPropagation();
   const targetGroupId = store.selectDraggingGroupId();
@@ -77,11 +77,11 @@ export const handleDrop = async (deps, payload) => {
 
   if (files.length > 0) {
     // For fonts, load them for preview
-    if (props.resourceType === "fonts" && fontManager) {
+    if (props.resourceType === "fonts") {
       for (const file of files) {
         const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
         const fontUrl = URL.createObjectURL(file);
-        await fontManager.load(fontName, fontUrl);
+        await appService.loadFont(fontName, fontUrl);
       }
     }
 
@@ -145,7 +145,7 @@ export const handleItemDoubleClick = (deps, payload) => {
 
 export const handleUploadButtonClick = (deps, payload) => {
   // Copy the logic in dragDrop.handlers.js
-  const { props, dispatchEvent, fontManager } = deps;
+  const { props, dispatchEvent, appService } = deps;
   payload._event.stopPropagation();
   const targetGroupId = payload._event.currentTarget.id.replace(
     "upload-btn-",
@@ -163,14 +163,14 @@ export const handleUploadButtonClick = (deps, payload) => {
 
       if (files.length > 0) {
         // For fonts, load them for preview
-        if (props.resourceType === "fonts" && fontManager) {
+        if (props.resourceType === "fonts") {
           for (const file of files) {
             const fontName = file.name.replace(
               /\.(ttf|otf|woff|woff2|ttc)$/i,
               "",
             );
             const fontUrl = URL.createObjectURL(file);
-            await fontManager.load(fontName, fontUrl);
+            await appService.loadFont(fontName, fontUrl);
           }
         }
 
@@ -195,7 +195,7 @@ export const handleUploadButtonClick = (deps, payload) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const { dispatchEvent, fontManager, props = {} } = deps;
+  const { dispatchEvent, appService, props = {} } = deps;
   const { _event: event } = payload;
   const { files } = event.detail;
   const targetGroupId = payload._event.currentTarget.id
@@ -203,11 +203,11 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     .replace("drag-drop-item-", "");
 
   // For fonts, load them for preview
-  if (props.resourceType === "fonts" && fontManager) {
+  if (props.resourceType === "fonts") {
     for (const file of files) {
       const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
       const fontUrl = URL.createObjectURL(file);
-      await fontManager.load(fontName, fontUrl);
+      await appService.loadFont(fontName, fontUrl);
     }
   }
 

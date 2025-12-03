@@ -180,7 +180,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 export const handleFontItemDoubleClick = async (deps, payload) => {
-  const { store, render, projectService, fontManager } = deps;
+  const { store, render, projectService, appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -197,7 +197,7 @@ export const handleFontItemDoubleClick = async (deps, payload) => {
   // Extract font information
   const fontInfoExtractor = createFontInfoExtractor({
     getFileContent: (fileId) => projectService.getFileContent(fileId),
-    fontManager,
+    loadFont: (fontName, fontUrl) => appService.loadFont(fontName, fontUrl),
   });
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
 
