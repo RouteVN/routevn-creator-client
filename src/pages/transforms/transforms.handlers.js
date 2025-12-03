@@ -162,13 +162,11 @@ export const handleAddTransformClick = async (deps, payload) => {
   render();
 
   const { canvas } = getRefIds();
-  if (!canvas?.elm || graphicsService.initialized) {
-    return;
+  if (canvas && canvas.elm) {
+    await graphicsService.init({
+      canvas: canvas.elm,
+    });
   }
-  await graphicsService.init({
-    canvas: canvas.elm,
-  });
-  graphicsService.initialized = true;
 
   // Render initial state with default values (scale=1, anchor=center-center)
   const renderState = createRenderState({
