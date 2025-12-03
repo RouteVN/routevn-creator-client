@@ -1,8 +1,8 @@
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   store.setItems({ items: props.choice?.items || [] });
-  store.setSelectedLayoutId({
-    layoutId: props.choice?.layoutId,
+  store.setSelectedResourceId({
+    resourceId: props.choice?.resourceId,
   });
 };
 
@@ -90,15 +90,14 @@ export const handleChoiceItemClick = (deps) => {
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const items = store.selectItems();
-  console.log("items", items);
-  const selectedLayoutId = store.selectSelectedLayoutId();
+  const selectedResourceId = store.selectSelectedResourceId();
 
   // Create choices object with new structure
   const choicesData = {
     items,
   };
-  if (selectedLayoutId && selectedLayoutId !== "") {
-    choicesData.layoutId = selectedLayoutId;
+  if (selectedResourceId && selectedResourceId !== "") {
+    choicesData.resourceId = selectedResourceId;
   }
 
   dispatchEvent(
@@ -135,9 +134,9 @@ export const handleChoiceContentInput = (deps, payload) => {
 
 export const handleLayoutSelectChange = (deps, payload) => {
   const { store, render } = deps;
-  const layoutId = payload._event.detail.value;
+  const resourceId = payload._event.detail.value;
 
-  store.setSelectedLayoutId({ layoutId });
+  store.setSelectedResourceId({ resourceId });
   render();
 };
 
@@ -149,8 +148,8 @@ export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
   const { name, fieldValue } = payload._event.detail;
 
-  if (name === "layoutId") {
-    store.setSelectedLayoutId({ layoutId: fieldValue });
+  if (name === "resourceId") {
+    store.setSelectedResourceId({ resourceId: fieldValue });
     render();
   }
 };

@@ -19,7 +19,7 @@ propsSchema:
           type: array
           items:
             type: object
-        layoutId:
+        resourceId:
           type: string
 
 viewDataSchema:
