@@ -520,13 +520,13 @@ export const subscriptions = (deps) => {
       filter(({ action }) => action === "border-drag-start"),
       tap(() => {
         handlePointerUp(deps);
-      })
+      }),
     ),
     subject.pipe(
       filter(({ action }) => action === "border-drag-end"),
       tap(() => {
         handlePointerDown(deps);
-      })
+      }),
     ),
     subject.pipe(
       filter(({ action }) => action === "border-drag-move"),
@@ -585,7 +585,6 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
 export const handleCanvasMouseMove = (deps, payload) => {
   const { store, subject } = deps;
   const { x, y } = payload;
-
 
   const drag = store.selectDragging();
 
