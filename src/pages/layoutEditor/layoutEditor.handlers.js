@@ -226,7 +226,7 @@ const renderLayoutPreview = async (deps) => {
   const finalElements = parseAndRender(elementsToRender, data);
 
   const parsedState = graphicsService.parse({
-    elements: renderStateElements,
+    elements: finalElements,
   });
 
   if (!selectedItem) {

@@ -104,6 +104,7 @@ export const layoutTreeStructureToRenderState = (
           fontWeight: typography.fontWeight || "normal",
           fill: colorItem?.hex || "white",
           lineHeight: typography.lineHeight || 1.2,
+          breakWords: true,
         };
       } else {
         // Use default settings
