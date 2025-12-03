@@ -9,10 +9,7 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
       }
 
       // Load font for analysis
-      const fontFace = await loadFont(
-        fontItem.fontFamily,
-        response.url,
-      );
+      const fontFace = await loadFont(fontItem.fontFamily, response.url);
 
       // Fetch the font file as array buffer
       const fontResponse = await fetch(response.url);
