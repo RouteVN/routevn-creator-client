@@ -406,8 +406,7 @@ export const selectViewData = ({ state }) => {
         fontStyle: fontData.fontFamily,
         fontFileId: fontData.fileId,
         color: getColorHex(item.colorId),
-        previewText:
-          item.previewText || "The quick brown fox jumps over the lazy dog",
+        previewText: item.previewText || "",
         selectedStyle:
           item.id === state.selectedItemId
             ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
