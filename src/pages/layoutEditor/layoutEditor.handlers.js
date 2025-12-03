@@ -210,7 +210,6 @@ const renderLayoutPreview = async (deps) => {
 
   const fileReferences = extractFileIdsFromRenderState(renderStateElements);
   const assets = await loadAssets(deps, fileReferences, fontsItems);
-  console.log("assets", assets);
   await graphicsService.loadAssets(assets);
 
   let elementsToRender = renderStateElements;
@@ -225,7 +224,6 @@ const renderLayoutPreview = async (deps) => {
   };
 
   const finalElements = parseAndRender(elementsToRender, data);
-  console.log("Final elements:", finalElements);
 
   const parsedState = graphicsService.parse({
     elements: renderStateElements,
@@ -269,17 +267,18 @@ const renderLayoutPreview = async (deps) => {
         width: 2,
         alpha: 1,
       },
-      // pointerMove: `layout-editor-pointer-move-${selectedItem.id}`,
-      // pointerDown: `layout-editor-pointer-down-${selectedItem.id}`,
-      // pointerUp: `layout-editor-pointer-up-${selectedItem.id}`,
-      // cursor: "all-scroll",
       hover: {
         cursor: "all-scroll",
+      },
+      drag: {
+        move: {},
+        start: {},
+        end: {},
       },
     };
 
     graphicsService.render({
-      elements: [...finalElements, border, redDot],
+      elements: [border, redDot, ...finalElements],
       animations: [],
     });
   }
@@ -517,32 +516,20 @@ export const subscriptions = (deps) => {
         handleArrowKeyDown(deps, { _event: e });
       }),
     ),
-    fromEvent(window, "keydown").pipe(
-      filter((e) => {
-        const isInput = isInputFocused();
-        if (isInput) {
-          return;
-        }
-        return ["Control"].includes(e.key);
-      }),
-      tap((e) => {
-        handleCtrlKeyDown(deps, { _event: e });
-      }),
-    ),
-    fromEvent(window, "keyup").pipe(
-      filter((e) => {
-        const isInput = isInputFocused();
-        if (isInput) {
-          return;
-        }
-        return ["Control"].includes(e.key);
-      }),
-      tap((e) => {
-        handleCtrlKeyUp(deps, { _event: e });
+    subject.pipe(
+      filter(({ action }) => action === "border-drag-start"),
+      tap(() => {
+        handlePointerUp(deps);
       }),
     ),
     subject.pipe(
-      filter(({ action }) => action === "graphicsServiceEvent"),
+      filter(({ action }) => action === "border-drag-end"),
+      tap(() => {
+        handlePointerDown(deps);
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "border-drag-move"),
       tap(({ payload }) => {
         handleCanvasMouseMove(deps, payload);
       }),
@@ -598,11 +585,8 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
 export const handleCanvasMouseMove = (deps, payload) => {
   const { store, subject } = deps;
   const { x, y } = payload;
-  const drag = store.selectDragging();
 
-  if (!drag.isDragging) {
-    return;
-  }
+  const drag = store.selectDragging();
 
   const item = store.selectSelectedItem();
   if (!drag.dragStartPosition) {
@@ -632,7 +616,7 @@ export const handleCanvasMouseMove = (deps, payload) => {
   });
 };
 
-export const handleCtrlKeyDown = (deps) => {
+export const handlePointerUp = (deps) => {
   const { store, render } = deps;
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
@@ -642,7 +626,7 @@ export const handleCtrlKeyDown = (deps) => {
   render();
 };
 
-export const handleCtrlKeyUp = (deps) => {
+export const handlePointerDown = (deps) => {
   const { store, render } = deps;
 
   const currentItem = store.selectSelectedItem();
