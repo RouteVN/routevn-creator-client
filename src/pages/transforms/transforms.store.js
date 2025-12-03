@@ -38,7 +38,7 @@ export const createInitialState = () => ({
     y: "0",
     scaleX: "1",
     scaleY: "1",
-    anchor: { anchorX: 0.5, anchorY: 0.5 },
+    anchor: { anchorX: 0, anchorY: 0 },
     rotation: "0",
   },
   transformForm: {
@@ -216,7 +216,7 @@ export const openTransformFormDialog = (state, options = {}) => {
       y: "0",
       scaleX: "1",
       scaleY: "1",
-      anchor: { anchorX: 0.5, anchorY: 0.5 },
+      anchor: { anchorX: 0, anchorY: 0 },
       //rotation: "0",
     };
   }
@@ -241,7 +241,7 @@ export const closeTransformFormDialog = (state) => {
     y: "0",
     scaleX: "1",
     scaleY: "1",
-    anchor: { anchorX: 0.5, anchorY: 0.5 },
+    anchor: { anchorX: 0, anchorY: 0 },
     //rotation: "0",
   };
 
