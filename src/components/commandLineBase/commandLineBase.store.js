@@ -11,7 +11,7 @@ export const createInitialState = () => ({
       {
         name: "resourceId",
         inputType: "select",
-        label: "Screen Layout",
+        label: "Base Layout",
         description: "",
         required: false,
         placeholder: "Choose a layout...",
@@ -38,7 +38,7 @@ export const selectViewData = ({ state, props }) => {
   const layouts = props.layouts || [];
 
   const layoutOptions = layouts
-    .filter((layout) => layout.layoutType === "screen")
+    .filter((layout) => layout.layoutType === "base")
     .map((layout) => ({
       value: layout.id,
       label: layout.name,
@@ -50,7 +50,7 @@ export const selectViewData = ({ state, props }) => {
       label: "Actions",
     },
     {
-      label: "Screen",
+      label: "Base",
     },
   ];
 

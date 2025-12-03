@@ -414,8 +414,8 @@
       },
       "default-screen": {
         "type": "layout",
-        "name": "Default Screen",
-        "layoutType": "screen",
+        "name": "Default Base",
+        "layoutType": "base",
         "elements": {
           "items": {
             "jkfeklaf": {
@@ -584,7 +584,7 @@
                         },
                         "mode": "adv"
                       },
-                      "screen": {
+                      "base": {
                         "resourceId": "default-screen",
                         "resourceType": "layout"
                       }

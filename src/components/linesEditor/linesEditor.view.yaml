@@ -101,8 +101,8 @@ template:
                                       - rtgl-svg svg=character wh=24:
                           - $if line.hasDialogueLayout:
                               - rtgl-svg#preview-dialogue data-type="dialogue" data-id="${line.id}" svg="dialogue" wh=24 mr=sm:
-                          - $if line.hasScreen:
-                              - rtgl-svg#preview-screen data-type="screen" data-id="${line.id}" svg="screen" wh=24 mr=sm:
+                          - $if line.hasBase:
+                              - rtgl-svg#preview-base data-type="base" data-id="${line.id}" svg="screen" wh=24 mr=sm:
                           - $if line.bgm:
                               - rtgl-svg#preview-bgm data-type="bgm" data-id="${line.id}" svg="music" wh=24 mr=sm:
                           - $if line.hasSfx:
