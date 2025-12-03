@@ -42,7 +42,9 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       console.error("Failed to check for updates:", error);
       if (!silent && globalUI) {
         await globalUI.showAlert({
-          message: `Failed to check for updates: ${error.message}`,
+          message: `Failed to check for updates: ${
+            error?.message || "Could not retrieve update information."
+          }`,
           title: "Error",
         });
       }

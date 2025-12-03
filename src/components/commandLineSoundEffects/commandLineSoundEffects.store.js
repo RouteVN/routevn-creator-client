@@ -52,13 +52,17 @@ export const addSfx = (state, payload) => {
     audioId: null,
     resourceType: "audio",
     name: "New Sound Effect",
+    volume: 500,
   };
   state.sfx.push(newSfx);
   state.currentEditingId = newSfx.id;
 };
 
 export const setExistingSfxs = (state, payload) => {
-  state.sfx = payload.sfx;
+  state.sfx = payload.sfx.map((sfx) => ({
+    volume: 500,
+    ...sfx,
+  }));
 };
 
 export const updateSfx = (state, payload) => {

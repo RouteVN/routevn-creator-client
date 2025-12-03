@@ -8,9 +8,9 @@ const DEFAULT_USER_CONFIG = {
     zoomLevel: 1.0,
   },
   scenesMap: {
-    zoomLevel: 1.0,
-    panX: 0,
-    panY: 0,
+    zoomLevel: 1.5,
+    panX: 120,
+    panY: 90,
   },
 };
 
@@ -351,6 +351,14 @@ export const createAppService = ({
 
     showDialog(options) {
       return globalUI.showConfirm(options);
+    },
+
+    closeAll() {
+      return globalUI.closeAll();
+    },
+
+    showDropdownMenu(options) {
+      return globalUI.showDropdownMenu(options);
     },
 
     // File pickers

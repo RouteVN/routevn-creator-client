@@ -57,6 +57,9 @@ export const createGraphicsService = async ({ subject }) => {
             if (payload._event.id === "selected-border")
               subject.dispatch("border-drag-end");
           }
+          if (payload.actions) {
+            engine.handleActions(payload.actions);
+          }
         },
       });
 
@@ -71,22 +74,30 @@ export const createGraphicsService = async ({ subject }) => {
       await assetBufferManager.load(assets);
       await routeGraphics.loadAssets(assetBufferManager.getBufferMap());
     },
-    initRouteEngine: (projectData) => {
+    initRouteEngine: (projectData, options = {}) => {
+      const { handleEffects = false } = options;
       const handlePendingEffects = (effects) => {
-        console.log("Pending Effects:", effects);
+        if (!handleEffects) return;
+
+        // Deduplicate effects by name, keeping only the last occurrence
+        const deduplicatedEffects = effects.reduce((acc, effect) => {
+          acc[effect.name] = effect;
+          return acc;
+        }, {});
+
+        // Convert back to array and process deduplicated effects
+        const uniqueEffects = Object.values(deduplicatedEffects);
+
+        for (const effect of uniqueEffects) {
+          if (effect.name === "render") {
+            const renderState = engine.selectRenderState();
+            routeGraphics.render(renderState);
+          } else if (effect.name === "handleLineActions") {
+            engine.handleLineActions();
+          }
+        }
       };
       engine = createRouteEngine({ handlePendingEffects });
-      // engine.onEvent(({ eventType, payload }) => {
-      //   if (eventType === "render") {
-      //     routeGraphics.render(payload);
-      //   }
-      // });
-      // engine.init({
-      //   projectData,
-      //   // ticker: app._app.ticker,
-      //   // loadAssets: app.loadAssets,
-      //   // captureElement,
-      // });
       engine.init({
         initialState: {
           global: {
@@ -95,20 +106,10 @@ export const createGraphicsService = async ({ subject }) => {
           projectData,
         },
       });
+    },
 
-      // eventHandler = (eventType, payload) => {
-      //   if (eventType === "completed") {
-      //     engine.handleEvent({
-      //       payload: {
-      //         actions: {
-      //           handleCompleted: {},
-      //         },
-      //       },
-      //     });
-      //   } else if (eventType === "system") {
-      //     engine.handleEvent({ payload });
-      //   }
-      // };
+    engineSelectPresentationState: () => {
+      return engine.selectPresentationState();
     },
 
     engineRenderCurrentState: () => {
@@ -131,9 +132,6 @@ export const createGraphicsService = async ({ subject }) => {
       if (engine) {
         engine = undefined;
       }
-    },
-    getStageElementBounds: () => {
-      return routeGraphics.getStageElementBounds();
     },
   };
 };

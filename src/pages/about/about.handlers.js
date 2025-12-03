@@ -3,9 +3,10 @@ export const handleBeforeMount = () => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, appVersion } = deps;
+  const { store, render, appService } = deps;
 
-  // Set app version from deps
+  // Set app version from appService
+  const appVersion = appService.getAppVersion();
   if (appVersion) {
     store.setAppVersion(appVersion);
   }
@@ -25,9 +26,9 @@ export const handleCheckForUpdates = async (deps) => {
 };
 
 export const handleClickSocialButton = async (deps, payload) => {
-  const { openUrl, store } = deps;
+  const { appService, store } = deps;
   const { _event } = payload;
   const id = _event.target.dataset.id;
   const social = store.selectSocial({ id });
-  openUrl(social.href);
+  appService.openUrl(social.href);
 };

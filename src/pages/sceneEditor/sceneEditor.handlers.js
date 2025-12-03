@@ -67,6 +67,10 @@ async function renderSceneState(store, graphicsService) {
     },
   });
   graphicsService.engineRenderCurrentState();
+
+  // Update presentation state after rendering
+  const presentationState = graphicsService.engineSelectPresentationState();
+  store.setPresentationState(presentationState);
 }
 
 export const handleBeforeMount = (deps) => {
@@ -113,8 +117,6 @@ export const handleAfterMount = async (deps) => {
   await graphicsService.init({ canvas: canvas.elm });
 
   const projectData = store.selectProjectData();
-
-  console.log("Resources:", projectData.resources);
 
   graphicsService.initRouteEngine(projectData);
   // TODO don't load all data... only ones necessary for this scene
@@ -264,37 +266,47 @@ export const handleSectionAddClick = async (deps) => {
   const sectionCount = scene?.sections?.length || 0;
   const newSectionName = `Section ${sectionCount + 1}`;
 
-  // Get layouts from repository to find first dialogue layout
+  // Get layouts from repository to find first dialogue and screen layouts
   const { layouts } = projectService.getState();
   let dialogueLayoutId = null;
+  let screenLayoutId = null;
 
   if (layouts && layouts.items) {
-    // Find first layout with layoutType: "dialogue"
     for (const [layoutId, layout] of Object.entries(layouts.items)) {
-      if (layout.layoutType === "dialogue") {
+      if (!dialogueLayoutId && layout.layoutType === "dialogue") {
         dialogueLayoutId = layoutId;
+      }
+      if (!screenLayoutId && layout.layoutType === "screen") {
+        screenLayoutId = layoutId;
+      }
+      if (dialogueLayoutId && screenLayoutId) {
         break;
       }
     }
   }
 
-  // Create actions object with dialogue layout if found
-  const actions = dialogueLayoutId
-    ? {
-        dialogue: {
+  // Create actions object with dialogue and screen layouts if found
+  const actions = {
+    dialogue: dialogueLayoutId
+      ? {
           gui: {
             resourceId: dialogueLayoutId,
           },
           mode: "adv",
           content: [{ text: "" }],
-        },
-      }
-    : {
-        dialogue: {
+        }
+      : {
           mode: "adv",
           content: [{ text: "" }],
         },
-      };
+  };
+
+  if (screenLayoutId) {
+    actions.screen = {
+      resourceId: screenLayoutId,
+      resourceType: "layout",
+    };
+  }
 
   await projectService.appendEvent({
     type: "treePush",
@@ -366,6 +378,9 @@ export const handleSplitLine = async (deps, payload) => {
             payload: {
               target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
               value: line.actions.dialogue.content,
+              options: {
+                replace: true,
+              },
             },
           });
         }
@@ -402,6 +417,9 @@ export const handleSplitLine = async (deps, payload) => {
       payload: {
         target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
         value: leftContentArray,
+        options: {
+          replace: true,
+        },
       },
     });
   } else if (leftContent) {
@@ -704,15 +722,13 @@ export const handleMergeLines = async (deps, payload) => {
   await projectService.appendEvent({
     type: "set",
     payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions`,
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions.dialogue`,
       value: {
-        dialogue: {
-          ...existingDialogue,
-          content: finalContent,
-        },
+        ...existingDialogue,
+        content: finalContent,
       },
       options: {
-        replace: false,
+        replace: true,
       },
     },
   });
@@ -855,6 +871,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
             payload: {
               target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
               value: updatedDialogue,
+              options: {
+                replace: true,
+              },
             },
           });
         }
@@ -1033,15 +1052,13 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
   await projectService.appendEvent({
     type: "set",
     payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
       value: {
-        dialogue: {
-          ...existingDialogue,
-          content: content,
-        },
+        ...existingDialogue,
+        content: content,
       },
       options: {
-        replace: false,
+        replace: true,
       },
     },
   });
@@ -1050,8 +1067,9 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps) {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
+  render();
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing
