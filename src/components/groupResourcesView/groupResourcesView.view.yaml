@@ -204,7 +204,7 @@ template:
                                                   - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
                                                   - rtgl-text s=xs c=mu-fg ellipsis mw=${maxWidth}: ${item.name}
                                             $elif resourceType == 'characterSprites':
-                                              - rtgl-view bc=${item.borderColor} p=md g=md:
+                                              - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
                                                   - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
                                                   - rtgl-text s=xs c=mu-fg ellipsis mw=${maxWidth}: ${item.name}
                                             $elif resourceType == 'characters':
