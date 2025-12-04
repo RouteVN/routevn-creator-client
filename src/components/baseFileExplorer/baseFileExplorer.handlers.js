@@ -75,6 +75,29 @@ export const getSelectedItemIndex = (
 
   const lastItem = sortedItems[sortedItems.length - 1];
   if (mouseY > lastItem.bottom) {
+    // Check if the last item belongs to an expanded folder
+    const lastItemId = lastItem.id.replace("item-", "");
+    const lastActualItem = items.find((item) => item.id === lastItemId);
+
+    if (lastActualItem?.parentId) {
+      // Find the parent folder
+      const parentFolder = items.find(
+        (item) => item.id === lastActualItem.parentId,
+      );
+
+      if (parentFolder?.type === "folder") {
+        // Return the parent folder's below position
+        const parentIndex = sortedItems.findIndex(
+          (item) => item.id === `item-${parentFolder.id}`,
+        );
+        return {
+          index: parentIndex,
+          position: lastItem.bottom,
+          dropPosition: "below",
+        };
+      }
+    }
+
     return {
       index: sortedItems.length - 1,
       position: lastItem.bottom,
