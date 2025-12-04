@@ -84,13 +84,13 @@ template:
                           - rtgl-text s=md c=mu-fg: No selection
 
   - rtgl-dialog#add-typography-dialog ?open=${isDialogOpen}:
+    - $if isDialogOpen:
       - rtgl-view slot=content d=h g=md w=800:
           - rtgl-view flex=1:
               - rtgl-form#typography-form key=${formKey} .defaultValues=dialogDefaultValues .form=dialogForm w=f:
           - rtgl-view flex=1 p=md bwl=xs d=v:
               - rtgl-text s=lg fw=b mb=md: Preview
-              - $if isDialogOpen:
-                  - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
+              - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
 
   - rtgl-dialog#add-color-dialog ?open=${isAddColorDialogOpen} s=sm:
       - $if isAddColorDialogOpen:
