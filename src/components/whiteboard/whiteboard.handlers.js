@@ -362,9 +362,13 @@ export const handleWindowMouseUp = (deps) => {
 
 // Keyboard event handlers
 export const handleWindowKeyDown = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
 
-  if (event.code === "Space" && !store.selectIsPanMode()) {
+  if (appService.isInputFocused()) {
+    return;
+  }
+
+  if (payload._event.code === "Space" && !store.selectIsPanMode()) {
     payload._event.preventDefault();
     store.togglePanMode({ isPanMode: true });
     render();
@@ -372,9 +376,13 @@ export const handleWindowKeyDown = (deps, payload) => {
 };
 
 export const handleWindowKeyUp = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
 
-  if (event.code === "Space" && store.selectIsPanMode()) {
+  if (appService.isInputFocused()) {
+    return;
+  }
+
+  if (payload._event.code === "Space" && store.selectIsPanMode()) {
     payload._event.preventDefault();
     store.togglePanMode({ isPanMode: false });
     render();
