@@ -1,4 +1,4 @@
-import { mkdir, writeFile, exists, readFile } from "@tauri-apps/plugin-fs";
+import { mkdir, writeFile, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
@@ -407,7 +407,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
       const uploadPromises = fileArray.map(async (file) => {
         try {
-          console.log("Upload files: ",file)
+          console.log("Upload files: ", file);
           const result = await processFile(file);
           return {
             success: true,

@@ -179,8 +179,9 @@ export const layoutTreeStructureToRenderState = (
         const image = imageItems[node.imageId];
         if (image && image.fileId) {
           element.src = `${image.fileId}`;
-          if(!element.width || element.width<=0)element.width = image.width;
-          if(!element.height || element.height<=0)element.height = image.height;
+          if (!element.width || element.width <= 0) element.width = image.width;
+          if (!element.height || element.height <= 0)
+            element.height = image.height;
         }
       }
       if (node.hoverImageId && imageItems) {
