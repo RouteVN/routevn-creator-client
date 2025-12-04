@@ -57,7 +57,8 @@ export const createGraphicsService = async ({ subject }) => {
             if (payload._event.id === "selected-border")
               subject.dispatch("border-drag-end");
           }
-          if (payload.actions) {
+
+          if (payload.actions && engine) {
             engine.handleActions(payload.actions);
           }
         },
