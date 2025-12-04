@@ -84,6 +84,7 @@ template:
                           - rtgl-text s=md c=mu-fg: No selection
 
   - rtgl-dialog#add-typography-dialog ?open=${isDialogOpen}:
+    - $if isDialogOpen:
       - rtgl-view slot=content d=h g=md w=800:
           - rtgl-view flex=1:
               - rtgl-form#typography-form key=${formKey} .defaultValues=dialogDefaultValues .form=dialogForm w=f:
