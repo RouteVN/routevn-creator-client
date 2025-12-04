@@ -90,8 +90,7 @@ template:
               - rtgl-form#typography-form key=${formKey} .defaultValues=dialogDefaultValues .form=dialogForm w=f:
           - rtgl-view flex=1 p=md bwl=xs d=v:
               - rtgl-text s=lg fw=b mb=md: Preview
-              - $if isDialogOpen:
-                  - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
+              - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
 
   - rtgl-dialog#add-color-dialog ?open=${isAddColorDialogOpen} s=sm:
       - $if isAddColorDialogOpen:
