@@ -153,7 +153,7 @@ const getRenderState = async (deps) => {
     { items: colorsItems },
     { items: fontsItems },
   );
-
+  console.log("Renderstateelements: ",renderStateElements)
   return {
     renderStateElements,
     layoutTreeStructure,

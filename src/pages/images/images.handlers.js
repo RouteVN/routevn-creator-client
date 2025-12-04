@@ -146,7 +146,6 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   const successfulUploads = await projectService.uploadFiles(files);
   for (const result of successfulUploads) {
-    console.log("Uploaded file:", result);
     await projectService.appendEvent({
       type: "treePush",
       payload: {
