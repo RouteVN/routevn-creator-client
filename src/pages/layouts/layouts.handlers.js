@@ -290,7 +290,7 @@ const createLayoutTemplate = (layoutType) => {
       ],
     };
   }
-  
+
   return {
     items: {},
     tree: [],
