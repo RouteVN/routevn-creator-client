@@ -98,6 +98,8 @@ export const handleAfterMount = async (deps) => {
   const { sceneId } = appService.getPayload();
   const state = projectService.getState();
 
+  console.log("state", state);
+
   store.setSceneId(sceneId);
   store.setRepositoryState(state);
 
@@ -293,11 +295,11 @@ export const handleSectionAddClick = async (deps) => {
             resourceId: dialogueLayoutId,
           },
           mode: "adv",
-          content: [{ text: "" }],
+          content: `\${l10n.default.keys.${newSectionId}.${newLineId}}`,
         }
       : {
           mode: "adv",
-          content: [{ text: "" }],
+          content: `\${l10n.default.keys.${newSectionId}.${newLineId}}`,
         },
   };
 
@@ -332,6 +334,14 @@ export const handleSectionAddClick = async (deps) => {
         parent: "_root",
         position: "last",
       },
+    },
+  });
+
+  await projectService.appendEvent({
+    type: "set",
+    payload: {
+      target: `l10n.items.default.keys.${newSectionId}`,
+      value: {},
     },
   });
 
@@ -1029,39 +1039,53 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
   const { projectService, store, subject } = deps;
   const { lineId, content } = payload;
 
-  const sceneId = store.selectSceneId();
+  // const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
   // Get existing dialogue data to preserve layoutId and characterId
-  const { scenes } = projectService.getState();
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
+  // const { scenes } = projectService.getState();
+  // const scene = toFlatItems(scenes)
+  //   .filter((item) => item.type === "scene")
+  //   .find((item) => item.id === sceneId);
 
-  let existingDialogue = {};
-  if (scene) {
-    const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
-    if (section) {
-      const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-      if (line && line.actions?.dialogue) {
-        existingDialogue = line.actions.dialogue;
-      }
-    }
-  }
+  // let existingDialogue = {};
+  // if (scene) {
+  //   const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
+  //   if (section) {
+  //     const line = toFlatItems(section.lines).find((l) => l.id === lineId);
+  //     if (line && line.actions?.dialogue) {
+  //       existingDialogue = line.actions.dialogue;
+  //     }
+  //   }
+  // }
+  //
+  console.log("UNIQUE ID", `${sectionId}.lines.items.${lineId}`, content);
+
+  // await projectService.appendEvent({
+  //   type: "set",
+  //   payload: {
+  //     target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
+  //     value: {
+  //       ...existingDialogue,
+  //       content: content,
+  //     },
+  //     options: {
+  //       replace: true,
+  //     },
+  //   },
+  // });
 
   await projectService.appendEvent({
     type: "set",
     payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-      value: {
-        ...existingDialogue,
-        content: content,
-      },
+      target: `l10n.items.default.keys.${sectionId}.${lineId}`,
+      value: content,
       options: {
         replace: true,
       },
     },
   });
+
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 

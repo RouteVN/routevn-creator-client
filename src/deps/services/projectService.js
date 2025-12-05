@@ -40,6 +40,25 @@ export const initialProjectData = {
   story: {
     initialSceneId: "",
   },
+  l10n: {
+    items: {
+      default: {
+        label: "Default Localization",
+        keys: {
+          //
+          // firstLevelKey: {
+          //   seondLeveLey: "value"
+          //
+          // }
+        },
+      },
+    },
+    tree: [
+      {
+        id: "default",
+      },
+    ],
+  },
   images: {
     items: {},
     tree: [],
