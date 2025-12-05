@@ -200,7 +200,7 @@ const calculateAbsolutePosition = (
 };
 
 const renderLayoutPreview = async (deps) => {
-  const { store, graphicsService, render } = deps;
+  const { store, graphicsService } = deps;
 
   const { renderStateElements, fontsItems } = await getRenderState(deps);
 
@@ -277,7 +277,7 @@ const renderLayoutPreview = async (deps) => {
         end: {},
       },
     };
-    console.log(finalElements)
+    console.log(finalElements);
     graphicsService.render({
       elements: [border, redDot, ...finalElements],
       animations: [],
@@ -589,7 +589,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   }
 
   store.updateSelectedItem(updatedItem);
-  console.log("Selected items from layout editor: ",updatedItem)
+  console.log("Selected items from layout editor: ", updatedItem);
   render();
 
   const { subject } = deps;
@@ -648,7 +648,7 @@ export const handlePointerUp = (deps) => {
 
 export const handlePointerDown = (deps) => {
   const { store, render } = deps;
-  console.log("Deps: ",deps)
+  console.log("Deps: ", deps);
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
     return;
