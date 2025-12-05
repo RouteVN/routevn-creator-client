@@ -261,7 +261,6 @@ const renderLayoutPreview = async (deps) => {
       fill: "transparent",
       width: result.width ?? 0,
       height: result.height ?? 0,
-      zIndex: 9999999,
       border: {
         color: "white",
         width: 2,
