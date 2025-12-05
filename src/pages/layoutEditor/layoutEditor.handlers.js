@@ -153,7 +153,6 @@ const getRenderState = async (deps) => {
     { items: colorsItems },
     { items: fontsItems },
   );
-  console.log("Renderstateelements: ", renderStateElements);
   return {
     renderStateElements,
     layoutTreeStructure,
@@ -277,7 +276,6 @@ const renderLayoutPreview = async (deps) => {
         end: {},
       },
     };
-    console.log(finalElements);
     graphicsService.render({
       elements: [border, redDot, ...finalElements],
       animations: [],
@@ -594,7 +592,6 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     const preloadedImages = store.selectImages();
     updatedItem.width = preloadedImages.items[updatedItem.imageId].width;
     updatedItem.height = preloadedImages.items[updatedItem.imageId].height;
-    console.log("Updated items: ", updatedItem);
   }
 
   store.updateSelectedItem(updatedItem);
@@ -656,7 +653,6 @@ export const handlePointerUp = (deps) => {
 
 export const handlePointerDown = (deps) => {
   const { store, render } = deps;
-  console.log("Deps: ", deps);
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
     return;

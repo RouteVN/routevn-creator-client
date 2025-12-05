@@ -539,7 +539,6 @@ export const selectTempSelectedImageId = ({ state }) => {
 export const selectViewData = ({ state, attrs }) => {
   // Transform typography data to options format
   const typographyGroups = toFlatGroups(state.typographyData);
-  console.log("Select view data: ", state);
   const typographyItems = typographyGroups.flatMap((group) =>
     group.children.map((item) => ({
       label: item.name,

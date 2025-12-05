@@ -407,7 +407,6 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
       const uploadPromises = fileArray.map(async (file) => {
         try {
-          console.log("Upload files: ", file);
           const result = await processFile(file);
           return {
             success: true,
