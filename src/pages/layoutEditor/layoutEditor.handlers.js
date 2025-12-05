@@ -153,7 +153,6 @@ const getRenderState = async (deps) => {
     { items: colorsItems },
     { items: fontsItems },
   );
-
   return {
     renderStateElements,
     layoutTreeStructure,
@@ -276,7 +275,6 @@ const renderLayoutPreview = async (deps) => {
         end: {},
       },
     };
-
     graphicsService.render({
       elements: [border, redDot, ...finalElements],
       animations: [],
@@ -586,6 +584,14 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     updatedItem = deepMerge(currentItem, unflattenedUpdate);
     updatedItem[detail.name] = detail.value;
   }
+  if (
+    updatedItem.type === "sprite" &&
+    (updatedItem.width === 0 || updatedItem.height === 0)
+  ) {
+    const preloadedImages = store.selectImages();
+    updatedItem.width = preloadedImages.items[updatedItem.imageId].width;
+    updatedItem.height = preloadedImages.items[updatedItem.imageId].height;
+  }
 
   store.updateSelectedItem(updatedItem);
   render();
@@ -646,7 +652,6 @@ export const handlePointerUp = (deps) => {
 
 export const handlePointerDown = (deps) => {
   const { store, render } = deps;
-
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
     return;
