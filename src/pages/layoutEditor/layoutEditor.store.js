@@ -289,6 +289,8 @@ export const selectChoiceDefaultValues = ({ state }) => {
   return state.choiceDefaultValues;
 };
 
+export const selectImages = ({ state }) => state.images;
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.layoutData);

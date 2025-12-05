@@ -140,13 +140,11 @@ export const handleImageItemClick = async (deps, payload) => {
 
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, projectService } = deps;
-  console.log(" payload._event.detail", payload._event.detail);
-  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
+  const { files, targetGroupId } = payload._event.detail;
   const id = targetGroupId;
 
   const successfulUploads = await projectService.uploadFiles(files);
   for (const result of successfulUploads) {
-    console.log("Uploaded file:", result);
     await projectService.appendEvent({
       type: "treePush",
       payload: {
