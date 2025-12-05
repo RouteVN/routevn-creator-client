@@ -44,8 +44,8 @@ export const createInitialState = () => ({
   // Pan state
   isPanMode: false,
   isPanning: false,
-  panX: 120,
-  panY: 90,
+  panX: -120,
+  panY: -200,
   panStartX: 0,
   panStartY: 0,
   panStartMouseX: 0,
