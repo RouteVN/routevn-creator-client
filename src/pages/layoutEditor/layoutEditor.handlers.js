@@ -551,7 +551,7 @@ export const subscriptions = (deps) => {
 };
 
 export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, repository } = deps;
   const layoutId = store.selectLayoutId();
   const selectedItemId = store.selectSelectedItemId();
   const detail = payload._event.detail;
@@ -581,15 +581,21 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
       current = current[parts[i]];
     }
     current[parts[parts.length - 1]] = detail.value;
-  } else {
+  } 
+  else {
     const currentItem = store.selectSelectedItem();
     const unflattenedUpdate = unflattenKey(detail.name, detail.value);
     updatedItem = deepMerge(currentItem, unflattenedUpdate);
     updatedItem[detail.name] = detail.value;
   }
+  if(updatedItem.type === "sprite" && (updatedItem.width===0 || updatedItem.height===0)){
+    const preloadedImages = store.selectImages();
+    updatedItem.width = preloadedImages.items[updatedItem.imageId].width;
+    updatedItem.height = preloadedImages.items[updatedItem.imageId].height;
+    console.log("Updated items: ",updatedItem)
+  }
 
   store.updateSelectedItem(updatedItem);
-  console.log("Selected items from layout editor: ", updatedItem);
   render();
 
   const { subject } = deps;
