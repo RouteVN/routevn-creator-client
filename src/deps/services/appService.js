@@ -9,8 +9,8 @@ const DEFAULT_USER_CONFIG = {
   },
   scenesMap: {
     zoomLevel: 1.5,
-    panX: 120,
-    panY: 90,
+    panX: -120,
+    panY: -200,
   },
 };
 
