@@ -17,7 +17,7 @@ import Router from "./deps/infra/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 
 // Initialize app database using web adapter
-const appDb = createDb({ path: "sqlite:app.db" });
+const appDb = createDb({ path: "app" });
 await appDb.init();
 
 // Create instances needed for app service
