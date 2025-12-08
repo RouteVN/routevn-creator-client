@@ -1,6 +1,7 @@
 export const handleAfterMount = async (deps) => {
   const { appService, store, render } = deps;
-
+  const platform = appService.getPlatform();
+  store.setPlatform(platform);
   const projects = await appService.loadAllProjects();
   store.setProjects(projects);
   render();
@@ -70,6 +71,7 @@ export const handleBrowseFolder = async (deps) => {
 
 export const handleFormSubmit = async (deps, payload) => {
   const { appService, store, render } = deps;
+  const platform = appService.getPlatform();
 
   try {
     if (payload._event.detail.actionId !== "submit") {
@@ -89,13 +91,13 @@ export const handleFormSubmit = async (deps, payload) => {
 
     const projectPath = store.selectProjectPath();
 
-    if (!name || !description || !projectPath) {
+    if (!name || !description || (platform !== "web" && !projectPath)) {
       let message = "Please fill in all required fields.";
       if (!name) {
         message = "Project Name is required.";
       } else if (!description) {
         message = "Project Description is required.";
-      } else if (!projectPath) {
+      } else if (platform !== "web" && !projectPath) {
         message = "Project Location is required.";
       }
 
@@ -114,7 +116,9 @@ export const handleFormSubmit = async (deps, payload) => {
     store.toggleDialog();
     render();
 
-    console.log(`Project created at: ${projectPath}`);
+    if (platform !== "web") {
+      console.log(`Project created at: ${projectPath}`);
+    }
   } catch (error) {
     console.error("Error creating project:", error);
     appService.showToast(`Failed to create project: ${error.message}`);
