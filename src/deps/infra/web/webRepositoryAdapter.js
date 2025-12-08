@@ -1,4 +1,7 @@
-import { loadTemplate } from "../../../utils/templateLoader.js";
+import {
+  loadTemplate,
+  getTemplateFiles,
+} from "../../../utils/templateLoader.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -10,6 +13,26 @@ const openIDB = (name, version, upgradeCallback) => {
     request.onerror = (event) => reject(event.target.error);
   });
 };
+
+async function copyTemplateFiles(templateId, adapter) {
+  const templateFilesPath = `/templates/${templateId}/files/`;
+  const filesToCopy = await getTemplateFiles(templateId);
+
+  for (const fileName of filesToCopy) {
+    try {
+      const sourcePath = templateFilesPath + fileName;
+
+      // Fetch from the web server and save to IndexedDB
+      const response = await fetch(sourcePath + "?raw");
+      if (response.ok) {
+        const blob = await response.blob();
+        await adapter.setFile(fileName, blob);
+      }
+    } catch (error) {
+      console.error(`Failed to copy template file ${fileName}:`, error);
+    }
+  }
+}
 
 /**
  * Initialize a new project with IndexedDB.
@@ -29,6 +52,9 @@ export const initializeProject = async ({
 
   // Load template data from static files
   const templateData = await loadTemplate(template);
+
+  // Copy template files to project's IndexedDB
+  await copyTemplateFiles(template, adapter);
 
   // Add project info to template data
   const initData = {
@@ -69,6 +95,9 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
     }
     if (!idb.objectStoreNames.contains("app")) {
       idb.createObjectStore("app", { keyPath: "key" });
+    }
+    if (!idb.objectStoreNames.contains("files")) {
+      idb.createObjectStore("files", { keyPath: "id" });
     }
   });
 
@@ -145,6 +174,28 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
           request.onerror = (event) => reject(event.target.error);
         });
       },
+    },
+
+    async getFile(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("files", "readonly");
+        const store = transaction.objectStore("files");
+        const request = store.get(id);
+        request.onsuccess = (event) => {
+          resolve(event.target.result?.data); // data is the Blob
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async setFile(id, data) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("files", "readwrite");
+        const store = transaction.objectStore("files");
+        const request = store.put({ id, data });
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
     },
   };
 };
