@@ -4,6 +4,7 @@ export const createInitialState = () => ({
   openButtonText: "Open Project",
   projects: [],
   isOpen: false,
+  platform: "tauri",
   projectPath: "",
   projectPathDisplay: "No folder selected",
 
@@ -59,6 +60,7 @@ export const createInitialState = () => ({
       //   options: [{ value: "default", label: "Default" }],
       // },
       {
+        $when: "platform == 'tauri'",
         name: "projectPath",
         inputType: "slot",
         slot: "project-path-selector",
@@ -105,6 +107,10 @@ export const setProjects = (state, projects) => {
 
 export const addProject = (state, project) => {
   state.projects.push(project);
+};
+
+export const setPlatform = (state, platform) => {
+  state.platform = platform;
 };
 
 export const removeProject = (state, projectId) => {
@@ -154,6 +160,9 @@ export const closeDropdownMenu = (state) => {
 export const selectViewData = ({ state }) => {
   return {
     ...state,
+    context: {
+      platform: state.platform,
+    },
     hasProjects: state.projects && state.projects.length > 0,
     emptyMessage:
       state.projects && state.projects.length === 0 ? "No projects yet" : "",
