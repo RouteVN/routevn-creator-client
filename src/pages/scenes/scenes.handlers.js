@@ -331,11 +331,11 @@ export const handleSceneFormAction = async (deps, payload) => {
               resourceId: dialogueLayoutId,
             },
             mode: "adv",
-            content: [{ text: "" }],
+            content: `\${l10n.default.keys.${sectionId}.${stepId}}`,
           }
         : {
             mode: "adv",
-            content: [{ text: "" }],
+            content: `\${l10n.default.keys.${sectionId}.${stepId}}`,
           },
     };
 
@@ -353,10 +353,15 @@ export const handleSceneFormAction = async (deps, payload) => {
       },
     };
 
-    // Add 31 lines with empty actions
+    // Add 31 lines with dialogue actions (no gui or base layout)
     additionalLineIds.forEach((lineId) => {
       lineItems[lineId] = {
-        actions: {},
+        actions: {
+          dialogue: {
+            mode: "adv",
+            content: `\${l10n.default.keys.${sectionId}.${lineId}}`,
+          },
+        },
       };
     });
 

@@ -57,6 +57,11 @@ async function renderSceneState(store, graphicsService) {
   const projectData = store.selectProjectData();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
+  console.log("selectSelectedLine", store.selectSelectedLine());
+  console.log(
+    "store.selectRepositoryState()",
+    store.selectRepositoryState().l10n.items,
+  );
   graphicsService.engineHandleActions({
     updateProjectData: {
       projectData,

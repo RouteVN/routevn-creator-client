@@ -1,3 +1,4 @@
+import { parseAndRender } from "jempl";
 import { toFlatItems } from "insieme";
 
 export const createInitialState = () => ({
@@ -131,6 +132,16 @@ export const selectViewData = ({ state, props }) => {
         characterFileId = character.fileId;
       }
     }
+
+    const data = {
+      l10n: state.repositoryState.l10n?.items,
+    };
+
+    const dialogTextStruc = parseAndRender(
+      line.actions?.dialogue?.content,
+      data,
+    );
+    line.dialogueText = dialogTextStruc[0]?.text;
 
     let sectionTransition;
     let transitionTarget;

@@ -458,7 +458,8 @@
                         "gui": {
                           "resourceId": "simple-dialogue"
                         },
-                        "mode": "adv"
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-1}"
                       },
                       "base": {
                         "resourceId": "default-screen",
@@ -467,97 +468,252 @@
                     }
                   },
                   "line-2": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-2}"
+                      }
+                    }
                   },
                   "line-3": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-3}"
+                      }
+                    }
                   },
                   "line-4": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-4}"
+                      }
+                    }
                   },
                   "line-5": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-5}"
+                      }
+                    }
                   },
                   "line-6": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-6}"
+                      }
+                    }
                   },
                   "line-7": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-7}"
+                      }
+                    }
                   },
                   "line-8": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-8}"
+                      }
+                    }
                   },
                   "line-9": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-9}"
+                      }
+                    }
                   },
                   "line-10": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-10}"
+                      }
+                    }
                   },
                   "line-11": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-11}"
+                      }
+                    }
                   },
                   "line-12": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-12}"
+                      }
+                    }
                   },
                   "line-13": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-13}"
+                      }
+                    }
                   },
                   "line-14": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-14}"
+                      }
+                    }
                   },
                   "line-15": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-15}"
+                      }
+                    }
                   },
                   "line-16": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-16}"
+                      }
+                    }
                   },
                   "line-17": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-17}"
+                      }
+                    }
                   },
                   "line-18": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-18}"
+                      }
+                    }
                   },
                   "line-19": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-19}"
+                      }
+                    }
                   },
                   "line-20": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-20}"
+                      }
+                    }
                   },
                   "line-21": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-21}"
+                      }
+                    }
                   },
                   "line-22": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-22}"
+                      }
+                    }
                   },
                   "line-23": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-23}"
+                      }
+                    }
                   },
                   "line-24": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-24}"
+                      }
+                    }
                   },
                   "line-25": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-25}"
+                      }
+                    }
                   },
                   "line-26": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-26}"
+                      }
+                    }
                   },
                   "line-27": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-27}"
+                      }
+                    }
                   },
                   "line-28": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-28}"
+                      }
+                    }
                   },
                   "line-29": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-29}"
+                      }
+                    }
                   },
                   "line-30": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-30}"
+                      }
+                    }
                   },
                   "line-31": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-31}"
+                      }
+                    }
                   },
                   "line-32": {
-                    "actions": {}
+                    "actions": {
+                      "dialogue": {
+                        "mode": "adv",
+                        "content": "${l10n.default.keys.section-main.line-32}"
+                      }
+                    }
                   }
                 },
                 "tree": [
