@@ -38,6 +38,7 @@ export const createInitialState = () => ({
   repositoryTarget: "about",
   flatItems: [],
   appVersion: "",
+  platform: "tauri",
 });
 
 export const selectSocial = (_, payload) => {
@@ -58,4 +59,8 @@ export const selectState = ({ state }) => {
 
 export const setAppVersion = (state, version) => {
   state.appVersion = version;
+};
+
+export const setPlatform = (state, platform) => {
+  state.platform = platform;
 };

@@ -74,7 +74,8 @@ template:
               - rtgl-view flex=1:
               - rtgl-view d=h g=sm:
                   - rtgl-button#createButton: ${createButtonText}
-                  - rtgl-button#openButton variant=se: ${openButtonText}
+                  - $if platform != 'web':
+                        - rtgl-button#openButton variant=se: ${openButtonText}
           - rtgl-view w=f g=md flex=1 oy=a:
               - $if emptyMessage:
                   - rtgl-view w=f h=200 ah=c av=c:
@@ -96,7 +97,7 @@ template:
 
   - rtgl-dialog#create-project-dialog ?open=${isOpen} s=md:
       - rtgl-view slot=content g=md:
-          - rtgl-form#form key=${isOpen} .defaultValues=defaultValues .form=form w=f:
+          - rtgl-form#form key=${isOpen} .defaultValues=defaultValues .form=form .context=context w=f:
               - rtgl-view w=f slot=project-path-selector d=h g=sm av=c:
                   - rtgl-input#pathInput w=f .value=projectPathDisplay disabled=true placeholder="No folder selected":
                   - rtgl-button#browseButton variant=se: Browse
