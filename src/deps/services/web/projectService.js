@@ -4,14 +4,14 @@ import { createRepository } from "insieme";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
-} from "../infra/web/webRepositoryAdapter";
-import { createBundle } from "../../utils/bundleUtils";
+} from "../../infra/web/webRepositoryAdapter.js";
+import { createBundle } from "../../../utils/bundleUtils.js";
 import {
   getImageDimensions,
   extractWaveformData,
   extractVideoThumbnail,
   detectFileType,
-} from "../../utils/fileProcessors";
+} from "../../../utils/fileProcessors.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
