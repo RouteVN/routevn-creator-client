@@ -133,10 +133,7 @@ export const createAppService = ({
               createdAt: entry.createdAt,
               lastOpenedAt: entry.lastOpenedAt,
             };
-            const iconUrl = await loadProjectIcon(
-              entry.id,
-              project.iconFileId,
-            );
+            const iconUrl = await loadProjectIcon(entry.id, project.iconFileId);
             if (iconUrl) {
               project.iconUrl = iconUrl;
             }

@@ -34,7 +34,9 @@ export const createWebFilePicker = () => {
         };
 
         input.onchange = (event) => {
-          const files = event.target.files ? Array.from(event.target.files) : [];
+          const files = event.target.files
+            ? Array.from(event.target.files)
+            : [];
           resolve(options.multiple ? files : files[0] || null);
           cleanup();
         };

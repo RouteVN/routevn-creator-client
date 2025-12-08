@@ -158,7 +158,9 @@ export const createProjectService = ({ router, filePicker }) => {
   const getCachedAdapter = () => {
     const projectId = getCurrentProjectId();
     if (!currentAdapter || currentProjectId !== projectId) {
-      throw new Error("Adapter not initialized. Call ensureRepository() first.");
+      throw new Error(
+        "Adapter not initialized. Call ensureRepository() first.",
+      );
     }
     return currentAdapter;
   };
