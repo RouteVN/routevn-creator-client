@@ -17,6 +17,9 @@ vt:
   path: 'vt'
   name: "Rettangoli UI Visual Tests"
   description: "Visual testing for Rettangoli UI components"
+  serve:
+    - from: /
+      to: _site/
   sections:
     - title: "Components"
       type: "groupLabel"
