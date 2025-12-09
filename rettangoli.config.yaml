@@ -17,10 +17,6 @@ vt:
   path: 'vt'
   name: "Rettangoli UI Visual Tests"
   description: "Visual testing for Rettangoli UI components"
-  port: 3002
-  serve:
-    - from: /
-      to: _site/
   sections:
     - title: "Components"
       type: "groupLabel"
