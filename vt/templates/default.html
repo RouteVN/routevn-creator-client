@@ -3,9 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VT Runner</title>
+    <title>VT E2E Runner</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+    </style>
   </head>
   <body>
-    <!-- This template is a placeholder. For E2E tests with a 'baseUrl', the test runner navigates directly to that URL. -->
+    <!--- needs to be changed later, kept simpler for just screenshot -->
+    <iframe src="http://localhost:3002/projects"></iframe>
   </body>
 </html>
