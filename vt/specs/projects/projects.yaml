@@ -1,0 +1,10 @@
+---
+title: Initial Project Page Load
+description: Verifies that the projects page loads correctly.
+steps:
+#TODO : to make something in vt so it can navigate to a path before taking screenshot
+# then maybe it would be possible to test the client..
+ #- navigate: /projects
+  - wait: 2000
+  - screenshot
+---
