@@ -187,3 +187,7 @@ The built application will be available in `src-tauri/target/release/` with plat
 - Platform-specific optimizations via separate entry points
 - System tray integration (planned)
 - Auto-updates support (planned)
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
