@@ -188,6 +188,12 @@ The built application will be available in `src-tauri/target/release/` with plat
 - System tray integration (planned)
 - Auto-updates support (planned)
 
+## Community
+
+Join us on [Discord](https://discord.gg/8J9dyZSu9C) to ask questions, report bugs, and stay up to date.
+
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+- This project is licensed under the [MIT License](LICENSE).
+- The name RouteVN, and its logo are the exclusive property of Yuusoft
+
