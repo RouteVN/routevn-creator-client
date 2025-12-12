@@ -270,7 +270,7 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
     alpha: 1,
     scaleX: 1,
     scaleY: 1,
-    // rotation: 0,
+    rotation: 0,
   };
 
   const finalInitialValue = useInitialValue
@@ -403,8 +403,15 @@ export const handleEditKeyframeFormSubmit = (deps, payload) => {
   const {
     payload: { property, index },
   } = store.selectPopover();
+
+  const formValues = payload._event.detail.formValues;
+
+  if (formValues.duration < 1) {
+    formValues.duration = 1;
+  }
+
   store.updateKeyframe({
-    keyframe: payload._event.detail.formValues,
+    keyframe: formValues,
     index,
     property,
   });
@@ -483,11 +490,11 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
     alpha: 1,
     scaleX: 1,
     scaleY: 1,
-    // rotation: 0,
+    rotation: 0,
   };
 
   const finalInitialValue =
-    valueSource === "default"
+    valueSource === "default" || initialValue === undefined
       ? defaultValues[property] !== undefined
         ? defaultValues[property]
         : 0

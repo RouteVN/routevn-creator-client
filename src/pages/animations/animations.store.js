@@ -785,7 +785,7 @@ export const selectViewData = ({ state }) => {
       alpha: 1,
       scaleX: 1,
       scaleY: 1,
-      // rotation: 0,
+      rotation: 0,
     };
 
     const isUsingDefault = currentInitialValue === defaultValues[property];
