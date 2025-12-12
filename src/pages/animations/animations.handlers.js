@@ -309,8 +309,14 @@ export const handleAddKeyframeFormSubmit = (deps, payload) => {
     payload: { property, index },
   } = store.selectPopover();
 
+  const formValues = payload._event.detail.formValues;
+
+  if (formValues.duration < 1) {
+    formValues.duration = 1;
+  }
+
   store.addKeyframe({
-    ...payload._event.detail.formValues,
+    ...formValues,
     property,
     index,
   });
