@@ -40,10 +40,10 @@ const createAddKeyframeForm = (property) => {
       max: 5,
       step: 0.1,
     },
-    rotation: {
-      min: -360,
-      max: 360,
-    },
+    // rotation: {
+    //   min: -360,
+    //   max: 360,
+    // },
   };
   return {
     title: "Add Keyframe",
@@ -168,7 +168,7 @@ const propertyOptions = [
   { label: "Position Y", value: "y" },
   { label: "Scale X", value: "scaleX" },
   { label: "Scale Y", value: "scaleY" },
-  { label: "Rotation", value: "rotation" },
+  // { label: "Rotation", value: "rotation" },
 ];
 
 const createAddPropertyForm = (propertyOptions) => {
@@ -237,15 +237,15 @@ const createAddPropertyForm = (propertyOptions) => {
             step: 0.1,
             label: "Initial value",
           },
-          {
-            $when: 'property == "rotation"',
-            name: "initialValue",
-            inputType: "slider-input",
-            min: -360,
-            max: 360,
-            step: 1,
-            label: "Initial value",
-          },
+          // {
+          //   $when: 'property == "rotation"',
+          //   name: "initialValue",
+          //   inputType: "slider-input",
+          //   min: -360,
+          //   max: 360,
+          //   step: 1,
+          //   label: "Initial value",
+          // },
         ],
       },
     ],
@@ -785,7 +785,7 @@ export const selectViewData = ({ state }) => {
       alpha: 1,
       scaleX: 1,
       scaleY: 1,
-      rotation: 0,
+      // rotation: 0,
     };
 
     const isUsingDefault = currentInitialValue === defaultValues[property];

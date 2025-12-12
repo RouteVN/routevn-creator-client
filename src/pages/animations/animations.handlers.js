@@ -270,7 +270,7 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
     alpha: 1,
     scaleX: 1,
     scaleY: 1,
-    rotation: 0,
+    // rotation: 0,
   };
 
   const finalInitialValue = useInitialValue
@@ -483,7 +483,7 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
     alpha: 1,
     scaleX: 1,
     scaleY: 1,
-    rotation: 0,
+    // rotation: 0,
   };
 
   const finalInitialValue =
