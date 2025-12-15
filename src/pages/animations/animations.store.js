@@ -40,10 +40,10 @@ const createAddKeyframeForm = (property) => {
       max: 5,
       step: 0.1,
     },
-    rotation: {
-      min: -360,
-      max: 360,
-    },
+    // rotation: {
+    //   min: -360,
+    //   max: 360,
+    // },
   };
   return {
     title: "Add Keyframe",
@@ -168,7 +168,7 @@ const propertyOptions = [
   { label: "Position Y", value: "y" },
   { label: "Scale X", value: "scaleX" },
   { label: "Scale Y", value: "scaleY" },
-  { label: "Rotation", value: "rotation" },
+  // { label: "Rotation", value: "rotation" },
 ];
 
 const createAddPropertyForm = (propertyOptions) => {
@@ -237,15 +237,15 @@ const createAddPropertyForm = (propertyOptions) => {
             step: 0.1,
             label: "Initial value",
           },
-          {
-            $when: 'property == "rotation"',
-            name: "initialValue",
-            inputType: "slider-input",
-            min: -360,
-            max: 360,
-            step: 1,
-            label: "Initial value",
-          },
+          // {
+          //   $when: 'property == "rotation"',
+          //   name: "initialValue",
+          //   inputType: "slider-input",
+          //   min: -360,
+          //   max: 360,
+          //   step: 1,
+          //   label: "Initial value",
+          // },
         ],
       },
     ],
@@ -522,15 +522,11 @@ export const createAnimationRenderState = (
     },
   ];
 
-  const transitions = [];
+  const animations = [];
   if (includeAnimations && properties && Object.keys(properties).length > 0) {
-    const formattedAnimationProperties = {};
-
     for (const [property, config] of Object.entries(properties)) {
       if (config.keyframes && config.keyframes.length > 0) {
         let propName = property;
-        if (property === "scaleX") propName = "scale.x";
-        else if (property === "scaleY") propName = "scale.y";
 
         let defaultValue = 0;
         if (property === "x") defaultValue = 960;
@@ -552,38 +548,36 @@ export const createAnimationRenderState = (
           processedInitialValue = (processedInitialValue * Math.PI) / 180;
         }
 
-        formattedAnimationProperties[propName] = {
+        const animationProperties = {};
+        animationProperties[propName] = {
           initialValue: processedInitialValue,
           keyframes: config.keyframes.map((kf) => {
-            let value = parseFloat(kf.value) || 0;
+            let value = parseFloat(kf.value) ?? 0;
             if (property === "rotation") {
               value = (value * Math.PI) / 180;
             }
             return {
               duration: kf.duration,
               value: value,
-              easing: kf.easing,
-              relative: kf.relative,
+              easing: kf.easing ?? "linear",
+              relative: kf.relative ?? false,
             };
           }),
         };
-      }
-    }
 
-    if (Object.keys(formattedAnimationProperties).length > 0) {
-      transitions.push({
-        id: "animation-preview",
-        elementId: "preview-element",
-        type: "keyframes",
-        event: "add",
-        properties: formattedAnimationProperties,
-      });
+        animations.push({
+          id: `animation-${property}`,
+          targetId: "preview-element",
+          type: "tween",
+          properties: animationProperties,
+        });
+      }
     }
   }
 
   return {
     elements,
-    transitions,
+    animations,
   };
 };
 

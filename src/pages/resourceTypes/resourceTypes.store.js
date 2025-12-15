@@ -24,11 +24,11 @@ export const assetItems = [
     name: "Transforms",
     path: "/project/resources/transforms",
   },
-  // {
-  //   id: "animations",
-  //   name: "Animations",
-  //   path: "/project/resources/animations",
-  // },
+  {
+    id: "animations",
+    name: "Animations",
+    path: "/project/resources/animations",
+  },
 ];
 
 export const userInterfaceItems = [

@@ -276,7 +276,7 @@ const renderLayoutPreview = async (deps) => {
       },
     };
     graphicsService.render({
-      elements: [border, redDot, ...finalElements],
+      elements: [...finalElements, border, redDot],
       animations: [],
     });
   }

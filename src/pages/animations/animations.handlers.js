@@ -309,8 +309,14 @@ export const handleAddKeyframeFormSubmit = (deps, payload) => {
     payload: { property, index },
   } = store.selectPopover();
 
+  const formValues = payload._event.detail.formValues;
+
+  if (formValues.duration < 1) {
+    formValues.duration = 1;
+  }
+
   store.addKeyframe({
-    ...payload._event.detail.formValues,
+    ...formValues,
     property,
     index,
   });
@@ -403,8 +409,15 @@ export const handleEditKeyframeFormSubmit = (deps, payload) => {
   const {
     payload: { property, index },
   } = store.selectPopover();
+
+  const formValues = payload._event.detail.formValues;
+
+  if (formValues.duration < 1) {
+    formValues.duration = 1;
+  }
+
   store.updateKeyframe({
-    keyframe: payload._event.detail.formValues,
+    keyframe: formValues,
     index,
     property,
   });
@@ -487,7 +500,7 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
   };
 
   const finalInitialValue =
-    valueSource === "default"
+    valueSource === "default" || initialValue === undefined
       ? defaultValues[property] !== undefined
         ? defaultValues[property]
         : 0
