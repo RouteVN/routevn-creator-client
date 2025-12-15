@@ -2,7 +2,7 @@
 title: Animation Settings UI improvements
 status: todo
 priority: medium
-assignee: nellow
+assignee: 738NGX
 labels: [bug]
 ---
 

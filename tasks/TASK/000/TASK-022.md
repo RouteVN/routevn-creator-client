@@ -2,7 +2,7 @@
 title: Transform modal UX issues
 status: todo
 priority: medium
-assignee: anyone
+assignee: 738NGX
 labels: [bug]
 ---
 

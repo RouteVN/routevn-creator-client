@@ -1,6 +1,6 @@
 ---
 title: File Selection improvements
-status: todo
+status: low
 priority: medium
 assignee: anyone
 labels: [bug]

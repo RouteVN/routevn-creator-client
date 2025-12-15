@@ -1,6 +1,6 @@
 ---
 title: Migrate to new version of route-graphics for LayoutEditor
-status: todo
+status: done
 assignee: nghia
 priority: high
 ---
