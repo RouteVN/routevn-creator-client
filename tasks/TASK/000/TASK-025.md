@@ -1,6 +1,6 @@
 ---
 title: bring back animations page
-status: todo
+status: done
 priority: medium
 assignee: nghia
 labels: [bug]

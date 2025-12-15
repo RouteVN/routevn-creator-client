@@ -1,7 +1,8 @@
 ---
 title: Make web version work
-status: todo
+status: done
 priority: medium
+assignee: nellow
 ---
 
 # Description
