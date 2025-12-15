@@ -1,6 +1,6 @@
 ---
 title: Hover/Click release overrides hover effect
-status: todo
+status: done
 priority: medium
 assignee: nghia
 labels: [bug]

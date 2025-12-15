@@ -2,7 +2,7 @@
 title: Long names overflow the box on layout page
 status: todo
 priority: medium
-assignee: anyone
+assignee: 738NGX
 labels: [bug]
 ---
 
