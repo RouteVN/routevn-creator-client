@@ -1,7 +1,8 @@
 ---
-title: Setup rettangoli-vt for automated UI testing
+title: Blocked - Setup rettangoli-vt for automated UI testing
 status: todo
 priority: medium
+assignee: nellow
 ---
 
 # Description
