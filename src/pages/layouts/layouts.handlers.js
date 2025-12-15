@@ -4,7 +4,6 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { layouts } = projectService.getState();
-  console.log("Layouts loaded:", layouts);
   store.setItems(layouts);
   render();
 };
@@ -97,9 +96,6 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     store.setItems(layouts);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 
