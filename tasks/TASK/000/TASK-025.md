@@ -2,7 +2,7 @@
 title: bring back animations page
 status: todo
 priority: medium
-assignee: anyone
+assignee: nghia
 labels: [bug]
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Rename drenderer to routeGraphics
-status: todo
+status: done
 priority: medium
 ---
 
