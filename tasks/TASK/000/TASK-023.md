@@ -1,6 +1,6 @@
 ---
 title: Layout Editor - Text section too crowded
-status: todo
+status: done
 priority: medium
 assignee: 738NGX
 labels: [bug]
