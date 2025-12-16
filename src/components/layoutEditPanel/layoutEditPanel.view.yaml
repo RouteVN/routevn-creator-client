@@ -84,9 +84,10 @@ template:
                                   - rtgl-svg svg=${field.svg} wh=16:
                               - rtgl-text s=xs: ${field.value}
                 $elif item.type == 'select':
-                  - rtgl-view d=h av=c g=md w=f:
-                      - rtgl-text s=xs w=80: ${item.label}
-                      - rtgl-select#select-item-${item.name} data-name=${item.name} w=f no-clear .selectedValue=#{item.value} .options=#{item.options}:
+                  - 'rtgl-view d=h av=c w=f':
+                      - rtgl-text s=xs w=65: ${item.label}
+                      - 'rtgl-view style="width: calc(100% - 65px);"':
+                        - rtgl-select#select-item-${item.name} data-name=${item.name} w=f no-clear .selectedValue=#{item.value} .options=#{item.options}:
                 $elif item.type == 'list-item':
                   - $for listItem in item.items:
                       - rtgl-view#list-item-${listItem.id} data-id=${listItem.id} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=p:
