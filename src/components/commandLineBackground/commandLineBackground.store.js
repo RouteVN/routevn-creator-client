@@ -27,7 +27,8 @@ export const createInitialState = () => ({
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
-  selectedAnimationId: undefined,
+  selectedTweenId: undefined,
+  pendingResourceId: undefined,
 });
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -61,12 +62,24 @@ export const setTempSelectedResource = (state, payload) => {
   state.tempSelectedResourceId = payload.resourceId;
 };
 
-export const setSelectedAnimation = (state, payload) => {
-  state.selectedAnimationId = payload.animationId;
+export const setPendingResourceId = (state, resourceId) => {
+  state.pendingResourceId = resourceId;
 };
 
-export const selectSelectedAnimation = ({ state }) => {
-  return state.selectedAnimationId;
+export const selectPendingResourceId = ({ state }) => {
+  return state.pendingResourceId;
+};
+
+export const clearPendingResourceId = (state) => {
+  state.pendingResourceId = undefined;
+};
+
+export const setSelectedTween = (state, payload) => {
+  state.selectedTweenId = payload.tweenId;
+};
+
+export const selectSelectedTween = ({ state }) => {
+  return state.selectedTweenId;
 };
 
 export const selectTab = ({ state }) => {
@@ -194,19 +207,18 @@ export const selectViewData = ({ state }) => {
         slot: "background",
         description: "Background",
       },
-      // {
-      //   name: "animation",
-      //   label: "Animation",
-      //   required: true,
-      //   inputType: "select",
-      //   options: animationOptions,
-      // },
+      {
+        name: "tween",
+        label: "Tween Animation",
+        inputType: "select",
+        options: tweenOptions,
+      },
     ],
   };
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
-    animation: state.selectedAnimationId,
+    tween: state.selectedTweenId,
   };
 
   return {

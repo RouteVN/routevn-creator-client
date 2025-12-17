@@ -144,8 +144,14 @@ export const selectActionsData = ({ props, state }) => {
 
   if (presentationState.background) {
     const backgroundImage = images[presentationState.background.resourceId];
+    const backgroundLayout =
+      layoutsTree.items?.[presentationState.background.resourceId];
     actionsObject.background = presentationState.background;
-    preview.background = backgroundImage;
+    if (backgroundImage) {
+      preview.background = { ...backgroundImage, type: "image" };
+    } else if (backgroundLayout) {
+      preview.background = { ...backgroundLayout, type: "layout" };
+    }
   }
 
   if (presentationState.layout) {
