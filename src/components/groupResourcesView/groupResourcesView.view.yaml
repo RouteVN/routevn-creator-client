@@ -192,7 +192,7 @@ template:
                                               - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
                                                   - rvn-file-image br=md w=${mediaWidth} h=${mediaHeight} fileId=${item.thumbnailFileId}:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
-                                            $elif resourceType == 'audio':
+                                            $elif resourceType == 'sounds':
                                               - $if item.waveformDataFileId:
                                                   - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
                                                       - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}:

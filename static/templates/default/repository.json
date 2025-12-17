@@ -68,17 +68,17 @@
       }
     }
   },
-  "audio": {
+  "sounds": {
     "tree": [
       {
-        "id": "default-audio-folder",
+        "id": "default-sounds-folder",
         "children": []
       }
     ],
     "items": {
-      "default-audio-folder": {
+      "default-sounds-folder": {
         "type": "folder",
-        "name": "Default Audio"
+        "name": "Default Sounds"
       }
     }
   },

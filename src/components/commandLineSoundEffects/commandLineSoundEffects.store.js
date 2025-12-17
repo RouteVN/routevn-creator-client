@@ -7,9 +7,8 @@ export const createInitialState = () => ({
    * Array of sound effect objects with the following structure:
    * {
    *   id: string,           // Unique identifier for the sound effect
-   *   audioId: string,      // ID of the audio resource from repository
-   *   resourceType: "audio", // Type of resource (always "audio")
-   *   name: string         // Display name for the sound effect
+   *   resourceId: string,   // ID of the sound resource from repository
+   *   name: string          // Display name for the sound effect
    * }
    */
   sfx: [],
@@ -39,7 +38,7 @@ const form = {
 };
 
 export const setRepositoryState = (state, payload) => {
-  state.items = payload.audio;
+  state.items = payload.sounds;
 };
 
 export const setTempSelectedResourceId = (state, payload) => {
@@ -49,8 +48,7 @@ export const setTempSelectedResourceId = (state, payload) => {
 export const addSfx = (state, payload) => {
   const newSfx = {
     id: payload.id,
-    audioId: null,
-    resourceType: "audio",
+    resourceId: null,
     name: "New Sound Effect",
     volume: 500,
   };
@@ -127,15 +125,15 @@ export const selectCurrentEditingId = ({ state }) => {
   return state.currentEditingId;
 };
 
-export const selectSfxWithAudioData = ({ state }) => {
-  const flatAudioItems = toFlatItems(state.items);
+export const selectSfxWithSoundData = ({ state }) => {
+  const flatSoundItems = toFlatItems(state.items);
 
   return state.sfx.map((sfx) => {
-    const audioItem = flatAudioItems.find((item) => item.id === sfx.audioId);
+    const soundItem = flatSoundItems.find((item) => item.id === sfx.resourceId);
     return {
       ...sfx,
-      name: audioItem?.name,
-      waveformDataFileId: audioItem?.waveformDataFileId,
+      name: soundItem?.name,
+      waveformDataFileId: soundItem?.waveformDataFileId,
     };
   });
 };
@@ -185,18 +183,18 @@ export const selectViewData = ({ state }) => {
   });
 
   const breadcrumb = selectBreadcrumb({ state });
-  const sfxWithAudioData = selectSfxWithAudioData({ state });
+  const sfxWithSoundData = selectSfxWithSoundData({ state });
 
   // Create default values with sound effects data
   const defaultValues = {
-    sfx: sfxWithAudioData,
+    sfx: sfxWithSoundData,
   };
 
   return {
     mode: state.mode,
     items: flatItems,
     groups: flatGroups,
-    sfx: sfxWithAudioData,
+    sfx: sfxWithSoundData,
     tempSelectedResourceId: state.tempSelectedResourceId,
     breadcrumb,
     form,

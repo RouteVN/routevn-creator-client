@@ -9,11 +9,12 @@ async function createAssetsFromFileIds(
   projectService,
   resources,
 ) {
-  const { audio, images, fonts = {} } = resources;
+  const { sounds, images, fonts = {} } = resources;
+  console.log("resources", resources);
   const allItems = Object.entries({
-    ...audio.items,
-    ...images.items,
-    ...fonts.items,
+    ...sounds,
+    ...images,
+    ...fonts,
   }).map(([key, val]) => {
     return {
       id: key,
@@ -23,6 +24,7 @@ async function createAssetsFromFileIds(
   const assets = {};
   for (const fileObj of fileReferences) {
     const { url: fileId } = fileObj;
+    console.log("allItems", allItems);
     const foundItem = allItems.find((item) => item.fileId === fileId);
     try {
       const { url } = await projectService.getFileContent(fileId);
@@ -30,9 +32,9 @@ async function createAssetsFromFileIds(
 
       // If no type in fileObj, look it up in the resources
       if (!type) {
-        Object.entries(audio)
-          .concat(Object.entries(images))
-          .concat(Object.entries(fonts))
+        Object.entries(sounds.items || {})
+          .concat(Object.entries(images.items || {}))
+          .concat(Object.entries(fonts.items || {}))
           .forEach(([_key, item]) => {
             if (item.fileId === fileId) {
               type = item.fileType;
@@ -49,6 +51,7 @@ async function createAssetsFromFileIds(
     }
   }
 
+  console.log("assets", assets);
   return assets;
 }
 

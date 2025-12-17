@@ -30,7 +30,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  audioData: { tree: [], items: {} },
+  soundData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
     fileId: {
@@ -38,7 +38,7 @@ export const createInitialState = () => ({
     },
   },
   searchQuery: "",
-  playingAudio: {
+  playingSound: {
     title: "",
     fileId: undefined,
   },
@@ -51,8 +51,8 @@ export const setContext = (state, context) => {
   state.context = context;
 };
 
-export const setItems = (state, audioData) => {
-  state.audioData = audioData;
+export const setItems = (state, soundData) => {
+  state.soundData = soundData;
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -61,7 +61,7 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
-  const flatItems = toFlatItems(state.audioData);
+  const flatItems = toFlatItems(state.soundData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };
 
@@ -74,14 +74,14 @@ export const setSearchQuery = (state, query) => {
 };
 
 export const openAudioPlayer = (state, { fileId, fileName }) => {
-  state.playingAudio.fileId = fileId;
-  state.playingAudio.title = fileName;
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
   state.showAudioPlayer = true;
 };
 
 export const closeAudioPlayer = (state) => {
   state.showAudioPlayer = false;
-  state.playingAudio = {
+  state.playingSound = {
     title: "",
     fileId: undefined,
   };
@@ -104,8 +104,8 @@ export const selectAudioPlayerRight = (state) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.audioData);
-  const rawFlatGroups = toFlatGroups(state.audioData);
+  const flatItems = toFlatItems(state.soundData);
+  const rawFlatGroups = toFlatGroups(state.soundData);
   const searchQuery = (state.searchQuery || "").toLowerCase();
 
   // Helper function to check if an item matches the search query
@@ -170,18 +170,18 @@ export const selectViewData = ({ state }) => {
     flatItems,
     flatGroups,
     resourceCategory: "assets",
-    selectedResourceId: "audio",
+    selectedResourceId: "sounds",
     selectedItemId: state.selectedItemId,
-    repositoryTarget: "audio",
+    repositoryTarget: "sounds",
     form,
     context: state.context,
     defaultValues,
     searchQuery: state.searchQuery,
-    resourceType: "audio",
-    title: "Audio",
-    uploadText: "Upload Audio",
+    resourceType: "sounds",
+    title: "Sound",
+    uploadText: "Upload Sound",
     acceptedFileTypes: [".mp3", ".wav", ".ogg"],
-    playingAudio: state.playingAudio,
+    playingSound: state.playingSound,
     showAudioPlayer: state.showAudioPlayer,
     audioPlayerLeft: state.audioPlayerLeft,
     audioPlayerRight: state.audioPlayerRight,

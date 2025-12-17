@@ -1,4 +1,4 @@
-elementName: rvn-audio
+elementName: rvn-sound
 
 viewDataSchema:
   type: object
@@ -6,7 +6,7 @@ viewDataSchema:
     showAudioPlayer:
       type: boolean
       default: false
-    playingAudio:
+    playingSound:
       type: object
       default: null
     audioPlayerLeft:
@@ -28,9 +28,9 @@ refs:
   groupview:
     eventListeners:
       item-click:
-        handler: handleAudioItemClick
+        handler: handleSoundItemClick
       item-dblclick:
-        handler: handleAudioItemDoubleClick
+        handler: handleSoundItemDoubleClick
       files-uploaded:
         handler: handleDragDropFileSelected
       search-input:
@@ -66,4 +66,4 @@ template:
                           - rtgl-text s=md c=mu-fg: No selection
       - $if showAudioPlayer:
           - 'rtgl-view h=72 pos=fix cor=bottom z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
-              - rvn-audio-player fileId=${playingAudio.fileId} autoPlay=true .title=playingAudio.title:
+              - rvn-audio-player fileId=${playingSound.fileId} autoPlay=true .title=playingSound.title:

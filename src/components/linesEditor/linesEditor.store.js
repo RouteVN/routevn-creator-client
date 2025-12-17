@@ -143,8 +143,8 @@ export const selectViewData = ({ state, props }) => {
     // Check for BGM
     if (line.actions?.bgm) {
       bgm = {};
-      if (line.actions.bgm.audioId) {
-        bgm.audioId = line.actions.bgm.audioId;
+      if (line.actions.bgm.resourceId) {
+        bgm.resourceId = line.actions.bgm.resourceId;
       }
     }
 
