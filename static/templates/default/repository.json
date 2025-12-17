@@ -31,10 +31,10 @@
       }
     ]
   },
-  "animations": {
+  "tweens": {
     "tree": [
       {
-        "id": "default-animations-group",
+        "id": "default-tweens-group",
         "children": [
           {
             "id": "fade-in"
@@ -43,12 +43,12 @@
       }
     ],
     "items": {
-      "default-animations-group": {
+      "default-tweens-group": {
         "type": "folder",
         "name": "Template Animations"
       },
       "fade-in": {
-        "type": "animation",
+        "type": "tween",
         "name": "Fade In",
         "duration": "1s",
         "keyframes": 1,
