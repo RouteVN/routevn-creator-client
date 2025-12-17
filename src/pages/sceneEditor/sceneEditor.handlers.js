@@ -614,6 +614,7 @@ export const handleLineNavigation = (deps, payload) => {
 
     // Trigger debounced canvas render
     subject.dispatch("sceneEditor.renderCanvas", {});
+    render();
     return;
   }
 
@@ -684,6 +685,7 @@ export const handleLineNavigation = (deps, payload) => {
       elements: [],
       transitions: [],
     });
+    render();
     subject.dispatch("sceneEditor.renderCanvas", {});
   }
 };
@@ -1068,8 +1070,9 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps) {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
+  render();
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing

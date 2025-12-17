@@ -13,14 +13,13 @@ export const handleBeforeMount = (deps) => {
     return;
   }
 
-  store.setSelectedResource({
-    resourceId,
-  });
+  // Store resourceId temporarily - resourceType will be determined in handleAfterMount
+  store.setPendingResourceId(resourceId);
 
-  // Set the selected animation if it exists
+  // Set the selected tween if it exists
   if (backgroundAnimations?.in) {
-    store.setSelectedAnimation({
-      animationId: backgroundAnimations.in?.animationId,
+    store.setSelectedTween({
+      tweenId: backgroundAnimations.in?.resourceId,
     });
   }
 };
@@ -37,6 +36,53 @@ export const handleAfterMount = async (deps) => {
     videos,
     tweens,
   });
+
+  // Determine resourceType from pending resourceId
+  const pendingResourceId = store.selectPendingResourceId();
+  if (pendingResourceId) {
+    const flatImages = toFlatItems(images);
+    const flatLayouts = toFlatItems(layouts);
+    const flatVideos = toFlatItems(videos);
+
+    let resourceType = null;
+    let fileId = null;
+
+    const foundImage = flatImages.find((item) => item.id === pendingResourceId);
+    if (foundImage) {
+      resourceType = "image";
+      fileId = foundImage.fileId;
+    }
+
+    if (!resourceType) {
+      const foundLayout = flatLayouts.find(
+        (item) => item.id === pendingResourceId,
+      );
+      if (foundLayout) {
+        resourceType = "layout";
+        fileId = foundLayout.thumbnailFileId;
+      }
+    }
+
+    if (!resourceType) {
+      const foundVideo = flatVideos.find(
+        (item) => item.id === pendingResourceId,
+      );
+      if (foundVideo) {
+        resourceType = "video";
+        fileId = foundVideo.fileId;
+      }
+    }
+
+    if (resourceType) {
+      store.setSelectedResource({
+        resourceId: pendingResourceId,
+        resourceType,
+        fileId,
+      });
+    }
+
+    store.clearPendingResourceId();
+  }
 
   render();
 };
@@ -98,9 +144,9 @@ export const handleFormInputChange = (deps, payload) => {
   const { store, render } = deps;
   const { name, fieldValue } = payload._event.detail;
 
-  if (name === "animation") {
-    store.setSelectedAnimation({
-      animationId: fieldValue,
+  if (name === "tween") {
+    store.setSelectedTween({
+      tweenId: fieldValue,
     });
     render();
   }
@@ -134,17 +180,17 @@ export const handleTabClick = (deps, payload) => {
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
-  const selectedAnimationId = store.selectSelectedAnimation();
+  const selectedTweenId = store.selectSelectedTween();
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
   };
 
-  // Only add animations object if there's a valid animation selected
-  if (selectedAnimationId && selectedAnimationId !== "none") {
+  // Only add animations object if there's a valid tween selected
+  if (selectedTweenId && selectedTweenId !== "none") {
     backgroundData.animations = {
       in: {
-        animationId: selectedAnimationId,
+        resourceId: selectedTweenId,
       },
     };
   }
