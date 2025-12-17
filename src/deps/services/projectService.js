@@ -44,7 +44,7 @@ export const initialProjectData = {
     items: {},
     tree: [],
   },
-  animations: {
+  tweens: {
     items: {},
     tree: [],
   },

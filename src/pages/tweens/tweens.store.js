@@ -173,7 +173,7 @@ const propertyOptions = [
 
 const createAddPropertyForm = (propertyOptions) => {
   return {
-    title: "Add animation property",
+    title: "Add tween property",
     fields: [
       {
         name: "property",
@@ -303,8 +303,8 @@ const propertyNameDropdownItems = [
   },
 ];
 
-const addAnimationForm = {
-  title: "Add Animation",
+const addTweenForm = {
+  title: "Add Tween Animation",
   fields: [
     {
       name: "name",
@@ -325,14 +325,14 @@ const addAnimationForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Add Animation",
+        content: "Add Tween Animation",
       },
     ],
   },
 };
 
-const editAnimationForm = {
-  title: "Edit Animation",
+const editTweenForm = {
+  title: "Edit Tween Animation",
   fields: [
     {
       name: "name",
@@ -353,14 +353,14 @@ const editAnimationForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Update Animation",
+        content: "Update Tween Animation",
       },
     ],
   },
 };
 
 export const createInitialState = () => ({
-  animationsData: { tree: [], items: {} },
+  tweensData: { tree: [], items: {} },
   selectedItemId: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
@@ -382,7 +382,7 @@ export const createInitialState = () => ({
   dialogDefaultValues: {
     name: "",
   },
-  dialogForm: addAnimationForm,
+  dialogForm: addTweenForm,
   editMode: false,
   editItemId: null,
   popover: {
@@ -394,8 +394,8 @@ export const createInitialState = () => ({
   },
 });
 
-export const setItems = (state, animationsData) => {
-  state.animationsData = animationsData;
+export const setItems = (state, tweensData) => {
+  state.tweensData = tweensData;
 };
 
 export const setSelectedItemId = (state, itemId) => {
@@ -404,7 +404,7 @@ export const setSelectedItemId = (state, itemId) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const selectAnimationsData = ({ state }) => state.animationsData;
+export const selectTweensData = ({ state }) => state.tweensData;
 
 export const setSearchQuery = (state, query) => {
   state.searchQuery = query;
@@ -452,13 +452,13 @@ export const openDialog = (
 
   if (editMode && itemData) {
     state.targetGroupId = itemData.parent || null;
-    state.dialogForm = editAnimationForm;
+    state.dialogForm = editTweenForm;
     state.dialogDefaultValues = {
       name: itemData.name,
     };
     state.properties = itemData.properties || {};
   } else {
-    state.dialogForm = addAnimationForm;
+    state.dialogForm = addTweenForm;
     state.dialogDefaultValues = {};
     state.properties = {};
   }
@@ -468,7 +468,7 @@ export const closeDialog = (state) => {
   state.isDialogOpen = false;
   state.editMode = false;
   state.editItemId = null;
-  state.dialogForm = addAnimationForm;
+  state.dialogForm = addTweenForm;
   state.dialogDefaultValues = {
     name: "",
   };
@@ -677,8 +677,8 @@ export const updateInitialValue = (state, payload) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.animationsData);
-  const rawFlatGroups = toFlatGroups(state.animationsData);
+  const flatItems = toFlatItems(state.tweensData);
+  const rawFlatGroups = toFlatGroups(state.tweensData);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -805,8 +805,8 @@ export const selectViewData = ({ state }) => {
     flatItems,
     flatGroups,
     resourceCategory: "assets",
-    selectedResourceId: "animations",
-    repositoryTarget: "animations",
+    selectedResourceId: "tweens",
+    repositoryTarget: "tweens",
     selectedItemId: state.selectedItemId,
     searchQuery: state.searchQuery,
     contextMenuItems: state.contextMenuItems,
@@ -847,7 +847,7 @@ export const selectViewData = ({ state }) => {
     addPropertyFormDefaultValues: {
       useInitialValue: false,
     },
-    resourceType: "animations",
-    title: "Animations",
+    resourceType: "tweens",
+    title: "Tweens",
   };
 };

@@ -29,13 +29,13 @@ export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
 
   await projectService.ensureRepository();
-  const { images, layouts, videos, animations } = projectService.getState();
+  const { images, layouts, videos, tweens } = projectService.getState();
 
   store.setRepositoryState({
     images,
     layouts,
     videos,
-    animations,
+    tweens,
   });
 
   render();

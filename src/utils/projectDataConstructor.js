@@ -33,10 +33,10 @@ export function constructProjectData(state, options = {}) {
     return processedFonts;
   }
 
-  function constructAnimations(repositoryAnimations = {}) {
+  function constructTweens(repositoryTweens = {}) {
     const items = {};
-    Object.entries(repositoryAnimations).forEach(([id, item]) => {
-      if (item.type === "animation") {
+    Object.entries(repositoryTweens).forEach(([id, item]) => {
+      if (item.type === "tween") {
         items[id] = {
           id,
           properties: item.properties,
@@ -130,7 +130,7 @@ export function constructProjectData(state, options = {}) {
   function constructResources(repositoryState) {
     const images = repositoryState.images?.items || {};
     const sounds = repositoryState.sounds?.items || {};
-    const animations = repositoryState.animations?.items || {};
+    const tweens = repositoryState.tweens?.items || {};
     const characters = repositoryState.characters?.items || {};
     const transforms = repositoryState.transforms?.items || {};
     const layouts = repositoryState.layouts?.items || {};
@@ -148,7 +148,7 @@ export function constructProjectData(state, options = {}) {
       sounds: constructSounds(sounds),
       fonts: constructFonts(fonts),
       layouts: constructLayouts(layouts, images, typography, colors, fonts),
-      animations: constructAnimations(animations),
+      tweens: constructTweens(tweens),
     };
   }
 

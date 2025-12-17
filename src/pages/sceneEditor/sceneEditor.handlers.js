@@ -10,7 +10,6 @@ async function createAssetsFromFileIds(
   resources,
 ) {
   const { sounds, images, fonts = {} } = resources;
-  console.log("resources", resources);
   const allItems = Object.entries({
     ...sounds,
     ...images,
@@ -24,7 +23,6 @@ async function createAssetsFromFileIds(
   const assets = {};
   for (const fileObj of fileReferences) {
     const { url: fileId } = fileObj;
-    console.log("allItems", allItems);
     const foundItem = allItems.find((item) => item.fileId === fileId);
     try {
       const { url } = await projectService.getFileContent(fileId);

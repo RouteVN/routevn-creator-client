@@ -25,9 +25,9 @@ export const assetItems = [
     path: "/project/resources/transforms",
   },
   {
-    id: "animations",
-    name: "Animations",
-    path: "/project/resources/animations",
+    id: "tweens",
+    name: "Tweens",
+    path: "/project/resources/tweens",
   },
 ];
 
