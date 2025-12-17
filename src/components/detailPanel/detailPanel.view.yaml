@@ -193,7 +193,7 @@ template:
                                   - rtgl-text s=${field.size}: ${field.value}
                             $else:
                               - rtgl-text s=${field.size}: ${field.value}
-                    $elif field.type == 'audio':
+                    $elif field.type == 'sounds':
                       - $if field.editable:
                           - rtgl-view pos=rel:
                               - 'rtgl-view#editable-audio-${i} cur=p style="position: relative;"':

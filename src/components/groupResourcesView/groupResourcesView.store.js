@@ -94,7 +94,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     canUpload: [
       "images",
       "videos",
-      "audio",
+      "sounds",
       "characterSprites",
       "fonts",
     ].includes(props.resourceType),

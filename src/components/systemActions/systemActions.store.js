@@ -132,9 +132,9 @@ export const selectActionsData = ({ props, state }) => {
   }
 
   const repositoryStateData = state.repositoryState;
-  // Images and audios: accessed directly by ID (e.g., images[id])
+  // Images and sounds: accessed directly by ID (e.g., images[id])
   const images = repositoryStateData.images?.items || {};
-  const audios = repositoryStateData.audio?.items || {};
+  const sounds = repositoryStateData.sounds?.items || {};
   const scenes = repositoryStateData.scenes || {};
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsTree = repositoryStateData.layouts || {};
@@ -155,17 +155,17 @@ export const selectActionsData = ({ props, state }) => {
 
   if (presentationState.bgm) {
     actionsObject.bgm = presentationState.bgm;
-    preview.bgm = audios[presentationState.bgm.audioId];
+    preview.bgm = sounds[presentationState.bgm.resourceId];
   }
 
   // Sound Effects
   if (actions.sfx?.items) {
-    const soundEffectsAudio = actions.sfx.items.map((sfx) => ({
+    const soundEffectsData = actions.sfx.items.map((sfx) => ({
       ...sfx,
-      audio: audios[sfx.audioId],
+      sound: sounds[sfx.resourceId],
     }));
-    const names = soundEffectsAudio
-      .map((sfx) => sfx.audio?.name || "")
+    const names = soundEffectsData
+      .map((sfx) => sfx.sound?.name || "")
       .filter((name) => name !== "")
       .join(", ");
 

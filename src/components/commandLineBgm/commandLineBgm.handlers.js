@@ -3,10 +3,10 @@ import { toFlatItems } from "insieme";
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { audio } = projectService.getState();
+  const { sounds } = projectService.getState();
 
   store.setRepositoryState({
-    audio,
+    sounds,
   });
 
   if (props.bgm) {
@@ -30,7 +30,7 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
 
   if (result.item.key === "remove") {
     store.setBgmAudio({
-      audioId: undefined,
+      resourceId: undefined,
     });
 
     render();
@@ -77,7 +77,7 @@ export const handleFormChange = (deps, payload) => {
   const { _event: event } = payload;
   store.setBgm({
     bgm: {
-      audioId: store.selectBgm().audioId,
+      resourceId: store.selectBgm().resourceId,
       ...event.detail.formValues,
     },
   });
@@ -102,16 +102,16 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render, downloadWaveformData, projectService } = deps;
   await projectService.ensureRepository();
   const itemId = payload._event.detail.id;
-  const { audio } = projectService.getState();
+  const { sounds } = projectService.getState();
 
   store.setTempSelectedResource({
     resourceId: itemId,
   });
   render();
 
-  // Find the selected audio item
-  const flatAudioItems = toFlatItems(audio);
-  const selectedItem = flatAudioItems.find((item) => item.id === itemId);
+  // Find the selected sound item
+  const flatSoundItems = toFlatItems(sounds);
+  const selectedItem = flatSoundItems.find((item) => item.id === itemId);
 
   console.log("File explorer - selectedItem:", selectedItem);
 
@@ -170,20 +170,20 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
 export const handleButtonSelectClick = async (deps) => {
   const { store, render, projectService } = deps;
   await projectService.ensureRepository();
-  const { audio } = projectService.getState();
+  const { sounds } = projectService.getState();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
 
   if (!tempSelectedResourceId) {
     return;
   }
 
-  const tempSelectedAudio = toFlatItems(audio).find(
-    (audio) => audio.id === tempSelectedResourceId,
+  const tempSelectedSound = toFlatItems(sounds).find(
+    (item) => item.id === tempSelectedResourceId,
   );
 
-  if (tempSelectedAudio) {
+  if (tempSelectedSound) {
     store.setBgmAudio({
-      audioId: tempSelectedResourceId,
+      resourceId: tempSelectedResourceId,
     });
 
     store.setMode({

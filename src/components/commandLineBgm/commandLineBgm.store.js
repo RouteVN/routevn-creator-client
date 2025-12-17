@@ -33,14 +33,14 @@ export const createInitialState = () => ({
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
   bgm: {
-    audioId: undefined,
+    resourceId: undefined,
     loop: true,
     volume: 500,
   },
 });
 
 export const setBgmAudio = (state, payload) => {
-  state.bgm.audioId = payload.audioId;
+  state.bgm.resourceId = payload.resourceId;
 };
 
 export const setBgm = (state, payload) => {
@@ -52,7 +52,7 @@ export const setMode = (state, payload) => {
 };
 
 export const setRepositoryState = (state, payload) => {
-  state.items = payload.audio;
+  state.items = payload.sounds;
 };
 
 export const selectBgm = ({ state }) => {
@@ -68,20 +68,19 @@ export const setTempSelectedResource = (state, payload) => {
 };
 
 export const selectSelectedResource = ({ state }) => {
-  if (!state.bgm.audioId) {
+  if (!state.bgm.resourceId) {
     return null;
   }
 
   const flatItems = toFlatItems(state.items);
-  const item = flatItems.find((item) => item.id === state.bgm.audioId);
+  const item = flatItems.find((item) => item.id === state.bgm.resourceId);
 
   if (!item) {
     return null;
   }
 
   return {
-    resourceId: state.bgm.audioId,
-    resourceType: "audio",
+    resourceId: state.bgm.resourceId,
     fileId: item.fileId,
     name: item.name,
     item: item,

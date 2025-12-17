@@ -26,7 +26,7 @@ propsSchema:
       description: Menu items for right-clicking on empty space
     repositoryTarget:
       type: string
-      description: Repository target for data operations (e.g. 'images', 'audio')
+      description: Repository target for data operations (e.g. 'images', 'sounds')
       required: true
 
 refs:

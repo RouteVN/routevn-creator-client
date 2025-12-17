@@ -5,9 +5,9 @@ export const assetItems = [
     path: "/project/resources/images",
   },
   {
-    id: "audio",
-    name: "Audio",
-    path: "/project/resources/audio",
+    id: "sounds",
+    name: "Sounds",
+    path: "/project/resources/sounds",
   },
   // {
   //   id: "videos",

@@ -13,14 +13,14 @@ export function constructProjectData(state, options = {}) {
     return processedImages;
   }
 
-  function constructAudios(repositoryAudio = {}) {
-    const processedAudios = {};
-    Object.entries(repositoryAudio).forEach(([id, item]) => {
-      if (item.type === "audio") {
-        processedAudios[id] = item;
+  function constructSounds(repositorySound = {}) {
+    const processedSounds = {};
+    Object.entries(repositorySound).forEach(([id, item]) => {
+      if (item.type === "sound") {
+        processedSounds[id] = item;
       }
     });
-    return processedAudios;
+    return processedSounds;
   }
 
   function constructFonts(repositoryFonts = {}) {
@@ -129,7 +129,7 @@ export function constructProjectData(state, options = {}) {
 
   function constructResources(repositoryState) {
     const images = repositoryState.images?.items || {};
-    const audio = repositoryState.audio?.items || {};
+    const sounds = repositoryState.sounds?.items || {};
     const animations = repositoryState.animations?.items || {};
     const characters = repositoryState.characters?.items || {};
     const transforms = repositoryState.transforms?.items || {};
@@ -145,7 +145,7 @@ export function constructProjectData(state, options = {}) {
       images: { ...constructImages(images), ...characterImages },
       transforms: constructTransforms(transforms),
       characters: processedCharacters,
-      audio: constructAudios(audio),
+      sounds: constructSounds(sounds),
       fonts: constructFonts(fonts),
       layouts: constructLayouts(layouts, images, typography, colors, fonts),
       animations: constructAnimations(animations),

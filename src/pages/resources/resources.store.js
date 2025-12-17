@@ -11,9 +11,9 @@ export const createInitialState = () => ({
       route: "/project/resources/characters",
     },
     {
-      id: "audio",
-      label: "Audio",
-      route: "/project/resources/audio",
+      id: "sounds",
+      label: "Sounds",
+      route: "/project/resources/sounds",
     },
     {
       id: "animation-effects",
