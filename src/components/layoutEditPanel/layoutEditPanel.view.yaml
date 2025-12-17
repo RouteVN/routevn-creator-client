@@ -108,7 +108,8 @@ template:
   - rvn-system-actions#system-actions .actions=values.actions  action-type="system":
 
   - rtgl-popover#popover-form ?open=${popover.open} placement=bottom x=${popover.x} y=${popover.y}:
-      - rtgl-form#form key=${popover.key} slot=content .form=popover.form .defaultValues=popover.defaultValues .context=popover.context:
+      - $if popover.open:
+        - rtgl-form#form autofocus key=${popover.key} slot=content .form=popover.form .defaultValues=popover.defaultValues .context=popover.context:
 
   - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
