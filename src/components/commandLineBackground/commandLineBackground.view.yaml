@@ -43,7 +43,7 @@ viewDataSchema:
           properties:
             background:
               type: string
-            animation:
+            tween:
               type: string
 
 propsSchema:
