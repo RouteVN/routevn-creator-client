@@ -1,6 +1,6 @@
 ---
 title: popup input interactions take too many clicks
-status: todo
+status: done
 priority: high
 assignee: 738NGX
 ---
