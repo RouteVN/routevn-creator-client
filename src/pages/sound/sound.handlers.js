@@ -4,8 +4,8 @@ import { filter, tap } from "rxjs";
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, appService } = deps;
   await projectService.ensureRepository();
-  const { audio } = projectService.getState();
-  store.setItems(audio || { tree: [], items: {} });
+  const { sounds } = projectService.getState();
+  store.setItems(sounds || { tree: [], items: {} });
 
   // Initialize audio player positions from userConfig
   const defaultLeft = parseInt(
@@ -22,10 +22,10 @@ export const handleAfterMount = async (deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { audio } = projectService.getState();
-  const audioData = audio || { tree: [], items: {} };
+  const { sounds } = projectService.getState();
+  const soundData = sounds || { tree: [], items: {} };
 
-  store.setItems(audioData);
+  store.setItems(soundData);
   render();
 };
 
@@ -80,7 +80,7 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
   render();
 };
 
-export const handleAudioItemClick = async (deps, payload) => {
+export const handleSoundItemClick = async (deps, payload) => {
   const { store, render, projectService, getRefIds } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
   store.setSelectedItemId(itemId);
@@ -127,10 +127,10 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     await projectService.appendEvent({
       type: "treePush",
       payload: {
-        target: "audio",
+        target: "sounds",
         value: {
           id: nanoid(),
-          type: "audio",
+          type: "sound",
           fileId: result.fileId,
           name: result.displayName,
           fileType: result.file.type,
@@ -147,8 +147,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { audio } = projectService.getState();
-    store.setItems(audio);
+    const { sounds } = projectService.getState();
+    store.setItems(sounds);
   }
 
   render();
@@ -160,7 +160,7 @@ export const handleFormExtraEvent = async (deps) => {
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn("No item selected for audio replacement");
+    console.warn("No item selected for sound replacement");
     return;
   }
 
@@ -186,7 +186,7 @@ export const handleFormExtraEvent = async (deps) => {
   await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
-      target: "audio",
+      target: "sounds",
       value: {
         fileId: uploadResult.fileId,
         fileType: uploadResult.file.type,
@@ -202,7 +202,7 @@ export const handleFormExtraEvent = async (deps) => {
   });
 
   // Update the store with the new repository state
-  const { audio } = projectService.getState();
+  const { sounds } = projectService.getState();
 
   // Use the waveform data directly (already normalized)
   const waveformData = uploadResult.waveformData;
@@ -212,7 +212,7 @@ export const handleFormExtraEvent = async (deps) => {
       waveformData,
     },
   });
-  store.setItems(audio);
+  store.setItems(sounds);
   render();
 };
 
@@ -221,7 +221,7 @@ export const handleFormChange = async (deps, payload) => {
   await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
-      target: "audio",
+      target: "sounds",
       value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
@@ -232,8 +232,8 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { audio } = projectService.getState();
-  store.setItems(audio);
+  const { sounds } = projectService.getState();
+  store.setItems(sounds);
   render();
 };
 
@@ -245,7 +245,7 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-export const handleAudioItemDoubleClick = async (deps, payload) => {
+export const handleSoundItemDoubleClick = async (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail;
 

@@ -36,7 +36,7 @@ export const createGraphicsService = async ({ subject }) => {
           textRevealingPlugin,
         ],
         animations: [tweenPlugin],
-        audios: [soundPlugin],
+        audio: [soundPlugin],
       };
 
       await routeGraphics.init({

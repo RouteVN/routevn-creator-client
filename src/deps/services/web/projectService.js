@@ -47,7 +47,7 @@ export const initialProjectData = {
     items: {},
     tree: [],
   },
-  audio: {
+  sounds: {
     items: {},
     tree: [],
   },

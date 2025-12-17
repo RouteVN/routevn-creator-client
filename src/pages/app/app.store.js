@@ -21,7 +21,7 @@ export const selectCurrentRoutePattern = (state) => {
     "/project/resources/images",
     "/project/resources/characters",
     "/project/resources/character-sprites",
-    "/project/resources/audio",
+    "/project/resources/sounds",
     "/project/resources/animations",
     "/project/resources/transforms",
     "/project/resources/videos",

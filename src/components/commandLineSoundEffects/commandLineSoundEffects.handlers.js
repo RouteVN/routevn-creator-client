@@ -4,10 +4,10 @@ import { nanoid } from "nanoid";
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { audio } = projectService.getState();
+  const { sounds } = projectService.getState();
 
   store.setRepositoryState({
-    audio,
+    sounds,
   });
 
   if (props?.sfx?.items) {
@@ -114,7 +114,7 @@ export const handleSubmitClick = (deps, payload) => {
 
   const { dispatchEvent, store } = deps;
   const sfx = store.selectSfxs();
-  const filteredEffects = sfx.filter((se) => se.audioId);
+  const filteredEffects = sfx.filter((se) => se.resourceId);
 
   dispatchEvent(
     new CustomEvent("submit", {
@@ -122,7 +122,7 @@ export const handleSubmitClick = (deps, payload) => {
         sfx: {
           items: filteredEffects.map((sfx) => ({
             id: sfx.id,
-            audioId: sfx.audioId,
+            resourceId: sfx.resourceId,
             volume: sfx.volume,
           })),
         },
@@ -179,14 +179,14 @@ export const handleButtonSelectClick = async (deps) => {
   const { store, render, projectService } = deps;
   await projectService.ensureRepository();
 
-  const { audio } = projectService.getState();
+  const { sounds } = projectService.getState();
 
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
-  const tempSelectedAudio = toFlatItems(audio).find(
-    (audio) => audio.id === tempSelectedResourceId,
+  const tempSelectedSound = toFlatItems(sounds).find(
+    (item) => item.id === tempSelectedResourceId,
   );
 
-  if (tempSelectedAudio) {
+  if (tempSelectedSound) {
     const currentEditingId = store.selectCurrentEditingId();
     const sfx = store.selectSfxs();
     const existingEffect = sfx.find((se) => se.id === currentEditingId);
@@ -195,8 +195,8 @@ export const handleButtonSelectClick = async (deps) => {
       // Update existing sound effect
       store.updateSfx({
         id: currentEditingId,
-        audioId: tempSelectedResourceId,
-        name: tempSelectedAudio.name,
+        resourceId: tempSelectedResourceId,
+        name: tempSelectedSound.name,
       });
     } else {
       // Create new sound effect (this was triggered by "Add New" button)
@@ -205,8 +205,8 @@ export const handleButtonSelectClick = async (deps) => {
       });
       store.updateSfx({
         id: currentEditingId,
-        audioId: tempSelectedResourceId,
-        name: tempSelectedAudio.name,
+        resourceId: tempSelectedResourceId,
+        name: tempSelectedSound.name,
       });
     }
 

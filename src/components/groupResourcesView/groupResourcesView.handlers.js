@@ -27,7 +27,7 @@ export const handleDragEnter = (deps, payload) => {
   );
 
   if (
-    !["images", "videos", "audio", "characterSprites", "fonts"].includes(
+    !["images", "videos", "sounds", "characterSprites", "fonts"].includes(
       props.resourceType,
     )
   ) {
