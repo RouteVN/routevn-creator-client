@@ -1,4 +1,4 @@
-elementName: rvn-animations
+elementName: rvn-tweens
 
 viewDataSchema:
   type: object
@@ -115,13 +115,13 @@ template:
                       - rvn-keyframe-timeline#dialog-timeline editable=true .properties=properties:
                       - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
                           - $if addPropertyButtonVisible:
-                              - rtgl-button#add-properties-button w=f v=se s=sm: + Add animation property
+                              - rtgl-button#add-properties-button w=f v=se s=sm: + Add tween property
               - rtgl-view h=128:
 
           - rtgl-view flex=5:
               - rtgl-view d=h av=c ah=sb mb=md:
                   - rtgl-text: Preview
-                  - rtgl-button#replay-button s=sm ml=md: Play Animation
+                  - rtgl-button#replay-button s=sm ml=md: Play Tween
               - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                   - rtgl-view pos=abs cor=full:
                       - 'div#canvas style="width: 100%; height: 100%;display: flex;"':

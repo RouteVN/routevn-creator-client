@@ -38,8 +38,8 @@ template:
               - rvn-character-sprites: []
             $elif currentRoutePattern == "/project/resources/sounds":
               - rvn-sound: []
-            $elif currentRoutePattern == "/project/resources/animations":
-              - rvn-animations: []
+            $elif currentRoutePattern == "/project/resources/tweens":
+              - rvn-tweens: []
             $elif currentRoutePattern == "/project/resources/transforms":
               - rvn-transforms: []
             $elif currentRoutePattern == "/project/resources/visuals":

@@ -22,7 +22,7 @@ export const selectCurrentRoutePattern = (state) => {
     "/project/resources/characters",
     "/project/resources/character-sprites",
     "/project/resources/sounds",
-    "/project/resources/animations",
+    "/project/resources/tweens",
     "/project/resources/transforms",
     "/project/resources/videos",
     "/project/resources/colors",

@@ -232,7 +232,7 @@ template:
                                               - 'rtgl-view#transform-item-${item.id} bc=${item.borderColor} p=md g=md cur=p style="${item.selectedStyle}" br=md bw=xs':
                                                   - rvn-transform-thumbnail .item=#{item}:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
-                                            $elif resourceType == 'animations':
+                                            $elif resourceType == 'tweens':
                                               - rtgl-view bc=${item.borderColor} p=md flex=1 h=f w=f bw=xs br=md bgc=bg:
                                                   - rtgl-text s=h4: ${item.name}
                                                   - rtgl-view h=12:
@@ -262,11 +262,11 @@ template:
                                       - rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c bw=xs br=md g=md cur=p:
                                           - rtgl-svg svg=plus wh=24:
                                           - rtgl-text: Add Transform
-                                    $elif resourceType == 'animations':
+                                    $elif resourceType == 'tweens':
                                       - rtgl-view w=f:
                                           - rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
                                               - rtgl-svg svg=plus wh=24 c=pr:
-                                              - rtgl-text s=md c=pr fw=500: Add Animation
+                                              - rtgl-text s=md c=pr fw=500: Add Tween Animation
                                     $else:
                                       - rtgl-view#upload-btn-${group.id} w=f h=150 bw=xs br=md ah=c av=c g=sm cur=p bgc=${bgc}:
                                         - rtgl-svg svg=upload wh=32:
