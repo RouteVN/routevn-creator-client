@@ -19,8 +19,8 @@ const resetState = {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, getRefIds } = deps;
   await projectService.ensureRepository();
-  const { animations } = projectService.getState();
-  store.setItems(animations || { tree: [], items: {} });
+  const { tweens } = projectService.getState();
+  store.setItems(tweens || { tree: [], items: {} });
 
   // Initialize graphicsService if canvas is present
   const { canvas } = getRefIds();
@@ -41,11 +41,11 @@ export const handleAfterMount = async (deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { animations } = projectService.getState();
+  const { tweens } = projectService.getState();
 
-  const animationData = animations || { tree: [], items: {} };
+  const tweenData = tweens || { tree: [], items: {} };
 
-  store.setItems(animationData);
+  store.setItems(tweenData);
   render();
 };
 
@@ -77,10 +77,10 @@ export const handleAnimationCreated = async (deps, payload) => {
   await projectService.appendEvent({
     type: "treePush",
     payload: {
-      target: "animations",
+      target: "tweens",
       value: {
         id: nanoid(),
-        type: "animation",
+        type: "tween",
         name: name,
         duration: "4s",
         keyframes: 3,
@@ -93,8 +93,8 @@ export const handleAnimationCreated = async (deps, payload) => {
     },
   });
 
-  const { animations } = projectService.getState();
-  store.setItems(animations);
+  const { tweens } = projectService.getState();
+  store.setItems(tweens);
   render();
 };
 
@@ -105,7 +105,7 @@ export const handleAnimationUpdated = async (deps, payload) => {
   await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
-      target: "animations",
+      target: "tweens",
       value: {
         name: name,
         properties,
@@ -117,8 +117,8 @@ export const handleAnimationUpdated = async (deps, payload) => {
     },
   });
 
-  const { animations } = projectService.getState();
-  store.setItems(animations);
+  const { tweens } = projectService.getState();
+  store.setItems(tweens);
   render();
 };
 
@@ -127,7 +127,7 @@ export const handleFormChange = async (deps, payload) => {
   await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
-      target: "animations",
+      target: "tweens",
       value: {
         [payload._event.detail.name]: payload._event.detail.fieldValue,
       },
@@ -138,8 +138,8 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { animations } = projectService.getState();
-  store.setItems(animations);
+  const { tweens } = projectService.getState();
+  store.setItems(tweens);
   render();
 };
 
@@ -167,18 +167,18 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
-  const animationsData = store.selectAnimationsData();
+  const tweensData = store.selectTweensData();
 
-  if (!animationsData || !animationsData.items) {
+  if (!tweensData || !tweensData.items) {
     return;
   }
 
-  const itemData = animationsData.items[itemId];
+  const itemData = tweensData.items[itemId];
 
   if (itemData) {
     // Find parent group
     let parent = null;
-    for (const [key, value] of Object.entries(animationsData.items)) {
+    for (const [key, value] of Object.entries(tweensData.items)) {
       if (value.children && value.children.includes(itemId)) {
         parent = key;
         break;

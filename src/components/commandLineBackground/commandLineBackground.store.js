@@ -23,7 +23,7 @@ export const createInitialState = () => ({
   imageItems: { items: {}, tree: [] },
   layoutItems: { items: {}, tree: [] },
   videoItems: { items: {}, tree: [] },
-  animationItems: { items: {}, tree: [] },
+  tweenItems: { items: {}, tree: [] },
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
@@ -42,7 +42,7 @@ export const setRepositoryState = (state, payload) => {
   state.imageItems = payload.images;
   state.layoutItems = payload.layouts;
   state.videoItems = payload.videos;
-  state.animationItems = payload.animations || [];
+  state.tweenItems = payload.tweens || [];
 };
 
 export const setTab = (state, payload) => {
@@ -175,17 +175,17 @@ export const selectViewData = ({ state }) => {
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
 
-  // Create animation options from repository animations using the same pattern as layouts
-  const flatAnimations = toFlatItems(state.animationItems || []).filter(
-    (item) => item.type === "animation",
+  // Create tween options from repository tweens using the same pattern as layouts
+  const flatTweens = toFlatItems(state.tweenItems || []).filter(
+    (item) => item.type === "tween",
   );
-  const animationOptions = flatAnimations.map((animation) => ({
-    value: animation.id,
-    label: animation.name || animation.id,
+  const tweenOptions = flatTweens.map((tween) => ({
+    value: tween.id,
+    label: tween.name || tween.id,
   }));
 
   // Add a "None" option at the beginning
-  animationOptions.unshift({ value: "none", label: "None" });
+  tweenOptions.unshift({ value: "none", label: "None" });
 
   const form = {
     fields: [
