@@ -34,7 +34,7 @@
     "vt:generate": "bun run build:web && rtgl vt generate --skip-screenshots && ./scripts/vt.sh",
     "vt:report": "bun run build:web && rtgl vt generate && rtgl vt report",
     "vt:accept": "rtgl vt accept",
-    "vt:serve": "bunx serve _site -p 3002",
+    "vt:serve": "bunx serve .rettangoli/vt/_site -p 3002",
     "serve": "bunx serve _site -p 3001",
     "lint": "oxlint && bun prettier --check src",
     "lint:fix": "oxlint && bun prettier --check --write src",
