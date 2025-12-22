@@ -4,11 +4,6 @@ const form = {
   fields: [
     { name: "name", inputType: "popover-input", description: "Name" },
     { name: "duration", inputType: "read-only-text", description: "Duration" },
-    {
-      name: "keyframes",
-      inputType: "read-only-text",
-      description: "Keyframes",
-    },
   ],
 };
 
