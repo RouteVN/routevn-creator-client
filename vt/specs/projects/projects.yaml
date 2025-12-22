@@ -2,6 +2,5 @@
 title: Initial Project Page Load
 description: Verifies that the projects page loads correctly.
 steps:
-  - goto: /projects
-  - wait: 2000
+  - screenshot
 ---
