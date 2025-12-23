@@ -14,6 +14,7 @@ fe:
 
 # all visual testing configuration
 vt:
+  url: "http://localhost:3001/projects"
   path: 'vt'
   name: "Rettangoli UI Visual Tests"
   description: "Visual testing for Rettangoli UI components"
