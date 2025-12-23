@@ -73,7 +73,7 @@ template:
               - rtgl-text s=h2: "${title}"
               - rtgl-view flex=1:
               - rtgl-view d=h g=sm:
-                  - rtgl-button#createButton: ${createButtonText}
+                  - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
                   - $if platform != 'web':
                         - rtgl-button#openButton variant=se: ${openButtonText}
           - rtgl-view w=f g=md flex=1 oy=a:
