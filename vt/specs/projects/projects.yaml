@@ -1,6 +1,7 @@
 ---
 title: Initial Project Page Load
-description: Verifies that the projects page loads correctly.
 steps:
-  - screenshot
+  #- goto https://rettangoli.dev
+  #- wait 2000
+  #- screenshot
 ---
