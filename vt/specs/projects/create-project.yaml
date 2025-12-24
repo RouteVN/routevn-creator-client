@@ -1,0 +1,13 @@
+---
+title: Create Project Flow
+description: Verifies creating a new project via the dialog.
+steps:
+  - select create-project-button:
+    - click
+  - wait 500
+  - select project-name-input:
+    - write Test project
+  - select project-description-input:
+    - write Test project description
+  - screenshot
+---
