@@ -1,6 +1,6 @@
 ---
 title: Blocked - Setup rettangoli-vt for automated UI testing
-status: todo
+status: done
 priority: medium
 assignee: nellow
 ---

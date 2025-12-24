@@ -31,6 +31,7 @@ export const createInitialState = () => ({
         inputType: "inputText",
         label: "Project Name",
         required: true,
+        testId: "project-name-input",
         validations: [
           {
             rule: /^.+$/,
@@ -44,6 +45,7 @@ export const createInitialState = () => ({
         label: "Description",
         description: "Enter a brief description of the project",
         required: true,
+        testId: "project-description-input",
         validations: [
           {
             rule: /^.+$/,
