@@ -12,5 +12,6 @@ steps:
   - screenshot
   - select create-project-submit-button:
     - click
+  - wait 1000
   - screenshot
 ---
