@@ -10,4 +10,7 @@ steps:
   - select project-description-input:
     - write Test project description
   - screenshot
+  - select create-project-submit-button:
+    - click
+  - screenshot
 ---
