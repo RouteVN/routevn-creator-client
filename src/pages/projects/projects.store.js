@@ -84,6 +84,7 @@ export const createInitialState = () => ({
           variant: "pr",
           content: "Submit",
           type: "submit",
+          testId: "create-project-submit-button",
         },
       ],
     },
