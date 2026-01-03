@@ -144,10 +144,10 @@ const getRenderState = async (deps) => {
 
   const layoutId = store.selectLayoutId();
   const storeElements = store.selectItems();
-  console.log('storeElements ', storeElements)
+  console.log("storeElements ", storeElements);
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
   const layoutTreeStructure = toTreeStructure(layoutElements);
-  console.log('layoutTreeStructure', layoutTreeStructure)
+  console.log("layoutTreeStructure", layoutTreeStructure);
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
@@ -205,7 +205,7 @@ const renderLayoutPreview = async (deps) => {
 
   const { renderStateElements, fontsItems } = await getRenderState(deps);
 
-  console.log('renderStateElements', renderStateElements)
+  console.log("renderStateElements", renderStateElements);
 
   const choicesData = store.selectChoicesData();
 
@@ -226,7 +226,7 @@ const renderLayoutPreview = async (deps) => {
     choice: choicesData,
   };
 
-  console.log('elementsToRender', elementsToRender)
+  console.log("elementsToRender", elementsToRender);
 
   const finalElements = parseAndRender(elementsToRender, data);
 
@@ -234,7 +234,7 @@ const renderLayoutPreview = async (deps) => {
     elements: finalElements,
   });
 
-  console.log('finalElements', finalElements);
+  console.log("finalElements", finalElements);
 
   if (!selectedItem) {
     graphicsService.render({

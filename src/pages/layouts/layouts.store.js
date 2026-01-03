@@ -149,10 +149,10 @@ export const selectViewData = ({ state }) => {
 
         return shouldIncludeGroup
           ? {
-            ...group,
-            children: filteredChildren,
-            hasChildren: filteredChildren.length > 0,
-          }
+              ...group,
+              children: filteredChildren,
+              hasChildren: filteredChildren.length > 0,
+            }
           : null;
       })
       .filter(Boolean);

@@ -89,7 +89,8 @@ const config = {
               },
             },
             {
-              $when: 'itemType != "text" || itemType != "text-ref-character-name" || itemType != "text-revealing-ref-dialogue-content" || itemType != "text-ref-choice-item-content"',
+              $when:
+                'itemType != "text" || itemType != "text-ref-character-name" || itemType != "text-revealing-ref-dialogue-content" || itemType != "text-ref-choice-item-content"',
               type: "clickable-value",
               svg: "h",
               name: "height",
@@ -177,7 +178,6 @@ const config = {
               },
             },
           ],
-
         },
       ],
     },
@@ -296,7 +296,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
+      $when:
+        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
       label: "Typography",
       items: [
         {
@@ -323,7 +324,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" == "text-ref-choice-item-content"',
+      $when:
+        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" == "text-ref-choice-item-content"',
       label: "Text Alignment",
       items: [
         {

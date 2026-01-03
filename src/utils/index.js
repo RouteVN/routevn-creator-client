@@ -66,13 +66,16 @@ export const layoutTreeStructureToRenderState = (
   fontsData,
 ) => {
   const updateChildrenIds = (children, indexVar) => {
-    return children.map(child => {
+    return children.map((child) => {
       const updatedChild = {
         ...child,
-        id: `${child.id}-\${${indexVar}}`
+        id: `${child.id}-\${${indexVar}}`,
       };
       if (updatedChild.children && updatedChild.children.length > 0) {
-        updatedChild.children = updateChildrenIds(updatedChild.children, indexVar);
+        updatedChild.children = updateChildrenIds(
+          updatedChild.children,
+          indexVar,
+        );
       }
       return updatedChild;
     });
@@ -102,7 +105,15 @@ export const layoutTreeStructureToRenderState = (
       element["$each"] = node["$each"];
     }
 
-    if (["text", "text-revealing", "text-ref-character-name", "text-revealing-ref-dialogue-content", "text-ref-choice-item-content"].includes(node.type)) {
+    if (
+      [
+        "text",
+        "text-revealing",
+        "text-ref-character-name",
+        "text-revealing-ref-dialogue-content",
+        "text-ref-choice-item-content",
+      ].includes(node.type)
+    ) {
       let textStyle = {};
 
       // Apply typography if selected
@@ -185,19 +196,19 @@ export const layoutTreeStructureToRenderState = (
         ...interactionStyles,
       };
 
-      if (node.type === 'text-ref-character-name') {
-        element.type = 'text'
-        element.content = '${dialogue.character.name}'
+      if (node.type === "text-ref-character-name") {
+        element.type = "text";
+        element.content = "${dialogue.character.name}";
       }
 
-      if (node.type === 'text-revealing-ref-dialogue-content') {
-        element.type = 'text'
-        element.content = '${dialogue.content[0].text}'
+      if (node.type === "text-revealing-ref-dialogue-content") {
+        element.type = "text";
+        element.content = "${dialogue.content[0].text}";
       }
 
-      if (node.type === 'text-ref-choice-item-content') {
-        element.type = 'text'
-        element.content = '${item.content}'
+      if (node.type === "text-ref-choice-item-content") {
+        element.type = "text";
+        element.content = "${item.content}";
       }
     }
 
@@ -229,29 +240,32 @@ export const layoutTreeStructureToRenderState = (
       }
     }
 
-    if (node.type === "container" || node.type === 'container-ref-choice-item') {
+    if (
+      node.type === "container" ||
+      node.type === "container-ref-choice-item"
+    ) {
       // For containers, we need to handle direction and children
       element.direction = node.direction;
       element.gap = node.gap;
       element.containerType = node.containerType;
 
-      if (node.type === 'container-ref-choice-item') {
-        element.type = 'container'
-        element.$each = 'item, i in choice.items'
-        element.id = `${node.id}-\${i}`
+      if (node.type === "container-ref-choice-item") {
+        element.type = "container";
+        element.$each = "item, i in choice.items";
+        element.id = `${node.id}-\${i}`;
         element.click = {
           actionPayload: {
-            actions: '${item.events.click.actions}'
-          }
-        }
+            actions: "${item.events.click.actions}",
+          },
+        };
       }
     }
 
     if (node.children && node.children.length > 0) {
       element.children = node.children.map(mapNode);
 
-      if (node.type === 'container-ref-choice-item') {
-        element.children = updateChildrenIds(element.children, 'i');
+      if (node.type === "container-ref-choice-item") {
+        element.children = updateChildrenIds(element.children, "i");
       }
     }
 
