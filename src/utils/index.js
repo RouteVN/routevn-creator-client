@@ -129,6 +129,7 @@ export const layoutTreeStructureToRenderState = (
           fill: colorItem?.hex || "white",
           lineHeight: typography.lineHeight || 1.2,
           breakWords: true,
+          align: node.style?.align,
         };
       } else {
         // Use default settings
@@ -136,13 +137,13 @@ export const layoutTreeStructureToRenderState = (
           fontSize: 24,
           fill: "white",
           lineHeight: 1.2,
+          align: node.style?.align,
         };
       }
 
       const finalStyle = {
         ...textStyle,
         wordWrapWidth: parseInt(node.style?.wordWrapWidth),
-        align: node.style?.align,
       };
 
       // Handle interaction styles

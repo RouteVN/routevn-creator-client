@@ -391,7 +391,7 @@ export const handleItemContextMenu = (deps, payload) => {
 
   // Filter context menu items based on item type
   let filteredMenuItems = props.contextMenuItems;
-  if (item && (item.type === "sprite" || item.type === "text")) {
+  if (item && (item.type === "sprite" || item.type.startsWith('text'))) {
     // For sprite and text items, only show Rename and Delete options
     filteredMenuItems = props.contextMenuItems?.filter(
       (menuItem) =>

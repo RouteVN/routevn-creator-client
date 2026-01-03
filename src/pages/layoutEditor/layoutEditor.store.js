@@ -292,7 +292,7 @@ const choiceForm = {
       $each: "choice, i in choices",
       name: "choices[${i}]",
       inputType: "inputText",
-      description: "Choice content ${i} text",
+      description: "Choice content text",
       placeholder: "Enter choice text",
     },
   ],

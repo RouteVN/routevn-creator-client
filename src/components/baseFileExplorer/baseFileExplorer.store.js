@@ -257,10 +257,19 @@ export const selectViewData = ({ state, props, attrs }) => {
       bgc = "mu";
     }
 
+    // TODO: move out of base file explorer
+    let svg = item.type;
+    if (item.type.startsWith('text')) {
+      svg = 'text';
+    } else if (item.type.startsWith('container')) {
+      svg = 'container';
+    }
+
     return {
       ...item,
       ml: item._level * 16,
       arrowIcon,
+      svg,
       bc,
       hBgc,
       bgc,
@@ -281,28 +290,28 @@ export const selectViewData = ({ state, props, attrs }) => {
   // Form configuration for renaming
   const renameForm = currentItem
     ? {
-        fields: [
+      fields: [
+        {
+          name: "name",
+          inputType: "inputText",
+          label: "Name",
+          required: true,
+        },
+      ],
+      actions: {
+        layout: "",
+        buttons: [
           {
-            name: "name",
-            inputType: "inputText",
-            label: "Name",
-            required: true,
+            id: "submit",
+            variant: "pr",
+            content: "Rename",
           },
         ],
-        actions: {
-          layout: "",
-          buttons: [
-            {
-              id: "submit",
-              variant: "pr",
-              content: "Rename",
-            },
-          ],
-        },
-      }
+      },
+    }
     : {
-        fields: [],
-      };
+      fields: [],
+    };
 
   const viewData = {
     ...state,

@@ -116,6 +116,7 @@ const config = {
           ],
         },
         {
+          $when: "itemType == 'container' || itemType == 'container-ref-choice-item' || itemType == 'text' | itemType == 'text-ref-choice-item-content'",
           type: "select",
           label: "Anchor",
           name: "anchor",
@@ -135,8 +136,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "container"',
-      label: "Direction 123",
+      $when: 'itemType == "container" || itemType == "container-ref-choice-item"',
+      label: "Direction",
       items: [
         {
           type: "select",
@@ -151,7 +152,7 @@ const config = {
         },
         {
           $when:
-            'itemType == "container" && (values.direction == "vertical" || values.direction == "horizontal") ',
+            '(itemType == "container" || itemType == "container-ref-choice-item") && (values.direction == "vertical" || values.direction == "horizontal") ',
           type: "group",
           fields: [
             {
@@ -177,23 +178,6 @@ const config = {
                 },
               },
             },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "container" && layoutType == "choice"',
-      label: "Control Statements",
-      type: "group",
-      items: [
-        {
-          type: "select",
-          label: "Repeat",
-          name: "$each",
-          value: "${values.$each}",
-          options: [
-            { label: "None", value: undefined },
-            { label: "Choices", value: "item in choice.items" },
           ],
         },
       ],
@@ -325,7 +309,7 @@ const config = {
     },
     {
       $when:
-        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" == "text-ref-choice-item-content"',
+        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
       label: "Text Alignment",
       items: [
         {
