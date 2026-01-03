@@ -144,7 +144,7 @@ const contextMenuItems = [
   },
   { label: "Rename", type: "item", value: "rename-item" },
   { label: "Delete", type: "item", value: "delete-item" },
-]
+];
 
 const emptyContextMenuItems = [
   {
@@ -249,8 +249,7 @@ const emptyContextMenuItems = [
       rotation: 0,
     },
   },
-]
-
+];
 
 const dialogueForm = {
   title: "Preview",

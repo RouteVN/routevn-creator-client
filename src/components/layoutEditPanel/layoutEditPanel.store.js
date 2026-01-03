@@ -116,7 +116,8 @@ const config = {
           ],
         },
         {
-          $when: "itemType == 'container' || itemType == 'container-ref-choice-item' || itemType == 'text' | itemType == 'text-ref-choice-item-content'",
+          $when:
+            "itemType == 'container' || itemType == 'container-ref-choice-item' || itemType == 'text' | itemType == 'text-ref-choice-item-content'",
           type: "select",
           label: "Anchor",
           name: "anchor",
@@ -136,7 +137,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "container" || itemType == "container-ref-choice-item"',
+      $when:
+        'itemType == "container" || itemType == "container-ref-choice-item"',
       label: "Direction",
       items: [
         {

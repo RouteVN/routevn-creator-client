@@ -72,7 +72,9 @@ export const handleSaveChoiceClick = (deps) => {
   const editForm = store.selectEditForm();
 
   if (!editForm.content || editForm.content.trim() === "") {
-    appService.showToast("Choice content cannot be empty", { title: "Warning" });
+    appService.showToast("Choice content cannot be empty", {
+      title: "Warning",
+    });
     return;
   }
 
