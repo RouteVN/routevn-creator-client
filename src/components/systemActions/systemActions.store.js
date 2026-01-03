@@ -1,4 +1,5 @@
 export const createInitialState = () => ({
+
   mode: "actions",
   isActionsDialogOpen: false,
   dropdownMenu: {

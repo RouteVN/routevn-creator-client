@@ -17,7 +17,7 @@ const layoutForm = {
       options: [
         { value: "normal", label: "Normal" },
         { value: "dialogue", label: "Dialogue" },
-        // { value: "choice", label: "Choice" },
+        { value: "choice", label: "Choice" },
         { value: "base", label: "Base" },
       ],
       tooltip: {
@@ -149,10 +149,10 @@ export const selectViewData = ({ state }) => {
 
         return shouldIncludeGroup
           ? {
-              ...group,
-              children: filteredChildren,
-              hasChildren: filteredChildren.length > 0,
-            }
+            ...group,
+            children: filteredChildren,
+            hasChildren: filteredChildren.length > 0,
+          }
           : null;
       })
       .filter(Boolean);
