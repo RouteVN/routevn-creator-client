@@ -173,7 +173,7 @@ const calculateAbsolutePosition = (
   parentY = 0,
 ) => {
   for (const element of elements) {
-    if (element.id === targetId) {
+    if (element.id === targetId || element.id === `${targetId}-0`) {
       // Simple absolute position: parent position + element relative position
       const x = parentX + element.x;
       const y = parentY + element.y;
@@ -234,9 +234,12 @@ const renderLayoutPreview = async (deps) => {
     elements: finalElements,
   });
 
+  console.log('1111111111111111111')
   console.log("finalElements", finalElements);
+  console.log('selectedItem', selectedItem)
 
   if (!selectedItem) {
+    console.log('222222222222222222')
     graphicsService.render({
       elements: finalElements,
       animations: [],
@@ -249,7 +252,9 @@ const renderLayoutPreview = async (deps) => {
     selectedItem.id,
   );
 
+  console.log('3333333333333333333')
   if (result) {
+    console.log('4444444444444444')
     const redDot = {
       id: "selected-anchor",
       type: "rect",
