@@ -234,12 +234,12 @@ const renderLayoutPreview = async (deps) => {
     elements: finalElements,
   });
 
-  console.log('1111111111111111111')
+  console.log("1111111111111111111");
   console.log("finalElements", finalElements);
-  console.log('selectedItem', selectedItem)
+  console.log("selectedItem", selectedItem);
 
   if (!selectedItem) {
-    console.log('222222222222222222')
+    console.log("222222222222222222");
     graphicsService.render({
       elements: finalElements,
       animations: [],
@@ -252,9 +252,9 @@ const renderLayoutPreview = async (deps) => {
     selectedItem.id,
   );
 
-  console.log('3333333333333333333')
+  console.log("3333333333333333333");
   if (result) {
-    console.log('4444444444444444')
+    console.log("4444444444444444");
     const redDot = {
       id: "selected-anchor",
       type: "rect",
