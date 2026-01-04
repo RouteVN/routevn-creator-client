@@ -144,10 +144,8 @@ const getRenderState = async (deps) => {
 
   const layoutId = store.selectLayoutId();
   const storeElements = store.selectItems();
-  console.log("storeElements ", storeElements);
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
   const layoutTreeStructure = toTreeStructure(layoutElements);
-  console.log("layoutTreeStructure", layoutTreeStructure);
   const renderStateElements = layoutTreeStructureToRenderState(
     layoutTreeStructure,
     imageItems,
@@ -205,8 +203,6 @@ const renderLayoutPreview = async (deps) => {
 
   const { renderStateElements, fontsItems } = await getRenderState(deps);
 
-  console.log("renderStateElements", renderStateElements);
-
   const choicesData = store.selectChoicesData();
 
   const selectedItem = store.selectSelectedItem();
@@ -226,20 +222,13 @@ const renderLayoutPreview = async (deps) => {
     choice: choicesData,
   };
 
-  console.log("elementsToRender", elementsToRender);
-
   const finalElements = parseAndRender(elementsToRender, data);
 
   const parsedState = graphicsService.parse({
     elements: finalElements,
   });
 
-  console.log("1111111111111111111");
-  console.log("finalElements", finalElements);
-  console.log("selectedItem", selectedItem);
-
   if (!selectedItem) {
-    console.log("222222222222222222");
     graphicsService.render({
       elements: finalElements,
       animations: [],
@@ -252,9 +241,7 @@ const renderLayoutPreview = async (deps) => {
     selectedItem.id,
   );
 
-  console.log("3333333333333333333");
   if (result) {
-    console.log("4444444444444444");
     const redDot = {
       id: "selected-anchor",
       type: "rect",
