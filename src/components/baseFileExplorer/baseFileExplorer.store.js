@@ -257,10 +257,19 @@ export const selectViewData = ({ state, props, attrs }) => {
       bgc = "mu";
     }
 
+    // TODO: move out of base file explorer
+    let svg = item.type;
+    if (item.type.startsWith("text")) {
+      svg = "text";
+    } else if (item.type.startsWith("container")) {
+      svg = "container";
+    }
+
     return {
       ...item,
       ml: item._level * 16,
       arrowIcon,
+      svg,
       bc,
       hBgc,
       bgc,

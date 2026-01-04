@@ -67,7 +67,32 @@ export const handleCancelEditClick = (deps) => {
 };
 
 export const handleSaveChoiceClick = (deps) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
+
+  const editForm = store.selectEditForm();
+
+  if (!editForm.content || editForm.content.trim() === "") {
+    appService.showToast("Choice content cannot be empty", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  if (!editForm.actionType) {
+    appService.showToast("Please select an action type", { title: "Warning" });
+    return;
+  }
+
+  if (editForm.actionType === "sectionTransition") {
+    if (!editForm.sceneId) {
+      appService.showToast("Please select a scene", { title: "Warning" });
+      return;
+    }
+    if (!editForm.sectionId) {
+      appService.showToast("Please select a section", { title: "Warning" });
+      return;
+    }
+  }
 
   store.saveChoice();
   render();

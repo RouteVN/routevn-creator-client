@@ -171,7 +171,7 @@ const calculateAbsolutePosition = (
   parentY = 0,
 ) => {
   for (const element of elements) {
-    if (element.id === targetId) {
+    if (element.id === targetId || element.id === `${targetId}-0`) {
       // Simple absolute position: parent position + element relative position
       const x = parentX + element.x;
       const y = parentY + element.y;
