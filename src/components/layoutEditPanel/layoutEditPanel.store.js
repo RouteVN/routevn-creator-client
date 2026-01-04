@@ -89,7 +89,8 @@ const config = {
               },
             },
             {
-              $when: 'itemType != "text"',
+              $when:
+                'itemType != "text" || itemType != "text-ref-character-name" || itemType != "text-revealing-ref-dialogue-content" || itemType != "text-ref-choice-item-content"',
               type: "clickable-value",
               svg: "h",
               name: "height",
@@ -115,6 +116,8 @@ const config = {
           ],
         },
         {
+          $when:
+            "itemType == 'container' || itemType == 'container-ref-choice-item' || itemType == 'text' | itemType == 'text-ref-choice-item-content'",
           type: "select",
           label: "Anchor",
           name: "anchor",
@@ -134,7 +137,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "container"',
+      $when:
+        'itemType == "container" || itemType == "container-ref-choice-item"',
       label: "Direction",
       items: [
         {
@@ -150,7 +154,7 @@ const config = {
         },
         {
           $when:
-            'itemType == "container" && (values.direction == "vertical" || values.direction == "horizontal") ',
+            '(itemType == "container" || itemType == "container-ref-choice-item") && (values.direction == "vertical" || values.direction == "horizontal") ',
           type: "group",
           fields: [
             {
@@ -226,33 +230,38 @@ const config = {
               value: "${values.text}",
               popoverForm: {
                 fields: [
+                  // {
+                  //   name: "contentType",
+                  //   description: "Content Type",
+                  //   inputType: "select",
+                  //   options: [
+                  //     { label: "Variable", value: "variable" },
+                  //     { label: "Plain Text", value: "plain" },
+                  //   ],
+                  // },
+                  // {
+                  //   $when: 'popoverFormValues.contentType == "variable"',
+                  //   name: "value",
+                  //   description: "Variable",
+                  //   inputType: "select",
+                  //   options: [
+                  //     {
+                  //       label: "Dialogue Character Name",
+                  //       value: "\\${dialogue.character.name}",
+                  //     },
+                  //     {
+                  //       label: "Dialogue Content",
+                  //       value: "\\${dialogue.content[0].text}",
+                  //     },
+                  //     {
+                  //       $when: 'layoutType === "choices"',
+                  //       label: "Choice content",
+                  //       value: "\\${item.content}",
+                  //     },
+                  //   ],
+                  // },
                   {
-                    name: "contentType",
-                    description: "Content Type",
-                    inputType: "select",
-                    options: [
-                      { label: "Variable", value: "variable" },
-                      { label: "Plain Text", value: "plain" },
-                    ],
-                  },
-                  {
-                    $when: 'popoverFormValues.contentType == "variable"',
-                    name: "value",
-                    description: "Variable",
-                    inputType: "select",
-                    options: [
-                      {
-                        label: "Dialogue Character Name",
-                        value: "\\${dialogue.character.name}",
-                      },
-                      {
-                        label: "Dialogue Content",
-                        value: "\\${dialogue.content[0].text}",
-                      },
-                    ],
-                  },
-                  {
-                    $when: 'popoverFormValues.contentType == "plain"',
+                    // $when: 'popoverFormValues.contentType == "plain"',
                     name: "value",
                     inputType: "input-text",
                   },
@@ -273,7 +282,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "text"',
+      $when:
+        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
       label: "Typography",
       items: [
         {
@@ -300,7 +310,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "text"',
+      $when:
+        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
       label: "Text Alignment",
       items: [
         {
@@ -325,33 +336,6 @@ const config = {
         {
           type: "list-item",
           items: "${values.actions}",
-        },
-      ],
-    },
-    {
-      $when: 'layoutType == "choice"',
-      label: "Control Statements",
-      items: [
-        // {
-        //   type: "select",
-        //   label: "Filter",
-        //   name: "$when",
-        //   value: "${values.$when}",
-        //   options: [
-        //     { label: "None", value: "" },
-        //     { label: "Condition 1", value: "condition1" },
-        //     { label: "Condition 2", value: "condition2" },
-        //   ],
-        // },
-        {
-          type: "select",
-          label: "Repeat",
-          name: "$each",
-          value: "${values.$each}",
-          options: [
-            { label: "None", value: undefined },
-            { label: "Choices", value: "item in choice.items" },
-          ],
         },
       ],
     },

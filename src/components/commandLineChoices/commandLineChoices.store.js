@@ -89,7 +89,7 @@ export const setEditingIndex = (state, index) => {
     // New choice or reset
 
     state.editForm.content = "";
-    state.editForm.actionType = "continue";
+    state.editForm.actionType = "nextLine";
     state.editForm.sceneId = "";
     state.editForm.sectionId = "";
   }
