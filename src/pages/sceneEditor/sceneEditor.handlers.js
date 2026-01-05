@@ -644,10 +644,10 @@ export const handleLineNavigation = (deps, payload) => {
       if (targetCursorPosition !== undefined) {
         if (targetCursorPosition === -1) {
           // Special value: position at end of target line (for ArrowLeft navigation)
-          const targetLineRef = refIds[`line-${nextLineId}`];
-          const targetTextLength = targetLineRef?.elm?.textContent?.length || 0;
-          linesEditorRef.elm.store.setCursorPosition(targetTextLength);
-          linesEditorRef.elm.store.setGoalColumn(targetTextLength);
+          // Set a large goal column - updateSelectedLine will clamp to actual text length
+          // when direction is "end"
+          linesEditorRef.elm.store.setCursorPosition(Number.MAX_SAFE_INTEGER);
+          linesEditorRef.elm.store.setGoalColumn(Number.MAX_SAFE_INTEGER);
           linesEditorRef.elm.store.setNavigationDirection("end"); // Special direction for end positioning
         } else {
           linesEditorRef.elm.store.setCursorPosition(targetCursorPosition);
