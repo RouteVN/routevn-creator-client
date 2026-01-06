@@ -42,7 +42,8 @@
     "tauri": "tauri",
     "tauri:dev:win": "tauri dev --target x86_64-pc-windows-gnu",
     "tauri:build": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json",
-    "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc"
+    "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
+    "tauri:build:mac": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --bundles dmg"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.3",
