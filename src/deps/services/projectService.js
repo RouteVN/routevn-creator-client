@@ -406,18 +406,13 @@ export const createProjectService = ({ router, db, filePicker }) => {
       const fileArray = Array.isArray(files) ? files : Array.from(files);
 
       const uploadPromises = fileArray.map(async (file) => {
-        try {
-          const result = await processFile(file);
-          return {
-            success: true,
-            file,
-            displayName: file.name.replace(/\.[^.]+$/, ""),
-            ...result,
-          };
-        } catch (error) {
-          console.error(`Failed to upload ${file.name}:`, error);
-          return { success: false, file, error: error.message };
-        }
+        const result = await processFile(file);
+        return {
+          success: true,
+          file,
+          displayName: file.name.replace(/\.[^.]+$/, ""),
+          ...result,
+        };
       });
 
       const results = await Promise.all(uploadPromises);
