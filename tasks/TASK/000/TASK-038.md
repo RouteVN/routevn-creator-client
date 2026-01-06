@@ -46,15 +46,22 @@ assignee: anyone
 ## Bugs
 
 1) when adding character on scene it's buggy and when deleting the character it's not properly deleting (or showing delete option where the character is not there) and not showing the option where the character is there  
-video name -> `scene_character_bug`
+Steps to reproduce
+
+https://github.com/user-attachments/assets/2d8a30e4-8ffb-4123-8f18-4969150d3569
 
 2) Character immediately not updated on the scene page when i add on the same line with existing character  
-video name -> `dual_character_bug`
+Steps to reproduce
+
+https://github.com/user-attachments/assets/d8c114a2-ae29-47db-902e-bdaa6acaa6bb
+
 
 3) When removing items it's not immediately updated on state page properly and sometimes evn on the section page
 
 4) Unresponsive Scene layout, it's very buggy as shown in the below video  
-video name -> `unresponsive_scene`
+Steps to reproduce
+
+https://github.com/user-attachments/assets/85eacfb9-a18f-4e11-86f0-57c992acc591
 
 5) If audio resource is removed from asset and if it's present on that line then it will not trigger that line and show blank  
 error -> `Uncaught TypeError: s is not iterable`
