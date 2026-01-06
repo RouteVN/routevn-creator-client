@@ -78,29 +78,13 @@ const getSelectionRange = (element) => {
   const isShadowRoot = shadowRoot instanceof ShadowRoot;
 
   let selection = window.getSelection();
-  console.log(
-    "[getSelectionRange] window.getSelection:",
-    selection,
-    "rangeCount:",
-    selection?.rangeCount,
-  );
 
   // Try shadowRoot.getSelection() first for Shadow DOM (non-standard but works in some browsers)
   if (isShadowRoot && typeof shadowRoot.getSelection === "function") {
     const shadowSelection = shadowRoot.getSelection();
-    console.log(
-      "[getSelectionRange] shadowRoot.getSelection:",
-      shadowSelection,
-      "rangeCount:",
-      shadowSelection?.rangeCount,
-    );
     if (shadowSelection && shadowSelection.rangeCount > 0) {
       const range = shadowSelection.getRangeAt(0);
       if (element.contains(range.startContainer)) {
-        console.log(
-          "[getSelectionRange] Using shadowRoot.getSelection - startContainer:",
-          range.startContainer,
-        );
         return range;
       }
     }
@@ -108,30 +92,12 @@ const getSelectionRange = (element) => {
 
   if (!selection || selection.rangeCount === 0) return null;
 
-  console.log(
-    "[getSelectionRange] isShadowRoot:",
-    isShadowRoot,
-    "hasGetComposedRanges:",
-    typeof selection.getComposedRanges === "function",
-  );
-
   // Use getComposedRanges for Shadow DOM (Safari 17+, Chrome 137+, Firefox 142+)
   if (isShadowRoot && typeof selection.getComposedRanges === "function") {
     try {
       const ranges = selection.getComposedRanges(shadowRoot);
-      console.log(
-        "[getSelectionRange] getComposedRanges returned:",
-        ranges.length,
-        "ranges",
-      );
       if (ranges.length > 0) {
         const staticRange = ranges[0];
-        console.log(
-          "[getSelectionRange] Using getComposedRanges - startContainer:",
-          staticRange.startContainer,
-          "startOffset:",
-          staticRange.startOffset,
-        );
 
         // Validate that the range is actually inside our element
         // On some browsers (Windows Chrome), getComposedRanges may return body instead of actual element
@@ -141,34 +107,19 @@ const getSelectionRange = (element) => {
           range.setStart(staticRange.startContainer, staticRange.startOffset);
           range.setEnd(staticRange.endContainer, staticRange.endOffset);
           return range;
-        } else {
-          console.log(
-            "[getSelectionRange] getComposedRanges returned invalid container, falling back",
-          );
         }
       }
     } catch (e) {
-      console.log("[getSelectionRange] getComposedRanges error:", e);
       // getComposedRanges not supported, fall through to fallback
     }
   }
 
   // Fallback to regular getRangeAt
   const range = selection.getRangeAt(0);
-  const containsStart = element.contains(range.startContainer);
-  console.log(
-    "[getSelectionRange] Fallback getRangeAt - startContainer:",
-    range.startContainer,
-    "element.contains:",
-    containsStart,
-  );
-  if (containsStart) {
+  if (element.contains(range.startContainer)) {
     return range;
   }
 
-  console.log(
-    "[getSelectionRange] Returning null - element doesn't contain startContainer",
-  );
   return null;
 };
 
@@ -191,14 +142,11 @@ const getCursorPosition = (element) => {
 
 // Helper function to check if cursor is on the first line of contenteditable
 const isCursorOnFirstLine = (element) => {
-  console.log("[isCursorOnFirstLine] Getting selection range");
   const range = getSelectionRange(element);
-  console.log("[isCursorOnFirstLine] getSelectionRange returned:", range);
   if (!range) return false;
 
   // Get the bounding rectangle of the cursor position
   const cursorRect = range.getBoundingClientRect();
-  console.log("[isCursorOnFirstLine] cursorRect:", cursorRect);
 
   // Create a range at the very beginning of the element
   const startRange = document.createRange();
@@ -248,23 +196,12 @@ const isCursorOnLastLine = (element) => {
     parseFloat(window.getComputedStyle(element).lineHeight) || 20;
   const hasMultipleLines = elementHeight > lineHeight * 1.5; // Allow some tolerance
 
-  console.log(
-    "[isCursorOnLastLine] elementHeight:",
-    elementHeight,
-    "lineHeight:",
-    lineHeight,
-    "hasMultipleLines:",
-    hasMultipleLines,
-  );
-
   if (!hasMultipleLines) {
     // Single line content - always navigate to next editor on ArrowDown
-    console.log("[isCursorOnLastLine] Single line, returning true");
     return true;
   }
 
   const range = getSelectionRange(element);
-  console.log("[isCursorOnLastLine] getSelectionRange returned:", range);
   if (!range) return false;
 
   // Get the bounding rectangle of the cursor position
@@ -722,24 +659,13 @@ export const handleLineKeyDown = (deps, payload) => {
         }
       } else {
         // In text-editor mode, check if cursor is on first line
-        console.log(
-          "[handleLineKeyDown] ArrowUp in text-editor mode, checking isOnFirstLine",
-        );
         const isOnFirstLine = isCursorOnFirstLine(payload._event.currentTarget);
-        console.log(
-          "[handleLineKeyDown] ArrowUp isOnFirstLine:",
-          isOnFirstLine,
-        );
 
         if (isOnFirstLine) {
           // Cursor is on first line, move to previous line
           payload._event.preventDefault();
           payload._event.stopPropagation(); // Prevent bubbling to container
           const goalColumn = store.selectGoalColumn() || 0;
-          console.log(
-            "[handleLineKeyDown] ArrowUp navigating to prev line with goalColumn:",
-            goalColumn,
-          );
 
           // Set navigating flag
           store.setIsNavigating(true);
@@ -803,24 +729,13 @@ export const handleLineKeyDown = (deps, payload) => {
         }
       } else {
         // In text-editor mode, check if cursor is on last line
-        console.log(
-          "[handleLineKeyDown] ArrowDown in text-editor mode, checking isOnLastLine",
-        );
         const isOnLastLine = isCursorOnLastLine(payload._event.currentTarget);
-        console.log(
-          "[handleLineKeyDown] ArrowDown isOnLastLine:",
-          isOnLastLine,
-        );
 
         if (isOnLastLine) {
           // Cursor is on last line, move to next line
           payload._event.preventDefault();
           payload._event.stopPropagation(); // Prevent bubbling to container
           const goalColumn = store.selectGoalColumn() || 0;
-          console.log(
-            "[handleLineKeyDown] ArrowDown navigating to next line with goalColumn:",
-            goalColumn,
-          );
 
           // Set navigating flag and direction
           store.setIsNavigating(true);
@@ -879,15 +794,10 @@ export const handleLineKeyDown = (deps, payload) => {
     case "ArrowLeft":
       if (mode === "text-editor") {
         // Check if cursor is at the beginning of the text
-        console.log("[handleLineKeyDown] ArrowLeft pressed");
         const currentPos = getCursorPosition(payload._event.currentTarget);
-        console.log("[handleLineKeyDown] ArrowLeft currentPos:", currentPos);
 
         if (currentPos <= 0) {
           // Cursor is at beginning, move to previous line
-          console.log(
-            "[handleLineKeyDown] ArrowLeft navigating to prev line (pos <= 0)",
-          );
           payload._event.preventDefault();
           payload._event.stopPropagation();
 
@@ -963,8 +873,6 @@ export const updateSelectedLine = (deps, payload) => {
   const refIds = getRefIds();
   const lineRef = refIds[`line-${currentLineId}`];
 
-  console.log("[updateSelectedLine] Starting for lineId:", currentLineId);
-
   // Check if lineRef exists and has the elm property
   if (!lineRef || !lineRef.elm) {
     console.warn(`Line reference not found for lineId: ${currentLineId}`);
@@ -975,15 +883,6 @@ export const updateSelectedLine = (deps, payload) => {
   const goalColumn = store.selectGoalColumn() || 0;
   const textLength = lineRef.elm.textContent.length;
   const direction = store.selectNavigationDirection();
-
-  console.log(
-    "[updateSelectedLine] goalColumn:",
-    goalColumn,
-    "textLength:",
-    textLength,
-    "direction:",
-    direction,
-  );
 
   // Choose positioning strategy based on direction
   let targetPosition;
@@ -998,23 +897,13 @@ export const updateSelectedLine = (deps, payload) => {
     targetPosition = Math.min(goalColumn, textLength);
   }
 
-  console.log("[updateSelectedLine] targetPosition:", targetPosition);
-
   // Get shadow root for selection if needed
   let shadowRoot = lineRef.elm.getRootNode();
   let selection = window.getSelection();
 
-  console.log(
-    "[updateSelectedLine] shadowRoot:",
-    shadowRoot,
-    "shadowRoot.getSelection:",
-    typeof shadowRoot?.getSelection,
-  );
-
   // Check if we're in a shadow DOM
   if (shadowRoot && shadowRoot.getSelection) {
     selection = shadowRoot.getSelection();
-    console.log("[updateSelectedLine] Using shadow root selection");
   }
 
   // Create a range at the desired position before focusing
@@ -1061,49 +950,23 @@ export const updateSelectedLine = (deps, payload) => {
   }
 
   // Now focus - this must happen before setting selection in Shadow DOM
-  console.log("[updateSelectedLine] About to focus element");
   lineRef.elm.focus({ preventScroll: true });
-  console.log(
-    "[updateSelectedLine] After focus - document.activeElement:",
-    document.activeElement,
-    "shadowRoot.activeElement:",
-    shadowRoot?.activeElement,
-  );
 
   // After focus, set the selection using setBaseAndExtent which works better with Shadow DOM
   if (foundNode) {
     // Re-get selection after focus - this is important for Shadow DOM
     selection = window.getSelection();
-    console.log(
-      "[updateSelectedLine] After focus - selection:",
-      selection,
-      "rangeCount:",
-      selection?.rangeCount,
-    );
 
     // Use setBaseAndExtent instead of addRange - works better in Shadow DOM
-    console.log("[updateSelectedLine] Calling setBaseAndExtent with:", {
-      startContainer: range.startContainer,
-      startOffset: range.startOffset,
-      endContainer: range.endContainer,
-      endOffset: range.endOffset,
-    });
     selection.setBaseAndExtent(
       range.startContainer,
       range.startOffset,
       range.endContainer,
       range.endOffset,
     );
-    console.log(
-      "[updateSelectedLine] After setBaseAndExtent - selection.rangeCount:",
-      selection?.rangeCount,
-    );
 
     // Update the current cursor position in store to reflect where we actually landed
     store.setCursorPosition(actualPosition);
-    console.log("[updateSelectedLine] Set cursor position to:", actualPosition);
-  } else {
-    console.log("[updateSelectedLine] foundNode is false, skipping selection");
   }
 };
 
