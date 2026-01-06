@@ -91,8 +91,10 @@ export const extractWaveformData = async (audioFile, samples = 1000) => {
       sampleRate: audioBuffer.sampleRate,
       channels: audioBuffer.numberOfChannels,
     };
-  } catch {
-    return null;
+  } catch (error) {
+    throw new Error(
+      `Failed to decode audio file: ${error.message || "Unsupported format"}`,
+    );
   }
 };
 
