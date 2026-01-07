@@ -83,7 +83,7 @@ template:
                   - rtgl-view#action-item-dialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg=dialogue wh=24:
                       - rtgl-text s=sm: ${preview.dialogue.name}
-              - $if preview.choice:
+              - $if preview.choice && preview.choice.items:
                   - rtgl-view#action-item-choices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=p pv=md:
                       - rtgl-svg svg=choices wh=24:
                       - rtgl-view d=v:
