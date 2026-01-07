@@ -383,14 +383,14 @@ export const createProjectService = ({ router, filePicker }) => {
     exportProject(projectData, files) {
       return createBundle(projectData, files);
     },
-    async downloadBundle(bundle, filename, options = {}) {
+    async downloadBundle(bundle, filename) {
       await filePicker.saveFilePicker(
         new Blob([bundle], { type: "application/octet-stream" }),
         filename,
       );
       return filename; // In web, we don't get a path back
     },
-    async createDistributionZip(bundle, zipName, options = {}) {
+    async createDistributionZip(bundle, zipName) {
       const zip = new JSZip();
       zip.file("package.bin", bundle);
 
