@@ -57,7 +57,7 @@ https://github.com/user-attachments/assets/d8c114a2-ae29-47db-902e-bdaa6acaa6bb
 
 - [ ] [High] @Nghia When removing items it's not immediately updated on state page properly and sometimes evn on the section page
 
-- [ ] [High] @nellow Unresponsive Scene layout, it's very buggy as shown in the below video
+- [x] [High] @nellow Unresponsive Scene layout, it's very buggy as shown in the below video
 Steps to reproduce
 
 https://github.com/user-attachments/assets/85eacfb9-a18f-4e11-86f0-57c992acc591
