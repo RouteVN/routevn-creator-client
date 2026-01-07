@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { resetState } from "./constants";
+import { resetState } from "./tweens.constants";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, getRefIds } = deps;
