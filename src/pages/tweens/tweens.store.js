@@ -483,13 +483,11 @@ export const selectIsGraphicsServiceInitialized = ({ state }) => {
   return state.isGraphicsServiceInitialized;
 };
 
-
 // Helper function to create render state with animations
 export const createAnimationRenderState = (
   properties,
   includeAnimations = true,
 ) => {
-
   const animations = [];
   if (includeAnimations && properties && Object.keys(properties).length > 0) {
     for (const [property, config] of Object.entries(properties)) {

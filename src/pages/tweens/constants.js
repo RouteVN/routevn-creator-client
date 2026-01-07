@@ -4,7 +4,6 @@ const BG_COLOR = "#4a4a4a";
 const PREVIEW_RECT_WIDTH = 200;
 const PREVIEW_RECT_HEIGHT = 200;
 
-
 const resetState = {
   elements: [
     {
@@ -31,4 +30,4 @@ const resetState = {
   animations: [],
 };
 
-export {resetState}
+export { resetState };
