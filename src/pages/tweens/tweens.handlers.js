@@ -1,20 +1,5 @@
 import { nanoid } from "nanoid";
-
-// Constants for preview rendering (used in handleReplayAnimation)
-const resetState = {
-  elements: [
-    {
-      id: "bg",
-      type: "rect",
-      x: 0,
-      y: 0,
-      width: 1920,
-      height: 1080,
-      fill: "#4a4a4a",
-    },
-  ],
-  transitions: [],
-};
+import { resetState } from "./constants";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, getRefIds } = deps;
@@ -478,6 +463,7 @@ export const handleReplayAnimation = async (deps) => {
 
   setTimeout(() => {
     const renderState = store.selectAnimationRenderStateWithAnimations();
+    console.log(renderState);
     graphicsService.render(renderState);
   }, 100);
 };
