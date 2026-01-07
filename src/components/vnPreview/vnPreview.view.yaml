@@ -12,4 +12,4 @@ refs: {}
 
 template:
   - 'rtgl-view pos=fix w=100vw h=100vh style="left: 0; top: 0;" z=3500':
-      - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex;"':
+      - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex; background: black; justify-content: center;"':
