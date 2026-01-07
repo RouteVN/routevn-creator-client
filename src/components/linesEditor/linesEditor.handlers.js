@@ -72,31 +72,68 @@ const findLastLinePosition = (element, goalColumn) => {
   return finalPosition;
 };
 
+// Helper function to get selection range, handling Shadow DOM with getComposedRanges
+const getSelectionRange = (element) => {
+  const shadowRoot = element.getRootNode();
+  const isShadowRoot = shadowRoot instanceof ShadowRoot;
+
+  let selection = window.getSelection();
+
+  // Try shadowRoot.getSelection() first for Shadow DOM (non-standard but works in some browsers)
+  if (isShadowRoot && typeof shadowRoot.getSelection === "function") {
+    const shadowSelection = shadowRoot.getSelection();
+    if (shadowSelection && shadowSelection.rangeCount > 0) {
+      const range = shadowSelection.getRangeAt(0);
+      if (element.contains(range.startContainer)) {
+        return range;
+      }
+    }
+  }
+
+  if (!selection || selection.rangeCount === 0) return null;
+
+  // Use getComposedRanges for Shadow DOM (Safari 17+, Chrome 137+, Firefox 142+)
+  if (isShadowRoot && typeof selection.getComposedRanges === "function") {
+    try {
+      const ranges = selection.getComposedRanges(shadowRoot);
+      if (ranges.length > 0) {
+        const staticRange = ranges[0];
+
+        // Validate that the range is actually inside our element
+        // On some browsers (Windows Chrome), getComposedRanges may return body instead of actual element
+        if (element.contains(staticRange.startContainer)) {
+          // Convert StaticRange to Range (StaticRange doesn't have getBoundingClientRect)
+          const range = document.createRange();
+          range.setStart(staticRange.startContainer, staticRange.startOffset);
+          range.setEnd(staticRange.endContainer, staticRange.endOffset);
+          return range;
+        }
+      }
+    } catch (e) {
+      // getComposedRanges not supported, fall through to fallback
+    }
+  }
+
+  // Fallback to regular getRangeAt
+  const range = selection.getRangeAt(0);
+  if (element.contains(range.startContainer)) {
+    return range;
+  }
+
+  return null;
+};
+
 // Helper function to get cursor position in contenteditable
 const getCursorPosition = (element) => {
   if (!element) {
     return 0;
   }
 
-  // For Shadow DOM, we need to get the selection from the shadow root
-  let selection = window.getSelection();
-  let shadowRoot = element.getRootNode();
+  const range = getSelectionRange(element);
+  if (!range) return 0;
 
-  // Check if we're in a shadow DOM
-  if (shadowRoot && shadowRoot.getSelection) {
-    selection = shadowRoot.getSelection();
-  }
-
-  if (!selection || selection.rangeCount === 0) return 0;
-
-  const range = selection.getRangeAt(0);
-
-  // Check if the selection is actually within our element
-  if (!element.contains(range.startContainer)) {
-    return 0;
-  }
-
-  const preCaretRange = range.cloneRange();
+  // For StaticRange (from getComposedRanges), we need to create a new range
+  const preCaretRange = document.createRange();
   preCaretRange.selectNodeContents(element);
   preCaretRange.setEnd(range.endContainer, range.endOffset);
   const position = preCaretRange.toString().length;
@@ -105,19 +142,8 @@ const getCursorPosition = (element) => {
 
 // Helper function to check if cursor is on the first line of contenteditable
 const isCursorOnFirstLine = (element) => {
-  // Get shadow root for selection if needed
-  let selection = window.getSelection();
-  let shadowRoot = element.getRootNode();
-
-  // Check if we're in a shadow DOM
-  if (shadowRoot && shadowRoot.getSelection) {
-    selection = shadowRoot.getSelection();
-  }
-
-  if (!selection || selection.rangeCount === 0) return false;
-
-  const range = selection.getRangeAt(0);
-  if (!element.contains(range.startContainer)) return false;
+  const range = getSelectionRange(element);
+  if (!range) return false;
 
   // Get the bounding rectangle of the cursor position
   const cursorRect = range.getBoundingClientRect();
@@ -164,20 +190,6 @@ const isCursorOnFirstLine = (element) => {
 
 // Helper function to check if cursor is on the last line of contenteditable
 const isCursorOnLastLine = (element) => {
-  // Get shadow root for selection if needed
-  let selection = window.getSelection();
-  let shadowRoot = element.getRootNode();
-
-  // Check if we're in a shadow DOM
-  if (shadowRoot && shadowRoot.getSelection) {
-    selection = shadowRoot.getSelection();
-  }
-
-  if (!selection || selection.rangeCount === 0) return false;
-
-  const range = selection.getRangeAt(0);
-  if (!element.contains(range.startContainer)) return false;
-
   // First, check if the element has multiple visual lines
   const elementHeight = element.scrollHeight;
   const lineHeight =
@@ -188,6 +200,9 @@ const isCursorOnLastLine = (element) => {
     // Single line content - always navigate to next editor on ArrowDown
     return true;
   }
+
+  const range = getSelectionRange(element);
+  if (!range) return false;
 
   // Get the bounding rectangle of the cursor position
   const cursorRect = range.getBoundingClientRect();
@@ -716,17 +731,6 @@ export const handleLineKeyDown = (deps, payload) => {
         // In text-editor mode, check if cursor is on last line
         const isOnLastLine = isCursorOnLastLine(payload._event.currentTarget);
 
-        console.log("[linesEditor] ArrowDown in text-editor mode:", {
-          lineId: payload._event.currentTarget.id,
-          isOnLastLine,
-          elementHeight: payload._event.currentTarget.scrollHeight,
-          lineHeight: parseFloat(
-            window.getComputedStyle(payload._event.currentTarget).lineHeight,
-          ),
-          textContent:
-            payload._event.currentTarget.textContent.substring(0, 50) + "...",
-        });
-
         if (isOnLastLine) {
           // Cursor is on last line, move to next line
           payload._event.preventDefault();
@@ -945,16 +949,25 @@ export const updateSelectedLine = (deps, payload) => {
     foundNode = true;
   }
 
-  if (foundNode && selection) {
-    selection.removeAllRanges();
-    selection.addRange(range);
+  // Now focus - this must happen before setting selection in Shadow DOM
+  lineRef.elm.focus({ preventScroll: true });
+
+  // After focus, set the selection using setBaseAndExtent which works better with Shadow DOM
+  if (foundNode) {
+    // Re-get selection after focus - this is important for Shadow DOM
+    selection = window.getSelection();
+
+    // Use setBaseAndExtent instead of addRange - works better in Shadow DOM
+    selection.setBaseAndExtent(
+      range.startContainer,
+      range.startOffset,
+      range.endContainer,
+      range.endOffset,
+    );
 
     // Update the current cursor position in store to reflect where we actually landed
     store.setCursorPosition(actualPosition);
   }
-
-  // Now focus - the selection should be preserved
-  lineRef.elm.focus({ preventScroll: true });
 };
 
 export const handleOnFocus = (deps, payload) => {
@@ -1008,15 +1021,11 @@ export const handleLineBlur = (deps, payload) => {
   const { store, render, getRefIds } = deps;
 
   // Capture element references before the timeout
-  const blurredLineId = payload._event.currentTarget.id;
   const blurredElement = payload._event.currentTarget;
   const shadowRoot = blurredElement.getRootNode();
 
-  console.log("[linesEditor] Blur event triggered on line:", blurredLineId);
-
   // Check if we're navigating between lines - if so, don't switch to block mode
   if (store.selectIsNavigating()) {
-    console.log("[linesEditor] Blur during navigation, skipping mode switch");
     return;
   }
 
@@ -1026,13 +1035,6 @@ export const handleLineBlur = (deps, payload) => {
     const actualActiveElement =
       (shadowRoot && shadowRoot.activeElement) || activeElement;
 
-    console.log("[linesEditor] Blur check:", {
-      previousLineId: blurredLineId,
-      newActiveElement: actualActiveElement?.id || "none",
-      isLineElement: actualActiveElement?.id?.startsWith("line-") || false,
-      currentMode: store.selectMode(),
-    });
-
     // Check if focus moved to another line within the editor
     if (
       actualActiveElement &&
@@ -1040,9 +1042,6 @@ export const handleLineBlur = (deps, payload) => {
       actualActiveElement.id.startsWith("line-")
     ) {
       // Focus moved to another line, stay in text-editor mode
-      console.log(
-        "[linesEditor] Focus moved to another line, staying in text-editor mode",
-      );
       return;
     }
 
@@ -1054,9 +1053,6 @@ export const handleLineBlur = (deps, payload) => {
       actualActiveElement === container ||
       !container?.contains(actualActiveElement)
     ) {
-      console.log(
-        "[linesEditor] Focus left lines or moved to container, switching to block mode",
-      );
       store.setMode("block");
 
       // Focus the container to enable block mode navigation
@@ -1065,9 +1061,6 @@ export const handleLineBlur = (deps, payload) => {
       }
 
       render();
-    } else {
-      // Focus is somewhere else within the editor (not a line, not the container)
-      console.log("[linesEditor] Focus still within editor but not on a line");
     }
   }, 0);
 };

@@ -116,11 +116,22 @@ export const handleSoundItemClick = async (deps, payload) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
-  const successfulUploads = await projectService.uploadFiles(files);
+  let successfulUploads;
+  try {
+    successfulUploads = await projectService.uploadFiles(files);
+  } catch {
+    await appService.showDialog({
+      title: "Unsupported Format",
+      message:
+        "The audio file format is not supported. Please use MP3, WAV, or OGG (Windows only) files.",
+      confirmText: "OK",
+    });
+    return;
+  }
 
   // Add all items to repository
   for (const result of successfulUploads) {
@@ -175,10 +186,16 @@ export const handleFormExtraEvent = async (deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await projectService.uploadFiles([file]);
-
-  if (uploadedFiles.length === 0) {
-    console.error("File upload failed, no files uploaded");
+  let uploadedFiles;
+  try {
+    uploadedFiles = await projectService.uploadFiles([file]);
+  } catch {
+    await appService.showDialog({
+      title: "Unsupported Format",
+      message:
+        "The audio file format is not supported. Please use MP3, WAV, or OGG (Windows only) files.",
+      confirmText: "OK",
+    });
     return;
   }
 

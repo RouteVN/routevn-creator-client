@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "RouteVN Creator",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "identifier": "com.routevn.creator",
   "build": {
     "frontendDist": "../_site",
@@ -84,7 +84,23 @@
       "icons/icon.ico"
     ],
     "createUpdaterArtifacts": true,
-    "licenseFile": "assets/LICENSE.txt"
+    "licenseFile": "assets/LICENSE.txt",
+    "macOS": {
+      "dmg": {
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
+    }
   },
   "plugins": {
     "updater": {
