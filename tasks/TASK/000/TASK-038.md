@@ -36,7 +36,8 @@ assignee: anyone
 - [ ] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good)
 - [ ] [High] @nellow Scene editor, choice is not forcing people to choose. You can click on the textbox to ignore the choice completely
 - [ ] [Low] Scene editor, can't choose which section to start the preview from
-- [ ] [High] @Nghia Choice is still not working
+- [X] [High] @Nghia Choice is still not working
+- [ ] [High] @Nghia The vn-preview is not covering the whole screen.
 - [ ] [High] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately
 - [ ] [Low] In scene editor, the arrow only correct between scenes whenever there is an arrow from one scene to another
 
