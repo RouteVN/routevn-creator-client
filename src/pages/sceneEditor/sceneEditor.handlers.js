@@ -149,7 +149,7 @@ export const handleSectionTabClick = (deps, payload) => {
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
-  const { store, render, projectService, graphicsService } = deps;
+  const { store, render, projectService, subject, graphicsService } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -218,9 +218,11 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   const state = projectService.getState();
   store.setRepositoryState(state);
+  render();
 
-  // Update presentation state synchronously before render to ensure
-  // the dialog shows the latest state when reopened
+  // Trigger debounced canvas render
+  //subject.dispatch("sceneEditor.renderCanvas", {});
+
   await renderSceneState(store, graphicsService);
 
   render();
