@@ -357,7 +357,7 @@
               "imageId": "iN20__bg4TaS80gh7-XcL"
             },
             "character-name": {
-              "type": "text",
+              "type": "text-ref-character-name",
               "name": "Character Name",
               "x": 40,
               "y": 30,
@@ -368,14 +368,13 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "${dialogue.character.name}",
               "typographyId": "typography-character-name",
               "style": {
                 "align": "left"
               }
             },
             "dialogue-content": {
-              "type": "text",
+              "type": "text-revealing-ref-dialogue-content",
               "name": "Dialogue Content",
               "x": 40,
               "y": 110,
@@ -386,7 +385,6 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "${dialogue.content[0].text}",
               "displaySpeed": 100,
               "typographyId": "typography-text-view",
               "style": {
