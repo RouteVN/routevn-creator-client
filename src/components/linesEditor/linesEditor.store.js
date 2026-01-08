@@ -145,8 +145,7 @@ export const selectViewData = ({ state, props }) => {
       bgm = {};
       if (line.actions.bgm.resourceId) {
         bgm.resourceId = line.actions.bgm.resourceId;
-      }
-      else bgm = undefined;
+      } else bgm = undefined;
     }
 
     // Check for SFX
@@ -231,7 +230,7 @@ export const selectViewData = ({ state, props }) => {
       hasBase,
     };
   });
-  console.log("Lines: ",lines)
+  console.log("Lines: ", lines);
   return {
     lines,
     selectedLineId: props.selectedLineId,

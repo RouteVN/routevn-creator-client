@@ -1128,7 +1128,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
     ...selectedLine,
     actions: newActions,
   };
-  console.log("Updated line: ", updatedLine)
+  console.log("Updated line: ", updatedLine);
   // Save directly to repository - this will update the state
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -1147,7 +1147,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   // Update store with new repository state
   const state = projectService.getState();
   store.setRepositoryState(state);
-  console.log("Updated stated after deletion: ",state)
+  console.log("Updated stated after deletion: ", state);
   // Trigger re-render
   render();
 
