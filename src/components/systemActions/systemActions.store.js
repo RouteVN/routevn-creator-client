@@ -183,7 +183,8 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.character?.items) {
     actionsObject.character = actions.character;
     preview.character = actions.character.items.map((char) => {
-      const character = repositoryStateData.characters?.items?.[char.characterId];
+      const character =
+        repositoryStateData.characters?.items?.[char.characterId];
       let sprite = {};
 
       if (char.sprites?.[0]?.imageId && character?.sprites) {
@@ -212,8 +213,7 @@ export const selectActionsData = ({ props, state }) => {
 
   if (actions.dialogue) {
     actionsObject.dialogue = actions.dialogue;
-    preview.dialogue =
-      layoutsTree.items[actions.dialogue.gui?.resourceId];
+    preview.dialogue = layoutsTree.items[actions.dialogue.gui?.resourceId];
   }
 
   if (actions.choice) {
