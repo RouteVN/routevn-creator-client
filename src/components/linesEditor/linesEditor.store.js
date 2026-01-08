@@ -114,7 +114,7 @@ export const selectViewData = ({ state, props }) => {
           })
           .filter((char) => char.fileId); // Only keep characters with valid sprites
       } else {
-        characterSprites = [];
+        characterSprites = undefined;
       }
     }
 
@@ -146,6 +146,7 @@ export const selectViewData = ({ state, props }) => {
       if (line.actions.bgm.resourceId) {
         bgm.resourceId = line.actions.bgm.resourceId;
       }
+      else bgm = undefined;
     }
 
     // Check for SFX
@@ -230,7 +231,7 @@ export const selectViewData = ({ state, props }) => {
       hasBase,
     };
   });
-
+  console.log("Lines: ",lines)
   return {
     lines,
     selectedLineId: props.selectedLineId,
