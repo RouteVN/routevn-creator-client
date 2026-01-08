@@ -133,6 +133,13 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleDataChanged = async (deps) => {
+  const { store, projectService, render } = deps;
+  const state = projectService.getState();
+  store.setRepositoryState(state);
+  render();
+};
+
 export const handleSectionTabClick = (deps, payload) => {
   const { store, render, subject } = deps;
   const id = payload._event.currentTarget.id.replace("section-tab-", "");
@@ -221,6 +228,44 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   render();
 
   // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
+};
+
+export const handleActionsChange = async (deps, payload) => {
+  const { store, projectService, subject, render } = deps;
+  const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+  const lineId = store.selectSelectedLineId();
+
+  if (!sceneId || !sectionId || !lineId) {
+    console.error("Cannot update actions: no line selected.");
+    return;
+  }
+
+  // Get the complete existing actions for the current line
+  const selectedLine = store.selectSelectedLine();
+  const existingActions = selectedLine?.actions || {};
+
+  // The payload.detail contains the new action, e.g., { character: { ... } }
+  const newAction = payload._event.detail;
+
+  // Manually merge the new action data into the existing actions
+  const mergedActions = { ...existingActions, ...newAction };
+
+  await projectService.appendEvent({
+    type: "set",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+      value: mergedActions,
+      options: { replace: true }, // Replace the entire actions object with the new merged one
+    },
+  });
+
+  // Manually trigger a data refresh and render cycle
+  await handleDataChanged(deps);
+  render();
+
+  // Trigger a debounced canvas render to reflect the changes
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 

@@ -14,10 +14,10 @@ export const handleAfterMount = async (deps) => {
   // Use presentationState if available, otherwise fall back to character prop
   let characterItems = null;
 
-  if (props?.presentationState?.character?.items) {
-    characterItems = props.presentationState.character.items;
-  } else if (props?.character?.items) {
+  if (props?.character?.items) {
     characterItems = props.character.items;
+  } else if (props?.presentationState?.character?.items) {
+    characterItems = props.presentationState.character.items;
   }
 
   if (!characterItems) {

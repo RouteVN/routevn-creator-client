@@ -125,7 +125,7 @@ export const setMode = (state, payload) => {
 
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
-  const { actions, presentationState = {} } = props;
+  const { actions } = props;
 
   if (!actions) {
     return {};
@@ -142,11 +142,10 @@ export const selectActionsData = ({ props, state }) => {
   const actionsObject = {};
   const preview = {};
 
-  if (presentationState.background) {
-    const backgroundImage = images[presentationState.background.resourceId];
-    const backgroundLayout =
-      layoutsTree.items?.[presentationState.background.resourceId];
-    actionsObject.background = presentationState.background;
+  if (actions.background) {
+    const backgroundImage = images[actions.background.resourceId];
+    const backgroundLayout = layoutsTree.items?.[actions.background.resourceId];
+    actionsObject.background = actions.background;
     if (backgroundImage) {
       preview.background = { ...backgroundImage, type: "image" };
     } else if (backgroundLayout) {
@@ -154,14 +153,14 @@ export const selectActionsData = ({ props, state }) => {
     }
   }
 
-  if (presentationState.layout) {
-    actionsObject.layout = presentationState.layout;
-    preview.layout = layoutsTree.items[presentationState.layout.resourceId];
+  if (actions.layout) {
+    actionsObject.layout = actions.layout;
+    preview.layout = layoutsTree.items[actions.layout.resourceId];
   }
 
-  if (presentationState.bgm) {
-    actionsObject.bgm = presentationState.bgm;
-    preview.bgm = sounds[presentationState.bgm.resourceId];
+  if (actions.bgm) {
+    actionsObject.bgm = actions.bgm;
+    preview.bgm = sounds[actions.bgm.resourceId];
   }
 
   // Sound Effects
@@ -181,10 +180,10 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  if (presentationState.character?.items) {
-    actionsObject.character = presentationState.character;
-    preview.character = presentationState.character.items.map((char) => {
-      const character = repositoryStateData.characters?.items?.[char.id];
+  if (actions.character?.items) {
+    actionsObject.character = actions.character;
+    preview.character = actions.character.items.map((char) => {
+      const character = repositoryStateData.characters?.items?.[char.characterId];
       let sprite = {};
 
       if (char.sprites?.[0]?.imageId && character?.sprites) {
@@ -211,10 +210,10 @@ export const selectActionsData = ({ props, state }) => {
     }
   }
 
-  if (presentationState.dialogue) {
-    actionsObject.dialogue = presentationState.dialogue;
+  if (actions.dialogue) {
+    actionsObject.dialogue = actions.dialogue;
     preview.dialogue =
-      layoutsTree.items[presentationState.dialogue.gui?.resourceId];
+      layoutsTree.items[actions.dialogue.gui?.resourceId];
   }
 
   if (actions.choice) {
@@ -225,9 +224,9 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  if (presentationState.base) {
-    actionsObject.base = presentationState.base;
-    preview.base = layoutsTree.items[presentationState.base.resourceId];
+  if (actions.base) {
+    actionsObject.base = actions.base;
+    preview.base = layoutsTree.items[actions.base.resourceId];
   }
 
   // Next Line

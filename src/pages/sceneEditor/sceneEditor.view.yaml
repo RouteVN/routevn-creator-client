@@ -64,12 +64,10 @@ refs:
         handler: handleActionsDialogClose
   system-actions:
     eventListeners:
-      submit:
-        handler: handleCommandLineSubmit
       action-delete:
         handler: handleSystemActionsActionDelete
       actions-change:
-        handler: handleCommandLineSubmit
+        handler: handleActionsChange
   back-button:
     eventListeners:
       click:
