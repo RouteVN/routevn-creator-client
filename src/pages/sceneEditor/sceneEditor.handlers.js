@@ -218,7 +218,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   const state = projectService.getState();
   store.setRepositoryState(state);
-  render();
+  //render();
 
   // Trigger debounced canvas render
   //subject.dispatch("sceneEditor.renderCanvas", {});

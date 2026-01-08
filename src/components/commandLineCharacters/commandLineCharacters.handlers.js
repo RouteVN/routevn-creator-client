@@ -119,8 +119,8 @@ export const handleSubmitClick = (deps) => {
   const characterData = {
     character: {
       items: selectedCharacters.map((char) => ({
-        id: char.id, // This is the unique instance ID (nanoid)
-        characterId: char.characterId, // This is the character resource ID
+        id: char.id,
+        characterId: char.characterId, 
         transformId: char.transformId,
         sprites: char.sprites || [],
       })),
