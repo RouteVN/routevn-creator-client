@@ -171,7 +171,9 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
       const sprite = toFlatItems(characterData.sprites).find(
         (s) => s.id === spriteId,
       );
-      spriteFileId = sprite?.fileId;
+      if (sprite) {
+        spriteFileId = sprite.fileId;
+      }
     }
 
     return {
