@@ -74,6 +74,8 @@ error -> `Uncaught TypeError: s is not iterable`
   - We should remove all text styling before pasting. The text input should not be styled by anything
   - Should think of how it handles new lines. 
 
+- [ ] [Medium] For the Scene Map. Arrows are automatically added when scenes have transitions. However it is not added for choices with transitions. It should apply for choices with transitions as well.
+
 ---
 
 ## UX Problems
