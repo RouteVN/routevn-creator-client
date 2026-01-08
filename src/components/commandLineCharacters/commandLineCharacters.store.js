@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "insieme";
+import { nanoid } from "nanoid";
 
 export const createInitialState = () => ({
   mode: "current",
@@ -47,7 +48,8 @@ export const addCharacter = (state, payload) => {
 
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
-    id: payload.id,
+    id: nanoid(),
+    characterId: payload.id,
     transformId: defaultTransform,
     sprites: [],
     spriteName: "",
@@ -145,12 +147,15 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
 
   return state.selectedCharacters.map((char) => {
     // Find the character data from repository
-    const characterData = characterItems.find((item) => item.id === char.id);
+    const characterData = characterItems.find(
+      (item) => item.id === char.characterId,
+    );
 
     if (!characterData) {
       // Return a minimal character object if repository data is missing
       return {
         id: char.id,
+        characterId: char.characterId,
         name: "Unknown Character",
         transformId: char.transformId,
         spriteId: char.sprites?.[0]?.resourceId,
@@ -172,6 +177,8 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
 
     return {
       ...characterData,
+      id: char.id, // Override with unique instance ID
+      characterId: char.characterId,
       transformId: char.transformId,
       spriteId: char.sprites?.[0]?.resourceId,
       spriteFileId: spriteFileId,

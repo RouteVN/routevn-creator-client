@@ -76,7 +76,7 @@ template:
               - rtgl-form#form .form=form .defaultValues=defaultValues:
                   - rtgl-view#characters-container slot=characters g=md w=f cur=p:
                       - $for character, i in defaultValues.characters:
-                          - rtgl-view#character-${character.id}-${i}  d=h g=md av=t bgc=ac p=md br=md w=f:
+                          - rtgl-view#character-${character.id}-${i} key=${character.id} d=h g=md av=t bgc=ac p=md br=md w=f:
                               - rtgl-view g=sm:
                                   - $if character.spriteFileId:
                                       - rvn-file-image fileId=${character.spriteFileId} w=120 h=120 br=sm:
