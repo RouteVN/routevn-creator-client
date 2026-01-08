@@ -67,6 +67,15 @@ https://github.com/user-attachments/assets/85eacfb9-a18f-4e11-86f0-57c992acc591
 error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [Medium] Add arrow for the choices as well
+
+- [ ] [High] When in the transform we set a custom scaleX and scaleY. we apply the transform in the scene editor for characters. it does not work. the with and height is still the same. expected: width and height of character sprite should be updated based on the scaleX and scaleY
+
+- [ ] [High] When we copy some rich text. And then try to paste it into the scene editor text. The text input gets messed up. Correct behavior:
+  - We should remove all text styling before pasting. The text input should not be styled by anything
+  - Should think of how it handles new lines. 
+
+- [ ] [Medium] For the Scene Map. Arrows are automatically added when scenes have transitions. However it is not added for choices with transitions. It should apply for choices with transitions as well.
+
 ---
 
 ## UX Problems
@@ -74,6 +83,7 @@ error -> `Uncaught TypeError: s is not iterable`
 - [ ] [Low] On character we need to be able to layer pictures like expressions or other things which is not supported in the client
 - [ ] [Low] On the sounds page, when playing audio, can make the slider more visible so it's intent is clear
 - [ ] [Low] User can benefit from keyboard actions, like delete to delete, f2 to rename, and other stuff which is not here in the creator
+- [ ] [High] Scene editor, on the right of the preview button. There should be an icon to mute/unmute. mute/unmute should apply to: bgm, sfx. propose how to implmement mute (set volume to 0, remove bgm/sfx actions or what)
 
 ---
 
