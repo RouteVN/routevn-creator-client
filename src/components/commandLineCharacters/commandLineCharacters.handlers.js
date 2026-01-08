@@ -120,7 +120,7 @@ export const handleSubmitClick = (deps) => {
     character: {
       items: selectedCharacters.map((char) => ({
         id: char.id,
-        characterId: char.characterId, 
+        characterId: char.characterId,
         transformId: char.transformId,
         sprites: char.sprites || [],
       })),
