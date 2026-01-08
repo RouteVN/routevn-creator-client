@@ -123,6 +123,7 @@ export const handleSubmitClick = (deps) => {
         characterId: char.characterId,
         transformId: char.transformId,
         sprites: char.sprites || [],
+        spriteName: char.spriteName || "",
       })),
     },
   };

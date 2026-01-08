@@ -52,6 +52,7 @@ export const addCharacter = (state, payload) => {
     characterId: payload.id,
     transformId: defaultTransform,
     sprites: [],
+    spriteName: "",
   });
 };
 
@@ -73,6 +74,12 @@ export const updateCharacterSprite = (state, { index, spriteId }) => {
         resourceId: spriteId,
       },
     ];
+  }
+};
+
+export const updateCharacterSpriteName = (state, { index, spriteName }) => {
+  if (state.selectedCharacters[index]) {
+    state.selectedCharacters[index].spriteName = spriteName;
   }
 };
 
@@ -153,6 +160,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
         transformId: char.transformId,
         spriteId: char.sprites?.[0]?.resourceId,
         spriteFileId: undefined,
+        spriteName: char.spriteName || "",
       };
     }
 
@@ -171,6 +179,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
       transformId: char.transformId,
       spriteId: char.sprites?.[0]?.resourceId,
       spriteFileId: spriteFileId,
+      spriteName: char.spriteName || "",
     };
   });
 };
