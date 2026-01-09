@@ -244,9 +244,10 @@ export const handleEditorDataChanged = async (deps, payload) => {
     content,
   });
 
-  // Render the scene immediately with the updated content
-  // Trigger debounced canvas render
-  subject.dispatch("sceneEditor.renderCanvas", {});
+  // Trigger debounced canvas render with skipRender flag.
+  // skipRender prevents full UI re-render which would reset cursor position while typing.
+  // Typing only updates dialogue content, not presentationState, so State panel doesn't need to update.
+  subject.dispatch("sceneEditor.renderCanvas", { skipRender: true });
 };
 
 export const handleAddActionsButtonClick = (deps) => {
@@ -1069,9 +1070,12 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 };
 
 // Handler for debounced canvas rendering
-async function handleRenderCanvas(deps) {
-  const { store, graphicsService } = deps;
+async function handleRenderCanvas(deps, payload) {
+  const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
+  if (!payload?.skipRender) {
+    render();
+  }
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing
