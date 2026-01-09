@@ -212,7 +212,7 @@ export const handleAddSceneClick = (deps) => {
   const { store, render, getRefIds } = deps;
 
   const { whiteboard } = getRefIds();
-  console.log(whiteboard)
+  console.log(whiteboard);
   const container = whiteboard.elm;
   const containerRect = container.getBoundingClientRect();
 
@@ -226,7 +226,10 @@ export const handleAddSceneClick = (deps) => {
   const whiteboardY = (centerY - pan.y) / zoomLevel;
 
   store.setSceneFormData({ name: "", folderId: "_root" });
-  store.setSceneFormPosition({ x: window.innerWidth / 2, y: window.innerHeight - 150 });
+  store.setSceneFormPosition({
+    x: window.innerWidth / 2,
+    y: window.innerHeight - 150,
+  });
   store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
   store.setShowSceneForm(true);
   render();
