@@ -209,10 +209,26 @@ export const handleWhiteboardItemDoubleClick = (deps, payload) => {
 };
 
 export const handleAddSceneClick = (deps) => {
-  const { store, render } = deps;
+  const { store, render, getRefIds } = deps;
 
-  // Start waiting for transform
-  store.setWaitingForTransform(true);
+  const { whiteboard } = getRefIds();
+  console.log(whiteboard)
+  const container = whiteboard.elm;
+  const containerRect = container.getBoundingClientRect();
+
+  const pan = whiteboard.elm.store.selectPan();
+  const zoomLevel = whiteboard.elm.store.selectZoomLevel();
+
+  const centerX = containerRect.width / 2;
+  const centerY = containerRect.height / 2;
+
+  const whiteboardX = (centerX - pan.x) / zoomLevel;
+  const whiteboardY = (centerY - pan.y) / zoomLevel;
+
+  store.setSceneFormData({ name: "", folderId: "_root" });
+  store.setSceneFormPosition({ x: window.innerWidth / 2, y: window.innerHeight - 150 });
+  store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
+  store.setShowSceneForm(true);
   render();
 };
 
