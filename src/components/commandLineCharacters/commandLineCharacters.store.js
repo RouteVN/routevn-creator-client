@@ -59,9 +59,6 @@ export const removeCharacter = (state, index) => {
 };
 
 export const updateCharacterTransform = (state, { index, transform }) => {
-  console.log("Update transform: ",transform);
-  console.log("State in update transform: ",state);
-  console.log("Index of the character beign transformed: ",index)
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].transformId = transform;
   }
