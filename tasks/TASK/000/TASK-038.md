@@ -76,6 +76,8 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [Medium] For the Scene Map. Arrows are automatically added when scenes have transitions. However it is not added for choices with transitions. It should apply for choices with transitions as well.
 
+- [ ] [High] add adding animation to background, with tween fade in. and then you navigate around different lines, or preview it. the animation runs everytime you click. expected: it should run only once for that line
+
 ---
 
 ## UX Problems
