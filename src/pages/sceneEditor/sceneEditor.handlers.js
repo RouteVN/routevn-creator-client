@@ -218,16 +218,14 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   const state = projectService.getState();
   store.setRepositoryState(state);
-  render();
-
-  // Trigger debounced canvas render
-  subject.dispatch("sceneEditor.renderCanvas", {});
-
-  // I tried this which like causes the character to persist for some reason. The logs show the presentation state has the character but i didnt add it on
-  // line 3 it should only show at line 2
-  // await renderSceneState(store, graphicsService);
-
   // render();
+
+  // // Trigger debounced canvas render
+  // subject.dispatch("sceneEditor.renderCanvas", {});
+
+  await renderSceneState(store, graphicsService);
+
+  render();
 };
 
 export const handleEditorDataChanged = async (deps, payload) => {
