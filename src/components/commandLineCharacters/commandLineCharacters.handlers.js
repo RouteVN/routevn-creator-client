@@ -79,7 +79,7 @@ export const handleTransformChange = (deps, payload) => {
 
   // Extract index from ID (format: transform-{index})
   const index = parseInt(id.replace("transform-", ""));
-
+  console.log("Payload in handleTranformChange: ",payload);
   store.updateCharacterTransform({ index, transform: value });
   render();
 };
