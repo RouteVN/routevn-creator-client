@@ -671,13 +671,6 @@ export const handleLineNavigation = (deps, payload) => {
 
     // Force a render to update line colors after navigation
     setTimeout(() => {
-      render();
-      // Also render the linesEditor to update line colors
-      if (linesEditorRef) {
-        linesEditorRef.elm.render();
-      }
-
-      // Trigger debounced canvas render
       subject.dispatch("sceneEditor.renderCanvas", {});
     }, 0);
   } else if (direction === "up" && currentLineId === targetLineId) {
@@ -1071,11 +1064,20 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps, payload) {
-  const { store, graphicsService, render } = deps;
+  const { store, graphicsService, render, getRefIds } = deps;
   await renderSceneState(store, graphicsService);
-  if (!payload?.skipRender) {
-    render();
+
+  if (payload?.skipRender) {
+    return;
   }
+
+  const refIds = getRefIds();
+  const linesEditorRef = refIds?.["lines-editor"];
+  if (linesEditorRef?.elm?.store?.selectMode?.() === "text-editor") {
+    return;
+  }
+
+  render();
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing
