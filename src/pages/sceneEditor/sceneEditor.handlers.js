@@ -244,8 +244,9 @@ export const handleEditorDataChanged = async (deps, payload) => {
     content,
   });
 
-  // Render the scene immediately with the updated content
-  // Trigger debounced canvas render
+  // Trigger debounced canvas render with skipRender flag.
+  // skipRender prevents full UI re-render which would reset cursor position while typing.
+  // Typing only updates dialogue content, not presentationState, so State panel doesn't need to update.
   subject.dispatch("sceneEditor.renderCanvas", { skipRender: true });
 };
 
