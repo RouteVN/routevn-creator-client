@@ -222,7 +222,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   // Trigger debounced canvas render
   subject.dispatch("sceneEditor.renderCanvas", {});
-
 };
 
 export const handleEditorDataChanged = async (deps, payload) => {
