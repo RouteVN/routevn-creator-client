@@ -1068,8 +1068,10 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps) {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, subject  } = deps;
   await renderSceneState(store, graphicsService);
+  const presentationState = store.selectPresentationState();
+  subject.dispatch("updatePresentationState", presentationState);
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing

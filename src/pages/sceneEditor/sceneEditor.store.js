@@ -43,6 +43,10 @@ export const hidePreviewScene = (state) => {
   state.previewVisible = false;
 };
 
+export const selectPresentationState = ({ state }) => {
+  return state.presentationState;
+};
+
 export const setPresentationState = (state, presentationState) => {
   state.presentationState = presentationState;
 };

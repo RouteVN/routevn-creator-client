@@ -1,3 +1,4 @@
+import { filter, tap } from "rxjs";
 export const open = (deps, payload) => {
   const { store, render } = deps;
   const { mode } = payload;
@@ -116,4 +117,17 @@ export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
   render();
+};
+
+export const subscriptions = (deps) => {
+  const { subject, store, render } = deps;
+  return [
+    subject.pipe(
+      filter(({ action }) => action === "updatePresentationState"),
+      tap(({ payload }) => {
+        store.setLocalPresentationState(payload);
+        render();
+      }),
+    ),
+  ];
 };
