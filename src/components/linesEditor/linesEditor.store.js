@@ -27,7 +27,9 @@ function computeChanges(prevState, currentState, repositoryState) {
   }
   const currentChars = new Map();
   if (currentState.characters?.items) {
-    currentState.characters.items.forEach((char) => currentChars.set(char.id, char));
+    currentState.characters.items.forEach((char) =>
+      currentChars.set(char.id, char),
+    );
   }
 
   // Added characters
@@ -61,13 +63,16 @@ function computeChanges(prevState, currentState, repositoryState) {
   const prevBg = prevState.background;
   const currBg = currentState.background;
   if (prevBg && !currBg) {
-    const fileId = repositoryState?.images?.items?.[prevBg.resourceId]?.fileId || null;
+    const fileId =
+      repositoryState?.images?.items?.[prevBg.resourceId]?.fileId || null;
     changes.background = { type: "deleted", fileId };
   } else if (!prevBg && currBg) {
-    const fileId = repositoryState?.images?.items?.[currBg.resourceId]?.fileId || null;
+    const fileId =
+      repositoryState?.images?.items?.[currBg.resourceId]?.fileId || null;
     changes.background = { type: "added", fileId };
   } else if (prevBg && currBg && prevBg.resourceId !== currBg.resourceId) {
-    const fileId = repositoryState?.images?.items?.[currBg.resourceId]?.fileId || null;
+    const fileId =
+      repositoryState?.images?.items?.[currBg.resourceId]?.fileId || null;
     changes.background = { type: "updated", fileId };
   }
 
@@ -78,7 +83,11 @@ function computeChanges(prevState, currentState, repositoryState) {
     changes.dialogue = { type: "deleted" };
   } else if (!prevDialogue && currDialogue) {
     changes.dialogue = { type: "added" };
-  } else if (prevDialogue && currDialogue && prevDialogue.gui?.resourceId !== currDialogue.gui?.resourceId) {
+  } else if (
+    prevDialogue &&
+    currDialogue &&
+    prevDialogue.gui?.resourceId !== currDialogue.gui?.resourceId
+  ) {
     changes.dialogue = { type: "updated" };
   }
 
@@ -89,7 +98,11 @@ function computeChanges(prevState, currentState, repositoryState) {
     changes.base = { type: "deleted" };
   } else if (!prevBase && currBase) {
     changes.base = { type: "added" };
-  } else if (prevBase && currBase && prevBase.resourceId !== currBase.resourceId) {
+  } else if (
+    prevBase &&
+    currBase &&
+    prevBase.resourceId !== currBase.resourceId
+  ) {
     changes.base = { type: "updated" };
   }
 
@@ -238,7 +251,9 @@ export const selectViewData = ({ state, props }) => {
     let characterFileId;
     if (line.actions?.dialogue?.characterId) {
       const characters = toFlatItems(state.repositoryState.characters || []);
-      const character = characters.find((c) => c.id === line.actions.dialogue.characterId);
+      const character = characters.find(
+        (c) => c.id === line.actions.dialogue.characterId,
+      );
       if (character && character.fileId) {
         characterFileId = character.fileId;
       }
@@ -251,12 +266,16 @@ export const selectViewData = ({ state, props }) => {
     let hasSfx = false;
 
     // Section transitions
-    const sectionTransitionData = line.actions?.sectionTransition || line.actions?.actions?.sectionTransition;
+    const sectionTransitionData =
+      line.actions?.sectionTransition ||
+      line.actions?.actions?.sectionTransition;
     if (sectionTransitionData) {
       if (sectionTransitionData.sceneId) {
         sectionTransition = true;
         const allScenes = toFlatItems(state.repositoryState.scenes || []);
-        const targetScene = allScenes.find((scene) => scene.id === sectionTransitionData.sceneId);
+        const targetScene = allScenes.find(
+          (scene) => scene.id === sectionTransitionData.sceneId,
+        );
         transitionTarget = targetScene?.name || "Unknown Scene";
       } else if (sectionTransitionData.sectionId) {
         sectionTransition = true;
@@ -265,7 +284,9 @@ export const selectViewData = ({ state, props }) => {
         for (const scene of allScenes) {
           if (scene.sections) {
             const sections = toFlatItems(scene.sections);
-            const targetSection = sections.find((section) => section.id === sectionTransitionData.sectionId);
+            const targetSection = sections.find(
+              (section) => section.id === sectionTransitionData.sectionId,
+            );
             if (targetSection) {
               sectionName = targetSection.name || sectionName;
               break;
@@ -292,7 +313,8 @@ export const selectViewData = ({ state, props }) => {
       ...line,
       lineNumber: i + 1,
       lineColor: isSelected ? "fg" : "mu-fg",
-      backgroundColor: isSelected && isBlockMode ? "var(--muted)" : "transparent",
+      backgroundColor:
+        isSelected && isBlockMode ? "var(--muted)" : "transparent",
       characterFileId,
       changes,
       sectionTransition,
@@ -303,7 +325,7 @@ export const selectViewData = ({ state, props }) => {
     };
   });
 
-  console.log("Lines: ",lines)
+  console.log("Lines: ", lines);
 
   return {
     lines,
