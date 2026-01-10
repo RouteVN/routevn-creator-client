@@ -1,5 +1,157 @@
 import { toFlatItems } from "insieme";
 
+// Get character sprite fileId from presentation state character
+function getCharacterSpriteFileId(char, repositoryState) {
+  const character = repositoryState?.characters?.items?.[char.id];
+  if (char.sprites?.[0]?.imageId && character?.sprites) {
+    const spriteId = char.sprites[0].imageId;
+    return character.sprites?.items?.[spriteId]?.fileId;
+  }
+  return null;
+}
+
+// Compute changes between two presentation states
+function computeChanges(prevState, currentState, repositoryState) {
+  const changes = {
+    characters: { added: [], updated: [], deleted: [] },
+    background: null,
+    dialogue: null,
+    base: null,
+    bgm: null,
+  };
+
+  // Character changes
+  const prevChars = new Map();
+  if (prevState.characters?.items) {
+    prevState.characters.items.forEach((char) => prevChars.set(char.id, char));
+  }
+  const currentChars = new Map();
+  if (currentState.characters?.items) {
+    currentState.characters.items.forEach((char) => currentChars.set(char.id, char));
+  }
+
+  // Added characters
+  for (const [id, char] of currentChars) {
+    if (!prevChars.has(id)) {
+      const fileId = getCharacterSpriteFileId(char, repositoryState);
+      if (fileId) changes.characters.added.push({ id, fileId });
+    }
+  }
+
+  // Updated characters (sprite changed)
+  for (const [id, char] of currentChars) {
+    if (prevChars.has(id)) {
+      const prevChar = prevChars.get(id);
+      if (prevChar.sprites?.[0]?.imageId !== char.sprites?.[0]?.imageId) {
+        const fileId = getCharacterSpriteFileId(char, repositoryState);
+        if (fileId) changes.characters.updated.push({ id, fileId });
+      }
+    }
+  }
+
+  // Deleted characters
+  for (const [id, char] of prevChars) {
+    if (!currentChars.has(id)) {
+      const fileId = getCharacterSpriteFileId(char, repositoryState);
+      if (fileId) changes.characters.deleted.push({ id, fileId });
+    }
+  }
+
+  // Background changes
+  const prevBg = prevState.background;
+  const currBg = currentState.background;
+  if (prevBg && !currBg) {
+    const fileId = repositoryState?.images?.items?.[prevBg.resourceId]?.fileId || null;
+    changes.background = { type: "deleted", fileId };
+  } else if (!prevBg && currBg) {
+    const fileId = repositoryState?.images?.items?.[currBg.resourceId]?.fileId || null;
+    changes.background = { type: "added", fileId };
+  } else if (prevBg && currBg && prevBg.resourceId !== currBg.resourceId) {
+    const fileId = repositoryState?.images?.items?.[currBg.resourceId]?.fileId || null;
+    changes.background = { type: "updated", fileId };
+  }
+
+  // Dialogue changes
+  const prevDialogue = prevState.dialogue;
+  const currDialogue = currentState.dialogue;
+  if (prevDialogue && !currDialogue) {
+    changes.dialogue = { type: "deleted" };
+  } else if (!prevDialogue && currDialogue) {
+    changes.dialogue = { type: "added" };
+  } else if (prevDialogue && currDialogue && prevDialogue.gui?.resourceId !== currDialogue.gui?.resourceId) {
+    changes.dialogue = { type: "updated" };
+  }
+
+  // Base changes
+  const prevBase = prevState.base;
+  const currBase = currentState.base;
+  if (prevBase && !currBase) {
+    changes.base = { type: "deleted" };
+  } else if (!prevBase && currBase) {
+    changes.base = { type: "added" };
+  } else if (prevBase && currBase && prevBase.resourceId !== currBase.resourceId) {
+    changes.base = { type: "updated" };
+  }
+
+  // BGM changes
+  const prevBgm = prevState.bgm;
+  const currBgm = currentState.bgm;
+  if (prevBgm && !currBgm) {
+    changes.bgm = { type: "deleted" };
+  } else if (!prevBgm && currBgm) {
+    changes.bgm = { type: "added" };
+  } else if (prevBgm && currBgm && prevBgm.resourceId !== currBgm.resourceId) {
+    changes.bgm = { type: "updated" };
+  }
+
+  return changes;
+}
+
+// Apply line actions to presentation state
+function applyActionsToState(presentationState, actions) {
+  const newState = { ...presentationState };
+
+  // Characters - replace entire list
+  if (actions.character) {
+    if (actions.character.items && actions.character.items.length > 0) {
+      newState.characters = {
+        items: actions.character.items.map((char) => ({
+          id: char.id,
+          sprites: char.sprites || [],
+        })),
+      };
+    } else {
+      delete newState.characters;
+    }
+  }
+
+  // Background
+  if (actions.background) {
+    newState.background = actions.background;
+  }
+
+  // Dialogue
+  if (actions.dialogue) {
+    if (actions.dialogue.clear) {
+      delete newState.dialogue;
+    } else if (actions.dialogue.gui) {
+      newState.dialogue = actions.dialogue;
+    }
+  }
+
+  // Base
+  if (actions.base?.resourceId) {
+    newState.base = actions.base;
+  }
+
+  // BGM
+  if (actions.bgm) {
+    newState.bgm = actions.bgm;
+  }
+
+  return newState;
+}
+
 export const createInitialState = () => ({
   ready: false,
   mode: "block", // 'block' or 'text-editor'
@@ -59,74 +211,34 @@ export const selectNavigationDirection = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props }) => {
+  // Track running presentation state
+  let runningPresentationState = {};
+
   const lines = (props.lines || []).map((line, i) => {
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";
 
-    let background;
-    let bgm;
-    if (line.actions?.background) {
-      background = structuredClone(line.actions.background);
-      background.fileId =
-        state.repositoryState.images.items[background.resourceId]?.fileId;
-    }
+    // State before this line
+    const prevState = { ...runningPresentationState };
 
-    // Character sprites for display (characters shown on screen)
-    let characterSprites;
-    if (line.actions?.character) {
-      // Collect all character sprites
-      if (
-        line.actions.character.items &&
-        line.actions.character.items.length > 0
-      ) {
-        characterSprites = line.actions.character.items
-          ?.map((char) => {
-            const character =
-              state.repositoryState.characters?.items?.[char.id];
-            let spriteFileId = null;
+    // Apply this line's actions
+    runningPresentationState = applyActionsToState(
+      runningPresentationState,
+      line.actions || {},
+    );
 
-            if (char.sprites && char.sprites.length > 0 && character?.sprites) {
-              const firstSprite = char.sprites[0];
-              if (firstSprite.imageId) {
-                // First try to get from character sprites
-                const flatSprites = toFlatItems(character.sprites);
-                const sprite = flatSprites.find(
-                  (s) => s.id === firstSprite.imageId,
-                );
-                if (sprite?.fileId) {
-                  spriteFileId = sprite.fileId;
-                } else if (
-                  state.repositoryState.images?.items?.[firstSprite.imageId]
-                ) {
-                  // Fallback to images repository
-                  spriteFileId =
-                    state.repositoryState.images.items[firstSprite.imageId]
-                      .fileId;
-                }
-              }
-            }
+    // Compute changes
+    const changes = computeChanges(
+      prevState,
+      runningPresentationState,
+      state.repositoryState,
+    );
 
-            return {
-              characterId: char.id,
-              characterName: character?.name || "Unknown",
-              fileId: spriteFileId,
-            };
-          })
-          .filter((char) => char.fileId); // Only keep characters with valid sprites
-      } else {
-        characterSprites = [];
-      }
-    }
-
-    // Dialogue character icon (who is speaking)
+    // Dialogue character icon
     let characterFileId;
     if (line.actions?.dialogue?.characterId) {
-      // Get character data from repository
       const characters = toFlatItems(state.repositoryState.characters || []);
-      const character = characters.find(
-        (c) => c.id === line.actions.dialogue.characterId,
-      );
-
+      const character = characters.find((c) => c.id === line.actions.dialogue.characterId);
       if (character && character.fileId) {
         characterFileId = character.fileId;
       }
@@ -137,99 +249,61 @@ export const selectViewData = ({ state, props }) => {
     let hasChoices;
     let choices;
     let hasSfx = false;
-    let hasDialogueLayout = false;
-    let hasBase = false;
 
-    // Check for BGM
-    if (line.actions?.bgm) {
-      bgm = {};
-      if (line.actions.bgm.resourceId) {
-        bgm.resourceId = line.actions.bgm.resourceId;
-      }
-    }
-
-    // Check for SFX
-    if (line.actions?.sfx?.items && line.actions.sfx.items.length > 0) {
-      hasSfx = true;
-    }
-
-    // Check for Dialogue Layout
-    if (
-      line.actions?.dialogue?.gui?.resourceId ||
-      line.actions?.dialogue?.clear
-    ) {
-      hasDialogueLayout = true;
-    }
-
-    // Check for Base
-    if (line.actions?.base?.resourceId) {
-      hasBase = true;
-    }
-
-    // Handle both nested and non-nested structures
-    const sectionTransitionData =
-      line.actions?.sectionTransition ||
-      line.actions?.actions?.sectionTransition;
-
+    // Section transitions
+    const sectionTransitionData = line.actions?.sectionTransition || line.actions?.actions?.sectionTransition;
     if (sectionTransitionData) {
       if (sectionTransitionData.sceneId) {
         sectionTransition = true;
-        // Get scene name from repository
         const allScenes = toFlatItems(state.repositoryState.scenes || []);
-        const targetScene = allScenes.find(
-          (scene) => scene.id === sectionTransitionData.sceneId,
-        );
+        const targetScene = allScenes.find((scene) => scene.id === sectionTransitionData.sceneId);
         transitionTarget = targetScene?.name || "Unknown Scene";
       } else if (sectionTransitionData.sectionId) {
         sectionTransition = true;
-        // Get section name from the scene that contains this section
         const allScenes = toFlatItems(state.repositoryState.scenes || []);
         let sectionName = "Unknown Section";
-
-        // Find the section across all scenes
         for (const scene of allScenes) {
           if (scene.sections) {
             const sections = toFlatItems(scene.sections);
-            const targetSection = sections.find(
-              (section) => section.id === sectionTransitionData.sectionId,
-            );
+            const targetSection = sections.find((section) => section.id === sectionTransitionData.sectionId);
             if (targetSection) {
               sectionName = targetSection.name || sectionName;
               break;
             }
           }
         }
-
         transitionTarget = sectionName;
       }
     }
 
-    // Handle choices
+    // Choices
     const choicesData = line.actions?.choice || line.actions?.actions?.choice;
     if (choicesData && choicesData.items && choicesData.items.length > 0) {
       hasChoices = true;
       choices = choicesData.items;
     }
 
+    // SFX
+    if (line.actions?.sfx?.items && line.actions.sfx.items.length > 0) {
+      hasSfx = true;
+    }
+
     return {
       ...line,
       lineNumber: i + 1,
       lineColor: isSelected ? "fg" : "mu-fg",
-      background,
-      bgm,
-      backgroundColor:
-        isSelected && isBlockMode ? "var(--muted)" : "transparent",
+      backgroundColor: isSelected && isBlockMode ? "var(--muted)" : "transparent",
       characterFileId,
-      characterSprites,
+      changes,
       sectionTransition,
       transitionTarget,
       hasChoices,
       choices,
       hasSfx,
-      hasDialogueLayout,
-      hasBase,
     };
   });
+
+  console.log("Lines: ",lines)
 
   return {
     lines,

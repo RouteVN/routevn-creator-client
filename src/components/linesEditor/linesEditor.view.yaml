@@ -85,25 +85,69 @@ template:
                                           - rtgl-text s=sm: "• ${choice.content}"
 
                       - rtgl-view d=h:
-                          - $if line.background:
-                              - rtgl-view#preview-background data-type="background" data-id="${line.id}":
-                                  - $if line.background.fileId:
-                                      - rvn-file-image w=36 h=24 fileId=${line.background.fileId} mr=sm:
-                                    $else:
-                                      - rtgl-svg svg=image wh=24:
-                          - $if line.characterSprites:
-                              - rtgl-view#preview-character data-type="character" data-id="${line.id}":
-                                  - $if line.characterSprites.length > 0:
-                                      - rtgl-view d=h mr=sm:
-                                          - $for sprite in line.characterSprites:
-                                              - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
-                                    $else:
-                                      - rtgl-svg svg=character wh=24:
-                          - $if line.hasDialogueLayout:
-                              - rtgl-svg#preview-dialogue data-type="dialogue" data-id="${line.id}" svg="dialogue" wh=24 mr=sm:
-                          - $if line.hasBase:
-                              - rtgl-svg#preview-base data-type="base" data-id="${line.id}" svg="screen" wh=24 mr=sm:
-                          - $if line.bgm:
-                              - rtgl-svg#preview-bgm data-type="bgm" data-id="${line.id}" svg="music" wh=24 mr=sm:
+                          # Background
+                          - $if line.changes.background:
+                              - $if line.changes.background.type == 'deleted':
+                                  - 'rtgl-view#preview-background data-type="background" data-id="${line.id}" pos=rel d=v':
+                                      - $if line.changes.background.fileId:
+                                          - rvn-file-image w=36 h=24 fileId=${line.changes.background.fileId} mr=sm:
+                                        $else:
+                                          - rtgl-svg svg=image wh=24:
+                                      - 'rtgl-svg svg="x-close" wh=14 pos=abs cor=c':
+                                $else:
+                                  - rtgl-view#preview-background data-type="background" data-id="${line.id}" d=h:
+                                      - $if line.changes.background.fileId:
+                                          - rvn-file-image w=36 h=24 fileId=${line.changes.background.fileId} mr=sm:
+                                        $else:
+                                          - rtgl-svg svg=image wh=24:
+
+                          # Characters added
+                          - $if line.changes.characters.added.length > 0:
+                              - rtgl-view#preview-character data-type="character" data-id="${line.id}" d=h mr=sm:
+                                  - $for sprite in line.changes.characters.added:
+                                      - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
+
+                          # Characters updated
+                          - $if line.changes.characters.updated.length > 0:
+                              - rtgl-view#preview-character data-type="character" data-id="${line.id}" d=h mr=sm:
+                                  - $for sprite in line.changes.characters.updated:
+                                      - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
+
+                          # Characters deleted
+                          - $if line.changes.characters.deleted.length > 0:
+                              - 'rtgl-view#preview-character data-type="character" data-id="${line.id}" d=h mr=sm pos=rel':
+                                  - $for sprite in line.changes.characters.deleted:
+                                      - rtgl-view d=v pos=rel:
+                                          - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
+                                          - 'rtgl-svg svg="x-close" wh=14 pos=abs cor=c':
+
+                          # Dialogue
+                          - $if line.changes.dialogue:
+                              - $if line.changes.dialogue.type == 'deleted':
+                                  - 'rtgl-view pos=rel d=v':
+                                      - rtgl-svg#preview-dialogue data-type="dialogue" data-id="${line.id}" svg="dialogue" wh=24 mr=sm:
+                                      - 'rtgl-svg svg="x-close" wh=14 pos=abs cor=c':
+                                $else:
+                                  - rtgl-svg#preview-dialogue data-type="dialogue" data-id="${line.id}" svg="dialogue" wh=24 mr=sm:
+
+                          # Base
+                          - $if line.changes.base:
+                              - $if line.changes.base.type == 'deleted':
+                                  - 'rtgl-view pos=rel d=v':
+                                      - rtgl-svg#preview-base data-type="base" data-id="${line.id}" svg="screen" wh=24 mr=sm:
+                                      - 'rtgl-svg svg="x-close" wh=14 pos=abs cor=c':
+                                $else:
+                                  - rtgl-svg#preview-base data-type="base" data-id="${line.id}" svg="screen" wh=24 mr=sm:
+
+                          # BGM
+                          - $if line.changes.bgm:
+                              - $if line.changes.bgm.type == 'deleted':
+                                  - 'rtgl-view pos=rel d=v':
+                                      - rtgl-svg#preview-bgm data-type="bgm" data-id="${line.id}" svg="music" wh=24 mr=sm:
+                                      - 'rtgl-svg svg="x-close" wh=14 pos=abs cor=c':
+                                $else:
+                                  - rtgl-svg#preview-bgm data-type="bgm" data-id="${line.id}" svg="music" wh=24 mr=sm:
+
+                          # SFX (always show, no change detection)
                           - $if line.hasSfx:
                               - rtgl-svg#preview-sfx data-type="sfx" data-id="${line.id}" svg="audio" wh=24:
