@@ -37,7 +37,7 @@ assignee: anyone
 - [ ] [High] @nellow Scene editor, choice is not forcing people to choose. You can click on the textbox to ignore the choice completely
 - [ ] [Low] Scene editor, can't choose which section to start the preview from
 - [X] [High] @Nghia Choice is still not working
-- [ ] [High] @Nghia The vn-preview is not covering the whole screen.
+- [X] [High] @Nghia The vn-preview is not covering the whole screen.
 - [ ] [High] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately
 - [ ] [Low] In scene editor, the arrow only correct between scenes whenever there is an arrow from one scene to another
 
@@ -75,6 +75,8 @@ error -> `Uncaught TypeError: s is not iterable`
   - Should think of how it handles new lines. 
 
 - [ ] [Medium] For the Scene Map. Arrows are automatically added when scenes have transitions. However it is not added for choices with transitions. It should apply for choices with transitions as well.
+
+- [ ] [High] add adding animation to background, with tween fade in. and then you navigate around different lines, or preview it. the animation runs everytime you click. expected: it should run only once for that line
 
 ---
 
