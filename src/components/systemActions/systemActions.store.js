@@ -86,7 +86,6 @@ export const setLocalPresentationState = (state, presentationState) => {
   state.localPresentationState = presentationState;
 };
 
-
 export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
@@ -132,7 +131,8 @@ export const setMode = (state, payload) => {
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
   const { actions } = props;
-  const presentationState = state.localPresentationState ?? props.presentationState ?? {};
+  const presentationState =
+    state.localPresentationState ?? props.presentationState ?? {};
 
   if (!actions) {
     return {};
