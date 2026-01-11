@@ -59,7 +59,7 @@ export const selectNavigationDirection = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props }) => {
-  console.log("Lines: ",props.lines)
+  console.log("Lines: ", props.lines);
   const lines = (props.lines || []).map((line, i) => {
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";
@@ -70,7 +70,7 @@ export const selectViewData = ({ state, props }) => {
       background = structuredClone(line.actions.background);
       background.fileId =
         state.repositoryState.images.items[background.resourceId]?.fileId;
-      console.log("Background: ",background)
+      console.log("Background: ", background);
     }
 
     // Character sprites for display (characters shown on screen)
@@ -86,10 +86,10 @@ export const selectViewData = ({ state, props }) => {
             const character =
               state.repositoryState.characters?.items?.[char.id];
             let spriteFileId = null;
-            console.log("Character: ",character)
+            console.log("Character: ", character);
             if (char.sprites && char.sprites.length > 0 && character?.sprites) {
               const firstSprite = char.sprites[0];
-              console.log("First sprite: ",firstSprite)
+              console.log("First sprite: ", firstSprite);
               if (firstSprite.resourceId) {
                 // First try to get from character sprites
                 const flatSprites = toFlatItems(character.sprites);
@@ -108,7 +108,7 @@ export const selectViewData = ({ state, props }) => {
                 }
               }
             }
-            console.log("Sprite fileId: ",spriteFileId)
+            console.log("Sprite fileId: ", spriteFileId);
             return {
               characterId: char.id,
               characterName: character?.name || "Unknown",
@@ -233,7 +233,7 @@ export const selectViewData = ({ state, props }) => {
       hasBase,
     };
   });
-  console.log("Lines after transforming: ",lines)
+  console.log("Lines after transforming: ", lines);
   return {
     lines,
     selectedLineId: props.selectedLineId,
