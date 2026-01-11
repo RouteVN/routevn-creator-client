@@ -59,6 +59,7 @@ export const selectNavigationDirection = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props }) => {
+  console.log("Lines: ",props.lines)
   const lines = (props.lines || []).map((line, i) => {
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";
@@ -69,6 +70,7 @@ export const selectViewData = ({ state, props }) => {
       background = structuredClone(line.actions.background);
       background.fileId =
         state.repositoryState.images.items[background.resourceId]?.fileId;
+      console.log("Background: ",background)
     }
 
     // Character sprites for display (characters shown on screen)
@@ -84,28 +86,29 @@ export const selectViewData = ({ state, props }) => {
             const character =
               state.repositoryState.characters?.items?.[char.id];
             let spriteFileId = null;
-
+            console.log("Character: ",character)
             if (char.sprites && char.sprites.length > 0 && character?.sprites) {
               const firstSprite = char.sprites[0];
-              if (firstSprite.imageId) {
+              console.log("First sprite: ",firstSprite)
+              if (firstSprite.resourceId) {
                 // First try to get from character sprites
                 const flatSprites = toFlatItems(character.sprites);
                 const sprite = flatSprites.find(
-                  (s) => s.id === firstSprite.imageId,
+                  (s) => s.id === firstSprite.resourceId,
                 );
                 if (sprite?.fileId) {
                   spriteFileId = sprite.fileId;
                 } else if (
-                  state.repositoryState.images?.items?.[firstSprite.imageId]
+                  state.repositoryState.images?.items?.[firstSprite.resourceId]
                 ) {
                   // Fallback to images repository
                   spriteFileId =
-                    state.repositoryState.images.items[firstSprite.imageId]
+                    state.repositoryState.images.items[firstSprite.resourceId]
                       .fileId;
                 }
               }
             }
-
+            console.log("Sprite fileId: ",spriteFileId)
             return {
               characterId: char.id,
               characterName: character?.name || "Unknown",
@@ -230,7 +233,7 @@ export const selectViewData = ({ state, props }) => {
       hasBase,
     };
   });
-
+  console.log("Lines after transforming: ",lines)
   return {
     lines,
     selectedLineId: props.selectedLineId,
