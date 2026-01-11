@@ -14,6 +14,7 @@ export const createInitialState = () => ({
     ],
   },
   repositoryState: {}, // Add this - default to empty object
+  localPresentationState: null,
 });
 
 export const selectViewData = ({ state, props, attrs }) => {
@@ -81,6 +82,10 @@ export const selectViewData = ({ state, props, attrs }) => {
   };
 };
 
+export const setLocalPresentationState = (state, presentationState) => {
+  state.localPresentationState = presentationState;
+};
+
 export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
@@ -125,7 +130,8 @@ export const setMode = (state, payload) => {
 
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
-  const { actions, presentationState = {} } = props;
+  const { actions } = props;
+  const presentationState = state.localPresentationState;
 
   if (!actions) {
     return {};
