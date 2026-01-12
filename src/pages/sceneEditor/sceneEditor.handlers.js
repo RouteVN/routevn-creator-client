@@ -1066,7 +1066,7 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
       },
     },
   });
-  subject.dispatch("sceneEditor.renderCanvas", {});
+  subject.dispatch("sceneEditor.renderCanvas", { skipRender: true });
 };
 
 // Handler for debounced canvas rendering
