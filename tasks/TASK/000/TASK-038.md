@@ -45,12 +45,12 @@ assignee: anyone
 
 ## Bugs
 
-- [ ] [High] @nellow when adding character on scene it's buggy and when deleting the character it's not properly deleting (or showing delete option where the character is not there) and not showing the option where the character is there
+- [x] [High] @nellow when adding character on scene it's buggy and when deleting the character it's not properly deleting (or showing delete option where the character is not there) and not showing the option where the character is there
 Steps to reproduce
 
 https://github.com/user-attachments/assets/2d8a30e4-8ffb-4123-8f18-4969150d3569
 
-- [ ] [High] @nellow Character immediately not updated on the scene page when i add on the same line with existing character
+- [x] [High] @nellow Character immediately not updated on the scene page when i add on the same line with existing character
 Steps to reproduce
 
 https://github.com/user-attachments/assets/d8c114a2-ae29-47db-902e-bdaa6acaa6bb
