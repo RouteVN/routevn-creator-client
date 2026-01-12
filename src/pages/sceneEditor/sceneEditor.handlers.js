@@ -1073,6 +1073,13 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 async function handleRenderCanvas(deps, payload) {
   const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
+
+  // Log presentation changes for the current line
+  const presentationChanges = graphicsService.engineSelectPresentationChanges();
+  const currentLineId = store.selectSelectedLineId();
+  const currentSectionId = store.selectSelectedSectionId();
+  console.log(`[Line Change] Section: ${currentSectionId}, Line: ${currentLineId}`, presentationChanges);
+
   if (!payload?.skipRender) {
     render();
   }
