@@ -36,6 +36,8 @@ refs:
       #   handler: handleBlockMouseDown
       mouseup:
         handler: handleLineMouseUp
+      paste:
+        handler: handleLinePaste
       # beforeinput:
       #   handler: handleBlockBeforeInput
       # compositionend:

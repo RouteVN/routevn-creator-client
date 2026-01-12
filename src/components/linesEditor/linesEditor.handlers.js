@@ -1018,6 +1018,36 @@ export const handleOnFocus = (deps, payload) => {
   render();
 };
 
+export const handleLinePaste = (deps, payload) => {
+  // const { dispatchEvent, store } = deps;
+  const event = payload._event;
+
+  event.preventDefault();
+
+  const lineId = event.target.id.replace(/^line-/, "");
+
+  const plainText = event.clipboardData.getData("text/plain");
+
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+
+  const textNode = document.createTextNode(plainText);
+  range.insertNode(textNode);
+
+  range.setStartAfter(textNode);
+  range.setEndAfter(textNode);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  const content = event.target.textContent;
+
+  const cursorPos = getCursorPosition(event.target);
+  // store.setCursorPosition(cursorPos);
+};
+
 export const handleLineBlur = (deps, payload) => {
   const { store, render, getRefIds } = deps;
 
