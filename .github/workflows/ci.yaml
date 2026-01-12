@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  lint-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,23 +17,12 @@ jobs:
       # Install dependencies from root
       - name: Install Dependencies
         run: bun install --frozen-lockfile
-
-      - name: Lint
-        run: bun run lint
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.2
-
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
       
       - name: Install Dependencies
         run: bun install -g rtgl
 
+      - name: Lint
+        run: bun run lint
+      
       - name: Build Web
         run: bun run build:web
