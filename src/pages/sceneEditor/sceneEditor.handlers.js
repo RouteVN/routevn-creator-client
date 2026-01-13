@@ -82,6 +82,25 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+// Seperate for asyn operation
+const initializeRouteGraphics = async (canvas, store, projectService, graphicsService) => {
+  await graphicsService.init({ canvas: canvas.elm });
+  const projectData = store.selectProjectData();
+
+
+  graphicsService.initRouteEngine(projectData);
+  // TODO don't load all data... only ones necessary for this scene
+  const fileReferences = extractFileIdsFromRenderState(projectData);
+  const assets = await createAssetsFromFileIds(
+    fileReferences,
+    projectService,
+    projectData.resources,
+  );
+  await graphicsService.loadAssets(assets);
+  // don't know why but it needs to be called twice the first time to work...
+  renderSceneState(store, graphicsService);
+}
+
 export const handleAfterMount = async (deps) => {
   const {
     getRefIds,
@@ -115,21 +134,8 @@ export const handleAfterMount = async (deps) => {
   }
 
   const { canvas } = getRefIds();
-  await graphicsService.init({ canvas: canvas.elm });
 
-  const projectData = store.selectProjectData();
-
-  graphicsService.initRouteEngine(projectData);
-  // TODO don't load all data... only ones necessary for this scene
-  const fileReferences = extractFileIdsFromRenderState(projectData);
-  const assets = await createAssetsFromFileIds(
-    fileReferences,
-    projectService,
-    projectData.resources,
-  );
-  await graphicsService.loadAssets(assets);
-  // don't know why but it needs to be called twice the first time to work...
-  renderSceneState(store, graphicsService);
+  initializeRouteGraphics(canvas, store, projectService, graphicsService);
   render();
 };
 
