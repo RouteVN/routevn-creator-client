@@ -13,8 +13,8 @@ assignee: anyone
 
 - [ ] [Low] The input to enter the width and height for the layout container are still annoying, and the popups are still not repoisitioning correctly when first click
 - [ ] [Low] The animation editor is confusing(it combine both left/right click to activate poup, it is better to be consistence with this)
-- [ ] [High] @Nghia Somehow animation preview is not working
-- [ ] [High] @Nghia Don't know if this is my computer problem, but whenever I click to other tabs for a while and return back to the client, it freeze for a solid 20 seconds or so.
+- [x] [High] @Nghia Somehow animation preview is not working
+- [x] [High] @Nghia Don't know if this is my computer problem, but whenever I click to other tabs for a while and return back to the client, it freeze for a solid 20 seconds or so. (Can't reproduce this error)
 - [ ] [Low] On the left layout, whenever there is no folder or file, it has "No items, Click to create a folder" text appears, it might be beeter to include a button here or highlight the text more to make people less confuse on how to create a folder
 - [ ] [Low] Having to go to another meny to change the character position on the screen is really anoying
 - [ ] [Low] Should add prevent default as it still functions like a browser
@@ -33,30 +33,30 @@ assignee: anyone
 
 - [ ] [Critical] @Nghia Scene Editor, when first create a new scene, it give me a black screen with only a plus symbol on the left, I can't click on the tabs at the top, because there were none, so I click on the plus symbol and it create another tab
 - [ ] [Medium] In the scene editor, if a line has too many text, it push the preview to the right.
-- [ ] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good)
+- [x] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good) (Can't reproduce the error)
 - [ ] [High] @nellow Scene editor, choice is not forcing people to choose. You can click on the textbox to ignore the choice completely
 - [ ] [Low] Scene editor, can't choose which section to start the preview from
-- [X] [High] @Nghia Choice is still not working
-- [X] [High] @Nghia The vn-preview is not covering the whole screen.
-- [ ] [High] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately
+- [x] [High] @Nghia Choice is still not working
+- [x] [High] @Nghia The vn-preview is not covering the whole screen.
+- [ ] [Low] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately (Luciano need to think more about UX)
 - [ ] [Low] In scene editor, the arrow only correct between scenes whenever there is an arrow from one scene to another
 
 ---
 
 ## Bugs
 
-- [ ] [High] @nellow when adding character on scene it's buggy and when deleting the character it's not properly deleting (or showing delete option where the character is not there) and not showing the option where the character is there
+- [x] [High] @nellow when adding character on scene it's buggy and when deleting the character it's not properly deleting (or showing delete option where the character is not there) and not showing the option where the character is there
 Steps to reproduce
 
 https://github.com/user-attachments/assets/2d8a30e4-8ffb-4123-8f18-4969150d3569
 
-- [ ] [High] @nellow Character immediately not updated on the scene page when i add on the same line with existing character
+- [x] [High] @nellow Character immediately not updated on the scene page when i add on the same line with existing character
 Steps to reproduce
 
 https://github.com/user-attachments/assets/d8c114a2-ae29-47db-902e-bdaa6acaa6bb
 
 
-- [ ] [High] @Nghia When removing items it's not immediately updated on state page properly and sometimes evn on the section page
+- [x] [High] @Nghia When removing items it's not immediately updated on state page properly and sometimes evn on the section page (duplicated)
 
 - [x] [High] @nellow Unresponsive Scene layout, it's very buggy as shown in the below video
 Steps to reproduce
@@ -68,7 +68,7 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [Medium] Add arrow for the choices as well
 
-- [ ] [High] When in the transform we set a custom scaleX and scaleY. we apply the transform in the scene editor for characters. it does not work. the with and height is still the same. expected: width and height of character sprite should be updated based on the scaleX and scaleY
+- [x] [High] When in the transform we set a custom scaleX and scaleY. we apply the transform in the scene editor for characters. it does not work. the with and height is still the same. expected: width and height of character sprite should be updated based on the scaleX and scaleY
 
 - [ ] [High] When we copy some rich text. And then try to paste it into the scene editor text. The text input gets messed up. Correct behavior:
   - We should remove all text styling before pasting. The text input should not be styled by anything

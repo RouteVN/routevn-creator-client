@@ -20,7 +20,7 @@
     "jszip": "^3.10.1",
     "nanoid": "^5.1.5",
     "route-engine-js": "v0.1.19",
-    "route-graphics": "0.0.24",
+    "route-graphics": "0.0.26",
     "rxjs": "^7.8.2",
     "snabbdom": "^3.6.2",
     "snabbdom-to-html": "^7.1.0",
