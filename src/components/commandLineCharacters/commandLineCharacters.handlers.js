@@ -111,9 +111,9 @@ export const handleSubmitClick = (deps) => {
   const selectedCharacters = store.selectSelectedCharacters();
 
   // Only dispatch if there are characters to submit
-  if (selectedCharacters.length === 0) {
-    return;
-  }
+  // if (selectedCharacters.length === 0) {
+  //   return;
+  // }
 
   const characterData = {
     character: {

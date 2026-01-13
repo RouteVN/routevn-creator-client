@@ -88,6 +88,7 @@ async function updateSectionChanges(deps) {
   if (!sectionId) return;
 
   const changes = graphicsService.engineSelectSectionLineChanges({ sectionId });
+  console.log("[Section Changes]", changes);
   store.setSectionLineChanges(changes);
 }
 
