@@ -1078,7 +1078,10 @@ async function handleRenderCanvas(deps, payload) {
   const presentationChanges = graphicsService.engineSelectPresentationChanges();
   const currentLineId = store.selectSelectedLineId();
   const currentSectionId = store.selectSelectedSectionId();
-  console.log(`[Line Change] Section: ${currentSectionId}, Line: ${currentLineId}`, presentationChanges);
+  console.log(
+    `[Line Change] Section: ${currentSectionId}, Line: ${currentLineId}`,
+    presentationChanges,
+  );
 
   if (!payload?.skipRender) {
     render();
