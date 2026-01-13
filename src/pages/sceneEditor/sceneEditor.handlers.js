@@ -83,10 +83,14 @@ export const handleBeforeMount = (deps) => {
 };
 
 // Seperate for asyn operation
-const initializeRouteGraphics = async (canvas, store, projectService, graphicsService) => {
+const initializeRouteGraphics = async (
+  canvas,
+  store,
+  projectService,
+  graphicsService,
+) => {
   await graphicsService.init({ canvas: canvas.elm });
   const projectData = store.selectProjectData();
-
 
   graphicsService.initRouteEngine(projectData);
   // TODO don't load all data... only ones necessary for this scene
@@ -99,7 +103,7 @@ const initializeRouteGraphics = async (canvas, store, projectService, graphicsSe
   await graphicsService.loadAssets(assets);
   // don't know why but it needs to be called twice the first time to work...
   renderSceneState(store, graphicsService);
-}
+};
 
 export const handleAfterMount = async (deps) => {
   const {
