@@ -115,8 +115,8 @@ export const handleAfterMount = async (deps) => {
   }
 
   const { canvas } = getRefIds();
-  await graphicsService.init({ canvas: canvas.elm });
 
+  await graphicsService.init({ canvas: canvas.elm });
   const projectData = store.selectProjectData();
 
   graphicsService.initRouteEngine(projectData);
