@@ -59,122 +59,141 @@ export const selectNavigationDirection = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props }) => {
+  const sectionLineChanges = props.sectionLineChanges || {};
+  const changesLines = sectionLineChanges.lines || [];
+
   const lines = (props.lines || []).map((line, i) => {
     const isSelected = props.selectedLineId === line.id;
     const isBlockMode = state.mode === "block";
 
+    // Find changes for this line
+    const lineChanges = changesLines.find((change) => change.id === line.id);
+    const changes = lineChanges?.changes || {};
+
+    // Process background changes
     let background;
-    let bgm;
-    if (line.actions?.background) {
-      background = structuredClone(line.actions.background);
-      background.fileId =
-        state.repositoryState.images.items[background.resourceId]?.fileId;
+    if (changes.background) {
+      const bgData = changes.background.data || {};
+      background = {
+        changeType: changes.background.changeType,
+        resourceId: bgData.resourceId,
+        fileId:
+          state.repositoryState.images?.items?.[bgData.resourceId]?.fileId,
+      };
     }
 
-    // Character sprites for display (characters shown on screen)
+    // Process character changes
     let characterSprites;
-    if (line.actions?.character) {
-      // Collect all character sprites
-      if (
-        line.actions.character.items &&
-        line.actions.character.items.length > 0
-      ) {
-        characterSprites = line.actions.character.items
-          ?.map((char) => {
-            const character =
-              state.repositoryState.characters?.items?.[char.id];
-            let spriteFileId = null;
+    if (changes.character) {
+      const charData = changes.character.data || {};
+      if (charData.items && charData.items.length > 0) {
+        characterSprites = {
+          changeType: changes.character.changeType,
+          items: charData.items
+            .map((char) => {
+              const character =
+                state.repositoryState.characters?.items?.[char.id];
+              let spriteFileId = null;
 
-            if (char.sprites && char.sprites.length > 0 && character?.sprites) {
-              const firstSprite = char.sprites[0];
-              if (firstSprite.imageId) {
-                // First try to get from character sprites
-                const flatSprites = toFlatItems(character.sprites);
-                const sprite = flatSprites.find(
-                  (s) => s.id === firstSprite.imageId,
-                );
-                if (sprite?.fileId) {
-                  spriteFileId = sprite.fileId;
-                } else if (
-                  state.repositoryState.images?.items?.[firstSprite.imageId]
-                ) {
-                  // Fallback to images repository
-                  spriteFileId =
-                    state.repositoryState.images.items[firstSprite.imageId]
-                      .fileId;
+              if (
+                char.sprites &&
+                char.sprites.length > 0 &&
+                character?.sprites
+              ) {
+                const firstSprite = char.sprites[0];
+                if (firstSprite.resourceId) {
+                  const flatSprites = toFlatItems(character.sprites);
+                  const sprite = flatSprites.find(
+                    (s) => s.id === firstSprite.resourceId,
+                  );
+                  if (sprite?.fileId) {
+                    spriteFileId = sprite.fileId;
+                  } else if (
+                    state.repositoryState.images?.items?.[
+                      firstSprite.resourceId
+                    ]
+                  ) {
+                    spriteFileId =
+                      state.repositoryState.images.items[firstSprite.resourceId]
+                        .fileId;
+                  }
                 }
               }
-            }
 
-            return {
-              characterId: char.id,
-              characterName: character?.name || "Unknown",
-              fileId: spriteFileId,
-            };
-          })
-          .filter((char) => char.fileId); // Only keep characters with valid sprites
+              return {
+                characterId: char.id,
+                characterName: character?.name || "Unknown",
+                fileId: spriteFileId,
+              };
+            })
+            .filter((char) => char.fileId),
+        };
       } else {
-        characterSprites = [];
+        characterSprites = {
+          changeType: changes.character.changeType,
+          items: [],
+        };
       }
     }
 
-    // Dialogue character icon (who is speaking)
+    // Process BGM changes
+    let bgm;
+    if (changes.bgm) {
+      const bgmData = changes.bgm.data || {};
+      bgm = {
+        changeType: changes.bgm.changeType,
+        resourceId: bgmData.resourceId,
+      };
+    }
+
+    // Process SFX changes
+    let hasSfx = false;
+    let sfxChangeType;
+    if (changes.sfx) {
+      hasSfx = true;
+      sfxChangeType = changes.sfx.changeType;
+    }
+
+    // Process dialogue layout changes
+    let hasDialogueLayout = false;
+    let dialogueChangeType;
+    if (changes.dialogue) {
+      hasDialogueLayout = true;
+      dialogueChangeType = changes.dialogue.changeType;
+    }
+
+    // Process base changes
+    let hasBase = false;
+    let baseChangeType;
+    if (changes.base) {
+      hasBase = true;
+      baseChangeType = changes.base.changeType;
+    }
+
+    // Dialogue character icon (who is speaking) - still from line.actions
     let characterFileId;
     if (line.actions?.dialogue?.characterId) {
-      // Get character data from repository
       const characters = toFlatItems(state.repositoryState.characters || []);
       const character = characters.find(
         (c) => c.id === line.actions.dialogue.characterId,
       );
-
       if (character && character.fileId) {
         characterFileId = character.fileId;
       }
     }
 
+    // Section transitions and choices - still from line.actions
     let sectionTransition;
     let transitionTarget;
     let hasChoices;
     let choices;
-    let hasSfx = false;
-    let hasDialogueLayout = false;
-    let hasBase = false;
 
-    // Check for BGM
-    if (line.actions?.bgm) {
-      bgm = {};
-      if (line.actions.bgm.resourceId) {
-        bgm.resourceId = line.actions.bgm.resourceId;
-      }
-    }
-
-    // Check for SFX
-    if (line.actions?.sfx?.items && line.actions.sfx.items.length > 0) {
-      hasSfx = true;
-    }
-
-    // Check for Dialogue Layout
-    if (
-      line.actions?.dialogue?.gui?.resourceId ||
-      line.actions?.dialogue?.clear
-    ) {
-      hasDialogueLayout = true;
-    }
-
-    // Check for Base
-    if (line.actions?.base?.resourceId) {
-      hasBase = true;
-    }
-
-    // Handle both nested and non-nested structures
     const sectionTransitionData =
       line.actions?.sectionTransition ||
       line.actions?.actions?.sectionTransition;
-
     if (sectionTransitionData) {
       if (sectionTransitionData.sceneId) {
         sectionTransition = true;
-        // Get scene name from repository
         const allScenes = toFlatItems(state.repositoryState.scenes || []);
         const targetScene = allScenes.find(
           (scene) => scene.id === sectionTransitionData.sceneId,
@@ -182,11 +201,8 @@ export const selectViewData = ({ state, props }) => {
         transitionTarget = targetScene?.name || "Unknown Scene";
       } else if (sectionTransitionData.sectionId) {
         sectionTransition = true;
-        // Get section name from the scene that contains this section
         const allScenes = toFlatItems(state.repositoryState.scenes || []);
         let sectionName = "Unknown Section";
-
-        // Find the section across all scenes
         for (const scene of allScenes) {
           if (scene.sections) {
             const sections = toFlatItems(scene.sections);
@@ -199,12 +215,10 @@ export const selectViewData = ({ state, props }) => {
             }
           }
         }
-
         transitionTarget = sectionName;
       }
     }
 
-    // Handle choices
     const choicesData = line.actions?.choice || line.actions?.actions?.choice;
     if (choicesData && choicesData.items && choicesData.items.length > 0) {
       hasChoices = true;
@@ -226,8 +240,11 @@ export const selectViewData = ({ state, props }) => {
       hasChoices,
       choices,
       hasSfx,
+      sfxChangeType,
       hasDialogueLayout,
+      dialogueChangeType,
       hasBase,
+      baseChangeType,
     };
   });
 

@@ -23,6 +23,7 @@ export const createInitialState = () => ({
   previewVisible: false,
   previewSceneId: undefined,
   presentationState: {},
+  sectionLineChanges: {},
 });
 
 export const setSceneId = (state, sceneId) => {
@@ -45,6 +46,14 @@ export const hidePreviewScene = (state) => {
 
 export const setPresentationState = (state, presentationState) => {
   state.presentationState = presentationState;
+};
+
+export const setSectionLineChanges = (state, changes) => {
+  state.sectionLineChanges = changes;
+};
+
+export const selectSectionLineChanges = ({ state }) => {
+  return state.sectionLineChanges;
 };
 
 export const selectPreviewScene = ({ state }) => {
@@ -363,6 +372,7 @@ export const selectViewData = ({ state }) => {
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
     presentationState: state.presentationState,
+    sectionLineChanges: state.sectionLineChanges,
   };
 };
 

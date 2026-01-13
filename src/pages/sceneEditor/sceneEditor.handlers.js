@@ -82,6 +82,15 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+async function updateSectionChanges(deps) {
+  const { store, graphicsService } = deps;
+  const sectionId = store.selectSelectedSectionId();
+  if (!sectionId) return;
+
+  const changes = graphicsService.engineSelectSectionLineChanges({ sectionId });
+  store.setSectionLineChanges(changes);
+}
+
 export const handleAfterMount = async (deps) => {
   const {
     getRefIds,
@@ -130,10 +139,13 @@ export const handleAfterMount = async (deps) => {
   await graphicsService.loadAssets(assets);
   // don't know why but it needs to be called twice the first time to work...
   renderSceneState(store, graphicsService);
+
+  await updateSectionChanges(deps);
+
   render();
 };
 
-export const handleSectionTabClick = (deps, payload) => {
+export const handleSectionTabClick = async (deps, payload) => {
   const { store, render, subject } = deps;
   const id = payload._event.currentTarget.id.replace("section-tab-", "");
   store.setSelectedSectionId(id);
@@ -144,6 +156,9 @@ export const handleSectionTabClick = (deps, payload) => {
   } else {
     store.setSelectedLineId(undefined);
   }
+
+  await updateSectionChanges(deps);
+
   render();
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
@@ -1073,6 +1088,16 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
 async function handleRenderCanvas(deps, payload) {
   const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
+  await updateSectionChanges(deps);
+  // Log presentation changes for the current line
+  const presentationChanges = graphicsService.engineSelectPresentationChanges();
+  const currentLineId = store.selectSelectedLineId();
+  const currentSectionId = store.selectSelectedSectionId();
+  console.log(
+    `[Line Change] Section: ${currentSectionId}, Line: ${currentLineId}`,
+    presentationChanges,
+  );
+
   if (!payload?.skipRender) {
     render();
   }
