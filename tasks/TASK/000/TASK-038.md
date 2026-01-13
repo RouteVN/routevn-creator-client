@@ -38,7 +38,7 @@ assignee: anyone
 - [ ] [Low] Scene editor, can't choose which section to start the preview from
 - [x] [High] @Nghia Choice is still not working
 - [x] [High] @Nghia The vn-preview is not covering the whole screen.
-- [x] [Low] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately (Luciano need to think more about UX)
+- [ ] [Low] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately (Luciano need to think more about UX)
 - [ ] [Low] In scene editor, the arrow only correct between scenes whenever there is an arrow from one scene to another
 
 ---
