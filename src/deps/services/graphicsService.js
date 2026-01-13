@@ -113,6 +113,14 @@ export const createGraphicsService = async ({ subject }) => {
       return engine.selectPresentationState();
     },
 
+    engineSelectSectionLineChanges: (payload) => {
+      return engine.selectSectionLineChanges(payload);
+    },
+
+    engineSelectPresentationChanges: () => {
+      return engine.selectPresentationChanges();
+    },
+
     engineRenderCurrentState: () => {
       const renderState = engine.selectRenderState();
       console.log("renderState", renderState);
