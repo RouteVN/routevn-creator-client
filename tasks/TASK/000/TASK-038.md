@@ -13,7 +13,7 @@ assignee: anyone
 
 - [ ] [Low] The input to enter the width and height for the layout container are still annoying, and the popups are still not repoisitioning correctly when first click
 - [ ] [Low] The animation editor is confusing(it combine both left/right click to activate poup, it is better to be consistence with this)
-- [ ] [High] @Nghia Somehow animation preview is not working
+- [x] [High] @Nghia Somehow animation preview is not working
 - [ ] [High] @Nghia Don't know if this is my computer problem, but whenever I click to other tabs for a while and return back to the client, it freeze for a solid 20 seconds or so.
 - [ ] [Low] On the left layout, whenever there is no folder or file, it has "No items, Click to create a folder" text appears, it might be beeter to include a button here or highlight the text more to make people less confuse on how to create a folder
 - [ ] [Low] Having to go to another meny to change the character position on the screen is really anoying
@@ -36,9 +36,9 @@ assignee: anyone
 - [ ] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good)
 - [ ] [High] @nellow Scene editor, choice is not forcing people to choose. You can click on the textbox to ignore the choice completely
 - [ ] [Low] Scene editor, can't choose which section to start the preview from
-- [X] [High] @Nghia Choice is still not working
-- [X] [High] @Nghia The vn-preview is not covering the whole screen.
-- [ ] [High] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately
+- [x] [High] @Nghia Choice is still not working
+- [x] [High] @Nghia The vn-preview is not covering the whole screen.
+- [x] [Low] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately (Luciano need to think more about UX)
 - [ ] [Low] In scene editor, the arrow only correct between scenes whenever there is an arrow from one scene to another
 
 ---
@@ -56,7 +56,7 @@ Steps to reproduce
 https://github.com/user-attachments/assets/d8c114a2-ae29-47db-902e-bdaa6acaa6bb
 
 
-- [ ] [High] @Nghia When removing items it's not immediately updated on state page properly and sometimes evn on the section page
+- [x] [High] @Nghia When removing items it's not immediately updated on state page properly and sometimes evn on the section page (duplicated)
 
 - [x] [High] @nellow Unresponsive Scene layout, it's very buggy as shown in the below video
 Steps to reproduce
@@ -68,7 +68,7 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [Medium] Add arrow for the choices as well
 
-- [ ] [High] When in the transform we set a custom scaleX and scaleY. we apply the transform in the scene editor for characters. it does not work. the with and height is still the same. expected: width and height of character sprite should be updated based on the scaleX and scaleY
+- [x] [High] When in the transform we set a custom scaleX and scaleY. we apply the transform in the scene editor for characters. it does not work. the with and height is still the same. expected: width and height of character sprite should be updated based on the scaleX and scaleY
 
 - [ ] [High] When we copy some rich text. And then try to paste it into the scene editor text. The text input gets messed up. Correct behavior:
   - We should remove all text styling before pasting. The text input should not be styled by anything
