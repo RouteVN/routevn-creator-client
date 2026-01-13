@@ -14,7 +14,7 @@ assignee: anyone
 - [ ] [Low] The input to enter the width and height for the layout container are still annoying, and the popups are still not repoisitioning correctly when first click
 - [ ] [Low] The animation editor is confusing(it combine both left/right click to activate poup, it is better to be consistence with this)
 - [x] [High] @Nghia Somehow animation preview is not working
-- [ ] [High] @Nghia Don't know if this is my computer problem, but whenever I click to other tabs for a while and return back to the client, it freeze for a solid 20 seconds or so.
+- [x] [High] @Nghia Don't know if this is my computer problem, but whenever I click to other tabs for a while and return back to the client, it freeze for a solid 20 seconds or so. (Can't reproduce this error)
 - [ ] [Low] On the left layout, whenever there is no folder or file, it has "No items, Click to create a folder" text appears, it might be beeter to include a button here or highlight the text more to make people less confuse on how to create a folder
 - [ ] [Low] Having to go to another meny to change the character position on the screen is really anoying
 - [ ] [Low] Should add prevent default as it still functions like a browser
@@ -33,7 +33,7 @@ assignee: anyone
 
 - [ ] [Critical] @Nghia Scene Editor, when first create a new scene, it give me a black screen with only a plus symbol on the left, I can't click on the tabs at the top, because there were none, so I click on the plus symbol and it create another tab
 - [ ] [Medium] In the scene editor, if a line has too many text, it push the preview to the right.
-- [ ] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good)
+- [x] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good) (Can't reproduce the error)
 - [ ] [High] @nellow Scene editor, choice is not forcing people to choose. You can click on the textbox to ignore the choice completely
 - [ ] [Low] Scene editor, can't choose which section to start the preview from
 - [x] [High] @Nghia Choice is still not working
