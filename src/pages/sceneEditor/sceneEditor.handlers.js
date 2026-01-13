@@ -9,11 +9,6 @@ async function createAssetsFromFileIds(
   projectService,
   resources,
 ) {
-  console.log("CREATE ASSETS FROM FILE IDS");
-  console.log("File references: ", fileReferences);
-  console.log("Project service: ", projectService);
-  console.log("Project resources: ", resources);
-  console.log("-----");
   const { sounds, images, fonts = {} } = resources;
   const allItems = Object.entries({
     ...sounds,
