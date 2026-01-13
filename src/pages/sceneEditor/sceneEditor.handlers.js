@@ -124,7 +124,6 @@ export const handleAfterMount = async (deps) => {
   await graphicsService.init({ canvas: canvas.elm });
   const projectData = store.selectProjectData();
 
-
   graphicsService.initRouteEngine(projectData);
   // TODO don't load all data... only ones necessary for this scene
   const fileReferences = extractFileIdsFromRenderState(projectData);
