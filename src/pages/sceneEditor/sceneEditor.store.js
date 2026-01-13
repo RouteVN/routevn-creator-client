@@ -372,6 +372,7 @@ export const selectViewData = ({ state }) => {
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
     presentationState: state.presentationState,
+    sectionLineChanges: state.sectionLineChanges,
   };
 };
 

@@ -117,7 +117,7 @@ template:
                       # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
                       #     - rtgl-text s=sm: "<>"
                   - "rtgl-view w=f p=md sv":
-                      - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId:
+                      - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId .sectionLineChanges=sectionLineChanges:
                       - rtgl-view h=30vh:
           - rtgl-view w=1 h=f bgc=mu:
           - rtgl-view w=f:
