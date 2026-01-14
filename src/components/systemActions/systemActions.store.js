@@ -187,9 +187,14 @@ export const selectActionsData = ({ props, state }) => {
       const character = repositoryStateData.characters?.items?.[char.id];
       let sprite = {};
 
-      if (char.sprites?.[0]?.imageId && character?.sprites) {
-        const spriteId = char.sprites[0].imageId;
-        sprite.fileId = character.sprites?.items[spriteId]?.fileId;
+      if (char.sprites?.[0]?.resourceId && character?.sprites?.items) {
+        const spriteResourceId = char.sprites[0].resourceId;
+        const spriteResource = character.sprites.items[spriteResourceId];
+        if (spriteResource?.fileId) {
+          sprite.fileId = spriteResource.fileId;
+        }
+      } else if (character?.fileId) {
+        sprite.fileId = character.fileId;
       }
 
       return {
