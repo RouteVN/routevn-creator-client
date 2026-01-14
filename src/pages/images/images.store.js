@@ -39,6 +39,9 @@ export const createInitialState = () => ({
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
+  deleteWarningVisible: false,
+  deleteWarningItemId: undefined,
+  deleteWarningUsage: null,
 });
 
 export const setContext = (state, context) => {
@@ -81,6 +84,18 @@ export const showFullImagePreview = (state, { itemId }) => {
 export const hideFullImagePreview = (state) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
+};
+
+export const showDeleteWarning = (state, { itemId, usage }) => {
+  state.deleteWarningVisible = true;
+  state.deleteWarningItemId = itemId;
+  state.deleteWarningUsage = usage;
+};
+
+export const hideDeleteWarning = (state) => {
+  state.deleteWarningVisible = false;
+  state.deleteWarningItemId = undefined;
+  state.deleteWarningUsage = null;
 };
 
 export const selectViewData = ({ state }) => {
@@ -196,5 +211,8 @@ export const selectViewData = ({ state }) => {
     maxWidth,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    deleteWarningVisible: state.deleteWarningVisible,
+    deleteWarningItemId: state.deleteWarningItemId,
+    deleteWarningUsage: state.deleteWarningUsage,
   };
 };
