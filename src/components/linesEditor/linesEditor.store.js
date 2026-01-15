@@ -7,6 +7,7 @@ export const createInitialState = () => ({
   goalColumn: 0, // Remember the desired column when moving vertically
   isNavigating: false, // Flag to prevent cursor reset during navigation
   navigationDirection: null, // 'up', 'down', 'end', or null - for proper cursor positioning
+  isSplitting: false, // Flag to prevent concurrent split operations
   repositoryState: {},
 });
 
@@ -38,6 +39,10 @@ export const setNavigationDirection = (state, direction) => {
   state.navigationDirection = direction;
 };
 
+export const setIsSplitting = (state, isSplitting) => {
+  state.isSplitting = isSplitting;
+};
+
 export const selectMode = ({ state }) => {
   return state.mode;
 };
@@ -56,6 +61,10 @@ export const selectGoalColumn = ({ state }) => {
 
 export const selectNavigationDirection = ({ state }) => {
   return state.navigationDirection;
+};
+
+export const selectIsSplitting = ({ state }) => {
+  return state.isSplitting;
 };
 
 export const selectViewData = ({ state, props }) => {

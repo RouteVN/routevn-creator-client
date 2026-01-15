@@ -511,6 +511,9 @@ export const handleSplitLine = async (deps, payload) => {
 
       // Also render the linesEditor
       linesEditorRef.elm.render();
+
+      // Reset splitting flag after all operations complete
+      linesEditorRef.elm.store.setIsSplitting(false);
     }
   });
 

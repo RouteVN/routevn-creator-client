@@ -583,9 +583,18 @@ export const handleLineKeyDown = (deps, payload) => {
       break;
     case "Enter":
       if (mode === "text-editor") {
+        // Always prevent default first
         payload._event.preventDefault();
 
-        // Get current cursor position and text content
+        // Prevent concurrent split operations
+        if (store.selectIsSplitting()) {
+          return;
+        }
+
+        // Set splitting flag immediately to prevent concurrent operations
+        store.setIsSplitting(true);
+
+        // Get current cursor position and text content immediately
         const cursorPos = getCursorPosition(payload._event.currentTarget);
         const fullText = payload._event.currentTarget.textContent;
 
@@ -593,17 +602,16 @@ export const handleLineKeyDown = (deps, payload) => {
         const leftContent = fullText.substring(0, cursorPos);
         const rightContent = fullText.substring(cursorPos);
 
-        requestAnimationFrame(() => {
-          dispatchEvent(
-            new CustomEvent("splitLine", {
-              detail: {
-                lineId: id,
-                leftContent: leftContent,
-                rightContent: rightContent,
-              },
-            }),
-          );
-        });
+        // Dispatch immediately, not in requestAnimationFrame
+        dispatchEvent(
+          new CustomEvent("splitLine", {
+            detail: {
+              lineId: id,
+              leftContent: leftContent,
+              rightContent: rightContent,
+            },
+          }),
+        );
       }
       break;
     case "ArrowUp":
