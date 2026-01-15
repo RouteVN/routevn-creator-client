@@ -209,5 +209,13 @@ export const selectViewData = ({ state }) => {
     deleteWarningVisible: state.deleteWarningVisible,
     deleteWarningItemId: state.deleteWarningItemId,
     deleteWarningUsage: state.deleteWarningUsage,
+    deleteIncludeProps: state.deleteWarningUsage
+      ? Object.entries(state.deleteWarningUsage.inProps || {}).map(
+          ([name, usages]) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            count: Array.isArray(usages) ? usages.length : 0,
+          }),
+        )
+      : [],
   };
 };

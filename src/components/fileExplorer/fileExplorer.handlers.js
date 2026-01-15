@@ -3,6 +3,7 @@ import {
   recursivelyCheckResource,
   SCENE_RESOURCE_KEYS,
   LAYOUT_RESOURCE_KEYS,
+  TYPOGRAPHY_RESOURCE_KEYS,
 } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
@@ -197,10 +198,13 @@ export const handleFileAction = async (deps, payload) => {
     if (currentItem) {
       let usage = {
         isUsed: false,
-        inProps: { scene: [], layout: [] },
+        inProps: {},
         count: 0,
       };
-      if (currentItem.type === "character") {
+
+      const resourceType = currentItem.type; 
+
+      if (resourceType === "character") {
         if (currentItem && currentItem.sprites && currentItem.sprites.items) {
           for (const spriteId of Object.keys(currentItem.sprites.items)) {
             const sceneUsages = recursivelyCheckResource(
@@ -214,6 +218,8 @@ export const handleFileAction = async (deps, payload) => {
               LAYOUT_RESOURCE_KEYS,
             );
             if (sceneUsages.length > 0 || layoutUsages.length > 0) {
+              usage.inProps.scene = usage.inProps.scene || [];
+              usage.inProps.layout = usage.inProps.layout || [];
               usage.inProps.scene.push(...sceneUsages);
               usage.inProps.layout.push(...layoutUsages);
               usage.count += sceneUsages.length + layoutUsages.length;
@@ -221,6 +227,39 @@ export const handleFileAction = async (deps, payload) => {
             }
           }
         }
+      } else if (resourceType === "layouts") {
+        const sceneUsages = recursivelyCheckResource(
+          state.scenes,
+          itemId,
+          SCENE_RESOURCE_KEYS,
+        );
+        usage = {
+          inProps: { scene: sceneUsages },
+          isUsed: sceneUsages.length > 0,
+          count: sceneUsages.length,
+        };
+      } else if (resourceType === "typography") {
+        const layoutUsages = recursivelyCheckResource(
+          state.layouts,
+          itemId,
+          LAYOUT_RESOURCE_KEYS,
+        );
+        usage = {
+          inProps: { layout: layoutUsages },
+          isUsed: layoutUsages.length > 0,
+          count: layoutUsages.length,
+        };
+      } else if (resourceType === "color" || resourceType === "font") {
+        const typographyUsages = recursivelyCheckResource(
+          state.typography,
+          itemId,
+          TYPOGRAPHY_RESOURCE_KEYS,
+        );
+        usage = {
+          inProps: { typography: typographyUsages },
+          isUsed: typographyUsages.length > 0,
+          count: typographyUsages.length,
+        };
       } else {
         const sceneUsages = recursivelyCheckResource(
           state.scenes,

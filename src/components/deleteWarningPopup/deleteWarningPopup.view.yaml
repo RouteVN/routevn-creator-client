@@ -1,0 +1,44 @@
+elementName: rvn-delete-warning-popup
+
+propsSchema:
+  type: object
+  properties:
+    isOpen:
+      type: boolean
+      description: Whether the dialog is open
+    includeProps:
+      type: array
+      description: Array of {name, count} objects showing where the resource is used
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          count:
+            type: number
+
+viewDataSchema:
+  type: object
+  properties:
+    isOpen:
+      type: boolean
+    includeProps:
+      type: array
+    totalCount:
+      type: number
+
+refs:
+  warning-deletion-dialog:
+    eventListeners:
+      close:
+        handler: handleClose
+
+template:
+  - rtgl-dialog#warning-deletion-dialog ?open=${isOpen} s=sm:
+    - rtgl-view slot=content g=md p=lg d=v:
+      - rtgl-text s=lg fw=bold c=dg: Cannot Delete Resource
+      - rtgl-text s=sm c=dg: This resource is currently in use and cannot be deleted.
+      - rtgl-view d=v g=xs mt=md:
+        - rtgl-text s=xs c=mu-fg: Used in ${totalCount} place(s)
+        - $for prop in includeProps:
+          - rtgl-text s=xs c=mu-fg: ${prop.name} ${prop.count}

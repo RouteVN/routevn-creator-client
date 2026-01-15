@@ -180,6 +180,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   render();
 };
 
+export const handleHideDeleteWarning = async (deps) => {
+  const { store, render } = deps;
+  console.log("Hiding delete warning");
+  store.hideDeleteWarning();
+  render();
+}
+
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({

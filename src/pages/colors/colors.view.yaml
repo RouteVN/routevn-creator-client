@@ -58,9 +58,9 @@ refs:
     eventListeners:
       action-click:
         handler: handleAddFormAction
-  delete-warning:
+  delete-warning-popup:
     eventListeners:
-      close:
+      close-delete-warning-popup:
         action: hideDeleteWarning
 
 template:
@@ -83,10 +83,4 @@ template:
       - rtgl-form#edit-form key=${isEditDialogOpen} slot=content .defaultValues=editDefaultValues .form=editForm:
   - rtgl-dialog#add-color-dialog ?open=${isAddDialogOpen} s=sm:
       - rtgl-form#add-color-form key=${isAddDialogOpen} slot=content .defaultValues=addDefaultValues .form=addForm w=f:
-  - rtgl-dialog#delete-warning ?open=${deleteWarningVisible} s=sm:
-    - rtgl-view slot=content g=md p=lg d=v:
-        - rtgl-text s=lg fw=bold c=dg: Cannot Delete Color
-        - rtgl-text s=sm c=dg: This color is currently in use and cannot be deleted.
-        - rtgl-view d=v g=xs mt=md:
-            - rtgl-text s=xs c=mu-fg: Used in ${deleteWarningUsage.count} place(s)
-            - rtgl-text s=xs c=mu-fg: Typography ${deleteWarningUsage.inProps.typography.length}
+  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

@@ -18,11 +18,21 @@ export const hideDeleteWarning = (state) => {
 };
 
 export const selectViewData = ({ props, state }) => {
+  const deleteIncludeProps = state.deleteWarningUsage
+    ? Object.entries(state.deleteWarningUsage.inProps || {}).map(
+        ([name, usages]) => ({
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          count: Array.isArray(usages) ? usages.length : 0,
+        }),
+      )
+    : [];
+
   return {
     items: props.items || [],
     contextMenuItems: props.contextMenuItems,
     emptyContextMenuItems: props.emptyContextMenuItems,
     deleteWarningVisible: state.deleteWarningVisible,
     deleteWarningUsage: state.deleteWarningUsage,
+    deleteIncludeProps,
   };
 };

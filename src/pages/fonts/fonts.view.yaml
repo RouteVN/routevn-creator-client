@@ -54,9 +54,9 @@ refs:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
-  delete-warning:
+  delete-warning-popup:
     eventListeners:
-      close:
+      close-delete-warning-popup:
         action: hideDeleteWarning
 
 template:
@@ -90,10 +90,4 @@ template:
                 $else:
                   - rtgl-view d=v av=c ah=c h=200:
                       - rtgl-text c=mu-fg: Loading...
-  - rtgl-dialog#delete-warning ?open=${deleteWarningVisible} s=sm:
-    - rtgl-view slot=content g=md p=lg d=v:
-        - rtgl-text s=lg fw=bold c=dg: Cannot Delete Font
-        - rtgl-text s=sm c=dg: This font is currently in use and cannot be deleted.
-        - rtgl-view d=v g=xs mt=md:
-            - rtgl-text s=xs c=mu-fg: Used in ${deleteWarningUsage.count} place(s)
-            - rtgl-text s=xs c=mu-fg: Typography ${deleteWarningUsage.inProps.typography.length}
+  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

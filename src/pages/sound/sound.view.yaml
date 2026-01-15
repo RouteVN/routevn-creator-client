@@ -47,9 +47,9 @@ refs:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
-  delete-warning:
+  delete-warning-popup:
     eventListeners:
-      close:
+      close-delete-warning-popup:
         action: hideDeleteWarning
 
 
@@ -72,10 +72,4 @@ template:
       - $if showAudioPlayer:
           - 'rtgl-view h=72 pos=fix cor=bottom z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
               - rvn-audio-player fileId=${playingSound.fileId} autoPlay=true .title=playingSound.title:
-  - rtgl-dialog#delete-warning ?open=${deleteWarningVisible} s=sm:
-      - rtgl-view slot=content g=md p=lg d=v:
-          - rtgl-text s=lg fw=bold c=dg: Cannot Delete Sound
-          - rtgl-text s=sm c=dg: This sound is currently in use and cannot be deleted.
-          - rtgl-view d=v g=xs mt=md:
-              - rtgl-text s=xs c=mu-fg: Used in ${deleteWarningUsage.count} place(s)
-              - rtgl-text s=xs c=mu-fg: Scenes ${deleteWarningUsage.inProps.scene.length} | Layouts ${deleteWarningUsage.inProps.layout.length}
+  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

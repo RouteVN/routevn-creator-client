@@ -289,5 +289,13 @@ export const selectViewData = ({ state }) => {
     editAvatarFileId: state.editAvatarFileId,
     deleteWarningVisible: state.deleteWarningVisible,
     deleteWarningUsage: state.deleteWarningUsage,
+    deleteIncludeProps: state.deleteWarningUsage
+      ? Object.entries(state.deleteWarningUsage.inProps || {}).map(
+          ([name, usages]) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            count: Array.isArray(usages) ? usages.length : 0,
+          }),
+        )
+      : [],
   };
 };
