@@ -570,6 +570,7 @@ export const handleLineKeyDown = (deps, payload) => {
       }
       break;
     case "Escape":
+      store.setIsSplitting(false);
       payload._event.preventDefault();
       // Switch to block mode and blur the current element
       store.setMode("block");
@@ -1029,6 +1030,7 @@ export const handleOnFocus = (deps, payload) => {
 export const handleLineBlur = (deps, payload) => {
   const { store, render, getRefIds } = deps;
 
+   store.setIsSplitting(false);
   // Capture element references before the timeout
   const blurredElement = payload._event.currentTarget;
   const shadowRoot = blurredElement.getRootNode();
