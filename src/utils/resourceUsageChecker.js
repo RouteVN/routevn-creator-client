@@ -26,7 +26,7 @@ export const LAYOUT_RESOURCE_KEYS = [
 // Keys that indicate resource usage in typography
 export const TYPOGRAPHY_RESOURCE_KEYS = ["colorId", "fontId"];
 
-const checkNode = (node, resourceId, keys, usages, targetType) => {
+const checkNode = (node, resourceId, keys, usages) => {
   if (!node || typeof node !== "object") {
     return;
   }
@@ -45,14 +45,14 @@ const checkNode = (node, resourceId, keys, usages, targetType) => {
     if (typeof value === "object" && value !== null) {
       if (key === "items") {
         for (const item of Object.values(value)) {
-          checkNode(item, resourceId, keys, usages, targetType);
+          checkNode(item, resourceId, keys, usages);
         }
       } else if (Array.isArray(value)) {
         value.forEach((item) => {
-          checkNode(item, resourceId, keys, usages, targetType);
+          checkNode(item, resourceId, keys, usages);
         });
       } else {
-        checkNode(value, resourceId, keys, usages, targetType);
+        checkNode(value, resourceId, keys, usages);
       }
     }
   }

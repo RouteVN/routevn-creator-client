@@ -218,7 +218,9 @@ export const handleFileAction = async (deps, payload) => {
           }
         }
         if (isUsed) {
-          appService.showToast("Cannot delete resource, it is currently in use.");
+          appService.showToast(
+            "Cannot delete resource, it is currently in use.",
+          );
           render();
           return;
         }
@@ -227,9 +229,7 @@ export const handleFileAction = async (deps, payload) => {
       } else if (resourceType === "typography") {
         checkTargets = [{ name: "layouts", keys: LAYOUT_RESOURCE_KEYS }];
       } else if (resourceType === "color" || resourceType === "font") {
-        checkTargets = [
-          { name: "typography", keys: TYPOGRAPHY_RESOURCE_KEYS },
-        ];
+        checkTargets = [{ name: "typography", keys: TYPOGRAPHY_RESOURCE_KEYS }];
       } else {
         checkTargets = [
           { name: "scenes", keys: SCENE_RESOURCE_KEYS },
@@ -244,7 +244,9 @@ export const handleFileAction = async (deps, payload) => {
           checkTargets,
         });
         if (usage.isUsed) {
-          appService.showToast("Cannot delete resource, it is currently in use.");
+          appService.showToast(
+            "Cannot delete resource, it is currently in use.",
+          );
           render();
           return;
         }
