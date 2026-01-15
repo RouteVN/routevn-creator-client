@@ -21,6 +21,9 @@ export const createInitialState = () => ({
   selectedItemId: null,
   searchQuery: "",
   collapsedIds: [],
+  deleteWarningVisible: false,
+  deleteWarningItemId: undefined,
+  deleteWarningUsage: null,
   isDialogOpen: false,
   targetGroupId: null,
   avatarFileId: null,
@@ -121,6 +124,18 @@ export const closeEditDialog = (state) => {
 
 export const setEditAvatarFileId = (state, fileId) => {
   state.editAvatarFileId = fileId;
+};
+
+export const showDeleteWarning = (state, { itemId, usage }) => {
+  state.deleteWarningVisible = true;
+  state.deleteWarningItemId = itemId;
+  state.deleteWarningUsage = usage;
+};
+
+export const hideDeleteWarning = (state) => {
+  state.deleteWarningVisible = false;
+  state.deleteWarningItemId = undefined;
+  state.deleteWarningUsage = null;
 };
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
@@ -272,5 +287,7 @@ export const selectViewData = ({ state }) => {
     editDefaultValues,
     editForm,
     editAvatarFileId: state.editAvatarFileId,
+    deleteWarningVisible: state.deleteWarningVisible,
+    deleteWarningUsage: state.deleteWarningUsage,
   };
 };

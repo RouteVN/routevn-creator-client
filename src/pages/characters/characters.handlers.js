@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { validateIconDimensions } from "../../utils/fileProcessors";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -319,6 +320,31 @@ export const handleDialogAvatarClick = async (deps) => {
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+
+  const state = projectService.getState();
+  const character = state.characters.items[itemId];
+
+  // Check for character usage
+  let usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+
+  // Also check for characterSprite usage (sprites within this character)
+  if (character && character.sprites && character.sprites.items) {
+    for (const spriteId of Object.keys(character.sprites.items)) {
+      const spriteUsage = checkResourceUsage(state.scenes, state.layouts, spriteId);
+      if (spriteUsage.isUsed) {
+        usage.inScene.push(...spriteUsage.inScene);
+        usage.inLayout.push(...spriteUsage.inLayout);
+        usage.count += spriteUsage.count;
+        usage.isUsed = true;
+      }
+    }
+  }
+
+  if (usage.isUsed) {
+    store.showDeleteWarning({ itemId, usage });
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await projectService.appendEvent({

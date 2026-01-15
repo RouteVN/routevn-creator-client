@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { resetState } from "./tweens.constants";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, getRefIds } = deps;
@@ -503,6 +504,14 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+
+  const state = projectService.getState();
+  const usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+  if (usage.isUsed) {
+    store.showDeleteWarning({ itemId, usage });
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await projectService.appendEvent({

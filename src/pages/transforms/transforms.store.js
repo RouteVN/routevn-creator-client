@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "insieme";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 const form = {
   fields: [
@@ -18,6 +19,9 @@ export const createInitialState = () => ({
   selectedItemId: null,
   searchQuery: "",
   collapsedIds: [],
+  deleteWarningVisible: false,
+  deleteWarningItemId: undefined,
+  deleteWarningUsage: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
     { label: "Rename", type: "item", value: "rename-item" },
@@ -265,6 +269,18 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
+export const showDeleteWarning = (state, { itemId, usage }) => {
+  state.deleteWarningVisible = true;
+  state.deleteWarningItemId = itemId;
+  state.deleteWarningUsage = usage;
+};
+
+export const hideDeleteWarning = (state) => {
+  state.deleteWarningVisible = false;
+  state.deleteWarningItemId = undefined;
+  state.deleteWarningUsage = null;
+};
+
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.transformData);
   const rawFlatGroups = toFlatGroups(state.transformData);
@@ -360,5 +376,7 @@ export const selectViewData = ({ state }) => {
     dialogDefaultValues: state.defaultValues,
     items,
     selectedItem: items[state.selectedItemId],
+    deleteWarningVisible: state.deleteWarningVisible,
+    deleteWarningUsage: state.deleteWarningUsage,
   };
 };

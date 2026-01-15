@@ -1,5 +1,6 @@
 import { toFlatGroups, toFlatItems } from "insieme";
 import { formatFileSize } from "../../utils/index.js";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 const form = {
   fields: [
@@ -45,6 +46,9 @@ export const createInitialState = () => ({
   showAudioPlayer: false,
   audioPlayerLeft: 0,
   audioPlayerRight: 0,
+  deleteWarningVisible: false,
+  deleteWarningItemId: undefined,
+  deleteWarningUsage: null,
 });
 
 export const setContext = (state, context) => {
@@ -101,6 +105,18 @@ export const selectAudioPlayerLeft = (state) => {
 
 export const selectAudioPlayerRight = (state) => {
   return state.audioPlayerRight;
+};
+
+export const showDeleteWarning = (state, { itemId, usage }) => {
+  state.deleteWarningVisible = true;
+  state.deleteWarningItemId = itemId;
+  state.deleteWarningUsage = usage;
+};
+
+export const hideDeleteWarning = (state) => {
+  state.deleteWarningVisible = false;
+  state.deleteWarningItemId = undefined;
+  state.deleteWarningUsage = null;
 };
 
 export const selectViewData = ({ state }) => {
@@ -185,5 +201,7 @@ export const selectViewData = ({ state }) => {
     showAudioPlayer: state.showAudioPlayer,
     audioPlayerLeft: state.audioPlayerLeft,
     audioPlayerRight: state.audioPlayerRight,
+    deleteWarningVisible: state.deleteWarningVisible,
+    deleteWarningUsage: state.deleteWarningUsage,
   };
 };

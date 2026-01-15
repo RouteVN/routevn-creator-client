@@ -1,5 +1,6 @@
 import { toFlatGroups, toFlatItems } from "insieme";
 import { resetState } from "./tweens.constants";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 const form = {
   fields: [
@@ -358,6 +359,9 @@ const editTweenForm = {
 export const createInitialState = () => ({
   tweensData: { tree: [], items: {} },
   selectedItemId: null,
+  deleteWarningVisible: false,
+  deleteWarningItemId: undefined,
+  deleteWarningUsage: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
     { label: "Duplicate", type: "item", value: "duplicate-item" },
@@ -427,6 +431,18 @@ export const updatePopoverFormValues = (state, formValues) => {
 
 export const selectPopover = ({ state }) => {
   return state.popover;
+};
+
+export const showDeleteWarning = (state, { itemId, usage }) => {
+  state.deleteWarningVisible = true;
+  state.deleteWarningItemId = itemId;
+  state.deleteWarningUsage = usage;
+};
+
+export const hideDeleteWarning = (state) => {
+  state.deleteWarningVisible = false;
+  state.deleteWarningItemId = undefined;
+  state.deleteWarningUsage = null;
 };
 
 export const selectFormState = ({ state }) => {
@@ -815,5 +831,7 @@ export const selectViewData = ({ state }) => {
     },
     resourceType: "tweens",
     title: "Tweens",
+    deleteWarningVisible: state.deleteWarningVisible,
+    deleteWarningUsage: state.deleteWarningUsage,
   };
 };

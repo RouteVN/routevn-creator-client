@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;
@@ -395,6 +396,15 @@ export const handleTransformFormChange = async (deps, payload) => {
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+
+  const state = projectService.getState();
+  const usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+
+  if (usage.isUsed) {
+    store.showDeleteWarning({ itemId, usage });
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await projectService.appendEvent({

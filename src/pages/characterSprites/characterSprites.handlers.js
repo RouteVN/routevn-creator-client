@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { appService, store, projectService, render, globalUI } = deps;
@@ -268,6 +269,14 @@ export const handleItemDelete = async (deps, payload) => {
   const { itemId } = payload._event.detail;
 
   const characterId = store.selectCharacterId();
+  const state = projectService.getState();
+
+  const usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+  if (usage.isUsed) {
+    store.showDeleteWarning({ itemId, usage });
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await repository.addEvent({

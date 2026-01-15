@@ -53,6 +53,10 @@ refs:
         handler: handleTransformFormActionClick
       form-change:
         handler: handleTransformFormChange
+  delete-warning:
+    eventListeners:
+      close:
+        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -81,3 +85,10 @@ template:
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"':
+  - rtgl-dialog#delete-warning ?open=${deleteWarningVisible} s=sm:
+      - rtgl-view slot=content g=md p=lg d=v:
+          - rtgl-text s=lg fw=bold c=dg: Cannot Delete Transform
+          - rtgl-text s=sm c=dg: This transform is currently in use and cannot be deleted.
+          - rtgl-view d=v g=xs mt=md:
+              - rtgl-text s=xs c=mu-fg: Used in ${deleteWarningUsage.count} place(s)
+              - rtgl-text s=xs c=mu-fg: Scenes ${deleteWarningUsage.inScene.length} | Layouts ${deleteWarningUsage.inLayout.length}

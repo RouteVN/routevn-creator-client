@@ -16,6 +16,7 @@ export const checkResourceUsageInScene = (scene, resourceId) => {
       if (typeof value === "string" && value === resourceId) {
         if (
           key === "resourceId" ||
+          key === "transformId" ||
           key === "sceneId" ||
           key === "sectionId" ||
           key === "characterId" ||
