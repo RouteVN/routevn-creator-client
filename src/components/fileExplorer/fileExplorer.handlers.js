@@ -93,7 +93,7 @@ export const handlePageItemClick = (deps, payload) => {
 };
 
 export const handleFileAction = async (deps, payload) => {
-  const { dispatchEvent, projectService, props, store, render } = deps;
+  const { dispatchEvent, projectService, appService, props, render } = deps;
   await projectService.ensureRepository();
   const detail = payload._event.detail;
   const repositoryTarget = props.repositoryTarget;
@@ -196,92 +196,58 @@ export const handleFileAction = async (deps, payload) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
-      let usage = {
-        isUsed: false,
-        inProps: {},
-        count: 0,
-      };
-
       const resourceType = currentItem.type;
 
+      let checkTargets;
       if (resourceType === "character") {
-        if (currentItem && currentItem.sprites && currentItem.sprites.items) {
+        let isUsed = false;
+        if (currentItem.sprites && currentItem.sprites.items) {
           for (const spriteId of Object.keys(currentItem.sprites.items)) {
-            const sceneUsages = recursivelyCheckResource(
-              state.scenes,
-              spriteId,
-              SCENE_RESOURCE_KEYS,
-            );
-            const layoutUsages = recursivelyCheckResource(
-              state.layouts,
-              spriteId,
-              LAYOUT_RESOURCE_KEYS,
-            );
-            if (sceneUsages.length > 0 || layoutUsages.length > 0) {
-              usage.inProps.scene = usage.inProps.scene || [];
-              usage.inProps.layout = usage.inProps.layout || [];
-              usage.inProps.scene.push(...sceneUsages);
-              usage.inProps.layout.push(...layoutUsages);
-              usage.count += sceneUsages.length + layoutUsages.length;
-              usage.isUsed = true;
+            const usage = recursivelyCheckResource({
+              state,
+              itemId: spriteId,
+              checkTargets: [
+                { name: "scenes", keys: SCENE_RESOURCE_KEYS },
+                { name: "layouts", keys: LAYOUT_RESOURCE_KEYS },
+              ],
+            });
+            if (usage.isUsed) {
+              isUsed = true;
+              break;
             }
           }
         }
-      } else if (resourceType === "layouts") {
-        const sceneUsages = recursivelyCheckResource(
-          state.scenes,
-          itemId,
-          SCENE_RESOURCE_KEYS,
-        );
-        usage = {
-          inProps: { scene: sceneUsages },
-          isUsed: sceneUsages.length > 0,
-          count: sceneUsages.length,
-        };
+        if (isUsed) {
+          appService.showToast("Cannot delete resource, it is currently in use.");
+          render();
+          return;
+        }
+      } else if (resourceType === "layout") {
+        checkTargets = [{ name: "scenes", keys: SCENE_RESOURCE_KEYS }];
       } else if (resourceType === "typography") {
-        const layoutUsages = recursivelyCheckResource(
-          state.layouts,
-          itemId,
-          LAYOUT_RESOURCE_KEYS,
-        );
-        usage = {
-          inProps: { layout: layoutUsages },
-          isUsed: layoutUsages.length > 0,
-          count: layoutUsages.length,
-        };
+        checkTargets = [{ name: "layouts", keys: LAYOUT_RESOURCE_KEYS }];
       } else if (resourceType === "color" || resourceType === "font") {
-        const typographyUsages = recursivelyCheckResource(
-          state.typography,
-          itemId,
-          TYPOGRAPHY_RESOURCE_KEYS,
-        );
-        usage = {
-          inProps: { typography: typographyUsages },
-          isUsed: typographyUsages.length > 0,
-          count: typographyUsages.length,
-        };
+        checkTargets = [
+          { name: "typography", keys: TYPOGRAPHY_RESOURCE_KEYS },
+        ];
       } else {
-        const sceneUsages = recursivelyCheckResource(
-          state.scenes,
-          itemId,
-          SCENE_RESOURCE_KEYS,
-        );
-        const layoutUsages = recursivelyCheckResource(
-          state.layouts,
-          itemId,
-          LAYOUT_RESOURCE_KEYS,
-        );
-        usage = {
-          inProps: { scene: sceneUsages, layout: layoutUsages },
-          isUsed: sceneUsages.length > 0 || layoutUsages.length > 0,
-          count: sceneUsages.length + layoutUsages.length,
-        };
+        checkTargets = [
+          { name: "scenes", keys: SCENE_RESOURCE_KEYS },
+          { name: "layouts", keys: LAYOUT_RESOURCE_KEYS },
+        ];
       }
 
-      if (usage.isUsed) {
-        store.showDeleteWarning({ itemId, usage });
-        render();
-        return;
+      if (checkTargets) {
+        const usage = recursivelyCheckResource({
+          state,
+          itemId,
+          checkTargets,
+        });
+        if (usage.isUsed) {
+          appService.showToast("Cannot delete resource, it is currently in use.");
+          render();
+          return;
+        }
       }
 
       await projectService.appendEvent({

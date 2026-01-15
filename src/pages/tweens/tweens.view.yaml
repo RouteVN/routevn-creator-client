@@ -89,10 +89,6 @@ refs:
         handler: handleClosePopover
       click-item:
         handler: handleKeyframeDropdownItemClick
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -140,4 +136,3 @@ template:
               - $if popover.mode == 'editInitialValue':
                   - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm .defaultValues=editInitialValueDefaultValues .context=editInitialValueContext:
           - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}:
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

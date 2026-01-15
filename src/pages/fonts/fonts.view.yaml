@@ -9,15 +9,6 @@ viewDataSchema:
     selectedFontInfo:
       type: object
       default: null
-    deleteWarningVisible:
-      type: boolean
-      default: false
-    deleteWarningItemId:
-      type: string
-      default: ""
-    deleteWarningUsage:
-      type: object
-      default: null
 
 refs:
   file-explorer:
@@ -54,10 +45,6 @@ refs:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -90,4 +77,3 @@ template:
                 $else:
                   - rtgl-view d=v av=c ah=c h=200:
                       - rtgl-text c=mu-fg: Loading...
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

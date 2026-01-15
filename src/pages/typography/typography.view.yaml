@@ -5,15 +5,6 @@ viewDataSchema:
   properties:
     searchQuery:
       type: string
-    deleteWarningVisible:
-      type: boolean
-      default: false
-    deleteWarningItemId:
-      type: string
-      default: ""
-    deleteWarningUsage:
-      type: object
-      default: null
 
 refs:
   file-explorer:
@@ -74,10 +65,6 @@ refs:
     eventListeners:
       action-click:
         handler: handleAddFontFormAction
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -117,4 +104,3 @@ template:
                   - $if hasSelectedFont:
                       - rtgl-view d=h g=sm av=c mt=sm:
                           - rtgl-text s=sm c=success: "Font selected: ${selectedFontFileName}"
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

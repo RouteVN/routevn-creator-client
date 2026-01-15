@@ -47,10 +47,6 @@ refs:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 
 template:
@@ -72,4 +68,3 @@ template:
       - $if showAudioPlayer:
           - 'rtgl-view h=72 pos=fix cor=bottom z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
               - rvn-audio-player fileId=${playingSound.fileId} autoPlay=true .title=playingSound.title:
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

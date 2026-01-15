@@ -287,23 +287,18 @@ export const handleGroupToggle = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
-  const typographyUsages = recursivelyCheckResource(
-    state.typography,
+  const usage = recursivelyCheckResource({
+    state,
     itemId,
-    TYPOGRAPHY_RESOURCE_KEYS,
-  );
-  const usage = {
-    inProps: { typography: typographyUsages },
-    isUsed: typographyUsages.length > 0,
-    count: typographyUsages.length,
-  };
+    checkTargets: [{ name: "typography", keys: TYPOGRAPHY_RESOURCE_KEYS }],
+  });
 
   if (usage.isUsed) {
-    store.showDeleteWarning({ itemId, usage });
+    appService.showToast("Cannot delete resource, it is currently in use.");
     render();
     return;
   }

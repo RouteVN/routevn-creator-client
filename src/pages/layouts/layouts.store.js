@@ -65,9 +65,6 @@ export const createInitialState = () => ({
   emptyContextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
   ],
-  deleteWarningVisible: false,
-  deleteWarningItemId: null,
-  deleteWarningUsage: null,
 });
 
 export const setFieldResources = (state, resources) => {
@@ -94,18 +91,6 @@ export const openAddDialog = (state, groupId) => {
 export const closeAddDialog = (state) => {
   state.isAddDialogOpen = false;
   state.targetGroupId = null;
-};
-
-export const showDeleteWarning = (state, { itemId, usage }) => {
-  state.deleteWarningVisible = true;
-  state.deleteWarningItemId = itemId;
-  state.deleteWarningUsage = usage;
-};
-
-export const hideDeleteWarning = (state) => {
-  state.deleteWarningVisible = false;
-  state.deleteWarningItemId = undefined;
-  state.deleteWarningUsage = null;
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -206,16 +191,5 @@ export const selectViewData = ({ state }) => {
       name: "",
       layoutType: "dialogue",
     },
-    deleteWarningVisible: state.deleteWarningVisible,
-    deleteWarningItemId: state.deleteWarningItemId,
-    deleteWarningUsage: state.deleteWarningUsage,
-    deleteIncludeProps: state.deleteWarningUsage
-      ? Object.entries(state.deleteWarningUsage.inProps || {}).map(
-          ([name, usages]) => ({
-            name: name.charAt(0).toUpperCase() + name.slice(1),
-            count: Array.isArray(usages) ? usages.length : 0,
-          }),
-        )
-      : [],
   };
 };

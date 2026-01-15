@@ -322,38 +322,33 @@ export const handleDialogAvatarClick = async (deps) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
   const character = state.characters.items[itemId];
 
-  let usage = { isUsed: false, inProps: { scene: [], layout: [] }, count: 0 };
+  let isUsed = false;
 
-  // Also check for characterSprite usage (sprites within this character)
   if (character && character.sprites && character.sprites.items) {
     for (const spriteId of Object.keys(character.sprites.items)) {
-      const sceneUsages = recursivelyCheckResource(
-        state.scenes,
-        spriteId,
-        SCENE_RESOURCE_KEYS,
-      );
-      const layoutUsages = recursivelyCheckResource(
-        state.layouts,
-        spriteId,
-        LAYOUT_RESOURCE_KEYS,
-      );
-      if (sceneUsages.length > 0 || layoutUsages.length > 0) {
-        usage.inProps.scene.push(...sceneUsages);
-        usage.inProps.layout.push(...layoutUsages);
-        usage.count += sceneUsages.length + layoutUsages.length;
-        usage.isUsed = true;
+      const usage = recursivelyCheckResource({
+        state,
+        itemId: spriteId,
+        checkTargets: [
+          { name: "scenes", keys: SCENE_RESOURCE_KEYS },
+          { name: "layouts", keys: LAYOUT_RESOURCE_KEYS },
+        ],
+      });
+      if (usage.isUsed) {
+        isUsed = true;
+        break;
       }
     }
   }
 
-  if (usage.isUsed) {
-    store.showDeleteWarning({ itemId, usage });
+  if (isUsed) {
+    appService.showToast("Cannot delete resource, it is currently in use.");
     render();
     return;
   }

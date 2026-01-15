@@ -45,9 +45,6 @@ export const createInitialState = () => ({
   showAudioPlayer: false,
   audioPlayerLeft: 0,
   audioPlayerRight: 0,
-  deleteWarningVisible: false,
-  deleteWarningItemId: undefined,
-  deleteWarningUsage: null,
 });
 
 export const setContext = (state, context) => {
@@ -104,18 +101,6 @@ export const selectAudioPlayerLeft = (state) => {
 
 export const selectAudioPlayerRight = (state) => {
   return state.audioPlayerRight;
-};
-
-export const showDeleteWarning = (state, { itemId, usage }) => {
-  state.deleteWarningVisible = true;
-  state.deleteWarningItemId = itemId;
-  state.deleteWarningUsage = usage;
-};
-
-export const hideDeleteWarning = (state) => {
-  state.deleteWarningVisible = false;
-  state.deleteWarningItemId = undefined;
-  state.deleteWarningUsage = null;
 };
 
 export const selectViewData = ({ state }) => {
@@ -200,15 +185,5 @@ export const selectViewData = ({ state }) => {
     showAudioPlayer: state.showAudioPlayer,
     audioPlayerLeft: state.audioPlayerLeft,
     audioPlayerRight: state.audioPlayerRight,
-    deleteWarningVisible: state.deleteWarningVisible,
-    deleteIncludeProps: state.deleteWarningUsage
-      ? Object.entries(state.deleteWarningUsage.inProps || {}).map(
-          ([name, usages]) => ({
-            name: name.charAt(0).toUpperCase() + name.slice(1),
-            count: Array.isArray(usages) ? usages.length : 0,
-          }),
-        )
-      : [],
-    deleteWarningUsage: state.deleteWarningUsage,
   };
 };

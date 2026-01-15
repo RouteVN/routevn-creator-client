@@ -43,10 +43,6 @@ refs:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -69,4 +65,3 @@ template:
           - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
           - $if fullImagePreviewFileId:
               - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

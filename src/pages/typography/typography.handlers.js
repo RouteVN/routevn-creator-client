@@ -690,23 +690,18 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
-  const layoutUsages = recursivelyCheckResource(
-    state.layouts,
+  const usage = recursivelyCheckResource({
+    state,
     itemId,
-    LAYOUT_RESOURCE_KEYS,
-  );
-  const usage = {
-    inProps: { layout: layoutUsages },
-    isUsed: layoutUsages.length > 0,
-    count: layoutUsages.length,
-  };
+    checkTargets: [{ name: "layouts", keys: LAYOUT_RESOURCE_KEYS }],
+  });
 
   if (usage.isUsed) {
-    store.showDeleteWarning({ itemId, usage });
+    appService.showToast("Cannot delete resource, it is currently in use.");
     render();
     return;
   }

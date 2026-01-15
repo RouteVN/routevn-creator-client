@@ -40,11 +40,6 @@ refs:
         handler: handleTargetChanged
       file-action:
         handler: handleFileAction
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 template:
   - rvn-base-file-explorer#base-file-explorer draggable shrinkable dropdown-menu .items=items .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

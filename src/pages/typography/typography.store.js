@@ -236,18 +236,6 @@ export const resetFormValues = (state) => {
   };
 };
 
-export const showDeleteWarning = (state, { itemId, usage }) => {
-  state.deleteWarningVisible = true;
-  state.deleteWarningItemId = itemId;
-  state.deleteWarningUsage = usage;
-};
-
-export const hideDeleteWarning = (state) => {
-  state.deleteWarningVisible = false;
-  state.deleteWarningItemId = undefined;
-  state.deleteWarningUsage = null;
-};
-
 export const setFormValuesFromItem = (state, item) => {
   if (!item) {
     throw new Error("Item is required for setFormValuesFromItem");
@@ -712,18 +700,5 @@ export const selectViewData = ({ state }) => {
     previewFontFileId: previewFontData.fileId,
     searchQuery: state.searchQuery,
     resourceType: "typography",
-
-    // Delete warning data
-    deleteWarningVisible: state.deleteWarningVisible,
-    deleteWarningItemId: state.deleteWarningItemId,
-    deleteWarningUsage: state.deleteWarningUsage,
-    deleteIncludeProps: state.deleteWarningUsage
-      ? Object.entries(state.deleteWarningUsage.inProps || {}).map(
-          ([name, usages]) => ({
-            name: name.charAt(0).toUpperCase() + name.slice(1),
-            count: Array.isArray(usages) ? usages.length : 0,
-          }),
-        )
-      : [],
   };
 };

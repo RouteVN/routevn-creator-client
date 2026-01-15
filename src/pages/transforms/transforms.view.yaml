@@ -53,10 +53,6 @@ refs:
         handler: handleTransformFormActionClick
       form-change:
         handler: handleTransformFormChange
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -85,4 +81,3 @@ template:
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"':
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

@@ -5,15 +5,6 @@ viewDataSchema:
   properties:
     searchQuery:
       type: string
-    deleteWarningVisible:
-      type: boolean
-      default: false
-    deleteWarningItemId:
-      type: string
-      default: ""
-    deleteWarningUsage:
-      type: object
-      default: null
 
 refs:
   file-explorer:
@@ -50,10 +41,6 @@ refs:
     eventListeners:
       action-click:
         handler: handleLayoutFormActionClick
-  delete-warning-popup:
-    eventListeners:
-      close-delete-warning-popup:
-        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -73,4 +60,3 @@ template:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#add-layout-dialog ?open=${isAddDialogOpen} s=md:
       - rtgl-form#layout-form slot=content .defaultValues=layoutFormDefaults .form=layoutForm w=f:
-  - rvn-delete-warning-popup#delete-warning-popup .isOpen=deleteWarningVisible .includeProps=deleteIncludeProps:

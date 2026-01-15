@@ -3,7 +3,7 @@ import {
   recursivelyCheckResource,
   SCENE_RESOURCE_KEYS,
   LAYOUT_RESOURCE_KEYS,
-} from "../../utils/resourceUsageChecker";
+} from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -180,13 +180,6 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   render();
 };
 
-export const handleHideDeleteWarning = async (deps) => {
-  const { store, render } = deps;
-  console.log("Hiding delete warning");
-  store.hideDeleteWarning();
-  render();
-};
-
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
@@ -209,29 +202,22 @@ export const handleFormChange = async (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
   await projectService.ensureRepository();
   const state = projectService.getState();
 
-  const sceneUsages = recursivelyCheckResource(
-    state.scenes,
+  const usage = recursivelyCheckResource({
+    state,
     itemId,
-    SCENE_RESOURCE_KEYS,
-  );
-  const layoutUsages = recursivelyCheckResource(
-    state.layouts,
-    itemId,
-    LAYOUT_RESOURCE_KEYS,
-  );
-  const usage = {
-    inProps: { scene: sceneUsages, layout: layoutUsages },
-    isUsed: sceneUsages.length > 0 || layoutUsages.length > 0,
-    count: sceneUsages.length + layoutUsages.length,
-  };
+    checkTargets: [
+      { name: "scenes", keys: SCENE_RESOURCE_KEYS },
+      { name: "layouts", keys: LAYOUT_RESOURCE_KEYS },
+    ],
+  });
 
   if (usage.isUsed) {
-    store.showDeleteWarning({ itemId, usage });
+    appService.showToast("Cannot delete resource, it is currently in use.");
     render();
     return;
   }
