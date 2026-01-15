@@ -1030,7 +1030,7 @@ export const handleOnFocus = (deps, payload) => {
 export const handleLineBlur = (deps, payload) => {
   const { store, render, getRefIds } = deps;
 
-   store.setIsSplitting(false);
+  store.setIsSplitting(false);
   // Capture element references before the timeout
   const blurredElement = payload._event.currentTarget;
   const shadowRoot = blurredElement.getRootNode();
