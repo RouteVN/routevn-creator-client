@@ -44,7 +44,11 @@ const recursivelyCheckResource = (data, resourceId, keys) => {
     for (const [key, value] of Object.entries(node)) {
       const currentPath = path ? `${path}.${key}` : key;
 
-      if (typeof value === "string" && value === resourceId && keys.includes(key)) {
+      if (
+        typeof value === "string" &&
+        value === resourceId &&
+        keys.includes(key)
+      ) {
         usages.push({
           type: keys === SCENE_RESOURCE_KEYS ? "scene" : "layout",
           property: key,
@@ -72,10 +76,17 @@ const recursivelyCheckResource = (data, resourceId, keys) => {
   return usages;
 };
 
-
 export const checkResourceUsage = (scene, layout, resourceId) => {
-  const sceneUsages = recursivelyCheckResource(scene, resourceId, SCENE_RESOURCE_KEYS);
-  const layoutUsages = recursivelyCheckResource(layout, resourceId, LAYOUT_RESOURCE_KEYS);
+  const sceneUsages = recursivelyCheckResource(
+    scene,
+    resourceId,
+    SCENE_RESOURCE_KEYS,
+  );
+  const layoutUsages = recursivelyCheckResource(
+    layout,
+    resourceId,
+    LAYOUT_RESOURCE_KEYS,
+  );
 
   return {
     inScene: sceneUsages,
