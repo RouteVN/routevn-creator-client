@@ -1,8 +1,6 @@
 import { nanoid } from "nanoid";
 import { resetState } from "./tweens.constants";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, getRefIds } = deps;

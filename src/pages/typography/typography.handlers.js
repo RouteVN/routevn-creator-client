@@ -1,9 +1,7 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
 import { getFileType } from "../../utils/fileTypeUtils";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = (store, projectService) => {

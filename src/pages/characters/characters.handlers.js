@@ -1,8 +1,6 @@
 import { nanoid } from "nanoid";
 import { validateIconDimensions } from "../../utils/fileProcessors";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;

@@ -1,7 +1,5 @@
 import { nanoid } from "nanoid";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
   const parts = path.split(".");

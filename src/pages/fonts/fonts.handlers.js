@@ -2,9 +2,7 @@ import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { toFlatItems } from "insieme";
 import { getFileType } from "../../utils/fileTypeUtils";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;

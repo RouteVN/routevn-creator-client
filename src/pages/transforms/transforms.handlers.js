@@ -1,8 +1,6 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;

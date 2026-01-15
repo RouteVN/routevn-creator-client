@@ -1,7 +1,5 @@
 import { nanoid } from "nanoid";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { appService, store, projectService, render, globalUI } = deps;

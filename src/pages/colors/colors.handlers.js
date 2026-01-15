@@ -1,7 +1,5 @@
 import { nanoid } from "nanoid";
-import {
-  recursivelyCheckResource,
-} from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const hexToBase64Image = (hex) => {
   if (!hex) return "";
