@@ -185,7 +185,7 @@ export const handleHideDeleteWarning = async (deps) => {
   console.log("Hiding delete warning");
   store.hideDeleteWarning();
   render();
-}
+};
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;

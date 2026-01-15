@@ -202,7 +202,7 @@ export const handleFileAction = async (deps, payload) => {
         count: 0,
       };
 
-      const resourceType = currentItem.type; 
+      const resourceType = currentItem.type;
 
       if (resourceType === "character") {
         if (currentItem && currentItem.sprites && currentItem.sprites.items) {
