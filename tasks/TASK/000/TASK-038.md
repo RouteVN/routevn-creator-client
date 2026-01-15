@@ -79,6 +79,8 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [High] add adding animation to background, with tween fade in. and then you navigate around different lines, or preview it. the animation runs everytime you click. expected: it should run only once for that line
 
+- [ ] [High] @nellow: bug with dialogue and fade: https://discord.com/channels/1233660682419834920/1461203575123480707/1461203575123480707
+
 ---
 
 ## UX Problems
