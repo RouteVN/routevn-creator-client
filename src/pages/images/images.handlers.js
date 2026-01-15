@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -197,8 +198,22 @@ export const handleFormChange = async (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+  await projectService.ensureRepository();
+  const state = projectService.getState();
+
+  const usage = recursivelyCheckResource({
+    state,
+    itemId,
+    checkTargets: ["scenes", "layouts"],
+  });
+
+  if (usage.isUsed) {
+    appService.showToast("Cannot delete resource, it is currently in use.");
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await projectService.appendEvent({

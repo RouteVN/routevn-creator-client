@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { validateIconDimensions } from "../../utils/fileProcessors";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -317,8 +318,33 @@ export const handleDialogAvatarClick = async (deps) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+
+  const state = projectService.getState();
+  const character = state.characters.items[itemId];
+
+  let isUsed = false;
+
+  if (character && character.sprites && character.sprites.items) {
+    for (const spriteId of Object.keys(character.sprites.items)) {
+      const usage = recursivelyCheckResource({
+        state,
+        itemId: spriteId,
+        checkTargets: ["scenes", "layouts"],
+      });
+      if (usage.isUsed) {
+        isUsed = true;
+        break;
+      }
+    }
+  }
+
+  if (isUsed) {
+    appService.showToast("Cannot delete resource, it is currently in use.");
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await projectService.appendEvent({

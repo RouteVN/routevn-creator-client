@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
   const parts = path.split(".");
@@ -87,7 +88,7 @@ export const handlePageItemClick = (deps, payload) => {
 };
 
 export const handleFileAction = async (deps, payload) => {
-  const { dispatchEvent, projectService, props } = deps;
+  const { dispatchEvent, projectService, appService, props, render } = deps;
   await projectService.ensureRepository();
   const detail = payload._event.detail;
   const repositoryTarget = props.repositoryTarget;
@@ -190,6 +191,56 @@ export const handleFileAction = async (deps, payload) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
+      const resourceType = currentItem.type;
+
+      let checkTargets;
+      if (resourceType === "character") {
+        let isUsed = false;
+        if (currentItem.sprites && currentItem.sprites.items) {
+          for (const spriteId of Object.keys(currentItem.sprites.items)) {
+            const usage = recursivelyCheckResource({
+              state,
+              itemId: spriteId,
+              checkTargets: ["scenes", "layouts"],
+            });
+            if (usage.isUsed) {
+              isUsed = true;
+              break;
+            }
+          }
+        }
+        if (isUsed) {
+          appService.showToast(
+            "Cannot delete resource, it is currently in use.",
+          );
+          render();
+          return;
+        }
+      } else if (resourceType === "layout") {
+        checkTargets = ["scenes"];
+      } else if (resourceType === "typography") {
+        checkTargets = ["layouts"];
+      } else if (resourceType === "color" || resourceType === "font") {
+        checkTargets = ["typography"];
+      } else {
+        checkTargets = ["scenes", "layouts"];
+      }
+
+      if (checkTargets) {
+        const usage = recursivelyCheckResource({
+          state,
+          itemId,
+          checkTargets,
+        });
+        if (usage.isUsed) {
+          appService.showToast(
+            "Cannot delete resource, it is currently in use.",
+          );
+          render();
+          return;
+        }
+      }
+
       await projectService.appendEvent({
         type: "treeDelete",
         payload: {
