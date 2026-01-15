@@ -71,3 +71,5 @@ template:
           - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5":
           - $if fullImagePreviewFileId:
               - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001:
+
+

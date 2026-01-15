@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const hexToBase64Image = (hex) => {
   if (!hex) return "";
@@ -283,8 +284,21 @@ export const handleGroupToggle = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+
+  const state = projectService.getState();
+  const usage = recursivelyCheckResource({
+    state,
+    itemId,
+    checkTargets: ["typography"],
+  });
+
+  if (usage.isUsed) {
+    appService.showToast("Cannot delete resource, it is currently in use.");
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await projectService.appendEvent({
