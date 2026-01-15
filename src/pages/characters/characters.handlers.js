@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { validateIconDimensions } from "../../utils/fileProcessors";
-import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource, SCENE_RESOURCE_KEYS, LAYOUT_RESOURCE_KEYS } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -324,20 +324,17 @@ export const handleItemDelete = async (deps, payload) => {
   const state = projectService.getState();
   const character = state.characters.items[itemId];
 
-  let usage = { isUsed: false, inScene: [], inLayout: [], count: 0 };
+  let usage = { isUsed: false, inProps: { scene: [], layout: [] }, count: 0 };
 
   // Also check for characterSprite usage (sprites within this character)
   if (character && character.sprites && character.sprites.items) {
     for (const spriteId of Object.keys(character.sprites.items)) {
-      const spriteUsage = checkResourceUsage(
-        state.scenes,
-        state.layouts,
-        spriteId,
-      );
-      if (spriteUsage.isUsed) {
-        usage.inScene.push(...spriteUsage.inScene);
-        usage.inLayout.push(...spriteUsage.inLayout);
-        usage.count += spriteUsage.count;
+      const sceneUsages = recursivelyCheckResource(state.scenes, spriteId, SCENE_RESOURCE_KEYS);
+      const layoutUsages = recursivelyCheckResource(state.layouts, spriteId, LAYOUT_RESOURCE_KEYS);
+      if (sceneUsages.length > 0 || layoutUsages.length > 0) {
+        usage.inProps.scene.push(...sceneUsages);
+        usage.inProps.layout.push(...layoutUsages);
+        usage.count += sceneUsages.length + layoutUsages.length;
         usage.isUsed = true;
       }
     }

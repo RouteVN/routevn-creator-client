@@ -5,6 +5,15 @@ viewDataSchema:
   properties:
     searchQuery:
       type: string
+    deleteWarningVisible:
+      type: boolean
+      default: false
+    deleteWarningItemId:
+      type: string
+      default: ""
+    deleteWarningUsage:
+      type: object
+      default: null
 
 refs:
   file-explorer:
@@ -65,6 +74,10 @@ refs:
     eventListeners:
       action-click:
         handler: handleAddFontFormAction
+  delete-warning:
+    eventListeners:
+      close:
+        action: hideDeleteWarning
 
 template:
   - rtgl-view d=h w=f h=f:
@@ -104,3 +117,10 @@ template:
                   - $if hasSelectedFont:
                       - rtgl-view d=h g=sm av=c mt=sm:
                           - rtgl-text s=sm c=success: "Font selected: ${selectedFontFileName}"
+  - rtgl-dialog#delete-warning ?open=${deleteWarningVisible} s=sm:
+      - rtgl-view slot=content g=md p=lg d=v:
+          - rtgl-text s=lg fw=bold c=dg: Cannot Delete typography
+          - rtgl-text s=sm c=dg: This typography is currently in use and cannot be deleted.
+          - rtgl-view d=v g=xs mt=md:
+              - rtgl-text s=xs c=mu-fg: Used in ${deleteWarningUsage.count} place(s)
+              - rtgl-text s=xs c=mu-fg: Layouts ${deleteWarningUsage.inProps.layout.length}

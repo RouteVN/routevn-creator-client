@@ -46,6 +46,9 @@ export const createInitialState = () => ({
   emptyContextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
   ],
+  deleteWarningVisible: false,
+  deleteWarningItemId: null,
+  deleteWarningUsage: null,
 });
 
 export const setItems = (state, colorsData) => {
@@ -95,6 +98,18 @@ export const toggleGroupCollapse = (state, groupId) => {
   } else {
     state.collapsedIds.push(groupId);
   }
+};
+
+export const showDeleteWarning = (state, { itemId, usage }) => {
+  state.deleteWarningVisible = true;
+  state.deleteWarningItemId = itemId;
+  state.deleteWarningUsage = usage;
+};
+
+export const hideDeleteWarning = (state) => {
+  state.deleteWarningVisible = false;
+  state.deleteWarningItemId = undefined;
+  state.deleteWarningUsage = null;
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -257,5 +272,8 @@ export const selectViewData = ({ state }) => {
     addForm,
     searchQuery: state.searchQuery,
     resourceType: "colors",
+    deleteWarningVisible: state.deleteWarningVisible,
+    deleteWarningItemId: state.deleteWarningItemId,
+    deleteWarningUsage: state.deleteWarningUsage,
   };
 };

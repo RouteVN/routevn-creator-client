@@ -87,6 +87,6 @@ template:
             - rtgl-text s=sm c=dg: This image is currently in use and cannot be deleted.
             - rtgl-view d=v g=xs mt=md:
                 - rtgl-text s=xs c=mu-fg: Used in ${deleteWarningUsage.count} place(s)
-                - rtgl-text s=xs c=mu-fg: Scenes ${deleteWarningUsage.inScene.length} | Layouts ${deleteWarningUsage.inLayout.length}
+                - rtgl-text s=xs c=mu-fg: Scenes ${deleteWarningUsage.inProps.scene.length} | Layouts ${deleteWarningUsage.inProps.layout.length}
 
 

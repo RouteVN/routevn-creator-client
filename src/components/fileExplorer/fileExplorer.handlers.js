@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource, SCENE_RESOURCE_KEYS, LAYOUT_RESOURCE_KEYS } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
   const parts = path.split(".");
@@ -191,25 +191,28 @@ export const handleFileAction = async (deps, payload) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
-      let usage = { isUsed: false, inScene: [], inLayout: [], count: 0 };
+      let usage = { isUsed: false, inProps: { scene: [], layout: [] }, count: 0 };
       if (currentItem.type === "character") {
         if (currentItem && currentItem.sprites && currentItem.sprites.items) {
           for (const spriteId of Object.keys(currentItem.sprites.items)) {
-            const spriteUsage = checkResourceUsage(
-              state.scenes,
-              state.layouts,
-              spriteId,
-            );
-            if (spriteUsage.isUsed) {
-              usage.inScene.push(...spriteUsage.inScene);
-              usage.inLayout.push(...spriteUsage.inLayout);
-              usage.count += spriteUsage.count;
+            const sceneUsages = recursivelyCheckResource(state.scenes, spriteId, SCENE_RESOURCE_KEYS);
+            const layoutUsages = recursivelyCheckResource(state.layouts, spriteId, LAYOUT_RESOURCE_KEYS);
+            if (sceneUsages.length > 0 || layoutUsages.length > 0) {
+              usage.inProps.scene.push(...sceneUsages);
+              usage.inProps.layout.push(...layoutUsages);
+              usage.count += sceneUsages.length + layoutUsages.length;
               usage.isUsed = true;
             }
           }
         }
       } else {
-        usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+        const sceneUsages = recursivelyCheckResource(state.scenes, itemId, SCENE_RESOURCE_KEYS);
+        const layoutUsages = recursivelyCheckResource(state.layouts, itemId, LAYOUT_RESOURCE_KEYS);
+        usage = {
+          inProps: { scene: sceneUsages, layout: layoutUsages },
+          isUsed: sceneUsages.length > 0 || layoutUsages.length > 0,
+          count: sceneUsages.length + layoutUsages.length,
+        };
       }
 
       if (usage.isUsed) {

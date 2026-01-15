@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { recursivelyCheckResource, TYPOGRAPHY_RESOURCE_KEYS } from "../../utils/resourceUsageChecker.js";
 
 const hexToBase64Image = (hex) => {
   if (!hex) return "";
@@ -285,6 +286,20 @@ export const handleGroupToggle = (deps, payload) => {
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+
+  const state = projectService.getState();
+  const typographyUsages = recursivelyCheckResource(state.typography, itemId, TYPOGRAPHY_RESOURCE_KEYS);
+  const usage = {
+    inProps: { typography: typographyUsages },
+    isUsed: typographyUsages.length > 0,
+    count: typographyUsages.length,
+  };
+
+  if (usage.isUsed) {
+    store.showDeleteWarning({ itemId, usage });
+    render();
+    return;
+  }
 
   // Perform the delete operation
   await projectService.appendEvent({

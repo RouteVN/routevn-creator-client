@@ -23,13 +23,20 @@ export const LAYOUT_RESOURCE_KEYS = [
   "fontFileId",
 ];
 
+// Keys that indicate resource usage in typography
+export const TYPOGRAPHY_RESOURCE_KEYS = [
+  "colorId",
+  "fontId",
+];
+
 // Map of resource types to their keys
 export const RESOURCE_KEYS_MAP = {
   scene: SCENE_RESOURCE_KEYS,
   layout: LAYOUT_RESOURCE_KEYS,
+  typography: TYPOGRAPHY_RESOURCE_KEYS,
 };
 
-const recursivelyCheckResource = (data, resourceId, keys) => {
+export const recursivelyCheckResource = (data, resourceId, keys) => {
   const usages = [];
 
   if (!data || typeof data !== "object") {
@@ -74,24 +81,4 @@ const recursivelyCheckResource = (data, resourceId, keys) => {
 
   checkNode(data, "");
   return usages;
-};
-
-export const checkResourceUsage = (scene, layout, resourceId) => {
-  const sceneUsages = recursivelyCheckResource(
-    scene,
-    resourceId,
-    SCENE_RESOURCE_KEYS,
-  );
-  const layoutUsages = recursivelyCheckResource(
-    layout,
-    resourceId,
-    LAYOUT_RESOURCE_KEYS,
-  );
-
-  return {
-    inScene: sceneUsages,
-    inLayout: layoutUsages,
-    isUsed: sceneUsages.length > 0 || layoutUsages.length > 0,
-    count: sceneUsages.length + layoutUsages.length,
-  };
 };

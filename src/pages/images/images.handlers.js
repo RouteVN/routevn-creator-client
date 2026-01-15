@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { checkResourceUsage } from "../../utils/resourceUsageChecker";
+import { recursivelyCheckResource, SCENE_RESOURCE_KEYS, LAYOUT_RESOURCE_KEYS } from "../../utils/resourceUsageChecker";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -203,7 +203,13 @@ export const handleItemDelete = async (deps, payload) => {
   await projectService.ensureRepository();
   const state = projectService.getState();
 
-  const usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+  const sceneUsages = recursivelyCheckResource(state.scenes, itemId, SCENE_RESOURCE_KEYS);
+  const layoutUsages = recursivelyCheckResource(state.layouts, itemId, LAYOUT_RESOURCE_KEYS);
+  const usage = {
+    inProps: { scene: sceneUsages, layout: layoutUsages },
+    isUsed: sceneUsages.length > 0 || layoutUsages.length > 0,
+    count: sceneUsages.length + layoutUsages.length,
+  };
 
   if (usage.isUsed) {
     store.showDeleteWarning({ itemId, usage });
