@@ -324,8 +324,7 @@ export const handleItemDelete = async (deps, payload) => {
   const state = projectService.getState();
   const character = state.characters.items[itemId];
 
-  // Check for character usage
-  let usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+  let usage = { isUsed: false, inScene: [], inLayout: [], count: 0 };
 
   // Also check for characterSprite usage (sprites within this character)
   if (character && character.sprites && character.sprites.items) {

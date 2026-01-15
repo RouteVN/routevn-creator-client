@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
   const parts = path.split(".");
@@ -87,7 +88,7 @@ export const handlePageItemClick = (deps, payload) => {
 };
 
 export const handleFileAction = async (deps, payload) => {
-  const { dispatchEvent, projectService, props } = deps;
+  const { dispatchEvent, projectService, props, store, render } = deps;
   await projectService.ensureRepository();
   const detail = payload._event.detail;
   const repositoryTarget = props.repositoryTarget;
@@ -190,6 +191,34 @@ export const handleFileAction = async (deps, payload) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
 
     if (currentItem) {
+    let usage = { isUsed: false, inScene: [], inLayout: [], count: 0 };
+    if(currentItem.type === "character") {
+      if (currentItem && currentItem.sprites && currentItem.sprites.items) {
+        for (const spriteId of Object.keys(currentItem.sprites.items)) {
+          const spriteUsage = checkResourceUsage(
+            state.scenes,
+            state.layouts,
+            spriteId,
+          );
+          if (spriteUsage.isUsed) {
+            usage.inScene.push(...spriteUsage.inScene);
+            usage.inLayout.push(...spriteUsage.inLayout);
+            usage.count += spriteUsage.count;
+            usage.isUsed = true;
+          }
+        }
+      }
+    }
+    else{
+      usage = checkResourceUsage(state.scenes, state.layouts, itemId);
+    }
+
+      if (usage.isUsed) {
+        store.showDeleteWarning({ itemId, usage });
+        render();
+        return;
+      }
+
       await projectService.appendEvent({
         type: "treeDelete",
         payload: {
