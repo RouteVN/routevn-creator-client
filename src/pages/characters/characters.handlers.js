@@ -2,8 +2,6 @@ import { nanoid } from "nanoid";
 import { validateIconDimensions } from "../../utils/fileProcessors";
 import {
   recursivelyCheckResource,
-  SCENE_RESOURCE_KEYS,
-  LAYOUT_RESOURCE_KEYS,
 } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
@@ -335,10 +333,7 @@ export const handleItemDelete = async (deps, payload) => {
       const usage = recursivelyCheckResource({
         state,
         itemId: spriteId,
-        checkTargets: [
-          { name: "scenes", keys: SCENE_RESOURCE_KEYS },
-          { name: "layouts", keys: LAYOUT_RESOURCE_KEYS },
-        ],
+        checkTargets: ["scenes", "layouts"],
       });
       if (usage.isUsed) {
         isUsed = true;

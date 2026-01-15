@@ -1,9 +1,6 @@
 import { nanoid } from "nanoid";
 import {
   recursivelyCheckResource,
-  SCENE_RESOURCE_KEYS,
-  LAYOUT_RESOURCE_KEYS,
-  TYPOGRAPHY_RESOURCE_KEYS,
 } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
@@ -206,10 +203,7 @@ export const handleFileAction = async (deps, payload) => {
             const usage = recursivelyCheckResource({
               state,
               itemId: spriteId,
-              checkTargets: [
-                { name: "scenes", keys: SCENE_RESOURCE_KEYS },
-                { name: "layouts", keys: LAYOUT_RESOURCE_KEYS },
-              ],
+              checkTargets: ["scenes", "layouts"],
             });
             if (usage.isUsed) {
               isUsed = true;
@@ -225,16 +219,13 @@ export const handleFileAction = async (deps, payload) => {
           return;
         }
       } else if (resourceType === "layout") {
-        checkTargets = [{ name: "scenes", keys: SCENE_RESOURCE_KEYS }];
+        checkTargets = ["scenes"];
       } else if (resourceType === "typography") {
-        checkTargets = [{ name: "layouts", keys: LAYOUT_RESOURCE_KEYS }];
+        checkTargets = ["layouts"];
       } else if (resourceType === "color" || resourceType === "font") {
-        checkTargets = [{ name: "typography", keys: TYPOGRAPHY_RESOURCE_KEYS }];
+        checkTargets = ["typography"];
       } else {
-        checkTargets = [
-          { name: "scenes", keys: SCENE_RESOURCE_KEYS },
-          { name: "layouts", keys: LAYOUT_RESOURCE_KEYS },
-        ];
+        checkTargets = ["scenes", "layouts"];
       }
 
       if (checkTargets) {

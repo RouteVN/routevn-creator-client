@@ -1,5 +1,5 @@
-// Keys that indicate resource usage in scenes
-export const SCENE_RESOURCE_KEYS = [
+// Keys that indicate resource usage in different resource types
+const SCENE_RESOURCE_KEYS = [
   "resourceId",
   "transformId",
   "sceneId",
@@ -12,8 +12,7 @@ export const SCENE_RESOURCE_KEYS = [
   "sfxId",
 ];
 
-// Keys that indicate resource usage in layouts
-export const LAYOUT_RESOURCE_KEYS = [
+const LAYOUT_RESOURCE_KEYS = [
   "imageId",
   "hoverImageId",
   "clickImageId",
@@ -23,8 +22,14 @@ export const LAYOUT_RESOURCE_KEYS = [
   "fontFileId",
 ];
 
-// Keys that indicate resource usage in typography
-export const TYPOGRAPHY_RESOURCE_KEYS = ["colorId", "fontId"];
+const TYPOGRAPHY_RESOURCE_KEYS = ["colorId", "fontId"];
+
+// Mapping from resource names to their keys
+const RESOURCE_KEYS_MAP = {
+  scenes: SCENE_RESOURCE_KEYS,
+  layouts: LAYOUT_RESOURCE_KEYS,
+  typography: TYPOGRAPHY_RESOURCE_KEYS,
+};
 
 const checkNode = (node, resourceId, keys, usages) => {
   if (!node || typeof node !== "object") {
@@ -61,17 +66,18 @@ const checkNode = (node, resourceId, keys, usages) => {
 export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
   const inProps = {};
 
-  for (const target of checkTargets) {
-    const { name, keys } = target;
-    const data = state[name];
+  for (const targetName of checkTargets) {
+    const keys = RESOURCE_KEYS_MAP[targetName];
+    if (!keys) continue;
 
+    const data = state[targetName];
     if (!data) continue;
 
     const usages = [];
-    checkNode(data, itemId, keys, usages, name);
+    checkNode(data, itemId, keys, usages);
 
     if (usages.length > 0) {
-      inProps[name] = usages;
+      inProps[targetName] = usages;
     }
   }
 
