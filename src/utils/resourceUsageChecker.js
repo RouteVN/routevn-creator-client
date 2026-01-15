@@ -24,10 +24,7 @@ export const LAYOUT_RESOURCE_KEYS = [
 ];
 
 // Keys that indicate resource usage in typography
-export const TYPOGRAPHY_RESOURCE_KEYS = [
-  "colorId",
-  "fontId",
-];
+export const TYPOGRAPHY_RESOURCE_KEYS = ["colorId", "fontId"];
 
 // Map of resource types to their keys
 export const RESOURCE_KEYS_MAP = {

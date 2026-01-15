@@ -1,7 +1,10 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
 import { getFileType } from "../../utils/fileTypeUtils";
-import { recursivelyCheckResource, LAYOUT_RESOURCE_KEYS } from "../../utils/resourceUsageChecker.js";
+import {
+  recursivelyCheckResource,
+  LAYOUT_RESOURCE_KEYS,
+} from "../../utils/resourceUsageChecker.js";
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = (store, projectService) => {
@@ -691,7 +694,11 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
-  const layoutUsages = recursivelyCheckResource(state.layouts, itemId, LAYOUT_RESOURCE_KEYS);
+  const layoutUsages = recursivelyCheckResource(
+    state.layouts,
+    itemId,
+    LAYOUT_RESOURCE_KEYS,
+  );
   const usage = {
     inProps: { layout: layoutUsages },
     isUsed: layoutUsages.length > 0,

@@ -2,7 +2,10 @@ import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { toFlatItems } from "insieme";
 import { getFileType } from "../../utils/fileTypeUtils";
-import { recursivelyCheckResource, TYPOGRAPHY_RESOURCE_KEYS } from "../../utils/resourceUsageChecker.js";
+import {
+  recursivelyCheckResource,
+  TYPOGRAPHY_RESOURCE_KEYS,
+} from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -258,7 +261,11 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
-  const typographyUsages = recursivelyCheckResource(state.typography, itemId, TYPOGRAPHY_RESOURCE_KEYS);
+  const typographyUsages = recursivelyCheckResource(
+    state.typography,
+    itemId,
+    TYPOGRAPHY_RESOURCE_KEYS,
+  );
   const usage = {
     inProps: { typography: typographyUsages },
     isUsed: typographyUsages.length > 0,

@@ -1,6 +1,10 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
-import { recursivelyCheckResource, SCENE_RESOURCE_KEYS, LAYOUT_RESOURCE_KEYS } from "../../utils/resourceUsageChecker.js";
+import {
+  recursivelyCheckResource,
+  SCENE_RESOURCE_KEYS,
+  LAYOUT_RESOURCE_KEYS,
+} from "../../utils/resourceUsageChecker.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;
@@ -398,8 +402,16 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
-  const sceneUsages = recursivelyCheckResource(state.scenes, itemId, SCENE_RESOURCE_KEYS);
-  const layoutUsages = recursivelyCheckResource(state.layouts, itemId, LAYOUT_RESOURCE_KEYS);
+  const sceneUsages = recursivelyCheckResource(
+    state.scenes,
+    itemId,
+    SCENE_RESOURCE_KEYS,
+  );
+  const layoutUsages = recursivelyCheckResource(
+    state.layouts,
+    itemId,
+    LAYOUT_RESOURCE_KEYS,
+  );
   const usage = {
     inProps: { scene: sceneUsages, layout: layoutUsages },
     isUsed: sceneUsages.length > 0 || layoutUsages.length > 0,

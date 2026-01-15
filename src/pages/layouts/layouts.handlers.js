@@ -1,5 +1,8 @@
 import { nanoid } from "nanoid";
-import { recursivelyCheckResource, SCENE_RESOURCE_KEYS } from "../../utils/resourceUsageChecker.js";
+import {
+  recursivelyCheckResource,
+  SCENE_RESOURCE_KEYS,
+} from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -340,7 +343,11 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
-  const sceneUsages = recursivelyCheckResource(state.scenes, itemId, SCENE_RESOURCE_KEYS);
+  const sceneUsages = recursivelyCheckResource(
+    state.scenes,
+    itemId,
+    SCENE_RESOURCE_KEYS,
+  );
   const usage = {
     inProps: { scene: sceneUsages },
     isUsed: sceneUsages.length > 0,

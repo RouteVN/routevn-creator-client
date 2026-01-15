@@ -181,7 +181,6 @@ export const hideDeleteWarning = (state) => {
   state.deleteWarningUsage = null;
 };
 
-
 export const getGlyphList = () => {
   const glyphs = [];
 

@@ -236,7 +236,6 @@ export const resetFormValues = (state) => {
   };
 };
 
-
 export const showDeleteWarning = (state, { itemId, usage }) => {
   state.deleteWarningVisible = true;
   state.deleteWarningItemId = itemId;
