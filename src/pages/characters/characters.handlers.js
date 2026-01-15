@@ -330,7 +330,11 @@ export const handleItemDelete = async (deps, payload) => {
   // Also check for characterSprite usage (sprites within this character)
   if (character && character.sprites && character.sprites.items) {
     for (const spriteId of Object.keys(character.sprites.items)) {
-      const spriteUsage = checkResourceUsage(state.scenes, state.layouts, spriteId);
+      const spriteUsage = checkResourceUsage(
+        state.scenes,
+        state.layouts,
+        spriteId,
+      );
       if (spriteUsage.isUsed) {
         usage.inScene.push(...spriteUsage.inScene);
         usage.inLayout.push(...spriteUsage.inLayout);

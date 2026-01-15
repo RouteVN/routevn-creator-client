@@ -1,5 +1,4 @@
 import { toFlatGroups, toFlatItems } from "insieme";
-import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 const form = {
   fields: [

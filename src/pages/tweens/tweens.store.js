@@ -1,6 +1,5 @@
 import { toFlatGroups, toFlatItems } from "insieme";
 import { resetState } from "./tweens.constants";
-import { checkResourceUsage } from "../../utils/resourceUsageChecker.js";
 
 const form = {
   fields: [
