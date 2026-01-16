@@ -1,4 +1,20 @@
 {
+  "name": "routevn-creator-client",
+  "description": "A visual novel engine and creator tool for building interactive narrative games with branching storylines, character dialogues, and multimedia support",
+  "keywords": [
+    "visual-novel",
+    "vn-engine",
+    "game-engine",
+    "narrative-game",
+    "interactive-fiction",
+    "storytelling",
+    "game-development",
+    "visual-novel-maker",
+    "dialogue-system",
+    "branching-narrative",
+    "tauri",
+    "desktop-app"
+  ],
   "type": "module",
   "dependencies": {
     "@rettangoli/fe": "0.0.10",
