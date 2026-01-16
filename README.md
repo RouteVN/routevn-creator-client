@@ -1,5 +1,6 @@
-
 # RouteVN Creator Client
+
+[Official Website](https://routevn.com/creator/about/)
 
 RouteVN Creator Client is a frontend application for building Visual Novels with a drag & drop visual UI, without needing to write any code.
 
@@ -10,10 +11,6 @@ This is a complete **Single Page Application (SPA)** that operates **offline-fir
 - [@rettangoli/fe](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-fe) - Is used as the frontend framework
 - [@rettangoli/ui](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-ui) - Is used as the UI library
 - [Repository](docs/Repository.md) - Is used as the state management system (enables offline-first functionality)
-
-## External Dependencies
-
-- [RouteVN API](https://github.com/yuusoft-org/routevn-api) - You need to run this backend project in order to use the APIs
 
 ## Project Structure
 
