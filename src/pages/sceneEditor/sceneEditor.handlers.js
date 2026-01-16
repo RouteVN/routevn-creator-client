@@ -1040,6 +1040,10 @@ export const handleHidePreviewScene = async (deps) => {
 
   const { canvas } = getRefIds();
   await graphicsService.init({ canvas: canvas.elm });
+
+  const projectData = store.selectProjectData();
+  graphicsService.initRouteEngine(projectData);
+
   await renderSceneState(store, graphicsService);
 };
 
