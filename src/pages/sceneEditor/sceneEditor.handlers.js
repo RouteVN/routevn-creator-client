@@ -375,13 +375,17 @@ export const handleSplitLine = async (deps, payload) => {
 
   // Check if this line is already being split
   const splittingLineId = store.selectSplittingLineId();
+  const timestamp = performance.now().toFixed(2);
+  console.log(`[LE][${timestamp}] handleSplitLine called | lineId:`, lineId, "| lock:", splittingLineId, "| leftContent:", leftContent.substring(0, 20), "| rightContent:", rightContent.substring(0, 20));
+
   if (splittingLineId === lineId) {
     // This line is already being split, ignore this duplicate event
-    console.log("[LE] Ignoring duplicate split for line", lineId);
+    console.log(`[LE][${timestamp}] BLOCKED duplicate split for line`, lineId);
     return; // Exit early - don't process duplicate split
   }
 
   // Mark this line as being split IMMEDIATELY
+  console.log(`[LE][${timestamp}] Setting lock to lineId:`, lineId);
   store.setSplittingLineId(lineId);
 
   const newLineId = nanoid();
@@ -515,8 +519,12 @@ export const handleSplitLine = async (deps, payload) => {
   render();
 
   // Use requestAnimationFrame for focus operations
-  console.log("[LE] Splitting line, focusing new line ID ", newLineId);
+  const scheduleTime = performance.now().toFixed(2);
+  console.log(`[LE][${scheduleTime}] Scheduling RAF to focus newLineId:`, newLineId, "| lock:", store.selectSplittingLineId());
   requestAnimationFrame(() => {
+    const rafTime = performance.now().toFixed(2);
+    console.log(`[LE][${rafTime}] RAF executing - focusing newLineId:`, newLineId, "| lock:", store.selectSplittingLineId());
+
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine({
         currentLineId: newLineId,
@@ -524,12 +532,16 @@ export const handleSplitLine = async (deps, payload) => {
 
       // Also render the linesEditor
       linesEditorRef.elm.render();
-      console.log("[LE] Focused new line ID ", newLineId);
+      console.log(`[LE][${rafTime}] Focused new line ID`, newLineId);
     }
 
     // Clear the splitting lock - allows new line to be split if Enter is still held
+    console.log(`[LE][${rafTime}] Scheduling nested RAF to clear lock | lock:`, store.selectSplittingLineId());
     requestAnimationFrame(() => {
+      const nestedRafTime = performance.now().toFixed(2);
+      console.log(`[LE][${nestedRafTime}]  Nested RAF executing - clearing lock | was:`, store.selectSplittingLineId());
       store.setSplittingLineId(null);
+      console.log(`[LE][${nestedRafTime}] Lock cleared | now: null`);
     });
   });
 
