@@ -64,14 +64,14 @@ Steps to reproduce
 
 https://github.com/user-attachments/assets/85eacfb9-a18f-4e11-86f0-57c992acc591
 
-- [ ] [High] @Nghia If audio resource is removed from asset and if it's present on that line then it will not trigger that line and show blank
+- [x] [High] @Nghia If audio resource is removed from asset and if it's present on that line then it will not trigger that line and show blank
 error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [Medium] Add arrow for the choices as well
 
 - [x] [High] When in the transform we set a custom scaleX and scaleY. we apply the transform in the scene editor for characters. it does not work. the with and height is still the same. expected: width and height of character sprite should be updated based on the scaleX and scaleY
 
-- [ ] [High] When we copy some rich text. And then try to paste it into the scene editor text. The text input gets messed up. Correct behavior:
+- [x] @nellow [High] When we copy some rich text. And then try to paste it into the scene editor text. The text input gets messed up. Correct behavior:
   - We should remove all text styling before pasting. The text input should not be styled by anything
   - Should think of how it handles new lines. 
 
@@ -79,7 +79,7 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [High] add adding animation to background, with tween fade in. and then you navigate around different lines, or preview it. the animation runs everytime you click. expected: it should run only once for that line
 
-- [ ] [High] @nellow: bug with dialogue and fade: https://discord.com/channels/1233660682419834920/1461203575123480707/1461203575123480707
+- [x] [High] @nellow: bug with dialogue and fade: https://discord.com/channels/1233660682419834920/1461203575123480707/1461203575123480707
 
 ---
 
