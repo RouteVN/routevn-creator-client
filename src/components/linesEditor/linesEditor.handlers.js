@@ -592,7 +592,7 @@ export const handleLineKeyDown = (deps, payload) => {
         // Split the content at cursor position
         const leftContent = fullText.substring(0, cursorPos);
         const rightContent = fullText.substring(cursorPos);
-
+        console.log("[LE] Enter line id = ", id)
         requestAnimationFrame(() => {
           dispatchEvent(
             new CustomEvent("splitLine", {
@@ -603,6 +603,7 @@ export const handleLineKeyDown = (deps, payload) => {
               },
             }),
           );
+          console.log("[LE] Dispatched splitLine event line ID ", id);
         });
       }
       break;

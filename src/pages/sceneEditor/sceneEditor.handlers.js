@@ -370,9 +370,21 @@ export const handleSplitLine = async (deps, payload) => {
   const { projectService, store, render, getRefIds, subject } = deps;
 
   const sceneId = store.selectSceneId();
-  const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = payload._event.detail;
+
+  // Check if this line is already being split
+  const splittingLineId = store.selectSplittingLineId();
+  if (splittingLineId === lineId) {
+    // This line is already being split, ignore this duplicate event
+    console.log("[LE] Ignoring duplicate split for line", lineId);
+    return; // Exit early - don't process duplicate split
+  }
+
+  // Mark this line as being split IMMEDIATELY
+  store.setSplittingLineId(lineId);
+
+  const newLineId = nanoid();
 
   // First, persist any temporary line changes from the store to the repository
   // This ensures edits to other lines aren't lost when we update the repository
@@ -503,6 +515,7 @@ export const handleSplitLine = async (deps, payload) => {
   render();
 
   // Use requestAnimationFrame for focus operations
+  console.log("[LE] Splitting line, focusing new line ID ", newLineId);
   requestAnimationFrame(() => {
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine({
@@ -511,7 +524,13 @@ export const handleSplitLine = async (deps, payload) => {
 
       // Also render the linesEditor
       linesEditorRef.elm.render();
+      console.log("[LE] Focused new line ID ", newLineId);
     }
+
+    // Clear the splitting lock - allows new line to be split if Enter is still held
+    requestAnimationFrame(() => {
+      store.setSplittingLineId(null);
+    });
   });
 
   // Trigger debounced canvas render
@@ -1093,14 +1112,6 @@ async function handleRenderCanvas(deps, payload) {
   const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
   await updateSectionChanges(deps);
-  // Log presentation changes for the current line
-  const presentationChanges = graphicsService.engineSelectPresentationChanges();
-  const currentLineId = store.selectSelectedLineId();
-  const currentSectionId = store.selectSelectedSectionId();
-  console.log(
-    `[Line Change] Section: ${currentSectionId}, Line: ${currentLineId}`,
-    presentationChanges,
-  );
 
   if (!payload?.skipRender) {
     render();

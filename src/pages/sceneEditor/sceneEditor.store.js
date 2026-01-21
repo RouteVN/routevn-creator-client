@@ -24,6 +24,7 @@ export const createInitialState = () => ({
   previewSceneId: undefined,
   presentationState: {},
   sectionLineChanges: {},
+  splittingLineId: null,
 });
 
 export const setSceneId = (state, sceneId) => {
@@ -175,6 +176,18 @@ export const setSelectedLineId = (state, selectedLineId) => {
 
 export const setSelectedSectionId = (state, selectedSectionId) => {
   state.selectedSectionId = selectedSectionId;
+};
+
+export const setSplittingLineId = (state, lineId) => {
+  state.splittingLineId = lineId;
+};
+
+export const clearSplittingLineId = (state) => {
+  state.splittingLineId = null;
+};
+
+export const selectSplittingLineId = ({ state }) => {
+  return state.splittingLineId;
 };
 
 export const showSectionDropdownMenu = (state, { position, sectionId }) => {
