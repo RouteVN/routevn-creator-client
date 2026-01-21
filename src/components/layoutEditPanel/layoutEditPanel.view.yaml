@@ -53,7 +53,11 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorSubmit
-
+        
+  cancel-image-selection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorCancel
   list-bar-item-*:
     eventListeners:
       click:
