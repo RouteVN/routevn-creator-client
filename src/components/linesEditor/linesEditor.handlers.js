@@ -592,31 +592,7 @@ export const handleLineKeyDown = (deps, payload) => {
         // Split the content at cursor position
         const leftContent = fullText.substring(0, cursorPos);
         const rightContent = fullText.substring(cursorPos);
-        const keydownTime = performance.now().toFixed(2);
-        console.log(
-          `[LE][${keydownTime}]   Enter keydown | lineId:`,
-          id,
-          "| cursorPos:",
-          cursorPos,
-          "| fullText: '",
-          fullText,
-          "' | left: '",
-          leftContent,
-          "' | right: '",
-          rightContent,
-          "'",
-        );
         requestAnimationFrame(() => {
-          const dispatchTime = performance.now().toFixed(2);
-          console.log(
-            `[LE][${dispatchTime}] Dispatching splitLine | lineId:`,
-            id,
-            "| left: '",
-            leftContent,
-            "' | right: '",
-            rightContent,
-            "'",
-          );
           dispatchEvent(
             new CustomEvent("splitLine", {
               detail: {
@@ -625,10 +601,6 @@ export const handleLineKeyDown = (deps, payload) => {
                 rightContent: rightContent,
               },
             }),
-          );
-          console.log(
-            `[LE][${dispatchTime}] splitLine dispatched for lineId:`,
-            id,
           );
         });
       }
