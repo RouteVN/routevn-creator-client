@@ -769,6 +769,15 @@ export const handleMergeLines = async (deps, payload) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
+  const splittingLineId = store.selectSplittingLineId();
+
+  if (splittingLineId === currentLineId) {
+    return; 
+  }
+
+  // Mark this line as being processed IMMEDIATELY
+  store.setSplittingLineId(currentLineId);
+
   // First, persist any temporary line changes from the store to the repository
   // This ensures edits to other lines aren't lost when we update the repository
   const storeState = store.selectRepositoryState();
@@ -879,6 +888,10 @@ export const handleMergeLines = async (deps, payload) => {
       });
       linesEditorRef.elm.render();
     }
+
+    requestAnimationFrame(() => {
+      store.setSplittingLineId(null);
+    });
   });
 
   // Trigger debounced canvas render
