@@ -377,8 +377,7 @@ export const handleSplitLine = async (deps, payload) => {
   const splittingLineId = store.selectSplittingLineId();
 
   if (splittingLineId === lineId) {
-    // This line is already being split, ignore this duplicate event
-    return; // Exit early - don't process duplicate split
+    return; 
   }
 
   // Mark this line as being split IMMEDIATELY
@@ -527,7 +526,7 @@ export const handleSplitLine = async (deps, payload) => {
 
     // Clear the splitting lock - allows new line to be split if Enter is still held
     requestAnimationFrame(() => {
-      store.setSplittingLineId(null);
+      store.clearSplittingLineId();
     });
   });
 
@@ -851,7 +850,7 @@ export const handleMergeLines = async (deps, payload) => {
     }
 
     requestAnimationFrame(() => {
-      store.setSplittingLineId(null);
+      store.clearSplittingLineId();
     });
   });
 
