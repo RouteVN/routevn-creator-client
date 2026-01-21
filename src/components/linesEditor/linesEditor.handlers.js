@@ -603,6 +603,7 @@ export const handleLineKeyDown = (deps, payload) => {
         const leftContent = fullText.substring(0, cursorPos);
         const rightContent = fullText.substring(cursorPos);
 
+        //payload._event.currentTarget.textContent = leftContent;
         // Update store immediately with the left content to prevent stale display
         dispatchEvent(
           new CustomEvent("editor-data-changed", {
