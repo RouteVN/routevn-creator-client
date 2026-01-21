@@ -179,7 +179,7 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { store, render, projectService, appService  } = deps;
+  const { store, render, projectService, appService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
@@ -241,7 +241,7 @@ export const handleAddDialogClose = (deps) => {
 };
 
 export const handleAddFormAction = async (deps, payload) => {
-  const { store, render, projectService, appService  } = deps;
+  const { store, render, projectService, appService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
