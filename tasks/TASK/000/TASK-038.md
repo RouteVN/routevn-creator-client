@@ -77,9 +77,11 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [Medium] For the Scene Map. Arrows are automatically added when scenes have transitions. However it is not added for choices with transitions. It should apply for choices with transitions as well.
 
-- [ ] [High] add adding animation to background, with tween fade in. and then you navigate around different lines, or preview it. the animation runs everytime you click. expected: it should run only once for that line
+- [X] [High] add adding animation to background, with tween fade in. and then you navigate around different lines, or preview it. the animation runs everytime you click. expected: it should run only once for that line
 
 - [x] [High] @nellow: bug with dialogue and fade: https://discord.com/channels/1233660682419834920/1461203575123480707/1461203575123480707
+
+- [ ] [High] custom text fonts not working in the preview in scene editor
 
 ---
 
@@ -89,11 +91,18 @@ error -> `Uncaught TypeError: s is not iterable`
 - [ ] [Low] On the sounds page, when playing audio, can make the slider more visible so it's intent is clear
 - [ ] [Low] User can benefit from keyboard actions, like delete to delete, f2 to rename, and other stuff which is not here in the creator
 - [ ] [High] Scene editor, on the right of the preview button. There should be an icon to mute/unmute. mute/unmute should apply to: bgm, sfx. propose how to implmement mute (set volume to 0, remove bgm/sfx actions or what)
+- [ ] [Low] In the images pages. When user tries to click Upload but just clicked below the upload button, it triggers the folder expand. The images under the folder gets hidden, and user may be confused on why
+- [ ] [Low] Scene editor need to make more obvious that can double click scene. cannot click start circle.
+- [ ] [Low] Able to increase font or zoom in scene editor. make avatar a big bigger somehow
+- [ ] [Low] Support dfferent themes
+- [ ] [Low] User find it annoying that when from scene editor go to image, and then go back to scene tab, user has to enter the scene again. maybe need to save last visited scene or something
+- [ ] [Low] scene editor Ability to preiew from current line instead of beginning
+
 
 ---
 
 ## Confused / Suggestions
 
-- Adding multiple character on the same line causes to hide the previous character (if the character is same) need info on this, not sure if a bug or intended
+- [x] Adding multiple character on the same line causes to hide the previous character (if the character is same) need info on this, not sure if a bug or intended
 
 
