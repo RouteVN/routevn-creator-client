@@ -283,6 +283,12 @@ export const handleImageSelectorImageSelected = (deps, payload) => {
   });
 };
 
+export const handleImageSelectorCancel = (deps) => {
+  const { store, render } = deps;
+  store.closeImageSelectorDialog();
+  render();
+};
+
 export const handleImageSelectorSubmit = (deps) => {
   const { store, render, dispatchEvent } = deps;
   const imageId = store.selectTempSelectedImageId();
