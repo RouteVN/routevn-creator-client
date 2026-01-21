@@ -384,11 +384,9 @@ export const handleSplitLine = async (deps, payload) => {
   if (storeScene) {
     for (const section of toFlatItems(storeScene.sections)) {
       for (const line of toFlatItems(section.lines)) {
-        // Skip the line being split
-        if (
-          line.id !== lineId &&
-          line.actions?.dialogue?.content !== undefined
-        ) {
+        // Persist all lines including the one being split
+        // This flushes any pending debounced updates from store to repository
+        if (line.actions?.dialogue?.content !== undefined) {
           // Persist this line's content to the repository
           await projectService.appendEvent({
             type: "set",

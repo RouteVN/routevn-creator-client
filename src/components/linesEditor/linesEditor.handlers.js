@@ -603,7 +603,18 @@ export const handleLineKeyDown = (deps, payload) => {
         const leftContent = fullText.substring(0, cursorPos);
         const rightContent = fullText.substring(cursorPos);
 
-        // Dispatch immediately, not in requestAnimationFrame
+        // Update store immediately with the left content to prevent stale display
+        dispatchEvent(
+          new CustomEvent("editor-data-changed", {
+            detail: {
+              lineId: id,
+              content: leftContent,
+            },
+            bubbles: true,
+          }),
+        );
+
+        // Dispatch split event
         dispatchEvent(
           new CustomEvent("splitLine", {
             detail: {
