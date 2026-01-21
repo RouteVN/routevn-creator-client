@@ -179,12 +179,16 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService  } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
     const editItemId = store.getState().editItemId;
 
+    if (!formData.name || !formData.name.trim()) {
+      appService.showToast("Color name is required.", { title: "Warning" });
+      return;
+    }
     // Update the color in the repository
     await projectService.appendEvent({
       type: "treeUpdate",
@@ -237,10 +241,16 @@ export const handleAddDialogClose = (deps) => {
 };
 
 export const handleAddFormAction = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService  } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.formValues;
+
+    if (!formData.name || !formData.name.trim()) {
+      appService.showToast("Color name cannot be empty.", { title: "Warning" });
+      return;
+    }
+
     const targetGroupId = store.getState().targetGroupId;
     const newColorId = nanoid();
 
