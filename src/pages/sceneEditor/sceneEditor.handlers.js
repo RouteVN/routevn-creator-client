@@ -772,7 +772,7 @@ export const handleMergeLines = async (deps, payload) => {
   const splittingLineId = store.selectSplittingLineId();
 
   if (splittingLineId === currentLineId) {
-    return; 
+    return;
   }
 
   // Mark this line as being processed IMMEDIATELY
