@@ -769,6 +769,38 @@ export const handleMergeLines = async (deps, payload) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
+  // First, persist any temporary line changes from the store to the repository
+  // This ensures edits to other lines aren't lost when we update the repository
+  const storeState = store.selectRepositoryState();
+  const storeScene = toFlatItems(storeState.scenes)
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === sceneId);
+
+  if (storeScene) {
+    for (const section of toFlatItems(storeScene.sections)) {
+      for (const line of toFlatItems(section.lines)) {
+        // Skip the lines being merged
+        if (
+          line.id !== prevLineId &&
+          line.id !== currentLineId &&
+          line.actions?.dialogue?.content !== undefined
+        ) {
+          // Persist this line's content to the repository
+          await projectService.appendEvent({
+            type: "set",
+            payload: {
+              target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
+              value: line.actions.dialogue.content,
+              options: {
+                replace: true,
+              },
+            },
+          });
+        }
+      }
+    }
+  }
+
   // Get previous line content and existing dialogue properties
   const scene = store.selectScene();
   const section = scene.sections.find((s) => s.id === sectionId);
