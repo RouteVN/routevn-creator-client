@@ -371,9 +371,20 @@ export const handleSplitLine = async (deps, payload) => {
   const { projectService, store, render, getRefIds, subject } = deps;
 
   const sceneId = store.selectSceneId();
-  const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = payload._event.detail;
+
+  // Check if this line is already being processed (split/merge)
+  const lockingLineId = store.selectLockingLineId();
+
+  if (lockingLineId === lineId) {
+    return;
+  }
+
+  // Mark this line as being processed IMMEDIATELY to prevent duplicate operations
+  store.setLockingLineId(lineId);
+
+  const newLineId = nanoid();
 
   // First, persist any temporary line changes from the store to the repository
   // This ensures edits to other lines aren't lost when we update the repository
@@ -513,6 +524,11 @@ export const handleSplitLine = async (deps, payload) => {
       // Also render the linesEditor
       linesEditorRef.elm.render();
     }
+
+    // Clear the splitting lock - allows new line to be split if Enter is still held
+    requestAnimationFrame(() => {
+      store.clearLockingLineId();
+    });
   });
 
   // Trigger debounced canvas render
@@ -714,6 +730,47 @@ export const handleMergeLines = async (deps, payload) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
+  // Check if this line is already being processed (split/merge)
+  const lockingLineId = store.selectLockingLineId();
+
+  if (lockingLineId === currentLineId) {
+    return;
+  }
+
+  store.setLockingLineId(currentLineId);
+
+  // First, persist any temporary line changes from the store to the repository
+  // This ensures edits to other lines aren't lost when we update the repository
+  const storeState = store.selectRepositoryState();
+  const storeScene = toFlatItems(storeState.scenes)
+    .filter((item) => item.type === "scene")
+    .find((item) => item.id === sceneId);
+
+  if (storeScene) {
+    for (const section of toFlatItems(storeScene.sections)) {
+      for (const line of toFlatItems(section.lines)) {
+        // Skip the lines being merged
+        if (
+          line.id !== prevLineId &&
+          line.id !== currentLineId &&
+          line.actions?.dialogue?.content !== undefined
+        ) {
+          // Persist this line's content to the repository
+          await projectService.appendEvent({
+            type: "set",
+            payload: {
+              target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
+              value: line.actions.dialogue.content,
+              options: {
+                replace: true,
+              },
+            },
+          });
+        }
+      }
+    }
+  }
+
   // Get previous line content and existing dialogue properties
   const scene = store.selectScene();
   const section = scene.sections.find((s) => s.id === sectionId);
@@ -792,6 +849,10 @@ export const handleMergeLines = async (deps, payload) => {
       });
       linesEditorRef.elm.render();
     }
+
+    requestAnimationFrame(() => {
+      store.clearLockingLineId();
+    });
   });
 
   // Trigger debounced canvas render
@@ -1094,14 +1155,6 @@ async function handleRenderCanvas(deps, payload) {
   const { store, graphicsService, render } = deps;
   await renderSceneState(store, graphicsService);
   await updateSectionChanges(deps);
-  // Log presentation changes for the current line
-  const presentationChanges = graphicsService.engineSelectPresentationChanges();
-  const currentLineId = store.selectSelectedLineId();
-  const currentSectionId = store.selectSelectedSectionId();
-  console.log(
-    `[Line Change] Section: ${currentSectionId}, Line: ${currentLineId}`,
-    presentationChanges,
-  );
 
   if (!payload?.skipRender) {
     render();
