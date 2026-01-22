@@ -121,9 +121,13 @@ export const createGraphicsService = async ({ subject }) => {
       return engine.selectPresentationChanges();
     },
 
-    engineRenderCurrentState: () => {
-      const renderState = engine.selectRenderState();
+    engineRenderCurrentState: (options = {}) => {
+      const { skipAudio = false } = options;
+      let renderState = engine.selectRenderState();
       console.log("renderState", renderState);
+      if (skipAudio) {
+        renderState = { ...renderState, audio: [] };
+      }
       routeGraphics.render(renderState);
     },
 

@@ -24,6 +24,7 @@ export const createInitialState = () => ({
   previewSceneId: undefined,
   presentationState: {},
   sectionLineChanges: {},
+  isMuted: false,
 });
 
 export const setSceneId = (state, sceneId) => {
@@ -373,6 +374,8 @@ export const selectViewData = ({ state }) => {
     previewSceneId: state.previewSceneId,
     presentationState: state.presentationState,
     sectionLineChanges: state.sectionLineChanges,
+    isMuted: state.isMuted,
+    muteIcon: state.isMuted ? "mute" : "unmute",
   };
 };
 
@@ -489,4 +492,12 @@ export const selectSectionTransitionsDAG = ({ state }) => {
     edges,
     adjacencyList,
   };
+};
+
+export const toggleMute = (state) => {
+  state.isMuted = !state.isMuted;
+};
+
+export const selectIsMuted = ({ state }) => {
+  return state.isMuted;
 };

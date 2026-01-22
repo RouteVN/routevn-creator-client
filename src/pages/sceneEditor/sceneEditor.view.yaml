@@ -78,6 +78,10 @@ refs:
     eventListeners:
       click:
         handler: handlePreviewClick
+  mute-toggle:
+    eventListeners:
+      click:
+        handler: handleMuteToggle
   vn-preview:
     eventListeners:
       close:
@@ -89,7 +93,8 @@ template:
           - rtgl-button#back-button sq icon="chevronLeft" v="gh" mr=sm:
           - rtgl-view flex=1:
               - rtgl-text c=mu-fg: ${scene.name}
-          - rtgl-view flex=1:
+          - rtgl-view flex=1 d=h g=sm jc=e:
+              - rtgl-button#mute-toggle sq v="gh" icon="${muteIcon}":
               - rtgl-button#preview-button: Preview
       - 'rtgl-view d=h w=f h=f flex=1 style="min-height: 0px"':
           - $if sectionsGraphView:
