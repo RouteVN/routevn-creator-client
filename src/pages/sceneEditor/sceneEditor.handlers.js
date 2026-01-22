@@ -538,6 +538,8 @@ export const handleSplitLine = async (deps, payload) => {
           `[LE] handleSplitLine | Clearing old line ${lineId} content because split happened at start.`,
         );
         oldLineElement.textContent = "";
+        const inputEvent = new Event('input', { bubbles: true });
+        oldLineElement.dispatchEvent(inputEvent);
       }
     }
 
@@ -1138,6 +1140,16 @@ export const handleHidePreviewScene = async (deps) => {
 export const handleUpdateDialogueContent = async (deps, payload) => {
   const { projectService, store, subject } = deps;
   const { lineId, content } = payload;
+
+  // Skip saving if content is empty (avoids creating { text: "" } structure)
+  const isEmptyContent =
+    !content ||
+    content.length === 0 ||
+    (content.length === 1 && content[0].text === "");
+
+  if (isEmptyContent) {
+    return;
+  }
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
