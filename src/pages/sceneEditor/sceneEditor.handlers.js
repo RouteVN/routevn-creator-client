@@ -538,7 +538,7 @@ export const handleSplitLine = async (deps, payload) => {
           `[LE] handleSplitLine | Clearing old line ${lineId} content because split happened at start.`,
         );
         oldLineElement.textContent = "";
-        const inputEvent = new Event('input', { bubbles: true });
+        const inputEvent = new Event("input", { bubbles: true });
         oldLineElement.dispatchEvent(inputEvent);
       }
     }
