@@ -400,6 +400,19 @@ export const handleSplitLine = async (deps, payload) => {
           line.id !== lineId &&
           line.actions?.dialogue?.content !== undefined
         ) {
+          const content = line.actions.dialogue.content;
+          const isEmptyContent =
+            !content ||
+            content.length === 0 ||
+            (content.length === 1 && content[0].text === "");
+
+          if (isEmptyContent) {
+            console.log(
+              `[LE] handleSplitLine | Skipping flush for line ${line.id} because content is empty.`,
+            );
+            continue;
+          }
+
           // Persist this line's content to the repository
           await projectService.appendEvent({
             type: "set",
@@ -782,6 +795,21 @@ export const handleMergeLines = async (deps, payload) => {
           line.id !== currentLineId &&
           line.actions?.dialogue?.content !== undefined
         ) {
+          // Check if content is empty to avoid saving { text: "" } structure
+          const content = line.actions.dialogue.content;
+          const isEmptyContent =
+            !content ||
+            content.length === 0 ||
+            (content.length === 1 && content[0].text === "");
+
+          if (isEmptyContent) {
+            // Skip saving empty content - don't persist { text: "" }
+            console.log(
+              `[LE] handleMergeLines | Skipping flush for line ${line.id} because content is empty.`,
+            );
+            continue;
+          }
+
           // Persist this line's content to the repository
           await projectService.appendEvent({
             type: "set",
