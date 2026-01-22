@@ -1,6 +1,6 @@
 ---
 title: make sure export can run and is correct
-status: todo
+status: done
 priority: high
 ---
 
