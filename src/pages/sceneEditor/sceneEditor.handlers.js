@@ -373,15 +373,15 @@ export const handleSplitLine = async (deps, payload) => {
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = payload._event.detail;
 
-  // Check if this line is already being split
-  const splittingLineId = store.selectSplittingLineId();
+  // Check if this line is already being processed (split/merge)
+  const lockingLineId = store.selectLockingLineId();
 
-  if (splittingLineId === lineId) {
-    return; 
+  if (lockingLineId === lineId) {
+    return;
   }
 
-  // Mark this line as being split IMMEDIATELY
-  store.setSplittingLineId(lineId);
+  // Mark this line as being processed IMMEDIATELY to prevent duplicate operations
+  store.setLockingLineId(lineId);
 
   const newLineId = nanoid();
 
@@ -526,7 +526,7 @@ export const handleSplitLine = async (deps, payload) => {
 
     // Clear the splitting lock - allows new line to be split if Enter is still held
     requestAnimationFrame(() => {
-      store.clearSplittingLineId();
+      store.clearLockingLineId();
     });
   });
 
@@ -729,14 +729,14 @@ export const handleMergeLines = async (deps, payload) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
-  const splittingLineId = store.selectSplittingLineId();
+  // Check if this line is already being processed (split/merge)
+  const lockingLineId = store.selectLockingLineId();
 
-  if (splittingLineId === currentLineId) {
+  if (lockingLineId === currentLineId) {
     return;
   }
 
-  // Mark this line as being processed IMMEDIATELY
-  store.setSplittingLineId(currentLineId);
+  store.setLockingLineId(currentLineId);
 
   // First, persist any temporary line changes from the store to the repository
   // This ensures edits to other lines aren't lost when we update the repository
@@ -850,7 +850,7 @@ export const handleMergeLines = async (deps, payload) => {
     }
 
     requestAnimationFrame(() => {
-      store.clearSplittingLineId();
+      store.clearLockingLineId();
     });
   });
 

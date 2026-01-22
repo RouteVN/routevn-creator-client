@@ -24,7 +24,7 @@ export const createInitialState = () => ({
   previewSceneId: undefined,
   presentationState: {},
   sectionLineChanges: {},
-  splittingLineId: null,
+  lockingLineId: null, // Lock to prevent duplicate split/merge operations
 });
 
 export const setSceneId = (state, sceneId) => {
@@ -178,16 +178,19 @@ export const setSelectedSectionId = (state, selectedSectionId) => {
   state.selectedSectionId = selectedSectionId;
 };
 
-export const setSplittingLineId = (state, lineId) => {
-  state.splittingLineId = lineId;
+// Set lock to prevent duplicate split/merge operations on the same line
+export const setLockingLineId = (state, lineId) => {
+  state.lockingLineId = lineId;
 };
 
-export const clearSplittingLineId = (state) => {
-  state.splittingLineId = null;
+// Clear lock after split/merge operation completes
+export const clearLockingLineId = (state) => {
+  state.lockingLineId = null;
 };
 
-export const selectSplittingLineId = ({ state }) => {
-  return state.splittingLineId;
+// Get current locked line ID
+export const selectLockingLineId = ({ state }) => {
+  return state.lockingLineId;
 };
 
 export const showSectionDropdownMenu = (state, { position, sectionId }) => {
