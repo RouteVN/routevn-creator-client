@@ -95,7 +95,7 @@ template:
               - rtgl-text c=mu-fg: ${scene.name}
           - rtgl-view flex=1 d=h g=sm jc=e:
               - rtgl-button#preview-button: Preview
-              - rtgl-button#mute-toggle sq v="gh" icon="${muteIcon}":
+          - rtgl-button#mute-toggle sq v="gh" icon="${muteIcon}":
       - 'rtgl-view d=h w=f h=f flex=1 style="min-height: 0px"':
           - $if sectionsGraphView:
               - 'rtgl-view w="calc((100vw - 64px) / 2)"':
