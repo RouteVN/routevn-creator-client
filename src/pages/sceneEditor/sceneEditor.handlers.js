@@ -525,6 +525,22 @@ export const handleSplitLine = async (deps, payload) => {
 
   // Use requestAnimationFrame for focus operations
   requestAnimationFrame(() => {
+    if (leftContent === "" && linesEditorRef && linesEditorRef.elm?.shadowRoot) {
+      const oldLineElement = linesEditorRef.elm.shadowRoot.querySelector(
+        `#line-${lineId}`,
+      );
+      if (oldLineElement) {
+        console.log(
+          `[LE] handleSplitLine | Clearing old line ${lineId} content because split happened at start.`,
+        );
+        oldLineElement.textContent = "";
+
+        // Trigger input event so linesEditor's handlers know about the change
+        const inputEvent = new Event('input', { bubbles: true });
+        oldLineElement.dispatchEvent(inputEvent);
+      }
+    }
+
     if (linesEditorRef) {
       linesEditorRef.elm.transformedHandlers.updateSelectedLine({
         currentLineId: newLineId,
