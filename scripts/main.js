@@ -1,6 +1,11 @@
 import { fileTypeFromBuffer } from "file-type";
-import createRouteEngine from 'route-engine-js'
+import createRouteEngine, {
+  createEffectsHandler,
+} from "route-engine-js";
+import { Ticker } from "pixi.js";
+
 import createRouteGraphics, {
+  createAssetBufferManager,
   textPlugin,
   rectPlugin,
   spritePlugin,
@@ -9,7 +14,9 @@ import createRouteGraphics, {
   textRevealingPlugin,
   tweenPlugin,
   soundPlugin,
-  createAssetBufferManager
+  videoPlugin,
+  particlesPlugin,
+  animatedSpritePlugin,
 } from "route-graphics";
 
 async function parseVNBundle(arrayBuffer) {
@@ -39,8 +46,12 @@ async function parseVNBundle(arrayBuffer) {
   for (const [id, metadata] of Object.entries(index)) {
     const contentStart = metadata.start + dataBlockOffset;
     const contentEnd = metadata.end + dataBlockOffset + 1;
-    const content = new Uint8Array(arrayBuffer, contentStart, contentEnd - contentStart);
-    if (id === 'instructions') {
+    const content = new Uint8Array(
+      arrayBuffer,
+      contentStart,
+      contentEnd - contentStart,
+    );
+    if (id === "instructions") {
       instructions = JSON.parse(new TextDecoder().decode(content));
     } else {
       const fileType = await fileTypeFromBuffer(content);
@@ -48,7 +59,7 @@ async function parseVNBundle(arrayBuffer) {
       assets[id] = {
         url: URL.createObjectURL(new Blob([content], { type: detectedType })),
         type: detectedType,
-        size: content.byteLength
+        size: content.byteLength,
       };
     }
   }
@@ -56,9 +67,11 @@ async function parseVNBundle(arrayBuffer) {
 }
 
 const init = async () => {
-  const response = await fetch('./package.bin');
-  if (!response.ok) throw new Error(`Failed to fetch BIN bundle: ${response.statusText}`);
-  const { assets: vnbundleAssets, instructions: vnbundleInstructions } = await parseVNBundle(await response.arrayBuffer());
+  const response = await fetch("./package.bin");
+  if (!response.ok)
+    throw new Error(`Failed to fetch BIN bundle: ${response.statusText}`);
+  const { assets: vnbundleAssets, instructions: vnbundleInstructions } =
+    await parseVNBundle(await response.arrayBuffer());
   const jsonData = {
     ...vnbundleInstructions.projectData,
   };
@@ -77,61 +90,78 @@ const init = async () => {
       spritePlugin,
       sliderPlugin,
       containerPlugin,
-      textRevealingPlugin
+      textRevealingPlugin,
+      videoPlugin,
+      particlesPlugin,
+      animatedSpritePlugin,
     ],
-    animations: [
-      tweenPlugin
-    ],
-    audios: [
-      soundPlugin
-    ]
-  }
+    animations: [tweenPlugin],
+    audio: [soundPlugin],
+  };
 
-  const app = createRouteGraphics();
-  await app.init({
+  // Create dedicated ticker for auto mode
+  const ticker = new Ticker();
+  ticker.start();
+
+  const base64ToArrayBuffer = (base64) => {
+    const binaryString = window.atob(
+      base64.replace(/^data:image\/[a-z]+;base64,/, ""),
+    );
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  };
+
+  const routeGraphics = createRouteGraphics();
+  await routeGraphics.init({
     width: 1920,
     height: 1080,
-    assetBufferMap,
-    eventHandler: (eventType, payload) => {
+    plugins,
+    eventHandler: async (eventName, payload) => {
       if (payload.actions) {
+        if (payload.actions.saveSaveSlot) {
+          const url = await routeGraphics.extractBase64("story");
+          const assets = {
+            [`saveThumbnailImage:${payload.actions.saveSaveSlot.slot}`]: {
+              buffer: base64ToArrayBuffer(url),
+              type: "image/png",
+            },
+          };
+          await routeGraphics.loadAssets(assets);
+          payload.actions.saveSaveSlot.thumbnailImage = url;
+        }
         engine.handleActions(payload.actions);
       }
     },
-    plugins,
   });
-  await app.loadAssets(assetBufferMap);
+  await routeGraphics.loadAssets(assetBufferMap);
 
-  document.getElementById("canvas").appendChild(app.canvas);
+  document.getElementById("canvas").appendChild(routeGraphics.canvas);
   document.getElementById("canvas").addEventListener("contextmenu", (e) => {
     e.preventDefault();
   });
 
+  const effectsHandler = createEffectsHandler({
+    getEngine: () => engine,
+    routeGraphics,
+    ticker,
+  });
+  const engine = createRouteEngine({ handlePendingEffects: effectsHandler });
+  const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
+  const globalDeviceVariables =
+    JSON.parse(localStorage.getItem("globalDeviceVariables")) || {};
+  const globalAccountVariables =
+    JSON.parse(localStorage.getItem("globalAccountVariables")) || {};
 
-  const handlePendingEffects = (effects) => {
-    // Deduplicate effects by name, keeping only the last occurrence
-    const deduplicatedEffects = effects.reduce((acc, effect) => {
-      acc[effect.name] = effect;
-      return acc;
-    }, {});
-
-    // Convert back to array and process deduplicated effects
-    const uniqueEffects = Object.values(deduplicatedEffects);
-
-    for (const effect of uniqueEffects) {
-      if (effect.name === "render") {
-        const renderState = engine.selectRenderState();
-        app.render(renderState);
-      } else if (effect.name === "handleLineActions") {
-        engine.handleLineActions();
-      }
-    }
-  };
-
-  const engine = createRouteEngine({ handlePendingEffects });
   engine.init({
     initialState: {
       global: {
         currentLocalizationPackageId: "eklekfjwalefj",
+        saveSlots,
+        variables: { ...globalDeviceVariables, ...globalAccountVariables },
       },
       projectData: jsonData,
     },
