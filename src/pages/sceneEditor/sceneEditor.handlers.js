@@ -525,7 +525,11 @@ export const handleSplitLine = async (deps, payload) => {
 
   // Use requestAnimationFrame for focus operations
   requestAnimationFrame(() => {
-    if (leftContent === "" && linesEditorRef && linesEditorRef.elm?.shadowRoot) {
+    if (
+      leftContent === "" &&
+      linesEditorRef &&
+      linesEditorRef.elm?.shadowRoot
+    ) {
       const oldLineElement = linesEditorRef.elm.shadowRoot.querySelector(
         `#line-${lineId}`,
       );
