@@ -58,6 +58,7 @@ async function renderSceneState(store, graphicsService) {
   const projectData = store.selectProjectData();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
+  const isMuted = store.selectIsMuted();
   graphicsService.engineHandleActions({
     updateProjectData: {
       projectData,
@@ -67,7 +68,7 @@ async function renderSceneState(store, graphicsService) {
       lineId,
     },
   });
-  graphicsService.engineRenderCurrentState();
+  graphicsService.engineRenderCurrentState({ skipAudio: isMuted });
 
   // Update presentation state after rendering
   const presentationState = graphicsService.engineSelectPresentationState();
@@ -1235,5 +1236,13 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   // Trigger re-render
   render();
 
+  subject.dispatch("sceneEditor.renderCanvas", {});
+};
+
+export const handleMuteToggle = (deps) => {
+  const { store, render, subject } = deps;
+  store.toggleMute();
+  render();
+  // Re-render canvas with new mute state
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
