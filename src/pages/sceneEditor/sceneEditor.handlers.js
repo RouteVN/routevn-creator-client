@@ -400,20 +400,52 @@ export const handleSplitLine = async (deps, payload) => {
           line.id !== lineId &&
           line.actions?.dialogue?.content !== undefined
         ) {
-          const content = line.actions.dialogue.content;
-          const isEmptyContent =
-            !content ||
-            content.length === 0 ||
-            (content.length === 1 && content[0].text === "");
+          const storeContent = line.actions.dialogue.content;
+          const isStoreContentEmpty =
+            !storeContent ||
+            storeContent.length === 0 ||
+            (storeContent.length === 1 && storeContent[0].text === "");
 
-          if (isEmptyContent) {
-            console.log(
-              `[LE] handleSplitLine | Skipping flush for line ${line.id} because content is empty.`,
+          // Get existing content from repository to check if we need to delete
+          const repoState = projectService.getState();
+          const repoScene = toFlatItems(repoState.scenes)
+            .filter((item) => item.type === "scene")
+            .find((item) => item.id === sceneId);
+          let repoContent = null;
+          if (repoScene) {
+            const repoSection = toFlatItems(repoScene.sections).find(
+              (s) => s.id === section.id,
             );
+            if (repoSection) {
+              const repoLine = toFlatItems(repoSection.lines).find(
+                (l) => l.id === line.id,
+              );
+              repoContent = repoLine?.actions?.dialogue?.content;
+            }
+          }
+
+          const isRepoContentEmpty =
+            !repoContent ||
+            repoContent.length === 0 ||
+            (repoContent.length === 1 && repoContent[0].text === "");
+
+          // If both are empty, skip
+          if (isStoreContentEmpty && isRepoContentEmpty) {
             continue;
           }
 
-          // Persist this line's content to the repository
+          // If store is empty but repo has content, unset dialogue
+          if (isStoreContentEmpty && !isRepoContentEmpty) {
+            await projectService.appendEvent({
+              type: "unset",
+              payload: {
+                target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue`,
+              },
+            });
+            continue;
+          }
+
+          // Otherwise, persist the content normally
           await projectService.appendEvent({
             type: "set",
             payload: {
@@ -795,22 +827,52 @@ export const handleMergeLines = async (deps, payload) => {
           line.id !== currentLineId &&
           line.actions?.dialogue?.content !== undefined
         ) {
-          // Check if content is empty to avoid saving { text: "" } structure
-          const content = line.actions.dialogue.content;
-          const isEmptyContent =
-            !content ||
-            content.length === 0 ||
-            (content.length === 1 && content[0].text === "");
+          const storeContent = line.actions.dialogue.content;
+          const isStoreContentEmpty =
+            !storeContent ||
+            storeContent.length === 0 ||
+            (storeContent.length === 1 && storeContent[0].text === "");
 
-          if (isEmptyContent) {
-            // Skip saving empty content - don't persist { text: "" }
-            console.log(
-              `[LE] handleMergeLines | Skipping flush for line ${line.id} because content is empty.`,
+          // Get existing content from repository to check if we need to delete
+          const repoState = projectService.getState();
+          const repoScene = toFlatItems(repoState.scenes)
+            .filter((item) => item.type === "scene")
+            .find((item) => item.id === sceneId);
+          let repoContent = null;
+          if (repoScene) {
+            const repoSection = toFlatItems(repoScene.sections).find(
+              (s) => s.id === section.id,
             );
+            if (repoSection) {
+              const repoLine = toFlatItems(repoSection.lines).find(
+                (l) => l.id === line.id,
+              );
+              repoContent = repoLine?.actions?.dialogue?.content;
+            }
+          }
+
+          const isRepoContentEmpty =
+            !repoContent ||
+            repoContent.length === 0 ||
+            (repoContent.length === 1 && repoContent[0].text === "");
+
+          // If both are empty, skip
+          if (isStoreContentEmpty && isRepoContentEmpty) {
             continue;
           }
 
-          // Persist this line's content to the repository
+          // If store is empty but repo has content, unset dialogue
+          if (isStoreContentEmpty && !isRepoContentEmpty) {
+            await projectService.appendEvent({
+              type: "unset",
+              payload: {
+                target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue`,
+              },
+            });
+            continue;
+          }
+
+          // Otherwise, persist the content normally
           await projectService.appendEvent({
             type: "set",
             payload: {
@@ -1169,20 +1231,10 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
   const { projectService, store, subject } = deps;
   const { lineId, content } = payload;
 
-  // Skip saving if content is empty (avoids creating { text: "" } structure)
-  const isEmptyContent =
-    !content ||
-    content.length === 0 ||
-    (content.length === 1 && content[0].text === "");
-
-  if (isEmptyContent) {
-    return;
-  }
-
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
-  // Get existing dialogue data to preserve layoutId and characterId
+  // Get existing dialogue data to check if content changed
   const { scenes } = projectService.getState();
   const scene = toFlatItems(scenes)
     .filter((item) => item.type === "scene")
@@ -1199,6 +1251,37 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
     }
   }
 
+  // Check if new content is empty
+  const isNewContentEmpty =
+    !content ||
+    content.length === 0 ||
+    (content.length === 1 && content[0].text === "");
+
+  // Check if old content is empty
+  const oldContent = existingDialogue.content;
+  const isOldContentEmpty =
+    !oldContent ||
+    oldContent.length === 0 ||
+    (oldContent.length === 1 && oldContent[0].text === "");
+
+  // If both new and old content are empty, skip save (no change needed)
+  if (isNewContentEmpty && isOldContentEmpty) {
+    return;
+  }
+
+  // If new content is empty but old content exists, remove the dialogue
+  if (isNewContentEmpty && !isOldContentEmpty) {
+    await projectService.appendEvent({
+      type: "unset",
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
+      },
+    });
+    subject.dispatch("sceneEditor.renderCanvas", { skipRender: true });
+    return;
+  }
+
+  // Otherwise, save the content normally
   await projectService.appendEvent({
     type: "set",
     payload: {
