@@ -58,6 +58,17 @@ export const selectNavigationDirection = ({ state }) => {
   return state.navigationDirection;
 };
 
+export const selectLineContent = ({ props }, payload) => {
+  const { lineId } = payload;
+  const line = (props.lines || []).find((l) => l.id === lineId);
+  if (line) {
+    const firstContent = line.actions?.dialogue?.content?.[0];
+    if (firstContent) {
+      return firstContent.text || "";
+    }
+  }
+};
+
 export const selectViewData = ({ state, props }) => {
   const sectionLineChanges = props.sectionLineChanges || {};
   const changesLines = sectionLineChanges.lines || [];

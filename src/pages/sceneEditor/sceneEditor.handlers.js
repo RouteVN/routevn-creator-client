@@ -438,7 +438,10 @@ export const handleSplitLine = async (deps, payload) => {
 
   // First, update the current line with the left content
   // Only update the dialogue.content, preserve everything else
-  const leftContentArray = leftContent ? [{ text: leftContent }] : [];
+  const leftContentArray = leftContent
+    ? [{ text: leftContent }]
+    : [{ text: "" }];
+
   if (existingDialogue && Object.keys(existingDialogue).length > 0) {
     // If dialogue exists, update only the content
     await projectService.appendEvent({
@@ -451,7 +454,7 @@ export const handleSplitLine = async (deps, payload) => {
         },
       },
     });
-  } else if (leftContent) {
+  } else {
     // If no dialogue exists but we have content, create minimal dialogue
     await projectService.appendEvent({
       type: "set",
@@ -466,7 +469,9 @@ export const handleSplitLine = async (deps, payload) => {
 
   // Then, create a new line with the right content and insert it after the current line
   // New line should have empty actions except for dialogue.content
-  const rightContentArray = rightContent ? [{ text: rightContent }] : [];
+  const rightContentArray = rightContent
+    ? [{ text: rightContent }]
+    : [{ text: "" }];
   const newLineActions = rightContent
     ? {
         dialogue: {
@@ -521,7 +526,10 @@ export const handleSplitLine = async (deps, payload) => {
         currentLineId: newLineId,
       });
 
-      // Also render the linesEditor
+      linesEditorRef.elm.transformedHandlers.forceSyncContentLine({
+        lineId,
+      });
+
       linesEditorRef.elm.render();
     }
 
