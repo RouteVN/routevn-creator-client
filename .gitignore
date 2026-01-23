@@ -19,3 +19,4 @@ static/bundle/main.js
 
 # Generated setup file
 src/setup.js
+.DS_Store
