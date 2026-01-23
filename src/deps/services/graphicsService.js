@@ -58,6 +58,13 @@ export const createGraphicsService = async ({ subject }) => {
               subject.dispatch("border-drag-end");
           }
 
+          if (eventName === "renderComplete") {
+            engine.handleActions({
+              markLineCompleted: {},
+            });
+            return;
+          }
+
           if (payload.actions && engine) {
             engine.handleActions(payload.actions);
           }
