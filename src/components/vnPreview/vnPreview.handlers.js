@@ -52,5 +52,4 @@ export const handleAfterMount = async (deps) => {
   await graphicsService.initRouteEngine(projectData, {
     handleEffects: true,
   });
-  graphicsService.engineRenderCurrentState();
 };

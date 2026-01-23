@@ -54,7 +54,8 @@ async function createAssetsFromFileIds(
 }
 
 // Helper function to render the scene state
-async function renderSceneState(store, graphicsService) {
+async function renderSceneState(store, graphicsService, payload = {}) {
+  const { skipAnimations = false } = payload;
   const projectData = store.selectProjectData();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -68,7 +69,10 @@ async function renderSceneState(store, graphicsService) {
       lineId,
     },
   });
-  graphicsService.engineRenderCurrentState({ skipAudio: isMuted });
+  graphicsService.engineRenderCurrentState({
+    skipAudio: isMuted,
+    skipAnimations,
+  });
 
   // Update presentation state after rendering
   const presentationState = graphicsService.engineSelectPresentationState();
@@ -274,7 +278,10 @@ export const handleEditorDataChanged = async (deps, payload) => {
   // Trigger debounced canvas render with skipRender flag.
   // skipRender prevents full UI re-render which would reset cursor position while typing.
   // Typing only updates dialogue content, not presentationState, so State panel doesn't need to update.
-  subject.dispatch("sceneEditor.renderCanvas", { skipRender: true });
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipRender: true,
+    skipAnimations: true,
+  });
 };
 
 export const handleAddActionsButtonClick = (deps) => {
@@ -1166,13 +1173,12 @@ export const handleUpdateDialogueContent = async (deps, payload) => {
       },
     },
   });
-  subject.dispatch("sceneEditor.renderCanvas", { skipRender: true });
 };
 
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps, payload) {
   const { store, graphicsService, render } = deps;
-  await renderSceneState(store, graphicsService);
+  await renderSceneState(store, graphicsService, payload);
   await updateSectionChanges(deps);
 
   if (!payload?.skipRender) {

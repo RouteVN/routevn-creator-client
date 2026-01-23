@@ -58,6 +58,13 @@ export const createGraphicsService = async ({ subject }) => {
               subject.dispatch("border-drag-end");
           }
 
+          if (eventName === "renderComplete") {
+            engine.handleActions({
+              markLineCompleted: {},
+            });
+            return;
+          }
+
           if (payload.actions && engine) {
             engine.handleActions(payload.actions);
           }
@@ -122,11 +129,13 @@ export const createGraphicsService = async ({ subject }) => {
     },
 
     engineRenderCurrentState: (options = {}) => {
-      const { skipAudio = false } = options;
+      const { skipAudio = false, skipAnimations = false } = options;
       let renderState = engine.selectRenderState();
-      console.log("renderState", renderState);
       if (skipAudio) {
         renderState = { ...renderState, audio: [] };
+      }
+      if (skipAnimations) {
+        renderState = { ...renderState, animations: [] };
       }
       routeGraphics.render(renderState);
     },
