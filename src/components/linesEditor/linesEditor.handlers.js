@@ -867,6 +867,22 @@ export const handleOnInput = (deps, payload) => {
   );
 };
 
+export const forceSyncContentLine = (deps, payload) => {
+  const { store, getRefIds } = deps;
+  const refIds = getRefIds();
+
+  const { lineId } = payload;
+  const lineRef = refIds[`line-${lineId}`];
+  // Check if lineRef exists and has the elm property
+  if (!lineRef || !lineRef.elm) {
+    return;
+  }
+  const lineContent = store.selectLineContent({ lineId });
+  if (lineRef.elm.textContent !== lineContent) {
+    lineRef.elm.textContent = lineContent;
+  }
+};
+
 export const updateSelectedLine = (deps, payload) => {
   const { currentLineId } = payload;
   const { store, getRefIds } = deps;
@@ -875,7 +891,6 @@ export const updateSelectedLine = (deps, payload) => {
 
   // Check if lineRef exists and has the elm property
   if (!lineRef || !lineRef.elm) {
-    console.warn(`Line reference not found for lineId: ${currentLineId}`);
     return;
   }
 
