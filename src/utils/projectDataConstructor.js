@@ -136,7 +136,7 @@ export function constructProjectData(state, options = {}) {
     const layouts = repositoryState.layouts?.items || {};
     const typography = repositoryState.typography || { items: {}, tree: [] };
     const colors = repositoryState.colors || { items: {}, tree: [] };
-    const fonts = repositoryState.fonts?.items || {};
+    const fonts = repositoryState.fonts || { items: {}, tree: [] };
 
     const processedCharacters = constructCharacters(characters);
     const characterImages = extractCharacterImages(characters);
@@ -146,7 +146,7 @@ export function constructProjectData(state, options = {}) {
       transforms: constructTransforms(transforms),
       characters: processedCharacters,
       sounds: constructSounds(sounds),
-      fonts: constructFonts(fonts),
+      fonts: constructFonts(fonts.items || {}),
       layouts: constructLayouts(layouts, images, typography, colors, fonts),
       tweens: constructTweens(tweens),
     };

@@ -109,6 +109,17 @@ export const handleAfterMount = async (deps) => {
   const { sceneId } = appService.getPayload();
   const state = projectService.getState();
 
+  if (state.fonts && state.fonts.items) {
+    for (const font of Object.values(state.fonts.items)) {
+      if (font.type === "font" && font.fileId && font.fontFamily) {
+        await projectService.loadFontFile({
+          fontName: font.fontFamily,
+          fileId: font.fileId,
+        });
+      }
+    }
+  }
+
   store.setSceneId(sceneId);
   store.setRepositoryState(state);
 
