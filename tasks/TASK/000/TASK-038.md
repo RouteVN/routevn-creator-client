@@ -81,7 +81,7 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [x] [High] @nellow: bug with dialogue and fade: https://discord.com/channels/1233660682419834920/1461203575123480707/1461203575123480707
 
-- [ ] [High] custom text fonts not working in the preview in scene editor
+- [x] [High] custom text fonts not working in the preview in scene editor
 
 - [ ] [High] Dialogue disappears when preview full screen when when 1st line has a background with animation. https://discord.com/channels/1233660682419834920/1461203575123480707
 
