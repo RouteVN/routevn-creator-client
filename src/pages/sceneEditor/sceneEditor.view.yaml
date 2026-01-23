@@ -107,8 +107,8 @@ template:
                   - rtgl-view:
                       - rtgl-text: ${sectionsGraph}
             $else:
-              - 'rtgl-view w=h h=f style="min-height: 0px"':
-                  - 'rtgl-view d=h g=xs w="calc((100vw - 64px) / 2)"':
+              - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
+                  - 'rtgl-view d=h g=xs w=f':
                       - rtgl-view d=h sh:
                           - rtgl-view d=h g=xs:
                               - $for section in sections:
@@ -121,7 +121,7 @@ template:
                       # Toggle graph view button - commented out for now
                       # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
                       #     - rtgl-text s=sm: "<>"
-                  - "rtgl-view w=f p=md sv":
+                  - "rtgl-view w=f p=md sv flex=1":
                       - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId .sectionLineChanges=sectionLineChanges:
                       - rtgl-view h=30vh:
           - rtgl-view w=1 h=f bgc=mu:
