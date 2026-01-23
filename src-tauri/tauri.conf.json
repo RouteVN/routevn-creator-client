@@ -31,6 +31,8 @@
           "ipc:",
           "http://ipc.localhost",
           "blob:",
+          "asset:",
+          "asset://localhost",
           "http://asset.localhost"
         ],
         "style-src": [
@@ -67,7 +69,7 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
-          "**/test-permissions.html"
+          "**/*"
         ]
       }
     }

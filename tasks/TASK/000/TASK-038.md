@@ -25,7 +25,7 @@ assignee: anyone
 
 - [ ] [Low] In the layout editor, adding an option to stretch and shrink the element with your mouse without clicking the menu on the left would be nice
 - [ ] [Low] In the layouts editor, we can't click and drag them directly, we must click on the left menu to interact with them
-- [ ] [High] @Nghia After sometime of not focusing on the client and return back to the client, I got the this._cancelResize error. And the layouts don't show me anything
+- [x] [High] [Cannot Replicate]  After sometime of not focusing on the client and return back to the client, I got the this._cancelResize error. And the layouts don't show me anything
 
 ---
 
@@ -83,6 +83,12 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [High] custom text fonts not working in the preview in scene editor
 
+- [ ] [High] Dialogue disappears when preview full screen when when 1st line has a background with animation. https://discord.com/channels/1233660682419834920/1461203575123480707
+
+- [ ] [Medium] Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
+
+- [ ] [High] BGM sound is not playing during full screen preview.
+
 ---
 
 ## UX Problems
@@ -90,7 +96,7 @@ error -> `Uncaught TypeError: s is not iterable`
 - [ ] [Low] On character we need to be able to layer pictures like expressions or other things which is not supported in the client
 - [ ] [Low] On the sounds page, when playing audio, can make the slider more visible so it's intent is clear
 - [ ] [Low] User can benefit from keyboard actions, like delete to delete, f2 to rename, and other stuff which is not here in the creator
-- [ ] [High] Scene editor, on the right of the preview button. There should be an icon to mute/unmute. mute/unmute should apply to: bgm, sfx. propose how to implmement mute (set volume to 0, remove bgm/sfx actions or what)
+- [x] [High] Scene editor, on the right of the preview button. There should be an icon to mute/unmute. mute/unmute should apply to: bgm, sfx. propose how to implmement mute (set volume to 0, remove bgm/sfx actions or what)
 - [ ] [Low] In the images pages. When user tries to click Upload but just clicked below the upload button, it triggers the folder expand. The images under the folder gets hidden, and user may be confused on why
 - [ ] [Low] Scene editor need to make more obvious that can double click scene. cannot click start circle.
 - [ ] [Low] Able to increase font or zoom in scene editor. make avatar a big bigger somehow
