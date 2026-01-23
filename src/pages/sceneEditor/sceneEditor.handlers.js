@@ -530,10 +530,7 @@ export const handleSplitLine = async (deps, payload) => {
         lineId,
       });
 
-      requestAnimationFrame(() => {
-        // Also render the linesEditor
-        linesEditorRef.elm.render();
-      });
+      linesEditorRef.elm.render();
     }
 
     // Clear the splitting lock - allows new line to be split if Enter is still held
