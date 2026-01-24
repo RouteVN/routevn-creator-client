@@ -43,13 +43,32 @@ export const handleAfterMount = async (deps) => {
   const state = projectService.getState();
   const { canvas } = getRefIds();
   await graphicsService.init({ canvas: canvas.elm });
+
+  const sceneId = attrs["scene-id"];
+  const sectionId = attrs["section-id"];
+  const lineId = attrs["line-id"];
+
   const projectData = constructProjectData(state, {
-    initialSceneId: attrs["scene-id"],
+    initialSceneId: sceneId,
   });
-  const fileReferences = extractFileIdsFromRenderState(projectData.resources);
+
+  const projectDataWithInitial = structuredClone(projectData);
+  const scene = projectDataWithInitial.story.scenes[sceneId];
+
+  if (scene && sectionId && sectionId !== "undefined") {
+    scene.initialSectionId = sectionId;
+
+    if (lineId && lineId !== "undefined" && scene.sections[sectionId]) {
+      scene.sections[sectionId].initialLineId = lineId;
+    }
+  }
+
+  const fileReferences = extractFileIdsFromRenderState(
+    projectDataWithInitial.resources,
+  );
   const assets = await loadAssets(deps, fileReferences);
   await graphicsService.loadAssets(assets);
-  await graphicsService.initRouteEngine(projectData, {
+  await graphicsService.initRouteEngine(projectDataWithInitial, {
     handleEffects: true,
   });
 };

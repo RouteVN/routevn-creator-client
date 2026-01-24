@@ -1067,7 +1067,9 @@ export const handleToggleSectionsGraphView = (deps) => {
 export const handlePreviewClick = (deps) => {
   const { store, render } = deps;
   const sceneId = store.selectSceneId();
-  store.showPreviewSceneId({ sceneId });
+  const sectionId = store.selectSelectedSectionId();
+  const lineId = store.selectSelectedLineId();
+  store.showPreviewSceneId({ sceneId, sectionId, lineId });
   render();
 };
 
