@@ -464,7 +464,6 @@ export const handleReplayAnimation = async (deps) => {
 
   setTimeout(() => {
     const renderState = store.selectAnimationRenderStateWithAnimations();
-    console.log(renderState);
     graphicsService.render(renderState);
   }, 100);
 };

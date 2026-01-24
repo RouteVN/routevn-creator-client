@@ -241,8 +241,6 @@ export const selectViewData = ({ state, props }) => {
     });
   }
 
-  console.log("selectedScene", selectedScene);
-
   const resourceOptions = layouts
     .filter((layout) => layout.layoutType === "choice")
     .map((layout) => ({
@@ -290,8 +288,6 @@ export const selectViewData = ({ state, props }) => {
       label: "Choices",
     });
   }
-
-  console.log("editForm", state.editForm);
 
   // Create context for form template
   const context = {

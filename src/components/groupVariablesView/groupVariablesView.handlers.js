@@ -32,11 +32,6 @@ export const handleVariableItemClick = (deps, payload) => {
 export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
 
-  console.log("store.selectDefaultValues", store.selectDefaultValues());
-  console.log(
-    "payload._event.detail.formValues",
-    payload._event.detail.formValues,
-  );
   // Update form values for preview
   store.updateFormValues({
     ...store.selectDefaultValues(),

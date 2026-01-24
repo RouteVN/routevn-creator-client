@@ -154,22 +154,9 @@ export const handleDownloadZipClick = async (deps, payload) => {
   const bundle = await projectService.exportProject(transformedData, files);
   const zipName = `${projectData.project.name}_${version.name}`;
 
-  console.log(
-    `✓ Bundle created: package.bin (${(bundle.length / 1024).toFixed(1)} KB)`,
-  );
-
   // Create and download ZIP with bundle and static files using save dialog
   try {
-    const savedPath = await projectService.createDistributionZip(
-      bundle,
-      zipName,
-    );
-    if (savedPath) {
-      console.log(`✓ Distribution ZIP created and saved to: ${savedPath}`);
-    } else {
-      // User cancelled the dialog
-      console.log("Save dialog cancelled by user");
-    }
+    await projectService.createDistributionZip(bundle, zipName);
     appService.closeAll();
   } catch (error) {
     console.error("Error saving ZIP with dialog:", error);

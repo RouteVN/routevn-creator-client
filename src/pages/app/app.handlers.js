@@ -2,7 +2,6 @@ import { filter, fromEvent, tap } from "rxjs";
 
 export const handleBeforeMount = (deps) => {
   const { appService } = deps;
-  console.log("handleBeforeMount", appService.getPath());
   const currentPath = appService.getPath();
 
   if (currentPath === "/") {
@@ -31,8 +30,6 @@ export const handleRedirect = (deps, payload) => {
 
 export const handleWindowPop = (deps) => {
   const { appService } = deps;
-  // console.log('handleWindowPop', payload._event);
-  console.log("pathname", appService.getPath());
   deps.store.setCurrentRoute(appService.getPath());
   deps.render();
 };
@@ -85,11 +82,6 @@ export const subscriptions = (deps) => {
       }),
     ),
     fromEvent(window, "popstate").pipe(
-      filter((e) => {
-        console.log("popstate", e.target.location);
-        // return !!e.target.location;
-        return true;
-      }),
       tap((e) => {
         deps.handlers.handleWindowPop(deps, { _event: e });
       }),

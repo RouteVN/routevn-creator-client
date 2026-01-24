@@ -54,9 +54,8 @@ export const handleAudioWaveformClick = (deps) => {
   render();
 };
 
-export const handleFormExtra = (deps, payload) => {
+export const handleFormExtra = (deps, _payload) => {
   const { store, render } = deps;
-  console.log("BGM form extra event", payload._event.detail);
 
   // When user clicks on waveform field, open gallery
   const selectedResource = store.selectSelectedResource();
@@ -113,22 +112,12 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   const flatSoundItems = toFlatItems(sounds);
   const selectedItem = flatSoundItems.find((item) => item.id === itemId);
 
-  console.log("File explorer - selectedItem:", selectedItem);
-
   // Download waveform data for the selected audio
   if (selectedItem?.waveformDataFileId && downloadWaveformData) {
-    console.log(
-      "File explorer - downloading waveform data for:",
-      selectedItem.waveformDataFileId,
-    );
-
     try {
-      const waveformData = await downloadWaveformData({
+      await downloadWaveformData({
         fileId: selectedItem.waveformDataFileId,
       });
-
-      // This is for preview in gallery mode, not for setting the final selection
-      console.log("File explorer - got waveform data:", waveformData);
     } catch (error) {
       console.error("Failed to load waveform data:", error);
     }

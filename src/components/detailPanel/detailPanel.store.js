@@ -149,7 +149,6 @@ export const createInitialState = () => ({
 });
 
 export const selectField = ({ props }, name) => {
-  console.log("props.fields", props.fields);
   return props.fields.find((field) => field.name === name);
 };
 

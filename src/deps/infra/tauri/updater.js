@@ -11,9 +11,6 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       const update = await check();
 
       if (!update) {
-        if (!silent) {
-          console.log("No updates available");
-        }
         return null;
       }
 
@@ -61,7 +58,6 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
         switch (event.event) {
           case "Started":
             contentLength = event.data.contentLength || 0;
-            console.log(`Started downloading update, size: ${contentLength}`);
             break;
           case "Progress":
             downloaded += event.data.chunkLength;
@@ -69,10 +65,8 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
               contentLength > 0
                 ? Math.round((downloaded / contentLength) * 100)
                 : 0;
-            console.log(`Download progress: ${downloadProgress}%`);
             break;
           case "Finished":
-            console.log("Update downloaded successfully");
             break;
         }
       });

@@ -115,10 +115,6 @@ export const handleFormSubmit = async (deps, payload) => {
     store.addProject(newProject);
     store.toggleDialog();
     render();
-
-    if (platform !== "web") {
-      console.log(`Project created at: ${projectPath}`);
-    }
   } catch (error) {
     console.error("Error creating project:", error);
     appService.showToast(`Failed to create project: ${error.message}`);

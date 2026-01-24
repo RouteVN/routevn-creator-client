@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
-import { filter, tap, debounceTime, groupBy, mergeMap } from "rxjs";
+import { filter, tap, debounceTime } from "rxjs";
 
 // Helper function to create assets object from file references
 async function createAssetsFromFileIds(
@@ -49,7 +49,6 @@ async function createAssetsFromFileIds(
     }
   }
 
-  console.log("assets", assets);
   return assets;
 }
 
@@ -79,10 +78,45 @@ async function renderSceneState(store, graphicsService, payload = {}) {
   store.setPresentationState(presentationState);
 }
 
+// Shared helper to write dialogue content to repository
+async function writeDialogueContent(
+  deps,
+  lineId,
+  { sceneId, sectionId, content },
+) {
+  const { projectService } = deps;
+
+  // Get existing dialogue to preserve other properties (layoutId, characterId, etc.)
+  const { scenes } = projectService.getState();
+  const existingDialogue =
+    scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines?.items?.[
+      lineId
+    ]?.actions?.dialogue || {};
+
+  await projectService.appendEvent({
+    type: "set",
+    payload: {
+      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
+      value: { ...existingDialogue, content },
+      options: { replace: true },
+    },
+  });
+}
+
+// Helper to flush dialogue queue
+async function flushDialogueQueue(deps) {
+  const { dialogueQueueService } = deps;
+
+  await dialogueQueueService.flush(async (lineId, data) => {
+    await writeDialogueContent(deps, lineId, data);
+  });
+}
+
 export const handleBeforeMount = (deps) => {
   const { graphicsService } = deps;
 
-  return () => {
+  return async () => {
+    await flushDialogueQueue(deps);
     graphicsService.destroy();
   };
 };
@@ -256,24 +290,18 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 };
 
 export const handleEditorDataChanged = async (deps, payload) => {
-  const { subject, store } = deps;
+  const { subject, store, dialogueQueueService } = deps;
 
-  const content = [
-    {
-      text: payload._event.detail.content,
-    },
-  ];
+  const lineId = payload._event.detail.lineId;
+  const content = [{ text: payload._event.detail.content }];
+
   // Update local store immediately for UI responsiveness
-  store.setLineTextContent({
-    lineId: payload._event.detail.lineId,
-    content,
-  });
+  store.setLineTextContent({ lineId, content });
 
-  // Dispatch to subject for throttled/debounced repository update
-  subject.dispatch("updateDialogueContent", {
-    lineId: payload._event.detail.lineId,
-    content,
-  });
+  // Queue the pending update and schedule debounced write
+  const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+  dialogueQueueService.setAndSchedule(lineId, { sceneId, sectionId, content });
 
   // Trigger debounced canvas render with skipRender flag.
   // skipRender prevents full UI re-render which would reset cursor position while typing.
@@ -404,36 +432,8 @@ export const handleSplitLine = async (deps, payload) => {
 
   const newLineId = nanoid();
 
-  // First, persist any temporary line changes from the store to the repository
-  // This ensures edits to other lines aren't lost when we update the repository
-  const storeState = store.selectRepositoryState();
-  const storeScene = toFlatItems(storeState.scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-
-  if (storeScene) {
-    for (const section of toFlatItems(storeScene.sections)) {
-      for (const line of toFlatItems(section.lines)) {
-        // Skip the line being split
-        if (
-          line.id !== lineId &&
-          line.actions?.dialogue?.content !== undefined
-        ) {
-          // Persist this line's content to the repository
-          await projectService.appendEvent({
-            type: "set",
-            payload: {
-              target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
-              value: line.actions.dialogue.content,
-              options: {
-                replace: true,
-              },
-            },
-          });
-        }
-      }
-    }
-  }
+  // Flush pending dialogue updates before modifying repository
+  await flushDialogueQueue(deps);
 
   // Get existing actions data to preserve everything except dialogue content
   const { scenes } = projectService.getState();
@@ -765,37 +765,8 @@ export const handleMergeLines = async (deps, payload) => {
 
   store.setLockingLineId(currentLineId);
 
-  // First, persist any temporary line changes from the store to the repository
-  // This ensures edits to other lines aren't lost when we update the repository
-  const storeState = store.selectRepositoryState();
-  const storeScene = toFlatItems(storeState.scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-
-  if (storeScene) {
-    for (const section of toFlatItems(storeScene.sections)) {
-      for (const line of toFlatItems(section.lines)) {
-        // Skip the lines being merged
-        if (
-          line.id !== prevLineId &&
-          line.id !== currentLineId &&
-          line.actions?.dialogue?.content !== undefined
-        ) {
-          // Persist this line's content to the repository
-          await projectService.appendEvent({
-            type: "set",
-            payload: {
-              target: `scenes.items.${sceneId}.sections.items.${section.id}.lines.items.${line.id}.actions.dialogue.content`,
-              value: line.actions.dialogue.content,
-              options: {
-                replace: true,
-              },
-            },
-          });
-        }
-      }
-    }
-  }
+  // Flush pending dialogue updates before modifying repository
+  await flushDialogueQueue(deps);
 
   // Get previous line content and existing dialogue properties
   const scene = store.selectScene();
@@ -1079,7 +1050,6 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   // Get current selected line
   const selectedLine = store.selectSelectedLine();
   if (!selectedLine || !selectedLine.actions) {
-    console.log("⚠️ No selected line or actions found");
     return;
   }
   // Create a new actions object without the action to delete
@@ -1137,46 +1107,6 @@ export const handleHidePreviewScene = async (deps) => {
   await renderSceneState(store, graphicsService);
 };
 
-// Handler for throttled/debounced dialogue content updates
-export const handleUpdateDialogueContent = async (deps, payload) => {
-  const { projectService, store } = deps;
-  const { lineId, content } = payload;
-
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
-
-  // Get existing dialogue data to preserve layoutId and characterId
-  const { scenes } = projectService.getState();
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-
-  let existingDialogue = {};
-  if (scene) {
-    const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
-    if (section) {
-      const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-      if (line && line.actions?.dialogue) {
-        existingDialogue = line.actions.dialogue;
-      }
-    }
-  }
-
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-      value: {
-        ...existingDialogue,
-        content: content,
-      },
-      options: {
-        replace: true,
-      },
-    },
-  });
-};
-
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps, payload) {
   const { store, graphicsService, render } = deps;
@@ -1190,19 +1120,14 @@ async function handleRenderCanvas(deps, payload) {
 
 // RxJS subscriptions for handling events with throttling/debouncing
 export const subscriptions = (deps) => {
-  const { subject } = deps;
+  const { subject, dialogueQueueService } = deps;
+
+  // Register write callback for dialogue queue (debounce is handled by the service)
+  dialogueQueueService.onWrite(async (lineId, data) => {
+    await writeDialogueContent(deps, lineId, data);
+  });
 
   return [
-    // Debounce dialogue content updates by 2000ms (2 seconds) per line ID
-    // TODO: Consider flushing pending debounced updates when subscription is cancelled to prevent data loss
-    subject.pipe(
-      filter(({ action }) => action === "updateDialogueContent"),
-      groupBy(({ payload }) => payload.lineId), // Group by line ID to debounce each line separately
-      mergeMap((group) => group.pipe(debounceTime(2000))),
-      tap(({ payload }) => {
-        deps.handlers.handleUpdateDialogueContent(deps, payload);
-      }),
-    ),
     // Debounce canvas renders by 50ms to prevent multiple renders on rapid navigation
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.renderCanvas"),
@@ -1226,7 +1151,6 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   // Get current selected line
   const selectedLine = store.selectSelectedLine();
   if (!selectedLine || !selectedLine.actions) {
-    console.log("⚠️ No selected line or actions found");
     return;
   }
   // Create a new actions object without the action to delete

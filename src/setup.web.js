@@ -9,6 +9,7 @@ import { createWebFilePicker } from "./deps/infra/web/filePicker.js";
 // Services - Web
 import { createAppService } from "./deps/services/web/appService.js";
 import { createProjectService } from "./deps/services/web/projectService.js";
+import { createPendingQueueService } from "./deps/services/pendingQueueService.js";
 
 // Shared Services & Dependencies
 import { createAudioService } from "./deps/services/audioService.js";
@@ -65,6 +66,9 @@ const appService = createAppService({
 // Initialize async resources first
 const graphicsService = await createGraphicsService({ subject });
 
+// Create dialogue queue service for debounced writes
+const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
+
 const componentDependencies = {
   subject,
   graphicsService,
@@ -79,6 +83,7 @@ const pageDependencies = {
   appService,
   projectService,
   updaterService: updater,
+  dialogueQueueService,
 };
 
 const deps = {

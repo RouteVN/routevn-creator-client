@@ -166,7 +166,6 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 
     if (uploadedFiles && uploadedFiles.length > 0) {
       const uploadedFile = uploadedFiles[0];
-      console.log("Character avatar uploaded successfully:", file.name);
 
       const updateData = {
         fileId: uploadedFile.fileId,
