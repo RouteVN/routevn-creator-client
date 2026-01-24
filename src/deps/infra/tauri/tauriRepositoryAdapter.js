@@ -108,10 +108,20 @@ export const createInsiemeTauriStoreAdapter = async (projectPath) => {
 
   return {
     // Insieme store interface
-    async getEvents() {
-      const results = await db.select(
-        "SELECT type, payload FROM events ORDER BY id",
-      );
+    async getEvents(payload = {}) {
+      const { since } = payload;
+
+      let query = "SELECT type, payload FROM events";
+      let params = [];
+
+      if (since !== undefined) {
+        query += " WHERE id > $1";
+        params.push(since);
+      }
+
+      query += " ORDER BY id";
+
+      const results = await db.select(query, params);
       return results.map((row) => ({
         type: row.type,
         payload: row.payload ? JSON.parse(row.payload) : null,
@@ -150,6 +160,29 @@ export const createInsiemeTauriStoreAdapter = async (projectPath) => {
       remove: async (key) => {
         await db.execute("DELETE FROM app WHERE key = $1", [key]);
       },
+    },
+
+    // Snapshot support for fast initialization
+    async getSnapshot() {
+      const result = await db.select("SELECT value FROM app WHERE key = $1", [
+        "_eventsSnapshot",
+      ]);
+      if (result && result.length > 0) {
+        try {
+          return JSON.parse(result[0].value);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    },
+
+    async setSnapshot(snapshot) {
+      const jsonValue = JSON.stringify(snapshot);
+      await db.execute(
+        "INSERT OR REPLACE INTO app (key, value) VALUES ($1, $2)",
+        ["_eventsSnapshot", jsonValue],
+      );
     },
   };
 };

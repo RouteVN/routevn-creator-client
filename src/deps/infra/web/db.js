@@ -86,19 +86,28 @@ export const createDb = ({ path, withEvents = false }) => {
   };
 
   if (withEvents) {
-    instance.getEvents = async () => {
+    instance.getEvents = async (payload = {}) => {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
+      const { since } = payload;
       return new Promise((resolve, reject) => {
         const transaction = db.transaction("events", "readonly");
         const store = transaction.objectStore("events");
         const request = store.getAll();
         request.onsuccess = (event) => {
-          const events = event.target.result.map((row) => ({
-            type: row.type,
-            payload: row.payload ? JSON.parse(row.payload) : null,
-          }));
-          resolve(events);
+          let events = event.target.result;
+
+          // Filter by since if provided (using auto-increment id)
+          if (since !== undefined) {
+            events = events.filter((row) => row.id > since);
+          }
+
+          resolve(
+            events.map((row) => ({
+              type: row.type,
+              payload: row.payload ? JSON.parse(row.payload) : null,
+            })),
+          );
         };
         request.onerror = (event) => reject(event.target.error);
       });
@@ -115,6 +124,43 @@ export const createDb = ({ path, withEvents = false }) => {
           payload: JSON.stringify(event.payload),
         };
         const request = store.add(eventToStore);
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    };
+
+    // Snapshot support for fast initialization
+    instance.getSnapshot = async () => {
+      if (!initialized)
+        throw new Error("Db not initialized. Call init() first.");
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("kv", "readonly");
+        const store = transaction.objectStore("kv");
+        const request = store.get("_eventsSnapshot");
+        request.onsuccess = (event) => {
+          const result = event.target.result;
+          if (result && result.value) {
+            try {
+              resolve(JSON.parse(result.value));
+            } catch {
+              resolve(null);
+            }
+          } else {
+            resolve(null);
+          }
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    };
+
+    instance.setSnapshot = async (snapshot) => {
+      if (!initialized)
+        throw new Error("Db not initialized. Call init() first.");
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("kv", "readwrite");
+        const store = transaction.objectStore("kv");
+        const jsonValue = JSON.stringify(snapshot);
+        const request = store.put({ key: "_eventsSnapshot", value: jsonValue });
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.error);
       });
