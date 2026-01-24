@@ -87,7 +87,7 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [x] [Medium] Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
 
-- [ ] [High] BGM sound is not playing during full screen preview.
+- [x] [High] [cannot replicate] BGM sound is not playing during full screen preview.
 
 ---
 
