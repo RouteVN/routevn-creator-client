@@ -85,7 +85,7 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [High] Dialogue disappears when preview full screen when when 1st line has a background with animation. https://discord.com/channels/1233660682419834920/1461203575123480707
 
-- [ ] [Medium] Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
+- [x] [Medium] Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
 
 - [ ] [High] BGM sound is not playing during full screen preview.
 
