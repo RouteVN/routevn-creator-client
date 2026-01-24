@@ -32,7 +32,7 @@ assignee: anyone
 ## Scene Editor Issues
 
 - [x] [Critical] @Nghia Scene Editor, when first create a new scene, it give me a black screen with only a plus symbol on the left, I can't click on the tabs at the top, because there were none, so I click on the plus symbol and it create another tab
-- [ ] [Medium] In the scene editor, if a line has too many text, it push the preview to the right.
+- [x] [Medium] In the scene editor, if a line has too many text, it push the preview to the right.
 - [x] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good) (Can't reproduce the error)
 - [x] [High] @nellow Scene editor, choice is not forcing people to choose. You can click on the textbox to ignore the choice completely
 - [ ] [High] @nellow Scene editor, when there's a line with content and we press enter and not let go, it will copy that content on each preceding new line.
