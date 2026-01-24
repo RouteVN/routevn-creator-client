@@ -1137,7 +1137,7 @@ export const handleHidePreviewScene = async (deps) => {
 
 // Handler for throttled/debounced dialogue content updates
 export const handleUpdateDialogueContent = async (deps, payload) => {
-  const { projectService, store, subject } = deps;
+  const { projectService, store } = deps;
   const { lineId, content } = payload;
 
   const sceneId = store.selectSceneId();
