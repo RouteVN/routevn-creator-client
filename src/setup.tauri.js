@@ -15,6 +15,7 @@ import { setupCloseListener } from "./deps/infra/tauri/windowClose";
 import { createAppService } from "./deps/services/appService";
 import { createAudioService } from "./deps/services/audioService";
 import { createProjectService } from "./deps/services/projectService";
+import { createPendingQueueService } from "./deps/services/pendingQueueService";
 
 // Legacy deps (to be migrated)
 import Subject from "./deps/subject";
@@ -66,6 +67,9 @@ const appService = createAppService({
 // Initialize async resources first
 const graphicsService = await createGraphicsService({ subject });
 
+// Create dialogue queue service for debounced writes
+const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
+
 setupCloseListener({ globalUI });
 
 const componentDependencies = {
@@ -82,6 +86,7 @@ const pageDependencies = {
   appService,
   projectService,
   updaterService: updater,
+  dialogueQueueService,
 };
 
 const deps = {
