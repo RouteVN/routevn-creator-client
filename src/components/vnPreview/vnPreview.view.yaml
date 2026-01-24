@@ -7,6 +7,10 @@ viewDataSchema:
 attrsSchema:
   sceneId:
     type: string
+  sectionId:
+    type: string
+  lineId:
+    type: string
 
 refs: {}
 

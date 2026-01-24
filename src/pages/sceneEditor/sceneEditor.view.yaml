@@ -139,4 +139,4 @@ template:
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:
   - $if previewVisible:
-      - rvn-vn-preview#vn-preview scene-id="${previewSceneId}":
+      - rvn-vn-preview#vn-preview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}":

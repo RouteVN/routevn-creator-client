@@ -22,6 +22,8 @@ export const createInitialState = () => ({
   repositoryState: {},
   previewVisible: false,
   previewSceneId: undefined,
+  previewSectionId: undefined,
+  previewLineId: undefined,
   presentationState: {},
   sectionLineChanges: {},
   isMuted: false,
@@ -40,10 +42,14 @@ export const showPreviewSceneId = (state, payload) => {
   const { sceneId } = payload;
   state.previewVisible = true;
   state.previewSceneId = sceneId;
+  state.previewSectionId = sectionId;
+  state.previewLineId = lineId;
 };
 
 export const hidePreviewScene = (state) => {
   state.previewVisible = false;
+  state.previewSectionId = undefined;
+  state.previewLineId = undefined;
 };
 
 export const setPresentationState = (state, presentationState) => {
@@ -388,6 +394,8 @@ export const selectViewData = ({ state }) => {
     ),
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
+    previewSectionId: state.previewSectionId,
+    previewLineId: state.previewLineId,
     presentationState: state.presentationState,
     sectionLineChanges: state.sectionLineChanges,
     isMuted: state.isMuted,
