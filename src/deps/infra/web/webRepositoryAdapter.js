@@ -103,17 +103,26 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
 
   return {
     // Insieme store interface
-    async getEvents() {
+    async getEvents(payload = {}) {
+      const { since } = payload;
       return new Promise((resolve, reject) => {
         const transaction = db.transaction("events", "readonly");
         const store = transaction.objectStore("events");
         const request = store.getAll();
         request.onsuccess = (event) => {
-          const events = event.target.result.map((row) => ({
-            type: row.type,
-            payload: row.payload ? JSON.parse(row.payload) : null,
-          }));
-          resolve(events);
+          let events = event.target.result;
+
+          // Filter by since if provided (using auto-increment id)
+          if (since !== undefined) {
+            events = events.filter((row) => row.id > since);
+          }
+
+          resolve(
+            events.map((row) => ({
+              type: row.type,
+              payload: row.payload ? JSON.parse(row.payload) : null,
+            })),
+          );
         };
         request.onerror = (event) => reject(event.target.error);
       });
@@ -193,6 +202,39 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
         const transaction = db.transaction("files", "readwrite");
         const store = transaction.objectStore("files");
         const request = store.put({ id, data });
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    // Snapshot support for fast initialization
+    async getSnapshot() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("app", "readonly");
+        const store = transaction.objectStore("app");
+        const request = store.get("_eventsSnapshot");
+        request.onsuccess = (event) => {
+          const result = event.target.result;
+          if (result && result.value) {
+            try {
+              resolve(JSON.parse(result.value));
+            } catch {
+              resolve(null);
+            }
+          } else {
+            resolve(null);
+          }
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async setSnapshot(snapshot) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("app", "readwrite");
+        const store = transaction.objectStore("app");
+        const jsonValue = JSON.stringify(snapshot);
+        const request = store.put({ key: "_eventsSnapshot", value: jsonValue });
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.error);
       });

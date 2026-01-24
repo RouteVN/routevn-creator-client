@@ -86,12 +86,22 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
 
   // Add events methods if needed
   if (withEvents) {
-    instance.getEvents = async () => {
+    instance.getEvents = async (payload = {}) => {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
-      const results = await db.select(
-        "SELECT type, payload FROM events ORDER BY id",
-      );
+      const { since } = payload;
+
+      let query = "SELECT type, payload FROM events";
+      let params = [];
+
+      if (since !== undefined) {
+        query += " WHERE id > $1";
+        params.push(since);
+      }
+
+      query += " ORDER BY id";
+
+      const results = await db.select(query, params);
       return results.map((row) => ({
         type: row.type,
         payload: row.payload ? JSON.parse(row.payload) : null,
@@ -105,6 +115,33 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
         event.type,
         JSON.stringify(event.payload),
       ]);
+    };
+
+    // Snapshot support for fast initialization
+    instance.getSnapshot = async () => {
+      if (!initialized)
+        throw new Error("Db not initialized. Call init() first.");
+      const result = await db.select("SELECT value FROM kv WHERE key = $1", [
+        "_eventsSnapshot",
+      ]);
+      if (result && result.length > 0) {
+        try {
+          return JSON.parse(result[0].value);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    };
+
+    instance.setSnapshot = async (snapshot) => {
+      if (!initialized)
+        throw new Error("Db not initialized. Call init() first.");
+      const jsonValue = JSON.stringify(snapshot);
+      await db.execute(
+        "INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)",
+        ["_eventsSnapshot", jsonValue],
+      );
     };
   }
 

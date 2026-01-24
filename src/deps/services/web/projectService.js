@@ -105,6 +105,9 @@ export const createProjectService = ({ router, filePicker }) => {
   // Repository cache
   const repositoriesByProject = new Map();
 
+  // Initialization locks - prevents duplicate initialization
+  const initLocksByProject = new Map(); // projectId -> Promise<Repository>
+
   // Current repository cache (for sync access after ensureRepository is called)
   let currentRepository = null;
   let currentProjectId = null;
@@ -118,16 +121,36 @@ export const createProjectService = ({ router, filePicker }) => {
 
   // Get or create repository by projectId
   const getRepositoryByProject = async (projectId) => {
+    // Check cache first
     if (repositoriesByProject.has(projectId)) {
       return repositoriesByProject.get(projectId);
     }
 
-    const store = await createInsiemeWebStoreAdapter(projectId);
-    const repository = createRepository({ originStore: store });
-    await repository.init({ initialState: initialProjectData });
-    repository.adapter = store; // Attach adapter for file ops
-    repositoriesByProject.set(projectId, repository);
-    return repository;
+    // Check if initialization is already in progress
+    if (initLocksByProject.has(projectId)) {
+      return initLocksByProject.get(projectId);
+    }
+
+    // Create init promise and store lock
+    const initPromise = (async () => {
+      try {
+        const store = await createInsiemeWebStoreAdapter(projectId);
+        const repository = createRepository({
+          originStore: store,
+          snapshotInterval: 100, // Auto-save snapshot every 100 events
+        });
+        await repository.init({ initialState: initialProjectData });
+        repository.adapter = store; // Attach adapter for file ops
+        repositoriesByProject.set(projectId, repository);
+        return repository;
+      } finally {
+        // Always remove the lock when done (success or failure)
+        initLocksByProject.delete(projectId);
+      }
+    })();
+
+    initLocksByProject.set(projectId, initPromise);
+    return initPromise;
   };
 
   // Get current project's repository (updates cache)

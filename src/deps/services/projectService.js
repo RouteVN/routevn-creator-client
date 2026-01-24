@@ -108,6 +108,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
   const repositoriesByProject = new Map();
   const repositoriesByPath = new Map();
 
+  // Initialization locks - prevents duplicate initialization
+  const initLocksByProject = new Map(); // projectId -> Promise<Repository>
+  const initLocksByPath = new Map(); // projectPath -> Promise<Repository>
+
   // Current repository cache (for sync access after ensureRepository is called)
   let currentRepository = null;
   let currentProjectId = null;
@@ -120,33 +124,70 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
   // Get or create repository by path
   const getRepositoryByPath = async (projectPath) => {
+    // Check cache first
     if (repositoriesByPath.has(projectPath)) {
       return repositoriesByPath.get(projectPath);
     }
 
-    const store = await createInsiemeTauriStoreAdapter(projectPath);
-    const repository = createRepository({ originStore: store });
-    await repository.init({ initialState: initialProjectData });
-    repositoriesByPath.set(projectPath, repository);
-    repository.app = store.app;
-    return repository;
+    // Check if initialization is already in progress
+    if (initLocksByPath.has(projectPath)) {
+      return initLocksByPath.get(projectPath);
+    }
+
+    // Create init promise and store lock
+    const initPromise = (async () => {
+      try {
+        const store = await createInsiemeTauriStoreAdapter(projectPath);
+        const repository = createRepository({
+          originStore: store,
+          snapshotInterval: 100, // Auto-save snapshot every 100 events
+        });
+        await repository.init({ initialState: initialProjectData });
+        repositoriesByPath.set(projectPath, repository);
+        repository.app = store.app;
+        return repository;
+      } finally {
+        // Always remove the lock when done (success or failure)
+        initLocksByPath.delete(projectPath);
+      }
+    })();
+
+    initLocksByPath.set(projectPath, initPromise);
+    return initPromise;
   };
 
   // Get or create repository by projectId
   const getRepositoryByProject = async (projectId) => {
+    // Check cache first
     if (repositoriesByProject.has(projectId)) {
       return repositoriesByProject.get(projectId);
     }
 
-    const projects = (await db.get("projectEntries")) || [];
-    const project = projects.find((p) => p.id === projectId);
-    if (!project) {
-      throw new Error("project not found");
+    // Check if initialization is already in progress
+    if (initLocksByProject.has(projectId)) {
+      return initLocksByProject.get(projectId);
     }
 
-    const repository = await getRepositoryByPath(project.projectPath);
-    repositoriesByProject.set(projectId, repository);
-    return repository;
+    // Create init promise and store lock
+    const initPromise = (async () => {
+      try {
+        const projects = (await db.get("projectEntries")) || [];
+        const project = projects.find((p) => p.id === projectId);
+        if (!project) {
+          throw new Error("project not found");
+        }
+
+        const repository = await getRepositoryByPath(project.projectPath);
+        repositoriesByProject.set(projectId, repository);
+        return repository;
+      } finally {
+        // Always remove the lock when done (success or failure)
+        initLocksByProject.delete(projectId);
+      }
+    })();
+
+    initLocksByProject.set(projectId, initPromise);
+    return initPromise;
   };
 
   // Get current project's repository (updates cache)
@@ -395,7 +436,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
       // Create store and initialize repository with the full data
       const store = await createInsiemeTauriStoreAdapter(projectPath);
-      const repository = createRepository({ originStore: store });
+      const repository = createRepository({
+        originStore: store,
+        snapshotInterval: 100, // Auto-save snapshot every 100 events
+      });
       await repository.init({ initialState: initData });
 
       await store.app.set("creator_version", "1");
