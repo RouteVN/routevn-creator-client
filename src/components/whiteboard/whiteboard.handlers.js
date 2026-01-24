@@ -183,19 +183,6 @@ export const handleItemMouseDown = (deps, payload) => {
   dragOffset.x = mouseInCanvasX - itemX;
   dragOffset.y = mouseInCanvasY - itemY;
 
-  console.log(
-    "Drag start - Mouse in canvas:",
-    mouseInCanvasX,
-    mouseInCanvasY,
-    "Item pos:",
-    itemX,
-    itemY,
-    "Offset:",
-    dragOffset.x,
-    dragOffset.y,
-  );
-
-  console.log("Starting drag for item:", itemId);
   store.startDragging({ itemId });
 
   // Dispatch selection event

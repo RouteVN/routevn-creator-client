@@ -250,9 +250,6 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     syncRepositoryToStore(store, projectService);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 

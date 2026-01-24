@@ -24,7 +24,6 @@ export const handleResizeStart = (deps, payload) => {
   const { store, render } = deps;
 
   payload._event.preventDefault();
-  console.log("Resizable panel resize start triggered");
 
   const startX = payload._event.clientX;
   const startWidth = store.selectPanelWidth();
@@ -68,8 +67,6 @@ const handleResizeMove = (deps, payload) => {
 const handleResizeEnd = (deps, _, listeners) => {
   const { store, render, attrs, appService, subject } = deps;
   const { handleMouseMove, handleMouseUp } = listeners;
-
-  console.log("Resizable panel resize end");
 
   // Save final width to localStorage using userConfig pattern
   const panelType = attrs["panel-type"] || "file-explorer";

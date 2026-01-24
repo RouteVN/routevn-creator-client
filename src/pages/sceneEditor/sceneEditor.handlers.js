@@ -49,7 +49,6 @@ async function createAssetsFromFileIds(
     }
   }
 
-  console.log("assets", assets);
   return assets;
 }
 
@@ -1049,7 +1048,6 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   // Get current selected line
   const selectedLine = store.selectSelectedLine();
   if (!selectedLine || !selectedLine.actions) {
-    console.log("⚠️ No selected line or actions found");
     return;
   }
   // Create a new actions object without the action to delete
@@ -1151,7 +1149,6 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   // Get current selected line
   const selectedLine = store.selectSelectedLine();
   if (!selectedLine || !selectedLine.actions) {
-    console.log("⚠️ No selected line or actions found");
     return;
   }
   // Create a new actions object without the action to delete

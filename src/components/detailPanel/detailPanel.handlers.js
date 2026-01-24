@@ -162,9 +162,6 @@ export const handleFormActionClick = (deps, payload) => {
   }
 
   if (action === "submit") {
-    console.log("Form submit clicked - dispatching item-update event");
-    console.log("Form values:", values);
-
     // Hide popover
     store.hidePopover();
     render();
@@ -179,8 +176,6 @@ export const handleFormActionClick = (deps, payload) => {
         composed: true,
       }),
     );
-
-    console.log("item-update event dispatched", values);
   }
 };
 
@@ -285,7 +280,6 @@ export const handleTypographySelectChange = (deps, payload) => {
 };
 
 export const handleEditableTextClick = (deps, payload) => {
-  console.log("@##################");
   const { store, render } = deps;
   payload._event.preventDefault();
 
@@ -372,22 +366,13 @@ export const handleTypographyFormActionClick = (deps, payload) => {
 export const handleImageSelectorFieldClick = (deps, payload) => {
   const { props, dispatchEvent } = deps;
 
-  console.log("handleImageSelectorFieldClick called");
-  console.log("event target:", payload._event.currentTarget);
-  console.log("event target id:", payload._event.currentTarget.id);
-
   // Extract field index from element ID
   const fieldIndex = parseInt(
     payload._event.currentTarget.id.replace("image-selector-field-", ""),
   );
   const field = props.fields[fieldIndex];
 
-  console.log("fieldIndex:", fieldIndex);
-  console.log("field:", field);
-  console.log("props.fields:", props.fields);
-
   if (field && field.type === "image-selector" && field.editable) {
-    console.log("dispatching request-image-groups event");
     // Request groups data from parent component
     dispatchEvent(
       new CustomEvent("request-image-groups", {
@@ -396,8 +381,6 @@ export const handleImageSelectorFieldClick = (deps, payload) => {
         composed: true,
       }),
     );
-  } else {
-    console.log("field not found, not image-selector type, or not editable");
   }
 };
 

@@ -83,7 +83,6 @@ export const showFullImagePreview = (state, { itemId }) => {
 };
 
 export const hideFullImagePreview = (state) => {
-  console.log("222222222222");
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
 };
