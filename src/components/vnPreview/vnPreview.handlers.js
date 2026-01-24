@@ -43,46 +43,32 @@ export const handleAfterMount = async (deps) => {
   const state = projectService.getState();
   const { canvas } = getRefIds();
   await graphicsService.init({ canvas: canvas.elm });
-  const projectData = constructProjectData(state, {
-    initialSceneId: attrs["scene-id"],
-  });
-  const fileReferences = extractFileIdsFromRenderState(projectData.resources);
-  const assets = await loadAssets(deps, fileReferences);
-  await graphicsService.loadAssets(assets);
-  await graphicsService.initRouteEngine(projectData, {
-    handleEffects: true,
-  });
 
+  const sceneId = attrs["scene-id"];
   const sectionId = attrs["section-id"];
   const lineId = attrs["line-id"];
 
-  if (
-    sectionId &&
-    sectionId !== "undefined" &&
-    lineId &&
-    lineId !== "undefined"
-  ) {
-    graphicsService.engineHandleActions({
-      jumpToLine: {
-        sectionId: sectionId,
-        lineId: lineId,
-      },
-    });
-  } else if (sectionId && sectionId !== "undefined") {
-    const sceneId = attrs["scene-id"];
-    const scene = projectData.story.scenes[sceneId];
-    if (
-      scene &&
-      scene.sections[sectionId] &&
-      scene.sections[sectionId].lines.length > 0
-    ) {
-      const firstLineId = scene.sections[sectionId].lines[0].id;
-      graphicsService.engineHandleActions({
-        jumpToLine: {
-          sectionId: sectionId,
-          lineId: firstLineId,
-        },
-      });
+  const projectData = constructProjectData(state, {
+    initialSceneId: sceneId,
+  });
+
+  const projectDataWithInitial = structuredClone(projectData);
+  const scene = projectDataWithInitial.story.scenes[sceneId];
+
+  if (scene && sectionId && sectionId !== "undefined") {
+    scene.initialSectionId = sectionId;
+
+    if (lineId && lineId !== "undefined" && scene.sections[sectionId]) {
+      scene.sections[sectionId].initialLineId = lineId;
     }
   }
+
+  const fileReferences = extractFileIdsFromRenderState(
+    projectDataWithInitial.resources,
+  );
+  const assets = await loadAssets(deps, fileReferences);
+  await graphicsService.loadAssets(assets);
+  await graphicsService.initRouteEngine(projectDataWithInitial, {
+    handleEffects: true,
+  });
 };
