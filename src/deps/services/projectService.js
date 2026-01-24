@@ -107,6 +107,8 @@ export const createProjectService = ({ router, db, filePicker }) => {
   // Repository cache
   const repositoriesByProject = new Map();
   const repositoriesByPath = new Map();
+  // Pending initialization promises to prevent duplicate concurrent loads
+  const pendingByPath = new Map();
 
   // Current repository cache (for sync access after ensureRepository is called)
   let currentRepository = null;
@@ -120,16 +122,34 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
   // Get or create repository by path
   const getRepositoryByPath = async (projectPath) => {
+    // Return cached repository if available
     if (repositoriesByPath.has(projectPath)) {
       return repositoriesByPath.get(projectPath);
     }
 
-    const store = await createInsiemeTauriStoreAdapter(projectPath);
-    const repository = createRepository({ originStore: store });
-    await repository.init({ initialState: initialProjectData });
-    repositoriesByPath.set(projectPath, repository);
-    repository.app = store.app;
-    return repository;
+    // Return pending promise if initialization is already in progress
+    if (pendingByPath.has(projectPath)) {
+      return pendingByPath.get(projectPath);
+    }
+
+    // Start initialization and store the promise
+    const initPromise = (async () => {
+      const store = await createInsiemeTauriStoreAdapter(projectPath);
+      const repository = createRepository({ originStore: store });
+      await repository.init({ initialState: initialProjectData });
+      repositoriesByPath.set(projectPath, repository);
+      repository.app = store.app;
+      return repository;
+    })();
+
+    pendingByPath.set(projectPath, initPromise);
+
+    try {
+      const repository = await initPromise;
+      return repository;
+    } finally {
+      pendingByPath.delete(projectPath);
+    }
   };
 
   // Get or create repository by projectId
