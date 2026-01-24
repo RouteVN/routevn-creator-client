@@ -39,7 +39,7 @@ export const setRepositoryState = (state, repository) => {
 };
 
 export const showPreviewSceneId = (state, payload) => {
-  const { sceneId } = payload;
+  const { sceneId, sectionId, lineId } = payload;
   state.previewVisible = true;
   state.previewSceneId = sceneId;
   state.previewSectionId = sectionId;

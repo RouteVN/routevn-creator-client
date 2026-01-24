@@ -52,4 +52,37 @@ export const handleAfterMount = async (deps) => {
   await graphicsService.initRouteEngine(projectData, {
     handleEffects: true,
   });
+
+  const sectionId = attrs["section-id"];
+  const lineId = attrs["line-id"];
+
+  if (
+    sectionId &&
+    sectionId !== "undefined" &&
+    lineId &&
+    lineId !== "undefined"
+  ) {
+    graphicsService.engineHandleActions({
+      jumpToLine: {
+        sectionId: sectionId,
+        lineId: lineId,
+      },
+    });
+  } else if (sectionId && sectionId !== "undefined") {
+    const sceneId = attrs["scene-id"];
+    const scene = projectData.story.scenes[sceneId];
+    if (
+      scene &&
+      scene.sections[sectionId] &&
+      scene.sections[sectionId].lines.length > 0
+    ) {
+      const firstLineId = scene.sections[sectionId].lines[0].id;
+      graphicsService.engineHandleActions({
+        jumpToLine: {
+          sectionId: sectionId,
+          lineId: firstLineId,
+        },
+      });
+    }
+  }
 };
