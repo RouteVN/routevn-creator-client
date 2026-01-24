@@ -234,7 +234,6 @@ export const selectViewData = ({ state, props }) => {
     })
     .filter((group) => group.shouldDisplay);
 
-  console.log("defaultValues", state.defaultValues);
   const defaultValues = structuredClone(state.defaultValues);
   if (!defaultValues.enum) {
     defaultValues.enum = [];

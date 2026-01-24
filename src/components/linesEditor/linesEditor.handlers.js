@@ -109,9 +109,8 @@ const getSelectionRange = (element) => {
           return range;
         }
       }
-    } catch (e) {
+    } catch {
       // getComposedRanges not supported, fall through to fallback
-      console.log(e);
     }
   }
 

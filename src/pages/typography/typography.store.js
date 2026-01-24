@@ -648,11 +648,6 @@ export const selectViewData = ({ state }) => {
     }
   }
 
-  console.log("dialogDefaultValues", {
-    dialogForm,
-    dialogDefaultValues,
-  });
-
   return {
     flatItems,
     flatGroups,

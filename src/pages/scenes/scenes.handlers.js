@@ -310,8 +310,6 @@ export const handleSceneFormAction = async (deps, payload) => {
     // Get form values from the event detail (same pattern as typography)
     const formData = payload._event.detail.formValues;
 
-    console.log("Submitting scene with form data:", formData);
-
     // Use a simple ID generator instead of nanoid
     const newSceneId = `scene-${Date.now()}-${Math.random()
       .toString(36)
@@ -449,9 +447,6 @@ export const handleSceneFormAction = async (deps, payload) => {
     // Reset form
     store.resetSceneForm();
 
-    console.log(
-      `Scene "${formData.name}" created successfully in folder "${formData.folderId}" at (${sceneWhiteboardPosition.x}, ${sceneWhiteboardPosition.y})`,
-    );
     render();
   }
 };

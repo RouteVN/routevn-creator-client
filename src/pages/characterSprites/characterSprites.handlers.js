@@ -38,7 +38,6 @@ export const handleDataChanged = async (deps) => {
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { id, item, isFolder } = payload._event.detail;
-  console.log("Selection changed:", id, item, isFolder);
 
   // For characterSprites, get item data from our own store since BaseFileExplorer
   // can't access the nested character.sprites data structure
@@ -133,7 +132,6 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     for (const result of successfulUploads) {
-      console.log("Upload result:", result);
       await repository.addEvent({
         type: "treePush",
         payload: {
@@ -162,9 +160,6 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     store.setItems(character.sprites);
   }
 
-  console.log(
-    `Uploaded ${successfulUploads.length} out of ${files.length} files successfully`,
-  );
   render();
 };
 

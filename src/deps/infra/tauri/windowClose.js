@@ -24,7 +24,6 @@ export async function setupCloseListener(deps) {
         isClosing = false; // Reset flag (though window will be closed)
       }
     });
-    console.log("Close listener set up successfully.");
     return listener;
   } catch (e) {
     console.error("Failed to set up close listener:", e);
