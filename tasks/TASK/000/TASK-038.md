@@ -67,7 +67,7 @@ https://github.com/user-attachments/assets/85eacfb9-a18f-4e11-86f0-57c992acc591
 - [x] [High] @Nghia If audio resource is removed from asset and if it's present on that line then it will not trigger that line and show blank
 error -> `Uncaught TypeError: s is not iterable`
 
-- [ ] [Medium] Add arrow for the choices as well
+- [x] [Medium] Add arrow for the choices as well
 
 - [x] [High] When in the transform we set a custom scaleX and scaleY. we apply the transform in the scene editor for characters. it does not work. the with and height is still the same. expected: width and height of character sprite should be updated based on the scaleX and scaleY
 
@@ -75,7 +75,7 @@ error -> `Uncaught TypeError: s is not iterable`
   - We should remove all text styling before pasting. The text input should not be styled by anything
   - Should think of how it handles new lines. 
 
-- [ ] [Medium] For the Scene Map. Arrows are automatically added when scenes have transitions. However it is not added for choices with transitions. It should apply for choices with transitions as well.
+- [x] [Medium] For the Scene Map. Arrows are automatically added when scenes have transitions. However it is not added for choices with transitions. It should apply for choices with transitions as well.
 
 - [X] [High] add adding animation to background, with tween fade in. and then you navigate around different lines, or preview it. the animation runs everytime you click. expected: it should run only once for that line
 

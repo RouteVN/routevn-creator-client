@@ -45,8 +45,28 @@ const getTransitionsForScene = (sections) => {
         const sectionTransition =
           line.actions?.sectionTransition ||
           line.actions?.actions?.sectionTransition;
-        if (sectionTransition && sectionTransition.sceneId) {
+        if (
+          sectionTransition &&
+          sectionTransition.sceneId &&
+          !transitions.includes(sectionTransition.sceneId)
+        ) {
           transitions.push(sectionTransition.sceneId);
+        }
+
+        // Check for transitions within choices
+        const choice = line.actions?.choice || line.actions?.actions?.choice;
+        if (choice && choice.items && Array.isArray(choice.items)) {
+          for (const choiceItem of choice.items) {
+            const choiceTransition =
+              choiceItem.events?.click?.actions?.sectionTransition;
+            if (
+              choiceTransition &&
+              choiceTransition.sceneId &&
+              !transitions.includes(choiceTransition.sceneId)
+            ) {
+              transitions.push(choiceTransition.sceneId);
+            }
+          }
         }
       }
     }
