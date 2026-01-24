@@ -137,7 +137,7 @@ export const createProjectService = ({ router, filePicker }) => {
         const store = await createInsiemeWebStoreAdapter(projectId);
         const repository = createRepository({
           originStore: store,
-          snapshotInterval: 100, // Auto-save snapshot every 100 events
+          snapshotInterval: 500, // Auto-save snapshot every 500 events
         });
         await repository.init({ initialState: initialProjectData });
         repository.adapter = store; // Attach adapter for file ops

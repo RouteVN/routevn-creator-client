@@ -140,7 +140,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
         const store = await createInsiemeTauriStoreAdapter(projectPath);
         const repository = createRepository({
           originStore: store,
-          snapshotInterval: 100, // Auto-save snapshot every 100 events
+          snapshotInterval: 500, // Auto-save snapshot every 500 events
         });
         await repository.init({ initialState: initialProjectData });
         repositoriesByPath.set(projectPath, repository);
@@ -438,7 +438,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       const store = await createInsiemeTauriStoreAdapter(projectPath);
       const repository = createRepository({
         originStore: store,
-        snapshotInterval: 100, // Auto-save snapshot every 100 events
+        snapshotInterval: 500, // Auto-save snapshot every 500 events
       });
       await repository.init({ initialState: initData });
 
