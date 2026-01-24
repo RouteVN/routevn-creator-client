@@ -77,8 +77,8 @@ export const createAppService = ({
   const loadProjectIcon = async (projectId, iconFileId) => {
     if (!iconFileId) return null;
     try {
-      const repository = await projectService.getRepositoryById(projectId);
-      const blob = await repository.adapter.getFile(iconFileId);
+      const adapter = projectService.getAdapterById(projectId);
+      const blob = await adapter.getFile(iconFileId);
       if (blob) {
         return URL.createObjectURL(blob);
       }

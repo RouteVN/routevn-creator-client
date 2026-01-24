@@ -104,6 +104,7 @@ export const initialProjectData = {
 export const createProjectService = ({ router, filePicker }) => {
   // Repository cache
   const repositoriesByProject = new Map();
+  const adaptersByProject = new Map();
 
   // Initialization locks - prevents duplicate initialization
   const initLocksByProject = new Map(); // projectId -> Promise<Repository>
@@ -140,8 +141,8 @@ export const createProjectService = ({ router, filePicker }) => {
           snapshotInterval: 500, // Auto-save snapshot every 500 events
         });
         await repository.init({ initialState: initialProjectData });
-        repository.adapter = store; // Attach adapter for file ops
         repositoriesByProject.set(projectId, repository);
+        adaptersByProject.set(projectId, store);
         return repository;
       } finally {
         // Always remove the lock when done (success or failure)
@@ -163,7 +164,7 @@ export const createProjectService = ({ router, filePicker }) => {
     // Update cache
     currentRepository = repository;
     currentProjectId = projectId;
-    currentAdapter = repository.adapter;
+    currentAdapter = adaptersByProject.get(projectId);
     return repository;
   };
 
@@ -309,6 +310,9 @@ export const createProjectService = ({ router, filePicker }) => {
     async getRepositoryById(projectId) {
       return getRepositoryByProject(projectId);
     },
+    getAdapterById(projectId) {
+      return adaptersByProject.get(projectId);
+    },
     async ensureRepository() {
       return getCurrentRepository();
     },
@@ -325,16 +329,16 @@ export const createProjectService = ({ router, filePicker }) => {
       return repository.getEvents();
     },
     async addVersionToProject(projectId, version) {
-      const repository = await getRepositoryByProject(projectId);
-      const versions = (await repository.adapter.app.get("versions")) || [];
+      const adapter = adaptersByProject.get(projectId);
+      const versions = (await adapter.app.get("versions")) || [];
       versions.unshift(version);
-      await repository.adapter.app.set("versions", versions);
+      await adapter.app.set("versions", versions);
     },
     async deleteVersionFromProject(projectId, versionId) {
-      const repository = await getRepositoryByProject(projectId);
-      const versions = (await repository.adapter.app.get("versions")) || [];
+      const adapter = adaptersByProject.get(projectId);
+      const versions = (await adapter.app.get("versions")) || [];
       const newVersions = versions.filter((v) => v.id !== versionId);
-      await repository.adapter.app.set("versions", newVersions);
+      await adapter.app.set("versions", newVersions);
     },
     async initializeProject({ name, description, projectId, template }) {
       return initializeWebProject({
