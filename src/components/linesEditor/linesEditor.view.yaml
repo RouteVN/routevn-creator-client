@@ -59,6 +59,10 @@ styles:
     word-break: break-word
   'div[contenteditable]:focus':
     outline: none
+  'rvn-file-image':
+    pointer-events: none
+    user-select: none
+    -webkit-user-drag: none
 
 template:
   - $if ready:
