@@ -125,7 +125,9 @@ template:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f fw=w g=lg:
                               - $for item, j in group.children:
-                                  - rvn-file-image#sprite-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:
+                                  - rtgl-view#sprite-item-${item.id} w=200 h=150 cur=p key=${item.bw} bw=${item.bw} bc=pr br=sm g=sm:
+                                      - rvn-file-image fileId=${item.fileId} w=200 h=120:
+                                      - rtgl-text s=sm ah=c: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#button-select: Select
 
