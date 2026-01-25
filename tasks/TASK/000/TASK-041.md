@@ -9,7 +9,7 @@ watching the usability test now here's some things i think would make the user e
 
 bugs : 
 
-- [ ] [low] seems like you can drag the icon from the line editor and it will give a url (6:31 - 6:33)
+- [x] [low] seems like you can drag the icon from the line editor and it will give a url (6:31 - 6:33)
 - [ ] [low] can select a character without any sprite (dont know if is intended) but should have validation (7:45)
 - [ ] [low] Should make the choices layout required (20:15)
 - [ ] [low] add transform, should make the transform name required (34:32)
