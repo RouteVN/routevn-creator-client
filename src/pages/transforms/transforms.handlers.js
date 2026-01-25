@@ -302,7 +302,7 @@ export const handleTransformDialogClose = (deps) => {
 };
 
 export const handleTransformFormActionClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
@@ -311,6 +311,10 @@ export const handleTransformFormActionClick = (deps, payload) => {
     // Get form values from the event detail - it's in formValues
     const formData = payload._event.detail.formValues;
 
+    if (!formData.name || !formData.name.trim()) {
+      appService.showToast("Transform name is required", { title: "Warning" });
+      return;
+    }
     // Get state values using selector functions
     const targetGroupId = store.selectTargetGroupId();
     const editMode = store.selectEditMode();

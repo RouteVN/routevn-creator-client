@@ -113,10 +113,16 @@ export const handleChoiceItemClick = (deps) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent, store } = deps;
+  const { dispatchEvent, store, appService } = deps;
   const items = store.selectItems();
   const selectedResourceId = store.selectSelectedResourceId();
 
+  if (!selectedResourceId) {
+    appService.showToast("Please select a choice layout", {
+      title: "Warning",
+    });
+    return;
+  }
   // Create choices object with new structure
   const choicesData = {
     items,
