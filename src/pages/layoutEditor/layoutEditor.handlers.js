@@ -224,6 +224,20 @@ const renderLayoutPreview = async (deps) => {
 
   const finalElements = parseAndRender(elementsToRender, data);
 
+  // Add drag and hover properties to all elements to make them interactive
+  finalElements.forEach((el) => {
+    if (el.id !== "bg") {
+      el.drag = {
+        move: {},
+        start: {},
+        end: {},
+      };
+      el.hover = {
+        cursor: "pointer",
+      };
+    }
+  });
+
   const parsedState = graphicsService.parse({
     elements: finalElements,
   });
@@ -325,6 +339,22 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   store.setSelectedItemId(itemId);
   render();
   await renderLayoutPreview(deps);
+};
+
+export const handleCanvasElementClick = async (deps, payload) => {
+  const { store, render } = deps;
+  const { id } = payload;
+
+  if (
+    id &&
+    id !== "bg" &&
+    id !== "selected-border" &&
+    id !== "selected-anchor"
+  ) {
+    store.setSelectedItemId(id);
+    render();
+    await renderLayoutPreview(deps);
+  }
 };
 
 // Use the generic render handler
@@ -521,8 +551,8 @@ export const subscriptions = (deps) => {
     ),
     subject.pipe(
       filter(({ action }) => action === "border-drag-start"),
-      tap(() => {
-        handlePointerUp(deps);
+      tap(({ payload }) => {
+        handlePointerUp(deps, payload);
       }),
     ),
     subject.pipe(
@@ -542,6 +572,13 @@ export const subscriptions = (deps) => {
       debounceTime(DEBOUNCE_DELAYS.UPDATE),
       tap(async ({ payload }) => {
         await handleDebouncedUpdate(deps, payload);
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "canvas-element-clicked"),
+      tap(({ payload }) => {
+        console.log("Handling canvas element click:", payload);
+        handleCanvasElementClick(deps, payload);
       }),
     ),
   ];
@@ -640,8 +677,22 @@ export const handleCanvasMouseMove = (deps, payload) => {
   });
 };
 
-export const handlePointerUp = (deps) => {
+export const handlePointerUp = async (deps, payload) => {
   const { store, render } = deps;
+  const id = payload?.id;
+
+  // If clicked/dragged a specific item (not border/anchor/bg), select it
+  if (
+    id &&
+    id !== "selected-border" &&
+    id !== "selected-anchor" &&
+    id !== "bg"
+  ) {
+    store.setSelectedItemId(id);
+    // Refresh preview to show selection border
+    await renderLayoutPreview(deps);
+  }
+
   const currentItem = store.selectSelectedItem();
   if (!currentItem) {
     return;
