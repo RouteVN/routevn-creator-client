@@ -409,14 +409,22 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
     // Version management
     async addVersionToProject(projectId, version) {
-      const adapter = adaptersByProject.get(projectId);
+      let adapter = adaptersByProject.get(projectId);
+      if (!adapter) {
+        await getRepositoryByProject(projectId);
+        adapter = adaptersByProject.get(projectId);
+      }
       const versions = (await adapter.app.get("versions")) || [];
       versions.unshift(version);
       await adapter.app.set("versions", versions);
     },
 
     async deleteVersionFromProject(projectId, versionId) {
-      const adapter = adaptersByProject.get(projectId);
+      let adapter = adaptersByProject.get(projectId);
+      if (!adapter) {
+        await getRepositoryByProject(projectId);
+        adapter = adaptersByProject.get(projectId);
+      }
       const versions = (await adapter.app.get("versions")) || [];
       const newVersions = versions.filter((v) => v.id !== versionId);
       await adapter.app.set("versions", newVersions);
