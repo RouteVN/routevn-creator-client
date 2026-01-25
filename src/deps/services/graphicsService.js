@@ -57,7 +57,10 @@ export const createGraphicsService = async ({ subject }) => {
             if (payload._event.id === "selected-border")
               subject.dispatch("border-drag-end");
           } else if (eventName === "click") {
-            console.log("Dispatching canvas-element-clicked for id:", payload._event.id);
+            console.log(
+              "Dispatching canvas-element-clicked for id:",
+              payload._event.id,
+            );
             subject.dispatch("canvas-element-clicked", {
               id: payload._event.id,
             });

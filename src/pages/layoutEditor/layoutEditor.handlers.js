@@ -224,20 +224,7 @@ const renderLayoutPreview = async (deps) => {
 
   const finalElements = parseAndRender(elementsToRender, data);
 
-  // Add drag and hover properties to all elements to make them interactive
-  finalElements.forEach((el) => {
-    if (el.id !== "bg") {
-      el.drag = {
-        move: {},
-        start: {},
-        end: {},
-      };
-      el.hover = {
-        cursor: "pointer",
-      };
-    }
-  });
-
+  console.log("Final elements for rendering:", finalElements);
   const parsedState = graphicsService.parse({
     elements: finalElements,
   });
