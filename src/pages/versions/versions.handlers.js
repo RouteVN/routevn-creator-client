@@ -2,9 +2,11 @@ import { nanoid } from "nanoid";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 
 export const handleAfterMount = async (deps) => {
-  const { store, render, projectService } = deps;
-  const repository = await projectService.getRepository();
-  const versions = (await repository.app.get("versions")) || [];
+  const { store, render, projectService, appService } = deps;
+  const { p: projectId } = appService.getPayload();
+  await projectService.ensureRepository();
+  const adapter = projectService.getAdapterById(projectId);
+  const versions = (await adapter.app.get("versions")) || [];
   store.setVersions(versions);
 
   render();
