@@ -121,6 +121,13 @@ const init = async () => {
     height: 1080,
     plugins,
     eventHandler: async (eventName, payload) => {
+      if (eventName === "renderComplete") {
+        engine.handleActions({
+          markLineCompleted: {},
+        });
+        return;
+      }
+
       if (payload.actions) {
         if (payload.actions.saveSaveSlot) {
           const url = await routeGraphics.extractBase64("story");
