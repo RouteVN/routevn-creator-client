@@ -32,7 +32,7 @@ assignee: anyone
 ## Scene Editor Issues
 
 - [x] [Critical] @Nghia Scene Editor, when first create a new scene, it give me a black screen with only a plus symbol on the left, I can't click on the tabs at the top, because there were none, so I click on the plus symbol and it create another tab
-- [ ] [Medium] In the scene editor, if a line has too many text, it push the preview to the right.
+- [x] [Medium] In the scene editor, if a line has too many text, it push the preview to the right.
 - [x] [High] @nellow Scene editor take a huge amount of ram on my laptop, and it is really slow (Need to double check, if less than 100 then good) (Can't reproduce the error)
 - [x] [High] @nellow Scene editor, choice is not forcing people to choose. You can click on the textbox to ignore the choice completely
 - [ ] [High] @nellow Scene editor, when there's a line with content and we press enter and not let go, it will copy that content on each preceding new line.
@@ -85,9 +85,9 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [ ] [High] Dialogue disappears when preview full screen when when 1st line has a background with animation. https://discord.com/channels/1233660682419834920/1461203575123480707
 
-- [ ] [Medium] Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
+- [x] [Medium] Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
 
-- [ ] [High] BGM sound is not playing during full screen preview.
+- [x] [High] [cannot replicate] BGM sound is not playing during full screen preview.
 
 ---
 
