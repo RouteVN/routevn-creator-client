@@ -223,6 +223,26 @@ const renderLayoutPreview = async (deps) => {
   };
 
   const finalElements = parseAndRender(elementsToRender, data);
+  const addInteractivity = (elements) => {
+    elements.forEach((el) => {
+      if (el.id !== "bg") {
+        el.hover = {
+          cursor: "pointer",
+        };
+        el.click = {
+          actionPayload: {
+            type: "select",
+          },
+        };
+      }
+
+      if (el.children && el.children.length > 0) {
+        addInteractivity(el.children);
+      }
+    });
+  };
+
+  addInteractivity(finalElements);
 
   console.log("Final elements for rendering:", finalElements);
   const parsedState = graphicsService.parse({
