@@ -207,13 +207,19 @@ export const handleSpriteItemClick = (deps, payload) => {
 };
 
 export const handleButtonSelectClick = (deps) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   const mode = store.selectMode();
   const selectedCharacters = store.selectCharactersWithRepositoryData();
   const selectedCharacterIndex = store.selectSelectedCharacterIndex();
 
   if (mode === "sprite-select") {
     const tempSelectedSpriteId = store.selectTempSelectedSpriteId();
+
+    if (!tempSelectedSpriteId) {
+      appService.showToast("A sprite is required.", { title: "Warning" });
+      return;
+    }
+
     const selectedChar = selectedCharacters[selectedCharacterIndex];
 
     if (selectedChar && selectedChar.sprites) {

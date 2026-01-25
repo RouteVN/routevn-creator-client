@@ -10,7 +10,7 @@ watching the usability test now here's some things i think would make the user e
 bugs : 
 
 - [ ] [low] seems like you can drag the icon from the line editor and it will give a url (6:31 - 6:33)
-- [ ] [low] can select a character without any sprite (dont know if is intended) but should have validation (7:45)
+- [x] [low] can select a character without any sprite (dont know if is intended) but should have validation (7:45)
 - [ ] [low] Should make the choices layout required (20:15)
 - [ ] [low] add transform, should make the transform name required (34:32)
 
@@ -21,8 +21,8 @@ Bugs outside of the video
 
 - [ ] [medium] @nellow when the element is selected, the hover effect wont get triggered? (dont know if intended)
 - [ ] [critical] @han4wluc layout editor is broken, `Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'handleActions')` and will not show any thing on the file explorer
-- [ ] [medium] add label on character selection on scene editor
-- [ ] [high] user can preview from a selected line or section they're at
+- [x] [medium] add label on character selection on scene editor
+- [x] [high] user can preview from a selected line or section they're at
 
 
 # UX
