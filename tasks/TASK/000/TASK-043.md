@@ -1,6 +1,6 @@
 ---
-title: for default template data split the folders into 3
-status: todo
+title: Version update
+status: done
 priority: medium
 ---
 

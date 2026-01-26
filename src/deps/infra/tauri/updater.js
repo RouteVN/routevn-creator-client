@@ -11,6 +11,12 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       const update = await check();
 
       if (!update) {
+        if (!silent && globalUI) {
+          await globalUI.showAlert({
+            message: "You are already on the latest version",
+            title: "Up to Date",
+          });
+        }
         return null;
       }
 
