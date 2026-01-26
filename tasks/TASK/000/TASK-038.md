@@ -11,20 +11,13 @@ assignee: anyone
 
 ## General UI / UX Issues
 
-- [ ] [Low] The input to enter the width and height for the layout container are still annoying, and the popups are still not repoisitioning correctly when first click
-- [ ] [Low] The animation editor is confusing(it combine both left/right click to activate poup, it is better to be consistence with this)
 - [x] [High] @Nghia Somehow animation preview is not working
 - [x] [High] @Nghia Don't know if this is my computer problem, but whenever I click to other tabs for a while and return back to the client, it freeze for a solid 20 seconds or so. (Can't reproduce this error)
-- [ ] [Low] On the left layout, whenever there is no folder or file, it has "No items, Click to create a folder" text appears, it might be beeter to include a button here or highlight the text more to make people less confuse on how to create a folder
-- [ ] [Low] Having to go to another meny to change the character position on the screen is really anoying
-- [ ] [Low] Should add prevent default as it still functions like a browser
-
+- [ ] [Low] @nellow remove tooltip when hover over images on resource editor
 ---
 
 ## Layout Editor Issues & Suggestions
 
-- [ ] [Low] In the layout editor, adding an option to stretch and shrink the element with your mouse without clicking the menu on the left would be nice
-- [ ] [Low] In the layouts editor, we can't click and drag them directly, we must click on the left menu to interact with them
 - [x] [High] [Cannot Replicate]  After sometime of not focusing on the client and return back to the client, I got the this._cancelResize error. And the layouts don't show me anything
 
 ---
@@ -39,7 +32,7 @@ assignee: anyone
 - [x] [Low] Scene editor, can't choose which section to start the preview from
 - [x] [High] @Nghia Choice is still not working
 - [x] [High] @Nghia The vn-preview is not covering the whole screen.
-- [ ] [Low] @Nghia In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately (Luciano need to think more about UX)
+- [ ] [Low] @nellow In scene editor the "Add Scene" button at the bottom center doesn't turn on the popup immediately, but it need to be pressed on the editor zomming map to turn on the popup. Need to turn on the popup immediately (Luciano need to think more about UX)
 - [x] [Low] In scene editor, the arrow only correct between scenes whenever there is an arrow from one scene to another
 
 ---
@@ -83,26 +76,23 @@ error -> `Uncaught TypeError: s is not iterable`
 
 - [x] [High] custom text fonts not working in the preview in scene editor
 
-- [ ] [High] Dialogue disappears when preview full screen when when 1st line has a background with animation. https://discord.com/channels/1233660682419834920/1461203575123480707
+- [x] [High] Dialogue disappears when preview full screen when when 1st line has a background with animation. https://discord.com/channels/1233660682419834920/1461203575123480707
 
-- [ ] [Medium] Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
+- [ ] [Medium] @han4wluc Scene editor, when making the window smaller. The preview section is cut off. it should always fill the screen. now not be allowed to scroll left and right.
 
-- [ ] [High] BGM sound is not playing during full screen preview.
+- [x] [High] BGM sound is not playing during full screen preview.
 
 ---
 
 ## UX Problems
 
-- [ ] [Low] On character we need to be able to layer pictures like expressions or other things which is not supported in the client
-- [ ] [Low] On the sounds page, when playing audio, can make the slider more visible so it's intent is clear
-- [ ] [Low] User can benefit from keyboard actions, like delete to delete, f2 to rename, and other stuff which is not here in the creator
 - [x] [High] Scene editor, on the right of the preview button. There should be an icon to mute/unmute. mute/unmute should apply to: bgm, sfx. propose how to implmement mute (set volume to 0, remove bgm/sfx actions or what)
 - [ ] [Low] In the images pages. When user tries to click Upload but just clicked below the upload button, it triggers the folder expand. The images under the folder gets hidden, and user may be confused on why
-- [ ] [Low] Scene editor need to make more obvious that can double click scene. cannot click start circle.
-- [ ] [Low] Able to increase font or zoom in scene editor. make avatar a big bigger somehow
-- [ ] [Low] Support dfferent themes
+
+- [ ] [Low] make avatar a big bigger somehow
+
 - [ ] [Low] User find it annoying that when from scene editor go to image, and then go back to scene tab, user has to enter the scene again. maybe need to save last visited scene or something
-- [ ] [Low] scene editor Ability to preiew from current line instead of beginning
+- [x] [Low] scene editor Ability to preiew from current line instead of beginning
 
 
 ---
@@ -112,3 +102,30 @@ error -> `Uncaught TypeError: s is not iterable`
 - [x] Adding multiple character on the same line causes to hide the previous character (if the character is same) need info on this, not sure if a bug or intended
 
 
+## Redesign
+
+### Layout editor
+
+- [ ] [Low] The input to enter the width and height for the layout container are still annoying, and the popups are still not repoisitioning correctly when first click
+- [ ] [Low] In the layout editor, adding an option to stretch and shrink the element with your mouse without clicking the menu on the left would be nice
+- [ ] [Low] In the layouts editor, we can't click and drag them directly, we must click on the left menu to interact with them
+- [ ] [Low] On the left layout, whenever there is no folder or file, it has "No items, Click to create a folder" text appears, it might be beeter to include a button here or highlight the text more to make people less confuse on how to create a folder
+- [ ] [medium] @nellow when the element is selected, the hover effect wont get triggered? (dont know if intended)
+
+- User might have expected the transform to work as the slider changed (33:40)
+### Animation editor
+
+- [ ] [Low] The animation editor is confusing(it combine both left/right click to activate poup, it is better to be consistence with this)
+
+## For later
+- [ ] [Low] Support dfferent themes
+- [ ] [Low] Able to increase font or zoom in scene editor
+- [ ] [Low] Scene editor need to make more obvious that can double click scene. cannot click start circle.
+- [ ] [Low] User can benefit from keyboard actions, like delete to delete, f2 to rename, and other stuff which is not here in the creator
+- [ ] [Low] On the sounds page, when playing audio, can make the slider more visible so it's intent is clear
+- [ ] [Low] On character we need to be able to layer pictures like expressions or other things which is not supported in the client
+- [ ] [Low] Having to go to another meny to change the character position on the screen is really anoying
+- need to think about selecting the character name, user has to click too many times to change character name on dialogue. 
+- for the required items, it's better to put a aestrik * on the field so they know that it's required 
+  - reason: User tried to create a project without description but failed because they didnt know it was requirement
+- User was confused, so they added the character without sprites, thinking it would show the person's name but had to let them know that it should be done by dialogue. Maybe a tooltip would help?  (7:57)
