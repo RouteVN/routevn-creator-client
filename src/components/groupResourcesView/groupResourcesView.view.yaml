@@ -176,9 +176,9 @@ template:
                                 - rtgl-svg wh=16 svg=folder:
                                 - rtgl-text: ${group.fullLabel}
                           - $if canUpload:   
-                              - rtgl-button#upload-btn-${group.id} s=sm flex=1 m=sm ip=s icon=upload: Upload
+                              - rtgl-button#upload-btn-${group.id} s=sm flex=1 ip=s icon=upload: Upload
                             $else:
-                              - rtgl-button#add-btn-${group.id} s=sm flex=1 m=sm ip=s icon=plus: Add
+                              - rtgl-button#add-btn-${group.id} s=sm flex=1 ip=s icon=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f d=h p=sm fw=w g=md:
                               - $if group.hasChildren:
