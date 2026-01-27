@@ -9,11 +9,11 @@
         "type": "folder",
         "name": "Background"
       },
-      "cg_folder": {
+      "shxSevkwvVFxpzkMgDEgI": {
         "type": "folder",
         "name": "CG"
       },
-      "ui_folder": {
+      "XYfHOLlvvPSqfoySNxaoI": {
         "type": "folder",
         "name": "UI"
       },
@@ -51,11 +51,11 @@
         "children": []
       },
       {
-        "id": "cg_folder",
+        "id": "shxSevkwvVFxpzkMgDEgI",
         "children": []
       },
       {
-        "id": "ui_folder",
+        "id": "XYfHOLlvvPSqfoySNxaoI",
         "children": [
           {
             "id": "iN20__bg4TaS80gh7-XcL",
@@ -113,20 +113,20 @@
   "sounds": {
     "tree": [
       {
-        "id": "bgm_folder",
+        "id": "YZyPicAclBQINzIYfjxxz",
         "children": []
       },
       {
-        "id": "sfx_folder",
+        "id": "cELHHqRYrGclqozfjRBYC",
         "children": []
       }
     ],
     "items": {
-      "bgm_folder": {
+      "YZyPicAclBQINzIYfjxxz": {
         "type": "folder",
         "name": "BGM"
       },
-      "sfx_folder": {
+      "cELHHqRYrGclqozfjRBYC": {
         "type": "folder",
         "name": "SFX"
       }
@@ -135,12 +135,12 @@
   "videos": {
     "tree": [
       {
-        "id": "default-videos-folder",
+        "id": "VtzNDzqaYDbsVPDEdfCxH",
         "children": []
       }
     ],
     "items": {
-      "default-videos-folder": {
+      "VtzNDzqaYDbsVPDEdfCxH": {
         "type": "folder",
         "name": "Default"
       }
@@ -149,12 +149,12 @@
   "characters": {
     "tree": [
       {
-        "id": "default-characters-folder",
+        "id": "mzrGcdJXfLObUPNGTRcoH",
         "children": []
       }
     ],
     "items": {
-      "default-characters-folder": {
+      "mzrGcdJXfLObUPNGTRcoH": {
         "type": "folder",
         "name": "Default"
       }
