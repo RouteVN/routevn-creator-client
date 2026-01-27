@@ -5,9 +5,17 @@
   },
   "images": {
     "items": {
-      "zZO4u50ZEEt1WIugqEiW4": {
+      "bg_folder": {
         "type": "folder",
-        "name": "Template Images"
+        "name": "Background"
+      },
+      "cg_folder": {
+        "type": "folder",
+        "name": "CG"
+      },
+      "ui_folder": {
+        "type": "folder",
+        "name": "UI"
       },
       "iN20__bg4TaS80gh7-XcL": {
         "type": "image",
@@ -39,7 +47,15 @@
     },
     "tree": [
       {
-        "id": "zZO4u50ZEEt1WIugqEiW4",
+        "id": "bg_folder",
+        "children": []
+      },
+      {
+        "id": "cg_folder",
+        "children": []
+      },
+      {
+        "id": "ui_folder",
         "children": [
           {
             "id": "iN20__bg4TaS80gh7-XcL",
@@ -71,7 +87,7 @@
     "items": {
       "default-tweens-group": {
         "type": "folder",
-        "name": "Template Animations"
+        "name": "Default"
       },
       "fade-in": {
         "type": "tween",
@@ -97,14 +113,22 @@
   "sounds": {
     "tree": [
       {
-        "id": "default-sounds-folder",
+        "id": "bgm_folder",
+        "children": []
+      },
+      {
+        "id": "sfx_folder",
         "children": []
       }
     ],
     "items": {
-      "default-sounds-folder": {
+      "bgm_folder": {
         "type": "folder",
-        "name": "Default Sounds"
+        "name": "BGM"
+      },
+      "sfx_folder": {
+        "type": "folder",
+        "name": "SFX"
       }
     }
   },
@@ -118,7 +142,7 @@
     "items": {
       "default-videos-folder": {
         "type": "folder",
-        "name": "Default Videos"
+        "name": "Default"
       }
     }
   },
@@ -132,7 +156,7 @@
     "items": {
       "default-characters-folder": {
         "type": "folder",
-        "name": "Default Characters"
+        "name": "Default"
       }
     }
   },
@@ -140,7 +164,7 @@
     "items": {
       "QOvDORIGgH_YCsh3xw94R": {
         "type": "folder",
-        "name": "Template Fonts"
+        "name": "Default"
       },
       "-hpZD817Q_lRDt-vjl4UN": {
         "type": "font",
@@ -183,7 +207,7 @@
     "items": {
       "default-transforms-group": {
         "type": "folder",
-        "name": "Template Transforms"
+        "name": "Default"
       },
       "bottom-left": {
         "type": "transform",
@@ -237,7 +261,7 @@
     "items": {
       "default-colors-group": {
         "type": "folder",
-        "name": "Common Colors"
+        "name": "Default"
       },
       "color-white": {
         "type": "color",
@@ -268,7 +292,7 @@
     "items": {
       "default-typography-group": {
         "type": "folder",
-        "name": "Template Typography"
+        "name": "Default"
       },
       "typography-character-name": {
         "type": "typography",
@@ -320,7 +344,7 @@
     "items": {
       "default-layouts-group": {
         "type": "folder",
-        "name": "Template Layouts"
+        "name": "Default"
       },
       "simple-dialogue": {
         "type": "layout",
@@ -570,7 +594,12 @@
                         "gui": {
                           "resourceId": "simple-dialogue"
                         },
-                        "mode": "adv"
+                        "mode": "adv",
+                        "content": [
+                          {
+                            "text": ""
+                          }
+                        ]
                       },
                       "base": {
                         "resourceId": "default-screen",
