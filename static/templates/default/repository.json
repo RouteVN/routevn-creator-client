@@ -594,12 +594,7 @@
                         "gui": {
                           "resourceId": "simple-dialogue"
                         },
-                        "mode": "adv",
-                        "content": [
-                          {
-                            "text": ""
-                          }
-                        ]
+                        "mode": "adv"
                       },
                       "base": {
                         "resourceId": "default-screen",
