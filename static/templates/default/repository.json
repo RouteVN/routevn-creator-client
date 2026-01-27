@@ -190,7 +190,7 @@
   "transforms": {
     "tree": [
       {
-        "id": "default-transforms-group",
+        "id": "yfxkRkXFuIsFlgKZEvEMG",
         "children": [
           {
             "id": "bottom-left"
@@ -205,7 +205,7 @@
       }
     ],
     "items": {
-      "default-transforms-group": {
+      "yfxkRkXFuIsFlgKZEvEMG": {
         "type": "folder",
         "name": "Default"
       },
@@ -247,7 +247,7 @@
   "colors": {
     "tree": [
       {
-        "id": "default-colors-group",
+        "id": "NytwcdlyacEOPofRWbhzN",
         "children": [
           {
             "id": "color-white"
@@ -259,7 +259,7 @@
       }
     ],
     "items": {
-      "default-colors-group": {
+      "NytwcdlyacEOPofRWbhzN": {
         "type": "folder",
         "name": "Default"
       },
@@ -278,23 +278,23 @@
   "typography": {
     "tree": [
       {
-        "id": "default-typography-group",
+        "id": "InLYeatJKoWWQOJaLlxZK",
         "children": [
           {
-            "id": "typography-character-name"
+            "id": "aEFgSimQUspdxkvXUSyRd"
           },
           {
-            "id": "typography-text-view"
+            "id": "jiWyxqqEgEdAVTPAxbGFp"
           }
         ]
       }
     ],
     "items": {
-      "default-typography-group": {
+      "InLYeatJKoWWQOJaLlxZK": {
         "type": "folder",
         "name": "Default"
       },
-      "typography-character-name": {
+      "aEFgSimQUspdxkvXUSyRd": {
         "type": "typography",
         "name": "Character Name",
         "fontSize": 48,
@@ -304,7 +304,7 @@
         "fontWeight": "400",
         "previewText": "Character Name"
       },
-      "typography-text-view": {
+      "jiWyxqqEgEdAVTPAxbGFp": {
         "type": "typography",
         "name": "Text View",
         "fontSize": 36,
@@ -327,26 +327,26 @@
   "layouts": {
     "tree": [
       {
-        "id": "default-layouts-group",
+        "id": "JFcMNDAFHIrOMLdwKFiEj",
         "children": [
           {
-            "id": "simple-dialogue"
+            "id": "YgqAiakoomeYEtJrxBLuv"
           },
           {
-            "id": "default-screen"
+            "id": "HEJttDFczRPSwsBusaLZs"
           },
           {
-            "id": "default-choice"
+            "id": "dLJSpAASxJCYyMkSonOLY"
           }
         ]
       }
     ],
     "items": {
-      "default-layouts-group": {
+      "JFcMNDAFHIrOMLdwKFiEj": {
         "type": "folder",
         "name": "Default"
       },
-      "simple-dialogue": {
+      "YgqAiakoomeYEtJrxBLuv": {
         "type": "layout",
         "name": "Simple Dialogue",
         "layoutType": "dialogue",
@@ -392,7 +392,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "typographyId": "typography-character-name",
+              "typographyId": "aEFgSimQUspdxkvXUSyRd",
               "style": {
                 "align": "left"
               }
@@ -410,7 +410,7 @@
               "scaleY": 1,
               "rotation": 0,
               "displaySpeed": 100,
-              "typographyId": "typography-text-view",
+              "typographyId": "jiWyxqqEgEdAVTPAxbGFp",
               "style": {
                 "align": "left"
               }
@@ -434,7 +434,7 @@
           ]
         }
       },
-      "default-screen": {
+      "HEJttDFczRPSwsBusaLZs": {
         "type": "layout",
         "name": "Default Base",
         "layoutType": "base",
@@ -468,7 +468,7 @@
           ]
         }
       },
-      "default-choice": {
+      "dLJSpAASxJCYyMkSonOLY": {
         "type": "layout",
         "name": "Default Choice",
         "layoutType": "choice",
@@ -503,7 +503,7 @@
             "5ghjk54j": {
               "type": "text-ref-choice-item-content",
               "name": "Text (Choice Item Content)",
-              "typographyId": "typography-text-view",
+              "typographyId": "jiWyxqqEgEdAVTPAxbGFp",
               "x": 840,
               "y": 10,
               "text": "text",
@@ -556,25 +556,25 @@
     }
   },
   "story": {
-    "initialSceneId": "scene-prologue"
+    "initialSceneId": "eXLwPZNpFqDjmXjORfonq"
   },
   "scenes": {
     "tree": [
       {
-        "id": "default-scenes-folder",
+        "id": "HretpJXgSBLITmmuVDUHj",
         "children": [
           {
-            "id": "scene-prologue"
+            "id": "eXLwPZNpFqDjmXjORfonq"
           }
         ]
       }
     ],
     "items": {
-      "default-scenes-folder": {
+      "HretpJXgSBLITmmuVDUHj": {
         "type": "folder",
         "name": "Scenes"
       },
-      "scene-prologue": {
+      "eXLwPZNpFqDjmXjORfonq": {
         "type": "scene",
         "name": "Prologue",
         "createdAt": "2024-01-01T00:00:00.000Z",
@@ -592,12 +592,12 @@
                     "actions": {
                       "dialogue": {
                         "gui": {
-                          "resourceId": "simple-dialogue"
+                          "resourceId": "YgqAiakoomeYEtJrxBLuv"
                         },
                         "mode": "adv"
                       },
                       "base": {
-                        "resourceId": "default-screen",
+                        "resourceId": "HEJttDFczRPSwsBusaLZs",
                         "resourceType": "layout"
                       }
                     }
