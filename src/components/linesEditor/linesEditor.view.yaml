@@ -71,9 +71,9 @@ template:
               - 'rtgl-view d=h w=f style="background-color: ${line.backgroundColor};"':
                   - rtgl-view h=f w=32 ah=e mr=md pt=sm:
                       - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
-                  - rtgl-view wh=16 br=f mr=md:
+                  - rtgl-view wh=24 br=f mr=md:
                       - $if line.characterFileId:
-                          - rvn-file-image fileId=${line.characterFileId} w=16 h=16 br=f:
+                          - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f:
                   - rtgl-view d=h w=f:
                       - rtgl-view w=f:
                           - 'div#line-${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=plaintext-only': ${line.actions.dialogue.content[0].text}
