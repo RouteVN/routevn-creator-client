@@ -5,7 +5,7 @@
   },
   "images": {
     "items": {
-      "bg_folder": {
+      "zZO4u50ZEEt1WIugqEiW4": {
         "type": "folder",
         "name": "Background"
       },
@@ -47,7 +47,7 @@
     },
     "tree": [
       {
-        "id": "bg_folder",
+        "id": "zZO4u50ZEEt1WIugqEiW4",
         "children": []
       },
       {
