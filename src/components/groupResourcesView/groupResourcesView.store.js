@@ -104,7 +104,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     flatGroups: finalProcessedGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: props.searchQuery || "",
-    title: props.title,
+    navTitle: props.navTitle,
     uploadText: props.uploadText || "Upload Files",
     acceptedFileTypes: props.acceptedFileTypes || [],
     emptyMessage:
