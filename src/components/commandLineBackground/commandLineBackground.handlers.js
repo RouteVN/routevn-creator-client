@@ -205,12 +205,19 @@ export const handleSubmitClick = (deps) => {
 };
 
 export const handleFileExplorerClickItem = (deps, payload) => {
-  const { getRefIds } = deps;
+  const { getRefIds, store } = deps;
+  const tab = store.selectTab();
+
+  // Only scroll to item when on image tab (image selector only exists there)
+  if (tab !== "image") {
+    return;
+  }
+
   const { id } = payload._event.detail;
   const imageSelector = getRefIds()["rvn-image-selector"];
-  imageSelector.elm.transformedHandlers.handleScrollToItem({
-    id,
-  });
+  if (imageSelector?.elm?.transformedHandlers?.handleScrollToItem) {
+    imageSelector.elm.transformedHandlers.handleScrollToItem({ id });
+  }
 };
 
 export const handleBackgroundImageClick = (deps) => {

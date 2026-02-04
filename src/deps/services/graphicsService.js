@@ -6,6 +6,7 @@ import createRouteGraphics, {
   sliderPlugin,
   containerPlugin,
   textRevealingPlugin,
+  videoPlugin,
   tweenPlugin,
   soundPlugin,
 } from "route-graphics";
@@ -34,6 +35,7 @@ export const createGraphicsService = async ({ subject }) => {
           sliderPlugin,
           containerPlugin,
           textRevealingPlugin,
+          videoPlugin,
         ],
         animations: [tweenPlugin],
         audio: [soundPlugin],

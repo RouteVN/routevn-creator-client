@@ -9,10 +9,10 @@ const tabs = [
     id: "layout",
     label: "Layouts",
   },
-  // {
-  //   id: "video",
-  //   label: "Videos",
-  // },
+  {
+    id: "video",
+    label: "Videos",
+  },
 ];
 
 // Form structure will be created dynamically in selectViewData

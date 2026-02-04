@@ -58,6 +58,10 @@ template:
                           - rtgl-svg svg=image wh=24:
                           - rvn-file-image fileId=${preview.background.fileId} w=50 h=35:
                           - rtgl-text s=sm: ${preview.background.name}
+                        $elif preview.background.type == 'video':
+                          - rtgl-svg svg=video wh=24:
+                          - rvn-file-image fileId=${preview.background.thumbnailFileId} w=50 h=35:
+                          - rtgl-text s=sm: ${preview.background.name}
                         $elif preview.background.type == 'layout':
                           - rtgl-svg svg=layout wh=24:
                           - rtgl-text s=sm: ${preview.background.name}

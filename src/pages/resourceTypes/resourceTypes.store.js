@@ -9,11 +9,11 @@ export const assetItems = [
     name: "Sounds",
     path: "/project/resources/sounds",
   },
-  // {
-  //   id: "videos",
-  //   name: "Videos",
-  //   path: "/project/resources/videos",
-  // },
+  {
+    id: "videos",
+    name: "Videos",
+    path: "/project/resources/videos",
+  },
   {
     id: "characters",
     name: "Characters",

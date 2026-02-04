@@ -275,8 +275,13 @@ template:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}
             $else:
-              - rtgl-view w=f h=f av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: No data
+              - rtgl-view w=f h=f av=c ah=c g=lg:
+                  - $if canUpload:
+                      - rtgl-view#upload-btn-root w=300 h=200 bw=xs bc=bo br=md ah=c av=c g=sm cur=p:
+                          - rtgl-svg svg=upload wh=32:
+                          - rtgl-text: ${uploadText}
+                    $else:
+                      - rtgl-text s=lg c=mu-fg: No data
 
           - $if flatGroups.length > 0:
               - rtgl-view h=33vh:

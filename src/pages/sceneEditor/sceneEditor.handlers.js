@@ -9,10 +9,11 @@ async function createAssetsFromFileIds(
   projectService,
   resources,
 ) {
-  const { sounds, images, fonts = {} } = resources;
+  const { sounds, images, videos = {}, fonts = {} } = resources;
   const allItems = Object.entries({
     ...sounds,
     ...images,
+    ...videos,
     ...fonts,
   }).map(([key, val]) => {
     return {
@@ -32,6 +33,7 @@ async function createAssetsFromFileIds(
       if (!type) {
         Object.entries(sounds.items || {})
           .concat(Object.entries(images.items || {}))
+          .concat(Object.entries(videos.items || {}))
           .concat(Object.entries(fonts.items || {}))
           .forEach(([_key, item]) => {
             if (item.fileId === fileId) {

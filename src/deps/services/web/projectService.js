@@ -8,6 +8,7 @@ import {
 import { createBundle } from "../../../utils/bundleUtils.js";
 import {
   getImageDimensions,
+  getVideoDimensions,
   extractWaveformData,
   extractVideoThumbnail,
   detectFileType,
@@ -258,13 +259,16 @@ export const createProjectService = ({ router, filePicker }) => {
       };
     },
     video: async (file) => {
-      const thumbnailData = await extractVideoThumbnail(file, {
-        timeOffset: 1,
-        width: 240,
-        height: 135,
-        format: "image/jpeg",
-        quality: 0.8,
-      });
+      const [dimensions, thumbnailData] = await Promise.all([
+        getVideoDimensions(file),
+        extractVideoThumbnail(file, {
+          timeOffset: 1,
+          width: 240,
+          height: 135,
+          format: "image/jpeg",
+          quality: 0.8,
+        }),
+      ]);
       const [videoResult, thumbnailResult] = await Promise.all([
         storeFile(file),
         storeFile(thumbnailData.blob),
@@ -273,6 +277,7 @@ export const createProjectService = ({ router, filePicker }) => {
         fileId: videoResult.fileId,
         thumbnailFileId: thumbnailResult.fileId,
         thumbnailData,
+        dimensions,
         type: "video",
       };
     },

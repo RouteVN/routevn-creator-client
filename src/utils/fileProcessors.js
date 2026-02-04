@@ -20,6 +20,25 @@ export const getImageDimensions = (file) => {
   });
 };
 
+export const getVideoDimensions = (file) => {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url); // Clean up memory
+      resolve({ width: video.videoWidth, height: video.videoHeight });
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(url); // Clean up memory
+      resolve(null);
+    };
+
+    video.src = url;
+  });
+};
+
 export const validateIconDimensions = async (file) => {
   const dimensions = await getImageDimensions(file);
 
