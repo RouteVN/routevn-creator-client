@@ -1,26 +1,24 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "insieme";
+import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { videos } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { videos } = projectService.getState();
   store.setItems(videos);
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { videos } = repository.getState();
-  store.setItems(videos);
+  const { store, render, projectService } = deps;
+  const repository = await projectService.getRepository();
+  const state = repository.getState();
+  store.setItems(state.videos);
   render();
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, projectService } = deps;
   const { id, item, isFolder } = payload._event.detail;
 
   // If this is a folder, clear selection and context
@@ -39,11 +37,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If we have item data with thumbnailFileId, set up media context for preview
   if (item && item.thumbnailFileId) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId: item.thumbnailFileId,
-    });
+    const { url } = await projectService.getFileContent(item.thumbnailFileId);
     store.setContext({
       thumbnailFileId: {
         src: url,
@@ -55,7 +49,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 };
 
 export const handleFileExplorerDoubleClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router } = deps;
+  const { store, render, projectService } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -63,11 +57,7 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
 
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId: selectedItem.fileId,
-    });
+    const { url } = await projectService.getFileContent(selectedItem.fileId);
 
     store.setVideoVisible({
       url,
@@ -78,8 +68,8 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
 };
 
 export const handleVideoItemClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router, getRefIds } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const { store, render, projectService, getRefIds } = deps;
+  const { itemId } = payload._event.detail;
   store.setSelectedItemId(itemId);
 
   const { fileExplorer } = getRefIds();
@@ -90,11 +80,9 @@ export const handleVideoItemClick = async (deps, payload) => {
   const selectedItem = store.selectSelectedItem();
 
   if (selectedItem && selectedItem.thumbnailFileId) {
-    const { p: projectId } = router.getPayload();
-    const fileManager = await fileManagerFactory.getByProject(projectId);
-    const { url } = await fileManager.getFileContent({
-      fileId: selectedItem.thumbnailFileId,
-    });
+    const { url } = await projectService.getFileContent(
+      selectedItem.thumbnailFileId,
+    );
     store.setContext({
       thumbnailFileId: {
         src: url,
@@ -105,17 +93,15 @@ export const handleVideoItemClick = async (deps, payload) => {
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, repositoryFactory, router, fileManagerFactory } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
-  const id = targetGroupId;
+  const { store, render, projectService } = deps;
+  const { files, targetGroupId } = payload._event.detail;
+  // "root" means no parent (root level), convert to undefined
+  const id = targetGroupId === "root" ? undefined : targetGroupId;
 
-  const successfulUploads = await fileManager.upload(files);
+  const successfulUploads = await projectService.uploadFiles(files);
 
   for (const result of successfulUploads) {
-    await repository.addEvent({
+    await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: "videos",
@@ -127,6 +113,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
           name: result.displayName,
           fileType: result.file.type,
           fileSize: result.file.size,
+          width: result.dimensions?.width,
+          height: result.dimensions?.height,
         },
         options: {
           parent: id,
@@ -137,7 +125,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   }
 
   if (successfulUploads.length > 0) {
-    const { videos } = repository.getState();
+    const { videos } = projectService.getState();
     store.setItems(videos);
   }
 
@@ -145,26 +133,15 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const {
-    repositoryFactory,
-    router,
-    store,
-    render,
-    filePicker,
-    fileManagerFactory,
-  } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
-  const fileManager = await fileManagerFactory.getByProject(projectId);
+  const { appService, projectService, store, render } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    console.warn("No item selected for video replacement");
     return;
   }
 
-  const files = await filePicker.open({
+  const files = await appService.pickFiles({
     accept: "video/*",
     multiple: false,
   });
@@ -175,7 +152,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   const file = files[0];
 
-  const uploadedFiles = await fileManager.upload([file]);
+  const uploadedFiles = await projectService.uploadFiles([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");
@@ -183,16 +160,18 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "videos",
       value: {
         fileId: uploadResult.fileId,
         thumbnailFileId: uploadResult.thumbnailFileId,
-        name: uploadResult.file.name,
+        name: uploadResult.displayName,
         fileType: uploadResult.file.type,
         fileSize: uploadResult.file.size,
+        width: uploadResult.dimensions?.width,
+        height: uploadResult.dimensions?.height,
       },
       options: {
         id: selectedItem.id,
@@ -202,10 +181,10 @@ export const handleFormExtraEvent = async (deps) => {
   });
 
   // Update the store with the new repository state
-  const { videos } = repository.getState();
+  const { videos } = projectService.getState();
   store.setContext({
     thumbnailFileId: {
-      src: uploadResult.thumbnailDownloadUrl,
+      src: uploadResult.downloadUrl,
     },
   });
   store.setItems(videos);
@@ -213,10 +192,8 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  await repository.addEvent({
+  const { projectService, render, store } = deps;
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "videos",
@@ -230,7 +207,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
-  const { videos } = repository.getState();
+  const { videos } = projectService.getState();
   store.setItems(videos);
   render();
 };
@@ -244,30 +221,27 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleVideoItemDoubleClick = async (deps, payload) => {
-  const { store, render, fileManagerFactory, router, repositoryFactory } = deps;
+  const { store, render, projectService } = deps;
   const { itemId } = payload._event.detail;
-  const { p: projectId } = router.getPayload();
 
   // Find the video item
-  const repository = await repositoryFactory.getByProject(projectId);
-  const { videos } = repository.getState();
-  const flatItems = toFlatItems(videos);
-  const videoItem = flatItems.find((item) => item.id === itemId);
+  const selectedItem = store.selectSelectedItem();
+  if (!selectedItem) {
+    store.setSelectedItemId(itemId);
+  }
 
-  if (!videoItem) {
+  const item = store.selectSelectedItem();
+  if (!item) {
     console.warn("Video item not found:", itemId);
     return;
   }
 
   // Get video URL
-  const fileManager = await fileManagerFactory.getByProject(projectId);
-  const { url } = await fileManager.getFileContent({
-    fileId: videoItem.fileId,
-  });
+  const { url } = await projectService.getFileContent(item.fileId);
 
   store.setVideoVisible({
     url,
-    fileType: videoItem.fileType,
+    fileType: item.fileType,
   });
   render();
 };
@@ -280,13 +254,25 @@ export const handleOutsideVideoClick = (deps) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { repositoryFactory, router, store, render } = deps;
-  const { p: projectId } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(projectId);
+  const { projectService, appService, store, render } = deps;
   const { resourceType, itemId } = payload._event.detail;
+  await projectService.ensureRepository();
+  const state = projectService.getState();
+
+  const usage = recursivelyCheckResource({
+    state,
+    itemId,
+    checkTargets: ["scenes", "layouts"],
+  });
+
+  if (usage.isUsed) {
+    appService.showToast("Cannot delete resource, it is currently in use.");
+    render();
+    return;
+  }
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: resourceType,
@@ -296,8 +282,8 @@ export const handleItemDelete = async (deps, payload) => {
     },
   });
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = repository.getState()[resourceType];
+  // Refresh data and update store
+  const data = projectService.getState()[resourceType];
   store.setItems(data);
   render();
 };

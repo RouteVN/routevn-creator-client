@@ -119,6 +119,11 @@ template:
                           - rtgl-view av=c ah=c:
                               - rtgl-text s=lg: ${selectedResource.name}
                               - rtgl-text s=sm c=mu-fg: ${selectedResource.layoutTypeDisplay}
+                    $elif selectedResource.resourceType == 'video':
+                      - rtgl-view#background-image w=355 h=200 cur=p slot=background pos=rel:
+                          - rvn-file-image fileId=${selectedResource.item.thumbnailFileId} w=355 h=200:
+                          - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                              - rtgl-icon icon=play s=xl c=fg:
                     $else:
                       - rtgl-view#background-image w=355 h=200 bgc=mu av=c ah=c cur=p slot=background:
                           - rtgl-text s=md c=mu-fg: Select Background

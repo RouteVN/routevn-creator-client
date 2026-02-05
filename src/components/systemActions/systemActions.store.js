@@ -132,8 +132,9 @@ export const selectActionsData = ({ props, state }) => {
   }
 
   const repositoryStateData = state.repositoryState;
-  // Images and sounds: accessed directly by ID (e.g., images[id])
+  // Images, videos and sounds: accessed directly by ID (e.g., images[id])
   const images = repositoryStateData.images?.items || {};
+  const videos = repositoryStateData.videos?.items || {};
   const sounds = repositoryStateData.sounds?.items || {};
   const scenes = repositoryStateData.scenes || {};
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
@@ -144,11 +145,14 @@ export const selectActionsData = ({ props, state }) => {
 
   if (presentationState.background) {
     const backgroundImage = images[presentationState.background.resourceId];
+    const backgroundVideo = videos[presentationState.background.resourceId];
     const backgroundLayout =
       layoutsTree.items?.[presentationState.background.resourceId];
     actionsObject.background = presentationState.background;
     if (backgroundImage) {
       preview.background = { ...backgroundImage, type: "image" };
+    } else if (backgroundVideo) {
+      preview.background = { ...backgroundVideo, type: "video" };
     } else if (backgroundLayout) {
       preview.background = { ...backgroundLayout, type: "layout" };
     }

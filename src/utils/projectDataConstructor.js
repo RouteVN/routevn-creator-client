@@ -13,6 +13,16 @@ export function constructProjectData(state, options = {}) {
     return processedImages;
   }
 
+  function constructVideos(repositoryVideos = {}) {
+    const processedVideos = {};
+    Object.entries(repositoryVideos).forEach(([id, item]) => {
+      if (item.type === "video") {
+        processedVideos[id] = item;
+      }
+    });
+    return processedVideos;
+  }
+
   function constructSounds(repositorySound = {}) {
     const processedSounds = {};
     Object.entries(repositorySound).forEach(([id, item]) => {
@@ -129,6 +139,7 @@ export function constructProjectData(state, options = {}) {
 
   function constructResources(repositoryState) {
     const images = repositoryState.images?.items || {};
+    const videos = repositoryState.videos?.items || {};
     const sounds = repositoryState.sounds?.items || {};
     const tweens = repositoryState.tweens?.items || {};
     const characters = repositoryState.characters?.items || {};
@@ -143,6 +154,7 @@ export function constructProjectData(state, options = {}) {
 
     return {
       images: { ...constructImages(images), ...characterImages },
+      videos: constructVideos(videos),
       transforms: constructTransforms(transforms),
       characters: processedCharacters,
       sounds: constructSounds(sounds),
