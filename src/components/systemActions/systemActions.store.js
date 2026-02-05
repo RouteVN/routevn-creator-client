@@ -245,6 +245,18 @@ export const selectActionsData = ({ props, state }) => {
     preview.nextLine = actions.nextLine;
   }
 
+  // Toggle Auto Mode
+  if (actions.toggleAutoMode !== undefined) {
+    actionsObject.toggleAutoMode = actions.toggleAutoMode;
+    preview.toggleAutoMode = actions.toggleAutoMode;
+  }
+
+  // Toggle Skip Mode
+  if (actions.toggleSkipMode !== undefined) {
+    actionsObject.toggleSkipMode = actions.toggleSkipMode;
+    preview.toggleSkipMode = actions.toggleSkipMode;
+  }
+
   return {
     actions: actionsObject,
     preview,

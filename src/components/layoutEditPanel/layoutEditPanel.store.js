@@ -537,6 +537,8 @@ export const selectViewData = ({ state, attrs }) => {
   const actionsLabelMap = {
     nextLine: "Next Line",
     sectionTransition: "Section Transition",
+    toggleAutoMode: "Toggle Auto Mode",
+    toggleSkipMode: "Toggle Skip Mode",
   };
 
   const context = {

@@ -235,6 +235,7 @@ export const layoutTreeStructureToRenderState = (
         const clickImage = imageItems[node.clickImageId];
         if (clickImage && clickImage.fileId) {
           element.click = {
+            ...element.click,
             src: `${clickImage.fileId}`,
           };
         }
