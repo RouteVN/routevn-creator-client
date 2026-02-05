@@ -13,7 +13,6 @@ import createRouteGraphics, {
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "https://cdn.jsdelivr.net/npm/pixi.js@8.0.0/+esm";
 
-
 export const createGraphicsService = async ({ subject }) => {
   let routeGraphics;
   let engine;
@@ -98,7 +97,11 @@ export const createGraphicsService = async ({ subject }) => {
     initRouteEngine: (projectData) => {
       ticker.start();
 
-      const handlePendingEffects = createEffectsHandler({ getEngine: () => engine, routeGraphics, ticker });
+      const handlePendingEffects = createEffectsHandler({
+        getEngine: () => engine,
+        routeGraphics,
+        ticker,
+      });
       engine = createRouteEngine({ handlePendingEffects });
       engine.init({
         initialState: {
