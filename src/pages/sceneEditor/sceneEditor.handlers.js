@@ -75,6 +75,15 @@ async function renderSceneState(store, graphicsService, payload = {}) {
     skipAnimations,
   });
 
+  // Disable auto-advance in edit mode - setNextLineConfig should only work in preview mode
+  graphicsService.engineHandleActions({
+    setNextLineConfig: {
+      auto: {
+        enabled: false,
+      },
+    },
+  });
+
   // Update presentation state after rendering
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState(presentationState);

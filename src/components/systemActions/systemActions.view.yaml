@@ -47,7 +47,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.setNextLineConfig:
               - $if preview.base:
                   - rtgl-view#action-item-base data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg=screen wh=24:
@@ -106,6 +106,10 @@ template:
                   - rtgl-view#action-item-toggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg="next-line" wh=24:
                       - rtgl-text s=sm: Toggle Skip Mode
+              - $if preview.setNextLineConfig:
+                  - rtgl-view#action-item-setNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=settings wh=24:
+                      - rtgl-text s=sm: Next Line Config
             $else:
               - rtgl-text s=sm c=mu-fg: No actions added yet
           - rtgl-button#add-action-button v=ol w=f: +
@@ -135,6 +139,8 @@ template:
               - rvn-command-line-toggle-auto-mode#command-line-toggle-auto-mode .toggleAutoMode=actions.toggleAutoMode:
             $elif mode == "toggleSkipMode":
               - rvn-command-line-toggle-skip-mode#command-line-toggle-skip-mode .toggleSkipMode=actions.toggleSkipMode:
+            $elif mode == "setNextLineConfig":
+              - rvn-command-line-set-next-line-config#command-line-set-next-line-config .setNextLineConfig=actions.setNextLineConfig:
             $elif mode == "controls":
               - rvn-command-line-controls#command-line-controls .controls=selectedLine.controls:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
