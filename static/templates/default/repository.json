@@ -337,6 +337,15 @@
           },
           {
             "id": "dLJSpAASxJCYyMkSonOLY"
+          },
+          {
+            "id": "TitlePageDefaultLayout"
+          },
+          {
+            "id": "LoadPageDefaultLayout"
+          },
+          {
+            "id": "OptionsPageDefaultLayout"
           }
         ]
       }
@@ -549,6 +558,829 @@
                   ]
                 }
               ]
+            }
+          ]
+        }
+      },
+      "TitlePageDefaultLayout": {
+        "type": "layout",
+        "name": "Title Page",
+        "layoutType": "normal",
+        "elements": {
+          "items": {
+            "title-text": {
+              "type": "text",
+              "name": "Title",
+              "x": 960,
+              "y": 250,
+              "width": 800,
+              "height": 100,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "MY VISUAL NOVEL",
+              "style": {
+                "align": "center",
+                "fontSize": 80,
+                "fontWeight": "bold",
+                "fill": "#ffffff",
+                "letterSpacing": 4
+              }
+            },
+            "btn-start": {
+              "type": "text",
+              "name": "Start Button",
+              "x": 960,
+              "y": 550,
+              "width": 200,
+              "height": 60,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "START",
+              "style": {
+                "align": "center",
+                "fontSize": 44,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "btn-load": {
+              "type": "text",
+              "name": "Load Button",
+              "x": 960,
+              "y": 650,
+              "width": 200,
+              "height": 60,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "LOAD",
+              "style": {
+                "align": "center",
+                "fontSize": 44,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "pushLayeredView": {
+                      "resourceId": "LoadPageDefaultLayout"
+                    }
+                  }
+                }
+              }
+            },
+            "btn-options": {
+              "type": "text",
+              "name": "Options Button",
+              "x": 960,
+              "y": 750,
+              "width": 200,
+              "height": 60,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "OPTIONS",
+              "style": {
+                "align": "center",
+                "fontSize": 44,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "pushLayeredView": {
+                      "resourceId": "OptionsPageDefaultLayout"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "title-text"
+            },
+            {
+              "id": "btn-start"
+            },
+            {
+              "id": "btn-load"
+            },
+            {
+              "id": "btn-options"
+            }
+          ]
+        }
+      },
+      "LoadPageDefaultLayout": {
+        "type": "layout",
+        "name": "Load Page",
+        "layoutType": "normal",
+        "elements": {
+          "items": {
+            "load-title": {
+              "type": "text",
+              "name": "Title",
+              "x": 960,
+              "y": 150,
+              "width": 600,
+              "height": 80,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "LOAD GAME",
+              "style": {
+                "align": "center",
+                "fontSize": 64,
+                "fontWeight": "bold",
+                "fill": "#ffffff",
+                "letterSpacing": 3
+              }
+            },
+            "slot-1": {
+              "type": "text",
+              "name": "Slot 1",
+              "x": 400,
+              "y": 350,
+              "width": 400,
+              "height": 150,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Slot 1\n[Empty]",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "slot-2": {
+              "type": "text",
+              "name": "Slot 2",
+              "x": 960,
+              "y": 350,
+              "width": 400,
+              "height": 150,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Slot 2\n[Empty]",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "slot-3": {
+              "type": "text",
+              "name": "Slot 3",
+              "x": 1520,
+              "y": 350,
+              "width": 400,
+              "height": 150,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Slot 3\n[Empty]",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "slot-4": {
+              "type": "text",
+              "name": "Slot 4",
+              "x": 400,
+              "y": 600,
+              "width": 400,
+              "height": 150,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Slot 4\n[Empty]",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "slot-5": {
+              "type": "text",
+              "name": "Slot 5",
+              "x": 960,
+              "y": 600,
+              "width": 400,
+              "height": 150,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Slot 5\n[Empty]",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "slot-6": {
+              "type": "text",
+              "name": "Slot 6",
+              "x": 1520,
+              "y": 600,
+              "width": 400,
+              "height": 150,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Slot 6\n[Empty]",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "load-back-button": {
+              "type": "text",
+              "name": "Back Button",
+              "x": 960,
+              "y": 900,
+              "width": 200,
+              "height": 60,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "BACK",
+              "style": {
+                "align": "center",
+                "fontSize": 40,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "popLayeredView": {}
+                  }
+                }
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "load-title"
+            },
+            {
+              "id": "slot-1"
+            },
+            {
+              "id": "slot-2"
+            },
+            {
+              "id": "slot-3"
+            },
+            {
+              "id": "slot-4"
+            },
+            {
+              "id": "slot-5"
+            },
+            {
+              "id": "slot-6"
+            },
+            {
+              "id": "load-back-button"
+            }
+          ]
+        }
+      },
+      "OptionsPageDefaultLayout": {
+        "type": "layout",
+        "name": "Options Page",
+        "layoutType": "normal",
+        "elements": {
+          "items": {
+            "options-title": {
+              "type": "text",
+              "name": "Title",
+              "x": 960,
+              "y": 120,
+              "width": 600,
+              "height": 80,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "OPTIONS",
+              "style": {
+                "align": "center",
+                "fontSize": 64,
+                "fontWeight": "bold",
+                "fill": "#ffffff",
+                "letterSpacing": 3
+              }
+            },
+            "audio-label": {
+              "type": "text",
+              "name": "Audio Label",
+              "x": 300,
+              "y": 280,
+              "width": 400,
+              "height": 50,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "AUDIO",
+              "style": {
+                "align": "left",
+                "fontSize": 48,
+                "fontWeight": "bold",
+                "fill": "#ffcc00"
+              }
+            },
+            "bgm-label": {
+              "type": "text",
+              "name": "BGM Volume Label",
+              "x": 300,
+              "y": 370,
+              "width": 300,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "BGM Volume",
+              "style": {
+                "align": "left",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "bgm-decrease": {
+              "type": "text",
+              "name": "BGM Decrease",
+              "x": 700,
+              "y": 370,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "◀",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "bgm-value": {
+              "type": "text",
+              "name": "BGM Value",
+              "x": 850,
+              "y": 370,
+              "width": 150,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "50%",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "bgm-increase": {
+              "type": "text",
+              "name": "BGM Increase",
+              "x": 1000,
+              "y": 370,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "▶",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "sfx-label": {
+              "type": "text",
+              "name": "SFX Volume Label",
+              "x": 300,
+              "y": 480,
+              "width": 300,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "SFX Volume",
+              "style": {
+                "align": "left",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "sfx-decrease": {
+              "type": "text",
+              "name": "SFX Decrease",
+              "x": 700,
+              "y": 480,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "◀",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "sfx-value": {
+              "type": "text",
+              "name": "SFX Value",
+              "x": 850,
+              "y": 480,
+              "width": 150,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "50%",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "sfx-increase": {
+              "type": "text",
+              "name": "SFX Increase",
+              "x": 1000,
+              "y": 480,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "▶",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "text-label": {
+              "type": "text",
+              "name": "Text Display Label",
+              "x": 300,
+              "y": 620,
+              "width": 400,
+              "height": 50,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "TEXT DISPLAY",
+              "style": {
+                "align": "left",
+                "fontSize": 48,
+                "fontWeight": "bold",
+                "fill": "#ffcc00"
+              }
+            },
+            "text-speed-label": {
+              "type": "text",
+              "name": "Text Speed Label",
+              "x": 300,
+              "y": 710,
+              "width": 300,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Text Speed",
+              "style": {
+                "align": "left",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "speed-decrease": {
+              "type": "text",
+              "name": "Speed Decrease",
+              "x": 700,
+              "y": 710,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "◀",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "speed-value": {
+              "type": "text",
+              "name": "Speed Value",
+              "x": 850,
+              "y": 710,
+              "width": 150,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "50",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "speed-increase": {
+              "type": "text",
+              "name": "Speed Increase",
+              "x": 1000,
+              "y": 710,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "▶",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "auto-mode-label": {
+              "type": "text",
+              "name": "Auto Mode Label",
+              "x": 300,
+              "y": 820,
+              "width": 300,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Auto Mode",
+              "style": {
+                "align": "left",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "auto-toggle": {
+              "type": "text",
+              "name": "Auto Mode Toggle",
+              "x": 850,
+              "y": 820,
+              "width": 200,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "OFF",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              }
+            },
+            "options-back-button": {
+              "type": "text",
+              "name": "Back Button",
+              "x": 960,
+              "y": 970,
+              "width": 200,
+              "height": 60,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "BACK",
+              "style": {
+                "align": "center",
+                "fontSize": 40,
+                "fill": "#ffffff"
+              },
+              "hover": {
+                "style": {
+                  "fill": "#ffcc00"
+                }
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "popLayeredView": {}
+                  }
+                }
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "options-title"
+            },
+            {
+              "id": "audio-label"
+            },
+            {
+              "id": "bgm-label"
+            },
+            {
+              "id": "bgm-decrease"
+            },
+            {
+              "id": "bgm-value"
+            },
+            {
+              "id": "bgm-increase"
+            },
+            {
+              "id": "sfx-label"
+            },
+            {
+              "id": "sfx-decrease"
+            },
+            {
+              "id": "sfx-value"
+            },
+            {
+              "id": "sfx-increase"
+            },
+            {
+              "id": "text-label"
+            },
+            {
+              "id": "text-speed-label"
+            },
+            {
+              "id": "speed-decrease"
+            },
+            {
+              "id": "speed-value"
+            },
+            {
+              "id": "speed-increase"
+            },
+            {
+              "id": "auto-mode-label"
+            },
+            {
+              "id": "auto-toggle"
+            },
+            {
+              "id": "options-back-button"
             }
           ]
         }

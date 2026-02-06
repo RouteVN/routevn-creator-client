@@ -47,7 +47,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.setNextLineConfig:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView:
               - $if preview.base:
                   - rtgl-view#action-item-base data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg=screen wh=24:
@@ -110,6 +110,14 @@ template:
                   - rtgl-view#action-item-toggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg="next-line" wh=24:
                       - rtgl-text s=sm: Toggle Skip Mode
+              - $if preview.pushLayeredView:
+                  - rtgl-view#action-item-pushLayeredView data-mode=pushLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg="layers" wh=24:
+                      - rtgl-text s=sm: "Push view: ${preview.pushLayeredView.layout.name}"
+              - $if preview.popLayeredView:
+                  - rtgl-view#action-item-popLayeredView data-mode=popLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg="layers" wh=24:
+                      - rtgl-text s=sm: Pop current layered view
               - $if preview.setNextLineConfig:
                   - rtgl-view#action-item-setNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg=settings wh=24:
@@ -143,6 +151,10 @@ template:
               - rvn-command-line-toggle-auto-mode#command-line-toggle-auto-mode .toggleAutoMode=actions.toggleAutoMode:
             $elif mode == "toggleSkipMode":
               - rvn-command-line-toggle-skip-mode#command-line-toggle-skip-mode .toggleSkipMode=actions.toggleSkipMode:
+            $elif mode == "pushLayeredView":
+              - rvn-command-line-push-layered-view#command-line-push-layered-view .pushLayeredView=actions.pushLayeredView:
+            $elif mode == "popLayeredView":
+              - rvn-command-line-pop-layered-view#command-line-pop-layered-view .popLayeredView=actions.popLayeredView:
             $elif mode == "visual":
               - rvn-command-line-visual#command-line-visual .visual=actions.visual .presentationState=presentationState:
             $elif mode == "setNextLineConfig":

@@ -539,6 +539,8 @@ export const selectViewData = ({ state, attrs }) => {
     sectionTransition: "Section Transition",
     toggleAutoMode: "Toggle Auto Mode",
     toggleSkipMode: "Toggle Skip Mode",
+    pushLayeredView: "Push Layered View",
+    popLayeredView: "Pop Layered View",
   };
 
   const context = {

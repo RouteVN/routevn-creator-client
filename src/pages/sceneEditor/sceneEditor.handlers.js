@@ -259,6 +259,64 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
+  // Handle pushLayeredView
+  if (payload._event.detail.pushLayeredView) {
+    if (!lineId) {
+      console.warn("Push layered view requires a selected line");
+      return;
+    }
+
+    await projectService.appendEvent({
+      type: "set",
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+        value: payload._event.detail,
+        options: {
+          replace: false,
+        },
+      },
+    });
+
+    const state = projectService.getState();
+    store.setRepositoryState(state);
+    render();
+
+    // Render the canvas with the latest data
+    setTimeout(async () => {
+      await renderSceneState(store, graphicsService);
+    }, 10);
+    return;
+  }
+
+  // Handle popLayeredView
+  if (payload._event.detail.popLayeredView) {
+    if (!lineId) {
+      console.warn("Pop layered view requires a selected line");
+      return;
+    }
+
+    await projectService.appendEvent({
+      type: "set",
+      payload: {
+        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
+        value: payload._event.detail,
+        options: {
+          replace: false,
+        },
+      },
+    });
+
+    const state = projectService.getState();
+    store.setRepositoryState(state);
+    render();
+
+    // Render the canvas with the latest data
+    setTimeout(async () => {
+      await renderSceneState(store, graphicsService);
+    }, 10);
+    return;
+  }
+
   if (!lineId) {
     return;
   }

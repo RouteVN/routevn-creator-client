@@ -24,6 +24,18 @@ const SYSTEM_ACTIONS = [
     icon: "next-line",
     mode: "toggleSkipMode",
   },
+  {
+    id: "15",
+    label: "Push Layered View",
+    icon: "layers",
+    mode: "pushLayeredView",
+  },
+  {
+    id: "16",
+    label: "Pop Layered View",
+    icon: "layers",
+    mode: "popLayeredView",
+  },
 ];
 
 const PRESENTATION_ACTIONS = [
