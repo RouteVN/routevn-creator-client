@@ -58,6 +58,12 @@ const PRESENTATION_ACTIONS = [
     mode: "character",
   },
   {
+    id: "8",
+    label: "Visuals",
+    icon: "image",
+    mode: "visual",
+  },
+  {
     id: "9",
     label: "Next Line Config",
     icon: "settings",
