@@ -64,6 +64,12 @@ const PRESENTATION_ACTIONS = [
     mode: "visual",
   },
   {
+    id: "9",
+    label: "Next Line Config",
+    icon: "settings",
+    mode: "setNextLineConfig",
+  },
+  {
     id: "3",
     label: "Choices",
     icon: "choices",

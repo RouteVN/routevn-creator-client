@@ -275,6 +275,12 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
+  // Set Next Line Config
+  if (actions.setNextLineConfig) {
+    actionsObject.setNextLineConfig = actions.setNextLineConfig;
+    preview.setNextLineConfig = actions.setNextLineConfig;
+  }
+
   return {
     actions: actionsObject,
     preview,
