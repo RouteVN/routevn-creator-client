@@ -257,6 +257,24 @@ export const selectActionsData = ({ props, state }) => {
     preview.toggleSkipMode = actions.toggleSkipMode;
   }
 
+  // Visual
+  if (presentationState.visual?.items) {
+    actionsObject.visual = presentationState.visual;
+    preview.visual = {
+      count: presentationState.visual.items.length,
+      items: presentationState.visual.items.map((item) => {
+        const imageData = images[item.resourceId];
+        const videoData = videos[item.resourceId];
+        const layoutData = layoutsTree.items?.[item.resourceId];
+        return {
+          ...item,
+          resource: imageData || videoData || layoutData,
+          resourceType: imageData ? "image" : videoData ? "video" : "layout",
+        };
+      }),
+    };
+  }
+
   return {
     actions: actionsObject,
     preview,

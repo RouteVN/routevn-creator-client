@@ -47,7 +47,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode:
               - $if preview.base:
                   - rtgl-view#action-item-base data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg=screen wh=24:
@@ -79,6 +79,10 @@ template:
                       - rtgl-view d=h g=sm av=c:
                           - $for charData, i in preview.character:
                               - rvn-file-image fileId=${charData.sprite.fileId} w=32 h=32:
+              - $if preview.visual:
+                  - rtgl-view#action-item-visual data-mode=visual g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=image wh=24:
+                      - rtgl-text s=sm: "${preview.visual.count} visual(s)"
               - $if preview.sectionTransition:
                   - rtgl-view#action-item-sectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg="transition" wh=24:
@@ -135,6 +139,8 @@ template:
               - rvn-command-line-toggle-auto-mode#command-line-toggle-auto-mode .toggleAutoMode=actions.toggleAutoMode:
             $elif mode == "toggleSkipMode":
               - rvn-command-line-toggle-skip-mode#command-line-toggle-skip-mode .toggleSkipMode=actions.toggleSkipMode:
+            $elif mode == "visual":
+              - rvn-command-line-visual#command-line-visual .visual=actions.visual .presentationState=presentationState:
             $elif mode == "controls":
               - rvn-command-line-controls#command-line-controls .controls=selectedLine.controls:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
