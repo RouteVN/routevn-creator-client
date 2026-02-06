@@ -12,6 +12,18 @@ const SYSTEM_ACTIONS = [
     icon: "transition",
     mode: "sectionTransition",
   },
+  {
+    id: "13",
+    label: "Toggle Auto Mode",
+    icon: "play",
+    mode: "toggleAutoMode",
+  },
+  {
+    id: "14",
+    label: "Toggle Skip Mode",
+    icon: "next-line",
+    mode: "toggleSkipMode",
+  },
 ];
 
 const PRESENTATION_ACTIONS = [

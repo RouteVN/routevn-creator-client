@@ -10,12 +10,16 @@ import createRouteGraphics, {
   tweenPlugin,
   soundPlugin,
 } from "route-graphics";
-import createRouteEngine from "route-engine-js";
+import createRouteEngine, { createEffectsHandler } from "route-engine-js";
+import { Ticker } from "https://cdn.jsdelivr.net/npm/pixi.js@8.0.0/+esm";
 
 export const createGraphicsService = async ({ subject }) => {
   let routeGraphics;
   let engine;
   let assetBufferManager;
+  // Create dedicated ticker for auto mode
+  let ticker;
+
   return {
     init: async (options = {}) => {
       if (routeGraphics) {
@@ -23,6 +27,8 @@ export const createGraphicsService = async ({ subject }) => {
         routeGraphics = undefined;
       }
 
+      ticker = new Ticker();
+      ticker.start();
       const { canvas } = options;
       assetBufferManager = createAssetBufferManager();
       routeGraphics = createRouteGraphics();
@@ -88,29 +94,14 @@ export const createGraphicsService = async ({ subject }) => {
       await assetBufferManager.load(assets);
       await routeGraphics.loadAssets(assetBufferManager.getBufferMap());
     },
-    initRouteEngine: (projectData, options = {}) => {
-      const { handleEffects = false } = options;
-      const handlePendingEffects = (effects) => {
-        if (!handleEffects) return;
+    initRouteEngine: (projectData) => {
+      ticker.start();
 
-        // Deduplicate effects by name, keeping only the last occurrence
-        const deduplicatedEffects = effects.reduce((acc, effect) => {
-          acc[effect.name] = effect;
-          return acc;
-        }, {});
-
-        // Convert back to array and process deduplicated effects
-        const uniqueEffects = Object.values(deduplicatedEffects);
-
-        for (const effect of uniqueEffects) {
-          if (effect.name === "render") {
-            const renderState = engine.selectRenderState();
-            routeGraphics.render(renderState);
-          } else if (effect.name === "handleLineActions") {
-            engine.handleLineActions();
-          }
-        }
-      };
+      const handlePendingEffects = createEffectsHandler({
+        getEngine: () => engine,
+        routeGraphics,
+        ticker,
+      });
       engine = createRouteEngine({ handlePendingEffects });
       engine.init({
         initialState: {
@@ -160,6 +151,7 @@ export const createGraphicsService = async ({ subject }) => {
       if (engine) {
         engine = undefined;
       }
+      ticker.stop();
     },
   };
 };
