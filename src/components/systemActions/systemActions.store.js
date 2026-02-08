@@ -220,6 +220,21 @@ export const selectActionsData = ({ props, state }) => {
     }
   }
 
+  if (actions.pushLayeredView) {
+    actionsObject.pushLayeredView = actions.pushLayeredView;
+    const layout = layoutsTree.items[actions.pushLayeredView.resourceId];
+    if (layout) {
+      preview.pushLayeredView = {
+        layout,
+      };
+    }
+  }
+
+  if (actions.popLayeredView) {
+    actionsObject.popLayeredView = actions.popLayeredView;
+    preview.popLayeredView = true;
+  }
+
   if (presentationState.dialogue) {
     actionsObject.dialogue = presentationState.dialogue;
     preview.dialogue =
