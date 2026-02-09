@@ -611,6 +611,15 @@
                 "style": {
                   "fill": "#ffcc00"
                 }
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "sectionTransition": {
+                      "sectionId": "section-main"
+                    }
+                  }
+                }
               }
             },
             "btn-load": {
@@ -1388,13 +1397,16 @@
     }
   },
   "story": {
-    "initialSceneId": "eXLwPZNpFqDjmXjORfonq"
+    "initialSceneId": "TitleSceneDefaultId"
   },
   "scenes": {
     "tree": [
       {
         "id": "HretpJXgSBLITmmuVDUHj",
         "children": [
+          {
+            "id": "TitleSceneDefaultId"
+          },
           {
             "id": "eXLwPZNpFqDjmXjORfonq"
           }
@@ -1406,13 +1418,55 @@
         "type": "folder",
         "name": "Scenes"
       },
+      "TitleSceneDefaultId": {
+        "type": "scene",
+        "name": "Title",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "position": {
+          "x": 200,
+          "y": 200
+        },
+        "sections": {
+          "items": {
+            "title-section-main": {
+              "name": "Section New",
+              "lines": {
+                "items": {
+                  "title-line-1": {
+                    "actions": {
+                      "background": {
+                        "resourceId": "TitlePageDefaultLayout",
+                        "resourceType": "layout"
+                      },
+                      "base": {
+                        "resourceId": "TitlePageDefaultLayout",
+                        "resourceType": "layout"
+                      }
+                    }
+                  }
+                },
+                "tree": [
+                  {
+                    "id": "title-line-1"
+                  }
+                ]
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "title-section-main"
+            }
+          ]
+        }
+      },
       "eXLwPZNpFqDjmXjORfonq": {
         "type": "scene",
         "name": "Prologue",
         "createdAt": "2024-01-01T00:00:00.000Z",
         "position": {
-          "x": 0,
-          "y": 0
+          "x": 350,
+          "y": 200
         },
         "sections": {
           "items": {
