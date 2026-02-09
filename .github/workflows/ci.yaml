@@ -19,7 +19,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install rtgl CLI
-        run: bun install -g rtgl@0.0.10
+        run: npm install -g rtgl@0.0.10
 
       - name: Lint
         run: bun run lint
