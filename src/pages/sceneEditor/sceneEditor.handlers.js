@@ -1227,7 +1227,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   if (actionType === "dialogue") {
     newActions[actionType].clear = true;
   } else {
-    newActions[actionType] = {};
+    delete newActions[actionType];
   }
   // Create updated line object
   const updatedLine = {
