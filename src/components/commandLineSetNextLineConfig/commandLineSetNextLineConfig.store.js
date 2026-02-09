@@ -1,10 +1,10 @@
 export const createInitialState = () => ({
   defaultValues: {
-    manualEnabled: "yes",
-    // manualRequireLineCompleted: "yes", // Not yet implemented in route-engine
-    autoEnabled: "no",
+    manualEnabled: true,
+    // manualRequireLineCompleted: false, // Not yet implemented in route-engine
+    autoEnabled: false,
     autoTrigger: "fromComplete",
-    autoDelay: "1000",
+    autoDelay: 1000,
   },
 
   form: {
@@ -20,13 +20,13 @@ export const createInitialState = () => ({
             "When enabled, the player can click to advance to the next line",
         },
         options: [
-          { value: "yes", label: "Yes" },
-          { value: "no", label: "No" },
+          { value: true, label: "Yes" },
+          { value: false, label: "No" },
         ],
       },
       // Not yet implemented in route-engine
       // {
-      //   $when: `values.manualEnabled == 'yes'`,
+      //   $when: `values.manualEnabled == true`,
       //   name: "manualRequireLineCompleted",
       //   inputType: "select",
       //   label: "Require Line Complete",
@@ -37,8 +37,8 @@ export const createInitialState = () => ({
       //       "If yes, clicking during animation completes the text first, requiring a second click to advance. If no, clicking advances immediately, skipping any ongoing animation",
       //   },
       //   options: [
-      //     { value: "no", label: "No" },
-      //     { value: "yes", label: "Yes" },
+      //     { value: false, label: "No" },
+      //     { value: true, label: "Yes" },
       //   ],
       // },
       {
@@ -52,12 +52,12 @@ export const createInitialState = () => ({
             "When enabled, the game will automatically advance to the next line after a delay",
         },
         options: [
-          { value: "no", label: "No" },
-          { value: "yes", label: "Yes" },
+          { value: false, label: "No" },
+          { value: true, label: "Yes" },
         ],
       },
       {
-        $when: `values.autoEnabled == 'yes'`,
+        $when: `values.autoEnabled == true`,
         name: "autoTrigger",
         inputType: "select",
         label: "Timer Start",
@@ -73,7 +73,7 @@ export const createInitialState = () => ({
         ],
       },
       {
-        $when: `values.autoEnabled == 'yes'`,
+        $when: `values.autoEnabled == true`,
         name: "autoDelay",
         inputType: "inputText",
         label: "Delay (ms)",

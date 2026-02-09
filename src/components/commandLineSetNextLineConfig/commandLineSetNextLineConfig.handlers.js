@@ -4,12 +4,11 @@ export const handleBeforeMount = (deps) => {
   if (props?.setNextLineConfig) {
     const config = props.setNextLineConfig;
     store.setDefaultValues({
-      manualEnabled: (config.manual?.enabled ?? true) ? "yes" : "no",
-      manualRequireLineCompleted:
-        (config.manual?.requireLineCompleted ?? false) ? "yes" : "no",
-      autoEnabled: (config.auto?.enabled ?? false) ? "yes" : "no",
+      manualEnabled: config.manual?.enabled ?? true,
+      manualRequireLineCompleted: config.manual?.requireLineCompleted ?? false,
+      autoEnabled: config.auto?.enabled ?? false,
       autoTrigger: config.auto?.trigger ?? "fromComplete",
-      autoDelay: String(config.auto?.delay ?? 1000),
+      autoDelay: config.auto?.delay ?? 1000,
     });
   }
 };
@@ -31,11 +30,11 @@ export const handleSubmitClick = (deps) => {
 
   const setNextLineConfig = {
     manual: {
-      enabled: defaultValues.manualEnabled === "yes",
-      requireLineCompleted: defaultValues.manualRequireLineCompleted === "yes",
+      enabled: defaultValues.manualEnabled,
+      requireLineCompleted: defaultValues.manualRequireLineCompleted,
     },
     auto: {
-      enabled: defaultValues.autoEnabled === "yes",
+      enabled: defaultValues.autoEnabled,
       trigger: defaultValues.autoTrigger,
       delay,
     },
