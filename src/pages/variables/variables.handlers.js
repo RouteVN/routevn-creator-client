@@ -34,7 +34,13 @@ export const handleVariableCreated = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const { p } = appService.getPayload();
   const repository = await projectService.getRepositoryById(p);
-  const { groupId, name, scope, type, default: defaultValue } = payload._event.detail;
+  const {
+    groupId,
+    name,
+    scope,
+    type,
+    default: defaultValue,
+  } = payload._event.detail;
 
   // Add new variable to repository
   await repository.addEvent({
