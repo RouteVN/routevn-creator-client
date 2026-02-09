@@ -98,13 +98,28 @@ export const handleFormChange = async (deps, payload) => {
   const { projectService, appService, render, store } = deps;
   const { p } = appService.getPayload();
   const repository = await projectService.getRepositoryById(p);
+  const fieldName = payload._event.detail.name;
+  const fieldValue = payload._event.detail.fieldValue;
+
+  const updateValue = {
+    [fieldName]: fieldValue,
+  };
+
+  // Set predefined default when type changes
+  if (fieldName === "type") {
+    const typeDefaults = {
+      string: "",
+      number: 0,
+      boolean: false,
+    };
+    updateValue.default = typeDefaults[fieldValue] ?? "";
+  }
+
   await repository.addEvent({
     type: "treeUpdate",
     payload: {
       target: "variables",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
-      },
+      value: updateValue,
       options: {
         id: store.selectSelectedItemId(),
         replace: false,
