@@ -15,9 +15,9 @@ export const handleBeforeMount = (deps) => {
 
 export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const { name, value } = payload._event.detail;
+  const { formValues } = payload._event.detail;
 
-  store.setDefaultValues({ [name]: value });
+  store.setDefaultValues(formValues);
   render();
 };
 
