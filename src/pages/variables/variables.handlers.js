@@ -68,6 +68,32 @@ export const handleVariableCreated = async (deps, payload) => {
   render();
 };
 
+export const handleVariableDelete = async (deps, payload) => {
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
+  const { itemId } = payload._event.detail;
+
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: "variables",
+      options: {
+        id: itemId,
+      },
+    },
+  });
+
+  // Clear selection if deleted item was selected
+  if (store.selectSelectedItemId() === itemId) {
+    store.setSelectedItemId(null);
+  }
+
+  const { variables } = repository.getState();
+  store.setItems(variables);
+  render();
+};
+
 export const handleFormChange = async (deps, payload) => {
   const { projectService, appService, render, store } = deps;
   const { p } = appService.getPayload();

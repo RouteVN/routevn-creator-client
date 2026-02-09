@@ -4,6 +4,14 @@ export const createInitialState = () => ({
   isDialogOpen: false,
   targetGroupId: null,
 
+  dropdownMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetItemId: null,
+    items: [{ label: "Delete", type: "item", value: "delete-item" }],
+  },
+
   defaultValues: {
     name: "",
     scope: "context",
@@ -122,6 +130,22 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
 
+export const showContextMenu = (state, { itemId, x, y }) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.x = x;
+  state.dropdownMenu.y = y;
+  state.dropdownMenu.targetItemId = itemId;
+};
+
+export const hideContextMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.targetItemId = null;
+};
+
+export const selectTargetItemId = ({ state }) => {
+  return state.dropdownMenu.targetItemId;
+};
+
 export const selectViewData = ({ state, props }) => {
   const searchQuery = state.searchQuery.toLowerCase();
 
@@ -151,33 +175,27 @@ export const selectViewData = ({ state, props }) => {
       const shouldShowGroup = !searchQuery || hasMatchingChildren;
 
       const isCollapsed = state.collapsedIds.includes(group.id);
-      const children = isCollapsed ? [] : filteredChildren;
-
-      // Create table data for this group's variables
-      const tableData = {
-        columns: [
-          { key: "name", label: "Name" },
-          { key: "scope", label: "Scope" },
-          { key: "type", label: "Type" },
-          { key: "default", label: "Default" },
-        ],
-        rows:
-          children.length > 0
-            ? children.map((item) => ({
-                id: item.id,
-                name: item.name,
-                scope: item.scope || "context",
-                type: item.type || "string",
-                default: item.default ?? "",
-              }))
-            : [],
-      };
+      const children = isCollapsed
+        ? []
+        : filteredChildren.map((item) => {
+            let defaultValue = item.default ?? "";
+            if (typeof defaultValue === "boolean") {
+              defaultValue = defaultValue ? "true" : "false";
+            }
+            return {
+              id: item.id,
+              name: item.name,
+              scope: item.scope || "context",
+              type: item.type || "string",
+              default: defaultValue,
+              isSelected: item.id === props.selectedItemId,
+            };
+          });
 
       return {
         ...group,
         isCollapsed,
         children,
-        tableData,
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };
@@ -187,7 +205,6 @@ export const selectViewData = ({ state, props }) => {
   const defaultValues = structuredClone(state.defaultValues);
 
   return {
-    group1: flatGroups[0]?.tableData || { columns: [], rows: [] },
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
@@ -197,5 +214,6 @@ export const selectViewData = ({ state, props }) => {
     context: {
       values: defaultValues,
     },
+    dropdownMenu: state.dropdownMenu,
   };
 };
