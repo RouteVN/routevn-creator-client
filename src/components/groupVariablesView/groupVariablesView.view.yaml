@@ -33,6 +33,10 @@ refs:
     eventListeners:
       click:
         handler: handleAddVariableClick
+  add-variable-empty-*:
+    eventListeners:
+      click:
+        handler: handleAddVariableClick
   add-variable-dialog:
     eventListeners:
       close:
@@ -47,10 +51,6 @@ refs:
     eventListeners:
       row-click:
         handler: handleTableRowClick
-  form-enum-add:
-    eventListeners:
-      click:
-        handler: handleEnumAddButtonClick
 
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
@@ -61,19 +61,24 @@ template:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md:
                       - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
-                          - $if group.isCollapsed:
-                              - rtgl-svg wh=16 svg=folderArrowRight:
-                            $else:
-                              - rtgl-svg wh=16 svg=folderArrowDown:
-                          - rtgl-view d=h av=c g=md:
-                              - rtgl-svg wh=16 svg=folder:
-                              - rtgl-text: ${group.fullLabel}
+                          - rtgl-view w=f d=h av=c:
+                              - $if group.isCollapsed:
+                                  - rtgl-svg wh=16 svg=folderArrowRight:
+                                $else:
+                                  - rtgl-svg wh=16 svg=folderArrowDown:
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg wh=16 svg=folder:
+                                  - rtgl-text: ${group.fullLabel}
+                          - rtgl-button#add-variable-button-${group.id} s=sm flex=1 ip=s icon=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f mb=md p=sm:
-                              - rtgl-view d=h g=md fw=w w=f:
-                                  - rtgl-table#table-${group.id} .data=flatGroups[${i}].tableData w=f:
-                              - rtgl-view#add-variable-button-${group.id} w=f h=60 av=c ah=c bw=xs cur=p mt=md:
-                                  - rtgl-text: Add Variable
+                              - $if group.hasChildren:
+                                  - rtgl-view d=h g=md fw=w w=f:
+                                      - rtgl-table#table-${group.id} .data=flatGroups[${i}].tableData w=f:
+                                $else:
+                                  - "rtgl-view#add-variable-empty-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
+                                      - rtgl-svg svg=plus wh=24:
+                                      - rtgl-text: Add Variable
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No variables found matching "${searchQuery}"
@@ -88,10 +93,3 @@ template:
   - rtgl-dialog#add-variable-dialog s=md ?open=${isDialogOpen}:
       - rtgl-view slot=content g=md:
           - rtgl-form#variable-form key=${isDialogOpen} .defaultValues=defaultValues .form=form w=f .context=context:
-              - rtgl-view slot="enum" g=md w=f:
-                  - $for item in defaultValues.enum:
-                      - rtgl-view br=md bw=xs h=36 ph=md av=c w=f:
-                          - rtgl-text: ${item.label}
-                  - rtgl-view d=h g=md w=f:
-                      - rtgl-input#form-enum-input w=f:
-                      - rtgl-button#form-enum-add: Add

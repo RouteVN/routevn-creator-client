@@ -4,22 +4,34 @@ const form = {
   fields: [
     { name: "name", inputType: "popover-input", label: "Name" },
     {
-      name: "variableType",
+      name: "scope",
       inputType: "popover-input",
-      label: "Variable Type",
+      label: "Scope",
     },
     {
-      name: "initialValue",
+      name: "type",
       inputType: "popover-input",
-      label: "Initial Value",
+      label: "Type",
     },
-    { name: "readonly", inputType: "popover-input", label: "Read Only" },
+    {
+      name: "default",
+      inputType: "popover-input",
+      label: "Default",
+    },
   ],
 };
 
 export const createInitialState = () => ({
   variablesData: { tree: [], items: {} },
   selectedItemId: null,
+  contextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+    { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
+  ],
+  emptyContextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+  ],
 });
 
 export const setItems = (state, variablesData) => {
@@ -45,9 +57,9 @@ export const selectViewData = ({ state }) => {
   if (selectedItem) {
     defaultValues = {
       name: selectedItem.name,
-      variableType: selectedItem.variableType || "",
-      initialValue: selectedItem.initialValue || "",
-      readonly: selectedItem.readonly ? "true" : "false",
+      scope: selectedItem.scope || "",
+      type: selectedItem.type || "",
+      default: selectedItem.default ?? "",
     };
   }
 
@@ -60,5 +72,7 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     form,
     defaultValues,
+    contextMenuItems: state.contextMenuItems,
+    emptyContextMenuItems: state.emptyContextMenuItems,
   };
 };

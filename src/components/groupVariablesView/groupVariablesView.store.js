@@ -6,10 +6,9 @@ export const createInitialState = () => ({
 
   defaultValues: {
     name: "",
-    enum: [],
+    scope: "context",
     type: "string",
-    initialValue: "",
-    readonly: false,
+    default: "",
   },
 
   form: {
@@ -28,25 +27,20 @@ export const createInitialState = () => ({
         label: "Scope",
         required: true,
         options: [
-          // # • runtime – temporary; resets when game restarts
-          // # Example: Currently selected menu tab, temporary UI state, or animation line
-          // # Use when the value is only needed while the game is running and should not persist across restarts.
+          // # • context – temporary; resets when game restarts
+          // # Example: Player progress, inventory items, story flags
+          // # Use for values that are tied to gameplay state.
           //
-          // # • device – saved on this device only
+          // # • global-device – saved on this device only
           // # Example: Text speed, sound/music volume, accessibility preferences
-          // # Use for user preferences that should persist on the current device, but don't need syncing or save/load.
+          // # Use for user preferences that should persist on the current device.
           //
-          // # • global – synced across all devices
+          // # • global-account – synced across all devices
           // # Example: Whether the game is completed, unlocked bonus content, claimed daily rewards
           // # Use when the value should follow the player across multiple devices (via cloud sync).
-          //
-          // # • saveData – saved only in game saves
-          // # Example: Player progress, inventory items, story flags
-          // # Use for values that are tied to save/load and shouldn't change unless the player loads a saved game.
-          { value: "runtime", label: "Runtime" },
-          { value: "device", label: "Device" },
-          { value: "global", label: "Global" },
-          { value: "saveData", label: "Save Data" },
+          { value: "context", label: "Context" },
+          { value: "global-device", label: "Global Device" },
+          { value: "global-account", label: "Global Account" },
         ],
       },
       {
@@ -56,48 +50,15 @@ export const createInitialState = () => ({
         required: true,
         options: [
           { value: "string", label: "String" },
-          { value: "integer", label: "Integer" },
+          { value: "number", label: "Number" },
           { value: "boolean", label: "Boolean" },
-          { value: "enum", label: "Enum" },
-          // { value: "array", label: "Array" },
-          // { value: "object", label: "Object" },
         ],
-      },
-      {
-        $when: "values.type == 'array'",
-        name: "arrayItemType",
-        label: "Item Type",
-        inputType: "select",
-        required: true,
-        options: [
-          { value: "string", label: "String" },
-          { value: "integer", label: "Integer" },
-          { value: "boolean", label: "Boolean" },
-          { value: "enum", label: "Enum" },
-          { value: "object", label: "Object" },
-        ],
-      },
-      {
-        $when: "values.type == 'enum'",
-        name: "enum",
-        inputType: "slot",
-        slot: "enum",
-        label: "Enum",
-        required: false,
-      },
-      {
-        $when: "values.type == 'enum'",
-        name: "initialValue",
-        inputType: "select",
-        label: "Initial Value",
-        options: "${enumOptions}",
-        required: false,
       },
       {
         $when: "values.type == 'boolean'",
-        name: "initialValue",
+        name: "default",
         inputType: "select",
-        label: "Initial Value",
+        label: "Default",
         options: [
           { value: true, label: "True" },
           { value: false, label: "False" },
@@ -106,27 +67,17 @@ export const createInitialState = () => ({
       },
       {
         $when: "values.type == 'string'",
-        name: "initialValue",
+        name: "default",
         inputType: "inputText",
-        label: "Initial Value",
+        label: "Default",
         required: false,
       },
       {
-        $when: "values.type == 'integer'",
-        name: "initialValue",
+        $when: "values.type == 'number'",
+        name: "default",
         inputType: "inputText",
-        label: "Initial Value",
+        label: "Default",
         required: false,
-      },
-      {
-        name: "readonly",
-        label: "Read Only",
-        inputType: "select",
-        required: true,
-        options: [
-          { value: true, label: "Read Only" },
-          { value: false, label: "Editable" },
-        ],
       },
     ],
     actions: {
@@ -179,13 +130,13 @@ export const selectViewData = ({ state, props }) => {
     if (!searchQuery) return true;
 
     const name = (item.name || "").toLowerCase();
-    const type = (item.variableType || "").toLowerCase();
-    const initialValue = (item.initialValue || "").toLowerCase();
+    const type = (item.type || "").toLowerCase();
+    const defaultValue = String(item.default ?? "").toLowerCase();
 
     return (
       name.includes(searchQuery) ||
       type.includes(searchQuery) ||
-      initialValue.includes(searchQuery)
+      defaultValue.includes(searchQuery)
     );
   };
 
@@ -206,19 +157,18 @@ export const selectViewData = ({ state, props }) => {
       const tableData = {
         columns: [
           { key: "name", label: "Name" },
+          { key: "scope", label: "Scope" },
           { key: "type", label: "Type" },
-          { key: "initialValue", label: "Initial Value" },
-          { key: "readOnly", label: "Read Only" },
+          { key: "default", label: "Default" },
         ],
         rows:
           children.length > 0
             ? children.map((item) => ({
                 id: item.id,
                 name: item.name,
-                type: item.variableType || "string",
-                enum: item.enum || [],
-                initialValue: item.initialValue || "",
-                readOnly: item.readonly ? "Yes" : "No",
+                scope: item.scope || "context",
+                type: item.type || "string",
+                default: item.default ?? "",
               }))
             : [],
       };
@@ -235,9 +185,6 @@ export const selectViewData = ({ state, props }) => {
     .filter((group) => group.shouldDisplay);
 
   const defaultValues = structuredClone(state.defaultValues);
-  if (!defaultValues.enum) {
-    defaultValues.enum = [];
-  }
 
   return {
     group1: flatGroups[0]?.tableData || { columns: [], rows: [] },
@@ -249,12 +196,6 @@ export const selectViewData = ({ state, props }) => {
     form: state.form,
     context: {
       values: defaultValues,
-      enumOptions: defaultValues.enum.map((option) => {
-        return {
-          value: option.id,
-          label: option.label,
-        };
-      }),
     },
   };
 };

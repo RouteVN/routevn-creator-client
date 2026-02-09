@@ -1,18 +1,18 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, projectService, appService, render } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
   const { variables } = repository.getState();
   store.setItems(variables || { tree: [], items: {} });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
 
   const repositoryState = repository.getState();
   const { variables } = repositoryState;
@@ -31,10 +31,10 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, type, initialValue, readonly } = payload._event.detail;
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
+  const { groupId, name, scope, type, default: defaultValue } = payload._event.detail;
 
   // Add new variable to repository
   await repository.addEvent({
@@ -43,11 +43,11 @@ export const handleVariableCreated = async (deps, payload) => {
       target: "variables",
       value: {
         id: nanoid(),
-        type: "variable",
+        itemType: "variable",
         name: name,
-        variableType: type,
-        initialValue: initialValue,
-        readonly: readonly,
+        scope: scope,
+        type: type,
+        default: defaultValue,
       },
       options: {
         parent: groupId,
@@ -63,9 +63,9 @@ export const handleVariableCreated = async (deps, payload) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService, appService, render, store } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
   await repository.addEvent({
     type: "treeUpdate",
     payload: {

@@ -44,11 +44,11 @@ export const handleAddVariableClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.stopPropagation(); // Prevent group click
 
-  // Extract group ID from the clicked button
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-variable-button-",
-    "",
-  );
+  // Extract group ID from the clicked button (handles both button and empty state)
+  const buttonId = payload._event.currentTarget.id;
+  const groupId = buttonId
+    .replace("add-variable-button-", "")
+    .replace("add-variable-empty-", "");
   store.setTargetGroupId(groupId);
 
   // Toggle dialog open
@@ -103,9 +103,9 @@ export const handleFormActionClick = (deps, payload) => {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
+          scope: formData.scope,
           type: formData.type,
-          initialValue: formData.initialValue,
-          readonly: formData.readonly,
+          default: formData.default,
         },
         bubbles: true,
         composed: true,
@@ -118,17 +118,3 @@ export const handleFormActionClick = (deps, payload) => {
   }
 };
 
-export const handleEnumAddButtonClick = (deps) => {
-  const { getRefIds, store, render } = deps;
-  const inputElm = getRefIds()["form-enum-input"].elm;
-  const defaultValues = structuredClone(store.selectDefaultValues());
-  if (!defaultValues.enum) {
-    defaultValues.enum = [];
-  }
-  defaultValues.enum.push({
-    label: inputElm.value,
-    id: `${Math.random()}`,
-  });
-  store.updateFormValues(defaultValues);
-  render();
-};
