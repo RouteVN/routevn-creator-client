@@ -75,7 +75,7 @@ export const createInitialState = () => ({
       {
         $when: `values.autoEnabled == true`,
         name: "autoDelay",
-        inputType: "inputText",
+        inputType: "input-number",
         label: "Delay (ms)",
         description: "",
         required: false,
