@@ -158,8 +158,8 @@ template:
                               - rtgl-text: ${group.name}
                               - rtgl-view d=h w=f fw=w g=lg:
                                   - $for item in group.children:
-                                      - rtgl-view w=200 h=150 cur=p g=sm:
-                                          - rvn-file-image#resource-item-${item.id} w=200 h=120 fileId=${item.thumbnailFileId}:
+                                      - rtgl-view#resource-item-${item.id} w=200 h=150 cur=p g=sm bw=${item.bw} bc=${item.bc} br=sm:
+                                          - rvn-file-image w=200 h=120 fileId=${item.thumbnailFileId}:
                                           - rtgl-text s=sm ah=c: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#button-select: Select
