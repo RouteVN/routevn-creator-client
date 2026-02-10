@@ -15,6 +15,8 @@ refs:
         handler: handleVariableItemClick
       variable-created:
         handler: handleVariableCreated
+      variable-delete:
+        handler: handleVariableDelete
   detail-form:
     eventListeners:
       form-change:
@@ -26,13 +28,13 @@ template:
       - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
         - rtgl-view slot="content" w=f h=f:
           - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-          - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
+          - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
       - rtgl-view flex=1 h=f:
         - rvn-group-variables-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
       - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
         - rtgl-view wh=f slot="content":
           - $if selectedItemId:
-            - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
+            - rtgl-form#detail-form key=${selectedItemId}-${defaultValues.name}-${defaultValues.type}-${defaultValues.default} w=f h=f .form=form .defaultValues=defaultValues:
             $else:
               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                   - rtgl-text s=md c=mu-fg: No selection

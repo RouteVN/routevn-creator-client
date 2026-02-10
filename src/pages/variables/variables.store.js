@@ -1,25 +1,63 @@
 import { toFlatGroups, toFlatItems } from "insieme";
 
-const form = {
+const createForm = (selectedItem) => ({
   fields: [
-    { name: "name", inputType: "popover-input", label: "Name" },
+    { name: "name", inputType: "popover-input", description: "Name" },
     {
-      name: "variableType",
-      inputType: "popover-input",
-      label: "Variable Type",
+      name: "scope",
+      inputType: "select",
+      description: "Scope",
+      options: [
+        { value: "context", label: "Context" },
+        { value: "global-device", label: "Global Device" },
+        { value: "global-account", label: "Global Account" },
+      ],
     },
     {
-      name: "initialValue",
-      inputType: "popover-input",
-      label: "Initial Value",
+      name: "type",
+      inputType: "select",
+      description: "Type",
+      options: [
+        { value: "string", label: "String" },
+        { value: "number", label: "Number" },
+        { value: "boolean", label: "Boolean" },
+      ],
     },
-    { name: "readonly", inputType: "popover-input", label: "Read Only" },
+    selectedItem?.type === "boolean"
+      ? {
+          name: "default",
+          inputType: "select",
+          description: "Default",
+          options: [
+            { value: "true", label: "True" },
+            { value: "false", label: "False" },
+          ],
+        }
+      : selectedItem?.type === "number"
+        ? {
+            name: "default",
+            inputType: "input-number",
+            description: "Default",
+          }
+        : {
+            name: "default",
+            inputType: "inputText",
+            description: "Default",
+          },
   ],
-};
+});
 
 export const createInitialState = () => ({
   variablesData: { tree: [], items: {} },
   selectedItemId: null,
+  contextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+    { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
+  ],
+  emptyContextMenuItems: [
+    { label: "New Folder", type: "item", value: "new-item" },
+  ],
 });
 
 export const setItems = (state, variablesData) => {
@@ -43,11 +81,16 @@ export const selectViewData = ({ state }) => {
 
   let defaultValues = {};
   if (selectedItem) {
+    let defaultValue = selectedItem.default ?? "";
+    // Convert boolean to string for form display
+    if (typeof defaultValue === "boolean") {
+      defaultValue = defaultValue ? "true" : "false";
+    }
     defaultValues = {
       name: selectedItem.name,
-      variableType: selectedItem.variableType || "",
-      initialValue: selectedItem.initialValue || "",
-      readonly: selectedItem.readonly ? "true" : "false",
+      scope: selectedItem.scope || "",
+      type: selectedItem.type || "",
+      default: defaultValue,
     };
   }
 
@@ -58,7 +101,9 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "variables",
     repositoryTarget: "variables",
     selectedItemId: state.selectedItemId,
-    form,
+    form: createForm(selectedItem),
     defaultValues,
+    contextMenuItems: state.contextMenuItems,
+    emptyContextMenuItems: state.emptyContextMenuItems,
   };
 };

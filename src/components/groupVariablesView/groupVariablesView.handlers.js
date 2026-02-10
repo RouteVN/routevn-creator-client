@@ -44,11 +44,11 @@ export const handleAddVariableClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.stopPropagation(); // Prevent group click
 
-  // Extract group ID from the clicked button
-  const groupId = payload._event.currentTarget.id.replace(
-    "add-variable-button-",
-    "",
-  );
+  // Extract group ID from the clicked button (handles both button and empty state)
+  const buttonId = payload._event.currentTarget.id;
+  const groupId = buttonId
+    .replace("add-variable-button-", "")
+    .replace("add-variable-empty-", "");
   store.setTargetGroupId(groupId);
 
   // Toggle dialog open
@@ -65,20 +65,55 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
-export const handleTableRowClick = (deps, payload) => {
+export const handleRowClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const { rowData } = payload._event.detail;
+  const itemId = payload._event.currentTarget.id.replace("row-", "");
 
-  if (rowData && rowData.id) {
-    // Forward variable item selection to parent
+  dispatchEvent(
+    new CustomEvent("variable-item-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleRowContextMenu = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+
+  const itemId = payload._event.currentTarget.id.replace("row-", "");
+  const x = payload._event.clientX;
+  const y = payload._event.clientY;
+
+  store.showContextMenu({ itemId, x, y });
+  render();
+};
+
+export const handleContextMenuClickItem = (deps, payload) => {
+  const { store, render, dispatchEvent } = deps;
+  const item = payload._event.detail.item;
+
+  if (item && item.value === "delete-item") {
+    const itemId = store.selectTargetItemId();
     dispatchEvent(
-      new CustomEvent("variable-item-click", {
-        detail: { itemId: rowData.id },
+      new CustomEvent("variable-delete", {
+        detail: { itemId },
         bubbles: true,
         composed: true,
       }),
     );
   }
+
+  store.hideContextMenu();
+  render();
+};
+
+export const handleCloseContextMenu = (deps) => {
+  const { store, render } = deps;
+  store.hideContextMenu();
+  render();
 };
 
 export const handleFormActionClick = (deps, payload) => {
@@ -103,9 +138,9 @@ export const handleFormActionClick = (deps, payload) => {
         detail: {
           groupId: targetGroupId,
           name: formData.name,
+          scope: formData.scope,
           type: formData.type,
-          initialValue: formData.initialValue,
-          readonly: formData.readonly,
+          default: formData.default,
         },
         bubbles: true,
         composed: true,
@@ -116,19 +151,4 @@ export const handleFormActionClick = (deps, payload) => {
     store.toggleDialog();
     render();
   }
-};
-
-export const handleEnumAddButtonClick = (deps) => {
-  const { getRefIds, store, render } = deps;
-  const inputElm = getRefIds()["form-enum-input"].elm;
-  const defaultValues = structuredClone(store.selectDefaultValues());
-  if (!defaultValues.enum) {
-    defaultValues.enum = [];
-  }
-  defaultValues.enum.push({
-    label: inputElm.value,
-    id: `${Math.random()}`,
-  });
-  store.updateFormValues(defaultValues);
-  render();
 };

@@ -317,8 +317,75 @@
     }
   },
   "variables": {
-    "items": {},
-    "tree": []
+    "items": {
+      "system-variables-folder": {
+        "type": "folder",
+        "name": "System"
+      },
+      "_textSpeed": {
+        "itemType": "variable",
+        "name": "_textSpeed",
+        "type": "number",
+        "default": 50,
+        "scope": "global-device"
+      },
+      "_autoForwardTime": {
+        "itemType": "variable",
+        "name": "_autoForwardTime",
+        "type": "number",
+        "default": 1000,
+        "scope": "global-device"
+      },
+      "_musicVolume": {
+        "itemType": "variable",
+        "name": "_musicVolume",
+        "type": "number",
+        "default": 500,
+        "scope": "global-device"
+      },
+      "_soundVolume": {
+        "itemType": "variable",
+        "name": "_soundVolume",
+        "type": "number",
+        "default": 500,
+        "scope": "global-device"
+      },
+      "_muteAll": {
+        "itemType": "variable",
+        "name": "_muteAll",
+        "type": "boolean",
+        "default": false,
+        "scope": "global-device"
+      },
+      "_skipUnseenText": {
+        "itemType": "variable",
+        "name": "_skipUnseenText",
+        "type": "boolean",
+        "default": false,
+        "scope": "global-device"
+      },
+      "_skipTransitionsAndAnimations": {
+        "itemType": "variable",
+        "name": "_skipTransitionsAndAnimations",
+        "type": "boolean",
+        "default": false,
+        "scope": "global-device"
+      }
+    },
+    "tree": [
+      {
+        "id": "system-variables-folder",
+        "children": [
+          { "id": "_textSpeed" },
+          { "id": "_autoForwardTime" },
+          { "id": "_musicVolume" },
+          { "id": "_soundVolume" },
+          { "id": "_muteAll" },
+          { "id": "_skipUnseenText" },
+          { "id": "_skipTransitionsAndAnimations" }
+        ]
+      }
+    ]
   },
   "components": {
     "items": {},

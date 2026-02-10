@@ -4,12 +4,19 @@ export const createInitialState = () => ({
   isDialogOpen: false,
   targetGroupId: null,
 
+  dropdownMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetItemId: null,
+    items: [{ label: "Delete", type: "item", value: "delete-item" }],
+  },
+
   defaultValues: {
     name: "",
-    enum: [],
+    scope: "context",
     type: "string",
-    initialValue: "",
-    readonly: false,
+    default: "",
   },
 
   form: {
@@ -28,25 +35,20 @@ export const createInitialState = () => ({
         label: "Scope",
         required: true,
         options: [
-          // # • runtime – temporary; resets when game restarts
-          // # Example: Currently selected menu tab, temporary UI state, or animation line
-          // # Use when the value is only needed while the game is running and should not persist across restarts.
+          // # • context – temporary; resets when game restarts
+          // # Example: Player progress, inventory items, story flags
+          // # Use for values that are tied to gameplay state.
           //
-          // # • device – saved on this device only
+          // # • global-device – saved on this device only
           // # Example: Text speed, sound/music volume, accessibility preferences
-          // # Use for user preferences that should persist on the current device, but don't need syncing or save/load.
+          // # Use for user preferences that should persist on the current device.
           //
-          // # • global – synced across all devices
+          // # • global-account – synced across all devices
           // # Example: Whether the game is completed, unlocked bonus content, claimed daily rewards
           // # Use when the value should follow the player across multiple devices (via cloud sync).
-          //
-          // # • saveData – saved only in game saves
-          // # Example: Player progress, inventory items, story flags
-          // # Use for values that are tied to save/load and shouldn't change unless the player loads a saved game.
-          { value: "runtime", label: "Runtime" },
-          { value: "device", label: "Device" },
-          { value: "global", label: "Global" },
-          { value: "saveData", label: "Save Data" },
+          { value: "context", label: "Context" },
+          { value: "global-device", label: "Global Device" },
+          { value: "global-account", label: "Global Account" },
         ],
       },
       {
@@ -56,48 +58,15 @@ export const createInitialState = () => ({
         required: true,
         options: [
           { value: "string", label: "String" },
-          { value: "integer", label: "Integer" },
+          { value: "number", label: "Number" },
           { value: "boolean", label: "Boolean" },
-          { value: "enum", label: "Enum" },
-          // { value: "array", label: "Array" },
-          // { value: "object", label: "Object" },
         ],
-      },
-      {
-        $when: "values.type == 'array'",
-        name: "arrayItemType",
-        label: "Item Type",
-        inputType: "select",
-        required: true,
-        options: [
-          { value: "string", label: "String" },
-          { value: "integer", label: "Integer" },
-          { value: "boolean", label: "Boolean" },
-          { value: "enum", label: "Enum" },
-          { value: "object", label: "Object" },
-        ],
-      },
-      {
-        $when: "values.type == 'enum'",
-        name: "enum",
-        inputType: "slot",
-        slot: "enum",
-        label: "Enum",
-        required: false,
-      },
-      {
-        $when: "values.type == 'enum'",
-        name: "initialValue",
-        inputType: "select",
-        label: "Initial Value",
-        options: "${enumOptions}",
-        required: false,
       },
       {
         $when: "values.type == 'boolean'",
-        name: "initialValue",
+        name: "default",
         inputType: "select",
-        label: "Initial Value",
+        label: "Default",
         options: [
           { value: true, label: "True" },
           { value: false, label: "False" },
@@ -106,27 +75,17 @@ export const createInitialState = () => ({
       },
       {
         $when: "values.type == 'string'",
-        name: "initialValue",
+        name: "default",
         inputType: "inputText",
-        label: "Initial Value",
+        label: "Default",
         required: false,
       },
       {
-        $when: "values.type == 'integer'",
-        name: "initialValue",
+        $when: "values.type == 'number'",
+        name: "default",
         inputType: "inputText",
-        label: "Initial Value",
+        label: "Default",
         required: false,
-      },
-      {
-        name: "readonly",
-        label: "Read Only",
-        inputType: "select",
-        required: true,
-        options: [
-          { value: true, label: "Read Only" },
-          { value: false, label: "Editable" },
-        ],
       },
     ],
     actions: {
@@ -171,6 +130,22 @@ export const setTargetGroupId = (state, groupId) => {
   state.targetGroupId = groupId;
 };
 
+export const showContextMenu = (state, { itemId, x, y }) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.x = x;
+  state.dropdownMenu.y = y;
+  state.dropdownMenu.targetItemId = itemId;
+};
+
+export const hideContextMenu = (state) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.targetItemId = null;
+};
+
+export const selectTargetItemId = ({ state }) => {
+  return state.dropdownMenu.targetItemId;
+};
+
 export const selectViewData = ({ state, props }) => {
   const searchQuery = state.searchQuery.toLowerCase();
 
@@ -179,13 +154,13 @@ export const selectViewData = ({ state, props }) => {
     if (!searchQuery) return true;
 
     const name = (item.name || "").toLowerCase();
-    const type = (item.variableType || "").toLowerCase();
-    const initialValue = (item.initialValue || "").toLowerCase();
+    const type = (item.type || "").toLowerCase();
+    const defaultValue = String(item.default ?? "").toLowerCase();
 
     return (
       name.includes(searchQuery) ||
       type.includes(searchQuery) ||
-      initialValue.includes(searchQuery)
+      defaultValue.includes(searchQuery)
     );
   };
 
@@ -200,34 +175,27 @@ export const selectViewData = ({ state, props }) => {
       const shouldShowGroup = !searchQuery || hasMatchingChildren;
 
       const isCollapsed = state.collapsedIds.includes(group.id);
-      const children = isCollapsed ? [] : filteredChildren;
-
-      // Create table data for this group's variables
-      const tableData = {
-        columns: [
-          { key: "name", label: "Name" },
-          { key: "type", label: "Type" },
-          { key: "initialValue", label: "Initial Value" },
-          { key: "readOnly", label: "Read Only" },
-        ],
-        rows:
-          children.length > 0
-            ? children.map((item) => ({
-                id: item.id,
-                name: item.name,
-                type: item.variableType || "string",
-                enum: item.enum || [],
-                initialValue: item.initialValue || "",
-                readOnly: item.readonly ? "Yes" : "No",
-              }))
-            : [],
-      };
+      const children = isCollapsed
+        ? []
+        : filteredChildren.map((item) => {
+            let defaultValue = item.default ?? "";
+            if (typeof defaultValue === "boolean") {
+              defaultValue = defaultValue ? "true" : "false";
+            }
+            return {
+              id: item.id,
+              name: item.name,
+              scope: item.scope || "context",
+              type: item.type || "string",
+              default: defaultValue,
+              isSelected: item.id === props.selectedItemId,
+            };
+          });
 
       return {
         ...group,
         isCollapsed,
         children,
-        tableData,
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
       };
@@ -235,12 +203,8 @@ export const selectViewData = ({ state, props }) => {
     .filter((group) => group.shouldDisplay);
 
   const defaultValues = structuredClone(state.defaultValues);
-  if (!defaultValues.enum) {
-    defaultValues.enum = [];
-  }
 
   return {
-    group1: flatGroups[0]?.tableData || { columns: [], rows: [] },
     flatGroups,
     selectedItemId: props.selectedItemId,
     searchQuery: state.searchQuery,
@@ -249,12 +213,7 @@ export const selectViewData = ({ state, props }) => {
     form: state.form,
     context: {
       values: defaultValues,
-      enumOptions: defaultValues.enum.map((option) => {
-        return {
-          value: option.id,
-          label: option.label,
-        };
-      }),
     },
+    dropdownMenu: state.dropdownMenu,
   };
 };

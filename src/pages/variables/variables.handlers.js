@@ -1,18 +1,18 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { store, repositoryFactory, router, render } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, projectService, appService, render } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
   const { variables } = repository.getState();
   store.setItems(variables || { tree: [], items: {} });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
 
   const repositoryState = repository.getState();
   const { variables } = repositoryState;
@@ -31,10 +31,16 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { store, render, repositoryFactory, router } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
-  const { groupId, name, type, initialValue, readonly } = payload._event.detail;
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
+  const {
+    groupId,
+    name,
+    scope,
+    type,
+    default: defaultValue,
+  } = payload._event.detail;
 
   // Add new variable to repository
   await repository.addEvent({
@@ -43,11 +49,11 @@ export const handleVariableCreated = async (deps, payload) => {
       target: "variables",
       value: {
         id: nanoid(),
-        type: "variable",
+        itemType: "variable",
         name: name,
-        variableType: type,
-        initialValue: initialValue,
-        readonly: readonly,
+        scope: scope,
+        type: type,
+        default: defaultValue,
       },
       options: {
         parent: groupId,
@@ -62,17 +68,58 @@ export const handleVariableCreated = async (deps, payload) => {
   render();
 };
 
+export const handleVariableDelete = async (deps, payload) => {
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
+  const { itemId } = payload._event.detail;
+
+  await repository.addEvent({
+    type: "treeDelete",
+    payload: {
+      target: "variables",
+      options: {
+        id: itemId,
+      },
+    },
+  });
+
+  // Clear selection if deleted item was selected
+  if (store.selectSelectedItemId() === itemId) {
+    store.setSelectedItemId(null);
+  }
+
+  const { variables } = repository.getState();
+  store.setItems(variables);
+  render();
+};
+
 export const handleFormChange = async (deps, payload) => {
-  const { repositoryFactory, router, render, store } = deps;
-  const { p } = router.getPayload();
-  const repository = await repositoryFactory.getByProject(p);
+  const { projectService, appService, render, store } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
+  const fieldName = payload._event.detail.name;
+  const fieldValue = payload._event.detail.fieldValue;
+
+  const updateValue = {
+    [fieldName]: fieldValue,
+  };
+
+  // Set predefined default when type changes
+  if (fieldName === "type") {
+    const typeDefaults = {
+      string: "",
+      number: 0,
+      boolean: false,
+    };
+    updateValue.default = typeDefaults[fieldValue] ?? "";
+  }
+
   await repository.addEvent({
     type: "treeUpdate",
     payload: {
       target: "variables",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
-      },
+      value: updateValue,
       options: {
         id: store.selectSelectedItemId(),
         replace: false,
