@@ -218,6 +218,176 @@ const config = {
       ],
     },
     {
+      $when: 'itemType == "slider"',
+      id: "slider-images",
+      label: "Slider Bar",
+      items: [
+        {
+          type: "list-bar",
+          items: [
+            {
+              name: "barImageId",
+              label: "Default",
+              imageId: "${values.barImageId}",
+            },
+            {
+              $when: "values.barImageId",
+              name: "hoverBarImageId",
+              label: "Hover",
+              imageId: "${values.hoverBarImageId}",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "slider" && values.barImageId',
+      id: "slider-thumb",
+      label: "Slider Thumb",
+      items: [
+        {
+          type: "list-bar",
+          items: [
+            {
+              name: "thumbImageId",
+              label: "Default",
+              imageId: "${values.thumbImageId}",
+            },
+            {
+              $when: "values.thumbImageId",
+              name: "hoverThumbImageId",
+              label: "Hover",
+              imageId: "${values.hoverThumbImageId}",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "slider" && values.barImageId',
+      label: "Slider Direction",
+      items: [
+        {
+          type: "select",
+          label: "Direction",
+          name: "direction",
+          value: "${values.direction}",
+          options: [
+            { label: "Horizontal", value: "horizontal" },
+            { label: "Vertical", value: "vertical" },
+          ],
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "slider" && values.barImageId',
+      label: "Slider Values",
+      items: [
+        {
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              label: "Min",
+              name: "min",
+              value: "${values.min}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              type: "clickable-value",
+              label: "Max",
+              name: "max",
+              value: "${values.max}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        {
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              label: "Step",
+              name: "step",
+              value: "${values.step}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              type: "clickable-value",
+              label: "Initial",
+              name: "initialValue",
+              value: "${values.initialValue}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-number",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       $when: 'itemType == "text"',
       label: "Text",
       items: [

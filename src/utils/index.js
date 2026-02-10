@@ -35,6 +35,8 @@ export const extractFileIdsFromRenderState = (obj) => {
           (key === "fileId" ||
             key === "url" ||
             key === "src" ||
+            key === "thumbSrc" ||
+            key === "barSrc" ||
             key === "hoverUrl" ||
             key === "clickUrl" ||
             key === "fontFileId") &&
@@ -239,6 +241,61 @@ export const layoutTreeStructureToRenderState = (
             src: `${clickImage.fileId}`,
           };
         }
+      }
+    }
+
+    if (node.type === "slider") {
+      element.direction = node.direction ?? "horizontal";
+      element.min = node.min ?? 0;
+      element.max = node.max ?? 100;
+      element.step = node.step ?? 1;
+      element.initialValue = node.initialValue ?? 0;
+
+      // Map thumbImageId to thumbSrc
+      if (node.thumbImageId && imageItems) {
+        const thumbImage = imageItems[node.thumbImageId];
+        if (thumbImage && thumbImage.fileId) {
+          element.thumbSrc = `${thumbImage.fileId}`;
+        }
+      }
+
+      // Map barImageId to barSrc and get dimensions from bar image
+      if (node.barImageId && imageItems) {
+        const barImage = imageItems[node.barImageId];
+        if (barImage && barImage.fileId) {
+          element.barSrc = `${barImage.fileId}`;
+          // Use bar image dimensions for slider size
+          if (barImage.width) {
+            element.width = barImage.width;
+          }
+          if (barImage.height) {
+            element.height = barImage.height;
+          }
+        }
+      }
+
+      // Handle hover state
+      if (node.hoverThumbImageId || node.hoverBarImageId) {
+        element.hover = element.hover || {};
+
+        if (node.hoverThumbImageId && imageItems) {
+          const hoverThumbImage = imageItems[node.hoverThumbImageId];
+          if (hoverThumbImage && hoverThumbImage.fileId) {
+            element.hover.thumbSrc = `${hoverThumbImage.fileId}`;
+          }
+        }
+
+        if (node.hoverBarImageId && imageItems) {
+          const hoverBarImage = imageItems[node.hoverBarImageId];
+          if (hoverBarImage && hoverBarImage.fileId) {
+            element.hover.barSrc = `${hoverBarImage.fileId}`;
+          }
+        }
+      }
+
+      // Handle change event if defined
+      if (node.change) {
+        element.change = node.change;
       }
     }
 

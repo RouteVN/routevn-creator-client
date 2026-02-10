@@ -102,7 +102,11 @@ template:
                       - rtgl-view#list-bar-item-${barItem.name} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=p:
                           - rtgl-text s=xs: ${barItem.label}
                           - rtgl-view flex=1:
-                          - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32:
+                          - $if barItem.imageId:
+                              - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32:
+                            $else:
+                              - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
+                                  - rtgl-text s=xs c=mu: Not set
                 $elif item.type == 'popover-input':
                   - rtgl-view#group-item-${item.name} data-name=${item.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=p bw=xs bc=bg h-bc=ac h=32 w=f:
                       - rtgl-text s=sm: ${item.value}
