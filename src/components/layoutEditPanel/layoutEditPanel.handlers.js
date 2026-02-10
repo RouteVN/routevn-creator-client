@@ -8,10 +8,12 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
   await projectService.ensureRepository();
-  const { typography } = projectService.getState();
+  const { typography, variables } = projectService.getState();
 
   // Store raw typography data
   store.setTypographyData(typography || { items: {}, tree: [] });
+  // Store raw variables data
+  store.setVariablesData(variables || { items: {}, tree: [] });
   render();
 };
 

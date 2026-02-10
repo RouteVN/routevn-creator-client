@@ -1,5 +1,5 @@
 import { parseAndRender } from "jempl";
-import { toFlatGroups } from "insieme";
+import { toFlatGroups, toFlatItems } from "insieme";
 
 const config = {
   sections: [
@@ -230,38 +230,71 @@ const config = {
               value: "${values.text}",
               popoverForm: {
                 fields: [
-                  // {
-                  //   name: "contentType",
-                  //   description: "Content Type",
-                  //   inputType: "select",
-                  //   options: [
-                  //     { label: "Variable", value: "variable" },
-                  //     { label: "Plain Text", value: "plain" },
-                  //   ],
-                  // },
-                  // {
-                  //   $when: 'popoverFormValues.contentType == "variable"',
-                  //   name: "value",
-                  //   description: "Variable",
-                  //   inputType: "select",
-                  //   options: [
-                  //     {
-                  //       label: "Dialogue Character Name",
-                  //       value: "\\${dialogue.character.name}",
-                  //     },
-                  //     {
-                  //       label: "Dialogue Content",
-                  //       value: "\\${dialogue.content[0].text}",
-                  //     },
-                  //     {
-                  //       $when: 'layoutType === "choices"',
-                  //       label: "Choice content",
-                  //       value: "\\${item.content}",
-                  //     },
-                  //   ],
-                  // },
                   {
-                    // $when: 'popoverFormValues.contentType == "plain"',
+                    name: "value",
+                    inputType: "input-text",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "variable"',
+      label: "Variable",
+      items: [
+        {
+          type: "select",
+          label: "Variable",
+          name: "variableId",
+          value: "${values.variableId}",
+          options: "${variableOptionsById}",
+        },
+        {
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              label: "Prefix",
+              name: "prefix",
+              value: "${values.prefix}",
+              popoverForm: {
+                fields: [
+                  {
+                    name: "value",
+                    inputType: "input-text",
+                  },
+                ],
+                actions: {
+                  buttons: [
+                    {
+                      id: "submit",
+                      variant: "pr",
+                      content: "Submit",
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              type: "clickable-value",
+              label: "Suffix",
+              name: "suffix",
+              value: "${values.suffix}",
+              popoverForm: {
+                fields: [
+                  {
                     name: "value",
                     inputType: "input-text",
                   },
@@ -283,7 +316,7 @@ const config = {
     },
     {
       $when:
-        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
+        'itemType == "text" || itemType == "variable" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
       label: "Typography",
       items: [
         {
@@ -311,7 +344,7 @@ const config = {
     },
     {
       $when:
-        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
+        'itemType == "text" || itemType == "variable" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
       label: "Text Alignment",
       items: [
         {
@@ -328,7 +361,8 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
+      $when:
+        'itemType == "text" || itemType == "variable" || itemType == "sprite" || itemType == "rect"',
       id: "actions",
       label: "Actions",
       labelAction: "plus",
@@ -379,6 +413,7 @@ export const createInitialState = () => {
       context: {},
     },
     typographyData: { tree: [], items: {} },
+    variablesData: { tree: [], items: {} },
     values: {
       x: 0,
       y: 0,
@@ -433,12 +468,6 @@ export const openPopoverForm = (state, payload) => {
     value,
   };
 
-  if (value && typeof value === "string" && value.startsWith("${")) {
-    popoverFormValues.contentType = "variable";
-  } else {
-    popoverFormValues.contentType = "plain";
-  }
-
   state.popover = {
     key: state.popover.key + 1,
     open: true,
@@ -455,6 +484,7 @@ export const openPopoverForm = (state, payload) => {
 
 export const updatePopoverFormContext = (state, payload) => {
   state.popover.context = {
+    ...state.popover.context,
     popoverFormValues: payload.values,
   };
   state.popover.defaultValues = payload.values;
@@ -504,6 +534,10 @@ export const setTypographyData = (state, typographyData) => {
   state.typographyData = typographyData;
 };
 
+export const setVariablesData = (state, variablesData) => {
+  state.variablesData = variablesData;
+};
+
 export const selectValues = ({ state }) => {
   return state.values;
 };
@@ -534,6 +568,15 @@ export const selectViewData = ({ state, attrs }) => {
     ...typographyItems,
   ];
 
+  // Transform variables data to options format (exclude folders)
+  const variableItems = toFlatItems(state.variablesData).filter(
+    (v) => v.type !== "folder",
+  );
+  const variableOptionsById = variableItems.map((v) => ({
+    label: v.name,
+    value: v.id,
+  }));
+
   const actionsLabelMap = {
     nextLine: "Next Line",
     sectionTransition: "Section Transition",
@@ -548,6 +591,7 @@ export const selectViewData = ({ state, attrs }) => {
     layoutType: attrs["layout-type"],
     typographyItems: typographyItems,
     typographyItemsWithNone: typographyItemsWithNone,
+    variableOptionsById: variableOptionsById,
     values: {
       ...state.values,
       actions: Object.entries(

@@ -112,6 +112,7 @@ export const layoutTreeStructureToRenderState = (
         "text-ref-character-name",
         "text-revealing-ref-dialogue-content",
         "text-ref-choice-item-content",
+        "variable",
       ].includes(node.type)
     ) {
       let textStyle = {};
@@ -210,6 +211,15 @@ export const layoutTreeStructureToRenderState = (
       if (node.type === "text-ref-choice-item-content") {
         element.type = "text";
         element.content = "${item.content}";
+      }
+
+      if (node.type === "variable") {
+        element.type = "text";
+        const prefix = node.prefix || "";
+        const suffix = node.suffix || "";
+        element.content = node.variableId
+          ? `${prefix}\${variables.${node.variableId}}${suffix}`
+          : prefix + suffix;
       }
     }
 

@@ -199,7 +199,7 @@ const calculateAbsolutePosition = (
 };
 
 const renderLayoutPreview = async (deps) => {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, projectService } = deps;
 
   const { renderStateElements, fontsItems } = await getRenderState(deps);
 
@@ -213,8 +213,20 @@ const renderLayoutPreview = async (deps) => {
 
   let elementsToRender = renderStateElements;
 
+  // Get variables from project state and convert to flat object with default values
+  const projectState = projectService.getState();
+  const variablesData = projectState.variables || { items: {} };
+  const variables = Object.entries(variablesData.items || {}).reduce(
+    (acc, [id, variable]) => {
+      acc[id] = variable.default ?? "";
+      return acc;
+    },
+    {},
+  );
+
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
   const data = {
+    variables,
     dialogue: {
       content: [{ text: dialogueDefaultValues["dialogue-content"] }],
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
