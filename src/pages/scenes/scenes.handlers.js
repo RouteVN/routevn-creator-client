@@ -1,8 +1,28 @@
 import { nanoid } from "nanoid";
 
 /**
+ * Extract transitions from layout element click actions
+ * @param {Object} layout - Layout object with elements
+ * @returns {Array} Array of sceneIds found in click actions
+ */
+const getTransitionsFromLayout = (layout) => {
+  const transitions = [];
+  if (!layout?.elements?.items) return transitions;
+
+  for (const element of Object.values(layout.elements.items)) {
+    const sceneId =
+      element.click?.actionPayload?.actions?.sectionTransition?.sceneId;
+    if (sceneId && !transitions.includes(sceneId)) {
+      transitions.push(sceneId);
+    }
+  }
+  return transitions;
+};
+
+/**
  *
  * @param {Object} sections
+ * @param {Object} layouts - Layouts data from repository
  * @returns {Array} Array of transition objects with sceneId
  * @example
  * // should return: ["scene-1760679405214-0ueot8rb4"]
@@ -29,7 +49,7 @@ import { nanoid } from "nanoid";
  * }
  *
  */
-const getTransitionsForScene = (sections) => {
+const getTransitionsForScene = (sections, layouts) => {
   if (!sections || !sections.items) {
     return [];
   }
@@ -68,6 +88,26 @@ const getTransitionsForScene = (sections) => {
             }
           }
         }
+
+        // Check for transitions within layouts referenced by background or base
+        const layoutRefs = [
+          line.actions?.background,
+          line.actions?.base,
+          line.actions?.actions?.background,
+          line.actions?.actions?.base,
+        ].filter((ref) => ref?.resourceType === "layout" && ref?.resourceId);
+
+        for (const ref of layoutRefs) {
+          const layout = layouts?.items?.[ref.resourceId];
+          if (layout) {
+            const layoutTransitions = getTransitionsFromLayout(layout);
+            for (const sceneId of layoutTransitions) {
+              if (!transitions.includes(sceneId)) {
+                transitions.push(sceneId);
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -78,7 +118,7 @@ const getTransitionsForScene = (sections) => {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, getRefIds, appService } = deps;
   await projectService.ensureRepository();
-  const { scenes, story } = projectService.getState();
+  const { scenes, story, layouts } = projectService.getState();
   const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
@@ -94,7 +134,7 @@ export const handleAfterMount = async (deps) => {
       x: scene.position?.x || 200,
       y: scene.position?.y || 200,
       isInit: sceneId === initialSceneId,
-      transitions: getTransitionsForScene(scene.sections),
+      transitions: getTransitionsForScene(scene.sections, layouts),
     }));
 
   // Initialize whiteboard with scene items only
@@ -131,7 +171,7 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { scenes, story } = projectService.getState();
+  const { scenes, story, layouts } = projectService.getState();
   const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
@@ -154,7 +194,7 @@ export const handleDataChanged = async (deps) => {
         x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
         y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
         isInit: sceneId === initialSceneId,
-        transitions: getTransitionsForScene(scene.sections),
+        transitions: getTransitionsForScene(scene.sections, layouts),
       };
     });
 
