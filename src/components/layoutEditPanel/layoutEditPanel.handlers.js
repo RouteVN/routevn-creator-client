@@ -208,6 +208,27 @@ export const handleListBarItemRightClick = async (deps, payload) => {
       name,
       value: undefined,
     });
+
+    // Cascade delete for slider images
+    // If bar is deleted, also delete thumb and hover images
+    if (name === "barImageId") {
+      store.updateValueProperty({ name: "thumbImageId", value: undefined });
+      store.updateValueProperty({
+        name: "hoverBarImageId",
+        value: undefined,
+      });
+      store.updateValueProperty({
+        name: "hoverThumbImageId",
+        value: undefined,
+      });
+    }
+    // If thumb is deleted, also delete hover thumb
+    if (name === "thumbImageId") {
+      store.updateValueProperty({
+        name: "hoverThumbImageId",
+        value: undefined,
+      });
+    }
   }
   render();
 
