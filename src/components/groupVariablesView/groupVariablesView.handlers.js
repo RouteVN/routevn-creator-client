@@ -31,11 +31,26 @@ export const handleVariableItemClick = (deps, payload) => {
 
 export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
+  const prevValues = store.selectDefaultValues();
+  const newValues = payload._event.detail.formValues;
+
+  // When type changes, set appropriate default value
+  let defaultValue = newValues.default;
+  if (newValues.type !== prevValues.type) {
+    if (newValues.type === "number") {
+      defaultValue = 0;
+    } else if (newValues.type === "boolean") {
+      defaultValue = false;
+    } else {
+      defaultValue = "";
+    }
+  }
 
   // Update form values for preview
   store.updateFormValues({
-    ...store.selectDefaultValues(),
-    ...payload._event.detail.formValues,
+    ...prevValues,
+    ...newValues,
+    default: defaultValue,
   });
   render();
 };
@@ -117,7 +132,7 @@ export const handleCloseContextMenu = (deps) => {
 };
 
 export const handleFormActionClick = (deps, payload) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store, render, dispatchEvent, props } = deps;
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
@@ -126,11 +141,36 @@ export const handleFormActionClick = (deps, payload) => {
     // Get form values from the event detail - it's in formValues
     const formData = payload._event.detail.formValues;
 
+    // Don't submit if name is not set
+    if (!formData.name || !formData.name.trim()) {
+      return;
+    }
+
+    // Don't submit if name already exists
+    const existingNames = (props.flatGroups || [])
+      .flatMap((g) => g.children || [])
+      .map((item) => item.name);
+    if (existingNames.includes(formData.name.trim())) {
+      return;
+    }
+
     // Get the target group ID from store - access the internal state properly
     const storeState = store.getState
       ? store.getState()
       : store._state || store.state;
     const targetGroupId = storeState.targetGroupId;
+
+    // Set default value based on type if not provided
+    let defaultValue = formData.default;
+    if (defaultValue === undefined || defaultValue === "") {
+      if (formData.type === "number") {
+        defaultValue = 0;
+      } else if (formData.type === "boolean") {
+        defaultValue = false;
+      } else {
+        defaultValue = "";
+      }
+    }
 
     // Forward variable creation to parent
     dispatchEvent(
@@ -140,7 +180,7 @@ export const handleFormActionClick = (deps, payload) => {
           name: formData.name,
           scope: formData.scope,
           type: formData.type,
-          default: formData.default,
+          default: defaultValue,
         },
         bubbles: true,
         composed: true,

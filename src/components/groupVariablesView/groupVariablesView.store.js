@@ -28,6 +28,9 @@ export const createInitialState = () => ({
         inputType: "inputText",
         label: "Name",
         required: true,
+        tooltip: {
+          content: "This field is mandatory and must be unique",
+        },
       },
       {
         name: "scope",
@@ -83,7 +86,7 @@ export const createInitialState = () => ({
       {
         $when: "values.type == 'number'",
         name: "default",
-        inputType: "inputText",
+        inputType: "input-number",
         label: "Default",
         required: false,
       },
