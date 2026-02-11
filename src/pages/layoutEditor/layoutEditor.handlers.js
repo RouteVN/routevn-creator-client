@@ -199,7 +199,7 @@ const calculateAbsolutePosition = (
 };
 
 const renderLayoutPreview = async (deps) => {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, projectService } = deps;
 
   const { renderStateElements, fontsItems } = await getRenderState(deps);
 
@@ -213,8 +213,24 @@ const renderLayoutPreview = async (deps) => {
 
   let elementsToRender = renderStateElements;
 
+  // Get variables from repository and extract default values
+  const repository = await projectService.getRepository();
+  const { variables: variablesData } = repository.getState();
+  const variableItems = variablesData?.items || {};
+  const variables = {};
+  const TYPE_DEFAULTS = { number: 0, boolean: false, string: "", object: {} };
+  Object.entries(variableItems).forEach(([id, config]) => {
+    if (config.type !== "folder") {
+      variables[id] =
+        config.default !== undefined
+          ? config.default
+          : TYPE_DEFAULTS[config.type];
+    }
+  });
+
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
   const data = {
+    variables,
     dialogue: {
       content: [{ text: dialogueDefaultValues["dialogue-content"] }],
       character: { name: dialogueDefaultValues["dialogue-character-name"] },
