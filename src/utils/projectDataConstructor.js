@@ -148,6 +148,12 @@ export function constructProjectData(state, options = {}) {
     const typography = repositoryState.typography || { items: {}, tree: [] };
     const colors = repositoryState.colors || { items: {}, tree: [] };
     const fonts = repositoryState.fonts || { items: {}, tree: [] };
+    // Filter out folder items - only include actual variables
+    const variables = Object.fromEntries(
+      Object.entries(repositoryState.variables?.items || {}).filter(
+        ([, item]) => item.type !== "folder",
+      ),
+    );
 
     const processedCharacters = constructCharacters(characters);
     const characterImages = extractCharacterImages(characters);
@@ -161,6 +167,7 @@ export function constructProjectData(state, options = {}) {
       fonts: constructFonts(fonts.items || {}),
       layouts: constructLayouts(layouts, images, typography, colors, fonts),
       tweens: constructTweens(tweens),
+      variables,
     };
   }
 
