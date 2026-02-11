@@ -19,7 +19,9 @@ export const handleAfterMount = async (deps) => {
   }
 
   // Initialize from existing data
-  store.setActionId(updateVariable.id || nanoid(8).replace(/[^a-zA-Z0-9]/g, "a"));
+  store.setActionId(
+    updateVariable.id || nanoid(8).replace(/[^a-zA-Z0-9]/g, "a"),
+  );
 
   const operations = (updateVariable.operations || []).map((op) => ({
     id: nanoid(),
@@ -85,7 +87,8 @@ export const handleVariableSelectChange = (deps, payload) => {
   const varType = (variable?.type || "string").toLowerCase();
 
   // Set default value based on variable type
-  const defaultValue = varType === "number" ? 1 : varType === "boolean" ? false : "";
+  const defaultValue =
+    varType === "number" ? 1 : varType === "boolean" ? false : "";
 
   // When variable changes, reset operation and set default value
   store.setTempOperation({
@@ -183,7 +186,7 @@ export const handleSubmitClick = (deps, payload) => {
         },
         bubbles: true,
         composed: true,
-      })
+      }),
     );
   }
 };
@@ -192,9 +195,7 @@ export const handleBreadcrumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
   if (payload._event.detail.id === "actions") {
-    dispatchEvent(
-      new CustomEvent("back-to-actions", { detail: {} })
-    );
+    dispatchEvent(new CustomEvent("back-to-actions", { detail: {} }));
   } else if (payload._event.detail.id === "current") {
     store.setMode({ mode: "current" });
     store.setCurrentEditingId({ id: null });

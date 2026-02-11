@@ -11,9 +11,7 @@ const OPERATIONS_BY_TYPE = {
     { value: "set", label: "Set to" },
     { value: "toggle", label: "Toggle" },
   ],
-  string: [
-    { value: "set", label: "Set to" },
-  ],
+  string: [{ value: "set", label: "Set to" }],
 };
 
 export const createInitialState = () => ({
@@ -142,10 +140,12 @@ export const selectViewData = ({ state }) => {
   // Get selected variable type for filtering operations
   const selectedVariable = variableItems[state.tempOperation.variableId];
   const variableType = (selectedVariable?.type || "string").toLowerCase();
-  const operationOptions = OPERATIONS_BY_TYPE[variableType] || OPERATIONS_BY_TYPE.string;
+  const operationOptions =
+    OPERATIONS_BY_TYPE[variableType] || OPERATIONS_BY_TYPE.string;
 
   // Determine input type based on variable type and operation
-  const showValueField = state.tempOperation.op !== "toggle" && state.tempOperation.op !== "";
+  const showValueField =
+    state.tempOperation.op !== "toggle" && state.tempOperation.op !== "";
   const valueInputType = variableType; // already lowercase: "number", "boolean", or "string"
 
   // Boolean options for boolean variables
@@ -165,7 +165,8 @@ export const selectViewData = ({ state }) => {
     if (op.op === "toggle") {
       displayValue = "";
     } else if (varType === "boolean") {
-      displayValue = op.value === true || op.value === "true" ? "true" : "false";
+      displayValue =
+        op.value === true || op.value === "true" ? "true" : "false";
     }
 
     return {
@@ -180,14 +181,20 @@ export const selectViewData = ({ state }) => {
   const breadcrumb = [
     { id: "actions", label: "Actions" },
     ...(state.mode === "edit"
-      ? [{ id: "current", label: "Update Variable" }, { label: "Edit Operation" }]
+      ? [
+          { id: "current", label: "Update Variable" },
+          { label: "Edit Operation" },
+        ]
       : [{ label: "Update Variable" }]),
   ];
 
   // Convert boolean value to string for select
-  const booleanValue = state.tempOperation.value === true ? "true" :
-                       state.tempOperation.value === false ? "false" :
-                       String(state.tempOperation.value || "false");
+  const booleanValue =
+    state.tempOperation.value === true
+      ? "true"
+      : state.tempOperation.value === false
+        ? "false"
+        : String(state.tempOperation.value || "false");
 
   return {
     initiated: state.initiated,
