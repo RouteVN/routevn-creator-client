@@ -711,6 +711,7 @@ export const selectViewData = ({ state, attrs }) => {
     toggleSkipMode: "Toggle Skip Mode",
     pushLayeredView: "Push Layered View",
     popLayeredView: "Pop Layered View",
+    updateVariable: "Update Variable",
   };
 
   const context = {

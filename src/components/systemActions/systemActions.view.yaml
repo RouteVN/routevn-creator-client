@@ -47,7 +47,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable:
               - $if preview.base:
                   - rtgl-view#action-item-base data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg=screen wh=24:
@@ -122,6 +122,10 @@ template:
                   - rtgl-view#action-item-setNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
                       - rtgl-svg svg=settings wh=24:
                       - rtgl-text s=sm: Next Line Config
+              - $if preview.updateVariable:
+                  - rtgl-view#action-item-updateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
+                      - rtgl-svg svg=variable wh=24:
+                      - rtgl-text s=sm: ${preview.updateVariable.summary}
             $else:
               - rtgl-text s=sm c=mu-fg: No actions added yet
           - rtgl-button#add-action-button v=ol w=f: +
@@ -159,6 +163,8 @@ template:
               - rvn-command-line-visual#command-line-visual .visual=actions.visual .presentationState=presentationState:
             $elif mode == "setNextLineConfig":
               - rvn-command-line-set-next-line-config#command-line-set-next-line-config .setNextLineConfig=actions.setNextLineConfig:
+            $elif mode == "updateVariable":
+              - rvn-command-line-update-variable#command-line-update-variable .updateVariable=actions.updateVariable:
             $elif mode == "controls":
               - rvn-command-line-controls#command-line-controls .controls=selectedLine.controls:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
