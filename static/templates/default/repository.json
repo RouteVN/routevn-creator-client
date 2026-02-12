@@ -683,6 +683,7 @@
                 "actionPayload": {
                   "actions": {
                     "sectionTransition": {
+                      "sceneId": "eXLwPZNpFqDjmXjORfonq",
                       "sectionId": "section-main"
                     }
                   }
