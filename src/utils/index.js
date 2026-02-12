@@ -259,18 +259,11 @@ export const layoutTreeStructureToRenderState = (
         }
       }
 
-      // Map barImageId to barSrc and get dimensions from bar image
+      // Map barImageId to barSrc
       if (node.barImageId && imageItems) {
         const barImage = imageItems[node.barImageId];
         if (barImage && barImage.fileId) {
           element.barSrc = `${barImage.fileId}`;
-          // Use bar image dimensions for slider size
-          if (barImage.width) {
-            element.width = barImage.width;
-          }
-          if (barImage.height) {
-            element.height = barImage.height;
-          }
         }
       }
 

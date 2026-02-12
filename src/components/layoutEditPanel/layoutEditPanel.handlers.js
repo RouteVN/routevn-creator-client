@@ -193,6 +193,12 @@ export const handleListBarItemRightClick = async (deps, payload) => {
   const { _event: event } = payload;
   event.preventDefault();
   const { name } = event.currentTarget.dataset;
+
+  // Prevent removing bar idle image - it's required for slider
+  if (name === "barImageId") {
+    return;
+  }
+
   const result = await appService.showDropdownMenu({
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,

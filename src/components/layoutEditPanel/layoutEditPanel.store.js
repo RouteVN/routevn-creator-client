@@ -227,11 +227,10 @@ const config = {
           items: [
             {
               name: "barImageId",
-              label: "Default",
+              label: "Idle",
               imageId: "${values.barImageId}",
             },
             {
-              $when: "values.barImageId",
               name: "hoverBarImageId",
               label: "Hover",
               imageId: "${values.hoverBarImageId}",
@@ -241,7 +240,7 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "slider" && values.barImageId',
+      $when: 'itemType == "slider"',
       id: "slider-thumb",
       label: "Slider Thumb",
       items: [
@@ -250,11 +249,10 @@ const config = {
           items: [
             {
               name: "thumbImageId",
-              label: "Default",
+              label: "Idle",
               imageId: "${values.thumbImageId}",
             },
             {
-              $when: "values.thumbImageId",
               name: "hoverThumbImageId",
               label: "Hover",
               imageId: "${values.hoverThumbImageId}",
@@ -264,7 +262,7 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "slider" && values.barImageId',
+      $when: 'itemType == "slider"',
       label: "Slider Direction",
       items: [
         {
@@ -280,7 +278,7 @@ const config = {
       ],
     },
     {
-      $when: 'itemType == "slider" && values.barImageId',
+      $when: 'itemType == "slider"',
       label: "Slider Values",
       items: [
         {
