@@ -599,6 +599,52 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     const unflattenedUpdate = unflattenKey(detail.name, detail.value);
     updatedItem = deepMerge(currentItem, unflattenedUpdate);
     updatedItem[detail.name] = detail.value;
+
+    // Auto-switch slider settings when direction changes (remembers per-direction)
+    if (detail.name === "direction" && currentItem.type === "slider") {
+      const oldDirection = currentItem.direction || "horizontal";
+      const newDirection = detail.value;
+
+      // Save current settings to old direction
+      const savedKey = `_saved${oldDirection.charAt(0).toUpperCase() + oldDirection.slice(1)}`;
+      updatedItem[savedKey] = {
+        barImageId: currentItem.barImageId,
+        hoverBarImageId: currentItem.hoverBarImageId,
+        thumbImageId: currentItem.thumbImageId,
+        hoverThumbImageId: currentItem.hoverThumbImageId,
+        width: currentItem.width,
+        height: currentItem.height,
+      };
+
+      // Check for saved settings for new direction
+      const restoreKey = `_saved${newDirection.charAt(0).toUpperCase() + newDirection.slice(1)}`;
+      const saved = currentItem[restoreKey];
+
+      if (saved) {
+        // Restore saved settings
+        updatedItem.barImageId = saved.barImageId;
+        updatedItem.hoverBarImageId = saved.hoverBarImageId;
+        updatedItem.thumbImageId = saved.thumbImageId;
+        updatedItem.hoverThumbImageId = saved.hoverThumbImageId;
+        updatedItem.width = saved.width;
+        updatedItem.height = saved.height;
+      } else {
+        // First time - use defaults and swap dimensions
+        if (newDirection === "vertical") {
+          updatedItem.barImageId = "slider_bar_vertical";
+          updatedItem.hoverBarImageId = "slider_bar_vertical_hover";
+        } else {
+          updatedItem.barImageId = "slider_bar_default";
+          updatedItem.hoverBarImageId = "slider_bar_hover";
+        }
+        // Reset thumb to defaults (same for both directions)
+        updatedItem.thumbImageId = "slider_thumb_default";
+        updatedItem.hoverThumbImageId = "slider_thumb_hover";
+
+        updatedItem.width = currentItem.height;
+        updatedItem.height = currentItem.width;
+      }
+    }
   }
   if (
     updatedItem.type === "sprite" &&

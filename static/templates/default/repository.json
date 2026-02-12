@@ -43,6 +43,60 @@
         "fileSize": 862,
         "width": 1400,
         "height": 100
+      },
+      "slider_bar_default": {
+        "type": "image",
+        "fileId": "Vv45YQP6fUdmuI51iI7SW",
+        "name": "slider_bar",
+        "fileType": "image/png",
+        "fileSize": 529,
+        "width": 400,
+        "height": 20
+      },
+      "slider_thumb_default": {
+        "type": "image",
+        "fileId": "MSRaaZrrAls6RYTk8dZl7",
+        "name": "slider_thumb",
+        "fileType": "image/png",
+        "fileSize": 579,
+        "width": 40,
+        "height": 40
+      },
+      "slider_bar_hover": {
+        "type": "image",
+        "fileId": "QVDFwFnI0tjTy7qfbyiGV",
+        "name": "slider_bar_hover",
+        "fileType": "image/png",
+        "fileSize": 536,
+        "width": 400,
+        "height": 20
+      },
+      "slider_thumb_hover": {
+        "type": "image",
+        "fileId": "-WGqH4Nj2GKnx8DFc9t2D",
+        "name": "slider_thumb_hover",
+        "fileType": "image/png",
+        "fileSize": 591,
+        "width": 40,
+        "height": 40
+      },
+      "slider_bar_vertical": {
+        "type": "image",
+        "fileId": "L5Vmww9xcMh6v3_cl2rNg",
+        "name": "slider_bar_vertical",
+        "fileType": "image/png",
+        "fileSize": 529,
+        "width": 20,
+        "height": 400
+      },
+      "slider_bar_vertical_hover": {
+        "type": "image",
+        "fileId": "kC9Z1-lmclgU4bNtaf7PS",
+        "name": "slider_bar_vertical_hover",
+        "fileType": "image/png",
+        "fileSize": 536,
+        "width": 20,
+        "height": 400
       }
     },
     "tree": [
@@ -67,6 +121,30 @@
           },
           {
             "id": "sY5qgcGzlgoXC3Nf88tGa",
+            "children": []
+          },
+          {
+            "id": "slider_bar_default",
+            "children": []
+          },
+          {
+            "id": "slider_thumb_default",
+            "children": []
+          },
+          {
+            "id": "slider_bar_hover",
+            "children": []
+          },
+          {
+            "id": "slider_thumb_hover",
+            "children": []
+          },
+          {
+            "id": "slider_bar_vertical",
+            "children": []
+          },
+          {
+            "id": "slider_bar_vertical_hover",
             "children": []
           }
         ]
