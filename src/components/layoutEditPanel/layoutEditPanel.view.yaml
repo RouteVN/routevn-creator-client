@@ -113,7 +113,7 @@ template:
 
   - rtgl-view h=1 w=f bgc=mu mv=lg:
 
-  - rvn-system-actions#system-actions .actions=values.actions  action-type="system":
+  - rvn-system-actions#system-actions .actions=actionsData  action-type="system":
 
   - rtgl-popover#popover-form ?open=${popover.open} placement=bottom x=${popover.x} y=${popover.y}:
       - $if popover.open:
