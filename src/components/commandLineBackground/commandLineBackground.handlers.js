@@ -166,9 +166,8 @@ export const handleFormInputChange = (deps, payload) => {
   }
 
   if (name === "loop") {
-    const loopValue = fieldValue === "true";
     store.setBackgroundLoop({
-      loop: loopValue,
+      loop: fieldValue,
     });
     render();
   }
