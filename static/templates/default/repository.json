@@ -17,6 +17,15 @@
         "type": "folder",
         "name": "UI"
       },
+      "options_black_bg_image": {
+        "type": "image",
+        "fileId": "options_black_bg",
+        "name": "options_black_bg",
+        "fileType": "image/png",
+        "fileSize": 8556,
+        "width": 1920,
+        "height": 1080
+      },
       "iN20__bg4TaS80gh7-XcL": {
         "type": "image",
         "fileId": "iXuoDMU56sb6F4x6xrNqa",
@@ -102,7 +111,12 @@
     "tree": [
       {
         "id": "zZO4u50ZEEt1WIugqEiW4",
-        "children": []
+        "children": [
+          {
+            "id": "options_black_bg_image",
+            "children": []
+          }
+        ]
       },
       {
         "id": "shxSevkwvVFxpzkMgDEgI",
@@ -713,6 +727,20 @@
         "layoutType": "normal",
         "elements": {
           "items": {
+            "title-background": {
+              "type": "sprite",
+              "name": "Background",
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "imageId": "options_black_bg_image"
+            },
             "title-text": {
               "type": "text",
               "name": "Title",
@@ -752,11 +780,6 @@
                 "fontSize": 44,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
-              },
               "click": {
                 "actionPayload": {
                   "actions": {
@@ -786,11 +809,6 @@
                 "fontSize": 44,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
-              },
               "click": {
                 "actionPayload": {
                   "actions": {
@@ -819,11 +837,6 @@
                 "fontSize": 44,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
-              },
               "click": {
                 "actionPayload": {
                   "actions": {
@@ -836,6 +849,9 @@
             }
           },
           "tree": [
+            {
+              "id": "title-background"
+            },
             {
               "id": "title-text"
             },
@@ -857,6 +873,20 @@
         "layoutType": "normal",
         "elements": {
           "items": {
+            "load-background": {
+              "type": "sprite",
+              "name": "Background",
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "imageId": "options_black_bg_image"
+            },
             "load-title": {
               "type": "text",
               "name": "Title",
@@ -895,11 +925,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
               }
             },
             "slot-2": {
@@ -919,11 +944,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
               }
             },
             "slot-3": {
@@ -943,11 +963,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
               }
             },
             "slot-4": {
@@ -967,11 +982,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
               }
             },
             "slot-5": {
@@ -991,11 +1001,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
               }
             },
             "slot-6": {
@@ -1015,11 +1020,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
               }
             },
             "load-back-button": {
@@ -1040,11 +1040,6 @@
                 "fontSize": 40,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
-              },
               "click": {
                 "actionPayload": {
                   "actions": {
@@ -1055,6 +1050,9 @@
             }
           },
           "tree": [
+            {
+              "id": "load-background"
+            },
             {
               "id": "load-title"
             },
@@ -1088,11 +1086,25 @@
         "layoutType": "normal",
         "elements": {
           "items": {
+            "options-background": {
+              "type": "sprite",
+              "name": "Background",
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "imageId": "options_black_bg_image"
+            },
             "options-title": {
               "type": "text",
               "name": "Title",
               "x": 960,
-              "y": 120,
+              "y": 80,
               "width": 600,
               "height": 80,
               "anchorX": 0.5,
@@ -1113,7 +1125,7 @@
               "type": "text",
               "name": "Audio Label",
               "x": 300,
-              "y": 280,
+              "y": 180,
               "width": 400,
               "height": 50,
               "anchorX": 0,
@@ -1133,7 +1145,7 @@
               "type": "text",
               "name": "BGM Volume Label",
               "x": 300,
-              "y": 370,
+              "y": 260,
               "width": 300,
               "height": 40,
               "anchorX": 0,
@@ -1152,7 +1164,7 @@
               "type": "text",
               "name": "BGM Decrease",
               "x": 700,
-              "y": 370,
+              "y": 260,
               "width": 80,
               "height": 50,
               "anchorX": 0.5,
@@ -1166,9 +1178,20 @@
                 "fontSize": 36,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsBgmDecrease",
+                      "operations": [
+                        {
+                          "variableId": "_musicVolume",
+                          "op": "decrement",
+                          "value": 100
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
@@ -1176,7 +1199,7 @@
               "type": "text",
               "name": "BGM Value",
               "x": 850,
-              "y": 370,
+              "y": 260,
               "width": 150,
               "height": 50,
               "anchorX": 0.5,
@@ -1184,7 +1207,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "50%",
+              "text": "${variables._musicVolume}",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1195,7 +1218,7 @@
               "type": "text",
               "name": "BGM Increase",
               "x": 1000,
-              "y": 370,
+              "y": 260,
               "width": 80,
               "height": 50,
               "anchorX": 0.5,
@@ -1209,9 +1232,20 @@
                 "fontSize": 36,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsBgmIncrease",
+                      "operations": [
+                        {
+                          "variableId": "_musicVolume",
+                          "op": "increment",
+                          "value": 100
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
@@ -1219,7 +1253,7 @@
               "type": "text",
               "name": "SFX Volume Label",
               "x": 300,
-              "y": 480,
+              "y": 340,
               "width": 300,
               "height": 40,
               "anchorX": 0,
@@ -1238,7 +1272,7 @@
               "type": "text",
               "name": "SFX Decrease",
               "x": 700,
-              "y": 480,
+              "y": 340,
               "width": 80,
               "height": 50,
               "anchorX": 0.5,
@@ -1252,9 +1286,20 @@
                 "fontSize": 36,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsSfxDecrease",
+                      "operations": [
+                        {
+                          "variableId": "_soundVolume",
+                          "op": "decrement",
+                          "value": 100
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
@@ -1262,7 +1307,7 @@
               "type": "text",
               "name": "SFX Value",
               "x": 850,
-              "y": 480,
+              "y": 340,
               "width": 150,
               "height": 50,
               "anchorX": 0.5,
@@ -1270,7 +1315,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "50%",
+              "text": "${variables._soundVolume}",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1281,7 +1326,7 @@
               "type": "text",
               "name": "SFX Increase",
               "x": 1000,
-              "y": 480,
+              "y": 340,
               "width": 80,
               "height": 50,
               "anchorX": 0.5,
@@ -1295,9 +1340,73 @@
                 "fontSize": 36,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsSfxIncrease",
+                      "operations": [
+                        {
+                          "variableId": "_soundVolume",
+                          "op": "increment",
+                          "value": 100
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "mute-label": {
+              "type": "text",
+              "name": "Mute All Label",
+              "x": 300,
+              "y": 420,
+              "width": 300,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Mute All",
+              "style": {
+                "align": "left",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "mute-toggle": {
+              "type": "text",
+              "name": "Mute All Toggle",
+              "x": 850,
+              "y": 420,
+              "width": 200,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "${variables._muteAll}",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsMuteToggle",
+                      "operations": [
+                        {
+                          "variableId": "_muteAll",
+                          "op": "toggle"
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
@@ -1305,7 +1414,7 @@
               "type": "text",
               "name": "Text Display Label",
               "x": 300,
-              "y": 620,
+              "y": 520,
               "width": 400,
               "height": 50,
               "anchorX": 0,
@@ -1325,7 +1434,7 @@
               "type": "text",
               "name": "Text Speed Label",
               "x": 300,
-              "y": 710,
+              "y": 600,
               "width": 300,
               "height": 40,
               "anchorX": 0,
@@ -1344,7 +1453,7 @@
               "type": "text",
               "name": "Speed Decrease",
               "x": 700,
-              "y": 710,
+              "y": 600,
               "width": 80,
               "height": 50,
               "anchorX": 0.5,
@@ -1358,9 +1467,20 @@
                 "fontSize": 36,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsSpeedDecrease",
+                      "operations": [
+                        {
+                          "variableId": "_textSpeed",
+                          "op": "decrement",
+                          "value": 10
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
@@ -1368,7 +1488,7 @@
               "type": "text",
               "name": "Speed Value",
               "x": 850,
-              "y": 710,
+              "y": 600,
               "width": 150,
               "height": 50,
               "anchorX": 0.5,
@@ -1376,7 +1496,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "50",
+              "text": "${variables._textSpeed}",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1387,7 +1507,7 @@
               "type": "text",
               "name": "Speed Increase",
               "x": 1000,
-              "y": 710,
+              "y": 600,
               "width": 80,
               "height": 50,
               "anchorX": 0.5,
@@ -1401,17 +1521,28 @@
                 "fontSize": 36,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsSpeedIncrease",
+                      "operations": [
+                        {
+                          "variableId": "_textSpeed",
+                          "op": "increment",
+                          "value": 10
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
-            "auto-mode-label": {
+            "auto-forward-label": {
               "type": "text",
-              "name": "Auto Mode Label",
+              "name": "Auto Forward Time Label",
               "x": 300,
-              "y": 820,
+              "y": 680,
               "width": 300,
               "height": 40,
               "anchorX": 0,
@@ -1419,18 +1550,146 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "Auto Mode",
+              "text": "Auto Forward Time",
               "style": {
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
               }
             },
-            "auto-toggle": {
+            "auto-decrease": {
               "type": "text",
-              "name": "Auto Mode Toggle",
+              "name": "Auto Decrease",
+              "x": 700,
+              "y": 680,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "◀",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsAutoDecrease",
+                      "operations": [
+                        {
+                          "variableId": "_autoForwardTime",
+                          "op": "decrement",
+                          "value": 250
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "auto-value": {
+              "type": "text",
+              "name": "Auto Value",
               "x": 850,
-              "y": 820,
+              "y": 680,
+              "width": 150,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "${variables._autoForwardTime}ms",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "auto-increase": {
+              "type": "text",
+              "name": "Auto Increase",
+              "x": 1000,
+              "y": 680,
+              "width": 80,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "▶",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsAutoIncrease",
+                      "operations": [
+                        {
+                          "variableId": "_autoForwardTime",
+                          "op": "increment",
+                          "value": 250
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "skip-label": {
+              "type": "text",
+              "name": "Skip Settings Label",
+              "x": 300,
+              "y": 780,
+              "width": 400,
+              "height": 50,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "SKIP SETTINGS",
+              "style": {
+                "align": "left",
+                "fontSize": 48,
+                "fontWeight": "bold",
+                "fill": "#ffcc00"
+              }
+            },
+            "skip-unseen-label": {
+              "type": "text",
+              "name": "Skip Unseen Text Label",
+              "x": 300,
+              "y": 860,
+              "width": 300,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Skip Unseen Text",
+              "style": {
+                "align": "left",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "skip-unseen-toggle": {
+              "type": "text",
+              "name": "Skip Unseen Toggle",
+              "x": 850,
+              "y": 860,
               "width": 200,
               "height": 50,
               "anchorX": 0.5,
@@ -1438,15 +1697,78 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "OFF",
+              "text": "${variables._skipUnseenText}",
               "style": {
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsSkipUnseen",
+                      "operations": [
+                        {
+                          "variableId": "_skipUnseenText",
+                          "op": "toggle"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "skip-transitions-label": {
+              "type": "text",
+              "name": "Skip Transitions Label",
+              "x": 300,
+              "y": 940,
+              "width": 350,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Skip Transitions",
+              "style": {
+                "align": "left",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              }
+            },
+            "skip-transitions-toggle": {
+              "type": "text",
+              "name": "Skip Transitions Toggle",
+              "x": 850,
+              "y": 940,
+              "width": 200,
+              "height": 50,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "${variables._skipTransitionsAndAnimations}",
+              "style": {
+                "align": "center",
+                "fontSize": 36,
+                "fill": "#ffffff"
+              },
+              "click": {
+                "actionPayload": {
+                  "actions": {
+                    "updateVariable": {
+                      "id": "optionsSkipTransitions",
+                      "operations": [
+                        {
+                          "variableId": "_skipTransitionsAndAnimations",
+                          "op": "toggle"
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
@@ -1454,7 +1776,7 @@
               "type": "text",
               "name": "Back Button",
               "x": 960,
-              "y": 970,
+              "y": 1020,
               "width": 200,
               "height": 60,
               "anchorX": 0.5,
@@ -1468,11 +1790,6 @@
                 "fontSize": 40,
                 "fill": "#ffffff"
               },
-              "hover": {
-                "style": {
-                  "fill": "#ffcc00"
-                }
-              },
               "click": {
                 "actionPayload": {
                   "actions": {
@@ -1483,6 +1800,9 @@
             }
           },
           "tree": [
+            {
+              "id": "options-background"
+            },
             {
               "id": "options-title"
             },
@@ -1514,6 +1834,12 @@
               "id": "sfx-increase"
             },
             {
+              "id": "mute-label"
+            },
+            {
+              "id": "mute-toggle"
+            },
+            {
               "id": "text-label"
             },
             {
@@ -1529,10 +1855,31 @@
               "id": "speed-increase"
             },
             {
-              "id": "auto-mode-label"
+              "id": "auto-forward-label"
             },
             {
-              "id": "auto-toggle"
+              "id": "auto-decrease"
+            },
+            {
+              "id": "auto-value"
+            },
+            {
+              "id": "auto-increase"
+            },
+            {
+              "id": "skip-label"
+            },
+            {
+              "id": "skip-unseen-label"
+            },
+            {
+              "id": "skip-unseen-toggle"
+            },
+            {
+              "id": "skip-transitions-label"
+            },
+            {
+              "id": "skip-transitions-toggle"
             },
             {
               "id": "options-back-button"
