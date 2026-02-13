@@ -45,6 +45,8 @@ viewDataSchema:
               type: string
             tween:
               type: string
+            loop:
+              type: boolean
 
 propsSchema:
   type: object
@@ -62,6 +64,8 @@ propsSchema:
           properties:
             in:
               type: string
+        loop:
+          type: boolean
 
 refs:
   rvn-image-selector:
