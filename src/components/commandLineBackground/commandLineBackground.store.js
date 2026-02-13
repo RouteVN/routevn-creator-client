@@ -28,6 +28,7 @@ export const createInitialState = () => ({
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
   selectedTweenId: undefined,
+  backgroundLoop: false,
   pendingResourceId: undefined,
 });
 
@@ -80,6 +81,14 @@ export const setSelectedTween = (state, payload) => {
 
 export const selectSelectedTween = ({ state }) => {
   return state.selectedTweenId;
+};
+
+export const setBackgroundLoop = (state, payload) => {
+  state.backgroundLoop = payload.loop;
+};
+
+export const selectBackgroundLoop = ({ state }) => {
+  return state.backgroundLoop;
 };
 
 export const selectTab = ({ state }) => {
@@ -200,25 +209,41 @@ export const selectViewData = ({ state }) => {
   // Add a "None" option at the beginning
   tweenOptions.unshift({ value: "none", label: "None" });
 
+  const formFields = [
+    {
+      inputType: "slot",
+      slot: "background",
+      description: "Background",
+    },
+  ];
+
+  if (selectedResource?.resourceType === "video") {
+    formFields.push({
+      name: "loop",
+      label: "Loop Video",
+      inputType: "select",
+      options: [
+        { value: true, label: "Loop" },
+        { value: false, label: "Don't Loop" },
+      ],
+    });
+  }
+
+  formFields.push({
+    name: "tween",
+    label: "Tween Animation",
+    inputType: "select",
+    options: tweenOptions,
+  });
+
   const form = {
-    fields: [
-      {
-        inputType: "slot",
-        slot: "background",
-        description: "Background",
-      },
-      {
-        name: "tween",
-        label: "Tween Animation",
-        inputType: "select",
-        options: tweenOptions,
-      },
-    ],
+    fields: formFields,
   };
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
     tween: state.selectedTweenId,
+    loop: state.backgroundLoop ?? false,
   };
 
   return {

@@ -7,7 +7,11 @@ export const handleBeforeMount = (deps) => {
     return;
   }
 
-  const { resourceId, animations: backgroundAnimations } = props.background;
+  const {
+    resourceId,
+    animations: backgroundAnimations,
+    loop: backgroundLoop,
+  } = props.background;
 
   if (!resourceId) {
     return;
@@ -15,6 +19,12 @@ export const handleBeforeMount = (deps) => {
 
   // Store resourceId temporarily - resourceType will be determined in handleAfterMount
   store.setPendingResourceId(resourceId);
+
+  if (backgroundLoop !== undefined) {
+    store.setBackgroundLoop({
+      loop: backgroundLoop,
+    });
+  }
 
   // Set the selected tween if it exists
   if (backgroundAnimations?.in) {
@@ -104,6 +114,9 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
       resourceId: undefined,
       resourceType: undefined,
     });
+    store.setBackgroundLoop({
+      loop: false,
+    });
 
     render();
   }
@@ -149,6 +162,14 @@ export const handleFormInputChange = (deps, payload) => {
       tweenId: fieldValue,
     });
     render();
+    return;
+  }
+
+  if (name === "loop") {
+    store.setBackgroundLoop({
+      loop: fieldValue,
+    });
+    render();
   }
 };
 
@@ -181,10 +202,15 @@ export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
   const selectedTweenId = store.selectSelectedTween();
+  const backgroundLoop = store.selectBackgroundLoop();
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
   };
+
+  if (selectedResource?.resourceType === "video") {
+    backgroundData.loop = backgroundLoop ?? false;
+  }
 
   // Only add animations object if there's a valid tween selected
   if (selectedTweenId && selectedTweenId !== "none") {
