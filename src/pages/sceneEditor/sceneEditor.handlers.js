@@ -1237,6 +1237,9 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   } else if (actionType === "background") {
     // Clear background by setting without resourceId
     newActions.background = {};
+  } else if (actionType === "base") {
+    // Clear base by setting without resourceId
+    newActions.base = {};
   } else {
     // For non-inherited actions, delete as before
     delete newActions[actionType];
