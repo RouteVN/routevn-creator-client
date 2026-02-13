@@ -1219,14 +1219,29 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   const { actionType } = payload._event.detail;
   // Get current selected line
   const selectedLine = store.selectSelectedLine();
-  if (!selectedLine || !selectedLine.actions) {
+  if (!selectedLine) {
     return;
   }
-  // Create a new actions object without the action to delete
-  const newActions = structuredClone(selectedLine.actions);
+  // Create a new actions object with the action cleared
+  // For inherited actions (visual, character, background), we set a "clear" value
+  // to override inherited state. For non-inherited actions, we delete the key.
+  const newActions = structuredClone(selectedLine.actions || {});
   if (actionType === "dialogue") {
-    newActions[actionType].clear = true;
+    newActions.dialogue = { clear: true };
+  } else if (actionType === "visual") {
+    // Clear visual by setting empty items array
+    newActions.visual = { items: [] };
+  } else if (actionType === "character") {
+    // Clear characters by setting empty items array
+    newActions.character = { items: [] };
+  } else if (actionType === "background") {
+    // Clear background by setting without resourceId
+    newActions.background = {};
+  } else if (actionType === "base") {
+    // Clear base by setting without resourceId
+    newActions.base = {};
   } else {
+    // For non-inherited actions, delete as before
     delete newActions[actionType];
   }
   // Create updated line object
