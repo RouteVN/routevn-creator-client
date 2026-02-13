@@ -227,7 +227,7 @@ const config = {
           items: [
             {
               name: "barImageId",
-              label: "Idle",
+              label: "Default",
               imageId: "${values.barImageId}",
             },
             {
@@ -249,7 +249,7 @@ const config = {
           items: [
             {
               name: "thumbImageId",
-              label: "Idle",
+              label: "Default",
               imageId: "${values.thumbImageId}",
             },
             {
@@ -257,22 +257,6 @@ const config = {
               label: "Hover",
               imageId: "${values.hoverThumbImageId}",
             },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "slider"',
-      label: "Slider Direction",
-      items: [
-        {
-          type: "select",
-          label: "Direction",
-          name: "direction",
-          value: "${values.direction}",
-          options: [
-            { label: "Horizontal", value: "horizontal" },
-            { label: "Vertical", value: "vertical" },
           ],
         },
       ],
