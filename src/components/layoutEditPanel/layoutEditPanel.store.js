@@ -734,6 +734,7 @@ export const selectViewData = ({ state, attrs }) => {
   return {
     actionsDialogOpen: state.actionsDialogOpen,
     values: state.values,
+    actionsData: state.values?.click?.actionPayload?.actions || {},
     config: finalConfig,
     popover: state.popover,
     imageSelectorDialog: state.imageSelectorDialog,
