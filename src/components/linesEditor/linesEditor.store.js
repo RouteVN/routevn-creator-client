@@ -165,6 +165,14 @@ export const selectViewData = ({ state, props }) => {
       sfxChangeType = changes.sfx.changeType;
     }
 
+    // Process Set Next Line Config changes
+    let hasSetNextLineConfig = false;
+    let setNextLineConfigChangeType;
+    if (changes.setNextLineConfig) {
+      hasSetNextLineConfig = true;
+      setNextLineConfigChangeType = changes.setNextLineConfig.changeType;
+    }
+
     // Process dialogue layout changes
     let hasDialogueLayout = false;
     let dialogueChangeType;
@@ -236,6 +244,13 @@ export const selectViewData = ({ state, props }) => {
       choices = choicesData.items;
     }
 
+    if (
+      line.actions?.setNextLineConfig ||
+      line.actions?.actions?.setNextLineConfig
+    ) {
+      hasSetNextLineConfig = true;
+    }
+
     return {
       ...line,
       lineNumber: i + 1,
@@ -252,6 +267,8 @@ export const selectViewData = ({ state, props }) => {
       choices,
       hasSfx,
       sfxChangeType,
+      hasSetNextLineConfig,
+      setNextLineConfigChangeType,
       hasDialogueLayout,
       dialogueChangeType,
       hasBase,

@@ -1,5 +1,6 @@
 export const createInitialState = () => ({
   defaultValues: {
+    applyMode: "singleLine",
     manualEnabled: true,
     // manualRequireLineCompleted: false, // Not yet implemented in route-engine
     autoEnabled: false,
@@ -9,6 +10,21 @@ export const createInitialState = () => ({
 
   form: {
     fields: [
+      {
+        name: "applyMode",
+        inputType: "select",
+        label: "Apply Mode",
+        description: "",
+        required: false,
+        tooltip: {
+          content:
+            "Single Line applies only to the next line. Persistent keeps this config active until changed",
+        },
+        options: [
+          { value: "singleLine", label: "Single Line" },
+          { value: "persistent", label: "Persistent" },
+        ],
+      },
       {
         name: "manualEnabled",
         inputType: "select",

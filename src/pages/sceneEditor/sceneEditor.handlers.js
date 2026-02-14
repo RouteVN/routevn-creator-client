@@ -3,6 +3,65 @@ import { toFlatItems } from "insieme";
 import { extractFileIdsFromRenderState } from "../../utils/index.js";
 import { filter, tap, debounceTime } from "rxjs";
 
+const findNonCloneablePaths = (root, limit = 5) => {
+  const paths = [];
+  const queue = [{ value: root, path: "$" }];
+  const visited = new WeakSet();
+
+  const isWindowLike = (value) =>
+    typeof window !== "undefined" && value === window;
+  const isNodeLike = (value) =>
+    typeof Node !== "undefined" && value instanceof Node;
+  const isEventLike = (value) =>
+    typeof Event !== "undefined" && value instanceof Event;
+
+  while (queue.length > 0 && paths.length < limit) {
+    const { value, path } = queue.shift();
+
+    if (!value || typeof value !== "object") {
+      continue;
+    }
+
+    if (isWindowLike(value) || isNodeLike(value) || isEventLike(value)) {
+      paths.push(path);
+      continue;
+    }
+
+    if (visited.has(value)) {
+      continue;
+    }
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        queue.push({ value: item, path: `${path}[${index}]` });
+      });
+      continue;
+    }
+
+    Object.entries(value).forEach(([key, item]) => {
+      queue.push({ value: item, path: `${path}.${key}` });
+    });
+  }
+
+  return paths;
+};
+
+const cloneWithDiagnostics = (value, label) => {
+  try {
+    return structuredClone(value);
+  } catch (error) {
+    if (error?.name === "DataCloneError") {
+      const paths = findNonCloneablePaths(value);
+      console.error(
+        `[sceneEditor] Non-cloneable data in ${label}. Possible paths:`,
+        paths.length > 0 ? paths : ["(path not detected)"],
+      );
+    }
+    throw error;
+  }
+};
+
 // Helper function to create assets object from file references
 async function createAssetsFromFileIds(
   fileReferences,
@@ -58,12 +117,16 @@ async function createAssetsFromFileIds(
 async function renderSceneState(store, graphicsService, payload = {}) {
   const { skipAnimations = false } = payload;
   const projectData = store.selectProjectData();
+  const safeProjectData = cloneWithDiagnostics(
+    projectData,
+    "projectData passed to updateProjectData",
+  );
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
   const isMuted = store.selectIsMuted();
   graphicsService.engineHandleActions({
     updateProjectData: {
-      projectData,
+      projectData: safeProjectData,
     },
     jumpToLine: {
       sectionId,
@@ -87,6 +150,28 @@ async function renderSceneState(store, graphicsService, payload = {}) {
   // Update presentation state after rendering
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState(presentationState);
+}
+
+function createProjectDataWithSelectedEntryPoint(projectData, selection) {
+  const { sceneId, sectionId, lineId } = selection;
+  const projectDataWithSelection = structuredClone(projectData);
+
+  if (!sceneId || !projectDataWithSelection?.story?.scenes?.[sceneId]) {
+    return projectDataWithSelection;
+  }
+
+  projectDataWithSelection.story.initialSceneId = sceneId;
+  const selectedScene = projectDataWithSelection.story.scenes[sceneId];
+
+  if (sectionId && selectedScene.sections?.[sectionId]) {
+    selectedScene.initialSectionId = sectionId;
+
+    if (lineId) {
+      selectedScene.sections[sectionId].initialLineId = lineId;
+    }
+  }
+
+  return projectDataWithSelection;
 }
 
 // Shared helper to write dialogue content to repository
@@ -149,6 +234,7 @@ export const handleAfterMount = async (deps) => {
     projectService,
     appService,
     render,
+    subject,
   } = deps;
 
   // Ensure repository is loaded for sync access
@@ -188,8 +274,16 @@ export const handleAfterMount = async (deps) => {
 
   await graphicsService.init({ canvas: canvas.elm });
   const projectData = store.selectProjectData();
+  const initialProjectData = createProjectDataWithSelectedEntryPoint(
+    projectData,
+    {
+      sceneId,
+      sectionId: store.selectSelectedSectionId(),
+      lineId: store.selectSelectedLineId(),
+    },
+  );
 
-  graphicsService.initRouteEngine(projectData);
+  graphicsService.initRouteEngine(initialProjectData);
   // TODO don't load all data... only ones necessary for this scene
   const fileReferences = extractFileIdsFromRenderState(projectData);
   const assets = await createAssetsFromFileIds(
@@ -198,12 +292,11 @@ export const handleAfterMount = async (deps) => {
     projectData.resources,
   );
   await graphicsService.loadAssets(assets);
-  // don't know why but it needs to be called twice the first time to work...
-  renderSceneState(store, graphicsService);
-
-  await updateSectionChanges(deps);
 
   render();
+  setTimeout(() => {
+    subject.dispatch("sceneEditor.renderCanvas", {});
+  }, 1000);
 };
 
 export const handleSectionTabClick = async (deps, payload) => {
@@ -225,7 +318,8 @@ export const handleSectionTabClick = async (deps, payload) => {
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
-  const { store, render, projectService, subject, graphicsService } = deps;
+  const { store, render, projectService, subject, graphicsService, appService } =
+    deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -237,11 +331,24 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
+    let safeDetail;
+    try {
+      safeDetail = cloneWithDiagnostics(
+        payload._event.detail,
+        "command line submit detail (sectionTransition)",
+      );
+    } catch {
+      appService?.showToast("Invalid action payload (non-serializable data)", {
+        title: "Error",
+      });
+      return;
+    }
+
     await projectService.appendEvent({
       type: "set",
       payload: {
         target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: payload._event.detail,
+        value: safeDetail,
         options: {
           replace: false,
         },
@@ -266,11 +373,24 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
+    let safeDetail;
+    try {
+      safeDetail = cloneWithDiagnostics(
+        payload._event.detail,
+        "command line submit detail (pushLayeredView)",
+      );
+    } catch {
+      appService?.showToast("Invalid action payload (non-serializable data)", {
+        title: "Error",
+      });
+      return;
+    }
+
     await projectService.appendEvent({
       type: "set",
       payload: {
         target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: payload._event.detail,
+        value: safeDetail,
         options: {
           replace: false,
         },
@@ -295,11 +415,24 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
+    let safeDetail;
+    try {
+      safeDetail = cloneWithDiagnostics(
+        payload._event.detail,
+        "command line submit detail (popLayeredView)",
+      );
+    } catch {
+      appService?.showToast("Invalid action payload (non-serializable data)", {
+        title: "Error",
+      });
+      return;
+    }
+
     await projectService.appendEvent({
       type: "set",
       payload: {
         target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: payload._event.detail,
+        value: safeDetail,
         options: {
           replace: false,
         },
@@ -337,6 +470,18 @@ export const handleCommandLineSubmit = async (deps, payload) => {
         },
       };
     }
+  }
+
+  try {
+    submissionData = cloneWithDiagnostics(
+      submissionData,
+      "command line submit detail (general)",
+    );
+  } catch {
+    appService?.showToast("Invalid action payload (non-serializable data)", {
+      title: "Error",
+    });
+    return;
   }
 
   await projectService.appendEvent({
@@ -1171,7 +1316,15 @@ export const handleHidePreviewScene = async (deps) => {
   await graphicsService.init({ canvas: canvas.elm });
 
   const projectData = store.selectProjectData();
-  graphicsService.initRouteEngine(projectData);
+  const initialProjectData = createProjectDataWithSelectedEntryPoint(
+    projectData,
+    {
+      sceneId: store.selectSceneId(),
+      sectionId: store.selectSelectedSectionId(),
+      lineId: store.selectSelectedLineId(),
+    },
+  );
+  graphicsService.initRouteEngine(initialProjectData);
 
   await renderSceneState(store, graphicsService);
 };
