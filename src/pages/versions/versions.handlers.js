@@ -1,5 +1,9 @@
 import { nanoid } from "nanoid";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
+import {
+  buildFilteredStateForExport,
+  collectUsedResourcesForExport,
+} from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, projectService, appService } = deps;
@@ -119,46 +123,24 @@ export const handleDownloadZipClick = async (deps, payload) => {
   // Get state at specific action
   const projectData = repository.getState(version.actionIndex);
 
-  // Transform projectData to the required format
-  const constructedProjectData = constructProjectData(projectData);
+  const usage = collectUsedResourcesForExport(projectData);
+  const filteredState = buildFilteredStateForExport(projectData, usage);
+
+  // Transform filtered project data to the required format
+  const constructedProjectData = constructProjectData(filteredState);
   const transformedData = {
     projectData: constructedProjectData,
   };
-
-  // Collect all fileIds from original project data
-  const fileIds = [];
-  const extractFileIds = (obj) => {
-    if (obj.fileId) fileIds.push(obj.fileId);
-    if (obj.iconFileId) fileIds.push(obj.iconFileId);
-    Object.values(obj).forEach((value) => {
-      if (typeof value === "object" && value !== null) extractFileIds(value);
-    });
-  };
-  extractFileIds(projectData);
-
-  // Fetch files as buffers
-  const files = {};
-  for (const fileId of fileIds) {
-    try {
-      const content = await projectService.getFileContent(fileId);
-      const response = await fetch(content.url);
-      const buffer = await response.arrayBuffer();
-      files[fileId] = {
-        buffer: new Uint8Array(buffer),
-        mime: content.type,
-      };
-    } catch (error) {
-      console.warn(`Failed to fetch file ${fileId}:`, error);
-    }
-  }
-
-  // Create bundle with transformed data
-  const bundle = await projectService.exportProject(transformedData, files);
+  const fileIds = usage.fileIds;
   const zipName = `${projectData.project.name}_${version.name}`;
 
-  // Create and download ZIP with bundle and static files using save dialog
+  // Create and download ZIP with streamed bundle creation
   try {
-    await projectService.createDistributionZip(bundle, zipName);
+    await projectService.createDistributionZipStreamed(
+      transformedData,
+      fileIds,
+      zipName,
+    );
     appService.closeAll();
   } catch (error) {
     console.error("Error saving ZIP with dialog:", error);

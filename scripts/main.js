@@ -1,7 +1,5 @@
 import { fileTypeFromBuffer } from "file-type";
-import createRouteEngine, {
-  createEffectsHandler,
-} from "route-engine-js";
+import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 
 import createRouteGraphics, {
@@ -66,7 +64,44 @@ async function parseVNBundle(arrayBuffer) {
   return { assets, instructions };
 }
 
-const init = async () => {
+const hideLoadingOverlay = () => {
+  const loadingElement = document.getElementById("loading");
+  if (loadingElement) {
+    loadingElement.classList.add("hidden");
+  }
+};
+
+const setLoadingText = (text) => {
+  const loadingElement = document.getElementById("loading");
+  if (loadingElement) {
+    loadingElement.textContent = text;
+  }
+};
+
+const setLoadingReadyForClick = () => {
+  const loadingElement = document.getElementById("loading");
+  if (loadingElement) {
+    loadingElement.textContent = "Click to start";
+    loadingElement.classList.add("ready");
+  }
+};
+
+const waitForClickToStart = async () => {
+  const loadingElement = document.getElementById("loading");
+  if (!loadingElement) return;
+
+  await new Promise((resolve) => {
+    const handleClick = () => {
+      loadingElement.removeEventListener("click", handleClick);
+      loadingElement.classList.remove("ready");
+      resolve();
+    };
+
+    loadingElement.addEventListener("click", handleClick);
+  });
+};
+
+const preloadBundleData = async () => {
   const response = await fetch("./package.bin");
   if (!response.ok)
     throw new Error(`Failed to fetch BIN bundle: ${response.statusText}`);
@@ -76,13 +111,16 @@ const init = async () => {
     ...vnbundleInstructions.projectData,
   };
 
-
   const assets = vnbundleAssets;
 
   const assetBufferManager = createAssetBufferManager();
   await assetBufferManager.load(assets);
   const assetBufferMap = assetBufferManager.getBufferMap();
 
+  return { jsonData, assetBufferMap };
+};
+
+const initEngine = async ({ jsonData, assetBufferMap }) => {
   const plugins = {
     elements: [
       textPlugin,
@@ -174,6 +212,20 @@ const init = async () => {
     },
   });
 
+  hideLoadingOverlay();
 };
 
-await init();
+const bootstrap = async () => {
+  try {
+    const preloadedData = await preloadBundleData();
+    setLoadingReadyForClick();
+    await waitForClickToStart();
+    setLoadingText("Starting...");
+    await initEngine(preloadedData);
+  } catch (error) {
+    console.error("Failed to start bundle player:", error);
+    setLoadingText("Failed to load");
+  }
+};
+
+await bootstrap();

@@ -1,6 +1,6 @@
 import { mkdir, writeFile, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
 import { createRepository } from "insieme";
@@ -237,6 +237,27 @@ export const createProjectService = ({ router, db, filePicker }) => {
   const getFilesPath = async () => {
     const projectPath = await getCurrentProjectPath();
     return await join(projectPath, "files");
+  };
+
+  const getBundleStaticFiles = async () => {
+    let indexHtml = null;
+    let mainJs = null;
+
+    try {
+      const indexResponse = await fetch("/bundle/index.html");
+      if (indexResponse.ok) {
+        indexHtml = await indexResponse.text();
+      }
+
+      const mainJsResponse = await fetch("/bundle/main.js");
+      if (mainJsResponse.ok) {
+        mainJs = await mainJsResponse.text();
+      }
+    } catch (error) {
+      console.error("Failed to fetch static bundle files:", error);
+    }
+
+    return { indexHtml, mainJs };
   };
 
   const storeFile = async (file) => {
@@ -554,17 +575,9 @@ export const createProjectService = ({ router, db, filePicker }) => {
         const zip = new JSZip();
         zip.file("package.bin", bundle);
 
-        try {
-          const indexResponse = await fetch("/bundle/index.html");
-          const indexContent = await indexResponse.text();
-          zip.file("index.html", indexContent);
-
-          const mainJsResponse = await fetch("/bundle/main.js");
-          const mainJsContent = await mainJsResponse.text();
-          zip.file("main.js", mainJsContent);
-        } catch (error) {
-          console.error("Failed to fetch static bundle files:", error);
-        }
+        const { indexHtml, mainJs } = await getBundleStaticFiles();
+        if (indexHtml) zip.file("index.html", indexHtml);
+        if (mainJs) zip.file("main.js", mainJs);
 
         const zipBlob = await zip.generateAsync({ type: "uint8array" });
 
@@ -581,6 +594,69 @@ export const createProjectService = ({ router, db, filePicker }) => {
         return null;
       } catch (error) {
         console.error("Error saving distribution ZIP with dialog:", error);
+        throw error;
+      }
+    },
+
+    async createDistributionZipStreamed(
+      projectData,
+      fileIds,
+      zipName,
+      options = {},
+    ) {
+      try {
+        const selectedPath = await filePicker.saveFilePicker({
+          title: options.title || "Save Distribution ZIP",
+          defaultPath: `${zipName}.zip`,
+          filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+        });
+
+        if (!selectedPath) {
+          return null;
+        }
+
+        const filesPath = await getFilesPath();
+        const uniqueFileIds = [];
+        const seenFileIds = new Set();
+
+        for (const fileId of fileIds || []) {
+          if (!fileId || seenFileIds.has(fileId)) continue;
+          seenFileIds.add(fileId);
+          uniqueFileIds.push(fileId);
+        }
+
+        const assets = [];
+        for (const fileId of uniqueFileIds) {
+          const filePath = await join(filesPath, fileId);
+          const fileExists = await exists(filePath);
+          if (!fileExists) {
+            console.warn(`Skipping missing file during export: ${fileId}`);
+            continue;
+          }
+          assets.push({
+            id: fileId,
+            path: filePath,
+            mime: "application/octet-stream",
+          });
+        }
+
+        const { indexHtml, mainJs } = await getBundleStaticFiles();
+
+        await invoke("create_distribution_zip_streamed", {
+          outputPath: selectedPath,
+          assets,
+          instructionsJson: JSON.stringify(projectData),
+          indexHtml,
+          mainJs,
+          usePartFile: options.usePartFile ?? true,
+        });
+
+        return selectedPath;
+      } catch (error) {
+        console.error(
+          "Error saving streamed distribution ZIP with dialog:",
+          error,
+        );
         throw error;
       }
     },

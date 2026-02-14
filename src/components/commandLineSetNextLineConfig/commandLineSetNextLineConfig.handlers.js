@@ -4,6 +4,7 @@ export const handleBeforeMount = (deps) => {
   if (props?.setNextLineConfig) {
     const config = props.setNextLineConfig;
     store.setDefaultValues({
+      applyMode: config.applyMode ?? "singleLine",
       manualEnabled: config.manual?.enabled ?? true,
       manualRequireLineCompleted: config.manual?.requireLineCompleted ?? false,
       autoEnabled: config.auto?.enabled ?? false,
@@ -29,6 +30,7 @@ export const handleSubmitClick = (deps) => {
   const delay = parseInt(defaultValues.autoDelay, 10) || 1000;
 
   const setNextLineConfig = {
+    applyMode: defaultValues.applyMode ?? "singleLine",
     manual: {
       enabled: defaultValues.manualEnabled,
       requireLineCompleted: defaultValues.manualRequireLineCompleted,

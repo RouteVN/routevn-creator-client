@@ -1,6 +1,8 @@
 #[cfg(debug_assertions)]
 use tauri::Manager;
 
+mod export_zip;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Enable WebKit inspector for WSL
@@ -19,6 +21,9 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_persisted_scope::init())
+        .invoke_handler(tauri::generate_handler![
+            export_zip::create_distribution_zip_streamed
+        ])
         .setup(|_app| {
             #[cfg(debug_assertions)]
             if let Some(window) = _app.get_webview_window("main") {

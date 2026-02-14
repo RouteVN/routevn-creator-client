@@ -138,3 +138,9 @@ template:
                                   - $if line.sfxChangeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
                                           - rtgl-svg svg=x wh=16 c=white:
+                          - $if line.hasSetNextLineConfig:
+                              - rtgl-view#preview-setNextLineConfig data-type="setNextLineConfig" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
+                                  - rtgl-svg svg="settings" wh=24:
+                                  - $if line.setNextLineConfigChangeType == "delete":
+                                      - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
+                                          - rtgl-svg svg=x wh=16 c=white:
