@@ -11,7 +11,7 @@ import createRouteGraphics, {
   soundPlugin,
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
-import { Ticker } from "https://cdn.jsdelivr.net/npm/pixi.js@8.0.0/+esm";
+import { Ticker } from "pixi.js";
 
 export const createGraphicsService = async ({ subject }) => {
   let routeGraphics;
