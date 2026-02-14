@@ -318,8 +318,14 @@ export const handleSectionTabClick = async (deps, payload) => {
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
-  const { store, render, projectService, subject, graphicsService, appService } =
-    deps;
+  const {
+    store,
+    render,
+    projectService,
+    subject,
+    graphicsService,
+    appService,
+  } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
