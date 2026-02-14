@@ -36,12 +36,6 @@ const SYSTEM_ACTIONS = [
     icon: "layers",
     mode: "popLayeredView",
   },
-  {
-    id: "17",
-    label: "Update Variable",
-    icon: "variable",
-    mode: "updateVariable",
-  },
 ];
 
 const PRESENTATION_ACTIONS = [
@@ -80,12 +74,6 @@ const PRESENTATION_ACTIONS = [
     label: "Visuals",
     icon: "image",
     mode: "visual",
-  },
-  {
-    id: "9",
-    label: "Next Line Config",
-    icon: "settings",
-    mode: "setNextLineConfig",
   },
   {
     id: "3",
