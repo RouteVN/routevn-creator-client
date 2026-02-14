@@ -1,7 +1,5 @@
 import { fileTypeFromBuffer } from "file-type";
-import createRouteEngine, {
-  createEffectsHandler,
-} from "route-engine-js";
+import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 
 import createRouteGraphics, {
@@ -66,6 +64,13 @@ async function parseVNBundle(arrayBuffer) {
   return { assets, instructions };
 }
 
+const hideLoadingOverlay = () => {
+  const loadingElement = document.getElementById("loading");
+  if (loadingElement) {
+    loadingElement.classList.add("hidden");
+  }
+};
+
 const init = async () => {
   const response = await fetch("./package.bin");
   if (!response.ok)
@@ -75,7 +80,6 @@ const init = async () => {
   const jsonData = {
     ...vnbundleInstructions.projectData,
   };
-
 
   const assets = vnbundleAssets;
 
@@ -174,6 +178,7 @@ const init = async () => {
     },
   });
 
+  hideLoadingOverlay();
 };
 
 await init();
