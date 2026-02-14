@@ -165,9 +165,6 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
-  // Combine images, videos, and layouts for resource selection
-  const allResources = [];
-
   // Add images
   const imageGroups = toFlatGroups(state.images).map((group) => ({
     ...group,
