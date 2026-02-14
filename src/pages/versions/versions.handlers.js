@@ -1,5 +1,9 @@
 import { nanoid } from "nanoid";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
+import {
+  buildFilteredStateForExport,
+  collectUsedResourcesForExport,
+} from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, projectService, appService } = deps;
@@ -119,22 +123,15 @@ export const handleDownloadZipClick = async (deps, payload) => {
   // Get state at specific action
   const projectData = repository.getState(version.actionIndex);
 
-  // Transform projectData to the required format
-  const constructedProjectData = constructProjectData(projectData);
+  const usage = collectUsedResourcesForExport(projectData);
+  const filteredState = buildFilteredStateForExport(projectData, usage);
+
+  // Transform filtered project data to the required format
+  const constructedProjectData = constructProjectData(filteredState);
   const transformedData = {
     projectData: constructedProjectData,
   };
-
-  // Collect all fileIds from original project data
-  const fileIds = [];
-  const extractFileIds = (obj) => {
-    if (obj.fileId) fileIds.push(obj.fileId);
-    if (obj.iconFileId) fileIds.push(obj.iconFileId);
-    Object.values(obj).forEach((value) => {
-      if (typeof value === "object" && value !== null) extractFileIds(value);
-    });
-  };
-  extractFileIds(projectData);
+  const fileIds = usage.fileIds;
   const zipName = `${projectData.project.name}_${version.name}`;
 
   // Create and download ZIP with streamed bundle creation
