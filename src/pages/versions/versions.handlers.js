@@ -135,30 +135,15 @@ export const handleDownloadZipClick = async (deps, payload) => {
     });
   };
   extractFileIds(projectData);
-
-  // Fetch files as buffers
-  const files = {};
-  for (const fileId of fileIds) {
-    try {
-      const content = await projectService.getFileContent(fileId);
-      const response = await fetch(content.url);
-      const buffer = await response.arrayBuffer();
-      files[fileId] = {
-        buffer: new Uint8Array(buffer),
-        mime: content.type,
-      };
-    } catch (error) {
-      console.warn(`Failed to fetch file ${fileId}:`, error);
-    }
-  }
-
-  // Create bundle with transformed data
-  const bundle = await projectService.exportProject(transformedData, files);
   const zipName = `${projectData.project.name}_${version.name}`;
 
-  // Create and download ZIP with bundle and static files using save dialog
+  // Create and download ZIP with streamed bundle creation
   try {
-    await projectService.createDistributionZip(bundle, zipName);
+    await projectService.createDistributionZipStreamed(
+      transformedData,
+      fileIds,
+      zipName,
+    );
     appService.closeAll();
   } catch (error) {
     console.error("Error saving ZIP with dialog:", error);

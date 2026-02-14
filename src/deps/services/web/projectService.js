@@ -209,6 +209,27 @@ export const createProjectService = ({ router, filePicker }) => {
     return { url, type: blob.type };
   };
 
+  const getBundleStaticFiles = async () => {
+    let indexHtml = null;
+    let mainJs = null;
+
+    try {
+      const indexResponse = await fetch("/bundle/index.html");
+      if (indexResponse.ok) {
+        indexHtml = await indexResponse.text();
+      }
+
+      const mainJsResponse = await fetch("/bundle/main.js");
+      if (mainJsResponse.ok) {
+        mainJs = await mainJsResponse.text();
+      }
+    } catch (error) {
+      console.error("Failed to fetch static bundle files:", error);
+    }
+
+    return { indexHtml, mainJs };
+  };
+
   const storeMetadata = async (data) => {
     const jsonString = JSON.stringify(data, null, 2);
     const jsonBlob = new Blob([jsonString], { type: "application/json" });
@@ -426,21 +447,42 @@ export const createProjectService = ({ router, filePicker }) => {
       const zip = new JSZip();
       zip.file("package.bin", bundle);
 
-      try {
-        const indexResponse = await fetch("/bundle/index.html");
-        const indexContent = await indexResponse.text();
-        zip.file("index.html", indexContent);
-
-        const mainJsResponse = await fetch("/bundle/main.js");
-        const mainJsContent = await mainJsResponse.text();
-        zip.file("main.js", mainJsContent);
-      } catch (error) {
-        console.error("Failed to fetch static bundle files:", error);
-      }
+      const { indexHtml, mainJs } = await getBundleStaticFiles();
+      if (indexHtml) zip.file("index.html", indexHtml);
+      if (mainJs) zip.file("main.js", mainJs);
 
       const zipBlob = await zip.generateAsync({ type: "blob" });
       await filePicker.saveFilePicker(zipBlob, `${zipName}.zip`);
       return `${zipName}.zip`;
+    },
+    async createDistributionZipStreamed(projectData, fileIds, zipName) {
+      const uniqueFileIds = [];
+      const seenFileIds = new Set();
+
+      for (const fileId of fileIds || []) {
+        if (!fileId || seenFileIds.has(fileId)) continue;
+        seenFileIds.add(fileId);
+        uniqueFileIds.push(fileId);
+      }
+
+      const files = {};
+      for (const fileId of uniqueFileIds) {
+        try {
+          const content = await getFileUrl(fileId);
+          const response = await fetch(content.url);
+          const buffer = await response.arrayBuffer();
+          files[fileId] = {
+            buffer: new Uint8Array(buffer),
+            mime: content.type,
+          };
+          URL.revokeObjectURL(content.url);
+        } catch (error) {
+          console.warn(`Failed to fetch file ${fileId}:`, error);
+        }
+      }
+
+      const bundle = await createBundle(projectData, files);
+      return await this.createDistributionZip(bundle, zipName);
     },
   };
 };

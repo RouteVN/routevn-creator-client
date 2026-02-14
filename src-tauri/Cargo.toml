@@ -31,3 +31,4 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-persisted-scope = { version = "2", features = ["protocol-asset"] }
+zip = "0.6.6"
