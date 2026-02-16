@@ -60,6 +60,44 @@ export const extractFileIdsFromRenderState = (obj) => {
   return Array.from(fileIds);
 };
 
+const toAlphanumericId = (value, fallback = "sliderUpdate") => {
+  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
+  return sanitized || fallback;
+};
+
+const toWordWrapWidth = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const normalizeSliderChange = (change, sliderId) => {
+  const updateVariable = change?.actionPayload?.actions?.updateVariable;
+  if (!updateVariable) {
+    return change;
+  }
+
+  const fallbackId = toAlphanumericId(`slider${sliderId}update`);
+  const sanitizedId = toAlphanumericId(updateVariable.id, fallbackId);
+
+  if (sanitizedId === updateVariable.id) {
+    return change;
+  }
+
+  return {
+    ...change,
+    actionPayload: {
+      ...change.actionPayload,
+      actions: {
+        ...change.actionPayload.actions,
+        updateVariable: {
+          ...updateVariable,
+          id: sanitizedId,
+        },
+      },
+    },
+  };
+};
+
 export const layoutTreeStructureToRenderState = (
   layout,
   imageItems,
@@ -117,6 +155,7 @@ export const layoutTreeStructureToRenderState = (
       ].includes(node.type)
     ) {
       let textStyle = {};
+      const wordWrapWidth = toWordWrapWidth(node.style?.wordWrapWidth);
 
       // Apply typography if selected
       if (node.typographyId && typographyData.items[node.typographyId]) {
@@ -126,7 +165,7 @@ export const layoutTreeStructureToRenderState = (
 
         textStyle = {
           fontSize: typography.fontSize || 24,
-          fontFamily: fontItem?.fontFamily || "sans-serif",
+          fontFamily: fontItem?.fontFamily || "Arial",
           fontWeight: typography.fontWeight || "normal",
           fill: colorItem?.hex || "white",
           lineHeight: typography.lineHeight || 1.2,
@@ -137,35 +176,57 @@ export const layoutTreeStructureToRenderState = (
         // Use default settings
         textStyle = {
           fontSize: 24,
+          fontFamily: "Arial",
+          fontWeight: "normal",
           fill: "white",
           lineHeight: 1.2,
           align: node.style?.align,
+          breakWords: true,
         };
       }
 
       const finalStyle = {
         ...textStyle,
-        wordWrapWidth: parseInt(node.style?.wordWrapWidth),
+        ...(wordWrapWidth !== undefined ? { wordWrapWidth } : {}),
       };
 
       // Handle interaction styles
       const interactionStyles = {};
 
+      const buildInteractionStyle = (typography) => {
+        const colorItem = colorsData.items?.[typography.colorId];
+        const fontItem = fontsData.items?.[typography.fontId];
+        const parsedFontSize = Number.parseFloat(
+          typography.fontSize ?? textStyle.fontSize ?? 24,
+        );
+        const fontSize = Number.isFinite(parsedFontSize) ? parsedFontSize : 24;
+        const parsedLineHeightRatio = Number.parseFloat(
+          typography.lineHeight ?? textStyle.lineHeight ?? 1.2,
+        );
+        const lineHeightRatio = Number.isFinite(parsedLineHeightRatio)
+          ? parsedLineHeightRatio
+          : 1.2;
+
+        return {
+          fontSize,
+          fontFamily: fontItem?.fontFamily || textStyle.fontFamily || "Arial",
+          fontWeight: typography.fontWeight || textStyle.fontWeight || "normal",
+          fill: colorItem?.hex || textStyle.fill || "white",
+          // Hover/click styles are applied directly by route-graphics (not parseText),
+          // so lineHeight must be in pixels to match base text metrics.
+          lineHeight: Math.round(fontSize * lineHeightRatio),
+          align: node.style?.align,
+          breakWords: true,
+          ...(wordWrapWidth !== undefined ? { wordWrapWidth } : {}),
+        };
+      };
+
       // Process hover style
       if (node.hoverTypographyId) {
         const hoverTypography = typographyData.items[node.hoverTypographyId];
         if (hoverTypography) {
-          const hoverColorItem = colorsData.items?.[hoverTypography.colorId];
-          const hoverFontItem = fontsData.items?.[hoverTypography.fontId];
-
           interactionStyles.hover = {
-            textStyle: {
-              fontSize: hoverTypography.fontSize || 24,
-              fontFamily: hoverFontItem?.fontFamily || "sans-serif",
-              fontWeight: hoverTypography.fontWeight || "normal",
-              fill: hoverColorItem?.hex || "white",
-              lineHeight: hoverTypography.lineHeight || 1.2,
-            },
+            textStyle: buildInteractionStyle(hoverTypography),
           };
         }
       }
@@ -175,18 +236,8 @@ export const layoutTreeStructureToRenderState = (
         const clickedTypography =
           typographyData.items[node.clickedTypographyId];
         if (clickedTypography) {
-          const clickedColorItem =
-            colorsData.items?.[clickedTypography.colorId];
-          const clickedFontItem = fontsData.items?.[clickedTypography.fontId];
-
           interactionStyles.click = {
-            textStyle: {
-              fontSize: clickedTypography.fontSize || 24,
-              fontFamily: clickedFontItem?.fontFamily || "sans-serif",
-              fontWeight: clickedTypography.fontWeight || "normal",
-              fill: clickedColorItem?.hex || "white",
-              lineHeight: clickedTypography.lineHeight || 1.2,
-            },
+            textStyle: buildInteractionStyle(clickedTypography),
           };
         }
       }
@@ -288,7 +339,7 @@ export const layoutTreeStructureToRenderState = (
 
       // Handle change event if defined
       if (node.change) {
-        element.change = node.change;
+        element.change = normalizeSliderChange(node.change, node.id);
       }
     }
 
@@ -325,4 +376,48 @@ export const layoutTreeStructureToRenderState = (
   };
 
   return layout.map(mapNode);
+};
+
+/**
+ * Gets variable options from variablesData for use in dropdowns.
+ *
+ * @param {Object} variablesData - Variables data from repository { items: {}, tree: [] }
+ * @param {Object} options - Filter options
+ * @param {string} options.type - Filter by variable type ('number', 'boolean', 'string', 'object')
+ * @param {boolean} options.showType - Show type in label (e.g., "volume (number)")
+ * @returns {Array} Array of { label, value } options
+ *
+ * @example
+ * // Get all variables
+ * getVariableOptions(variablesData)
+ *
+ * // Get only number variables
+ * getVariableOptions(variablesData, { type: 'number' })
+ *
+ * // Get all variables with type shown
+ * getVariableOptions(variablesData, { showType: true })
+ */
+export const getVariableOptions = (variablesData, options = {}) => {
+  const { type, showType = false } = options;
+  const variablesItems = variablesData?.items || {};
+
+  return Object.entries(variablesItems)
+    .filter(([_, item]) => {
+      // Filter out folders
+      if (item.type === "folder" || item.itemType === "folder") {
+        return false;
+      }
+      // Filter by type if specified
+      if (type && item.type !== type) {
+        return false;
+      }
+      return true;
+    })
+    .map(([id, variable]) => {
+      const varType = (variable.type || "string").toLowerCase();
+      return {
+        label: showType ? `${variable.name} (${varType})` : variable.name,
+        value: id,
+      };
+    });
 };

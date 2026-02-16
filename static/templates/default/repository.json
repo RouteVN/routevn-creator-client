@@ -265,6 +265,13 @@
         "fontFamily": "sample_font",
         "fileType": "font/sample_font",
         "fileSize": 857712
+      },
+      "font-system-arial": {
+        "type": "font",
+        "name": "Arial (System)",
+        "fontFamily": "Arial",
+        "fileType": "font/system",
+        "fileSize": 0
       }
     },
     "tree": [
@@ -273,6 +280,10 @@
         "children": [
           {
             "id": "-hpZD817Q_lRDt-vjl4UN",
+            "children": []
+          },
+          {
+            "id": "font-system-arial",
             "children": []
           }
         ]
@@ -346,6 +357,9 @@
           },
           {
             "id": "color-black"
+          },
+          {
+            "id": "color-yellow"
           }
         ]
       }
@@ -364,6 +378,11 @@
         "type": "color",
         "name": "Black",
         "hex": "#000000"
+      },
+      "color-yellow": {
+        "type": "color",
+        "name": "Yellow",
+        "hex": "#FFD84D"
       }
     }
   },
@@ -377,6 +396,9 @@
           },
           {
             "id": "jiWyxqqEgEdAVTPAxbGFp"
+          },
+          {
+            "id": "choice-hover-yellow-typography"
           }
         ]
       }
@@ -405,6 +427,16 @@
         "fontId": "-hpZD817Q_lRDt-vjl4UN",
         "fontWeight": "400",
         "previewText": "Text View"
+      },
+      "choice-hover-yellow-typography": {
+        "type": "typography",
+        "name": "Choice Hover Yellow",
+        "fontSize": 24,
+        "lineHeight": 1.2,
+        "colorId": "color-yellow",
+        "fontId": "font-system-arial",
+        "fontWeight": "400",
+        "previewText": "Choice Hover"
       }
     }
   },
@@ -671,7 +703,7 @@
             "5ghjk54j": {
               "type": "text-ref-choice-item-content",
               "name": "Text (Choice Item Content)",
-              "typographyId": "jiWyxqqEgEdAVTPAxbGFp",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "x": 840,
               "y": 10,
               "text": "text",
@@ -775,6 +807,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "START",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -804,6 +837,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "LOAD",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -832,6 +866,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "OPTIONS",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -1035,6 +1070,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "BACK",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 40,
@@ -1389,6 +1425,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._muteAll}",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1698,6 +1735,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._skipUnseenText}",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1751,6 +1789,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._skipTransitionsAndAnimations}",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1785,6 +1824,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "BACK",
+              "hoverTypographyId": "choice-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 40,

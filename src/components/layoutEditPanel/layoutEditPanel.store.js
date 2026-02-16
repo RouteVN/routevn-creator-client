@@ -443,7 +443,7 @@ const config = {
           label: "Default",
           name: "typographyId",
           value: "${values.typographyId}",
-          options: "${typographyItems}",
+          options: "${typographyItemsWithDefault}",
         },
         {
           type: "select",
@@ -681,6 +681,10 @@ export const selectViewData = ({ state, attrs }) => {
       value: item.id,
     })),
   );
+  const typographyItemsWithDefault = [
+    { label: "Built-in Default", value: "" },
+    ...typographyItems,
+  ];
   const typographyItemsWithNone = [
     { label: "None", value: "" },
     ...typographyItems,
@@ -700,9 +704,13 @@ export const selectViewData = ({ state, attrs }) => {
     itemType: attrs["item-type"],
     layoutType: attrs["layout-type"],
     typographyItems: typographyItems,
+    typographyItemsWithDefault: typographyItemsWithDefault,
     typographyItemsWithNone: typographyItemsWithNone,
     values: {
       ...state.values,
+      typographyId: state.values?.typographyId ?? "",
+      hoverTypographyId: state.values?.hoverTypographyId ?? "",
+      clickedTypographyId: state.values?.clickedTypographyId ?? "",
       actions: Object.entries(
         state.values?.click?.actionPayload?.actions || {},
       ).map(([key, _value]) => ({
