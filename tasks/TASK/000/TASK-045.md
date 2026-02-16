@@ -1,6 +1,6 @@
 ---
 title: Actions preview
-status: todo
+status: done
 priority: medium
 ---
 

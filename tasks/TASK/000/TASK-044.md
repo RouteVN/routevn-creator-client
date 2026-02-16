@@ -1,6 +1,6 @@
 ---
 title: Slider direction
-status: todo
+status: done
 priority: medium
 ---
 
