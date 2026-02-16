@@ -1160,34 +1160,38 @@
                 "fill": "#ffffff"
               }
             },
-            "bgm-decrease": {
-              "type": "text",
-              "name": "BGM Decrease",
+            "bgm-slider": {
+              "type": "slider",
+              "name": "BGM Slider",
               "x": 700,
-              "y": 260,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
+              "y": 250,
+              "width": 320,
+              "height": 20,
+              "direction": "horizontal",
+              "thumbImageId": "slider_thumb_default",
+              "barImageId": "slider_bar_default",
+              "hoverThumbImageId": "slider_thumb_hover",
+              "hoverBarImageId": "slider_bar_hover",
+              "min": 0,
+              "max": 1000,
+              "step": 10,
+              "initialValue": "${variables._musicVolume}",
+              "variableId": "_musicVolume",
+              "anchorX": 0,
+              "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "◀",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
+              "change": {
                 "actionPayload": {
                   "actions": {
                     "updateVariable": {
-                      "id": "optionsBgmDecrease",
+                      "id": "optionsBgmSlider",
                       "operations": [
                         {
                           "variableId": "_musicVolume",
-                          "op": "decrement",
-                          "value": 100
+                          "op": "set",
+                          "value": "_event.value"
                         }
                       ]
                     }
@@ -1198,9 +1202,9 @@
             "bgm-value": {
               "type": "text",
               "name": "BGM Value",
-              "x": 850,
+              "x": 1120,
               "y": 260,
-              "width": 150,
+              "width": 180,
               "height": 50,
               "anchorX": 0.5,
               "anchorY": 0.5,
@@ -1212,41 +1216,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
-            },
-            "bgm-increase": {
-              "type": "text",
-              "name": "BGM Increase",
-              "x": 1000,
-              "y": 260,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "▶",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
-                "actionPayload": {
-                  "actions": {
-                    "updateVariable": {
-                      "id": "optionsBgmIncrease",
-                      "operations": [
-                        {
-                          "variableId": "_musicVolume",
-                          "op": "increment",
-                          "value": 100
-                        }
-                      ]
-                    }
-                  }
-                }
               }
             },
             "sfx-label": {
@@ -1268,34 +1237,38 @@
                 "fill": "#ffffff"
               }
             },
-            "sfx-decrease": {
-              "type": "text",
-              "name": "SFX Decrease",
+            "sfx-slider": {
+              "type": "slider",
+              "name": "SFX Slider",
               "x": 700,
-              "y": 340,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
+              "y": 330,
+              "width": 320,
+              "height": 20,
+              "direction": "horizontal",
+              "thumbImageId": "slider_thumb_default",
+              "barImageId": "slider_bar_default",
+              "hoverThumbImageId": "slider_thumb_hover",
+              "hoverBarImageId": "slider_bar_hover",
+              "min": 0,
+              "max": 1000,
+              "step": 10,
+              "initialValue": "${variables._soundVolume}",
+              "variableId": "_soundVolume",
+              "anchorX": 0,
+              "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "◀",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
+              "change": {
                 "actionPayload": {
                   "actions": {
                     "updateVariable": {
-                      "id": "optionsSfxDecrease",
+                      "id": "optionsSfxSlider",
                       "operations": [
                         {
                           "variableId": "_soundVolume",
-                          "op": "decrement",
-                          "value": 100
+                          "op": "set",
+                          "value": "_event.value"
                         }
                       ]
                     }
@@ -1306,9 +1279,9 @@
             "sfx-value": {
               "type": "text",
               "name": "SFX Value",
-              "x": 850,
+              "x": 1120,
               "y": 340,
-              "width": 150,
+              "width": 180,
               "height": 50,
               "anchorX": 0.5,
               "anchorY": 0.5,
@@ -1320,41 +1293,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
-            },
-            "sfx-increase": {
-              "type": "text",
-              "name": "SFX Increase",
-              "x": 1000,
-              "y": 340,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "▶",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
-                "actionPayload": {
-                  "actions": {
-                    "updateVariable": {
-                      "id": "optionsSfxIncrease",
-                      "operations": [
-                        {
-                          "variableId": "_soundVolume",
-                          "op": "increment",
-                          "value": 100
-                        }
-                      ]
-                    }
-                  }
-                }
               }
             },
             "mute-label": {
@@ -1449,34 +1387,38 @@
                 "fill": "#ffffff"
               }
             },
-            "speed-decrease": {
-              "type": "text",
-              "name": "Speed Decrease",
+            "speed-slider": {
+              "type": "slider",
+              "name": "Text Speed Slider",
               "x": 700,
-              "y": 600,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
+              "y": 590,
+              "width": 320,
+              "height": 20,
+              "direction": "horizontal",
+              "thumbImageId": "slider_thumb_default",
+              "barImageId": "slider_bar_default",
+              "hoverThumbImageId": "slider_thumb_hover",
+              "hoverBarImageId": "slider_bar_hover",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "initialValue": "${variables._textSpeed}",
+              "variableId": "_textSpeed",
+              "anchorX": 0,
+              "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "◀",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
+              "change": {
                 "actionPayload": {
                   "actions": {
                     "updateVariable": {
-                      "id": "optionsSpeedDecrease",
+                      "id": "optionsSpeedSlider",
                       "operations": [
                         {
                           "variableId": "_textSpeed",
-                          "op": "decrement",
-                          "value": 10
+                          "op": "set",
+                          "value": "_event.value"
                         }
                       ]
                     }
@@ -1487,9 +1429,9 @@
             "speed-value": {
               "type": "text",
               "name": "Speed Value",
-              "x": 850,
+              "x": 1120,
               "y": 600,
-              "width": 150,
+              "width": 180,
               "height": 50,
               "anchorX": 0.5,
               "anchorY": 0.5,
@@ -1501,41 +1443,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
-            },
-            "speed-increase": {
-              "type": "text",
-              "name": "Speed Increase",
-              "x": 1000,
-              "y": 600,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "▶",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
-                "actionPayload": {
-                  "actions": {
-                    "updateVariable": {
-                      "id": "optionsSpeedIncrease",
-                      "operations": [
-                        {
-                          "variableId": "_textSpeed",
-                          "op": "increment",
-                          "value": 10
-                        }
-                      ]
-                    }
-                  }
-                }
               }
             },
             "auto-forward-label": {
@@ -1557,34 +1464,38 @@
                 "fill": "#ffffff"
               }
             },
-            "auto-decrease": {
-              "type": "text",
-              "name": "Auto Decrease",
+            "auto-slider": {
+              "type": "slider",
+              "name": "Auto Forward Slider",
               "x": 700,
-              "y": 680,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
+              "y": 670,
+              "width": 320,
+              "height": 20,
+              "direction": "horizontal",
+              "thumbImageId": "slider_thumb_default",
+              "barImageId": "slider_bar_default",
+              "hoverThumbImageId": "slider_thumb_hover",
+              "hoverBarImageId": "slider_bar_hover",
+              "min": 250,
+              "max": 5000,
+              "step": 250,
+              "initialValue": "${variables._autoForwardTime}",
+              "variableId": "_autoForwardTime",
+              "anchorX": 0,
+              "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "text": "◀",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
+              "change": {
                 "actionPayload": {
                   "actions": {
                     "updateVariable": {
-                      "id": "optionsAutoDecrease",
+                      "id": "optionsAutoSlider",
                       "operations": [
                         {
                           "variableId": "_autoForwardTime",
-                          "op": "decrement",
-                          "value": 250
+                          "op": "set",
+                          "value": "_event.value"
                         }
                       ]
                     }
@@ -1595,9 +1506,9 @@
             "auto-value": {
               "type": "text",
               "name": "Auto Value",
-              "x": 850,
+              "x": 1140,
               "y": 680,
-              "width": 150,
+              "width": 220,
               "height": 50,
               "anchorX": 0.5,
               "anchorY": 0.5,
@@ -1609,41 +1520,6 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
-            },
-            "auto-increase": {
-              "type": "text",
-              "name": "Auto Increase",
-              "x": 1000,
-              "y": 680,
-              "width": 80,
-              "height": 50,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "▶",
-              "style": {
-                "align": "center",
-                "fontSize": 36,
-                "fill": "#ffffff"
-              },
-              "click": {
-                "actionPayload": {
-                  "actions": {
-                    "updateVariable": {
-                      "id": "optionsAutoIncrease",
-                      "operations": [
-                        {
-                          "variableId": "_autoForwardTime",
-                          "op": "increment",
-                          "value": 250
-                        }
-                      ]
-                    }
-                  }
-                }
               }
             },
             "skip-label": {
@@ -1813,25 +1689,19 @@
               "id": "bgm-label"
             },
             {
-              "id": "bgm-decrease"
+              "id": "bgm-slider"
             },
             {
               "id": "bgm-value"
             },
             {
-              "id": "bgm-increase"
-            },
-            {
               "id": "sfx-label"
             },
             {
-              "id": "sfx-decrease"
+              "id": "sfx-slider"
             },
             {
               "id": "sfx-value"
-            },
-            {
-              "id": "sfx-increase"
             },
             {
               "id": "mute-label"
@@ -1846,25 +1716,19 @@
               "id": "text-speed-label"
             },
             {
-              "id": "speed-decrease"
+              "id": "speed-slider"
             },
             {
               "id": "speed-value"
             },
             {
-              "id": "speed-increase"
-            },
-            {
               "id": "auto-forward-label"
             },
             {
-              "id": "auto-decrease"
+              "id": "auto-slider"
             },
             {
               "id": "auto-value"
-            },
-            {
-              "id": "auto-increase"
             },
             {
               "id": "skip-label"

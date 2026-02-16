@@ -1,3 +1,5 @@
+import { getVariableOptions } from "../../utils/index.js";
+
 // Operations available per variable type
 const OPERATIONS_BY_TYPE = {
   number: [
@@ -122,20 +124,12 @@ export const selectOperations = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
-  // Access variables items directly (more reliable than toFlatItems for this structure)
   const variableItems = state.variablesData?.items || {};
 
-  // Build variable options list (filter out folders)
-  const variableOptions = Object.entries(variableItems)
-    .filter(([_, item]) => item.type !== "folder" && item.itemType !== "folder")
-    .map(([id, variable]) => {
-      const varType = (variable.type || "string").toLowerCase();
-      return {
-        value: id,
-        label: `${variable.name} (${varType})`,
-        variableType: varType,
-      };
-    });
+  // Build variable options list using helper
+  const variableOptions = getVariableOptions(state.variablesData, {
+    showType: true,
+  });
 
   // Get selected variable type for filtering operations
   const selectedVariable = variableItems[state.tempOperation.variableId];

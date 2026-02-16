@@ -60,6 +60,39 @@ export const extractFileIdsFromRenderState = (obj) => {
   return Array.from(fileIds);
 };
 
+const toAlphanumericId = (value, fallback = "sliderUpdate") => {
+  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
+  return sanitized || fallback;
+};
+
+const normalizeSliderChange = (change, sliderId) => {
+  const updateVariable = change?.actionPayload?.actions?.updateVariable;
+  if (!updateVariable) {
+    return change;
+  }
+
+  const fallbackId = toAlphanumericId(`slider${sliderId}update`);
+  const sanitizedId = toAlphanumericId(updateVariable.id, fallbackId);
+
+  if (sanitizedId === updateVariable.id) {
+    return change;
+  }
+
+  return {
+    ...change,
+    actionPayload: {
+      ...change.actionPayload,
+      actions: {
+        ...change.actionPayload.actions,
+        updateVariable: {
+          ...updateVariable,
+          id: sanitizedId,
+        },
+      },
+    },
+  };
+};
+
 export const layoutTreeStructureToRenderState = (
   layout,
   imageItems,
@@ -288,7 +321,7 @@ export const layoutTreeStructureToRenderState = (
 
       // Handle change event if defined
       if (node.change) {
-        element.change = node.change;
+        element.change = normalizeSliderChange(node.change, node.id);
       }
     }
 
@@ -325,4 +358,48 @@ export const layoutTreeStructureToRenderState = (
   };
 
   return layout.map(mapNode);
+};
+
+/**
+ * Gets variable options from variablesData for use in dropdowns.
+ *
+ * @param {Object} variablesData - Variables data from repository { items: {}, tree: [] }
+ * @param {Object} options - Filter options
+ * @param {string} options.type - Filter by variable type ('number', 'boolean', 'string', 'object')
+ * @param {boolean} options.showType - Show type in label (e.g., "volume (number)")
+ * @returns {Array} Array of { label, value } options
+ *
+ * @example
+ * // Get all variables
+ * getVariableOptions(variablesData)
+ *
+ * // Get only number variables
+ * getVariableOptions(variablesData, { type: 'number' })
+ *
+ * // Get all variables with type shown
+ * getVariableOptions(variablesData, { showType: true })
+ */
+export const getVariableOptions = (variablesData, options = {}) => {
+  const { type, showType = false } = options;
+  const variablesItems = variablesData?.items || {};
+
+  return Object.entries(variablesItems)
+    .filter(([_, item]) => {
+      // Filter out folders
+      if (item.type === "folder" || item.itemType === "folder") {
+        return false;
+      }
+      // Filter by type if specified
+      if (type && item.type !== type) {
+        return false;
+      }
+      return true;
+    })
+    .map(([id, variable]) => {
+      const varType = (variable.type || "string").toLowerCase();
+      return {
+        label: showType ? `${variable.name} (${varType})` : variable.name,
+        value: id,
+      };
+    });
 };
