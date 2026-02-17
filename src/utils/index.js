@@ -1,3 +1,5 @@
+import { getFirstTypographyId } from "../constants/typography.js";
+
 export const formatFileSize = (bytes) => {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -68,6 +70,17 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
 const toWordWrapWidth = (value) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const resolveTypographyForNode = (nodeTypographyId, typographyData = {}) => {
+  const typographyItems = typographyData.items || {};
+
+  if (nodeTypographyId && typographyItems[nodeTypographyId]) {
+    return typographyItems[nodeTypographyId];
+  }
+
+  const firstTypographyId = getFirstTypographyId(typographyData);
+  return firstTypographyId ? typographyItems[firstTypographyId] : undefined;
 };
 
 const normalizeSliderChange = (change, sliderId) => {
@@ -157,9 +170,13 @@ export const layoutTreeStructureToRenderState = (
       let textStyle = {};
       const wordWrapWidth = toWordWrapWidth(node.style?.wordWrapWidth);
 
+      const typography = resolveTypographyForNode(
+        node.typographyId,
+        typographyData,
+      );
+
       // Apply typography if selected
-      if (node.typographyId && typographyData.items[node.typographyId]) {
-        const typography = typographyData.items[node.typographyId];
+      if (typography) {
         const colorItem = colorsData.items?.[typography.colorId];
         const fontItem = fontsData.items?.[typography.fontId];
 

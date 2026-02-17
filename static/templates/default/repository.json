@@ -392,6 +392,9 @@
         "id": "InLYeatJKoWWQOJaLlxZK",
         "children": [
           {
+            "id": "built-in-default-typography"
+          },
+          {
             "id": "aEFgSimQUspdxkvXUSyRd"
           },
           {
@@ -407,6 +410,16 @@
       "InLYeatJKoWWQOJaLlxZK": {
         "type": "folder",
         "name": "Default"
+      },
+      "built-in-default-typography": {
+        "type": "typography",
+        "name": "Built-in Default",
+        "fontSize": 24,
+        "lineHeight": 1.2,
+        "colorId": "color-white",
+        "fontId": "font-system-arial",
+        "fontWeight": "400",
+        "previewText": "Built-in Default"
       },
       "aEFgSimQUspdxkvXUSyRd": {
         "type": "typography",

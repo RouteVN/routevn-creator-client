@@ -1,4 +1,9 @@
 import { nanoid } from "nanoid";
+import {
+  getFirstTypographyId,
+  getTypographyCount,
+  getTypographyRemovalCount,
+} from "../../constants/typography.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
@@ -13,6 +18,14 @@ const lodashGet = (obj, path, defaultValue) => {
   }
   return current !== undefined ? current : defaultValue;
 };
+
+const isTextElementType = (type) =>
+  [
+    "text",
+    "text-ref-character-name",
+    "text-revealing-ref-dialogue-content",
+    "text-ref-choice-item-content",
+  ].includes(type);
 
 // Forward click-item event from base component
 export const handleClickItem = async (deps, payload) => {
@@ -99,6 +112,8 @@ export const handleFileAction = async (deps, payload) => {
     );
   }
 
+  const state = projectService.getState();
+
   // Extract the actual item from the detail (rtgl-dropdown-menu adds index)
   const item = detail.item || detail;
   const itemId = detail.itemId;
@@ -152,6 +167,7 @@ export const handleFileAction = async (deps, payload) => {
       },
     });
   } else if (item.value === "add-text") {
+    const firstTypographyId = getFirstTypographyId(state.typography);
     await projectService.appendEvent({
       type: "treePush",
       payload: {
@@ -160,6 +176,9 @@ export const handleFileAction = async (deps, payload) => {
           id: nanoid(),
           type: "text",
           name: "Text",
+          ...(firstTypographyId
+            ? { typographyId: firstTypographyId }
+            : {}),
         },
         options: {
           parent: "_root",
@@ -185,7 +204,6 @@ export const handleFileAction = async (deps, payload) => {
       });
     }
   } else if (item.value === "delete-item") {
-    const state = projectService.getState();
     const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
@@ -219,6 +237,13 @@ export const handleFileAction = async (deps, payload) => {
       } else if (resourceType === "layout") {
         checkTargets = ["scenes"];
       } else if (resourceType === "typography") {
+        const typographyCount = getTypographyCount(state.typography);
+        const removalCount = getTypographyRemovalCount(state.typography, itemId);
+        if (typographyCount - removalCount < 1) {
+          appService.showToast("At least one typography must remain.");
+          render();
+          return;
+        }
         checkTargets = ["layouts"];
       } else if (resourceType === "color" || resourceType === "font") {
         checkTargets = ["typography"];
@@ -252,7 +277,6 @@ export const handleFileAction = async (deps, payload) => {
       });
     }
   } else if (item.value === "new-child-folder") {
-    const state = projectService.getState();
     const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;
@@ -275,14 +299,23 @@ export const handleFileAction = async (deps, payload) => {
     }
   } else if (item.value.action === "new-child-item") {
     const { ...restItem } = item.value;
+    const value = {
+      ...restItem,
+      id: nanoid(),
+    };
+
+    if (isTextElementType(value.type)) {
+      const firstTypographyId = getFirstTypographyId(state.typography);
+      if (firstTypographyId) {
+        value.typographyId = firstTypographyId;
+      }
+    }
+
     await projectService.appendEvent({
       type: "treePush",
       payload: {
         target: repositoryTarget,
-        value: {
-          ...restItem,
-          id: nanoid(),
-        },
+        value,
         options: {
           parent: itemId || "_root",
           position: "last",
@@ -290,7 +323,6 @@ export const handleFileAction = async (deps, payload) => {
       },
     });
   } else if (item.value === "duplicate-item") {
-    const state = projectService.getState();
     const targetData = lodashGet(state, repositoryTarget);
     const currentItem =
       targetData && targetData.items ? targetData.items[itemId] : null;

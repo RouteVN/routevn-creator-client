@@ -1,5 +1,9 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
+import {
+  getTypographyCount,
+  getTypographyRemovalCount,
+} from "../../constants/typography.js";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
@@ -688,6 +692,17 @@ export const handleItemDelete = async (deps, payload) => {
   const { resourceType, itemId } = payload._event.detail;
 
   const state = projectService.getState();
+
+  if (resourceType === "typography") {
+    const typographyCount = getTypographyCount(state.typography);
+    const removalCount = getTypographyRemovalCount(state.typography, itemId);
+    if (typographyCount - removalCount < 1) {
+      appService.showToast("At least one typography must remain.");
+      render();
+      return;
+    }
+  }
+
   const usage = recursivelyCheckResource({
     state,
     itemId,
