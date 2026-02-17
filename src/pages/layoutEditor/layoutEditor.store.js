@@ -79,6 +79,7 @@ const contextMenuItems = [
       max: 100,
       step: 1,
       initialValue: 0,
+      variableId: "",
       anchorX: 0,
       anchorY: 0,
       scaleX: 1,
@@ -279,6 +280,7 @@ const emptyContextMenuItems = [
       max: 100,
       step: 1,
       initialValue: 0,
+      variableId: "",
       anchorX: 0,
       anchorY: 0,
       scaleX: 1,
@@ -416,6 +418,7 @@ export const createInitialState = () => ({
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
+  variablesData: { tree: [], items: {} },
   dialogueDefaultValues: {
     "dialogue-character-name": "Character",
     "dialogue-content": "This is a sample dialogue content.",
@@ -482,6 +485,10 @@ export const setColorsData = (state, colorsData) => {
 
 export const setFontsData = (state, fontsData) => {
   state.fontsData = fontsData;
+};
+
+export const setVariablesData = (state, variablesData) => {
+  state.variablesData = variablesData;
 };
 
 export const setDialogueDefaultValue = (state, { name, fieldValue }) => {
@@ -575,6 +582,10 @@ export const selectFontsData = ({ state }) => {
   return state.fontsData;
 };
 
+export const selectVariablesData = ({ state }) => {
+  return state.variablesData;
+};
+
 export const selectViewData = ({ state }) => {
   const item = selectSelectedItem({ state });
   const flatItems = toFlatItems(state.layoutData);
@@ -607,5 +618,6 @@ export const selectViewData = ({ state }) => {
     choicesContext,
     layout: state.layout,
     presentationState: {},
+    variablesData: state.variablesData,
   };
 };

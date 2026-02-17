@@ -78,7 +78,10 @@ export const createGraphicsService = async ({ subject }) => {
           }
 
           if (payload.actions && engine) {
-            engine.handleActions(payload.actions);
+            engine.handleActions(
+              payload.actions,
+              payload._event ? { _event: payload._event } : undefined,
+            );
           }
         },
       });
@@ -137,8 +140,8 @@ export const createGraphicsService = async ({ subject }) => {
       routeGraphics.render(renderState);
     },
 
-    engineHandleActions: (actions) => {
-      engine.handleActions(actions);
+    engineHandleActions: (actions, eventContext) => {
+      engine.handleActions(actions, eventContext);
     },
 
     render: (payload) => routeGraphics.render(payload),
