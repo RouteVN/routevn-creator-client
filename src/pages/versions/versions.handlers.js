@@ -136,12 +136,20 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
   // Create and download ZIP with streamed bundle creation
   try {
-    await projectService.createDistributionZipStreamed(
+    const outputPath = await projectService.createDistributionZipStreamed(
       transformedData,
       fileIds,
       zipName,
     );
-    appService.closeAll();
+
+    if (!outputPath) {
+      appService.closeAll();
+      return;
+    }
+
+    appService.showToast(`ZIP export completed.\nSaved to: ${outputPath}`, {
+      title: "Export completed",
+    });
   } catch (error) {
     console.error("Error saving ZIP with dialog:", error);
     appService.showToast(`Failed to save ZIP file: ${error.message}`, {
