@@ -86,15 +86,23 @@ const setLoadingReadyForClick = () => {
   }
 };
 
-const waitForClickToStart = async () => {
+const waitForClickToStart = async ({ onClick } = {}) => {
   const loadingElement = document.getElementById("loading");
   if (!loadingElement) return;
 
-  await new Promise((resolve) => {
-    const handleClick = () => {
+  await new Promise((resolve, reject) => {
+    const handleClick = async () => {
       loadingElement.removeEventListener("click", handleClick);
       loadingElement.classList.remove("ready");
-      resolve();
+
+      try {
+        if (onClick) {
+          await onClick();
+        }
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
     };
 
     loadingElement.addEventListener("click", handleClick);
@@ -219,9 +227,9 @@ const bootstrap = async () => {
   try {
     const preloadedData = await preloadBundleData();
     setLoadingReadyForClick();
-    await waitForClickToStart();
-    setLoadingText("Starting...");
-    await initEngine(preloadedData);
+    await waitForClickToStart({
+      onClick: () => initEngine(preloadedData),
+    });
   } catch (error) {
     console.error("Failed to start bundle player:", error);
     setLoadingText("Failed to load");
