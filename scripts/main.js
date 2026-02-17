@@ -86,15 +86,23 @@ const setLoadingReadyForClick = () => {
   }
 };
 
-const waitForClickToStart = async () => {
+const waitForClickToStart = async ({ onClick } = {}) => {
   const loadingElement = document.getElementById("loading");
   if (!loadingElement) return;
 
-  await new Promise((resolve) => {
-    const handleClick = () => {
+  await new Promise((resolve, reject) => {
+    const handleClick = async () => {
       loadingElement.removeEventListener("click", handleClick);
       loadingElement.classList.remove("ready");
-      resolve();
+
+      try {
+        if (onClick) {
+          await onClick();
+        }
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
     };
 
     loadingElement.addEventListener("click", handleClick);
@@ -120,7 +128,25 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
-const initEngine = async ({ jsonData, assetBufferMap }) => {
+const createInitialState = (jsonData) => {
+  const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
+  const globalDeviceVariables =
+    JSON.parse(localStorage.getItem("globalDeviceVariables")) || {};
+  const globalAccountVariables =
+    JSON.parse(localStorage.getItem("globalAccountVariables")) || {};
+
+  return {
+    global: {
+      currentLocalizationPackageId: "eklekfjwalefj",
+      saveSlots,
+      variables: { ...globalDeviceVariables, ...globalAccountVariables },
+    },
+    projectData: jsonData,
+  };
+};
+
+const prepareRuntime = async () => {
+  const { jsonData, assetBufferMap } = await preloadBundleData();
   const plugins = {
     elements: [
       textPlugin,
@@ -154,11 +180,16 @@ const initEngine = async ({ jsonData, assetBufferMap }) => {
   };
 
   const routeGraphics = createRouteGraphics();
+  let engine;
   await routeGraphics.init({
     width: 1920,
     height: 1080,
     plugins,
     eventHandler: async (eventName, payload) => {
+      if (!engine) {
+        return;
+      }
+
       if (eventName === "renderComplete") {
         engine.handleActions({
           markLineCompleted: {},
@@ -194,34 +225,38 @@ const initEngine = async ({ jsonData, assetBufferMap }) => {
     routeGraphics,
     ticker,
   });
-  const engine = createRouteEngine({ handlePendingEffects: effectsHandler });
-  const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
-  const globalDeviceVariables =
-    JSON.parse(localStorage.getItem("globalDeviceVariables")) || {};
-  const globalAccountVariables =
-    JSON.parse(localStorage.getItem("globalAccountVariables")) || {};
+  engine = createRouteEngine({ handlePendingEffects: effectsHandler });
 
-  engine.init({
-    initialState: {
-      global: {
-        currentLocalizationPackageId: "eklekfjwalefj",
-        saveSlots,
-        variables: { ...globalDeviceVariables, ...globalAccountVariables },
-      },
-      projectData: jsonData,
-    },
+  return {
+    engine,
+    routeGraphics,
+    initialState: createInitialState(jsonData),
+    started: false,
+  };
+};
+
+const startRuntime = async (preparedRuntime) => {
+  if (preparedRuntime.started) {
+    return;
+  }
+
+  if (preparedRuntime.routeGraphics?.resumeAudioContext) {
+    await preparedRuntime.routeGraphics.resumeAudioContext();
+  }
+  preparedRuntime.engine.init({
+    initialState: preparedRuntime.initialState,
   });
-
+  preparedRuntime.started = true;
   hideLoadingOverlay();
 };
 
 const bootstrap = async () => {
   try {
-    const preloadedData = await preloadBundleData();
+    const preparedRuntime = await prepareRuntime();
     setLoadingReadyForClick();
-    await waitForClickToStart();
-    setLoadingText("Starting...");
-    await initEngine(preloadedData);
+    await waitForClickToStart({
+      onClick: () => startRuntime(preparedRuntime),
+    });
   } catch (error) {
     console.error("Failed to start bundle player:", error);
     setLoadingText("Failed to load");
