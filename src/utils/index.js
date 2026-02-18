@@ -1,3 +1,5 @@
+import { getFirstTypographyId } from "../constants/typography.js";
+
 export const formatFileSize = (bytes) => {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -65,6 +67,21 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
   return sanitized || fallback;
 };
 
+const toWordWrapWidth = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const resolveTypographyForNode = (nodeTypographyId, typographyData = {}) => {
+  const typographyItems = typographyData.items || {};
+
+  if (nodeTypographyId && typographyItems[nodeTypographyId]) {
+    return typographyItems[nodeTypographyId];
+  }
+
+  const firstTypographyId = getFirstTypographyId(typographyData);
+  return firstTypographyId ? typographyItems[firstTypographyId] : undefined;
+};
 const normalizeSliderChange = (change, sliderId) => {
   const updateVariable = change?.actionPayload?.actions?.updateVariable;
   if (!updateVariable) {
@@ -150,10 +167,15 @@ export const layoutTreeStructureToRenderState = (
       ].includes(node.type)
     ) {
       let textStyle = {};
+      const wordWrapWidth = toWordWrapWidth(node.style?.wordWrapWidth);
+
+      const typography = resolveTypographyForNode(
+        node.typographyId,
+        typographyData,
+      );
 
       // Apply typography if selected
-      if (node.typographyId && typographyData.items[node.typographyId]) {
-        const typography = typographyData.items[node.typographyId];
+      if (typography) {
         const colorItem = colorsData.items?.[typography.colorId];
         const fontItem = fontsData.items?.[typography.fontId];
 
@@ -170,35 +192,58 @@ export const layoutTreeStructureToRenderState = (
         // Use default settings
         textStyle = {
           fontSize: 24,
+          fontFamily: "sans-serif",
+          fontWeight: "normal",
           fill: "white",
           lineHeight: 1.2,
           align: node.style?.align,
+          breakWords: true,
         };
       }
 
       const finalStyle = {
         ...textStyle,
-        wordWrapWidth: parseInt(node.style?.wordWrapWidth),
+        ...(wordWrapWidth !== undefined ? { wordWrapWidth } : {}),
       };
 
       // Handle interaction styles
       const interactionStyles = {};
 
+      const buildInteractionStyle = (typography) => {
+        const colorItem = colorsData.items?.[typography.colorId];
+        const fontItem = fontsData.items?.[typography.fontId];
+        const parsedFontSize = Number.parseFloat(
+          typography.fontSize ?? textStyle.fontSize ?? 24,
+        );
+        const fontSize = Number.isFinite(parsedFontSize) ? parsedFontSize : 24;
+        const parsedLineHeightRatio = Number.parseFloat(
+          typography.lineHeight ?? textStyle.lineHeight ?? 1.2,
+        );
+        const lineHeightRatio = Number.isFinite(parsedLineHeightRatio)
+          ? parsedLineHeightRatio
+          : 1.2;
+
+        return {
+          fontSize,
+          fontFamily:
+            fontItem?.fontFamily || textStyle.fontFamily || "sans-serif",
+          fontWeight: typography.fontWeight || textStyle.fontWeight || "normal",
+          fill: colorItem?.hex || textStyle.fill || "white",
+          // Hover/click styles are applied directly by route-graphics (not parseText),
+          // so lineHeight must be in pixels to match base text metrics.
+          lineHeight: Math.round(fontSize * lineHeightRatio),
+          align: node.style?.align,
+          breakWords: true,
+          ...(wordWrapWidth !== undefined ? { wordWrapWidth } : {}),
+        };
+      };
+
       // Process hover style
       if (node.hoverTypographyId) {
         const hoverTypography = typographyData.items[node.hoverTypographyId];
         if (hoverTypography) {
-          const hoverColorItem = colorsData.items?.[hoverTypography.colorId];
-          const hoverFontItem = fontsData.items?.[hoverTypography.fontId];
-
           interactionStyles.hover = {
-            textStyle: {
-              fontSize: hoverTypography.fontSize || 24,
-              fontFamily: hoverFontItem?.fontFamily || "sans-serif",
-              fontWeight: hoverTypography.fontWeight || "normal",
-              fill: hoverColorItem?.hex || "white",
-              lineHeight: hoverTypography.lineHeight || 1.2,
-            },
+            textStyle: buildInteractionStyle(hoverTypography),
           };
         }
       }
@@ -208,18 +253,8 @@ export const layoutTreeStructureToRenderState = (
         const clickedTypography =
           typographyData.items[node.clickedTypographyId];
         if (clickedTypography) {
-          const clickedColorItem =
-            colorsData.items?.[clickedTypography.colorId];
-          const clickedFontItem = fontsData.items?.[clickedTypography.fontId];
-
           interactionStyles.click = {
-            textStyle: {
-              fontSize: clickedTypography.fontSize || 24,
-              fontFamily: clickedFontItem?.fontFamily || "sans-serif",
-              fontWeight: clickedTypography.fontWeight || "normal",
-              fill: clickedColorItem?.hex || "white",
-              lineHeight: clickedTypography.lineHeight || 1.2,
-            },
+            textStyle: buildInteractionStyle(clickedTypography),
           };
         }
       }

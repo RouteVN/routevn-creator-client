@@ -265,6 +265,13 @@
         "fontFamily": "sample_font",
         "fileType": "font/sample_font",
         "fileSize": 857712
+      },
+      "font-system-arial": {
+        "type": "font",
+        "name": "Arial (System)",
+        "fontFamily": "Arial",
+        "fileType": "font/system",
+        "fileSize": 0
       }
     },
     "tree": [
@@ -273,6 +280,10 @@
         "children": [
           {
             "id": "-hpZD817Q_lRDt-vjl4UN",
+            "children": []
+          },
+          {
+            "id": "font-system-arial",
             "children": []
           }
         ]
@@ -346,6 +357,9 @@
           },
           {
             "id": "color-black"
+          },
+          {
+            "id": "color-yellow"
           }
         ]
       }
@@ -364,6 +378,11 @@
         "type": "color",
         "name": "Black",
         "hex": "#000000"
+      },
+      "color-yellow": {
+        "type": "color",
+        "name": "Yellow",
+        "hex": "#FFD84D"
       }
     }
   },
@@ -372,6 +391,12 @@
       {
         "id": "InLYeatJKoWWQOJaLlxZK",
         "children": [
+          {
+            "id": "default-typography"
+          },
+          {
+            "id": "default-hover-yellow-typography"
+          },
           {
             "id": "aEFgSimQUspdxkvXUSyRd"
           },
@@ -385,6 +410,16 @@
       "InLYeatJKoWWQOJaLlxZK": {
         "type": "folder",
         "name": "Default"
+      },
+      "default-typography": {
+        "type": "typography",
+        "name": "Default",
+        "fontSize": 24,
+        "lineHeight": 1.2,
+        "colorId": "color-white",
+        "fontId": "font-system-arial",
+        "fontWeight": "400",
+        "previewText": "Default"
       },
       "aEFgSimQUspdxkvXUSyRd": {
         "type": "typography",
@@ -405,6 +440,16 @@
         "fontId": "-hpZD817Q_lRDt-vjl4UN",
         "fontWeight": "400",
         "previewText": "Text View"
+      },
+      "default-hover-yellow-typography": {
+        "type": "typography",
+        "name": "Default Hover Yellow",
+        "fontSize": 24,
+        "lineHeight": 1.2,
+        "colorId": "color-yellow",
+        "fontId": "font-system-arial",
+        "fontWeight": "400",
+        "previewText": "Default Hover"
       }
     }
   },
@@ -671,7 +716,7 @@
             "5ghjk54j": {
               "type": "text-ref-choice-item-content",
               "name": "Text (Choice Item Content)",
-              "typographyId": "jiWyxqqEgEdAVTPAxbGFp",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "x": 840,
               "y": 10,
               "text": "text",
@@ -683,7 +728,8 @@
               "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
-              "rotation": 0
+              "rotation": 0,
+              "typographyId": "default-typography"
             },
             "894jjd3": {
               "type": "sprite",
@@ -760,7 +806,8 @@
                 "fontWeight": "bold",
                 "fill": "#ffffff",
                 "letterSpacing": 4
-              }
+              },
+              "typographyId": "default-typography"
             },
             "btn-start": {
               "type": "text",
@@ -775,6 +822,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "START",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -789,7 +837,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "btn-load": {
               "type": "text",
@@ -804,6 +853,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "LOAD",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -817,7 +867,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "btn-options": {
               "type": "text",
@@ -832,6 +883,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "OPTIONS",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -845,7 +897,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             }
           },
           "tree": [
@@ -906,7 +959,8 @@
                 "fontWeight": "bold",
                 "fill": "#ffffff",
                 "letterSpacing": 3
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-1": {
               "type": "text",
@@ -925,7 +979,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-2": {
               "type": "text",
@@ -944,7 +999,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-3": {
               "type": "text",
@@ -963,7 +1019,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-4": {
               "type": "text",
@@ -982,7 +1039,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-5": {
               "type": "text",
@@ -1001,7 +1059,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-6": {
               "type": "text",
@@ -1020,7 +1079,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "load-back-button": {
               "type": "text",
@@ -1035,6 +1095,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "BACK",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 40,
@@ -1046,7 +1107,8 @@
                     "popLayeredView": {}
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             }
           },
           "tree": [
@@ -1119,7 +1181,8 @@
                 "fontWeight": "bold",
                 "fill": "#ffffff",
                 "letterSpacing": 3
-              }
+              },
+              "typographyId": "default-typography"
             },
             "audio-label": {
               "type": "text",
@@ -1139,7 +1202,8 @@
                 "fontSize": 48,
                 "fontWeight": "bold",
                 "fill": "#ffcc00"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "bgm-label": {
               "type": "text",
@@ -1158,7 +1222,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "bgm-slider": {
               "type": "slider",
@@ -1216,7 +1281,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "sfx-label": {
               "type": "text",
@@ -1235,7 +1301,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "sfx-slider": {
               "type": "slider",
@@ -1293,7 +1360,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "mute-label": {
               "type": "text",
@@ -1312,7 +1380,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "mute-toggle": {
               "type": "text",
@@ -1327,6 +1396,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._muteAll}",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1346,7 +1416,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "text-label": {
               "type": "text",
@@ -1366,7 +1437,8 @@
                 "fontSize": 48,
                 "fontWeight": "bold",
                 "fill": "#ffcc00"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "text-speed-label": {
               "type": "text",
@@ -1385,7 +1457,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "speed-slider": {
               "type": "slider",
@@ -1443,7 +1516,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "auto-forward-label": {
               "type": "text",
@@ -1462,7 +1536,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "auto-slider": {
               "type": "slider",
@@ -1520,7 +1595,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-label": {
               "type": "text",
@@ -1540,7 +1616,8 @@
                 "fontSize": 48,
                 "fontWeight": "bold",
                 "fill": "#ffcc00"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-unseen-label": {
               "type": "text",
@@ -1559,7 +1636,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-unseen-toggle": {
               "type": "text",
@@ -1574,6 +1652,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._skipUnseenText}",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1593,7 +1672,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-transitions-label": {
               "type": "text",
@@ -1612,7 +1692,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-transitions-toggle": {
               "type": "text",
@@ -1627,6 +1708,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._skipTransitionsAndAnimations}",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1646,7 +1728,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "options-back-button": {
               "type": "text",
@@ -1661,6 +1744,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "BACK",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 40,
@@ -1672,7 +1756,8 @@
                     "popLayeredView": {}
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             }
           },
           "tree": [

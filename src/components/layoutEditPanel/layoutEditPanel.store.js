@@ -1,5 +1,6 @@
 import { parseAndRender } from "jempl";
 import { toFlatGroups } from "insieme";
+import { getFirstTypographyId } from "../../constants/typography.js";
 import { getVariableOptions } from "../../utils/index.js";
 
 const config = {
@@ -705,6 +706,7 @@ export const selectViewData = ({ state, attrs }) => {
       value: item.id,
     })),
   );
+  const firstTypographyId = getFirstTypographyId(state.typographyData);
   const typographyItemsWithNone = [
     { label: "None", value: "" },
     ...typographyItems,
@@ -737,6 +739,9 @@ export const selectViewData = ({ state, attrs }) => {
     variableOptionsWithNone: variableOptionsWithNone,
     values: {
       ...state.values,
+      typographyId: state.values?.typographyId || firstTypographyId || "",
+      hoverTypographyId: state.values?.hoverTypographyId ?? "",
+      clickedTypographyId: state.values?.clickedTypographyId ?? "",
       actions: Object.entries(
         state.values?.click?.actionPayload?.actions || {},
       ).map(([key, _value]) => ({
