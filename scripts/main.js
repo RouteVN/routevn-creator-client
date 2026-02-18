@@ -120,7 +120,7 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
-const initEngine = async ({ jsonData, assetBufferMap }) => {
+const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   const plugins = {
     elements: [
       textPlugin,
@@ -154,6 +154,8 @@ const initEngine = async ({ jsonData, assetBufferMap }) => {
   };
 
   const routeGraphics = createRouteGraphics();
+  let engine;
+
   await routeGraphics.init({
     width: 1920,
     height: 1080,
@@ -194,34 +196,37 @@ const initEngine = async ({ jsonData, assetBufferMap }) => {
     routeGraphics,
     ticker,
   });
-  const engine = createRouteEngine({ handlePendingEffects: effectsHandler });
+  engine = createRouteEngine({ handlePendingEffects: effectsHandler });
   const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
   const globalDeviceVariables =
     JSON.parse(localStorage.getItem("globalDeviceVariables")) || {};
   const globalAccountVariables =
     JSON.parse(localStorage.getItem("globalAccountVariables")) || {};
 
-  engine.init({
-    initialState: {
-      global: {
-        currentLocalizationPackageId: "eklekfjwalefj",
-        saveSlots,
-        variables: { ...globalDeviceVariables, ...globalAccountVariables },
+  const startEngine = () => {
+    engine.init({
+      initialState: {
+        global: {
+          currentLocalizationPackageId: "eklekfjwalefj",
+          saveSlots,
+          variables: { ...globalDeviceVariables, ...globalAccountVariables },
+        },
+        projectData: jsonData,
       },
-      projectData: jsonData,
-    },
-  });
+    });
+  };
 
-  hideLoadingOverlay();
+  return { startEngine };
 };
 
 const bootstrap = async () => {
   try {
     const preloadedData = await preloadBundleData();
+    const engineRuntime = await prepareEngine(preloadedData);
     setLoadingReadyForClick();
     await waitForClickToStart();
-    setLoadingText("Starting...");
-    await initEngine(preloadedData);
+    engineRuntime.startEngine();
+    hideLoadingOverlay();
   } catch (error) {
     console.error("Failed to start bundle player:", error);
     setLoadingText("Failed to load");
