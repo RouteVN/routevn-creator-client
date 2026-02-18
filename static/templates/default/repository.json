@@ -392,16 +392,16 @@
         "id": "InLYeatJKoWWQOJaLlxZK",
         "children": [
           {
-            "id": "built-in-default-typography"
+            "id": "default-typography"
+          },
+          {
+            "id": "default-hover-yellow-typography"
           },
           {
             "id": "aEFgSimQUspdxkvXUSyRd"
           },
           {
             "id": "jiWyxqqEgEdAVTPAxbGFp"
-          },
-          {
-            "id": "choice-hover-yellow-typography"
           }
         ]
       }
@@ -411,15 +411,15 @@
         "type": "folder",
         "name": "Default"
       },
-      "built-in-default-typography": {
+      "default-typography": {
         "type": "typography",
-        "name": "Built-in Default",
+        "name": "Default",
         "fontSize": 24,
         "lineHeight": 1.2,
         "colorId": "color-white",
         "fontId": "font-system-arial",
         "fontWeight": "400",
-        "previewText": "Built-in Default"
+        "previewText": "Default"
       },
       "aEFgSimQUspdxkvXUSyRd": {
         "type": "typography",
@@ -441,15 +441,15 @@
         "fontWeight": "400",
         "previewText": "Text View"
       },
-      "choice-hover-yellow-typography": {
+      "default-hover-yellow-typography": {
         "type": "typography",
-        "name": "Choice Hover Yellow",
+        "name": "Default Hover Yellow",
         "fontSize": 24,
         "lineHeight": 1.2,
         "colorId": "color-yellow",
         "fontId": "font-system-arial",
         "fontWeight": "400",
-        "previewText": "Choice Hover"
+        "previewText": "Default Hover"
       }
     }
   },
@@ -716,7 +716,7 @@
             "5ghjk54j": {
               "type": "text-ref-choice-item-content",
               "name": "Text (Choice Item Content)",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "x": 840,
               "y": 10,
               "text": "text",
@@ -728,7 +728,8 @@
               "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
-              "rotation": 0
+              "rotation": 0,
+              "typographyId": "default-typography"
             },
             "894jjd3": {
               "type": "sprite",
@@ -805,7 +806,8 @@
                 "fontWeight": "bold",
                 "fill": "#ffffff",
                 "letterSpacing": 4
-              }
+              },
+              "typographyId": "default-typography"
             },
             "btn-start": {
               "type": "text",
@@ -820,7 +822,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "START",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -835,7 +837,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "btn-load": {
               "type": "text",
@@ -850,7 +853,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "LOAD",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -864,7 +867,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "btn-options": {
               "type": "text",
@@ -879,7 +883,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "OPTIONS",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 44,
@@ -893,7 +897,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             }
           },
           "tree": [
@@ -954,7 +959,8 @@
                 "fontWeight": "bold",
                 "fill": "#ffffff",
                 "letterSpacing": 3
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-1": {
               "type": "text",
@@ -973,7 +979,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-2": {
               "type": "text",
@@ -992,7 +999,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-3": {
               "type": "text",
@@ -1011,7 +1019,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-4": {
               "type": "text",
@@ -1030,7 +1039,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-5": {
               "type": "text",
@@ -1049,7 +1059,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "slot-6": {
               "type": "text",
@@ -1068,7 +1079,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "load-back-button": {
               "type": "text",
@@ -1083,7 +1095,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "BACK",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 40,
@@ -1095,7 +1107,8 @@
                     "popLayeredView": {}
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             }
           },
           "tree": [
@@ -1168,7 +1181,8 @@
                 "fontWeight": "bold",
                 "fill": "#ffffff",
                 "letterSpacing": 3
-              }
+              },
+              "typographyId": "default-typography"
             },
             "audio-label": {
               "type": "text",
@@ -1188,7 +1202,8 @@
                 "fontSize": 48,
                 "fontWeight": "bold",
                 "fill": "#ffcc00"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "bgm-label": {
               "type": "text",
@@ -1207,7 +1222,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "bgm-decrease": {
               "type": "text",
@@ -1242,7 +1258,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "bgm-value": {
               "type": "text",
@@ -1261,7 +1278,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "bgm-increase": {
               "type": "text",
@@ -1296,7 +1314,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "sfx-label": {
               "type": "text",
@@ -1315,7 +1334,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "sfx-decrease": {
               "type": "text",
@@ -1350,7 +1370,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "sfx-value": {
               "type": "text",
@@ -1369,7 +1390,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "sfx-increase": {
               "type": "text",
@@ -1404,7 +1426,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "mute-label": {
               "type": "text",
@@ -1423,7 +1446,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "mute-toggle": {
               "type": "text",
@@ -1438,7 +1462,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._muteAll}",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1458,7 +1482,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "text-label": {
               "type": "text",
@@ -1478,7 +1503,8 @@
                 "fontSize": 48,
                 "fontWeight": "bold",
                 "fill": "#ffcc00"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "text-speed-label": {
               "type": "text",
@@ -1497,7 +1523,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "speed-decrease": {
               "type": "text",
@@ -1532,7 +1559,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "speed-value": {
               "type": "text",
@@ -1551,7 +1579,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "speed-increase": {
               "type": "text",
@@ -1586,7 +1615,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "auto-forward-label": {
               "type": "text",
@@ -1605,7 +1635,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "auto-decrease": {
               "type": "text",
@@ -1640,7 +1671,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "auto-value": {
               "type": "text",
@@ -1659,7 +1691,8 @@
                 "align": "center",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "auto-increase": {
               "type": "text",
@@ -1694,7 +1727,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-label": {
               "type": "text",
@@ -1714,7 +1748,8 @@
                 "fontSize": 48,
                 "fontWeight": "bold",
                 "fill": "#ffcc00"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-unseen-label": {
               "type": "text",
@@ -1733,7 +1768,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-unseen-toggle": {
               "type": "text",
@@ -1748,7 +1784,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._skipUnseenText}",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1768,7 +1804,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-transitions-label": {
               "type": "text",
@@ -1787,7 +1824,8 @@
                 "align": "left",
                 "fontSize": 36,
                 "fill": "#ffffff"
-              }
+              },
+              "typographyId": "default-typography"
             },
             "skip-transitions-toggle": {
               "type": "text",
@@ -1802,7 +1840,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "${variables._skipTransitionsAndAnimations}",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 36,
@@ -1822,7 +1860,8 @@
                     }
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             },
             "options-back-button": {
               "type": "text",
@@ -1837,7 +1876,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "BACK",
-              "hoverTypographyId": "choice-hover-yellow-typography",
+              "hoverTypographyId": "default-hover-yellow-typography",
               "style": {
                 "align": "center",
                 "fontSize": 40,
@@ -1849,7 +1888,8 @@
                     "popLayeredView": {}
                   }
                 }
-              }
+              },
+              "typographyId": "default-typography"
             }
           },
           "tree": [

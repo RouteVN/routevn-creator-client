@@ -1,4 +1,4 @@
-export const BUILT_IN_DEFAULT_TYPOGRAPHY_ID = "built-in-default-typography";
+export const DEFAULT_TYPOGRAPHY_ID = "default-typography";
 
 const getNodeId = (node) => {
   if (!node) {
