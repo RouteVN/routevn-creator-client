@@ -1,5 +1,3 @@
-export const DEFAULT_TYPOGRAPHY_ID = "default-typography";
-
 const getNodeId = (node) => {
   if (!node) {
     return undefined;

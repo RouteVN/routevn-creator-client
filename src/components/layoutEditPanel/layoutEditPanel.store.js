@@ -463,7 +463,7 @@ const config = {
           label: "Default",
           name: "typographyId",
           value: "${values.typographyId}",
-          options: "${typographyItemsWithDefault}",
+          options: "${typographyItems}",
         },
         {
           type: "select",
@@ -707,7 +707,6 @@ export const selectViewData = ({ state, attrs }) => {
     })),
   );
   const firstTypographyId = getFirstTypographyId(state.typographyData);
-  const typographyItemsWithDefault = typographyItems;
   const typographyItemsWithNone = [
     { label: "None", value: "" },
     ...typographyItems,
@@ -736,7 +735,6 @@ export const selectViewData = ({ state, attrs }) => {
     itemType: attrs["item-type"],
     layoutType: attrs["layout-type"],
     typographyItems: typographyItems,
-    typographyItemsWithDefault: typographyItemsWithDefault,
     typographyItemsWithNone: typographyItemsWithNone,
     variableOptionsWithNone: variableOptionsWithNone,
     values: {

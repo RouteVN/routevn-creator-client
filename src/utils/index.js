@@ -181,7 +181,7 @@ export const layoutTreeStructureToRenderState = (
 
         textStyle = {
           fontSize: typography.fontSize || 24,
-          fontFamily: fontItem?.fontFamily || "Arial",
+          fontFamily: fontItem?.fontFamily || "sans-serif",
           fontWeight: typography.fontWeight || "normal",
           fill: colorItem?.hex || "white",
           lineHeight: typography.lineHeight || 1.2,
@@ -192,7 +192,7 @@ export const layoutTreeStructureToRenderState = (
         // Use default settings
         textStyle = {
           fontSize: 24,
-          fontFamily: "Arial",
+          fontFamily: "sans-serif",
           fontWeight: "normal",
           fill: "white",
           lineHeight: 1.2,
@@ -225,7 +225,8 @@ export const layoutTreeStructureToRenderState = (
 
         return {
           fontSize,
-          fontFamily: fontItem?.fontFamily || textStyle.fontFamily || "Arial",
+          fontFamily:
+            fontItem?.fontFamily || textStyle.fontFamily || "sans-serif",
           fontWeight: typography.fontWeight || textStyle.fontWeight || "normal",
           fill: colorItem?.hex || textStyle.fill || "white",
           // Hover/click styles are applied directly by route-graphics (not parseText),

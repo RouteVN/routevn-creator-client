@@ -1262,8 +1262,7 @@
                     }
                   }
                 }
-              },
-              "typographyId": "default-typography"
+              }
             },
             "bgm-value": {
               "type": "text",
@@ -1342,8 +1341,7 @@
                     }
                   }
                 }
-              },
-              "typographyId": "default-typography"
+              }
             },
             "sfx-value": {
               "type": "text",
@@ -1499,8 +1497,7 @@
                     }
                   }
                 }
-              },
-              "typographyId": "default-typography"
+              }
             },
             "speed-value": {
               "type": "text",
@@ -1579,8 +1576,7 @@
                     }
                   }
                 }
-              },
-              "typographyId": "default-typography"
+              }
             },
             "auto-value": {
               "type": "text",
