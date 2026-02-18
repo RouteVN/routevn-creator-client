@@ -1,5 +1,120 @@
 import { toFlatGroups, toFlatItems } from "insieme";
 
+const createTransitionKey = (transition) => {
+  if (!transition) {
+    return null;
+  }
+
+  const sceneId = transition.sceneId || "";
+  const sectionId = transition.sectionId || "";
+
+  if (!sceneId && !sectionId) {
+    return null;
+  }
+
+  return `${sceneId}::${sectionId}`;
+};
+
+const getTransitionsFromLayout = (layout) => {
+  if (!layout?.elements?.items) {
+    return [];
+  }
+
+  return Object.values(layout.elements.items)
+    .map((element) => {
+      return element?.click?.actionPayload?.actions?.sectionTransition;
+    })
+    .filter(Boolean);
+};
+
+const getSectionPresentation = (
+  section,
+  initialSectionId,
+  layouts,
+  menuSceneId,
+) => {
+  const lines = section?.lines ? toFlatItems(section.lines) : [];
+  const transitions = new Set();
+
+  let choiceCount = 0;
+  let hasMenuReturnAction = false;
+  let returnsToMenuScene = false;
+
+  lines.forEach((line) => {
+    const pushLayeredView =
+      line.actions?.pushLayeredView || line.actions?.actions?.pushLayeredView;
+    const popLayeredView =
+      line.actions?.popLayeredView || line.actions?.actions?.popLayeredView;
+    if (pushLayeredView || popLayeredView) {
+      hasMenuReturnAction = true;
+    }
+
+    const sectionTransition =
+      line.actions?.sectionTransition ||
+      line.actions?.actions?.sectionTransition;
+    if (menuSceneId && sectionTransition?.sceneId === menuSceneId) {
+      returnsToMenuScene = true;
+    }
+    const sectionTransitionKey = createTransitionKey(sectionTransition);
+
+    if (sectionTransitionKey) {
+      transitions.add(sectionTransitionKey);
+    }
+
+    const choice = line.actions?.choice || line.actions?.actions?.choice;
+    const choiceItems = Array.isArray(choice?.items) ? choice.items : [];
+    choiceCount += choiceItems.length;
+
+    choiceItems.forEach((choiceItem) => {
+      const choiceTransition =
+        choiceItem.events?.click?.actions?.sectionTransition;
+      if (menuSceneId && choiceTransition?.sceneId === menuSceneId) {
+        returnsToMenuScene = true;
+      }
+      const choiceTransitionKey = createTransitionKey(choiceTransition);
+
+      if (choiceTransitionKey) {
+        transitions.add(choiceTransitionKey);
+      }
+    });
+
+    const layoutRefs = [
+      line.actions?.background,
+      line.actions?.base,
+      line.actions?.actions?.background,
+      line.actions?.actions?.base,
+    ].filter((ref) => ref?.resourceType === "layout" && ref?.resourceId);
+
+    layoutRefs.forEach((layoutRef) => {
+      const layout = layouts?.items?.[layoutRef.resourceId];
+      const layoutTransitions = getTransitionsFromLayout(layout);
+
+      layoutTransitions.forEach((layoutTransition) => {
+        if (menuSceneId && layoutTransition?.sceneId === menuSceneId) {
+          returnsToMenuScene = true;
+        }
+        const layoutTransitionKey = createTransitionKey(layoutTransition);
+
+        if (layoutTransitionKey) {
+          transitions.add(layoutTransitionKey);
+        }
+      });
+    });
+  });
+
+  const outgoingCount = transitions.size;
+  const isMenuReturn = hasMenuReturnAction || returnsToMenuScene;
+
+  return {
+    lineCount: lines.length,
+    choiceCount,
+    outgoingCount,
+    isMenuReturn,
+    isDeadEnd: outgoingCount === 0 && !isMenuReturn,
+    isInitial: section.id === initialSectionId,
+  };
+};
+
 const form = {
   fields: [
     { name: "name", inputType: "popover-input", description: "Name" },
@@ -14,8 +129,10 @@ const CONTEXT_MENU_ITEMS = [
 
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
+  layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   whiteboardItems: [],
+  sectionsPanelExpanded: false,
   isWaitingForTransform: false,
   showSceneForm: false,
   sceneFormPosition: { x: 0, y: 0 },
@@ -34,6 +151,10 @@ export const createInitialState = () => ({
 
 export const setItems = (state, scenesData) => {
   state.scenesData = scenesData;
+};
+
+export const setLayouts = (state, layoutsData) => {
+  state.layoutsData = layoutsData || { tree: [], items: {} };
 };
 
 export const showPreviewSceneId = (state, payload) => {
@@ -55,6 +176,10 @@ export const selectPreviewScene = ({ state }) => {
 
 export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
+};
+
+export const toggleSectionsPanelExpanded = (state) => {
+  state.sectionsPanelExpanded = !state.sectionsPanelExpanded;
 };
 
 export const updateItemPosition = (state, { itemId, x, y }) => {
@@ -147,14 +272,16 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
 let hasInitialized = false;
 
 export const selectViewData = ({ state }, payload) => {
+  const repositoryState = payload?.repository?.getState?.();
+
   // Check if we need to initialize from repository on first render
-  if (!hasInitialized && payload && payload.repository) {
-    const repositoryState = payload.repository.getState();
-    const { scenes, story } = repositoryState;
+  if (!hasInitialized && repositoryState) {
+    const { scenes, story, layouts: repositoryLayouts } = repositoryState;
 
     if (scenes && Object.keys(scenes.items || {}).length > 0) {
       // Initialize the scenes data
       state.scenesData = scenes;
+      state.layoutsData = repositoryLayouts || { tree: [], items: {} };
 
       // Transform only scene items (not folders) into whiteboard items
       const initialSceneId = story?.initialSceneId;
@@ -174,6 +301,8 @@ export const selectViewData = ({ state }, payload) => {
     }
   }
 
+  const layouts = state.layoutsData;
+
   const flatItems = toFlatItems(state.scenesData);
   const flatGroups = toFlatGroups(state.scenesData);
 
@@ -189,6 +318,53 @@ export const selectViewData = ({ state }, payload) => {
     };
   }
 
+  const selectedSceneFirstSectionId = selectedItem?.sections?.tree?.[0]?.id;
+  const selectedSceneInitialSectionId =
+    selectedItem?.initialSectionId || selectedSceneFirstSectionId;
+  const menuSceneId = repositoryState?.story?.initialSceneId;
+
+  const selectedSceneSections =
+    selectedItem?.type === "scene" && selectedItem?.sections
+      ? toFlatItems(selectedItem.sections).map((section, index) => {
+          const {
+            lineCount,
+            choiceCount,
+            outgoingCount,
+            isMenuReturn,
+            isDeadEnd,
+            isInitial,
+          } = getSectionPresentation(
+            section,
+            selectedSceneInitialSectionId,
+            layouts,
+            menuSceneId,
+          );
+
+          return {
+            id: section.id,
+            name: section.name || `Section ${index + 1}`,
+            lineCount,
+            choiceCount,
+            outgoingCount,
+            isMenuReturn,
+            isDeadEnd,
+            isInitial,
+            index,
+          };
+        })
+      : [];
+  const sectionCount = selectedSceneSections.length;
+  const deadEndCount = selectedSceneSections.filter(
+    (section) => section.isDeadEnd,
+  ).length;
+  const sectionCards = selectedSceneSections.map((section, index) => ({
+    ...section,
+    order: index + 1,
+  }));
+  const initialSection = selectedSceneSections.find(
+    (section) => section.isInitial,
+  );
+  const initialSectionName = initialSection ? initialSection.name : undefined;
   // Get folder options for form
   const folderOptions = [
     { id: "_root", name: "Root Folder" },
@@ -247,6 +423,14 @@ export const selectViewData = ({ state }, payload) => {
     whiteboardItems: state.whiteboardItems,
     form,
     defaultValues,
+    sectionsPanelExpanded: state.sectionsPanelExpanded,
+    sectionsPanelToggleLabel: state.sectionsPanelExpanded
+      ? "Collapse"
+      : "Expand",
+    sectionCards,
+    sectionCount,
+    deadEndCount,
+    initialSectionName,
     isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,
     sceneFormPosition: state.sceneFormPosition,

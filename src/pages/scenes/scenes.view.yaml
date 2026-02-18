@@ -39,6 +39,14 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
+  sections-panel-toggle:
+    eventListeners:
+      click:
+        handler: handleSectionsPanelToggle
+  section-row-*:
+    eventListeners:
+      click:
+        handler: handleSectionRowClick
   scene-form:
     eventListeners:
       action-click:
@@ -72,11 +80,66 @@ template:
                   - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
           - rtgl-view flex=1 h=f:
               - rvn-whiteboard#whiteboard .items=whiteboardItems .cursor=whiteboardCursor .selectedItemId=selectedItemId:
-          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-              - rtgl-view wh=f slot="content":
+          - rvn-resizable-panel panel-type=detail-panel w=400 min-w=320 max-w=620 resize-side="left":
+              - rtgl-view wh=f d=v slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
-                          - rtgl-button#preview-button slot="preview" data-scene-id="${selectedItemId}": Preview
+                      - 'rtgl-view w=f h=f d=v g=sm style="min-height: 0px;"':
+                          - rtgl-form#detail-form key=${selectedItemId} w=f .form=form .defaultValues=defaultValues:
+                              - rtgl-button#preview-button slot="preview" data-scene-id="${selectedItemId}": Preview
+                          - 'rtgl-view w=f flex=1 d=v bw=xs br=md bgc=bg style="min-height: 0px;"':
+                              - rtgl-view#sections-panel-toggle w=f d=v g=md p=lg cur=p h-bgc=mu bw=xs br=sm bgc=bg:
+                                  - rtgl-view w=f d=h av=c:
+                                      - rtgl-text s=sm fw=500: Sections Overview
+                                      - rtgl-view flex=1:
+                                      - rtgl-view ph=md pv=xs bgc=ac bw=xs bc=ac br=full:
+                                          - rtgl-text s=xs fw=600 c=bg: ${sectionsPanelToggleLabel}
+                                  - rtgl-view w=f d=h g=md:
+                                      - 'rtgl-view flex=1 h=88 d=v jc=sb p=md bw=xs bc=mu br=sm bgc=mu style="min-width: 0px;"':
+                                          - rtgl-text s=xs c=mu-fg: Sections
+                                          - rtgl-text s=lg: ${sectionCount}
+                                      - 'rtgl-view flex=1 h=88 d=v jc=sb p=md bw=xs bc=mu br=sm bgc=mu style="min-width: 0px;"':
+                                          - rtgl-text s=xs c=mu-fg: Dead Ends
+                                          - rtgl-text s=lg: ${deadEndCount}
+                                      - 'rtgl-view flex=1 h=88 d=v jc=sb p=md bw=xs bc=mu br=sm bgc=mu style="min-width: 0px;"':
+                                          - rtgl-text s=xs c=mu-fg: Initial
+                                          - $if initialSectionName:
+                                              - 'rtgl-text s=sm style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${initialSectionName}
+                                            $else:
+                                              - rtgl-text s=sm c=mu-fg: None
+                                  - rtgl-view w=f d=h av=c:
+                                      - rtgl-text s=xs c=mu-fg: ${sectionCount} total, ${deadEndCount} dead ends
+                              - $if sectionsPanelExpanded:
+                                  - 'rtgl-view w=f flex=1 d=v p=md g=md style="min-height: 0px;"':
+                                      - $if sectionCount == 0:
+                                          - rtgl-view flex=1 av=c ah=c bw=xs br=sm bgc=mu:
+                                              - rtgl-text s=sm c=mu-fg: No sections
+                                        $else:
+                                          - 'rtgl-view w=f flex=1 sv d=v p=sm g=md bgc=bg bw=xs br=sm style="min-height: 0px;"':
+                                              - $for section in sectionCards:
+                                                  - rtgl-view#section-row-${section.id} w=f d=v g=md p=lg cur=p bw=xs bc=mu br=sm bgc=bg h-bgc=mu:
+                                                      - rtgl-view d=h av=c jc=sb g=xs:
+                                                          - rtgl-view d=h av=c g=xs:
+                                                              - rtgl-text s=md fw=500: ${section.name}
+                                                              - $if section.isInitial:
+                                                                  - rtgl-view ph=xs pv=xxs bgc=ac br=sm:
+                                                                      - rtgl-text s=xs: Initial
+                                                              - $if section.isMenuReturn:
+                                                                  - rtgl-view ph=xs pv=xxs bgc=mu br=sm:
+                                                                      - rtgl-text s=xs c=mu-fg: Menu End
+                                                              - $if section.isDeadEnd:
+                                                                  - rtgl-view ph=xs pv=xxs bgc=er br=sm:
+                                                                      - rtgl-text s=xs c=bg: Dead End
+                                                          - rtgl-text s=xs c=mu-fg: #${section.order}
+                                                      - rtgl-view d=h g=sm jc=c av=c:
+                                                          - rtgl-view w=92 d=v g=xs p=sm bgc=mu bw=xs bc=bg br=sm:
+                                                              - rtgl-text s=xxs c=mu-fg: Lines
+                                                              - rtgl-text s=sm: ${section.lineCount}
+                                                          - rtgl-view w=92 d=v g=xs p=sm bgc=mu bw=xs bc=bg br=sm:
+                                                              - rtgl-text s=xxs c=mu-fg: Choices
+                                                              - rtgl-text s=sm: ${section.choiceCount}
+                                                          - rtgl-view w=92 d=v g=xs p=sm bgc=mu bw=xs bc=bg br=sm:
+                                                              - rtgl-text s=xxs c=mu-fg: Outgoing
+                                                              - rtgl-text s=sm: ${section.outgoingCount}
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection

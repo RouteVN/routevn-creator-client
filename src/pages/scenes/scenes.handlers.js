@@ -123,6 +123,7 @@ export const handleAfterMount = async (deps) => {
 
   // Set the scenes data
   store.setItems(scenesData);
+  store.setLayouts(layouts);
 
   // Transform only scene items (not folders) into whiteboard items
   const initialSceneId = story?.initialSceneId;
@@ -200,6 +201,7 @@ export const handleDataChanged = async (deps) => {
 
   // Update both scenes data and whiteboard items
   store.setItems(sceneData);
+  store.setLayouts(layouts);
   store.setWhiteboardItems(sceneItems);
   render();
 };
@@ -249,6 +251,30 @@ export const handleWhiteboardItemSelected = (deps, payload) => {
   // Update selected item for detail panel
   store.setSelectedItemId(itemId);
   render();
+};
+
+export const handleSectionsPanelToggle = (deps) => {
+  const { store, render } = deps;
+  store.toggleSectionsPanelExpanded();
+  render();
+};
+
+export const handleSectionRowClick = (deps, payload) => {
+  const { store, appService } = deps;
+  const rowId = payload._event.currentTarget.id;
+  const sectionId = rowId.replace("section-row-", "");
+  const sceneId = store.selectSelectedItemId();
+
+  if (!sceneId || !sectionId) {
+    return;
+  }
+
+  const currentPayload = appService.getPayload();
+  appService.navigate("/project/scene-editor", {
+    ...currentPayload,
+    sceneId,
+    sectionId,
+  });
 };
 
 export const handleWhiteboardItemDoubleClick = (deps, payload) => {
@@ -436,6 +462,7 @@ export const handleSceneFormAction = async (deps, payload) => {
           type: "scene",
           name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
           createdAt: new Date().toISOString(),
+          initialSectionId: sectionId,
           position: {
             x: sceneWhiteboardPosition.x,
             y: sceneWhiteboardPosition.y,

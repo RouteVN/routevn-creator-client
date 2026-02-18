@@ -240,8 +240,8 @@ export const handleAfterMount = async (deps) => {
   // Ensure repository is loaded for sync access
   await projectService.ensureRepository();
 
-  // Get sceneId from router payload
-  const { sceneId } = appService.getPayload();
+  // Get sceneId and optional sectionId from router payload
+  const { sceneId, sectionId: requestedSectionId } = appService.getPayload();
   const state = projectService.getState();
 
   if (state.fonts && state.fonts.items) {
@@ -258,16 +258,22 @@ export const handleAfterMount = async (deps) => {
   store.setSceneId(sceneId);
   store.setRepositoryState(state);
 
-  // Get scene to set first section and first line
+  // Get scene to set requested section (fallback: first section) and first line
   const scene = store.selectScene();
   if (scene && scene.sections && scene.sections.length > 0) {
-    const firstSection = scene.sections[0];
-    store.setSelectedSectionId(firstSection.id);
+    const selectedSection =
+      scene.sections.find((section) => section.id === requestedSectionId) ||
+      scene.sections[0];
+    store.setSelectedSectionId(selectedSection.id);
 
-    // Also select the first line in the first section
-    if (firstSection.lines && firstSection.lines.length > 0) {
-      store.setSelectedLineId(firstSection.lines[0].id);
+    // Select first line from selected section
+    if (selectedSection.lines && selectedSection.lines.length > 0) {
+      store.setSelectedLineId(selectedSection.lines[0].id);
+    } else {
+      store.setSelectedLineId(undefined);
     }
+  } else {
+    store.setSelectedLineId(undefined);
   }
 
   const { canvas } = getRefIds();
