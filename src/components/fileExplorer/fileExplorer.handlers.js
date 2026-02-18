@@ -176,9 +176,7 @@ export const handleFileAction = async (deps, payload) => {
           id: nanoid(),
           type: "text",
           name: "Text",
-          ...(firstTypographyId
-            ? { typographyId: firstTypographyId }
-            : {}),
+          ...(firstTypographyId ? { typographyId: firstTypographyId } : {}),
         },
         options: {
           parent: "_root",
@@ -238,7 +236,10 @@ export const handleFileAction = async (deps, payload) => {
         checkTargets = ["scenes"];
       } else if (resourceType === "typography") {
         const typographyCount = getTypographyCount(state.typography);
-        const removalCount = getTypographyRemovalCount(state.typography, itemId);
+        const removalCount = getTypographyRemovalCount(
+          state.typography,
+          itemId,
+        );
         if (typographyCount - removalCount < 1) {
           appService.showToast("At least one typography must remain.");
           render();
