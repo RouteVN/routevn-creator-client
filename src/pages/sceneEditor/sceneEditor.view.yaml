@@ -40,6 +40,18 @@ refs:
     eventListeners:
       click:
         handler: handleSectionsOverviewClick
+  sections-overview-overlay:
+    eventListeners:
+      click:
+        handler: handleSectionsOverviewClose
+  sections-overview-close:
+    eventListeners:
+      click:
+        handler: handleSectionsOverviewClose
+  section-overview-row-*:
+    eventListeners:
+      click:
+        handler: handleSectionsOverviewRowClick
   dropdown-menu:
     eventListeners:
       close:
@@ -142,6 +154,20 @@ template:
                   - rtgl-view g=md w=f pv=md:
                       - rvn-system-actions#system-actions show-selected .actions=selectedLineActions .selectedLineId=selectedLineId .selectedLine=selectedLine .currentSceneId=scene.id action-type="presentation" .presentationState=presentationState:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+  - $if sectionsOverviewOpen:
+      - rtgl-view pos=fix cor=full z=2200:
+          - 'rtgl-view#sections-overview-overlay pos=fix cor=full bgc=bg op=0.55':
+          - 'rtgl-view pos=fix z=2201 bwl=xs bgc=bg d=v style="top: 0; right: 0; height: 100vh; width: 50vw;"':
+              - rtgl-view d=h av=c g=sm bwb=xs p=lg w=f:
+                  - rtgl-text s=lg fw=600: Sections Overview
+                  - rtgl-view flex=1:
+                  - rtgl-button#sections-overview-close v=gh: Close
+              - 'rtgl-view d=v w=f flex=1 sv p=lg g=md style="min-height: 0px;"':
+                  - $for section in sectionsOverviewItems:
+                      - rtgl-view#section-overview-row-${section.id} w=f d=h av=c jc=sb g=sm p=lg cur=p bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
+                          - rtgl-view d=v g=xs:
+                              - rtgl-text s=md c=${section.rowTextColor}: ${section.order}. ${section.name}
+                              - rtgl-text s=xs c=${section.rowSubTextColor}: ${section.lineCount} lines
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:
   - $if previewVisible:

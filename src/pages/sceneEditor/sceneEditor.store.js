@@ -7,6 +7,9 @@ export const createInitialState = () => ({
   selectedLineId: undefined,
   sectionsGraphView: false,
   selectedSectionId: "1",
+  sectionsOverviewPanel: {
+    isOpen: false,
+  },
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -185,6 +188,14 @@ export const setSelectedSectionId = (state, selectedSectionId) => {
   state.selectedSectionId = selectedSectionId;
 };
 
+export const openSectionsOverviewPanel = (state) => {
+  state.sectionsOverviewPanel.isOpen = true;
+};
+
+export const closeSectionsOverviewPanel = (state) => {
+  state.sectionsOverviewPanel.isOpen = false;
+};
+
 // Set lock to prevent duplicate split/merge operations on the same line
 export const setLockingLineId = (state, lineId) => {
   state.lockingLineId = lineId;
@@ -332,6 +343,17 @@ export const selectViewData = ({ state }) => {
       bgc: section.id === state.selectedSectionId ? "" : "mu",
     };
   });
+  const sectionsOverviewItems = scene.sections.map((section, index) => ({
+    id: section.id,
+    order: index + 1,
+    name: section.name || `Section ${index + 1}`,
+    lineCount: Array.isArray(section.lines) ? section.lines.length : 0,
+    isSelected: section.id === state.selectedSectionId,
+    rowBgc: section.id === state.selectedSectionId ? "ac" : "bg",
+    rowBc: section.id === state.selectedSectionId ? "ac" : "mu",
+    rowTextColor: section.id === state.selectedSectionId ? "bg" : "fg",
+    rowSubTextColor: section.id === state.selectedSectionId ? "bg" : "mu-fg",
+  }));
 
   // const currentLines = state.sections.find(section => section.id === state.selectedSectionId).lines;
 
@@ -383,6 +405,8 @@ export const selectViewData = ({ state }) => {
   return {
     scene: scene,
     sections,
+    sectionsOverviewOpen: state.sectionsOverviewPanel.isOpen,
+    sectionsOverviewItems,
     currentLines: Array.isArray(currentSection?.lines)
       ? currentSection.lines
       : [],

@@ -659,15 +659,32 @@ export const handleSectionAddClick = async (deps) => {
 
 export const handleSectionsOverviewClick = (deps, payload) => {
   const { store, render } = deps;
-  const rect = payload._event.currentTarget?.getBoundingClientRect?.();
-  const position = rect
-    ? { x: rect.left, y: rect.bottom }
-    : {
-        x: payload._event.clientX || 0,
-        y: payload._event.clientY || 0,
-      };
+  if (payload?._event) {
+    payload._event.preventDefault();
+  }
+  store.openSectionsOverviewPanel();
+  render();
+};
 
-  store.showSectionsOverviewDropdownMenu({ position });
+export const handleSectionsOverviewClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSectionsOverviewPanel();
+  render();
+};
+
+export const handleSectionsOverviewRowClick = async (deps, payload) => {
+  const { store, render } = deps;
+  const sectionId = payload._event.currentTarget.id.replace(
+    "section-overview-row-",
+    "",
+  );
+
+  if (!sectionId) {
+    return;
+  }
+
+  await selectSection(deps, sectionId);
+  store.closeSectionsOverviewPanel();
   render();
 };
 
