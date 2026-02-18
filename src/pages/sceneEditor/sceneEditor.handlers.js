@@ -299,14 +299,32 @@ export const handleAfterMount = async (deps) => {
   }, 1000);
 };
 
-export const handleSectionTabClick = async (deps, payload) => {
+const scrollSectionTabIntoView = (deps, sectionId) => {
+  const { getRefIds } = deps;
+
+  requestAnimationFrame(() => {
+    const refIds = getRefIds?.();
+    const tabRef = refIds?.[`section-tab-${sectionId}`];
+    const tabElement =
+      tabRef?.elm || document.getElementById(`section-tab-${sectionId}`);
+
+    tabElement?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    });
+  });
+};
+
+const selectSection = async (deps, sectionId) => {
   const { store, render, subject } = deps;
-  const id = payload._event.currentTarget.id.replace("section-tab-", "");
-  store.setSelectedSectionId(id);
+  store.setSelectedSectionId(sectionId);
   const scene = store.selectScene();
-  const newSection = scene.sections.find((section) => section.id === id);
-  if (newSection && newSection.lines && newSection.lines.length > 0) {
-    store.setSelectedLineId(newSection.lines[0].id);
+  const nextSection = scene?.sections?.find(
+    (section) => section.id === sectionId,
+  );
+  if (nextSection && nextSection.lines && nextSection.lines.length > 0) {
+    store.setSelectedLineId(nextSection.lines[0].id);
   } else {
     store.setSelectedLineId(undefined);
   }
@@ -314,7 +332,13 @@ export const handleSectionTabClick = async (deps, payload) => {
   await updateSectionChanges(deps);
 
   render();
+  scrollSectionTabIntoView(deps, sectionId);
   subject.dispatch("sceneEditor.renderCanvas", {});
+};
+
+export const handleSectionTabClick = async (deps, payload) => {
+  const sectionId = payload._event.currentTarget.id.replace("section-tab-", "");
+  await selectSection(deps, sectionId);
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
@@ -631,6 +655,20 @@ export const handleSectionAddClick = async (deps) => {
   setTimeout(async () => {
     await renderSceneState(store, graphicsService);
   }, 10);
+};
+
+export const handleSectionsOverviewClick = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget?.getBoundingClientRect?.();
+  const position = rect
+    ? { x: rect.left, y: rect.bottom }
+    : {
+        x: payload._event.clientX || 0,
+        y: payload._event.clientY || 0,
+      };
+
+  store.showSectionsOverviewDropdownMenu({ position });
+  render();
 };
 
 export const handleSplitLine = async (deps, payload) => {
@@ -1107,7 +1145,8 @@ export const handleDropdownMenuClickOverlay = (deps) => {
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, subject } = deps;
-  const action = payload._event.detail.item.value; // Access value from item object
+  const item = payload._event.detail.item || payload._event.detail;
+  const action = item?.value;
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
   const actionsType = dropdownState.actionsType;
@@ -1117,6 +1156,14 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const position = dropdownState.position;
 
   store.hideDropdownMenu();
+
+  if (typeof action === "string" && action.startsWith("go-to-section:")) {
+    const nextSectionId = action.replace("go-to-section:", "");
+    if (nextSectionId) {
+      await selectSection(deps, nextSectionId);
+      return;
+    }
+  }
 
   if (action === "delete-section") {
     // Delete section from repository

@@ -36,6 +36,10 @@ refs:
     eventListeners:
       click:
         handler: handleSectionAddClick
+  sections-overview:
+    eventListeners:
+      click:
+        handler: handleSectionsOverviewClick
   dropdown-menu:
     eventListeners:
       close:
@@ -116,6 +120,8 @@ template:
                                       - rtgl-text s=sm: ${section.name}
                       - rtgl-view#section-add h=32 av=c ph=lg ah=c cur=p bgc=mu:
                           - rtgl-text s=sm: +
+                      - rtgl-view#sections-overview h=32 av=c ph=lg ah=c cur=p bgc=mu:
+                          - rtgl-text s=sm: ...
 
                       - rtgl-view flex=1:
                       # Toggle graph view button - commented out for now

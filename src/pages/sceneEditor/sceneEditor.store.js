@@ -218,6 +218,23 @@ export const showSectionDropdownMenu = (state, { position, sectionId }) => {
   };
 };
 
+export const showSectionsOverviewDropdownMenu = (state, { position }) => {
+  const scene = selectScene({ state });
+  const items = (scene?.sections || []).map((section, index) => ({
+    label: `${index + 1}. ${section.name || `Section ${index + 1}`}`,
+    type: "item",
+    value: `go-to-section:${section.id}`,
+  }));
+
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    items,
+    sectionId: null,
+    actionsType: null,
+  };
+};
+
 export const showActionsDropdownMenu = (state, { position, actionsType }) => {
   state.dropdownMenu = {
     isOpen: true,
