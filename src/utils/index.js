@@ -82,7 +82,6 @@ const resolveTypographyForNode = (nodeTypographyId, typographyData = {}) => {
   const firstTypographyId = getFirstTypographyId(typographyData);
   return firstTypographyId ? typographyItems[firstTypographyId] : undefined;
 };
-
 const normalizeSliderChange = (change, sliderId) => {
   const updateVariable = change?.actionPayload?.actions?.updateVariable;
   if (!updateVariable) {

@@ -3,6 +3,7 @@ export const handleBeforeMount = (deps) => {
   store.setValues({
     values: props.values || {},
   });
+  store.setVariablesData(props.variablesData || { items: {}, tree: [] });
 };
 
 export const handleAfterMount = async (deps) => {
@@ -22,6 +23,7 @@ export const handleOnUpdate = (deps, payload) => {
     store.setValues({
       values: newProps.values || {},
     });
+    store.setVariablesData(newProps.variablesData || { items: {}, tree: [] });
     render();
   }
 };

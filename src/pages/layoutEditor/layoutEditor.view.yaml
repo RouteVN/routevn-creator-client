@@ -75,7 +75,7 @@ template:
                   - rtgl-view h=48 w=f av=c ph=md:
                       - rtgl-text c=mu-fg: ${item.name} (${item.type})
                   - rtgl-view w=f flex=1 sv pv=md:
-                      - rvn-layout-edit-panel#layout-edit-panel key=${layoutEditPanelKey} layout-type=${layout.layoutType} item-type=${item.type} .values=item:
+                      - rvn-layout-edit-panel#layout-edit-panel key=${layoutEditPanelKey} layout-type=${layout.layoutType} item-type=${item.type} .values=item .variablesData=variablesData:
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection

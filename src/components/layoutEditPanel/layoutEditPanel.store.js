@@ -1,6 +1,7 @@
 import { parseAndRender } from "jempl";
 import { toFlatGroups } from "insieme";
 import { getFirstTypographyId } from "../../constants/typography.js";
+import { getVariableOptions } from "../../utils/index.js";
 
 const config = {
   sections: [
@@ -343,6 +344,11 @@ const config = {
                 },
               },
             },
+          ],
+        },
+        {
+          type: "group",
+          fields: [
             {
               type: "clickable-value",
               label: "Initial",
@@ -367,6 +373,19 @@ const config = {
               },
             },
           ],
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "slider"',
+      label: "Variable Binding",
+      items: [
+        {
+          type: "select",
+          label: "Update Variable",
+          name: "variableId",
+          value: "${values.variableId}",
+          options: "${variableOptionsWithNone}",
         },
       ],
     },
@@ -532,6 +551,7 @@ export const createInitialState = () => {
       context: {},
     },
     typographyData: { tree: [], items: {} },
+    variablesData: { tree: [], items: {} },
     values: {
       x: 0,
       y: 0,
@@ -657,6 +677,10 @@ export const setTypographyData = (state, typographyData) => {
   state.typographyData = typographyData;
 };
 
+export const setVariablesData = (state, variablesData) => {
+  state.variablesData = variablesData;
+};
+
 export const selectValues = ({ state }) => {
   return state.values;
 };
@@ -689,6 +713,15 @@ export const selectViewData = ({ state, attrs }) => {
     ...typographyItems,
   ];
 
+  // Transform variables data to options format (number type only for sliders)
+  const variableOptions = getVariableOptions(state.variablesData, {
+    type: "number",
+  });
+  const variableOptionsWithNone = [
+    { label: "None", value: "" },
+    ...variableOptions,
+  ];
+
   const actionsLabelMap = {
     nextLine: "Next Line",
     sectionTransition: "Section Transition",
@@ -705,6 +738,7 @@ export const selectViewData = ({ state, attrs }) => {
     typographyItems: typographyItems,
     typographyItemsWithDefault: typographyItemsWithDefault,
     typographyItemsWithNone: typographyItemsWithNone,
+    variableOptionsWithNone: variableOptionsWithNone,
     values: {
       ...state.values,
       typographyId: state.values?.typographyId || firstTypographyId || "",
