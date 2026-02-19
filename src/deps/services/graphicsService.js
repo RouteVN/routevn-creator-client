@@ -21,6 +21,62 @@ export const createGraphicsService = async ({ subject }) => {
   let ticker;
   let beforeHandleActions;
   let actionQueue = Promise.resolve();
+  let assetLoadQueue = Promise.resolve();
+
+  const isBlobUrl = (url) =>
+    typeof url === "string" && url.startsWith("blob:");
+
+  const loadBuffersWithRetry = async (assets, retryCount = 1) => {
+    let attempt = 0;
+    while (attempt <= retryCount) {
+      try {
+        await assetBufferManager.load(assets);
+        return;
+      } catch (error) {
+        if (attempt >= retryCount) {
+          throw error;
+        }
+        attempt += 1;
+      }
+    }
+  };
+
+  const runAssetLoad = async (assets) => {
+    const assetEntries = Object.entries(assets || {});
+    const newAssetEntries = assetEntries.filter(
+      ([key]) => !assetBufferManager.has(key),
+    );
+
+    if (newAssetEntries.length === 0) {
+      return;
+    }
+
+    const newAssets = Object.fromEntries(newAssetEntries);
+    const blobUrlsToRevoke = newAssetEntries
+      .map(([, asset]) => asset?.url)
+      .filter(isBlobUrl);
+
+    try {
+      await loadBuffersWithRetry(newAssets);
+    } finally {
+      blobUrlsToRevoke.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    const fullBufferMap = assetBufferManager.getBufferMap();
+    const deltaBufferMap = Object.fromEntries(
+      newAssetEntries
+        .map(([key]) => [key, fullBufferMap[key]])
+        .filter(([, value]) => !!value),
+    );
+
+    if (Object.keys(deltaBufferMap).length === 0) {
+      return;
+    }
+
+    await routeGraphics.loadAssets(deltaBufferMap);
+  };
 
   const runInteractionActions = async (actions, eventContext) => {
     if (beforeHandleActions) {
@@ -56,6 +112,7 @@ export const createGraphicsService = async ({ subject }) => {
       const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
       beforeHandleActions = onBeforeHandleActions;
       actionQueue = Promise.resolve();
+      assetLoadQueue = Promise.resolve();
       assetBufferManager = createAssetBufferManager();
       routeGraphics = createRouteGraphics();
 
@@ -120,30 +177,9 @@ export const createGraphicsService = async ({ subject }) => {
       }
     },
     loadAssets: async (assets) => {
-      const assetEntries = Object.entries(assets || {});
-      const newAssetEntries = assetEntries.filter(
-        ([key]) => !assetBufferManager.has(key),
-      );
-
-      if (newAssetEntries.length === 0) {
-        return;
-      }
-
-      const newAssets = Object.fromEntries(newAssetEntries);
-      await assetBufferManager.load(newAssets);
-
-      const fullBufferMap = assetBufferManager.getBufferMap();
-      const deltaBufferMap = Object.fromEntries(
-        newAssetEntries
-          .map(([key]) => [key, fullBufferMap[key]])
-          .filter(([, value]) => !!value),
-      );
-
-      if (Object.keys(deltaBufferMap).length === 0) {
-        return;
-      }
-
-      await routeGraphics.loadAssets(deltaBufferMap);
+      const queuedLoad = assetLoadQueue.then(() => runAssetLoad(assets));
+      assetLoadQueue = queuedLoad.catch(() => {});
+      return queuedLoad;
     },
     initRouteEngine: (projectData) => {
       ticker.start();
@@ -204,6 +240,7 @@ export const createGraphicsService = async ({ subject }) => {
       }
       beforeHandleActions = undefined;
       actionQueue = Promise.resolve();
+      assetLoadQueue = Promise.resolve();
       ticker.stop();
     },
   };

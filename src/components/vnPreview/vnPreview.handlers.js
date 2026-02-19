@@ -90,9 +90,9 @@ async function loadAssetsForSceneIds(
       const { graphicsService } = deps;
       await graphicsService.loadAssets(assets);
 
-      missingFileReferences.forEach((fileReference) => {
-        if (fileReference?.url) {
-          assetLoadCache.fileIds.add(fileReference.url);
+      Object.keys(assets).forEach((fileId) => {
+        if (fileId) {
+          assetLoadCache.fileIds.add(fileId);
         }
       });
     }
@@ -153,9 +153,9 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
   const { graphicsService } = deps;
   await graphicsService.loadAssets(assets);
 
-  missingFileReferences.forEach((fileReference) => {
-    if (fileReference?.url) {
-      assetLoadCache.fileIds.add(fileReference.url);
+  Object.keys(assets).forEach((fileId) => {
+    if (fileId) {
+      assetLoadCache.fileIds.add(fileId);
     }
   });
 };
