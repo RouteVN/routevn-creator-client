@@ -27,6 +27,7 @@ export const createInitialState = () => ({
   presentationState: {},
   sectionLineChanges: {},
   isMuted: false,
+  isSceneAssetLoading: false,
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
 });
 
@@ -58,6 +59,14 @@ export const setPresentationState = (state, presentationState) => {
 
 export const setSectionLineChanges = (state, changes) => {
   state.sectionLineChanges = changes;
+};
+
+export const setSceneAssetLoading = (state, isLoading) => {
+  state.isSceneAssetLoading = isLoading;
+};
+
+export const selectIsSceneAssetLoading = ({ state }) => {
+  return state.isSceneAssetLoading;
 };
 
 export const selectSectionLineChanges = ({ state }) => {
@@ -306,6 +315,7 @@ export const selectViewData = ({ state }) => {
         null,
         2,
       ),
+      isSceneAssetLoading: state.isSceneAssetLoading,
     };
   }
 
@@ -352,15 +362,6 @@ export const selectViewData = ({ state }) => {
     (line) => line.id === state.selectedLineId,
   );
 
-  // Debug logging
-  if (!selectedLine && state.selectedLineId) {
-    console.warn("Selected line not found:", {
-      selectedLineId: state.selectedLineId,
-      availableLineIds: currentSection?.lines?.map((line) => line.id) || [],
-      currentSectionId: state.selectedSectionId,
-    });
-  }
-
   const repositoryState = selectRepositoryState({ state });
 
   return {
@@ -400,6 +401,7 @@ export const selectViewData = ({ state }) => {
     sectionLineChanges: state.sectionLineChanges,
     isMuted: state.isMuted,
     muteIcon: state.isMuted ? "mute" : "unmute",
+    isSceneAssetLoading: state.isSceneAssetLoading,
   };
 };
 

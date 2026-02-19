@@ -19,6 +19,30 @@ export const createGraphicsService = async ({ subject }) => {
   let assetBufferManager;
   // Create dedicated ticker for auto mode
   let ticker;
+  let beforeHandleActions;
+  let actionQueue = Promise.resolve();
+
+  const runInteractionActions = async (actions, eventContext) => {
+    if (beforeHandleActions) {
+      await beforeHandleActions(actions, eventContext);
+    }
+
+    if (!engine) {
+      return;
+    }
+
+    engine.handleActions(actions, eventContext);
+  };
+
+  const enqueueInteractionActions = (actions, eventContext) => {
+    actionQueue = actionQueue
+      .then(() => {
+        return runInteractionActions(actions, eventContext);
+      })
+      .catch((error) => {
+        console.error("[graphicsService] Failed to process interaction", error);
+      });
+  };
 
   return {
     init: async (options = {}) => {
@@ -29,7 +53,9 @@ export const createGraphicsService = async ({ subject }) => {
 
       ticker = new Ticker();
       ticker.start();
-      const { canvas } = options;
+      const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
+      beforeHandleActions = onBeforeHandleActions;
+      actionQueue = Promise.resolve();
       assetBufferManager = createAssetBufferManager();
       routeGraphics = createRouteGraphics();
 
@@ -78,7 +104,7 @@ export const createGraphicsService = async ({ subject }) => {
           }
 
           if (payload.actions && engine) {
-            engine.handleActions(
+            enqueueInteractionActions(
               payload.actions,
               payload._event ? { _event: payload._event } : undefined,
             );
@@ -154,6 +180,8 @@ export const createGraphicsService = async ({ subject }) => {
       if (engine) {
         engine = undefined;
       }
+      beforeHandleActions = undefined;
+      actionQueue = Promise.resolve();
       ticker.stop();
     },
   };
