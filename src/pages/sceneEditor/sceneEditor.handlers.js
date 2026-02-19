@@ -1,8 +1,10 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
 import {
+  extractSceneIdsFromValue,
   extractFileIdsForScenes,
   extractInitialHybridSceneIds,
+  resolveEventBindings,
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
 } from "../../utils/index.js";
@@ -135,6 +137,19 @@ const setSceneAssetLoading = (deps, isLoading) => {
   render();
 };
 
+const logLoadedAssets = (sceneIds, fileReferences) => {
+  if (!Array.isArray(fileReferences) || fileReferences.length === 0) {
+    return;
+  }
+
+  console.log("[asset-load][sceneEditor] loaded", {
+    sceneIds,
+    fileIds: fileReferences
+      .map((fileReference) => fileReference?.url)
+      .filter(Boolean),
+  });
+};
+
 async function loadAssetsForSceneIds(
   deps,
   projectData,
@@ -184,6 +199,8 @@ async function loadAssetsForSceneIds(
           assetLoadCache.fileIds.add(fileReference.url);
         }
       });
+
+      logLoadedAssets(uniqueSceneIds, missingFileReferences);
     }
 
     uniqueSceneIds.forEach((sceneId) => {
@@ -221,21 +238,35 @@ const preloadDirectTransitionScenes = async (deps, projectData, sceneIds) => {
 
 const createBeforeHandleActionsHook = (deps) => {
   const { store } = deps;
-  return async (actions) => {
+  return async (actions, eventContext) => {
     const projectData = store.selectProjectData();
-    const transitionSceneIds = extractTransitionTargetSceneIdsFromActions(
-      actions,
-      projectData,
+    const eventData = eventContext?._event;
+    const resolvedActions = resolveEventBindings(actions, eventData);
+    const transitionSceneIds = Array.from(
+      new Set([
+        ...extractTransitionTargetSceneIdsFromActions(
+          resolvedActions,
+          projectData,
+        ),
+        ...extractTransitionTargetSceneIdsFromActions(eventData, projectData),
+        ...extractSceneIdsFromValue(resolvedActions, projectData),
+        ...extractSceneIdsFromValue(eventData, projectData),
+      ]),
     );
 
     if (transitionSceneIds.length === 0) {
       return;
     }
 
+    console.log("[asset-load][sceneEditor] transition preload", {
+      transitionSceneIds,
+      hasEventData: !!eventData,
+    });
+
     await loadAssetsForSceneIds(deps, projectData, transitionSceneIds, {
       showLoading: false,
     });
-    void preloadDirectTransitionScenes(deps, projectData, transitionSceneIds);
+    await preloadDirectTransitionScenes(deps, projectData, transitionSceneIds);
   };
 };
 

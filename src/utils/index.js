@@ -64,10 +64,21 @@ export const extractFileIdsFromRenderState = (obj) => {
 
 const RESOURCE_REFERENCE_KEYS = new Set([
   "resourceId",
+  "guiId",
+  "bgmId",
+  "sfxId",
   "layoutId",
   "characterId",
   "transformId",
   "fontId",
+  "fontFileId",
+  "imageId",
+  "hoverImageId",
+  "clickImageId",
+  "thumbImageId",
+  "barImageId",
+  "hoverThumbImageId",
+  "hoverBarImageId",
 ]);
 
 const createResourceSelection = () => ({
@@ -191,6 +202,46 @@ const mergeObjects = (...objects) => {
   }, {});
 };
 
+const collectResourceSelectionFromValue = (projectData, value) => {
+  const resources = projectData?.resources || {};
+  const selection = createResourceSelection();
+  const pendingLayoutIds = [];
+  const queuedLayoutIds = new Set();
+
+  const scanValue = (node) => {
+    traverseScene(node, (key, entry) => {
+      if (!RESOURCE_REFERENCE_KEYS.has(key) || typeof entry !== "string") {
+        return;
+      }
+
+      const hadLayout = selection.layouts.has(entry);
+      addResourceIdToSelection(selection, resources, entry);
+
+      if (
+        !hadLayout &&
+        selection.layouts.has(entry) &&
+        !queuedLayoutIds.has(entry)
+      ) {
+        queuedLayoutIds.add(entry);
+        pendingLayoutIds.push(entry);
+      }
+    });
+  };
+
+  scanValue(value);
+
+  while (pendingLayoutIds.length > 0) {
+    const layoutId = pendingLayoutIds.shift();
+    const layout = resources.layouts?.[layoutId];
+    if (!layout) {
+      continue;
+    }
+    scanValue(layout);
+  }
+
+  return selection;
+};
+
 const dedupeFileReferences = (fileReferences = []) => {
   const dedupedReferences = new Map();
 
@@ -255,6 +306,72 @@ export const extractTransitionTargetSceneIdsFromActions = (
   return Array.from(sceneIds);
 };
 
+const getValueByPath = (source, path) => {
+  if (!path) {
+    return source;
+  }
+
+  return path.split(".").reduce((result, segment) => {
+    if (result === null || result === undefined) {
+      return undefined;
+    }
+    return result[segment];
+  }, source);
+};
+
+const resolveEventBindingString = (value, eventData) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  if (value === "_event") {
+    return eventData;
+  }
+  if (!value.startsWith("_event.")) {
+    return value;
+  }
+
+  const resolvedValue = getValueByPath(
+    eventData,
+    value.slice("_event.".length),
+  );
+  return resolvedValue === undefined ? value : resolvedValue;
+};
+
+export const resolveEventBindings = (value, eventData) => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveEventBindings(entry, eventData));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        resolveEventBindings(entry, eventData),
+      ]),
+    );
+  }
+  return resolveEventBindingString(value, eventData);
+};
+
+export const extractSceneIdsFromValue = (value, projectData) => {
+  const allScenes = projectData?.story?.scenes || {};
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const sceneIds = new Set();
+  traverseScene(value, (key, entry) => {
+    if (key !== "sceneId" || typeof entry !== "string") {
+      return;
+    }
+    if (!allScenes[entry]) {
+      return;
+    }
+    sceneIds.add(entry);
+  });
+
+  return Array.from(sceneIds);
+};
+
 export const extractFileIdsForScene = (projectData, sceneId) => {
   const scene = projectData?.story?.scenes?.[sceneId];
   const resources = projectData?.resources;
@@ -263,14 +380,7 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
     return [];
   }
 
-  const selection = createResourceSelection();
-
-  traverseScene(scene, (key, entry) => {
-    if (!RESOURCE_REFERENCE_KEYS.has(key) || typeof entry !== "string") {
-      return;
-    }
-    addResourceIdToSelection(selection, resources, entry);
-  });
+  const selection = collectResourceSelectionFromValue(projectData, scene);
 
   const scopedLayouts = pickByIds(resources.layouts, selection.layouts);
   const scopedFontsById = pickByIds(resources.fonts, selection.fonts);

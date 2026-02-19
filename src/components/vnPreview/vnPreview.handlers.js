@@ -1,7 +1,9 @@
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 import {
+  extractSceneIdsFromValue,
   extractFileIdsForScenes,
   extractInitialHybridSceneIds,
+  resolveEventBindings,
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
 } from "../../utils/index.js";
@@ -43,6 +45,19 @@ const setAssetLoading = (deps, isLoading) => {
   const { store, render } = deps;
   store.setAssetLoading(isLoading);
   render();
+};
+
+const logLoadedAssets = (sceneIds, fileReferences) => {
+  if (!Array.isArray(fileReferences) || fileReferences.length === 0) {
+    return;
+  }
+
+  console.log("[asset-load][vnPreview] loaded", {
+    sceneIds,
+    fileIds: fileReferences
+      .map((fileReference) => fileReference?.url)
+      .filter(Boolean),
+  });
 };
 
 async function loadAssetsForSceneIds(
@@ -91,6 +106,8 @@ async function loadAssetsForSceneIds(
           assetLoadCache.fileIds.add(fileReference.url);
         }
       });
+
+      logLoadedAssets(uniqueSceneIds, missingFileReferences);
     }
 
     uniqueSceneIds.forEach((sceneId) => {
@@ -127,20 +144,34 @@ const preloadDirectTransitionScenes = async (deps, projectData, sceneIds) => {
 };
 
 const createBeforeHandleActionsHook = (deps, projectData) => {
-  return async (actions) => {
-    const transitionSceneIds = extractTransitionTargetSceneIdsFromActions(
-      actions,
-      projectData,
+  return async (actions, eventContext) => {
+    const eventData = eventContext?._event;
+    const resolvedActions = resolveEventBindings(actions, eventData);
+    const transitionSceneIds = Array.from(
+      new Set([
+        ...extractTransitionTargetSceneIdsFromActions(
+          resolvedActions,
+          projectData,
+        ),
+        ...extractTransitionTargetSceneIdsFromActions(eventData, projectData),
+        ...extractSceneIdsFromValue(resolvedActions, projectData),
+        ...extractSceneIdsFromValue(eventData, projectData),
+      ]),
     );
 
     if (transitionSceneIds.length === 0) {
       return;
     }
 
+    console.log("[asset-load][vnPreview] transition preload", {
+      transitionSceneIds,
+      hasEventData: !!eventData,
+    });
+
     await loadAssetsForSceneIds(deps, projectData, transitionSceneIds, {
       showLoading: false,
     });
-    void preloadDirectTransitionScenes(deps, projectData, transitionSceneIds);
+    await preloadDirectTransitionScenes(deps, projectData, transitionSceneIds);
   };
 };
 
