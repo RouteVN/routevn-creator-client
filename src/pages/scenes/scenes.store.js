@@ -56,7 +56,6 @@ const getSectionPresentation = (
       returnsToMenuScene = true;
     }
     const sectionTransitionKey = createTransitionKey(sectionTransition);
-
     if (sectionTransitionKey) {
       transitions.add(sectionTransitionKey);
     }
@@ -72,7 +71,6 @@ const getSectionPresentation = (
         returnsToMenuScene = true;
       }
       const choiceTransitionKey = createTransitionKey(choiceTransition);
-
       if (choiceTransitionKey) {
         transitions.add(choiceTransitionKey);
       }
@@ -94,7 +92,6 @@ const getSectionPresentation = (
           returnsToMenuScene = true;
         }
         const layoutTransitionKey = createTransitionKey(layoutTransition);
-
         if (layoutTransitionKey) {
           transitions.add(layoutTransitionKey);
         }
