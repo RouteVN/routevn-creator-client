@@ -196,6 +196,10 @@ export const closeSectionsOverviewPanel = (state) => {
   state.sectionsOverviewPanel.isOpen = false;
 };
 
+export const selectIsSectionsOverviewOpen = ({ state }) => {
+  return state.sectionsOverviewPanel.isOpen;
+};
+
 // Set lock to prevent duplicate split/merge operations on the same line
 export const setLockingLineId = (state, lineId) => {
   state.lockingLineId = lineId;
@@ -319,6 +323,8 @@ export const selectViewData = ({ state }) => {
     return {
       scene: null,
       sections: [],
+      sectionsOverviewOpen: false,
+      sectionsOverviewItems: [],
       currentLines: [],
       currentLine: null,
       actionsData: [],

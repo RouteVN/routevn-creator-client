@@ -336,7 +336,16 @@ const selectSection = async (deps, sectionId) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
+const isSectionsOverviewOpen = (store) => {
+  return store.selectIsSectionsOverviewOpen();
+};
+
 export const handleSectionTabClick = async (deps, payload) => {
+  const { store } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
   const sectionId = payload._event.currentTarget.id.replace("section-tab-", "");
   await selectSection(deps, sectionId);
 };
@@ -535,6 +544,9 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
 export const handleEditorDataChanged = async (deps, payload) => {
   const { subject, store, dialogueQueueService } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
 
   const lineId = payload._event.detail.lineId;
   const content = [{ text: payload._event.detail.content }];
@@ -564,6 +576,9 @@ export const handleAddActionsButtonClick = (deps) => {
 
 export const handleSectionAddClick = async (deps) => {
   const { store, projectService, render, graphicsService } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
 
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
@@ -650,6 +665,7 @@ export const handleSectionAddClick = async (deps) => {
   store.setSelectedSectionId(newSectionId);
   store.setSelectedLineId(newLineId);
   render();
+  scrollSectionTabIntoView(deps, newSectionId);
 
   // Render the canvas with the new section's data
   setTimeout(async () => {
@@ -662,6 +678,11 @@ export const handleSectionsOverviewClick = (deps, payload) => {
   if (payload?._event) {
     payload._event.preventDefault();
   }
+
+  if (typeof document !== "undefined" && document.activeElement?.blur) {
+    document.activeElement.blur();
+  }
+
   store.openSectionsOverviewPanel();
   render();
 };
@@ -673,7 +694,7 @@ export const handleSectionsOverviewClose = (deps) => {
 };
 
 export const handleSectionsOverviewRowClick = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const sectionId = payload._event.currentTarget.id.replace(
     "section-overview-row-",
     "",
@@ -683,13 +704,15 @@ export const handleSectionsOverviewRowClick = async (deps, payload) => {
     return;
   }
 
-  await selectSection(deps, sectionId);
   store.closeSectionsOverviewPanel();
-  render();
+  await selectSection(deps, sectionId);
 };
 
 export const handleSplitLine = async (deps, payload) => {
   const { projectService, store, render, getRefIds, subject } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
 
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -838,6 +861,9 @@ export const handleSplitLine = async (deps, payload) => {
 
 export const handleNewLine = async (deps) => {
   const { store, render, projectService } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
 
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
@@ -863,6 +889,10 @@ export const handleNewLine = async (deps) => {
 
 export const handleLineNavigation = (deps, payload) => {
   const { store, getRefIds, render, subject, graphicsService } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
   const { targetLineId, mode, direction, targetCursorPosition, lineRect } =
     payload._event.detail;
 
@@ -1026,6 +1056,10 @@ export const handleLineNavigation = (deps, payload) => {
 
 export const handleMergeLines = async (deps, payload) => {
   const { store, getRefIds, render, projectService, subject } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
   const { prevLineId, currentLineId, contentToAppend } = payload._event.detail;
 
   const sceneId = store.selectSceneId();
@@ -1133,6 +1167,10 @@ export const handleMergeLines = async (deps, payload) => {
 
 export const handleSectionTabRightClick = (deps, payload) => {
   const { store, render } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
   payload._event.preventDefault(); // Prevent default browser context menu
 
   const sectionId = payload._event.currentTarget.id.replace("section-tab-", "");
