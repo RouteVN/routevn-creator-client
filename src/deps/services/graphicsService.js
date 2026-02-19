@@ -120,8 +120,30 @@ export const createGraphicsService = async ({ subject }) => {
       }
     },
     loadAssets: async (assets) => {
-      await assetBufferManager.load(assets);
-      await routeGraphics.loadAssets(assetBufferManager.getBufferMap());
+      const assetEntries = Object.entries(assets || {});
+      const newAssetEntries = assetEntries.filter(
+        ([key]) => !assetBufferManager.has(key),
+      );
+
+      if (newAssetEntries.length === 0) {
+        return;
+      }
+
+      const newAssets = Object.fromEntries(newAssetEntries);
+      await assetBufferManager.load(newAssets);
+
+      const fullBufferMap = assetBufferManager.getBufferMap();
+      const deltaBufferMap = Object.fromEntries(
+        newAssetEntries
+          .map(([key]) => [key, fullBufferMap[key]])
+          .filter(([, value]) => !!value),
+      );
+
+      if (Object.keys(deltaBufferMap).length === 0) {
+        return;
+      }
+
+      await routeGraphics.loadAssets(deltaBufferMap);
     },
     initRouteEngine: (projectData) => {
       ticker.start();

@@ -1,9 +1,11 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
 import {
+  extractFileIdsForLayouts,
   extractSceneIdsFromValue,
   extractFileIdsForScenes,
   extractInitialHybridSceneIds,
+  extractLayoutIdsFromValue,
   resolveEventBindings,
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
@@ -137,19 +139,6 @@ const setSceneAssetLoading = (deps, isLoading) => {
   render();
 };
 
-const logLoadedAssets = (sceneIds, fileReferences) => {
-  if (!Array.isArray(fileReferences) || fileReferences.length === 0) {
-    return;
-  }
-
-  console.log("[asset-load][sceneEditor] loaded", {
-    sceneIds,
-    fileIds: fileReferences
-      .map((fileReference) => fileReference?.url)
-      .filter(Boolean),
-  });
-};
-
 async function loadAssetsForSceneIds(
   deps,
   projectData,
@@ -199,8 +188,6 @@ async function loadAssetsForSceneIds(
           assetLoadCache.fileIds.add(fileReference.url);
         }
       });
-
-      logLoadedAssets(uniqueSceneIds, missingFileReferences);
     }
 
     uniqueSceneIds.forEach((sceneId) => {
@@ -236,12 +223,56 @@ const preloadDirectTransitionScenes = async (deps, projectData, sceneIds) => {
   });
 };
 
+const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
+  const uniqueLayoutIds = Array.from(new Set(layoutIds || [])).filter(
+    (layoutId) => Boolean(projectData?.resources?.layouts?.[layoutId]),
+  );
+
+  if (uniqueLayoutIds.length === 0) {
+    return;
+  }
+
+  const fileReferences = extractFileIdsForLayouts(projectData, uniqueLayoutIds);
+  const missingFileReferences = fileReferences.filter((fileReference) => {
+    const fileId = fileReference?.url;
+    return fileId && !assetLoadCache.fileIds.has(fileId);
+  });
+
+  if (missingFileReferences.length === 0) {
+    return;
+  }
+
+  const { graphicsService, projectService } = deps;
+  const assets = await createAssetsFromFileIds(
+    missingFileReferences,
+    projectService,
+    projectData.resources,
+  );
+  await graphicsService.loadAssets(assets);
+
+  missingFileReferences.forEach((fileReference) => {
+    if (fileReference?.url) {
+      assetLoadCache.fileIds.add(fileReference.url);
+    }
+  });
+};
+
 const createBeforeHandleActionsHook = (deps) => {
   const { store } = deps;
   return async (actions, eventContext) => {
     const projectData = store.selectProjectData();
     const eventData = eventContext?._event;
     const resolvedActions = resolveEventBindings(actions, eventData);
+    const layoutIds = Array.from(
+      new Set([
+        ...extractLayoutIdsFromValue(resolvedActions, projectData),
+        ...extractLayoutIdsFromValue(eventData, projectData),
+      ]),
+    );
+    if (layoutIds.length > 0) {
+      await preloadLayoutAssetsByIds(deps, projectData, layoutIds);
+    }
+
     const transitionSceneIds = Array.from(
       new Set([
         ...extractTransitionTargetSceneIdsFromActions(
@@ -257,11 +288,6 @@ const createBeforeHandleActionsHook = (deps) => {
     if (transitionSceneIds.length === 0) {
       return;
     }
-
-    console.log("[asset-load][sceneEditor] transition preload", {
-      transitionSceneIds,
-      hasEventData: !!eventData,
-    });
 
     await loadAssetsForSceneIds(deps, projectData, transitionSceneIds, {
       showLoading: false,
@@ -978,12 +1004,6 @@ export const handleLineNavigation = (deps, payload) => {
   if (mode === "block") {
     const currentLineId = store.selectSelectedLineId();
 
-    // console.log({
-    //   currentLineId,
-    //   targetLineId,
-    //   direction,
-    // });
-
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
       // First line - show animation effects
@@ -1482,6 +1502,8 @@ export const handleHidePreviewScene = async (deps) => {
   render();
 
   const { canvas } = getRefIds();
+  resetAssetLoadCache();
+  store.setSceneAssetLoading(false);
   const beforeHandleActions = createBeforeHandleActionsHook(deps);
   await graphicsService.init({
     canvas: canvas.elm,

@@ -372,6 +372,43 @@ export const extractSceneIdsFromValue = (value, projectData) => {
   return Array.from(sceneIds);
 };
 
+export const extractLayoutIdsFromValue = (value, projectData) => {
+  const allLayouts = projectData?.resources?.layouts || {};
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const layoutIds = new Set();
+
+  const scanNode = (node) => {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      node.forEach(scanNode);
+      return;
+    }
+
+    if (typeof node.layoutId === "string" && allLayouts[node.layoutId]) {
+      layoutIds.add(node.layoutId);
+    }
+
+    if (
+      typeof node.resourceId === "string" &&
+      allLayouts[node.resourceId] &&
+      (typeof node.resourceType !== "string" || node.resourceType === "layout")
+    ) {
+      layoutIds.add(node.resourceId);
+    }
+
+    Object.values(node).forEach(scanNode);
+  };
+
+  scanNode(value);
+  return Array.from(layoutIds);
+};
+
 export const extractFileIdsForScene = (projectData, sceneId) => {
   const scene = projectData?.story?.scenes?.[sceneId];
   const resources = projectData?.resources;
@@ -398,6 +435,33 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
     characters: pickByIds(resources.characters, selection.characters),
     transforms: pickByIds(resources.transforms, selection.transforms),
     tweens: pickByIds(resources.tweens, selection.tweens),
+  };
+
+  return dedupeFileReferences(extractFileIdsFromRenderState(scopedResources));
+};
+
+export const extractFileIdsForLayouts = (projectData, layoutIds = []) => {
+  const resources = projectData?.resources;
+  if (!resources || !Array.isArray(layoutIds) || layoutIds.length === 0) {
+    return [];
+  }
+
+  const validLayoutIds = new Set(
+    layoutIds.filter((layoutId) => typeof layoutId === "string" && layoutId),
+  );
+  const scopedLayouts = pickByIds(resources.layouts, validLayoutIds);
+
+  if (Object.keys(scopedLayouts).length === 0) {
+    return [];
+  }
+
+  const scopedFontsByFamily = pickFontsByFamily(
+    resources.fonts,
+    collectFontFamilies(scopedLayouts),
+  );
+  const scopedResources = {
+    layouts: scopedLayouts,
+    fonts: scopedFontsByFamily,
   };
 
   return dedupeFileReferences(extractFileIdsFromRenderState(scopedResources));

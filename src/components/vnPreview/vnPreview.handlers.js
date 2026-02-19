@@ -1,8 +1,10 @@
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 import {
+  extractFileIdsForLayouts,
   extractSceneIdsFromValue,
   extractFileIdsForScenes,
   extractInitialHybridSceneIds,
+  extractLayoutIdsFromValue,
   resolveEventBindings,
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
@@ -45,19 +47,6 @@ const setAssetLoading = (deps, isLoading) => {
   const { store, render } = deps;
   store.setAssetLoading(isLoading);
   render();
-};
-
-const logLoadedAssets = (sceneIds, fileReferences) => {
-  if (!Array.isArray(fileReferences) || fileReferences.length === 0) {
-    return;
-  }
-
-  console.log("[asset-load][vnPreview] loaded", {
-    sceneIds,
-    fileIds: fileReferences
-      .map((fileReference) => fileReference?.url)
-      .filter(Boolean),
-  });
 };
 
 async function loadAssetsForSceneIds(
@@ -106,8 +95,6 @@ async function loadAssetsForSceneIds(
           assetLoadCache.fileIds.add(fileReference.url);
         }
       });
-
-      logLoadedAssets(uniqueSceneIds, missingFileReferences);
     }
 
     uniqueSceneIds.forEach((sceneId) => {
@@ -143,10 +130,50 @@ const preloadDirectTransitionScenes = async (deps, projectData, sceneIds) => {
   });
 };
 
+const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
+  const uniqueLayoutIds = Array.from(new Set(layoutIds || [])).filter(
+    (layoutId) => Boolean(projectData?.resources?.layouts?.[layoutId]),
+  );
+
+  if (uniqueLayoutIds.length === 0) {
+    return;
+  }
+
+  const fileReferences = extractFileIdsForLayouts(projectData, uniqueLayoutIds);
+  const missingFileReferences = fileReferences.filter((fileReference) => {
+    const fileId = fileReference?.url;
+    return fileId && !assetLoadCache.fileIds.has(fileId);
+  });
+
+  if (missingFileReferences.length === 0) {
+    return;
+  }
+
+  const assets = await loadAssets(deps, missingFileReferences);
+  const { graphicsService } = deps;
+  await graphicsService.loadAssets(assets);
+
+  missingFileReferences.forEach((fileReference) => {
+    if (fileReference?.url) {
+      assetLoadCache.fileIds.add(fileReference.url);
+    }
+  });
+};
+
 const createBeforeHandleActionsHook = (deps, projectData) => {
   return async (actions, eventContext) => {
     const eventData = eventContext?._event;
     const resolvedActions = resolveEventBindings(actions, eventData);
+    const layoutIds = Array.from(
+      new Set([
+        ...extractLayoutIdsFromValue(resolvedActions, projectData),
+        ...extractLayoutIdsFromValue(eventData, projectData),
+      ]),
+    );
+    if (layoutIds.length > 0) {
+      await preloadLayoutAssetsByIds(deps, projectData, layoutIds);
+    }
+
     const transitionSceneIds = Array.from(
       new Set([
         ...extractTransitionTargetSceneIdsFromActions(
@@ -162,11 +189,6 @@ const createBeforeHandleActionsHook = (deps, projectData) => {
     if (transitionSceneIds.length === 0) {
       return;
     }
-
-    console.log("[asset-load][vnPreview] transition preload", {
-      transitionSceneIds,
-      hasEventData: !!eventData,
-    });
 
     await loadAssetsForSceneIds(deps, projectData, transitionSceneIds, {
       showLoading: false,
