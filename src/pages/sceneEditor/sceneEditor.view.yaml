@@ -125,12 +125,10 @@ template:
                           - rtgl-text s=lg fw=600: Sections Overview
                           - rtgl-view flex=1:
                           - rtgl-button#sections-overview-close v=gh: Close
-                      - 'rtgl-view d=v w=f flex=1 sv p=lg g=md style="min-height: 0px;"':
+                      - 'rtgl-view d=v w=f flex=1 sv p=md g=sm style="min-height: 0px;"':
                           - $for section in sectionsOverviewItems:
-                              - rtgl-view#section-overview-row-${section.id} w=f d=h av=c jc=sb g=sm p=lg cur=p bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
-                                  - rtgl-view d=v g=xs:
-                                      - rtgl-text s=md c=${section.rowTextColor}: ${section.order}. ${section.name}
-                                      - rtgl-text s=xs c=${section.rowSubTextColor}: ${section.lineCount} lines
+                              - rtgl-view#section-overview-row-${section.id} w=f d=h av=c g=sm p=md cur=p bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
+                                  - 'rtgl-text s=md c=${section.rowTextColor} style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
                 $else:
                   - 'rtgl-view#scene-editor-left-editor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
                       - 'rtgl-view d=h g=xs w=f':

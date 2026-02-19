@@ -351,14 +351,11 @@ export const selectViewData = ({ state }) => {
   });
   const sectionsOverviewItems = scene.sections.map((section, index) => ({
     id: section.id,
-    order: index + 1,
     name: section.name || `Section ${index + 1}`,
-    lineCount: Array.isArray(section.lines) ? section.lines.length : 0,
     isSelected: section.id === state.selectedSectionId,
     rowBgc: section.id === state.selectedSectionId ? "ac" : "bg",
     rowBc: section.id === state.selectedSectionId ? "ac" : "mu",
     rowTextColor: section.id === state.selectedSectionId ? "bg" : "fg",
-    rowSubTextColor: section.id === state.selectedSectionId ? "bg" : "mu-fg",
   }));
 
   // const currentLines = state.sections.find(section => section.id === state.selectedSectionId).lines;
