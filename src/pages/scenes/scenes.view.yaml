@@ -128,14 +128,14 @@ template:
                                                                       - rtgl-text s=xs c=bg: Dead End
                                                       - rtgl-view d=h g=md jc=c av=c:
                                                           - rtgl-view w=98 h=72 d=v jc=sb p=md bgc=mu bw=xs bc=mu br=sm:
-                                                              - rtgl-text s=xs c=mu-fg: Lines
-                                                              - rtgl-text s=md: ${section.lineCount}
+                                                              - rtgl-text s=sm c=mu-fg: Lines
+                                                              - rtgl-text s=lg: ${section.lineCount}
                                                           - rtgl-view w=98 h=72 d=v jc=sb p=md bgc=mu bw=xs bc=mu br=sm:
-                                                              - rtgl-text s=xs c=mu-fg: Choices
-                                                              - rtgl-text s=md: ${section.choiceCount}
+                                                              - rtgl-text s=sm c=mu-fg: Choices
+                                                              - rtgl-text s=lg: ${section.choiceCount}
                                                           - rtgl-view w=98 h=72 d=v jc=sb p=md bgc=mu bw=xs bc=mu br=sm:
-                                                              - rtgl-text s=xs c=mu-fg: Outgoing
-                                                              - rtgl-text s=md: ${section.outgoingCount}
+                                                              - rtgl-text s=sm c=mu-fg: Outgoing
+                                                              - rtgl-text s=lg: ${section.outgoingCount}
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
