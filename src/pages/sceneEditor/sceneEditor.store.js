@@ -1,6 +1,7 @@
 import { toFlatItems, toTreeStructure } from "insieme";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
+import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
 export const createInitialState = () => ({
   sceneId: undefined,
@@ -353,10 +354,32 @@ export const selectViewData = ({ state }) => {
     };
   }
 
+  const repositoryState = selectRepositoryState({ state });
+  const layouts = repositoryState.layouts || { items: {} };
+  const selectedSceneFirstSectionId = scene.sections?.[0]?.id;
+  const selectedSceneInitialSectionId =
+    scene.initialSectionId || selectedSceneFirstSectionId;
+  const menuSceneId = repositoryState.story?.initialSceneId;
+
+  const sectionPresentationById = Object.fromEntries(
+    scene.sections.map((section) => [
+      section.id,
+      getSectionPresentation({
+        section,
+        initialSectionId: selectedSceneInitialSectionId,
+        layouts,
+        menuSceneId,
+      }),
+    ]),
+  );
+
+  const sectionTransitionsDAG = selectSectionTransitionsDAG({ state });
+
   const sections = scene.sections.map((section) => {
     return {
       ...section,
       bgc: section.id === state.selectedSectionId ? "" : "mu",
+      isDeadEnd: !!sectionPresentationById[section.id]?.isDeadEnd,
     };
   });
   const sectionsOverviewItems = scene.sections.map((section, index) => ({
@@ -366,6 +389,7 @@ export const selectViewData = ({ state }) => {
     rowBgc: section.id === state.selectedSectionId ? "ac" : "bg",
     rowBc: section.id === state.selectedSectionId ? "ac" : "mu",
     rowTextColor: section.id === state.selectedSectionId ? "bg" : "fg",
+    isDeadEnd: !!sectionPresentationById[section.id]?.isDeadEnd,
   }));
 
   // const currentLines = state.sections.find(section => section.id === state.selectedSectionId).lines;
@@ -404,8 +428,6 @@ export const selectViewData = ({ state }) => {
     (line) => line.id === state.selectedLineId,
   );
 
-  const repositoryState = selectRepositoryState({ state });
-
   return {
     scene: scene,
     sections,
@@ -432,11 +454,7 @@ export const selectViewData = ({ state }) => {
         ...item,
       }),
     ),
-    sectionsGraph: JSON.stringify(
-      selectSectionTransitionsDAG({ state }),
-      null,
-      2,
-    ),
+    sectionsGraph: JSON.stringify(sectionTransitionsDAG, null, 2),
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
     previewSectionId: state.previewSectionId,

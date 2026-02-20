@@ -1,9 +1,21 @@
 import { toFlatGroups, toFlatItems } from "insieme";
+import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
 const form = {
   fields: [
     { name: "name", inputType: "popover-input", description: "Name" },
     { name: "preview", inputType: "slot", slot: "preview" },
+    {
+      name: "sectionCount",
+      inputType: "read-only-text",
+      description: "Sections",
+    },
+    {
+      name: "sectionsList",
+      inputType: "slot",
+      slot: "sections-list",
+      description: "Sections List",
+    },
   ],
 };
 
@@ -14,6 +26,7 @@ const CONTEXT_MENU_ITEMS = [
 
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
+  layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   whiteboardItems: [],
   isWaitingForTransform: false,
@@ -30,10 +43,15 @@ export const createInitialState = () => ({
   },
   previewVisible: false,
   previewSceneId: undefined,
+  sectionsListOpen: false,
 });
 
 export const setItems = (state, scenesData) => {
   state.scenesData = scenesData;
+};
+
+export const setLayouts = (state, layoutsData) => {
+  state.layoutsData = layoutsData || { tree: [], items: {} };
 };
 
 export const showPreviewSceneId = (state, payload) => {
@@ -54,7 +72,14 @@ export const selectPreviewScene = ({ state }) => {
 };
 
 export const setSelectedItemId = (state, itemId) => {
+  if (state.selectedItemId !== itemId) {
+    state.sectionsListOpen = false;
+  }
   state.selectedItemId = itemId;
+};
+
+export const toggleSectionsList = (state) => {
+  state.sectionsListOpen = !state.sectionsListOpen;
 };
 
 export const updateItemPosition = (state, { itemId, x, y }) => {
@@ -147,14 +172,16 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
 let hasInitialized = false;
 
 export const selectViewData = ({ state }, payload) => {
+  const repositoryState = payload?.repository?.getState?.();
+
   // Check if we need to initialize from repository on first render
-  if (!hasInitialized && payload && payload.repository) {
-    const repositoryState = payload.repository.getState();
-    const { scenes, story } = repositoryState;
+  if (!hasInitialized && repositoryState) {
+    const { scenes, story, layouts: repositoryLayouts } = repositoryState;
 
     if (scenes && Object.keys(scenes.items || {}).length > 0) {
       // Initialize the scenes data
       state.scenesData = scenes;
+      state.layoutsData = repositoryLayouts || { tree: [], items: {} };
 
       // Transform only scene items (not folders) into whiteboard items
       const initialSceneId = story?.initialSceneId;
@@ -174,6 +201,7 @@ export const selectViewData = ({ state }, payload) => {
     }
   }
 
+  const layouts = state.layoutsData;
   const flatItems = toFlatItems(state.scenesData);
   const flatGroups = toFlatGroups(state.scenesData);
 
@@ -181,11 +209,37 @@ export const selectViewData = ({ state }, payload) => {
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
+  const selectedSceneFirstSectionId = selectedItem?.sections?.tree?.[0]?.id;
+  const selectedSceneInitialSectionId =
+    selectedItem?.initialSectionId || selectedSceneFirstSectionId;
+  const menuSceneId = repositoryState?.story?.initialSceneId;
 
   let defaultValues = {};
-  if (selectedItem) {
+  let selectedSceneSections = [];
+  if (selectedItem?.type === "scene") {
+    selectedSceneSections = toFlatItems(
+      selectedItem.sections || {
+        tree: [],
+        items: {},
+      },
+    ).map((section, index) => {
+      const { isDeadEnd } = getSectionPresentation({
+        section,
+        initialSectionId: selectedSceneInitialSectionId,
+        layouts,
+        menuSceneId,
+      });
+
+      return {
+        id: section.id,
+        name: section.name || `Section ${index + 1}`,
+        isDeadEnd,
+      };
+    });
+
     defaultValues = {
       name: selectedItem.name,
+      sectionCount: selectedSceneSections.length,
     };
   }
 
@@ -257,5 +311,7 @@ export const selectViewData = ({ state }, payload) => {
     dropdownMenu: state.dropdownMenu,
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
+    sectionsListOpen: state.sectionsListOpen,
+    selectedSceneSections,
   };
 };

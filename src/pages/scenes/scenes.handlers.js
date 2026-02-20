@@ -123,6 +123,7 @@ export const handleAfterMount = async (deps) => {
 
   // Set the scenes data
   store.setItems(scenesData);
+  store.setLayouts(layouts);
 
   // Transform only scene items (not folders) into whiteboard items
   const initialSceneId = story?.initialSceneId;
@@ -200,6 +201,7 @@ export const handleDataChanged = async (deps) => {
 
   // Update both scenes data and whiteboard items
   store.setItems(sceneData);
+  store.setLayouts(layouts);
   store.setWhiteboardItems(sceneItems);
   render();
 };
@@ -624,6 +626,29 @@ export const handleClickShowScenePreview = (deps, payload) => {
     sceneId: payload._event.target.dataset.sceneId,
   });
   render();
+};
+
+export const handleSectionsListToggle = (deps) => {
+  const { store, render } = deps;
+  store.toggleSectionsList();
+  render();
+};
+
+export const handleSectionsListItemClick = (deps, payload) => {
+  const { appService } = deps;
+  const sceneId = payload._event.currentTarget.dataset.sceneId;
+  const sectionId = payload._event.currentTarget.dataset.sectionId;
+
+  if (!sceneId || !sectionId) {
+    return;
+  }
+
+  const currentPayload = appService.getPayload();
+  appService.navigate("/project/scene-editor", {
+    ...currentPayload,
+    sceneId,
+    sectionId,
+  });
 };
 
 export const handleWhiteboardZoomChanged = (deps, payload) => {
