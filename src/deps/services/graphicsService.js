@@ -23,8 +23,7 @@ export const createGraphicsService = async ({ subject }) => {
   let actionQueue = Promise.resolve();
   let assetLoadQueue = Promise.resolve();
 
-  const isBlobUrl = (url) =>
-    typeof url === "string" && url.startsWith("blob:");
+  const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
   const loadBuffersWithRetry = async (assets, retryCount = 1) => {
     let attempt = 0;

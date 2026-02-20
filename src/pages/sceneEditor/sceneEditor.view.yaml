@@ -36,6 +36,18 @@ refs:
     eventListeners:
       click:
         handler: handleSectionAddClick
+  sections-overview:
+    eventListeners:
+      click:
+        handler: handleSectionsOverviewClick
+  sections-overview-close:
+    eventListeners:
+      click:
+        handler: handleSectionsOverviewClose
+  section-overview-row-*:
+    eventListeners:
+      click:
+        handler: handleSectionsOverviewRowClick
   dropdown-menu:
     eventListeners:
       close:
@@ -107,23 +119,36 @@ template:
                   - rtgl-view:
                       - rtgl-text: ${sectionsGraph}
             $else:
-              - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
-                  - 'rtgl-view d=h g=xs w=f':
-                      - rtgl-view d=h sh:
-                          - rtgl-view d=h g=xs:
-                              - $for section in sections:
-                                  - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=p:
-                                      - rtgl-text s=sm: ${section.name}
-                      - rtgl-view#section-add h=32 av=c ph=lg ah=c cur=p bgc=mu:
-                          - rtgl-text s=sm: +
+              - $if sectionsOverviewOpen:
+                  - 'rtgl-view#scene-editor-left-overview w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
+                      - rtgl-view d=h av=c g=sm bwb=xs p=lg w=f:
+                          - rtgl-text s=lg fw=600: Sections Overview
+                          - rtgl-view flex=1:
+                          - rtgl-button#sections-overview-close v=gh: Close
+                      - 'rtgl-view d=v w=f flex=1 sv p=md g=sm style="min-height: 0px;"':
+                          - $for section in sectionsOverviewItems:
+                              - rtgl-view#section-overview-row-${section.id} w=f d=h av=c g=sm p=md cur=p bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
+                                  - 'rtgl-text s=md c=${section.rowTextColor} style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
+                $else:
+                  - 'rtgl-view#scene-editor-left-editor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
+                      - 'rtgl-view d=h g=xs w=f':
+                          - rtgl-view d=h sh:
+                              - rtgl-view d=h g=xs:
+                                  - $for section in sections:
+                                      - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=p:
+                                          - rtgl-text s=sm: ${section.name}
+                          - rtgl-view#section-add h=32 av=c ph=lg ah=c cur=p bgc=mu:
+                              - rtgl-text s=sm: +
+                          - rtgl-view#sections-overview h=32 av=c ph=lg ah=c cur=p bgc=mu:
+                              - rtgl-text s=sm: ...
 
-                      - rtgl-view flex=1:
-                      # Toggle graph view button - commented out for now
-                      # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
-                      #     - rtgl-text s=sm: "<>"
-                  - "rtgl-view w=f p=md sv flex=1":
-                      - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId .sectionLineChanges=sectionLineChanges:
-                      - rtgl-view h=30vh:
+                          - rtgl-view flex=1:
+                          # Toggle graph view button - commented out for now
+                          # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
+                          #     - rtgl-text s=sm: "<>"
+                      - "rtgl-view w=f p=md sv flex=1":
+                          - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId .sectionLineChanges=sectionLineChanges:
+                          - rtgl-view h=30vh:
           - rtgl-view w=1 h=f bgc=mu:
           - rtgl-view w=f:
               - rtgl-view:
