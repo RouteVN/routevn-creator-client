@@ -1,6 +1,15 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "insieme";
-import { extractFileIdsFromRenderState } from "../../utils/index.js";
+import {
+  extractFileIdsForLayouts,
+  extractSceneIdsFromValue,
+  extractFileIdsForScenes,
+  extractInitialHybridSceneIds,
+  extractLayoutIdsFromValue,
+  resolveEventBindings,
+  extractTransitionTargetSceneIds,
+  extractTransitionTargetSceneIdsFromActions,
+} from "../../utils/index.js";
 import { filter, tap, debounceTime } from "rxjs";
 
 const findNonCloneablePaths = (root, limit = 5) => {
@@ -113,6 +122,180 @@ async function createAssetsFromFileIds(
   return assets;
 }
 
+const createAssetLoadCache = () => ({
+  sceneIds: new Set(),
+  fileIds: new Set(),
+});
+
+let assetLoadCache = createAssetLoadCache();
+
+const resetAssetLoadCache = () => {
+  assetLoadCache = createAssetLoadCache();
+};
+
+const setSceneAssetLoading = (deps, isLoading) => {
+  const { store, render } = deps;
+  store.setSceneAssetLoading(isLoading);
+  render();
+};
+
+async function loadAssetsForSceneIds(
+  deps,
+  projectData,
+  sceneIds,
+  { showLoading = true } = {},
+) {
+  const { graphicsService, projectService, appService } = deps;
+  const allScenes = projectData?.story?.scenes || {};
+
+  const uniqueSceneIds = Array.from(new Set(sceneIds || [])).filter(
+    (sceneId) => !!allScenes[sceneId],
+  );
+  if (uniqueSceneIds.length === 0) {
+    return;
+  }
+
+  const fileReferences = extractFileIdsForScenes(projectData, uniqueSceneIds);
+  const missingFileReferences = fileReferences.filter((fileReference) => {
+    const fileId = fileReference?.url;
+    return fileId && !assetLoadCache.fileIds.has(fileId);
+  });
+  const isAnySceneUntracked = uniqueSceneIds.some(
+    (sceneId) => !assetLoadCache.sceneIds.has(sceneId),
+  );
+
+  if (missingFileReferences.length === 0 && !isAnySceneUntracked) {
+    return;
+  }
+
+  const shouldShowLoading = showLoading && missingFileReferences.length > 0;
+
+  try {
+    if (shouldShowLoading) {
+      setSceneAssetLoading(deps, true);
+    }
+
+    if (missingFileReferences.length > 0) {
+      const assets = await createAssetsFromFileIds(
+        missingFileReferences,
+        projectService,
+        projectData.resources,
+      );
+      await graphicsService.loadAssets(assets);
+
+      missingFileReferences.forEach((fileReference) => {
+        if (fileReference?.url) {
+          assetLoadCache.fileIds.add(fileReference.url);
+        }
+      });
+    }
+
+    uniqueSceneIds.forEach((sceneId) => {
+      assetLoadCache.sceneIds.add(sceneId);
+    });
+  } catch (error) {
+    appService?.showToast("Failed to load some scene assets", {
+      title: "Warning",
+    });
+    console.error("[sceneEditor] Failed to load scene assets:", error);
+  } finally {
+    if (shouldShowLoading) {
+      setSceneAssetLoading(deps, false);
+    }
+  }
+}
+
+const preloadDirectTransitionScenes = async (deps, projectData, sceneIds) => {
+  const directTargets = Array.from(
+    new Set(
+      (sceneIds || []).flatMap((sceneId) =>
+        extractTransitionTargetSceneIds(projectData, sceneId),
+      ),
+    ),
+  );
+
+  if (directTargets.length === 0) {
+    return;
+  }
+
+  await loadAssetsForSceneIds(deps, projectData, directTargets, {
+    showLoading: false,
+  });
+};
+
+const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
+  const uniqueLayoutIds = Array.from(new Set(layoutIds || [])).filter(
+    (layoutId) => Boolean(projectData?.resources?.layouts?.[layoutId]),
+  );
+
+  if (uniqueLayoutIds.length === 0) {
+    return;
+  }
+
+  const fileReferences = extractFileIdsForLayouts(projectData, uniqueLayoutIds);
+  const missingFileReferences = fileReferences.filter((fileReference) => {
+    const fileId = fileReference?.url;
+    return fileId && !assetLoadCache.fileIds.has(fileId);
+  });
+
+  if (missingFileReferences.length === 0) {
+    return;
+  }
+
+  const { graphicsService, projectService } = deps;
+  const assets = await createAssetsFromFileIds(
+    missingFileReferences,
+    projectService,
+    projectData.resources,
+  );
+  await graphicsService.loadAssets(assets);
+
+  missingFileReferences.forEach((fileReference) => {
+    if (fileReference?.url) {
+      assetLoadCache.fileIds.add(fileReference.url);
+    }
+  });
+};
+
+const createBeforeHandleActionsHook = (deps) => {
+  const { store } = deps;
+  return async (actions, eventContext) => {
+    const projectData = store.selectProjectData();
+    const eventData = eventContext?._event;
+    const resolvedActions = resolveEventBindings(actions, eventData);
+    const layoutIds = Array.from(
+      new Set([
+        ...extractLayoutIdsFromValue(resolvedActions, projectData),
+        ...extractLayoutIdsFromValue(eventData, projectData),
+      ]),
+    );
+    if (layoutIds.length > 0) {
+      await preloadLayoutAssetsByIds(deps, projectData, layoutIds);
+    }
+
+    const transitionSceneIds = Array.from(
+      new Set([
+        ...extractTransitionTargetSceneIdsFromActions(
+          resolvedActions,
+          projectData,
+        ),
+        ...extractTransitionTargetSceneIdsFromActions(eventData, projectData),
+        ...extractSceneIdsFromValue(resolvedActions, projectData),
+        ...extractSceneIdsFromValue(eventData, projectData),
+      ]),
+    );
+
+    if (transitionSceneIds.length === 0) {
+      return;
+    }
+
+    await loadAssetsForSceneIds(deps, projectData, transitionSceneIds, {
+      showLoading: false,
+    });
+    await preloadDirectTransitionScenes(deps, projectData, transitionSceneIds);
+  };
+};
+
 // Helper function to render the scene state
 async function renderSceneState(store, graphicsService, payload = {}) {
   const { skipAnimations = false } = payload;
@@ -209,10 +392,12 @@ async function flushDialogueQueue(deps) {
 }
 
 export const handleBeforeMount = (deps) => {
-  const { graphicsService } = deps;
+  const { graphicsService, store } = deps;
 
   return async () => {
     await flushDialogueQueue(deps);
+    store.setSceneAssetLoading(false);
+    resetAssetLoadCache();
     graphicsService.destroy();
   };
 };
@@ -272,7 +457,14 @@ export const handleAfterMount = async (deps) => {
 
   const { canvas } = getRefIds();
 
-  await graphicsService.init({ canvas: canvas.elm });
+  resetAssetLoadCache();
+  store.setSceneAssetLoading(false);
+
+  const beforeHandleActions = createBeforeHandleActionsHook(deps);
+  await graphicsService.init({
+    canvas: canvas.elm,
+    beforeHandleActions,
+  });
   const projectData = store.selectProjectData();
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
@@ -284,14 +476,11 @@ export const handleAfterMount = async (deps) => {
   );
 
   graphicsService.initRouteEngine(initialProjectData);
-  // TODO don't load all data... only ones necessary for this scene
-  const fileReferences = extractFileIdsFromRenderState(projectData);
-  const assets = await createAssetsFromFileIds(
-    fileReferences,
-    projectService,
-    projectData.resources,
-  );
-  await graphicsService.loadAssets(assets);
+  const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
+  await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
+    showLoading: true,
+  });
+  void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
 
   render();
   setTimeout(() => {
@@ -900,12 +1089,6 @@ export const handleLineNavigation = (deps, payload) => {
   if (mode === "block") {
     const currentLineId = store.selectSelectedLineId();
 
-    // console.log({
-    //   currentLineId,
-    //   targetLineId,
-    //   direction,
-    // });
-
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
       // First line - show animation effects
@@ -1421,18 +1604,31 @@ export const handleHidePreviewScene = async (deps) => {
   render();
 
   const { canvas } = getRefIds();
-  await graphicsService.init({ canvas: canvas.elm });
+  resetAssetLoadCache();
+  store.setSceneAssetLoading(false);
+  const beforeHandleActions = createBeforeHandleActionsHook(deps);
+  await graphicsService.init({
+    canvas: canvas.elm,
+    beforeHandleActions,
+  });
 
   const projectData = store.selectProjectData();
+  const sceneId = store.selectSceneId();
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
     {
-      sceneId: store.selectSceneId(),
+      sceneId,
       sectionId: store.selectSelectedSectionId(),
       lineId: store.selectSelectedLineId(),
     },
   );
   graphicsService.initRouteEngine(initialProjectData);
+
+  const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
+  await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
+    showLoading: false,
+  });
+  void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
 
   await renderSceneState(store, graphicsService);
 };
@@ -1440,6 +1636,15 @@ export const handleHidePreviewScene = async (deps) => {
 // Handler for debounced canvas rendering
 async function handleRenderCanvas(deps, payload) {
   const { store, graphicsService, render } = deps;
+  const projectData = store.selectProjectData();
+  const sceneId = store.selectSceneId();
+  const sceneIdsToLoad = extractInitialHybridSceneIds(projectData, sceneId);
+
+  await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {
+    showLoading: false,
+  });
+  void preloadDirectTransitionScenes(deps, projectData, sceneIdsToLoad);
+
   await renderSceneState(store, graphicsService, payload);
   await updateSectionChanges(deps);
 

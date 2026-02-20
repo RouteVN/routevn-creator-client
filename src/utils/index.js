@@ -62,6 +62,434 @@ export const extractFileIdsFromRenderState = (obj) => {
   return Array.from(fileIds);
 };
 
+const RESOURCE_REFERENCE_KEYS = new Set([
+  "resourceId",
+  "guiId",
+  "bgmId",
+  "sfxId",
+  "layoutId",
+  "characterId",
+  "transformId",
+  "fontId",
+  "fontFileId",
+  "imageId",
+  "hoverImageId",
+  "clickImageId",
+  "thumbImageId",
+  "barImageId",
+  "hoverThumbImageId",
+  "hoverBarImageId",
+]);
+
+const createResourceSelection = () => ({
+  images: new Set(),
+  videos: new Set(),
+  sounds: new Set(),
+  fonts: new Set(),
+  layouts: new Set(),
+  characters: new Set(),
+  transforms: new Set(),
+  tweens: new Set(),
+});
+
+const addResourceIdToSelection = (selection, resources, resourceId) => {
+  if (typeof resourceId !== "string" || resourceId.length === 0) {
+    return;
+  }
+
+  if (resources.images?.[resourceId]) {
+    selection.images.add(resourceId);
+  }
+  if (resources.videos?.[resourceId]) {
+    selection.videos.add(resourceId);
+  }
+  if (resources.sounds?.[resourceId]) {
+    selection.sounds.add(resourceId);
+  }
+  if (resources.fonts?.[resourceId]) {
+    selection.fonts.add(resourceId);
+  }
+  if (resources.layouts?.[resourceId]) {
+    selection.layouts.add(resourceId);
+  }
+  if (resources.characters?.[resourceId]) {
+    selection.characters.add(resourceId);
+  }
+  if (resources.transforms?.[resourceId]) {
+    selection.transforms.add(resourceId);
+  }
+  if (resources.tweens?.[resourceId]) {
+    selection.tweens.add(resourceId);
+  }
+};
+
+const traverseScene = (value, handleEntry) => {
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      traverseScene(item, handleEntry);
+    });
+    return;
+  }
+
+  Object.entries(value).forEach(([key, entry]) => {
+    handleEntry(key, entry);
+    traverseScene(entry, handleEntry);
+  });
+};
+
+const pickByIds = (items = {}, idSet) => {
+  if (!idSet || idSet.size === 0) {
+    return {};
+  }
+
+  return Array.from(idSet).reduce((result, id) => {
+    if (items[id]) {
+      result[id] = items[id];
+    }
+    return result;
+  }, {});
+};
+
+const pickFontsByFamily = (fonts = {}, fontFamilySet) => {
+  if (!fontFamilySet || fontFamilySet.size === 0) {
+    return {};
+  }
+
+  return Object.entries(fonts).reduce((result, [fontId, font]) => {
+    if (
+      typeof font?.fontFamily === "string" &&
+      fontFamilySet.has(font.fontFamily)
+    ) {
+      result[fontId] = font;
+    }
+    return result;
+  }, {});
+};
+
+const collectFontFamilies = (value, fontFamilies = new Set()) => {
+  if (!value || typeof value !== "object") {
+    return fontFamilies;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => {
+      collectFontFamilies(entry, fontFamilies);
+    });
+    return fontFamilies;
+  }
+
+  Object.entries(value).forEach(([key, entry]) => {
+    if (key === "fontFamily" && typeof entry === "string" && entry.length > 0) {
+      fontFamilies.add(entry);
+      return;
+    }
+    collectFontFamilies(entry, fontFamilies);
+  });
+
+  return fontFamilies;
+};
+
+const mergeObjects = (...objects) => {
+  return objects.reduce((result, object) => {
+    return {
+      ...result,
+      ...object,
+    };
+  }, {});
+};
+
+const collectResourceSelectionFromValue = (projectData, value) => {
+  const resources = projectData?.resources || {};
+  const selection = createResourceSelection();
+  const pendingLayoutIds = [];
+  const queuedLayoutIds = new Set();
+
+  const scanValue = (node) => {
+    traverseScene(node, (key, entry) => {
+      if (!RESOURCE_REFERENCE_KEYS.has(key) || typeof entry !== "string") {
+        return;
+      }
+
+      const hadLayout = selection.layouts.has(entry);
+      addResourceIdToSelection(selection, resources, entry);
+
+      if (
+        !hadLayout &&
+        selection.layouts.has(entry) &&
+        !queuedLayoutIds.has(entry)
+      ) {
+        queuedLayoutIds.add(entry);
+        pendingLayoutIds.push(entry);
+      }
+    });
+  };
+
+  scanValue(value);
+
+  while (pendingLayoutIds.length > 0) {
+    const layoutId = pendingLayoutIds.shift();
+    const layout = resources.layouts?.[layoutId];
+    if (!layout) {
+      continue;
+    }
+    scanValue(layout);
+  }
+
+  return selection;
+};
+
+const dedupeFileReferences = (fileReferences = []) => {
+  const dedupedReferences = new Map();
+
+  fileReferences.forEach((fileReference) => {
+    const fileId = fileReference?.url;
+    if (!fileId || dedupedReferences.has(fileId)) {
+      return;
+    }
+    dedupedReferences.set(fileId, fileReference);
+  });
+
+  return Array.from(dedupedReferences.values());
+};
+
+export const extractTransitionTargetSceneIds = (projectData, sceneId) => {
+  const scene = projectData?.story?.scenes?.[sceneId];
+  const allScenes = projectData?.story?.scenes || {};
+
+  if (!scene) {
+    return [];
+  }
+
+  const sceneIds = new Set();
+
+  traverseScene(scene, (key, entry) => {
+    if (key !== "sectionTransition" || typeof entry !== "object" || !entry) {
+      return;
+    }
+
+    if (typeof entry.sceneId !== "string" || !allScenes[entry.sceneId]) {
+      return;
+    }
+
+    sceneIds.add(entry.sceneId);
+  });
+
+  return Array.from(sceneIds);
+};
+
+export const extractTransitionTargetSceneIdsFromActions = (
+  actions,
+  projectData,
+) => {
+  const allScenes = projectData?.story?.scenes || {};
+  if (!actions || typeof actions !== "object") {
+    return [];
+  }
+
+  const sceneIds = new Set();
+  traverseScene(actions, (key, entry) => {
+    if (key !== "sectionTransition" || typeof entry !== "object" || !entry) {
+      return;
+    }
+
+    if (typeof entry.sceneId !== "string" || !allScenes[entry.sceneId]) {
+      return;
+    }
+
+    sceneIds.add(entry.sceneId);
+  });
+
+  return Array.from(sceneIds);
+};
+
+const getValueByPath = (source, path) => {
+  if (!path) {
+    return source;
+  }
+
+  return path.split(".").reduce((result, segment) => {
+    if (result === null || result === undefined) {
+      return undefined;
+    }
+    return result[segment];
+  }, source);
+};
+
+const resolveEventBindingString = (value, eventData) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  if (value === "_event") {
+    return eventData;
+  }
+  if (!value.startsWith("_event.")) {
+    return value;
+  }
+
+  const resolvedValue = getValueByPath(
+    eventData,
+    value.slice("_event.".length),
+  );
+  return resolvedValue === undefined ? value : resolvedValue;
+};
+
+export const resolveEventBindings = (value, eventData) => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveEventBindings(entry, eventData));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        resolveEventBindings(entry, eventData),
+      ]),
+    );
+  }
+  return resolveEventBindingString(value, eventData);
+};
+
+export const extractSceneIdsFromValue = (value, projectData) => {
+  const allScenes = projectData?.story?.scenes || {};
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const sceneIds = new Set();
+  traverseScene(value, (key, entry) => {
+    if (key !== "sceneId" || typeof entry !== "string") {
+      return;
+    }
+    if (!allScenes[entry]) {
+      return;
+    }
+    sceneIds.add(entry);
+  });
+
+  return Array.from(sceneIds);
+};
+
+export const extractLayoutIdsFromValue = (value, projectData) => {
+  const allLayouts = projectData?.resources?.layouts || {};
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const layoutIds = new Set();
+
+  const scanNode = (node) => {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      node.forEach(scanNode);
+      return;
+    }
+
+    if (typeof node.layoutId === "string" && allLayouts[node.layoutId]) {
+      layoutIds.add(node.layoutId);
+    }
+
+    if (
+      typeof node.resourceId === "string" &&
+      allLayouts[node.resourceId] &&
+      (typeof node.resourceType !== "string" || node.resourceType === "layout")
+    ) {
+      layoutIds.add(node.resourceId);
+    }
+
+    Object.values(node).forEach(scanNode);
+  };
+
+  scanNode(value);
+  return Array.from(layoutIds);
+};
+
+export const extractFileIdsForScene = (projectData, sceneId) => {
+  const scene = projectData?.story?.scenes?.[sceneId];
+  const resources = projectData?.resources;
+
+  if (!scene || !resources) {
+    return [];
+  }
+
+  const selection = collectResourceSelectionFromValue(projectData, scene);
+
+  const scopedLayouts = pickByIds(resources.layouts, selection.layouts);
+  const scopedFontsById = pickByIds(resources.fonts, selection.fonts);
+  const scopedFontsByFamily = pickFontsByFamily(
+    resources.fonts,
+    collectFontFamilies(scopedLayouts),
+  );
+
+  const scopedResources = {
+    images: pickByIds(resources.images, selection.images),
+    videos: pickByIds(resources.videos, selection.videos),
+    sounds: pickByIds(resources.sounds, selection.sounds),
+    fonts: mergeObjects(scopedFontsByFamily, scopedFontsById),
+    layouts: scopedLayouts,
+    characters: pickByIds(resources.characters, selection.characters),
+    transforms: pickByIds(resources.transforms, selection.transforms),
+    tweens: pickByIds(resources.tweens, selection.tweens),
+  };
+
+  return dedupeFileReferences(extractFileIdsFromRenderState(scopedResources));
+};
+
+export const extractFileIdsForLayouts = (projectData, layoutIds = []) => {
+  const resources = projectData?.resources;
+  if (!resources || !Array.isArray(layoutIds) || layoutIds.length === 0) {
+    return [];
+  }
+
+  const validLayoutIds = new Set(
+    layoutIds.filter((layoutId) => typeof layoutId === "string" && layoutId),
+  );
+  const scopedLayouts = pickByIds(resources.layouts, validLayoutIds);
+
+  if (Object.keys(scopedLayouts).length === 0) {
+    return [];
+  }
+
+  const scopedFontsByFamily = pickFontsByFamily(
+    resources.fonts,
+    collectFontFamilies(scopedLayouts),
+  );
+  const scopedResources = {
+    layouts: scopedLayouts,
+    fonts: scopedFontsByFamily,
+  };
+
+  return dedupeFileReferences(extractFileIdsFromRenderState(scopedResources));
+};
+
+export const extractFileIdsForScenes = (projectData, sceneIds = []) => {
+  if (!Array.isArray(sceneIds) || sceneIds.length === 0) {
+    return [];
+  }
+
+  const fileReferences = sceneIds.flatMap((sceneId) =>
+    extractFileIdsForScene(projectData, sceneId),
+  );
+  return dedupeFileReferences(fileReferences);
+};
+
+export const extractInitialHybridSceneIds = (projectData, sceneId) => {
+  if (!sceneId) {
+    return [];
+  }
+
+  const relatedSceneIds = [
+    sceneId,
+    ...extractTransitionTargetSceneIds(projectData, sceneId),
+  ];
+  return Array.from(new Set(relatedSceneIds));
+};
+
 const toAlphanumericId = (value, fallback = "sliderUpdate") => {
   const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
   return sanitized || fallback;
