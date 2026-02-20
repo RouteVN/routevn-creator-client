@@ -122,6 +122,55 @@ async function createAssetsFromFileIds(
   return assets;
 }
 
+const isMinimalAdvDialogue = (dialogue) => {
+  if (!dialogue || typeof dialogue !== "object") {
+    return false;
+  }
+
+  const keysWithoutContent = Object.keys(dialogue).filter(
+    (key) => key !== "content",
+  );
+
+  return keysWithoutContent.length === 1 && dialogue.mode === "adv";
+};
+
+const shouldInheritNvlModeFromPreviousLine = ({
+  scenes,
+  sceneId,
+  sectionId,
+  lineId,
+  existingDialogue,
+}) => {
+  const linesData =
+    scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines;
+  if (!linesData) {
+    return false;
+  }
+
+  if (existingDialogue?.mode === "nvl") {
+    return false;
+  }
+
+  if (existingDialogue?.mode && !isMinimalAdvDialogue(existingDialogue)) {
+    return false;
+  }
+
+  const currentIndex = (linesData.tree || []).findIndex(
+    (line) => line.id === lineId,
+  );
+  if (currentIndex <= 0) {
+    return false;
+  }
+
+  const previousLineId = linesData.tree[currentIndex - 1]?.id;
+  if (!previousLineId) {
+    return false;
+  }
+
+  const previousDialogue = linesData.items?.[previousLineId]?.actions?.dialogue;
+  return previousDialogue?.mode === "nvl";
+};
+
 const createAssetLoadCache = () => ({
   sceneIds: new Set(),
   fileIds: new Set(),
@@ -371,12 +420,23 @@ async function writeDialogueContent(
     scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines?.items?.[
       lineId
     ]?.actions?.dialogue || {};
+  const shouldInheritNvlMode = shouldInheritNvlModeFromPreviousLine({
+    scenes,
+    sceneId,
+    sectionId,
+    lineId,
+    existingDialogue,
+  });
 
   await projectService.appendEvent({
     type: "set",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-      value: { ...existingDialogue, content },
+      value: {
+        ...existingDialogue,
+        ...(shouldInheritNvlMode ? { mode: "nvl" } : {}),
+        content,
+      },
       options: { replace: true },
     },
   });
@@ -699,12 +759,11 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   if (submissionData.dialogue) {
     const line = store.selectSelectedLine();
     if (line && line.actions?.dialogue?.content) {
-      // Preserve existing text
+      // Preserve existing text while updating dialogue metadata fields.
       submissionData = {
         ...submissionData,
         dialogue: {
           content: line.actions.dialogue.content,
-          // layoutId: line.actions.dialogue.layoutId,
           ...submissionData.dialogue,
         },
       };
@@ -988,11 +1047,21 @@ export const handleSplitLine = async (deps, payload) => {
   const rightContentArray = rightContent
     ? [{ text: rightContent }]
     : [{ text: "" }];
-  const newLineActions = rightContent
+  const shouldInheritNvl =
+    existingDialogue?.mode === "nvl" ||
+    shouldInheritNvlModeFromPreviousLine({
+      scenes,
+      sceneId,
+      sectionId,
+      lineId,
+      existingDialogue,
+    });
+  const shouldCreateDialogueAction = shouldInheritNvl || !!rightContent;
+  const newLineActions = shouldCreateDialogueAction
     ? {
         dialogue: {
-          content: rightContentArray,
-          mode: "adv",
+          mode: shouldInheritNvl ? "nvl" : "adv",
+          ...(rightContent ? { content: rightContentArray } : {}),
         },
       }
     : {};
@@ -1068,6 +1137,25 @@ export const handleNewLine = async (deps) => {
   const sceneId = store.selectSceneId();
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
+  const selectedLine = store.selectSelectedLine();
+  const scenes = projectService.getState().scenes;
+  const existingDialogue = selectedLine?.actions?.dialogue || {};
+  const shouldInheritNvl =
+    existingDialogue?.mode === "nvl" ||
+    shouldInheritNvlModeFromPreviousLine({
+      scenes,
+      sceneId,
+      sectionId,
+      lineId: selectedLine?.id,
+      existingDialogue,
+    });
+  const newLineActions = shouldInheritNvl
+    ? {
+        dialogue: {
+          mode: "nvl",
+        },
+      }
+    : {};
 
   await projectService.appendEvent({
     type: "treePush",
@@ -1075,7 +1163,7 @@ export const handleNewLine = async (deps) => {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
       value: {
         id: newLineId,
-        actions: {},
+        actions: newLineActions,
       },
       options: {
         parent: "_root",

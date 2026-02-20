@@ -17,12 +17,13 @@ const layoutForm = {
       options: [
         { value: "normal", label: "Normal" },
         { value: "dialogue", label: "Dialogue" },
+        { value: "nvl", label: "NVL" },
         { value: "choice", label: "Choice" },
         { value: "base", label: "Base" },
       ],
       tooltip: {
         content:
-          "Normal is layout that can be used for background or menu pages. Dialogue is used for text dialogue layout. Choice is used for the choices. Base is a general purpose layout type.",
+          "Normal is layout that can be used for background or menu pages. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices. Base is a general purpose layout type.",
       },
     },
   ],
@@ -117,6 +118,7 @@ export const selectViewData = ({ state }) => {
     const layoutTypeLabels = {
       normal: "Normal",
       dialogue: "Dialogue",
+      nvl: "NVL",
       choice: "Choice",
       base: "Base",
     };

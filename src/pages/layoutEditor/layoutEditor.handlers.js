@@ -234,11 +234,23 @@ const renderLayoutPreview = async (deps) => {
   });
 
   const dialogueDefaultValues = store.selectDialogueDefaultValues();
+  const characterName = dialogueDefaultValues["dialogue-character-name"];
+  const dialogueContent = dialogueDefaultValues["dialogue-content"];
   const data = {
     variables,
     dialogue: {
-      content: [{ text: dialogueDefaultValues["dialogue-content"] }],
-      character: { name: dialogueDefaultValues["dialogue-character-name"] },
+      content: [{ text: dialogueContent }],
+      character: { name: characterName },
+      lines: [
+        {
+          content: [{ text: dialogueContent }],
+          characterName,
+        },
+        {
+          content: [{ text: "Narration line sample for NVL layouts." }],
+          characterName: "",
+        },
+      ],
     },
     choice: choicesData,
   };

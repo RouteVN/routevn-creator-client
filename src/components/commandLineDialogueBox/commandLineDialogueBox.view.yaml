@@ -27,6 +27,8 @@ viewDataSchema:
       type: object
     defaultValues:
       type: object
+    context:
+      type: object
 
 propsSchema:
   type: object
@@ -52,8 +54,17 @@ propsSchema:
     dialogue:
       type: object
       properties:
-        layoutId:
+        mode:
           type: string
+        clearPage:
+          type: boolean
+        clear:
+          type: boolean
+        gui:
+          type: object
+          properties:
+            resourceId:
+              type: string
         characterId:
           type: string
 
@@ -75,7 +86,7 @@ template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-breadcrumb#breadcumb .items=breadcrumb:
 
-      - rtgl-form#dialogue-form .defaultValues=defaultValues .form=form w=f:
+      - rtgl-form#dialogue-form .defaultValues=defaultValues .form=form .context=context w=f:
 
       - rtgl-view flex=1:
       - rtgl-view d=h av=c ah=e w=f g=lg:

@@ -41,7 +41,10 @@ export const selectViewData = ({ state, props, attrs }) => {
     }));
 
   const dialogueLayouts = Object.entries(repositoryState.layouts?.items || {})
-    .filter(([_, layout]) => layout.layoutType === "dialogue")
+    .filter(
+      ([_, layout]) =>
+        layout.layoutType === "dialogue" || layout.layoutType === "nvl",
+    )
     .map(([id, layout]) => ({
       id,
       name: layout.name,
@@ -237,8 +240,17 @@ export const selectActionsData = ({ props, state }) => {
 
   if (presentationState.dialogue) {
     actionsObject.dialogue = presentationState.dialogue;
-    preview.dialogue =
-      layoutsTree.items[presentationState.dialogue.gui?.resourceId];
+    if (presentationState.dialogue.clear === true) {
+      preview.dialogue = {
+        name: "Dialogue: Clear",
+      };
+    } else {
+      preview.dialogue = {
+        name:
+          layoutsTree.items?.[presentationState.dialogue.gui?.resourceId]
+            ?.name || "No layout",
+      };
+    }
   }
 
   if (actions.choice) {
