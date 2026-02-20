@@ -33,6 +33,12 @@ export const createInitialState = () => ({
   isMuted: false,
   isSceneAssetLoading: false,
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
+  deadEndTooltip: {
+    open: false,
+    x: 0,
+    y: 0,
+    content: "",
+  },
 });
 
 export const setSceneId = (state, sceneId) => {
@@ -200,10 +206,12 @@ export const setSelectedSectionId = (state, selectedSectionId) => {
 
 export const openSectionsOverviewPanel = (state) => {
   state.sectionsOverviewPanel.isOpen = true;
+  state.deadEndTooltip.open = false;
 };
 
 export const closeSectionsOverviewPanel = (state) => {
   state.sectionsOverviewPanel.isOpen = false;
+  state.deadEndTooltip.open = false;
 };
 
 export const selectIsSectionsOverviewOpen = ({ state }) => {
@@ -351,6 +359,7 @@ export const selectViewData = ({ state }) => {
         2,
       ),
       isSceneAssetLoading: state.isSceneAssetLoading,
+      deadEndTooltip: state.deadEndTooltip,
     };
   }
 
@@ -464,6 +473,7 @@ export const selectViewData = ({ state }) => {
     isMuted: state.isMuted,
     muteIcon: state.isMuted ? "mute" : "unmute",
     isSceneAssetLoading: state.isSceneAssetLoading,
+    deadEndTooltip: state.deadEndTooltip,
   };
 };
 
@@ -588,4 +598,20 @@ export const toggleMute = (state) => {
 
 export const selectIsMuted = ({ state }) => {
   return state.isMuted;
+};
+
+export const showDeadEndTooltip = (state, { x, y, content }) => {
+  state.deadEndTooltip = {
+    open: true,
+    x,
+    y,
+    content,
+  };
+};
+
+export const hideDeadEndTooltip = (state) => {
+  state.deadEndTooltip = {
+    ...state.deadEndTooltip,
+    open: false,
+  };
 };

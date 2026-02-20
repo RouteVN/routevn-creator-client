@@ -65,6 +65,12 @@ refs:
     eventListeners:
       click:
         handler: handleSectionsListItemClick
+  sections-list-warning-*:
+    eventListeners:
+      mouseenter:
+        handler: handleDeadEndWarningMouseEnter
+      mouseleave:
+        handler: handleDeadEndWarningMouseLeave
   vn-preview:
     eventListeners:
       close:
@@ -98,10 +104,7 @@ template:
                                               - rtgl-view#sections-list-item-${section.id} data-scene-id="${selectedItemId}" data-section-id="${section.id}" d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=p:
                                                   - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0"': ${section.name}
                                                   - $if section.isDeadEnd:
-                                                      - svg width=16 height=16 viewBox="0 0 24 24":
-                                                          - polygon points="12,3 22,21 2,21" fill="none" stroke="#ffffff" stroke-width=3 stroke-linejoin="round":
-                                                          - line x1=12 y1=9 x2=12 y2=14 stroke="#ffffff" stroke-width=3 stroke-linecap="round":
-                                                          - circle cx=12 cy=18 r=1.5 fill="#ffffff":
+                                                      - rtgl-svg#sections-list-warning-${section.id} svg=warning-dead-end wh=16:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
@@ -111,5 +114,6 @@ template:
       - rtgl-popover#scene-form-popover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
           - rtgl-form#scene-form key=${showSceneForm} slot=content .form=sceneFormFields w=320:
       - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+      - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} placement="top" content="${deadEndTooltip.content}":
   - $if previewVisible:
       - rvn-vn-preview#vn-preview scene-id="${previewSceneId}":

@@ -48,6 +48,12 @@ refs:
     eventListeners:
       click:
         handler: handleSectionsOverviewRowClick
+  sections-overview-warning-*:
+    eventListeners:
+      mouseenter:
+        handler: handleSectionsOverviewWarningMouseEnter
+      mouseleave:
+        handler: handleSectionsOverviewWarningMouseLeave
   dropdown-menu:
     eventListeners:
       close:
@@ -130,10 +136,7 @@ template:
                               - rtgl-view#section-overview-row-${section.id} w=f d=h av=c g=sm p=md cur=p bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
                                   - 'rtgl-text s=md c=${section.rowTextColor} w=f flex=1 style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
                                   - $if section.isDeadEnd:
-                                      - svg width=20 height=20 viewBox="0 0 24 24":
-                                          - polygon points="12,3 22,21 2,21" fill="none" stroke="#ffffff" stroke-width=3 stroke-linejoin="round":
-                                          - line x1=12 y1=9 x2=12 y2=14 stroke="#ffffff" stroke-width=3 stroke-linecap="round":
-                                          - circle cx=12 cy=18 r=1.5 fill="#ffffff":
+                                      - rtgl-svg#sections-overview-warning-${section.id} svg=warning-dead-end wh=20:
                 $else:
                   - 'rtgl-view#scene-editor-left-editor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
                       - 'rtgl-view d=h g=xs w=f':
@@ -171,5 +174,6 @@ template:
   - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content .form=form:
+  - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} placement="top" content="${deadEndTooltip.content}":
   - $if previewVisible:
       - rvn-vn-preview#vn-preview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}":

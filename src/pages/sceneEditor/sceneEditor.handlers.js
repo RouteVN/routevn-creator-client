@@ -12,6 +12,9 @@ import {
 } from "../../utils/index.js";
 import { filter, tap, debounceTime } from "rxjs";
 
+const DEAD_END_TOOLTIP_CONTENT =
+  "This section has no transition to another scene.";
+
 const findNonCloneablePaths = (root, limit = 5) => {
   const paths = [];
   const queue = [{ value: root, path: "$" }];
@@ -883,13 +886,33 @@ export const handleSectionsOverviewClick = (deps, payload) => {
     document.activeElement.blur();
   }
 
+  store.hideDeadEndTooltip();
   store.openSectionsOverviewPanel();
   render();
 };
 
 export const handleSectionsOverviewClose = (deps) => {
   const { store, render } = deps;
+  store.hideDeadEndTooltip();
   store.closeSectionsOverviewPanel();
+  render();
+};
+
+export const handleSectionsOverviewWarningMouseEnter = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.showDeadEndTooltip({
+    x: rect.left + rect.width / 2,
+    y: rect.top - 8,
+    content: DEAD_END_TOOLTIP_CONTENT,
+  });
+  render();
+};
+
+export const handleSectionsOverviewWarningMouseLeave = (deps) => {
+  const { store, render } = deps;
+  store.hideDeadEndTooltip();
   render();
 };
 
