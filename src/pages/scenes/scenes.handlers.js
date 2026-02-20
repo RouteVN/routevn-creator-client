@@ -123,6 +123,7 @@ export const handleAfterMount = async (deps) => {
 
   // Set the scenes data
   store.setItems(scenesData);
+  store.setLayouts(layouts);
 
   // Transform only scene items (not folders) into whiteboard items
   const initialSceneId = story?.initialSceneId;
@@ -200,6 +201,7 @@ export const handleDataChanged = async (deps) => {
 
   // Update both scenes data and whiteboard items
   store.setItems(sceneData);
+  store.setLayouts(layouts);
   store.setWhiteboardItems(sceneItems);
   render();
 };

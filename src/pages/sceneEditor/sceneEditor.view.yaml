@@ -128,7 +128,12 @@ template:
                       - 'rtgl-view d=v w=f flex=1 sv p=md g=sm style="min-height: 0px;"':
                           - $for section in sectionsOverviewItems:
                               - rtgl-view#section-overview-row-${section.id} w=f d=h av=c g=sm p=md cur=p bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
-                                  - 'rtgl-text s=md c=${section.rowTextColor} style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
+                                  - 'rtgl-text s=md c=${section.rowTextColor} w=f flex=1 style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
+                                  - $if section.isDeadEnd:
+                                      - svg width=20 height=20 viewBox="0 0 24 24":
+                                          - polygon points="12,3 22,21 2,21" fill="none" stroke="#ffffff" stroke-width=3 stroke-linejoin="round":
+                                          - line x1=12 y1=9 x2=12 y2=14 stroke="#ffffff" stroke-width=3 stroke-linecap="round":
+                                          - circle cx=12 cy=18 r=1.5 fill="#ffffff":
                 $else:
                   - 'rtgl-view#scene-editor-left-editor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
                       - 'rtgl-view d=h g=xs w=f':
@@ -136,7 +141,13 @@ template:
                               - rtgl-view d=h g=xs:
                                   - $for section in sections:
                                       - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=p:
-                                          - rtgl-text s=sm: ${section.name}
+                                          - rtgl-view d=h av=c ah=c g=xs:
+                                              - rtgl-text s=sm: ${section.name}
+                                              - $if section.isDeadEnd:
+                                                  - svg width=18 height=18 viewBox="0 0 24 24":
+                                                      - polygon points="12,3 22,21 2,21" fill="none" stroke="#ffffff" stroke-width=3 stroke-linejoin="round":
+                                                      - line x1=12 y1=9 x2=12 y2=14 stroke="#ffffff" stroke-width=3 stroke-linecap="round":
+                                                      - circle cx=12 cy=18 r=1.5 fill="#ffffff":
                           - rtgl-view#section-add h=32 av=c ph=lg ah=c cur=p bgc=mu:
                               - rtgl-text s=sm: +
                           - rtgl-view#sections-overview h=32 av=c ph=lg ah=c cur=p bgc=mu:
