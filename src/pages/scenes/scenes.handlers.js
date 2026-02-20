@@ -626,6 +626,29 @@ export const handleClickShowScenePreview = (deps, payload) => {
   render();
 };
 
+export const handleSectionsListToggle = (deps) => {
+  const { store, render } = deps;
+  store.toggleSectionsList();
+  render();
+};
+
+export const handleSectionsListItemClick = (deps, payload) => {
+  const { appService } = deps;
+  const sceneId = payload._event.currentTarget.dataset.sceneId;
+  const sectionId = payload._event.currentTarget.dataset.sectionId;
+
+  if (!sceneId || !sectionId) {
+    return;
+  }
+
+  const currentPayload = appService.getPayload();
+  appService.navigate("/project/scene-editor", {
+    ...currentPayload,
+    sceneId,
+    sectionId,
+  });
+};
+
 export const handleWhiteboardZoomChanged = (deps, payload) => {
   const { appService } = deps;
   const { zoomLevel } = payload._event.detail;

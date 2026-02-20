@@ -57,6 +57,14 @@ refs:
     eventListeners:
       click:
         handler: handleClickShowScenePreview
+  sections-list-toggle:
+    eventListeners:
+      click:
+        handler: handleSectionsListToggle
+  sections-list-item-*:
+    eventListeners:
+      click:
+        handler: handleSectionsListItemClick
   vn-preview:
     eventListeners:
       close:
@@ -77,6 +85,18 @@ template:
                   - $if selectedItemId:
                       - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
                           - rtgl-button#preview-button slot="preview" data-scene-id="${selectedItemId}": Preview
+                          - rtgl-view slot="sections-list" d=v w=f g=sm:
+                              - rtgl-view#sections-list-toggle d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=p:
+                                  - rtgl-text s=sm w=f: Sections List
+                              - $if sectionsListOpen:
+                                  - $if selectedSceneSections.length == 0:
+                                      - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:
+                                          - rtgl-text s=sm c=mu-fg: No sections
+                                    $else:
+                                      - rtgl-view d=v w=f:
+                                          - $for section in selectedSceneSections:
+                                              - rtgl-view#sections-list-item-${section.id} data-scene-id="${selectedItemId}" data-section-id="${section.id}" d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=p:
+                                                  - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0"': ${section.name}
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection

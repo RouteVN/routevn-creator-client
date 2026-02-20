@@ -4,6 +4,17 @@ const form = {
   fields: [
     { name: "name", inputType: "popover-input", description: "Name" },
     { name: "preview", inputType: "slot", slot: "preview" },
+    {
+      name: "sectionCount",
+      inputType: "read-only-text",
+      description: "Sections",
+    },
+    {
+      name: "sectionsList",
+      inputType: "slot",
+      slot: "sections-list",
+      description: "Sections List",
+    },
   ],
 };
 
@@ -30,6 +41,7 @@ export const createInitialState = () => ({
   },
   previewVisible: false,
   previewSceneId: undefined,
+  sectionsListOpen: false,
 });
 
 export const setItems = (state, scenesData) => {
@@ -54,7 +66,14 @@ export const selectPreviewScene = ({ state }) => {
 };
 
 export const setSelectedItemId = (state, itemId) => {
+  if (state.selectedItemId !== itemId) {
+    state.sectionsListOpen = false;
+  }
   state.selectedItemId = itemId;
+};
+
+export const toggleSectionsList = (state) => {
+  state.sectionsListOpen = !state.sectionsListOpen;
 };
 
 export const updateItemPosition = (state, { itemId, x, y }) => {
@@ -183,9 +202,21 @@ export const selectViewData = ({ state }, payload) => {
     : null;
 
   let defaultValues = {};
+  let selectedSceneSections = [];
   if (selectedItem) {
+    selectedSceneSections = toFlatItems(
+      selectedItem.sections || {
+        tree: [],
+        items: {},
+      },
+    ).map((section, index) => ({
+      id: section.id,
+      name: section.name || `Section ${index + 1}`,
+    }));
+
     defaultValues = {
       name: selectedItem.name,
+      sectionCount: selectedSceneSections.length,
     };
   }
 
@@ -257,5 +288,7 @@ export const selectViewData = ({ state }, payload) => {
     dropdownMenu: state.dropdownMenu,
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
+    sectionsListOpen: state.sectionsListOpen,
+    selectedSceneSections,
   };
 };
