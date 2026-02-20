@@ -1,5 +1,8 @@
 import { nanoid } from "nanoid";
 
+const DEAD_END_TOOLTIP_CONTENT =
+  "This section has no transition to another scene.";
+
 /**
  * Extract transitions from layout element click actions
  * @param {Object} layout - Layout object with elements
@@ -631,6 +634,25 @@ export const handleClickShowScenePreview = (deps, payload) => {
 export const handleSectionsListToggle = (deps) => {
   const { store, render } = deps;
   store.toggleSectionsList();
+  store.hideDeadEndTooltip();
+  render();
+};
+
+export const handleDeadEndWarningMouseEnter = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.showDeadEndTooltip({
+    x: rect.left + rect.width / 2,
+    y: rect.top - 8,
+    content: DEAD_END_TOOLTIP_CONTENT,
+  });
+  render();
+};
+
+export const handleDeadEndWarningMouseLeave = (deps) => {
+  const { store, render } = deps;
+  store.hideDeadEndTooltip();
   render();
 };
 

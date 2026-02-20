@@ -44,6 +44,12 @@ export const createInitialState = () => ({
   previewVisible: false,
   previewSceneId: undefined,
   sectionsListOpen: false,
+  deadEndTooltip: {
+    open: false,
+    x: 0,
+    y: 0,
+    content: "",
+  },
 });
 
 export const setItems = (state, scenesData) => {
@@ -74,12 +80,29 @@ export const selectPreviewScene = ({ state }) => {
 export const setSelectedItemId = (state, itemId) => {
   if (state.selectedItemId !== itemId) {
     state.sectionsListOpen = false;
+    state.deadEndTooltip.open = false;
   }
   state.selectedItemId = itemId;
 };
 
 export const toggleSectionsList = (state) => {
   state.sectionsListOpen = !state.sectionsListOpen;
+};
+
+export const showDeadEndTooltip = (state, { x, y, content }) => {
+  state.deadEndTooltip = {
+    open: true,
+    x,
+    y,
+    content,
+  };
+};
+
+export const hideDeadEndTooltip = (state) => {
+  state.deadEndTooltip = {
+    ...state.deadEndTooltip,
+    open: false,
+  };
 };
 
 export const updateItemPosition = (state, { itemId, x, y }) => {
@@ -313,5 +336,6 @@ export const selectViewData = ({ state }, payload) => {
     previewSceneId: state.previewSceneId,
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
+    deadEndTooltip: state.deadEndTooltip,
   };
 };
