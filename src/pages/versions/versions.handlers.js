@@ -68,10 +68,9 @@ export const handleVersionContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const versionId = payload._event.currentTarget.id.replace(
-    "versionMoreBtn",
-    "",
-  );
+  const versionId =
+    payload._event.currentTarget?.dataset?.versionId ||
+    payload._event.currentTarget?.id?.replace("versionMoreBtn", "");
   const versions = store.selectVersions();
   const version = versions.find((v) => v.id === versionId);
 
@@ -102,10 +101,9 @@ export const handleDownloadZipClick = async (deps, payload) => {
   });
 
   // Get versionId from the button or data attributes
-  const versionId = payload._event.currentTarget.id.replace(
-    "versionDownload",
-    "",
-  );
+  const versionId =
+    payload._event.currentTarget?.dataset?.versionId ||
+    payload._event.currentTarget?.id?.replace("versionDownload", "");
 
   const version = store.selectVersion(versionId);
 

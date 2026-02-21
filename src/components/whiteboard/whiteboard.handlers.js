@@ -172,7 +172,9 @@ export const handleItemMouseDown = (deps, payload) => {
     return;
   }
 
-  const itemId = payload._event.currentTarget.id.replace("item", "");
+  const itemId =
+    payload._event.currentTarget?.dataset?.itemId ||
+    payload._event.currentTarget?.id?.replace("item", "");
   const itemElement = payload._event.currentTarget;
   const canvas = refs.canvas;
   const canvasRect = canvas.getBoundingClientRect();
@@ -206,8 +208,10 @@ export const handleItemMouseDown = (deps, payload) => {
 export const handleItemDoubleClick = (deps, payload) => {
   payload._event.stopPropagation();
 
-  const fullId = payload._event.currentTarget.id;
-  const itemId = fullId ? fullId.replace("item", "") : "";
+  const itemId =
+    payload._event.currentTarget?.dataset?.itemId ||
+    payload._event.currentTarget?.id?.replace("item", "") ||
+    "";
 
   if (!itemId) {
     console.error("ERROR: No itemId found for double-click");
@@ -229,8 +233,10 @@ export const handleItemContextMenu = (deps, payload) => {
   payload._event.stopPropagation();
 
   const { dispatchEvent } = deps;
-  const fullId = payload._event.currentTarget.id;
-  const itemId = fullId ? fullId.replace("item", "") : "";
+  const itemId =
+    payload._event.currentTarget?.dataset?.itemId ||
+    payload._event.currentTarget?.id?.replace("item", "") ||
+    "";
 
   if (!itemId) {
     console.error("ERROR: No itemId found for context menu");

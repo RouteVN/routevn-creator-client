@@ -93,11 +93,11 @@ template:
                                           - rtgl-text s=sm c=mu-fg: No sections
                                     $else:
                                       - rtgl-view d=v w=f:
-                                          - $for section in selectedSceneSections:
-                                              - rtgl-view#sectionsListItem${section.id} data-scene-id="${selectedItemId}" data-section-id="${section.id}" d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:
+                                          - $for section, sectionIndex in selectedSceneSections:
+                                              - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:
                                                   - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0"': ${section.name}
                                                   - $if section.isDeadEnd:
-                                                      - rtgl-svg#sectionsListWarning${section.id} svg=warning-dead-end wh=16: null
+                                                      - rtgl-svg#sectionsListWarning${sectionIndex} svg=warning-dead-end wh=16: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection

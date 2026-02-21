@@ -13,7 +13,9 @@ export const handleAfterMount = (deps) => {
 export const handleImageItemClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
 
-  const id = payload._event.currentTarget.id.replace("imageItem", "");
+  const id =
+    payload._event.currentTarget?.dataset?.itemId ||
+    payload._event.currentTarget?.id?.replace("imageItem", "");
 
   store.setSelectedImageId({
     imageId: id,
@@ -36,16 +38,15 @@ export const handleScrollToItem = (deps, payload) => {
   const { container } = refs;
   const { id } = payload;
 
-  // Find the group element by ID pattern
-  const groupElementId = `item-${id}`;
-  const groupElement = container.querySelector(`#${groupElementId}`);
+  // Find the group element by stable data attribute.
+  const groupElement = container.querySelector(`[data-group-id="${id}"]`);
 
   if (!groupElement) {
     return;
   }
 
   // Find all group elements to determine if this is the first one
-  const allGroupElements = container.querySelectorAll('[id^="item-"]');
+  const allGroupElements = container.querySelectorAll("[data-group-id]");
 
   // Check if this is the first group element
   const isFirstGroup = allGroupElements[0] === groupElement;
