@@ -25,6 +25,8 @@ const isTextElementType = (type) =>
     "text-ref-character-name",
     "text-revealing-ref-dialogue-content",
     "text-ref-choice-item-content",
+    "text-ref-dialogue-line-character-name",
+    "text-ref-dialogue-line-content",
   ].includes(type);
 
 // Forward click-item event from base component

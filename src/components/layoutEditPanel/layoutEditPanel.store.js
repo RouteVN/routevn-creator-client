@@ -92,7 +92,7 @@ const config = {
             },
             {
               $when:
-                'itemType != "text" || itemType != "text-ref-character-name" || itemType != "text-revealing-ref-dialogue-content" || itemType != "text-ref-choice-item-content"',
+                'itemType != "text" || itemType != "text-ref-character-name" || itemType != "text-revealing-ref-dialogue-content" || itemType != "text-ref-choice-item-content" || itemType != "text-ref-dialogue-line-character-name" || itemType != "text-ref-dialogue-line-content"',
               type: "clickable-value",
               svg: "h",
               name: "height",
@@ -119,7 +119,7 @@ const config = {
         },
         {
           $when:
-            "itemType == 'container' || itemType == 'container-ref-choice-item' || itemType == 'text' | itemType == 'text-ref-choice-item-content'",
+            "itemType == 'container' || itemType == 'container-ref-choice-item' || itemType == 'container-ref-dialogue-line' || itemType == 'text' || itemType == 'text-ref-choice-item-content' || itemType == 'text-ref-character-name' || itemType == 'text-revealing-ref-dialogue-content' || itemType == 'text-ref-dialogue-line-character-name' || itemType == 'text-ref-dialogue-line-content'",
           type: "select",
           label: "Anchor",
           name: "anchor",
@@ -140,7 +140,7 @@ const config = {
     },
     {
       $when:
-        'itemType == "container" || itemType == "container-ref-choice-item"',
+        'itemType == "container" || itemType == "container-ref-choice-item" || itemType == "container-ref-dialogue-line"',
       label: "Direction",
       items: [
         {
@@ -156,7 +156,7 @@ const config = {
         },
         {
           $when:
-            '(itemType == "container" || itemType == "container-ref-choice-item") && (values.direction == "vertical" || values.direction == "horizontal") ',
+            '(itemType == "container" || itemType == "container-ref-choice-item" || itemType == "container-ref-dialogue-line") && (values.direction == "vertical" || values.direction == "horizontal") ',
           type: "group",
           fields: [
             {
@@ -455,7 +455,7 @@ const config = {
     },
     {
       $when:
-        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
+        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content" || itemType == "text-ref-dialogue-line-character-name" || itemType == "text-ref-dialogue-line-content"',
       label: "Typography",
       items: [
         {
@@ -483,7 +483,7 @@ const config = {
     },
     {
       $when:
-        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content"',
+        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content" || itemType == "text-ref-dialogue-line-character-name" || itemType == "text-ref-dialogue-line-content"',
       label: "Text Alignment",
       items: [
         {

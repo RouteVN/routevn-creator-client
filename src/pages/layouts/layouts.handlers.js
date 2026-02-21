@@ -205,6 +205,134 @@ const createLayoutTemplate = (layoutType) => {
         },
       ],
     };
+  } else if (layoutType === "nvl") {
+    const nvlContainerId = nanoid();
+    const nvlBackgroundId = nanoid();
+    const nvlLinesId = nanoid();
+    const lineContainerId = nanoid();
+    const lineNameTextId = nanoid();
+    const lineContentTextId = nanoid();
+
+    return {
+      items: {
+        [nvlContainerId]: {
+          type: "container",
+          name: "NVL Container",
+          x: 100,
+          y: 80,
+          width: 1720,
+          height: 920,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+        },
+        [nvlBackgroundId]: {
+          type: "sprite",
+          name: "NVL Background",
+          x: 0,
+          y: 0,
+          width: 1720,
+          height: 920,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          imageId: "iN20__bg4TaS80gh7-XcL",
+        },
+        [nvlLinesId]: {
+          type: "container",
+          name: "NVL Lines",
+          x: 40,
+          y: 30,
+          gap: 24,
+          width: 1640,
+          height: 860,
+          direction: "vertical",
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+        },
+        [lineContainerId]: {
+          type: "container-ref-dialogue-line",
+          name: "Container (Dialogue Line)",
+          x: 0,
+          y: 0,
+          width: 1640,
+          height: 120,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+        },
+        [lineNameTextId]: {
+          type: "text-ref-dialogue-line-character-name",
+          name: "Text (Line Character Name)",
+          $when: "line.characterName",
+          x: 0,
+          y: 0,
+          width: 280,
+          height: 40,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          text: "text",
+          style: {
+            align: "left",
+          },
+        },
+        [lineContentTextId]: {
+          type: "text-ref-dialogue-line-content",
+          name: "Text (Line Content)",
+          x: 0,
+          y: 44,
+          width: 1640,
+          height: 72,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          text: "text",
+          style: {
+            align: "left",
+          },
+        },
+      },
+      tree: [
+        {
+          id: nvlContainerId,
+          children: [
+            {
+              id: nvlBackgroundId,
+            },
+            {
+              id: nvlLinesId,
+              children: [
+                {
+                  id: lineContainerId,
+                  children: [
+                    {
+                      id: lineNameTextId,
+                    },
+                    {
+                      id: lineContentTextId,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
   } else if (layoutType === "normal") {
     const rootId = nanoid();
     const textId = nanoid();

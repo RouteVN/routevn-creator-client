@@ -592,6 +592,8 @@ export const layoutTreeStructureToRenderState = (
         "text-ref-character-name",
         "text-revealing-ref-dialogue-content",
         "text-ref-choice-item-content",
+        "text-ref-dialogue-line-character-name",
+        "text-ref-dialogue-line-content",
       ].includes(node.type)
     ) {
       let textStyle = {};
@@ -709,6 +711,16 @@ export const layoutTreeStructureToRenderState = (
         element.type = "text";
         element.content = "${item.content}";
       }
+
+      if (node.type === "text-ref-dialogue-line-character-name") {
+        element.type = "text";
+        element.content = "${line.characterName}";
+      }
+
+      if (node.type === "text-ref-dialogue-line-content") {
+        element.type = "text";
+        element.content = "${line.content[0].text}";
+      }
     }
 
     if (node.type === "sprite") {
@@ -790,7 +802,8 @@ export const layoutTreeStructureToRenderState = (
 
     if (
       node.type === "container" ||
-      node.type === "container-ref-choice-item"
+      node.type === "container-ref-choice-item" ||
+      node.type === "container-ref-dialogue-line"
     ) {
       // For containers, we need to handle direction and children
       element.direction = node.direction;
@@ -807,12 +820,21 @@ export const layoutTreeStructureToRenderState = (
           },
         };
       }
+
+      if (node.type === "container-ref-dialogue-line") {
+        element.type = "container";
+        element.$each = "line, i in dialogue.lines";
+        element.id = `${node.id}-\${i}`;
+      }
     }
 
     if (node.children && node.children.length > 0) {
       element.children = node.children.map(mapNode);
 
-      if (node.type === "container-ref-choice-item") {
+      if (
+        node.type === "container-ref-choice-item" ||
+        node.type === "container-ref-dialogue-line"
+      ) {
         element.children = updateChildrenIds(element.children, "i");
       }
     }

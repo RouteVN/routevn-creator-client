@@ -537,6 +537,9 @@
             "id": "YgqAiakoomeYEtJrxBLuv"
           },
           {
+            "id": "NvlDefaultLayout"
+          },
+          {
             "id": "HEJttDFczRPSwsBusaLZs"
           },
           {
@@ -641,6 +644,133 @@
                 },
                 {
                   "id": "dialogue-content"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "NvlDefaultLayout": {
+        "type": "layout",
+        "name": "Default NVL",
+        "layoutType": "nvl",
+        "elements": {
+          "items": {
+            "nvl-container": {
+              "type": "container",
+              "name": "NVL Container",
+              "x": 100,
+              "y": 80,
+              "width": 1720,
+              "height": 920,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0
+            },
+            "nvl-background": {
+              "type": "sprite",
+              "name": "NVL Background",
+              "x": 0,
+              "y": 0,
+              "width": 1720,
+              "height": 920,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "imageId": "iN20__bg4TaS80gh7-XcL"
+            },
+            "nvl-lines": {
+              "type": "container",
+              "name": "NVL Lines",
+              "x": 40,
+              "y": 30,
+              "gap": 24,
+              "width": 1640,
+              "height": 860,
+              "direction": "vertical",
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0
+            },
+            "nvl-line-item": {
+              "type": "container-ref-dialogue-line",
+              "name": "Container (Dialogue Line)",
+              "x": 0,
+              "y": 0,
+              "width": 1640,
+              "height": 120,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0
+            },
+            "nvl-line-name": {
+              "type": "text-ref-dialogue-line-character-name",
+              "name": "Text (Line Character Name)",
+              "$when": "line.characterName",
+              "x": 0,
+              "y": 0,
+              "width": 280,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "text",
+              "typographyId": "aEFgSimQUspdxkvXUSyRd",
+              "style": {
+                "align": "left"
+              }
+            },
+            "nvl-line-content": {
+              "type": "text-ref-dialogue-line-content",
+              "name": "Text (Line Content)",
+              "x": 0,
+              "y": 44,
+              "width": 1640,
+              "height": 72,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "text",
+              "typographyId": "jiWyxqqEgEdAVTPAxbGFp",
+              "style": {
+                "align": "left"
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "nvl-container",
+              "children": [
+                {
+                  "id": "nvl-background"
+                },
+                {
+                  "id": "nvl-lines",
+                  "children": [
+                    {
+                      "id": "nvl-line-item",
+                      "children": [
+                        {
+                          "id": "nvl-line-name"
+                        },
+                        {
+                          "id": "nvl-line-content"
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
