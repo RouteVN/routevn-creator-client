@@ -50,36 +50,58 @@ const rtglComponentTags = [
   "rtgl-waveform",
 ];
 
+const isFeRuntimeComponent = (instance) => {
+  return (
+    !!instance &&
+    typeof instance === "object" &&
+    typeof instance.render === "function" &&
+    "template" in instance &&
+    ("transformedHandlers" in instance || "store" in instance)
+  );
+};
+
+const patchRtglAttributeChangedCallback = (tagName) => {
+  const ctor = customElements.get(tagName);
+  if (!ctor || guardedRtglConstructors.has(ctor)) {
+    return;
+  }
+
+  const originalAttributeChangedCallback =
+    ctor.prototype.attributeChangedCallback;
+  if (typeof originalAttributeChangedCallback !== "function") {
+    guardedRtglConstructors.add(ctor);
+    return;
+  }
+
+  ctor.prototype.attributeChangedCallback = function (...args) {
+    // Only gate FE runtime components. Primitive web components must keep their
+    // native attribute updates working.
+    if (!isFeRuntimeComponent(this)) {
+      return originalAttributeChangedCallback.apply(this, args);
+    }
+
+    const isRuntimeReady =
+      typeof this?.transformedHandlers?.handleCallStoreAction === "function";
+    if (
+      !this.isConnected ||
+      !this.renderTarget ||
+      !isRuntimeReady ||
+      !this.patch
+    ) {
+      return;
+    }
+    return originalAttributeChangedCallback.apply(this, args);
+  };
+
+  guardedRtglConstructors.add(ctor);
+};
+
 const guardRtglAttributeUpdatesBeforeConnect = () => {
   rtglComponentTags.forEach((tagName) => {
-    const ctor = customElements.get(tagName);
-    if (!ctor || guardedRtglConstructors.has(ctor)) {
-      return;
-    }
-
-    const originalAttributeChangedCallback =
-      ctor.prototype.attributeChangedCallback;
-    if (typeof originalAttributeChangedCallback !== "function") {
-      guardedRtglConstructors.add(ctor);
-      return;
-    }
-
-    ctor.prototype.attributeChangedCallback = function (...args) {
-      const isRuntimeReady =
-        typeof this?.transformedHandlers?.handleCallStoreAction === "function";
-      if (
-        !this.isConnected ||
-        !this.renderTarget ||
-        !isRuntimeReady ||
-        !this.store ||
-        !this.patch
-      ) {
-        return;
-      }
-      return originalAttributeChangedCallback.apply(this, args);
-    };
-
-    guardedRtglConstructors.add(ctor);
+    patchRtglAttributeChangedCallback(tagName);
+    customElements.whenDefined(tagName).then(() => {
+      patchRtglAttributeChangedCallback(tagName);
+    });
   });
 };
 
