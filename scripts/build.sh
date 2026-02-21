@@ -62,6 +62,9 @@ find _site -type f -name "*.html" -print0 | while IFS= read -r -d '' file; do
   sed -i -E \
     "s#<script type=\"module\" src=\"/public/main.js(\\?v=[^\"]*)?\"></script>#<script type=\"module\" src=\"/public/main.js?v=${BUILD_REV}\"></script>#g" \
     "${file}"
+  sed -i -E \
+    "s#<script src=\"/public/@rettangoli/ui@[^/]+/dist/rettangoli-iife-ui.min.js(\\?v=[^\"]*)?\"></script>#<script src=\"/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist/rettangoli-iife-ui.min.js?v=${BUILD_REV}\"></script>#g" \
+    "${file}"
 done
 
 echo "Build completed for ${BUILD_TYPE}"

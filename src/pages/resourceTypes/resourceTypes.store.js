@@ -114,21 +114,29 @@ const resourceCategoryNames = {
 
 export const createInitialState = () => ({});
 
+const EMPTY_CATEGORY = Object.freeze({
+  label: "",
+  resources: [],
+});
+
+const getCategoryConfig = (resourceCategory) =>
+  resourceCategoryNames[resourceCategory] || EMPTY_CATEGORY;
+
 export const selectResourceItem = ({ props }, id) => {
   const { resourceCategory } = props;
-  return resourceCategoryNames[resourceCategory].resources.find(
-    (item) => item.id === id,
-  );
+  const categoryConfig = getCategoryConfig(resourceCategory);
+  return categoryConfig.resources.find((item) => item.id === id);
 };
 
 export const selectViewData = ({ props }) => {
   const { resourceCategory, selectedResourceId } = props;
+  const categoryConfig = getCategoryConfig(resourceCategory);
 
   // Get the actual resource ID to highlight (use parent mapping if exists)
   const actualSelectedId =
     resourceParentMapping[selectedResourceId] || selectedResourceId;
 
-  const resourceItems = resourceCategoryNames[resourceCategory].resources;
+  const resourceItems = categoryConfig.resources;
 
   const items = resourceItems.map((item) => {
     const isSelected = actualSelectedId === item.id;
@@ -141,7 +149,7 @@ export const selectViewData = ({ props }) => {
   });
 
   return {
-    label: resourceCategoryNames[resourceCategory].label,
+    label: categoryConfig.label,
     items,
   };
 };

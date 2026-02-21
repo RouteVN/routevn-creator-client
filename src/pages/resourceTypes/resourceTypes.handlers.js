@@ -7,6 +7,9 @@ export const handleItemClick = (deps, payload) => {
     return;
   }
   const resourceItem = store.selectResourceItem(id);
+  if (!resourceItem?.path) {
+    return;
+  }
   const currentPayload = appService.getPayload();
   appService.navigate(resourceItem.path, currentPayload);
 };

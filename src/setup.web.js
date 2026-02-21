@@ -15,6 +15,52 @@ import Subject from "./deps/subject.js";
 import Router from "./deps/infra/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 
+const guardedRtglConstructors = new WeakSet();
+const rtglComponentTags = [
+  "rtgl-accordion-item",
+  "rtgl-breadcrumb",
+  "rtgl-dropdown-menu",
+  "rtgl-form",
+  "rtgl-global-ui",
+  "rtgl-navbar",
+  "rtgl-page-outline",
+  "rtgl-popover-input",
+  "rtgl-select",
+  "rtgl-sidebar",
+  "rtgl-slider-input",
+  "rtgl-table",
+  "rtgl-tabs",
+  "rtgl-tooltip",
+  "rtgl-waveform",
+];
+
+const guardRtglAttributeUpdatesBeforeConnect = () => {
+  rtglComponentTags.forEach((tagName) => {
+    const ctor = customElements.get(tagName);
+    if (!ctor || guardedRtglConstructors.has(ctor)) {
+      return;
+    }
+
+    const originalAttributeChangedCallback =
+      ctor.prototype.attributeChangedCallback;
+    if (typeof originalAttributeChangedCallback !== "function") {
+      guardedRtglConstructors.add(ctor);
+      return;
+    }
+
+    ctor.prototype.attributeChangedCallback = function (...args) {
+      if (!this.isConnected || !this.renderTarget) {
+        return;
+      }
+      return originalAttributeChangedCallback.apply(this, args);
+    };
+
+    guardedRtglConstructors.add(ctor);
+  });
+};
+
+guardRtglAttributeUpdatesBeforeConnect();
+
 // Initialize app database using web adapter
 const appDb = createDb({ path: "app" });
 await appDb.init();
