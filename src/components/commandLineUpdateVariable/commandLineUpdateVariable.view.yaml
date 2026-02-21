@@ -49,8 +49,8 @@ template:
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
           - rtgl-view g=md mt=md w=f:
-              - $for operation in operations:
-                  - rtgl-view#operation${operation.id} cur=pointer d=h av=c ah=c g=md p=md bgc=mu h-bgc=ac br=md w=f:
+              - $for operation, i in operations:
+                  - rtgl-view#operation${i} data-operation-id=${operation.id} cur=pointer d=h av=c ah=c g=md p=md bgc=mu h-bgc=ac br=md w=f:
                       - rtgl-text s=sm: '${operation.variableName}:'
                       - rtgl-text s=sm c=pr: ${operation.opLabel}
                       - $if operation.op != 'toggle':

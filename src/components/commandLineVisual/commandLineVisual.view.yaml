@@ -47,7 +47,7 @@ template:
           - rtgl-view flex=1 sv w=f:
               - rtgl-view g=md w=f:
                   - $for visual, i in defaultValues.visuals:
-                      - rtgl-view#visual${visual.id}${i} data-index=${i} d=h g=md av=t bgc=ac p=md br=md w=f:
+                      - rtgl-view#visual${i} data-index=${i} data-visual-id=${visual.id} d=h g=md av=t bgc=ac p=md br=md w=f:
                           - rtgl-view g=sm:
                               - $if visual.fileId:
                                   - rvn-file-image fileId=${visual.fileId} w=120 h=120 br=sm: null
@@ -73,7 +73,7 @@ template:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f wrap g=lg:
                               - $for item, j in group.children:
-                                  - rtgl-view#resourceItem${item.id} w=200 h=150 cur=pointer key=${item.bw} bw=${item.bw} bc=pr br=sm g=sm:
+                                  - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 cur=pointer key=${item.bw} bw=${item.bw} bc=pr br=sm g=sm:
                                       - $if item.previewFileId:
                                           - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
                                         $else:

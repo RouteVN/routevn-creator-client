@@ -58,7 +58,7 @@ template:
               - rtgl-form#form :form=form :defaultValues=defaultValues:
                   - rtgl-view#charactersContainer slot=characters g=md w=f cur=pointer:
                       - $for character, i in defaultValues.characters:
-                          - rtgl-view#character${character.id}${i} data-index=${i} d=h g=md av=t bgc=ac p=md br=md w=f:
+                          - rtgl-view#character${i} data-index=${i} data-character-id=${character.id} d=h g=md av=t bgc=ac p=md br=md w=f:
                               - rtgl-view g=sm:
                                   - $if character.spriteFileId:
                                       - rvn-file-image fileId=${character.spriteFileId} w=120 h=120 br=sm: null
@@ -84,7 +84,7 @@ template:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f wrap g=lg:
                               - $for item, j in group.children:
-                                  - rtgl-view#characterItem${item.id} w=200 h=150 p=sm bgc=mu br=md cur=pointer key=${item.bw} bw=${item.bw}:
+                                  - rtgl-view#characterItem${i}x${j} data-character-id=${item.id} w=200 h=150 p=sm bgc=mu br=md cur=pointer key=${item.bw} bw=${item.bw}:
                                       - rtgl-view w=f h=f av=c ah=c g=sm:
                                           - $if item.fileId:
                                               - rvn-file-image fileId=${item.fileId} w=80 h=80 br=f: null
@@ -104,7 +104,7 @@ template:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f wrap g=lg:
                               - $for item, j in group.children:
-                                  - rtgl-view#spriteItem${item.id} w=200 h=150 cur=pointer key=${item.bw} bw=${item.bw} bc=pr br=sm g=sm:
+                                  - rtgl-view#spriteItem${i}x${j} data-sprite-id=${item.id} w=200 h=150 cur=pointer key=${item.bw} bw=${item.bw} bc=pr br=sm g=sm:
                                       - rvn-file-image fileId=${item.fileId} w=200 h=120: null
                                       - rtgl-text s=sm ah=c: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:

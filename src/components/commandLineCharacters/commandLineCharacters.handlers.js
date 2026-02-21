@@ -85,10 +85,11 @@ export const handleFormChange = () => {
 
 export const handleCharacterItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const characterId = payload._event.currentTarget.id.replace(
-    "characterItem",
-    "",
-  );
+  const target = payload._event.currentTarget;
+  const characterId =
+    target?.dataset?.characterId ||
+    target?.id?.replace("characterItem", "") ||
+    "";
 
   // Add character to selected characters
   store.addCharacter({ id: characterId });
@@ -183,7 +184,9 @@ export const handleAddCharacterClick = (deps) => {
 
 export const handleSpriteItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const spriteId = payload._event.currentTarget.id.replace("spriteItem", "");
+  const target = payload._event.currentTarget;
+  const spriteId =
+    target?.dataset?.spriteId || target?.id?.replace("spriteItem", "") || "";
 
   store.setTempSelectedSpriteId({
     spriteId: spriteId,

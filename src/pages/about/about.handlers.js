@@ -29,7 +29,7 @@ export const handleCheckForUpdates = async (deps) => {
 export const handleClickSocialButton = async (deps, payload) => {
   const { appService, store } = deps;
   const { _event } = payload;
-  const id = _event.target.dataset.id;
+  const id = _event.currentTarget?.dataset?.id;
   const social = store.selectSocial({ id });
   appService.openUrl(social.href);
 };

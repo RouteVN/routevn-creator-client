@@ -27,19 +27,19 @@ template:
           - rtgl-view w=f ah=e:
               - rtgl-text s=sm: 'Total duration: ${totalDuration}'
       - $if selectedProperties.length > 0:
-          - $for property in selectedProperties:
+          - $for property, pIndex in selectedProperties:
               - rtgl-view d=h w=f av=c:
                   - rtgl-view w=72 av=c d=h:
                       - rtgl-view w=48 av=c d=h ah=c:
-                          - rtgl-text#propertyName${property.name} s=xs cur=pointer: ${property.name}
+                          - rtgl-text#propertyName${pIndex} data-property=${property.name} s=xs cur=pointer: ${property.name}
                       - $if editable:
-                          - rtgl-button#addKeyframe${property.name} s=sm w=16 v=gh cur=pointer ml=xs: +
+                          - rtgl-button#addKeyframe${pIndex} data-property=${property.name} s=sm w=16 v=gh cur=pointer ml=xs: +
                   - rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm:
-                      - rtgl-text#initialValue${property.name} s=xs cur=pointer: ${property.initialValue}
+                      - rtgl-text#initialValue${pIndex} data-property=${property.name} s=xs cur=pointer: ${property.initialValue}
                   - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
                       - $if property.keyframes && property.keyframes.length > 0:
                           - $for keyframe, j in property.keyframes:
-                              - 'rtgl-view#keyframe${property.name}${j} data-property=${property.name} data-index=${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs style="width: ${keyframe.widthPercent}%"':
+                              - 'rtgl-view#keyframe${pIndex}x${j} data-property=${property.name} data-index=${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs style="width: ${keyframe.widthPercent}%"':
                                   - rtgl-text s=xs: ${keyframe.value}
                           - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
                               - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null

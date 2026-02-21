@@ -44,9 +44,9 @@ template:
       - $if mode == 'current':
           - rtgl-form#form :form=form :defaultValues=defaultValues:
               - rtgl-view#sfxContainer slot=sfx g=md:
-                  - $for sfx in defaultValues.sfx:
+                  - $for sfx, i in defaultValues.sfx:
                       - rtgl-view g=sm:
-                          - rtgl-view#sfx${sfx.id} cur=pointer:
+                          - rtgl-view#sfx${i} data-sfx-id=${sfx.id} cur=pointer:
                               - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
                           - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
                   - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
@@ -58,12 +58,12 @@ template:
               - rtgl-view h=f flex=1 sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=items no-empty-message: null
               - rtgl-view h=f flex=2 sv g=lg:
-                  - $for group in groups:
+                  - $for group, i in groups:
                       - rtgl-view g=md:
                           - rtgl-text: ${group.name}
                           - rtgl-view d=h w=f wrap g=lg:
-                              - $for item in group.children:
-                                  - rtgl-view#resourceItem${item.id} cur=pointer bw=${item.bw} bc=${item.bc} g=sm:
+                              - $for item, j in group.children:
+                                  - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=${item.bw} bc=${item.bc} g=sm:
                                       - $if item.waveformDataFileId:
                                           - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 h=120: null
                                           - rtgl-text s=sm ah=c: ${item.name}

@@ -75,10 +75,11 @@ export const handleTransformChange = (deps, payload) => {
 
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const resourceId = payload._event.currentTarget.id.replace(
-    "resourceItem",
-    "",
-  );
+  const target = payload._event.currentTarget;
+  const resourceId =
+    target?.dataset?.resourceId ||
+    target?.id?.replace("resourceItem", "") ||
+    "";
 
   store.setTempSelectedResourceId({ resourceId });
   render();

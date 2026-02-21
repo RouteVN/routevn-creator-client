@@ -43,7 +43,7 @@ template:
                           - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f: null
                   - rtgl-view d=h w=f:
                       - rtgl-view w=f:
-                          - 'div#line${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=plaintext-only': ${line.actions.dialogue.content[0].text}
+                          - 'div#line${i} data-line-id="${line.id}" style="width: 100%; padding-bottom: 4px;" contenteditable=plaintext-only': ${line.actions.dialogue.content[0].text}
                           - $if line.sectionTransition:
                               - rtgl-view#previewSectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
                                   - rtgl-svg svg="transition" wh=16: null

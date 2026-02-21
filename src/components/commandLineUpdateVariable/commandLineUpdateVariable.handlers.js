@@ -47,7 +47,9 @@ export const handleAddOperationClick = (deps, payload) => {
 
 export const handleOperationClick = (deps, payload) => {
   const { store, render } = deps;
-  const id = payload._event.currentTarget.id.replace("operation", "");
+  const target = payload._event.currentTarget;
+  const id =
+    target?.dataset?.operationId || target?.id?.replace("operation", "") || "";
 
   const operations = store.selectOperations();
   const operation = operations.find((op) => op.id === id);
@@ -68,7 +70,9 @@ export const handleOperationContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
 
-  const id = payload._event.currentTarget.id.replace("operation", "");
+  const target = payload._event.currentTarget;
+  const id =
+    target?.dataset?.operationId || target?.id?.replace("operation", "") || "";
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
     operationId: id,

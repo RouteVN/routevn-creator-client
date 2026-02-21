@@ -140,6 +140,16 @@ const getCursorPosition = (element) => {
   return position;
 };
 
+const getLineIdFromElement = (element) => {
+  return element?.dataset?.lineId || element?.id?.replace(/^line/, "") || "";
+};
+
+const getLineElementById = (refs, lineId) => {
+  return Object.values(refs || {}).find(
+    (element) => getLineIdFromElement(element) === lineId,
+  );
+};
+
 // Helper function to check if cursor is on the first line of contenteditable
 const isCursorOnFirstLine = (element) => {
   const range = getSelectionRange(element);
@@ -323,7 +333,7 @@ export const handleContainerKeyDown = (deps, payload) => {
 
           requestAnimationFrame(() => {
             const refIds = refs;
-            const lineElement = refIds[`line${firstLineId}`];
+            const lineElement = getLineElementById(refIds, firstLineId);
             let lineRect = null;
 
             if (lineElement) {
@@ -360,7 +370,7 @@ export const handleContainerKeyDown = (deps, payload) => {
             // Get the line element's coordinates before dispatching
             requestAnimationFrame(() => {
               const refIds = refs;
-              const lineElement = refIds[`line${prevLineId}`];
+              const lineElement = getLineElementById(refIds, prevLineId);
               let lineRect = null;
 
               if (lineElement) {
@@ -412,7 +422,7 @@ export const handleContainerKeyDown = (deps, payload) => {
 
           requestAnimationFrame(() => {
             const refIds = refs;
-            const lineElement = refIds[`line${firstLineId}`];
+            const lineElement = getLineElementById(refIds, firstLineId);
             let lineRect = null;
 
             if (lineElement) {
@@ -449,7 +459,7 @@ export const handleContainerKeyDown = (deps, payload) => {
             // Get the line element's coordinates before dispatching
             requestAnimationFrame(() => {
               const refIds = refs;
-              const lineElement = refIds[`line${nextLineId}`];
+              const lineElement = getLineElementById(refIds, nextLineId);
               let lineRect = null;
 
               if (lineElement) {
@@ -483,7 +493,7 @@ export const handleContainerKeyDown = (deps, payload) => {
         payload._event.preventDefault();
         if (currentLineId) {
           // Focus the selected line to enter text-editor mode at the end
-          const lineElement = deps.refs[`line${currentLineId}`];
+          const lineElement = getLineElementById(deps.refs, currentLineId);
 
           if (lineElement) {
             // Position cursor at the end before focusing
@@ -503,7 +513,7 @@ export const handleContainerKeyDown = (deps, payload) => {
 
 export const handleLineKeyDown = (deps, payload) => {
   const { dispatchEvent, store, render, props } = deps;
-  const id = payload._event.target.id.replace(/^line/, "");
+  const id = getLineIdFromElement(payload._event.currentTarget);
   const mode = store.selectMode();
 
   // Capture cursor position immediately before any key handling
@@ -537,9 +547,8 @@ export const handleLineKeyDown = (deps, payload) => {
         // Check if cursor is at position 0
         const currentPos = getCursorPosition(payload._event.currentTarget);
         const currentContent = payload._event.currentTarget.textContent;
-        const currentLineId = payload._event.currentTarget.id.replace(
-          /^line/,
-          "",
+        const currentLineId = getLineIdFromElement(
+          payload._event.currentTarget,
         );
 
         if (currentPos === 0) {
@@ -615,7 +624,7 @@ export const handleLineKeyDown = (deps, payload) => {
           // Get the line element's coordinates before dispatching
           requestAnimationFrame(() => {
             const refIds = deps.refs;
-            const lineElement = refIds[`line${prevLine.id}`];
+            const lineElement = getLineElementById(refIds, prevLine.id);
             let lineRect = null;
 
             if (lineElement) {
@@ -672,9 +681,8 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(
-                  /^line/,
-                  "",
+                targetLineId: getLineIdFromElement(
+                  payload._event.currentTarget,
                 ),
                 mode: "text-editor",
                 direction: "up",
@@ -698,7 +706,7 @@ export const handleLineKeyDown = (deps, payload) => {
           // Get the line element's coordinates before dispatching
           requestAnimationFrame(() => {
             const refIds = deps.refs;
-            const lineElement = refIds[`line${nextLine.id}`];
+            const lineElement = getLineElementById(refIds, nextLine.id);
             let lineRect = null;
 
             if (lineElement) {
@@ -743,9 +751,8 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(
-                  /^line/,
-                  "",
+                targetLineId: getLineIdFromElement(
+                  payload._event.currentTarget,
                 ),
                 mode: "text-editor",
                 direction: "down",
@@ -775,9 +782,8 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(
-                  /^line/,
-                  "",
+                targetLineId: getLineIdFromElement(
+                  payload._event.currentTarget,
                 ),
                 mode: "text-editor",
                 direction: "down",
@@ -806,9 +812,8 @@ export const handleLineKeyDown = (deps, payload) => {
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
-                targetLineId: payload._event.currentTarget.id.replace(
-                  /^line/,
-                  "",
+                targetLineId: getLineIdFromElement(
+                  payload._event.currentTarget,
                 ),
                 mode: "text-editor",
                 direction: "end",
@@ -847,11 +852,11 @@ export const handleLineMouseUp = (deps, payload) => {
 export const handleOnInput = (deps, payload) => {
   const { dispatchEvent, store } = deps;
 
-  const lineId = payload._event.target.id.replace(/^line/, "");
-  const content = payload._event.target.textContent;
+  const lineId = getLineIdFromElement(payload._event.currentTarget);
+  const content = payload._event.currentTarget.textContent;
 
   // Save cursor position on every input
-  const cursorPos = getCursorPosition(payload._event.target);
+  const cursorPos = getCursorPosition(payload._event.currentTarget);
   store.setCursorPosition({ position: cursorPos });
 
   const detail = {
@@ -871,7 +876,7 @@ export const forceSyncContentLine = (deps, payload) => {
   const refIds = refs;
 
   const { lineId } = payload;
-  const lineRef = refIds[`line${lineId}`];
+  const lineRef = getLineElementById(refIds, lineId);
   // Check if lineRef exists and has the elm property
   if (!lineRef) {
     return;
@@ -886,7 +891,7 @@ export const updateSelectedLine = (deps, payload) => {
   const { currentLineId } = payload;
   const { store, refs } = deps;
   const refIds = refs;
-  const lineRef = refIds[`line${currentLineId}`];
+  const lineRef = getLineElementById(refIds, currentLineId);
 
   // Check if lineRef exists and has the elm property
   if (!lineRef) {
@@ -986,7 +991,7 @@ export const updateSelectedLine = (deps, payload) => {
 
 export const handleOnFocus = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  const lineId = payload._event.currentTarget.id.replace(/^line/, "");
+  const lineId = getLineIdFromElement(payload._event.currentTarget);
 
   // Get the line element's coordinates
   const lineElement = payload._event.currentTarget;

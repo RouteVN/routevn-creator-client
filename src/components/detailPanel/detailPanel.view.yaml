@@ -106,7 +106,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-view#editableText${field.name} cur=pointer:
+                              - rtgl-view#editableText${i} data-field-name=${field.name} cur=pointer:
                                   - rtgl-text s=${field.size}: ${field.value}
                             $else:
                               - rtgl-text s=${field.size}: ${field.value}
@@ -114,7 +114,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-select#select${field.name} av=c :selectedValue=field.value :options=field.options: null
+                              - rtgl-select#select${i} data-field-name=${field.name} av=c :selectedValue=field.value :options=field.options: null
                             $else:
                               - rtgl-text: ${field.value}
                     $elif field.type == 'color':
@@ -162,7 +162,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-view#editableNumber${field.name} cur=pointer:
+                              - rtgl-view#editableNumber${i} data-field-name=${field.name} cur=pointer:
                                   - rtgl-text s=${field.size}: ${field.value}
                             $else:
                               - rtgl-text s=${field.size}: ${field.value}

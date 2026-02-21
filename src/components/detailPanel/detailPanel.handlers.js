@@ -18,7 +18,9 @@ export const handleEditableImageClick = (deps, payload) => {
 
 export const handleSelectChange = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const id = payload._event.currentTarget.id.replace("select", "");
+  const target = payload._event.currentTarget;
+  const id =
+    target?.dataset?.fieldName || target?.id?.replace("select", "") || "";
 
   dispatchEvent(
     new CustomEvent("item-update", {
@@ -37,10 +39,11 @@ export const handleEditableNumberClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const fieldName = payload._event.currentTarget.id.replace(
-    "editableNumber",
-    "",
-  );
+  const target = payload._event.currentTarget;
+  const fieldName =
+    target?.dataset?.fieldName ||
+    target?.id?.replace("editableNumber", "") ||
+    "";
   const field = store.selectField(fieldName);
 
   // Calculate position for left-bottom placement relative to mouse cursor
@@ -283,7 +286,9 @@ export const handleEditableTextClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const fieldName = payload._event.currentTarget.id.replace("editableText", "");
+  const target = payload._event.currentTarget;
+  const fieldName =
+    target?.dataset?.fieldName || target?.id?.replace("editableText", "") || "";
 
   const field = store.selectField(fieldName);
 

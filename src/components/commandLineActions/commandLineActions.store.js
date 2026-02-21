@@ -111,10 +111,11 @@ export const createInitialState = () => ({});
 
 export const selectViewData = ({ props: attrs }) => {
   const actionsType = attrs?.actionsType;
-  const items = {
-    system: SYSTEM_ACTIONS,
-    presentation: PRESENTATION_ACTIONS,
-  }[actionsType];
+  const items =
+    {
+      system: SYSTEM_ACTIONS,
+      presentation: PRESENTATION_ACTIONS,
+    }[actionsType] || PRESENTATION_ACTIONS;
 
   return {
     items,

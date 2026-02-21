@@ -15,7 +15,9 @@ export const handleMouseLeave = (deps, payload) => {
 
 export const handleAddKeyframe = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace("addKeyframe", "");
+  const target = payload._event.currentTarget;
+  const property =
+    target?.dataset?.property || target?.id?.replace("addKeyframe", "") || "";
 
   // Dispatch event to parent to add keyframe - let the parent get the context
   dispatchEvent(
@@ -55,7 +57,9 @@ export const handleKeyframeRightClick = (deps, payload) => {
 
 export const handlePropertyNameRightClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace("propertyName", "");
+  const target = payload._event.currentTarget;
+  const property =
+    target?.dataset?.property || target?.id?.replace("propertyName", "") || "";
 
   payload._event.preventDefault();
 
@@ -75,7 +79,9 @@ export const handlePropertyNameRightClick = (deps, payload) => {
 
 export const handleInitialValueClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace("initialValue", "");
+  const target = payload._event.currentTarget;
+  const property =
+    target?.dataset?.property || target?.id?.replace("initialValue", "") || "";
 
   dispatchEvent(
     new CustomEvent("initialValueclick", {

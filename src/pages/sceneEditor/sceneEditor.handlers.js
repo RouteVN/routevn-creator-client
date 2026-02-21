@@ -575,9 +575,15 @@ const scrollSectionTabIntoView = (deps, sectionId) => {
 
   requestAnimationFrame(() => {
     const refIds = refs?.();
-    const tabRef = refIds?.[`section-tab-${sectionId}`];
+    const refElements = Object.values(refIds || {});
+    const tabRef = refElements.find(
+      (element) => element?.dataset?.sectionId === sectionId,
+    );
     const tabElement =
-      tabRef || document.getElementById(`section-tab-${sectionId}`);
+      tabRef ||
+      Array.from(document.querySelectorAll("[data-section-id]")).find(
+        (element) => element.getAttribute("data-section-id") === sectionId,
+      );
 
     tabElement?.scrollIntoView({
       behavior: "smooth",
@@ -617,7 +623,10 @@ export const handleSectionTabClick = async (deps, payload) => {
     return;
   }
 
-  const sectionId = payload._event.currentTarget.id.replace("sectionTab", "");
+  const sectionId =
+    payload._event.currentTarget?.dataset?.sectionId ||
+    payload._event.currentTarget?.id?.replace("sectionTab", "") ||
+    "";
   await selectSection(deps, sectionId);
 };
 
@@ -987,10 +996,10 @@ export const handleSectionsOverviewWarningMouseLeave = (deps) => {
 
 export const handleSectionsOverviewRowClick = async (deps, payload) => {
   const { store } = deps;
-  const sectionId = payload._event.currentTarget.id.replace(
-    "sectionOverviewRow",
-    "",
-  );
+  const sectionId =
+    payload._event.currentTarget?.dataset?.sectionId ||
+    payload._event.currentTarget?.id?.replace("sectionOverviewRow", "") ||
+    "";
 
   if (!sectionId) {
     return;
@@ -1494,7 +1503,10 @@ export const handleSectionTabRightClick = (deps, payload) => {
 
   payload._event.preventDefault(); // Prevent default browser context menu
 
-  const sectionId = payload._event.currentTarget.id.replace("sectionTab", "");
+  const sectionId =
+    payload._event.currentTarget?.dataset?.sectionId ||
+    payload._event.currentTarget?.id?.replace("sectionTab", "") ||
+    "";
 
   store.showSectionDropdownMenu({
     position: {
