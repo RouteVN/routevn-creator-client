@@ -166,7 +166,7 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   }
 };
 
-export const getGlyphList = ({ _state }, _payload = {}) => {
+export const getGlyphList = (_context = {}, _payload = {}) => {
   const glyphs = [];
 
   const addGlyph = (char) => {
