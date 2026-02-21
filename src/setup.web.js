@@ -17,6 +17,22 @@ import { createGraphicsService } from "./deps/services/graphicsService.js";
 
 const guardedRtglConstructors = new WeakSet();
 const rtglComponentTags = [
+  "rtgl-button",
+  "rtgl-view",
+  "rtgl-text",
+  "rtgl-image",
+  "rtgl-svg",
+  "rtgl-input",
+  "rtgl-input-date",
+  "rtgl-input-time",
+  "rtgl-input-datetime",
+  "rtgl-input-number",
+  "rtgl-textarea",
+  "rtgl-color-picker",
+  "rtgl-slider",
+  "rtgl-checkbox",
+  "rtgl-dialog",
+  "rtgl-popover",
   "rtgl-accordion-item",
   "rtgl-breadcrumb",
   "rtgl-dropdown-menu",
