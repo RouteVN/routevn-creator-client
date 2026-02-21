@@ -46,8 +46,8 @@ export const createInitialState = () => ({
 });
 
 export const startDragging = (
-  state,
-  { id, itemRects, containerTop, forbiddenIndices },
+  { state },
+  { id, itemRects, containerTop, forbiddenIndices } = {},
 ) => {
   state.isDragging = true;
   state.selectedItemId = id;
@@ -56,7 +56,7 @@ export const startDragging = (
   state.forbiddenIndices = forbiddenIndices || [];
 };
 
-export const stopDragging = (state) => {
+export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
   state.selectedItemId = undefined;
   state.targetDragIndex = -2;
@@ -67,19 +67,19 @@ export const stopDragging = (state) => {
   state.forbiddenIndices = [];
 };
 
-export const setTargetDragIndex = (state, index) => {
+export const setTargetDragIndex = ({ state }, { index } = {}) => {
   state.targetDragIndex = index;
 };
 
-export const setTargetDragPosition = (state, position) => {
+export const setTargetDragPosition = ({ state }, { position } = {}) => {
   state.targetDragPosition = position;
 };
 
-export const setTargetDropPosition = (state, dropPosition) => {
+export const setTargetDropPosition = ({ state }, { dropPosition } = {}) => {
   state.targetDropPosition = dropPosition;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -119,7 +119,7 @@ export const selectCollapsedIds = ({ state }) => {
   return state.collapsedIds;
 };
 
-export const toggleFolderExpand = (state, folderId) => {
+export const toggleFolderExpand = ({ state }, { folderId } = {}) => {
   const currentIndex = state.collapsedIds.indexOf(folderId);
 
   if (currentIndex >= 0) {
@@ -132,8 +132,8 @@ export const toggleFolderExpand = (state, folderId) => {
 };
 
 export const showDropdownMenuFileExplorerItem = (
-  state,
-  { position, id, type, contextMenuItems },
+  { state },
+  { position, id, type, contextMenuItems } = {},
 ) => {
   let items;
   if (contextMenuItems) {
@@ -151,8 +151,8 @@ export const showDropdownMenuFileExplorerItem = (
 };
 
 export const showDropdownMenuFileExplorerEmpty = (
-  state,
-  { position, emptyContextMenuItems },
+  { state },
+  { position, emptyContextMenuItems } = {},
 ) => {
   state.dropdownMenu = {
     isOpen: true,
@@ -162,7 +162,7 @@ export const showDropdownMenuFileExplorerEmpty = (
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu = {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -179,7 +179,7 @@ export const selectDropdownMenuPosition = ({ state }) => {
   return state.dropdownMenu.position;
 };
 
-export const showPopover = (state, { position, itemId }) => {
+export const showPopover = ({ state }, { position, itemId } = {}) => {
   state.popover = {
     isOpen: true,
     position,
@@ -187,7 +187,7 @@ export const showPopover = (state, { position, itemId }) => {
   };
 };
 
-export const hidePopover = (state) => {
+export const hidePopover = ({ state }, _payload = {}) => {
   state.popover = {
     isOpen: false,
     itemId: null,
@@ -206,7 +206,7 @@ export const selectPopoverItemId = ({ state }) => {
   return state.popover.itemId;
 };
 
-export const selectViewData = ({ state, props, attrs }) => {
+export const selectViewData = ({ state, props, props: attrs }) => {
   let items = props.items || [];
 
   // Filter items based on collapsed state
@@ -293,7 +293,7 @@ export const selectViewData = ({ state, props, attrs }) => {
         fields: [
           {
             name: "name",
-            inputType: "inputText",
+            inputType: "input-text",
             label: "Name",
             required: true,
           },
@@ -328,7 +328,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     popover: state.popover,
     form: renameForm,
     attrs,
-    noEmptyMessage: attrs["no-empty-message"],
+    noEmptyMessage: attrs.noEmptyMessage,
     shrinkable: attrs.shrinkable,
   };
 

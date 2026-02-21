@@ -85,33 +85,33 @@ export const createInitialState = () => ({
   },
 });
 
-export const setLayouts = (state, layouts) => {
+export const setLayouts = ({ state }, { layouts } = {}) => {
   state.layouts = layouts;
 };
 
-export const setSelectedResource = (state, { resourceId }) => {
+export const setSelectedResource = ({ state }, { resourceId } = {}) => {
   state.selectedResourceId = resourceId;
   state.defaultValues.resourceId = resourceId;
 };
 
-export const setSelectedCharacterId = (state, { characterId }) => {
+export const setSelectedCharacterId = ({ state }, { characterId } = {}) => {
   state.selectedCharacterId = characterId;
   state.defaultValues.characterId = characterId;
 };
 
-export const setSelectedMode = (state, { mode }) => {
+export const setSelectedMode = ({ state }, { mode } = {}) => {
   const selectedMode = mode === "nvl" ? "nvl" : "adv";
   state.selectedMode = selectedMode;
   state.defaultValues.mode = selectedMode;
 };
 
-export const setClearPage = (state, { clearPage }) => {
+export const setClearPage = ({ state }, { clearPage } = {}) => {
   const clearPageValue = toBoolean(clearPage);
   state.clearPage = clearPageValue;
   state.defaultValues.clearPage = clearPageValue;
 };
 
-export const setClear = (state, { clear }) => {
+export const setClear = ({ state }, { clear } = {}) => {
   const clearValue = toBoolean(clear);
   state.clear = clearValue;
   state.defaultValues.clear = clearValue;

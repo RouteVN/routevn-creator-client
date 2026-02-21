@@ -1,0 +1,4 @@
+componentName: rvn-image-selector
+propsSchema:
+  type: object
+  properties: {}

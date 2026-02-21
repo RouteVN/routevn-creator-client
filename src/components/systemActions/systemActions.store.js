@@ -16,7 +16,7 @@ export const createInitialState = () => ({
   repositoryState: {}, // Add this - default to empty object
 });
 
-export const selectViewData = ({ state, props, attrs }) => {
+export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
   const { actions: actionsObject, preview } = selectActionsData({
     props,
@@ -79,8 +79,8 @@ export const selectViewData = ({ state, props, attrs }) => {
     dialogueLayouts,
     allCharacters: filteredCharacters,
     selectedLine: props.selectedLine,
-    actionsType: attrs["action-type"],
-    showSelected: !!attrs["show-selected"],
+    actionsType: attrs.actionType,
+    showSelected: !!attrs.showSelected,
   };
 };
 
@@ -88,7 +88,7 @@ export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
 
-export const setRepositoryState = (state, repositoryState) => {
+export const setRepositoryState = ({ state }, { repositoryState } = {}) => {
   state.repositoryState = repositoryState;
 };
 
@@ -106,23 +106,23 @@ export const selectAction = ({ state }) => {
   return state.actions;
 };
 
-export const updateActions = (state, payload) => {
+export const updateActions = ({ state }, { payload } = {}) => {
   state.actions = {
     ...state.actions,
     ...payload,
   };
 };
 
-export const showActionsDialog = (state) => {
+export const showActionsDialog = ({ state }, _payload = {}) => {
   state.isActionsDialogOpen = true;
 };
 
-export const hideActionsDialog = (state) => {
+export const hideActionsDialog = ({ state }, _payload = {}) => {
   state.isActionsDialogOpen = false;
   state.mode = "hidden";
 };
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
@@ -348,7 +348,7 @@ export const selectActionsData = ({ props, state }) => {
   };
 };
 
-export const showDropdownMenu = (state, { position, actionType }) => {
+export const showDropdownMenu = ({ state }, { position, actionType } = {}) => {
   state.dropdownMenu = {
     ...state.dropdownMenu,
     isOpen: true,
@@ -357,7 +357,7 @@ export const showDropdownMenu = (state, { position, actionType }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.actionType = null;
 };
@@ -366,6 +366,6 @@ export const selectDropdownMenuActionType = ({ state }) => {
   return state.dropdownMenu.actionType;
 };
 
-export const deleteAction = (state, _actionType) => {
+export const deleteAction = ({ state }, { _actionType } = {}) => {
   hideDropdownMenu(state);
 };

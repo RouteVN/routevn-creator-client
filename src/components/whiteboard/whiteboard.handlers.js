@@ -2,12 +2,22 @@ import { fromEvent, tap } from "rxjs";
 
 let dragOffset = { x: 0, y: 0 };
 
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+export const handleBeforeMount = (deps) => {
+  return mountLegacySubscriptions(deps);
+};
+
 export const handleContainerContextMenu = (deps, payload) => {
   payload._event.preventDefault();
-  const { store, getRefIds, dispatchEvent } = deps;
+  const { store, refs, dispatchEvent } = deps;
 
   // Calculate click position in canvas coordinates
-  const container = getRefIds().container.elm;
+  const container = refs.container;
   const containerRect = container.getBoundingClientRect();
   const pan = store.selectPan();
   const zoomLevel = store.selectZoomLevel();
@@ -40,7 +50,7 @@ export const handlePanButtonClick = (deps) => {
 };
 
 export const handleContainerMouseDown = (deps, payload) => {
-  const { store, getRefIds } = deps;
+  const { store, refs } = deps;
 
   if (store.selectIsPanMode()) {
     // Start panning
@@ -50,7 +60,7 @@ export const handleContainerMouseDown = (deps, payload) => {
     });
   } else {
     // Calculate click position in canvas coordinates using container coordinates
-    const container = getRefIds().container.elm;
+    const container = refs.container;
     const containerRect = container.getBoundingClientRect();
     const pan = store.selectPan();
     const zoomLevel = store.selectZoomLevel();
@@ -79,10 +89,10 @@ export const handleContainerMouseDown = (deps, payload) => {
 
 export const handleContainerWheel = (deps, payload) => {
   const { _event: event } = payload;
-  const { store, getRefIds, render, dispatchEvent } = deps;
+  const { store, refs, render, dispatchEvent } = deps;
 
   // Calculate mouse position relative to container
-  const container = getRefIds().container.elm;
+  const container = refs.container;
   const rect = container.getBoundingClientRect();
   const mouseX = payload._event.clientX - rect.left;
   const mouseY = payload._event.clientY - rect.top;
@@ -106,9 +116,9 @@ export const handleContainerWheel = (deps, payload) => {
 };
 
 export const handleZoomInClick = (deps) => {
-  const { store, getRefIds, render, dispatchEvent } = deps;
+  const { store, refs, render, dispatchEvent } = deps;
 
-  const container = getRefIds().container.elm;
+  const container = refs.container;
   const rect = container.getBoundingClientRect();
 
   store.zoomFromCenter({
@@ -130,9 +140,9 @@ export const handleZoomInClick = (deps) => {
 };
 
 export const handleZoomOutClick = (deps) => {
-  const { store, getRefIds, render, dispatchEvent } = deps;
+  const { store, refs, render, dispatchEvent } = deps;
 
-  const container = getRefIds().container.elm;
+  const container = refs.container;
   const rect = container.getBoundingClientRect();
 
   store.zoomFromCenter({
@@ -155,16 +165,16 @@ export const handleZoomOutClick = (deps) => {
 
 export const handleItemMouseDown = (deps, payload) => {
   payload._event.stopPropagation();
-  const { store, getRefIds } = deps;
+  const { store, refs } = deps;
 
   if (store.selectIsPanMode()) {
     // Don't drag items in pan mode
     return;
   }
 
-  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item", "");
   const itemElement = payload._event.currentTarget;
-  const canvas = getRefIds().canvas.elm;
+  const canvas = refs.canvas;
   const canvasRect = canvas.getBoundingClientRect();
   const zoomLevel = store.selectZoomLevel();
   const pan = store.selectPan();
@@ -197,7 +207,7 @@ export const handleItemDoubleClick = (deps, payload) => {
   payload._event.stopPropagation();
 
   const fullId = payload._event.currentTarget.id;
-  const itemId = fullId ? fullId.replace("item-", "") : "";
+  const itemId = fullId ? fullId.replace("item", "") : "";
 
   if (!itemId) {
     console.error("ERROR: No itemId found for double-click");
@@ -220,7 +230,7 @@ export const handleItemContextMenu = (deps, payload) => {
 
   const { dispatchEvent } = deps;
   const fullId = payload._event.currentTarget.id;
-  const itemId = fullId ? fullId.replace("item-", "") : "";
+  const itemId = fullId ? fullId.replace("item", "") : "";
 
   if (!itemId) {
     console.error("ERROR: No itemId found for context menu");
@@ -242,7 +252,7 @@ export const handleItemContextMenu = (deps, payload) => {
 };
 
 export const handleWindowMouseMove = (deps, payload) => {
-  const { store, getRefIds, render, dispatchEvent } = deps;
+  const { store, refs, render, dispatchEvent } = deps;
 
   if (store.selectIsPanning()) {
     // Handle panning
@@ -264,7 +274,7 @@ export const handleWindowMouseMove = (deps, payload) => {
     render();
   } else if (store.selectIsDragging()) {
     // Handle item dragging
-    const canvas = getRefIds().canvas.elm;
+    const canvas = refs.canvas;
     const canvasRect = canvas.getBoundingClientRect();
     const dragItemId = store.selectDragItemId();
     const pan = store.selectPan();
@@ -281,7 +291,7 @@ export const handleWindowMouseMove = (deps, payload) => {
     const newY = mouseInCanvasY - dragOffset.y;
 
     // Get the container's visible area
-    const container = getRefIds().container.elm;
+    const container = refs.container;
     const containerRect = container.getBoundingClientRect();
     const panState = store.selectPan();
 
@@ -319,17 +329,17 @@ export const handleWindowMouseMove = (deps, payload) => {
 };
 
 export const handleWindowMouseUp = (deps) => {
-  const { store, getRefIds, dispatchEvent } = deps;
+  const { store, refs, dispatchEvent } = deps;
 
   if (store.selectIsPanning()) {
     store.stopPanning();
   } else if (store.selectIsDragging()) {
     const dragItemId = store.selectDragItemId();
-    const itemElement = getRefIds()[`item-${dragItemId}`];
+    const itemElement = refs[`item-${dragItemId}`];
 
-    if (itemElement && itemElement.elm) {
-      const finalX = parseInt(itemElement.elm.style.left, 10);
-      const finalY = parseInt(itemElement.elm.style.top, 10);
+    if (itemElement) {
+      const finalX = parseInt(itemElement.style.left, 10);
+      const finalY = parseInt(itemElement.style.top, 10);
 
       // Dispatch the final position to update the data
       dispatchEvent(
@@ -376,7 +386,7 @@ export const handleWindowKeyUp = (deps, payload) => {
   }
 };
 
-export const subscriptions = (deps) => {
+const subscriptions = (deps) => {
   return [
     fromEvent(window, "mousemove").pipe(
       tap((event) =>

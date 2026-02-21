@@ -19,7 +19,7 @@ export const handleAfterMount = async (deps) => {
     }
   }
 
-  const sfx = store.selectSfxWithAudioData();
+  const sfx = store.selectSfxWithSoundData();
 
   if (!sfx || sfx.length === 0) {
     return;
@@ -71,7 +71,7 @@ export const handleAddNewClick = (deps, payload) => {
 export const handleSfxClick = (deps, payload) => {
   const { store, render } = deps;
 
-  const id = payload._event.currentTarget.id.replace("sfx-", "");
+  const id = payload._event.currentTarget.id.replace("sfx", "");
 
   store.setCurrentEditingId({
     id: id,
@@ -87,7 +87,7 @@ export const handleSfxContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
 
-  const id = payload._event.currentTarget.id.replace("sfx-", "");
+  const id = payload._event.currentTarget.id.replace("sfx", "");
 
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
@@ -100,7 +100,7 @@ export const handleSfxContextMenu = (deps, payload) => {
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
 
-  const id = payload._event.currentTarget.id.replace("resource-item-", "");
+  const id = payload._event.currentTarget.id.replace("resourceItem", "");
 
   store.setTempSelectedResourceId({
     resourceId: id,

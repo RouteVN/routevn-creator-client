@@ -25,11 +25,11 @@ export const createInitialState = () => ({
   },
 });
 
-export const setLayouts = (state, layouts) => {
+export const setLayouts = ({ state }, { layouts } = {}) => {
   state.layouts = layouts;
 };
 
-export const setSelectedResourceId = (state, { resourceId }) => {
+export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
   state.selectedLayoutId = resourceId;
   state.defaultValues.resourceId = resourceId;
 };

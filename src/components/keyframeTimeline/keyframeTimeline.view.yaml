@@ -1,99 +1,48 @@
-elementName: rvn-keyframe-timeline
-
-attrsSchema:
-  type: object
-  properties:
-    editable:
-      type: string
-      description: Whether the timeline is editable or not
-
-propsSchema:
-  type: object
-  properties:
-    totalDuration:
-      type: string
-      description: Total duration of the animation (e.g., "4s")
-    selectedProperties:
-      type: array
-      description: Array of selected animation properties (for dialog usage)
-      items:
-        type: object
-        properties:
-          name:
-            type: string
-          initialValue:
-            type: number
-    properties:
-      type: object
-      description: Animation properties object with initialValue and keyframes
-    tracks:
-      type: array
-      description: Array of animation tracks
-      items:
-        type: object
-        properties:
-          name:
-            type: string
-          keyframes:
-            type: array
-            items:
-              type: object
-              properties:
-                start:
-                  type: number
-                duration:
-                  type: number
-
 refs:
-  timeline-container:
+  timelineContainer:
     eventListeners:
       mousemove:
         handler: handleMouseMove
       mouseleave:
         handler: handleMouseLeave
-  add-keyframe-*:
+  addKeyframe*:
     eventListeners:
       click:
         handler: handleAddKeyframe
-  keyframe-*:
+  keyframe*:
     eventListeners:
       contextmenu:
         handler: handleKeyframeRightClick
-  property-name-*:
+  propertyName*:
     eventListeners:
       contextmenu:
         handler: handlePropertyNameRightClick
-  initial-value-*:
+  initialValue*:
     eventListeners:
       click:
         handler: handleInitialValueClick
-
 template:
-  - rtgl-view#timeline-container g=md w=f pos=rel:
+  - rtgl-view#timelineContainer g=md w=f pos=rel:
       - rtgl-view d=h w=f mb=sm:
           - rtgl-view w=f ah=e:
-              - rtgl-text s=sm: "Total duration: ${totalDuration}"
+              - rtgl-text s=sm: 'Total duration: ${totalDuration}'
       - $if selectedProperties.length > 0:
           - $for property in selectedProperties:
               - rtgl-view d=h w=f av=c:
                   - rtgl-view w=72 av=c d=h:
                       - rtgl-view w=48 av=c d=h ah=c:
-                          - rtgl-text#property-name-${property.name} s=xs cur=p: ${property.name}
+                          - rtgl-text#propertyName${property.name} s=xs cur=pointer: ${property.name}
                       - $if editable:
-                          - rtgl-button#add-keyframe-${property.name} s=sm w=16 v=gh cur=p ml=xs: +
+                          - rtgl-button#addKeyframe${property.name} s=sm w=16 v=gh cur=pointer ml=xs: +
                   - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm ml=sm:
-                      - rtgl-text#initial-value-${property.name} s=xs cur=p: ${property.initialValue}
+                      - rtgl-text#initialValue${property.name} s=xs cur=pointer: ${property.initialValue}
                   - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
                       - $if property.keyframes && property.keyframes.length > 0:
                           - $for keyframe, j in property.keyframes:
-                              - 'rtgl-view#keyframe-${property.name}-${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs style="width: ${keyframe.widthPercent}%"':
+                              - 'rtgl-view#keyframe${property.name}${j} data-property=${property.name} data-index=${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs style="width: ${keyframe.widthPercent}%"':
                                   - rtgl-text s=xs: ${keyframe.value}
                           - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
-                              - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"':
+                              - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null
                         $else:
                           - rtgl-view d=h p=xs h=f flex=1 br=sm ah=c av=c:
                               - rtgl-text s=xs: No keyframes
-      # - $if showHoverLine:
-      #     - 'rtgl-view pos=abs ah=c style="top: 0; bottom: 0; left: ${mouseX}px"':
-      #         - rtgl-text: ${timeDisplay}
-      #         - rtgl-view h=f w=2 bgc=de:

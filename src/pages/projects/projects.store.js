@@ -28,7 +28,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Project Name",
         required: true,
         testId: "project-name-input",
@@ -41,7 +41,7 @@ export const createInitialState = () => ({
       },
       {
         name: "description",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Description",
         description: "Enter a brief description of the project",
         required: true,
@@ -91,7 +91,7 @@ export const createInitialState = () => ({
   },
 });
 
-export const toggleDialog = (state) => {
+export const toggleDialog = ({ state }, _payload = {}) => {
   state.isOpen = !state.isOpen;
   // Reset form when closing
   if (!state.isOpen) {
@@ -104,23 +104,23 @@ export const toggleDialog = (state) => {
   }
 };
 
-export const setProjects = (state, projects) => {
+export const setProjects = ({ state }, { projects } = {}) => {
   state.projects = projects;
 };
 
-export const addProject = (state, project) => {
+export const addProject = ({ state }, { project } = {}) => {
   state.projects.push(project);
 };
 
-export const setPlatform = (state, platform) => {
+export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform;
 };
 
-export const removeProject = (state, projectId) => {
+export const removeProject = ({ state }, { projectId } = {}) => {
   state.projects = state.projects.filter((p) => p.id !== projectId);
 };
 
-export const setProjectPath = (state, path) => {
+export const setProjectPath = ({ state }, { path } = {}) => {
   state.projectPath = path; // Update top-level for binding
   state.defaultValues.projectPath = path; // Update defaultValues for form
   state.projectPathDisplay = path || "No folder selected";
@@ -142,7 +142,7 @@ export const selectDropdownMenuTargetProjectId = ({ state }) => {
   return state.dropdownMenu.targetProjectId;
 };
 
-export const openDropdownMenu = (state, { x, y, projectId }) => {
+export const openDropdownMenu = ({ state }, { x, y, projectId } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
@@ -152,7 +152,7 @@ export const openDropdownMenu = (state, { x, y, projectId }) => {
   ];
 };
 
-export const closeDropdownMenu = (state) => {
+export const closeDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;

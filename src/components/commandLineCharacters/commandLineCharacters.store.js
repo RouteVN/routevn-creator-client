@@ -25,19 +25,19 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
-export const setItems = (state, payload) => {
+export const setItems = ({ state }, { payload } = {}) => {
   state.items = payload.items;
 };
 
-export const setTransforms = (state, payload) => {
+export const setTransforms = ({ state }, { payload } = {}) => {
   state.transforms = payload.transforms;
 };
 
-export const addCharacter = (state, payload) => {
+export const addCharacter = ({ state }, { payload } = {}) => {
   // Get the first available transform as default
   const transformItems = toFlatItems(state.transforms).filter(
     (item) => item.type === "transform",
@@ -54,17 +54,20 @@ export const addCharacter = (state, payload) => {
   });
 };
 
-export const removeCharacter = (state, index) => {
+export const removeCharacter = ({ state }, { index } = {}) => {
   state.selectedCharacters.splice(index, 1);
 };
 
-export const updateCharacterTransform = (state, { index, transform }) => {
+export const updateCharacterTransform = (
+  { state },
+  { index, transform } = {},
+) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].transformId = transform;
   }
 };
 
-export const updateCharacterSprite = (state, { index, spriteId }) => {
+export const updateCharacterSprite = ({ state }, { index, spriteId } = {}) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].sprites = [
       {
@@ -75,25 +78,28 @@ export const updateCharacterSprite = (state, { index, spriteId }) => {
   }
 };
 
-export const updateCharacterSpriteName = (state, { index, spriteName }) => {
+export const updateCharacterSpriteName = (
+  { state },
+  { index, spriteName } = {},
+) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].spriteName = spriteName;
   }
 };
 
-export const clearCharacters = (state) => {
+export const clearCharacters = ({ state }, _payload = {}) => {
   state.selectedCharacters = [];
 };
 
-export const setTempSelectedCharacterId = (state, payload) => {
+export const setTempSelectedCharacterId = ({ state }, { payload } = {}) => {
   state.tempSelectedCharacterId = payload.characterId;
 };
 
-export const setTempSelectedSpriteId = (state, payload) => {
+export const setTempSelectedSpriteId = ({ state }, { payload } = {}) => {
   state.tempSelectedSpriteId = payload.spriteId;
 };
 
-export const setSelectedCharacterIndex = (state, payload) => {
+export const setSelectedCharacterIndex = ({ state }, { payload } = {}) => {
   state.selectedCharacterIndex = payload.index;
 };
 
@@ -105,13 +111,16 @@ export const selectTempSelectedSpriteId = ({ state }) => {
   return state.tempSelectedSpriteId;
 };
 
-export const showDropdownMenu = (state, { position, characterIndex }) => {
+export const showDropdownMenu = (
+  { state },
+  { position, characterIndex } = {},
+) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
   state.dropdownMenu.characterIndex = characterIndex;
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.characterIndex = null;
 };
@@ -132,7 +141,7 @@ export const selectSelectedCharacterIndex = ({ state }) => {
   return state.selectedCharacterIndex;
 };
 
-export const setExistingCharacters = (state, payload) => {
+export const setExistingCharacters = ({ state }, { payload } = {}) => {
   state.selectedCharacters = payload.characters;
 };
 

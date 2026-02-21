@@ -54,22 +54,22 @@ export const createInitialState = () => ({
   zoomLevel: 1.5,
 });
 
-export const startDragging = (state, { itemId }) => {
+export const startDragging = ({ state }, { itemId } = {}) => {
   state.isDragging = true;
   state.dragItemId = itemId;
 };
 
-export const stopDragging = (state) => {
+export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
   state.dragItemId = null;
 };
 
 // Pan functions
-export const togglePanMode = (state, { isPanMode }) => {
+export const togglePanMode = ({ state }, { isPanMode } = {}) => {
   state.isPanMode = isPanMode;
 };
 
-export const startPanning = (state, { mouseX, mouseY }) => {
+export const startPanning = ({ state }, { mouseX, mouseY } = {}) => {
   state.isPanning = true;
   state.panStartX = state.panX;
   state.panStartY = state.panY;
@@ -77,18 +77,18 @@ export const startPanning = (state, { mouseX, mouseY }) => {
   state.panStartMouseY = mouseY;
 };
 
-export const updatePan = (state, { mouseX, mouseY }) => {
+export const updatePan = ({ state }, { mouseX, mouseY } = {}) => {
   if (!state.isPanning) return;
   state.panX = state.panStartX + (mouseX - state.panStartMouseX);
   state.panY = state.panStartY + (mouseY - state.panStartMouseY);
 };
 
-export const stopPanning = (state) => {
+export const stopPanning = ({ state }, _payload = {}) => {
   state.isPanning = false;
 };
 
 // Zoom functions
-export const zoomAt = (state, { mouseX, mouseY, scaleFactor }) => {
+export const zoomAt = ({ state }, { mouseX, mouseY, scaleFactor } = {}) => {
   const newZoom = state.zoomLevel * scaleFactor;
 
   // Clamp zoom level between 0.2x and 2x, snapping to limits if exceeded
@@ -115,8 +115,8 @@ export const zoomAt = (state, { mouseX, mouseY, scaleFactor }) => {
 };
 
 export const zoomFromCenter = (
-  state,
-  { direction, containerWidth, containerHeight },
+  { state },
+  { direction, containerWidth, containerHeight } = {},
 ) => {
   const newZoom = getNextZoomLevel(state.zoomLevel, direction);
 
@@ -153,7 +153,10 @@ export const selectPan = ({ state }) => ({
 });
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
-export const setInitialZoomAndPan = (state, { zoomLevel, panX, panY }) => {
+export const setInitialZoomAndPan = (
+  { state },
+  { zoomLevel, panX, panY } = {},
+) => {
   state.zoomLevel = zoomLevel;
   state.panX = panX;
   state.panY = panY;

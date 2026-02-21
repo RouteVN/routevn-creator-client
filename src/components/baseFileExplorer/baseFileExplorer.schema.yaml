@@ -1,0 +1,28 @@
+componentName: rvn-base-file-explorer
+propsSchema:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          id:
+            type: string
+          level:
+            type: number
+          hasChildren:
+            type: boolean
+          parentId:
+            type: string
+    contextMenuItems:
+      type: array
+      description: Menu items for right-clicking on an item
+    emptyContextMenuItems:
+      type: array
+      description: Menu items for right-clicking on empty space
+    no-empty-message:
+      type: boolean
+      description: Whether to show the empty message when there are no items

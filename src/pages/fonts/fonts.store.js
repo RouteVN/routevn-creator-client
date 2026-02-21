@@ -125,11 +125,11 @@ export const createInitialState = () => ({
   collapsedIds: [],
 });
 
-export const setItems = (state, fontsData) => {
+export const setItems = ({ state }, { fontsData } = {}) => {
   state.fontsData = fontsData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -141,23 +141,23 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setModalOpen = (state, isOpen) => {
+export const setModalOpen = ({ state }, { isOpen } = {}) => {
   state.isModalOpen = isOpen;
 };
 
-export const setSelectedFontInfo = (state, fontInfo) => {
+export const setSelectedFontInfo = ({ state }, { fontInfo } = {}) => {
   state.selectedFontInfo = fontInfo;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -166,7 +166,7 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
-export const getGlyphList = () => {
+export const getGlyphList = ({ _state }, _payload = {}) => {
   const glyphs = [];
 
   const addGlyph = (char) => {
@@ -200,12 +200,6 @@ export const getGlyphList = () => {
   }
 
   return glyphs;
-};
-
-export const getUnicodeValue = (char) => {
-  if (!char) return "";
-  const code = char.charCodeAt(0);
-  return `U+${code.toString(16).toUpperCase().padStart(4, "0")}`;
 };
 
 export const selectViewData = ({ state }) => {

@@ -1,32 +1,5 @@
-elementName: rvn-command-line-push-layered-view
-
-propsSchema:
-  type: object
-  properties:
-    pushLayeredView:
-      type: object
-      properties:
-        resourceId:
-          type: string
-
-viewDataSchema:
-  type: object
-  properties:
-    initiated:
-      type: boolean
-    mode:
-      type: string
-    breadcrumb:
-      type: array
-    form:
-      type: object
-    context:
-      type: object
-    defaultValues:
-      type: object
-
 refs:
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
@@ -38,13 +11,12 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
-
 template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current' && initiated:
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcrumb .items=breadcrumb:
-          - rtgl-form#form .form=form .defaultValues=defaultValues .context=context w=f:
-          - rtgl-view flex=1:
+              - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
+          - rtgl-form#form :form=form :defaultValues=defaultValues :context=context w=f: null
+          - rtgl-view flex=1: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#submit-button variant=pr: Submit
+              - rtgl-button#submitButton variant=pr: Submit

@@ -248,15 +248,15 @@ const isCursorOnLastLine = (element) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, getRefIds, projectService } = deps;
+  const { store, refs, projectService } = deps;
 
   await projectService.ensureRepository();
-  store.setRepositoryState(projectService.getState());
+  store.setRepositoryState({ repositoryState: projectService.getState() });
   store.setReady();
 
   // Focus container on mount to enable keyboard navigation
   setTimeout(() => {
-    const container = getRefIds()["container"]?.elm;
+    const container = refs["container"];
     if (container) {
       container.focus();
     }
@@ -285,7 +285,7 @@ export const handlePreviewRightClick = async (deps, payload) => {
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
-    placement: "bottom-start",
+    place: "bs",
   });
 
   if (result.item.key === "remove") {
@@ -300,7 +300,7 @@ export const handlePreviewRightClick = async (deps, payload) => {
 };
 
 export const handleContainerKeyDown = (deps, payload) => {
-  const { store, props, dispatchEvent, getRefIds } = deps;
+  const { store, props, dispatchEvent, refs } = deps;
   const mode = store.selectMode();
 
   // Only handle container keydown if the target is the container itself
@@ -322,8 +322,8 @@ export const handleContainerKeyDown = (deps, payload) => {
           const firstLineId = lines[0].id;
 
           requestAnimationFrame(() => {
-            const refIds = getRefIds();
-            const lineElement = refIds[`line-${firstLineId}`]?.elm;
+            const refIds = refs;
+            const lineElement = refIds[`line${firstLineId}`];
             let lineRect = null;
 
             if (lineElement) {
@@ -359,8 +359,8 @@ export const handleContainerKeyDown = (deps, payload) => {
 
             // Get the line element's coordinates before dispatching
             requestAnimationFrame(() => {
-              const refIds = getRefIds();
-              const lineElement = refIds[`line-${prevLineId}`]?.elm;
+              const refIds = refs;
+              const lineElement = refIds[`line${prevLineId}`];
               let lineRect = null;
 
               if (lineElement) {
@@ -411,8 +411,8 @@ export const handleContainerKeyDown = (deps, payload) => {
           const firstLineId = lines[0].id;
 
           requestAnimationFrame(() => {
-            const refIds = getRefIds();
-            const lineElement = refIds[`line-${firstLineId}`]?.elm;
+            const refIds = refs;
+            const lineElement = refIds[`line${firstLineId}`];
             let lineRect = null;
 
             if (lineElement) {
@@ -448,8 +448,8 @@ export const handleContainerKeyDown = (deps, payload) => {
 
             // Get the line element's coordinates before dispatching
             requestAnimationFrame(() => {
-              const refIds = getRefIds();
-              const lineElement = refIds[`line-${nextLineId}`]?.elm;
+              const refIds = refs;
+              const lineElement = refIds[`line${nextLineId}`];
               let lineRect = null;
 
               if (lineElement) {
@@ -483,14 +483,14 @@ export const handleContainerKeyDown = (deps, payload) => {
         payload._event.preventDefault();
         if (currentLineId) {
           // Focus the selected line to enter text-editor mode at the end
-          const lineElement = deps.getRefIds()[`line-${currentLineId}`]?.elm;
+          const lineElement = deps.refs[`line${currentLineId}`];
 
           if (lineElement) {
             // Position cursor at the end before focusing
             const textLength = lineElement.textContent.length;
-            store.setCursorPosition(textLength);
-            store.setGoalColumn(textLength);
-            store.setNavigationDirection("end");
+            store.setCursorPosition({ position: textLength });
+            store.setGoalColumn({ goalColumn: textLength });
+            store.setNavigationDirection({ direction: "end" });
 
             // Use updateSelectedLine to properly position cursor at end
             updateSelectedLine(deps, { currentLineId });
@@ -503,13 +503,13 @@ export const handleContainerKeyDown = (deps, payload) => {
 
 export const handleLineKeyDown = (deps, payload) => {
   const { dispatchEvent, store, render, props } = deps;
-  const id = payload._event.target.id.replace(/^line-/, "");
+  const id = payload._event.target.id.replace(/^line/, "");
   const mode = store.selectMode();
 
   // Capture cursor position immediately before any key handling
   if (mode === "text-editor") {
     const cursorPos = getCursorPosition(payload._event.currentTarget);
-    store.setCursorPosition(cursorPos);
+    store.setCursorPosition({ position: cursorPos });
 
     // Update goal column for horizontal movement or when setting new vertical position
     if (
@@ -518,7 +518,7 @@ export const handleLineKeyDown = (deps, payload) => {
       payload._event.key === "Home" ||
       payload._event.key === "End"
     ) {
-      store.setGoalColumn(cursorPos);
+      store.setGoalColumn({ goalColumn: cursorPos });
     } else if (
       payload._event.key === "ArrowUp" ||
       payload._event.key === "ArrowDown"
@@ -526,7 +526,7 @@ export const handleLineKeyDown = (deps, payload) => {
       // For vertical movement, ensure we have the current position as goal column if not set
       const currentGoalColumn = store.selectGoalColumn();
       if (currentGoalColumn === 0) {
-        store.setGoalColumn(cursorPos);
+        store.setGoalColumn({ goalColumn: cursorPos });
       }
     }
   }
@@ -538,7 +538,7 @@ export const handleLineKeyDown = (deps, payload) => {
         const currentPos = getCursorPosition(payload._event.currentTarget);
         const currentContent = payload._event.currentTarget.textContent;
         const currentLineId = payload._event.currentTarget.id.replace(
-          /^line-/,
+          /^line/,
           "",
         );
 
@@ -571,10 +571,10 @@ export const handleLineKeyDown = (deps, payload) => {
     case "Escape":
       payload._event.preventDefault();
       // Switch to block mode and blur the current element
-      store.setMode("block");
+      store.setMode({ mode: "block" });
       payload._event.currentTarget.blur();
       // Focus the container to enable block mode navigation
-      const container = deps.getRefIds()["container"]?.elm;
+      const container = deps.refs["container"];
       if (container) {
         container.focus();
       }
@@ -614,8 +614,8 @@ export const handleLineKeyDown = (deps, payload) => {
 
           // Get the line element's coordinates before dispatching
           requestAnimationFrame(() => {
-            const refIds = deps.getRefIds();
-            const lineElement = refIds[`line-${prevLine.id}`]?.elm;
+            const refIds = deps.refs;
+            const lineElement = refIds[`line${prevLine.id}`];
             let lineRect = null;
 
             if (lineElement) {
@@ -667,13 +667,13 @@ export const handleLineKeyDown = (deps, payload) => {
           const goalColumn = store.selectGoalColumn() || 0;
 
           // Set navigating flag
-          store.setIsNavigating(true);
+          store.setIsNavigating({ isNavigating: true });
 
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
                 targetLineId: payload._event.currentTarget.id.replace(
-                  /^line-/,
+                  /^line/,
                   "",
                 ),
                 mode: "text-editor",
@@ -697,8 +697,8 @@ export const handleLineKeyDown = (deps, payload) => {
 
           // Get the line element's coordinates before dispatching
           requestAnimationFrame(() => {
-            const refIds = deps.getRefIds();
-            const lineElement = refIds[`line-${nextLine.id}`]?.elm;
+            const refIds = deps.refs;
+            const lineElement = refIds[`line${nextLine.id}`];
             let lineRect = null;
 
             if (lineElement) {
@@ -737,14 +737,14 @@ export const handleLineKeyDown = (deps, payload) => {
           const goalColumn = store.selectGoalColumn() || 0;
 
           // Set navigating flag and direction
-          store.setIsNavigating(true);
-          store.setNavigationDirection("down");
+          store.setIsNavigating({ isNavigating: true });
+          store.setNavigationDirection({ direction: "down" });
 
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
                 targetLineId: payload._event.currentTarget.id.replace(
-                  /^line-/,
+                  /^line/,
                   "",
                 ),
                 mode: "text-editor",
@@ -770,13 +770,13 @@ export const handleLineKeyDown = (deps, payload) => {
           payload._event.stopPropagation();
 
           // Set navigating flag
-          store.setIsNavigating(true);
+          store.setIsNavigating({ isNavigating: true });
 
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
                 targetLineId: payload._event.currentTarget.id.replace(
-                  /^line-/,
+                  /^line/,
                   "",
                 ),
                 mode: "text-editor",
@@ -801,13 +801,13 @@ export const handleLineKeyDown = (deps, payload) => {
           payload._event.stopPropagation();
 
           // Set navigating flag
-          store.setIsNavigating(true);
+          store.setIsNavigating({ isNavigating: true });
 
           dispatchEvent(
             new CustomEvent("line-navigation", {
               detail: {
                 targetLineId: payload._event.currentTarget.id.replace(
-                  /^line-/,
+                  /^line/,
                   "",
                 ),
                 mode: "text-editor",
@@ -831,14 +831,14 @@ export const handleLineMouseUp = (deps, payload) => {
   setTimeout(() => {
     const cursorPos = getCursorPosition(payload._event.currentTarget);
     if (cursorPos > 0) {
-      store.setCursorPosition(cursorPos);
-      store.setGoalColumn(cursorPos);
+      store.setCursorPosition({ position: cursorPos });
+      store.setGoalColumn({ goalColumn: cursorPos });
     } else {
       // Try again with longer delay if position is 0
       setTimeout(() => {
         const cursorPos2 = getCursorPosition(payload._event.currentTarget);
-        store.setCursorPosition(cursorPos2);
-        store.setGoalColumn(cursorPos2);
+        store.setCursorPosition({ position: cursorPos2 });
+        store.setGoalColumn({ goalColumn: cursorPos2 });
       }, 10);
     }
   }, 0);
@@ -847,12 +847,12 @@ export const handleLineMouseUp = (deps, payload) => {
 export const handleOnInput = (deps, payload) => {
   const { dispatchEvent, store } = deps;
 
-  const lineId = payload._event.target.id.replace(/^line-/, "");
+  const lineId = payload._event.target.id.replace(/^line/, "");
   const content = payload._event.target.textContent;
 
   // Save cursor position on every input
   const cursorPos = getCursorPosition(payload._event.target);
-  store.setCursorPosition(cursorPos);
+  store.setCursorPosition({ position: cursorPos });
 
   const detail = {
     lineId,
@@ -867,42 +867,42 @@ export const handleOnInput = (deps, payload) => {
 };
 
 export const forceSyncContentLine = (deps, payload) => {
-  const { store, getRefIds } = deps;
-  const refIds = getRefIds();
+  const { store, refs } = deps;
+  const refIds = refs;
 
   const { lineId } = payload;
-  const lineRef = refIds[`line-${lineId}`];
+  const lineRef = refIds[`line${lineId}`];
   // Check if lineRef exists and has the elm property
-  if (!lineRef || !lineRef.elm) {
+  if (!lineRef) {
     return;
   }
   const lineContent = store.selectLineContent({ lineId });
-  if (lineRef.elm.textContent !== lineContent) {
-    lineRef.elm.textContent = lineContent;
+  if (lineRef.textContent !== lineContent) {
+    lineRef.textContent = lineContent;
   }
 };
 
 export const updateSelectedLine = (deps, payload) => {
   const { currentLineId } = payload;
-  const { store, getRefIds } = deps;
-  const refIds = getRefIds();
-  const lineRef = refIds[`line-${currentLineId}`];
+  const { store, refs } = deps;
+  const refIds = refs;
+  const lineRef = refIds[`line${currentLineId}`];
 
   // Check if lineRef exists and has the elm property
-  if (!lineRef || !lineRef.elm) {
+  if (!lineRef) {
     return;
   }
 
   // Get goal column (desired position) instead of current position
   const goalColumn = store.selectGoalColumn() || 0;
-  const textLength = lineRef.elm.textContent.length;
+  const textLength = lineRef.textContent.length;
   const direction = store.selectNavigationDirection();
 
   // Choose positioning strategy based on direction
   let targetPosition;
   if (direction === "up") {
     // For upward navigation, find position on last line
-    targetPosition = findLastLinePosition(lineRef.elm, goalColumn);
+    targetPosition = findLastLinePosition(lineRef, goalColumn);
   } else if (direction === "end") {
     // For end positioning (ArrowLeft navigation), position at absolute end
     targetPosition = textLength;
@@ -912,7 +912,7 @@ export const updateSelectedLine = (deps, payload) => {
   }
 
   // Get shadow root for selection if needed
-  let shadowRoot = lineRef.elm.getRootNode();
+  let shadowRoot = lineRef.getRootNode();
   let selection = window.getSelection();
 
   // Check if we're in a shadow DOM
@@ -953,7 +953,7 @@ export const updateSelectedLine = (deps, payload) => {
     return false;
   };
 
-  walkTextNodes(lineRef.elm);
+  walkTextNodes(lineRef);
 
   // If we didn't find a position (cursor beyond text), position at end
   if (!foundNode && lastTextNode) {
@@ -964,7 +964,7 @@ export const updateSelectedLine = (deps, payload) => {
   }
 
   // Now focus - this must happen before setting selection in Shadow DOM
-  lineRef.elm.focus({ preventScroll: true });
+  lineRef.focus({ preventScroll: true });
 
   // After focus, set the selection using setBaseAndExtent which works better with Shadow DOM
   if (foundNode) {
@@ -980,13 +980,13 @@ export const updateSelectedLine = (deps, payload) => {
     );
 
     // Update the current cursor position in store to reflect where we actually landed
-    store.setCursorPosition(actualPosition);
+    store.setCursorPosition({ position: actualPosition });
   }
 };
 
 export const handleOnFocus = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  const lineId = payload._event.currentTarget.id.replace(/^line-/, "");
+  const lineId = payload._event.currentTarget.id.replace(/^line/, "");
 
   // Get the line element's coordinates
   const lineElement = payload._event.currentTarget;
@@ -1010,13 +1010,13 @@ export const handleOnFocus = (deps, payload) => {
       },
     }),
   );
-  store.setMode("text-editor"); // Switch to text-editor mode on focus
+  store.setMode({ mode: "text-editor" }); // Switch to text-editor mode on focus
 
   // Check if we're navigating - if so, don't reset cursor or re-render
   if (store.selectIsNavigating()) {
     // Reset the flag and direction but don't render
-    store.setIsNavigating(false);
-    store.setNavigationDirection(null);
+    store.setIsNavigating({ isNavigating: false });
+    store.setNavigationDirection({ direction: null });
     return;
   }
 
@@ -1024,7 +1024,7 @@ export const handleOnFocus = (deps, payload) => {
   setTimeout(() => {
     const cursorPos = getCursorPosition(payload._event.currentTarget);
     if (cursorPos >= 0) {
-      store.setGoalColumn(cursorPos);
+      store.setGoalColumn({ goalColumn: cursorPos });
     }
   }, 10);
 
@@ -1032,7 +1032,7 @@ export const handleOnFocus = (deps, payload) => {
 };
 
 export const handleLineBlur = (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
 
   // Capture element references before the timeout
   const blurredElement = payload._event.currentTarget;
@@ -1053,13 +1053,13 @@ export const handleLineBlur = (deps, payload) => {
     if (
       actualActiveElement &&
       actualActiveElement.id &&
-      actualActiveElement.id.startsWith("line-")
+      actualActiveElement.id.startsWith("line")
     ) {
       // Focus moved to another line, stay in text-editor mode
       return;
     }
 
-    const container = getRefIds()["container"]?.elm;
+    const container = refs["container"];
 
     // If focus moved to the container itself or left the editor, switch to block mode
     // The container getting focus means the user clicked outside lines but within the editor area
@@ -1067,7 +1067,7 @@ export const handleLineBlur = (deps, payload) => {
       actualActiveElement === container ||
       !container?.contains(actualActiveElement)
     ) {
-      store.setMode("block");
+      store.setMode({ mode: "block" });
 
       // Focus the container to enable block mode navigation
       if (container) {

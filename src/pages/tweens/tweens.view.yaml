@@ -1,15 +1,9 @@
-elementName: rvn-tweens
-
-viewDataSchema:
-  type: object
-  properties: {}
-
 refs:
-  file-explorer:
+  fileExplorer:
     eventListeners:
       data-changed:
         handler: handleDataChanged
-      click-item:
+      item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleAnimationItemDoubleClick
@@ -25,23 +19,23 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  detail-form:
+  detailForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-  add-animation-dialog:
+  addAnimationDialog:
     eventListeners:
       close:
         handler: handleCloseDialog
-  animation-form:
+  animationForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleFormActionClick
-  add-properties-button:
+  addPropertiesButton:
     eventListeners:
       click:
         handler: handleAddPropertiesClick
-  dialog-timeline:
+  dialogTimeline:
     eventListeners:
       add-keyframe:
         handler: handleAddKeyframeInDialog
@@ -51,88 +45,84 @@ refs:
         handler: handlePropertyNameRightClick
       initial-value-click:
         handler: handleInitialValueClick
-  add-property-popover:
+  addPropertyPopover:
     eventListeners:
       close:
         handler: handleClosePopover
-  add-property-form:
+  addPropertyForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleAddPropertyFormSubmit
       form-change:
         handler: handleAddPropertyFormChange
-  add-keyframe-form:
+  addKeyframeForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleAddKeyframeFormSubmit
-  add-keyframe-popover:
+  addKeyframePopover:
     eventListeners:
       close:
         handler: handleClosePopover
-  edit-keyframe-form:
+  editKeyframeForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleEditKeyframeFormSubmit
-  edit-initial-value-form:
+  editInitialValueForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleEditInitialValueFormSubmit
       form-change:
         handler: handleEditInitialValueFormChange
-  replay-button:
+  replayButton:
     eventListeners:
       click:
         handler: handleReplayAnimation
-  keyframe-dropdown-menu:
+  keyframeDropdownMenu:
     eventListeners:
       close:
         handler: handleClosePopover
-      click-item:
+      item-click:
         handler: handleKeyframeDropdownItemClick
-
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
-          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-                  - rvn-file-explorer#fileExplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview full-width-item .navTitle=title .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery show-zoom-controls=false:
+              - rvn-group-resources-view#groupview full-width-item :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery show-zoom-controls=false: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :defaultValues=defaultValues: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-
-  - rtgl-dialog#add-animation-dialog ?open=${isDialogOpen} s=lg:
+  - rtgl-dialog#addAnimationDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h g=md:
           - rtgl-view flex=5:
-              - rtgl-form#animation-form key=${isDialogOpen} .defaultValues=dialogDefaultValues .form=dialogForm w=f:
+              - rtgl-form#animationForm key=${isDialogOpen} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
                   - rtgl-view slot=timeline w=f:
-                      - rvn-keyframe-timeline#dialog-timeline editable=true .properties=properties:
+                      - rvn-keyframe-timeline#dialogTimeline editable=true :properties=properties: null
                       - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
                           - $if addPropertyButtonVisible:
-                              - rtgl-button#add-properties-button w=f v=se s=sm: + Add tween property
-              - rtgl-view h=128:
-
+                              - rtgl-button#addPropertiesButton w=f v=se s=sm: + Add tween property
+              - rtgl-view h=128: null
           - rtgl-view flex=5:
               - rtgl-view d=h av=c ah=sb mb=md:
                   - rtgl-text: Preview
-                  - rtgl-button#replay-button s=sm ml=md: Play Tween
+                  - rtgl-button#replayButton s=sm ml=md: Play Tween
               - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                   - rtgl-view pos=abs cor=full:
-                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"':
-
-          - rtgl-popover#add-property-popover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
+                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"': null
+          - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
               - $if popover.mode == 'addProperty':
-                  - rtgl-form#add-property-form slot=content .form=addPropertyForm .context=addPropertyContext .defaultValues=addPropertyFormDefaultValues:
+                  - rtgl-form#addPropertyForm slot=content :form=addPropertyForm :context=addPropertyContext :defaultValues=addPropertyFormDefaultValues: null
               - $if popover.mode == 'addKeyframe':
-                  - rtgl-form#add-keyframe-form slot=content .form=addKeyframeForm .defaultValues=addKeyframeDefaultValues:
+                  - rtgl-form#addKeyframeForm slot=content :form=addKeyframeForm :defaultValues=addKeyframeDefaultValues: null
               - $if popover.mode == 'editKeyframe':
-                  - rtgl-form#edit-keyframe-form slot=content .form=updateKeyframeForm .defaultValues=editKeyframeDefaultValues:
+                  - rtgl-form#editKeyframeForm slot=content :form=updateKeyframeForm :defaultValues=editKeyframeDefaultValues: null
               - $if popover.mode == 'editInitialValue':
-                  - rtgl-form#edit-initial-value-form slot=content .form=editInitialValueForm .defaultValues=editInitialValueDefaultValues .context=editInitialValueContext:
-          - rtgl-dropdown-menu#keyframe-dropdown-menu .items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}:
+                  - rtgl-form#editInitialValueForm slot=content :form=editInitialValueForm :defaultValues=editInitialValueDefaultValues :context=editInitialValueContext: null
+          - rtgl-dropdown-menu#keyframeDropdownMenu :items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null

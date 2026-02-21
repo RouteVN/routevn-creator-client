@@ -18,7 +18,7 @@ export const handleBeforeMount = (deps) => {
   }
 
   // Store resourceId temporarily - resourceType will be determined in handleAfterMount
-  store.setPendingResourceId(resourceId);
+  store.setPendingResourceId({ resourceId: resourceId });
 
   if (backgroundLoop !== undefined) {
     store.setBackgroundLoop({
@@ -106,7 +106,7 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
-    placement: "bottom-start",
+    place: "bs",
   });
 
   if (result.item.key === "remove") {
@@ -155,7 +155,7 @@ export const handleFormExtra = (deps) => {
 
 export const handleFormInputChange = (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = payload._event.detail;
+  const { name, value: fieldValue } = payload._event.detail;
 
   if (name === "tween") {
     store.setSelectedTween({
@@ -176,7 +176,7 @@ export const handleFormInputChange = (deps, payload) => {
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
   const resourceId = payload._event.currentTarget.id.replace(
-    "resource-item-",
+    "resourceItem",
     "",
   );
   const resourceType = store.selectTab();
@@ -231,7 +231,7 @@ export const handleSubmitClick = (deps) => {
 };
 
 export const handleFileExplorerClickItem = (deps, payload) => {
-  const { getRefIds, store } = deps;
+  const { refs, store } = deps;
   const tab = store.selectTab();
 
   // Only scroll to item when on image tab (image selector only exists there)
@@ -240,9 +240,9 @@ export const handleFileExplorerClickItem = (deps, payload) => {
   }
 
   const { id } = payload._event.detail;
-  const imageSelector = getRefIds()["rvn-image-selector"];
-  if (imageSelector?.elm?.transformedHandlers?.handleScrollToItem) {
-    imageSelector.elm.transformedHandlers.handleScrollToItem({ id });
+  const imageSelector = refs["rvnImageSelector"];
+  if (imageSelector?.transformedHandlers?.handleScrollToItem) {
+    imageSelector.transformedHandlers.handleScrollToItem({ id });
   }
 };
 

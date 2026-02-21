@@ -5,7 +5,7 @@ const layoutForm = {
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      inputType: "input-text",
       label: "Layout Name",
       required: true,
     },
@@ -68,28 +68,28 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setFieldResources = (state, resources) => {
+export const setFieldResources = ({ state }, { resources } = {}) => {
   state.fieldResources = resources;
 };
 
-export const setItems = (state, layoutsData) => {
+export const setItems = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const openAddDialog = (state, groupId) => {
+export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;
   state.targetGroupId = groupId;
 };
 
-export const closeAddDialog = (state) => {
+export const closeAddDialog = ({ state }, _payload = {}) => {
   state.isAddDialogOpen = false;
   state.targetGroupId = null;
 };

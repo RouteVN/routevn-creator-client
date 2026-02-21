@@ -25,23 +25,23 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
-export const setImages = (state, payload) => {
+export const setImages = ({ state }, { payload } = {}) => {
   state.images = payload.images;
 };
 
-export const setVideos = (state, payload) => {
+export const setVideos = ({ state }, { payload } = {}) => {
   state.videos = payload.videos;
 };
 
-export const setLayouts = (state, payload) => {
+export const setLayouts = ({ state }, { payload } = {}) => {
   state.layouts = payload.layouts;
 };
 
-export const setTransforms = (state, payload) => {
+export const setTransforms = ({ state }, { payload } = {}) => {
   state.transforms = payload.transforms;
 };
 
@@ -49,7 +49,7 @@ const generateVisualId = () => {
   return `visual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const addVisual = (state, payload) => {
+export const addVisual = ({ state }, { payload } = {}) => {
   const transformItems = toFlatItems(state.transforms).filter(
     (item) => item.type === "transform",
   );
@@ -63,31 +63,31 @@ export const addVisual = (state, payload) => {
   });
 };
 
-export const removeVisual = (state, index) => {
+export const removeVisual = ({ state }, { index } = {}) => {
   state.selectedVisuals.splice(index, 1);
 };
 
-export const updateVisualTransform = (state, { index, transform }) => {
+export const updateVisualTransform = ({ state }, { index, transform } = {}) => {
   if (state.selectedVisuals[index]) {
     state.selectedVisuals[index].transformId = transform;
   }
 };
 
-export const updateVisualResource = (state, { index, resourceId }) => {
+export const updateVisualResource = ({ state }, { index, resourceId } = {}) => {
   if (state.selectedVisuals[index]) {
     state.selectedVisuals[index].resourceId = resourceId;
   }
 };
 
-export const clearVisuals = (state) => {
+export const clearVisuals = ({ state }, _payload = {}) => {
   state.selectedVisuals = [];
 };
 
-export const setTempSelectedResourceId = (state, payload) => {
+export const setTempSelectedResourceId = ({ state }, { payload } = {}) => {
   state.tempSelectedResourceId = payload.resourceId;
 };
 
-export const setSelectedVisualIndex = (state, payload) => {
+export const setSelectedVisualIndex = ({ state }, { payload } = {}) => {
   state.selectedVisualIndex = payload.index;
 };
 
@@ -95,13 +95,13 @@ export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-export const showDropdownMenu = (state, { position, visualIndex }) => {
+export const showDropdownMenu = ({ state }, { position, visualIndex } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
   state.dropdownMenu.visualIndex = visualIndex;
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.visualIndex = null;
 };
@@ -122,7 +122,7 @@ export const selectSelectedVisualIndex = ({ state }) => {
   return state.selectedVisualIndex;
 };
 
-export const setExistingVisuals = (state, payload) => {
+export const setExistingVisuals = ({ state }, { payload } = {}) => {
   state.selectedVisuals = payload.visuals;
 };
 

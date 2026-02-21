@@ -1,6 +1,4 @@
-import { createWebPatch } from "@rettangoli/fe";
 import { createGlobalUI } from "@rettangoli/ui";
-import { h } from "snabbdom/build/h";
 
 // Infra - Web
 import { createDb } from "./deps/infra/web/db.js";
@@ -91,6 +89,4 @@ const deps = {
   pages: pageDependencies,
 };
 
-const patch = createWebPatch();
-
-export { h, patch, deps };
+export { deps };

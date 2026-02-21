@@ -29,12 +29,12 @@ export const createInitialState = () => ({
   dataLoaded: false,
 });
 
-export const setProject = (state, project) => {
+export const setProject = ({ state }, { project } = {}) => {
   state.project = project;
   state.dataLoaded = true;
 };
 
-export const setIconFileId = (state, iconFileId) => {
+export const setIconFileId = ({ state }, { iconFileId } = {}) => {
   state.project.iconFileId = iconFileId;
 };
 

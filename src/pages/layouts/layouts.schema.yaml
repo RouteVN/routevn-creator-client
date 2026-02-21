@@ -1,0 +1,4 @@
+componentName: rvn-layouts
+propsSchema:
+  type: object
+  properties: {}

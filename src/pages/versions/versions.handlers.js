@@ -11,7 +11,7 @@ export const handleAfterMount = async (deps) => {
   await projectService.ensureRepository();
   const adapter = projectService.getAdapterById(projectId);
   const versions = (await adapter.app.get("versions")) || [];
-  store.setVersions(versions);
+  store.setVersions({ versions: versions });
 
   render();
 };
@@ -20,7 +20,7 @@ export const handleDataChanged = () => {};
 
 export const handleSaveVersionClick = (deps) => {
   const { store, render } = deps;
-  store.setShowVersionForm(true);
+  store.setShowVersionForm({ show: true });
   render();
 };
 
@@ -39,7 +39,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     store.resetVersionForm();
     render();
   } else if (actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
     const repository = await projectService.getRepository();
 
     // Get current action count from repository
@@ -58,7 +58,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     await projectService.addVersionToProject(p, newVersion);
 
     // Update UI
-    store.addVersion(newVersion);
+    store.addVersion({ version: newVersion });
     store.resetVersionForm();
     render();
   }
@@ -69,7 +69,7 @@ export const handleVersionContextMenu = (deps, payload) => {
   payload._event.preventDefault();
 
   const versionId = payload._event.currentTarget.id.replace(
-    "version-more-btn-",
+    "versionMoreBtn",
     "",
   );
   const versions = store.selectVersions();
@@ -103,7 +103,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
   // Get versionId from the button or data attributes
   const versionId = payload._event.currentTarget.id.replace(
-    "version-download-",
+    "versionDownload",
     "",
   );
 
@@ -202,6 +202,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   await projectService.deleteVersionFromProject(p, versionId);
 
   // Update store by removing from current versions
-  store.deleteVersion(versionId);
+  store.deleteVersion({ versionId: versionId });
   render();
 };

@@ -1,6 +1,6 @@
 export const handleActionClick = (deps, payload) => {
   const { dispatchEvent, store } = deps;
-  const id = payload._event.currentTarget.id.replace("action-", "");
+  const id = payload._event.currentTarget.id.replace("action", "");
 
   const items = store.selectItems() || [];
   const item = items.find((item) => item.id === id);

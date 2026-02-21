@@ -6,14 +6,14 @@ export const handleAfterMount = (deps) => {
   const images = state.images || { items: {}, tree: [] };
 
   // Store raw images data - processing will happen in selectViewData
-  store.setImages(images);
+  store.setImages({ images: images });
   render();
 };
 
 export const handleImageItemClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
 
-  const id = payload._event.currentTarget.id.replace("image-item-", "");
+  const id = payload._event.currentTarget.id.replace("imageItem", "");
 
   store.setSelectedImageId({
     imageId: id,
@@ -31,21 +31,21 @@ export const handleImageItemClick = (deps, payload) => {
 };
 
 export const handleScrollToItem = (deps, payload) => {
-  const { getRefIds } = deps;
+  const { refs } = deps;
 
-  const { container } = getRefIds();
+  const { container } = refs;
   const { id } = payload;
 
   // Find the group element by ID pattern
   const groupElementId = `item-${id}`;
-  const groupElement = container.elm.querySelector(`#${groupElementId}`);
+  const groupElement = container.querySelector(`#${groupElementId}`);
 
   if (!groupElement) {
     return;
   }
 
   // Find all group elements to determine if this is the first one
-  const allGroupElements = container.elm.querySelectorAll('[id^="item-"]');
+  const allGroupElements = container.querySelectorAll('[id^="item-"]');
 
   // Check if this is the first group element
   const isFirstGroup = allGroupElements[0] === groupElement;
@@ -81,17 +81,17 @@ export const handleScrollToItem = (deps, payload) => {
     // Fallback: if estimation seems wrong, try the viewport method
     if (targetScrollTop <= 0) {
       const elementRect = groupElement.getBoundingClientRect();
-      const containerRect = container.elm.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
       targetScrollTop =
-        container.elm.scrollTop + (elementRect.top - containerRect.top);
+        container.scrollTop + (elementRect.top - containerRect.top);
     }
   }
 
   // Always scroll if the difference is significant (more than 10px)
-  const shouldScroll = Math.abs(container.elm.scrollTop - targetScrollTop) > 10;
+  const shouldScroll = Math.abs(container.scrollTop - targetScrollTop) > 10;
 
   if (shouldScroll) {
-    container.elm.scrollTo({
+    container.scrollTo({
       top: targetScrollTop,
     });
   }

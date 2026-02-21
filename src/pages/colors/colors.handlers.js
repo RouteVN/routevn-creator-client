@@ -24,14 +24,14 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { colors } = projectService.getState();
-  store.setItems(colors);
+  store.setItems({ colorsData: colors });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { colors } = projectService.getState();
-  store.setItems(colors);
+  store.setItems({ colorsData: colors });
   render();
 };
 
@@ -41,7 +41,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
   // If this is a folder, clear selection and context
   if (isFolder) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
     store.setContext({
       colorImage: {
         src: null,
@@ -51,7 +51,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
 
   // If we have item data with hex value, set up color context for preview
   if (item && item.hex) {
@@ -66,12 +66,12 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export const handleColorItemClick = (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
@@ -108,7 +108,7 @@ export const handleColorCreated = async (deps, payload) => {
   });
 
   const { colors } = projectService.getState();
-  store.setItems(colors);
+  store.setItems({ colorsData: colors });
   render();
 };
 
@@ -133,7 +133,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "colors",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -143,13 +143,13 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { colors } = projectService.getState();
-  store.setItems(colors);
+  store.setItems({ colorsData: colors });
 
   // Update context if hex value changed
   if (payload._event.detail.name === "hex") {
     store.setContext({
       colorImage: {
-        src: hexToBase64Image(payload._event.detail.fieldValue),
+        src: hexToBase64Image(payload._event.detail.value),
       },
     });
   }
@@ -161,14 +161,14 @@ export const handleColorItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
-  store.openEditDialog(itemId);
+  store.openEditDialog({ itemId: itemId });
   render();
 };
 
 export const handleAddColorClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
-  store.openAddDialog(groupId);
+  store.openAddDialog({ groupId: groupId });
   render();
 };
 
@@ -182,7 +182,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
     const editItemId = store.getState().editItemId;
 
     if (!formData.name || !formData.name.trim()) {
@@ -206,7 +206,7 @@ export const handleEditFormAction = async (deps, payload) => {
     });
 
     const { colors } = projectService.getState();
-    store.setItems(colors);
+    store.setItems({ colorsData: colors });
 
     // Update context if this is the selected item
     if (editItemId === store.getState().selectedItemId) {
@@ -228,7 +228,7 @@ export const handleFormFieldClick = (deps, payload) => {
   if (payload._event.detail.name === "colorImage") {
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId) {
-      store.openEditDialog(selectedItemId);
+      store.openEditDialog({ itemId: selectedItemId });
       render();
     }
   }
@@ -244,7 +244,7 @@ export const handleAddFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
 
     if (!formData.name || !formData.name.trim()) {
       appService.showToast("Color name cannot be empty.", { title: "Warning" });
@@ -273,7 +273,7 @@ export const handleAddFormAction = async (deps, payload) => {
     });
 
     const { colors } = projectService.getState();
-    store.setItems(colors);
+    store.setItems({ colorsData: colors });
     store.closeAddDialog();
     render();
   }
@@ -282,14 +282,14 @@ export const handleAddFormAction = async (deps, payload) => {
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value || "";
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
 export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse(groupId);
+  store.toggleGroupCollapse({ groupId: groupId });
   render();
 };
 
@@ -323,6 +323,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ colorsData: data });
   render();
 };

@@ -1,20 +1,7 @@
-elementName: rvn-app
-
-viewDataSchema:
-  type: object
-  properties:
-    currentRoutePattern:
-      type: string
-      default: "/projects"
-    showSidebar:
-      type: boolean
-      default: true
 refs: {}
-
 subscriptions:
   - from: routePop
     handler: handleWindowPop
-
 template:
   - rtgl-view d=h w=f h=f:
       - $if showSidebar:

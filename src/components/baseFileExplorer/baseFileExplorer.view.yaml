@@ -1,52 +1,5 @@
-elementName: rvn-base-file-explorer
-
-viewDataSchema:
-  type: object
-  properties:
-    items:
-      type: array
-      items:
-        type: object
-        properties:
-          name:
-            type: string
-          type:
-            type: string
-
-attrsSchema:
-  type: object
-  properties:
-    no-empty-message:
-      type: boolean
-      description: Whether to show the empty message when there are no items
-
-propsSchema:
-  type: object
-  properties:
-    items:
-      type: array
-      items:
-        type: object
-        properties:
-          name:
-            type: string
-          id:
-            type: string
-          level:
-            type: number
-          hasChildren:
-            type: boolean
-          parentId:
-            type: string
-    contextMenuItems:
-      type: array
-      description: Menu items for right-clicking on an item
-    emptyContextMenuItems:
-      type: array
-      description: Menu items for right-clicking on empty space
-
 refs:
-  item-*:
+  item*:
     eventListeners:
       mousedown:
         required: true
@@ -57,7 +10,7 @@ refs:
         handler: handleItemClick
       dblclick:
         handler: handleItemDblClick
-  arrow-*:
+  arrow*:
     eventListeners:
       click:
         handler: handleArrowClick
@@ -65,15 +18,15 @@ refs:
     eventListeners:
       contextmenu:
         handler: handleContainerContextMenu
-  empty-message:
+  emptyMessage:
     eventListeners:
       click:
         handler: handleEmptyMessageClick
-  dropdown-menu:
+  dropdownMenu:
     eventListeners:
       close:
         handler: handleDropdownMenuClickOverlay
-      click-item:
+      item-click:
         handler: handleDropdownMenuClickItem
   popover:
     eventListeners:
@@ -81,36 +34,34 @@ refs:
         handler: handlePopoverClickOverlay
   form:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleFormActionClick
-
 styles:
-  ":host":
-    "-webkit-user-select": "none"
-    "-moz-user-select": "none"
-    "-ms-user-select": "none"
-    "user-select": "none"
-
+  ':host':
+    '-webkit-user-select': none
+    '-moz-user-select': none
+    '-ms-user-select': none
+    user-select: none
 template:
   - rtgl-view w=f h=f sv:
-      - "rtgl-view w=f g=sm pos=rel":
+      - rtgl-view w=f g=sm pos=rel:
           - rtgl-view w=f h=f:
               - $if items.length == 0 && !noEmptyMessage:
-                  - "rtgl-view#empty-message w=f h=f d=f av=c ah=c p=xl cur=p":
-                      - "rtgl-text s=sm c=mu-fg ta=c": "No items. Click to create a folder."
+                  - rtgl-view#emptyMessage w=f h=f d=f av=c ah=c p=xl cur=pointer:
+                      - rtgl-text s=sm c=mu-fg ta=c: No items. Click to create a folder.
                 $else:
                   - $for item, i in items:
-                      - 'rtgl-view#item-${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=p av=c bc=${item.bc} bw=xs':
+                      - 'rtgl-view#item${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
-                              - rtgl-svg#arrow-${item.id} svg=${item.arrowIcon} wh=16 cur=p:
+                              - rtgl-svg#arrow${item.id} svg=${item.arrowIcon} wh=16 cur=pointer: null
                             $else:
-                              - rtgl-view wh=16:
+                              - rtgl-view wh=16: null
                           - rtgl-view d=h g=md av=c w=f:
-                              - rtgl-svg svg=${item.svg} wh=16:
-                              - 'rtgl-text s=sm ellipsis=true w=f flex=1 mr=xl style="min-width: 0"': "${item.name}"
+                              - rtgl-svg svg=${item.svg} wh=16: null
+                              - 'rtgl-text s=sm ellipsis=true w=f flex=1 mr=xl style="min-width: 0"': ${item.name}
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
-              - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"':
-      - rtgl-view#container w=f h=f:
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+              - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null
+      - rtgl-view#container w=f h=f: null
+  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
-      - rtgl-form#form key=${popover.isOpen} slot=content .form=form .defaultValues=renameFormDefaultValues:
+      - rtgl-form#form key=${popover.isOpen} slot=content :form=form :defaultValues=renameFormDefaultValues: null

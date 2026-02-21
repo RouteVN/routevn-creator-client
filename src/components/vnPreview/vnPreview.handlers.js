@@ -45,7 +45,7 @@ const resetAssetLoadCache = () => {
 
 const setAssetLoading = (deps, isLoading) => {
   const { store, render } = deps;
-  store.setAssetLoading(isLoading);
+  store.setAssetLoading({ isLoading: isLoading });
   render();
 };
 
@@ -207,21 +207,21 @@ export const handleBeforeMount = (deps) => {
 
   window.addEventListener("keydown", handleKeyDown);
   return () => {
-    store.setAssetLoading(false);
+    store.setAssetLoading({ isLoading: false });
     resetAssetLoadCache();
     window.removeEventListener("keydown", handleKeyDown);
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { projectService, graphicsService, getRefIds, attrs, store } = deps;
+  const { projectService, graphicsService, refs, props: attrs, store } = deps;
   await projectService.ensureRepository();
   const state = projectService.getState();
-  const { canvas } = getRefIds();
+  const { canvas } = refs;
 
-  const sceneId = attrs["scene-id"];
-  const sectionId = attrs["section-id"];
-  const lineId = attrs["line-id"];
+  const sceneId = attrs.sceneId;
+  const sectionId = attrs.sectionId;
+  const lineId = attrs.lineId;
 
   const projectData = constructProjectData(state, {
     initialSceneId: sceneId,
@@ -243,11 +243,11 @@ export const handleAfterMount = async (deps) => {
     projectDataWithInitial,
   );
   await graphicsService.init({
-    canvas: canvas.elm,
+    canvas: canvas,
     beforeHandleActions,
   });
   resetAssetLoadCache();
-  store.setAssetLoading(false);
+  store.setAssetLoading({ isLoading: false });
 
   const initialSceneIds = extractInitialHybridSceneIds(
     projectDataWithInitial,

@@ -6,6 +6,12 @@ import {
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
 const DEBOUNCE_DELAYS = {
   UPDATE: 500, // Regular updates (forms, etc)
   KEYBOARD: 1000, // Keyboard final save
@@ -26,6 +32,10 @@ const fileContentCache = new Map();
 
 // Track keyboard navigation timeout
 let keyboardNavigationTimeout = null;
+
+export const handleBeforeMount = (deps) => {
+  return mountLegacySubscriptions(deps);
+};
 
 /**
  * Schedule a final save after keyboard navigation stops
@@ -316,29 +326,27 @@ const renderLayoutPreview = async (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const {
-    appService,
-    store,
-    projectService,
-    render,
-    getRefIds,
-    graphicsService,
-  } = deps;
+  const { appService, store, projectService, render, refs, graphicsService } =
+    deps;
   const { layoutId } = appService.getPayload();
   const repository = await projectService.getRepository();
   const { layouts, images, typography, colors, fonts, variables } =
     repository.getState();
   const layout = layouts.items[layoutId];
   store.setLayout({ id: layoutId, layout });
-  store.setItems(layout?.elements || { items: {}, tree: [] });
-  store.setImages(images);
-  store.setTypographyData(typography || { items: {}, tree: [] });
-  store.setColorsData(colors || { items: {}, tree: [] });
-  store.setFontsData(fonts || { items: {}, tree: [] });
-  store.setVariablesData(variables || { items: {}, tree: [] });
+  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
+  store.setImages({ images: images });
+  store.setTypographyData({
+    typographyData: typography || { items: {}, tree: [] },
+  });
+  store.setColorsData({ colorsData: colors || { items: {}, tree: [] } });
+  store.setFontsData({ fontsData: fonts || { items: {}, tree: [] } });
+  store.setVariablesData({
+    variablesData: variables || { items: {}, tree: [] },
+  });
 
-  const { canvas } = getRefIds();
-  await graphicsService.init({ canvas: canvas.elm });
+  const { canvas } = refs;
+  await graphicsService.init({ canvas: canvas });
 
   await renderLayoutPreview(deps);
   render();
@@ -357,7 +365,7 @@ export const handleRenderOnly = (deps) => deps.render();
 export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render } = deps;
   const itemId = payload._event.detail.id;
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
   await renderLayoutPreview(deps);
 };
@@ -372,7 +380,7 @@ export const handleDataChanged = async (deps) => {
   const repository = await projectService.getRepository();
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
-  store.setItems(layout?.elements || { items: {}, tree: [] });
+  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   render();
   await renderLayoutPreview(deps);
 };
@@ -424,7 +432,7 @@ const deepMerge = (target, source) => {
 
 export const handleDialogueFormChange = async (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = payload._event.detail;
+  const { name, value: fieldValue } = payload._event.detail;
 
   store.setDialogueDefaultValue({ name, fieldValue });
   render();
@@ -434,7 +442,7 @@ export const handleDialogueFormChange = async (deps, payload) => {
 
 export const handleChoiceFormChange = async (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = payload._event.detail;
+  const { name, value: fieldValue } = payload._event.detail;
 
   store.setChoiceDefaultValue({ name, fieldValue });
   render();
@@ -498,7 +506,7 @@ export const handleArrowKeyDown = async (deps, payload) => {
   }
 
   const updatedItem = { ...currentItem, ...change };
-  store.updateSelectedItem(updatedItem);
+  store.updateSelectedItem({ updatedItem: updatedItem });
   render();
   await renderLayoutPreview(deps);
   scheduleKeyboardSave(deps, currentItem.id, layoutId);
@@ -532,11 +540,11 @@ async function handleDebouncedUpdate(deps, payload) {
   const { layouts, images } = repository.getState();
   const layout = layouts.items[layoutId];
 
-  store.setItems(layout?.elements || { items: {}, tree: [] });
-  store.setImages(images);
+  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
+  store.setImages({ images: images });
 }
 
-export const subscriptions = (deps) => {
+const subscriptions = (deps) => {
   const { subject, appService } = deps;
   const { isInputFocused } = appService;
   return [
@@ -709,7 +717,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     updatedItem.height = preloadedImages.items[updatedItem.imageId].height;
   }
 
-  store.updateSelectedItem(updatedItem);
+  store.updateSelectedItem({ updatedItem: updatedItem });
   render();
 
   const { subject } = deps;
@@ -745,7 +753,7 @@ export const handleCanvasMouseMove = (deps, payload) => {
     y: drag.dragStartPosition.itemStartY + y - drag.dragStartPosition.y,
   };
 
-  store.updateSelectedItem(updatedItem);
+  store.updateSelectedItem({ updatedItem: updatedItem });
   renderLayoutPreview(deps);
 
   subject.dispatch("layoutEditor.updateElement", {

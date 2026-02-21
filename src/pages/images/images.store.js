@@ -41,15 +41,15 @@ export const createInitialState = () => ({
   fullImagePreviewFileId: undefined,
 });
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setItems = (state, imagesData) => {
+export const setItems = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -64,11 +64,11 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setSearchQuery = (state, { value }) => {
+export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value || "";
 };
 
-export const showFullImagePreview = (state, { itemId }) => {
+export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   const flatItems = toFlatItems(state.imagesData);
   const item = flatItems.find((item) => item.id === itemId);
 
@@ -78,7 +78,7 @@ export const showFullImagePreview = (state, { itemId }) => {
   }
 };
 
-export const hideFullImagePreview = (state) => {
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
 };

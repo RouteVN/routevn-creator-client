@@ -23,7 +23,7 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
@@ -37,15 +37,15 @@ const form = {
   ],
 };
 
-export const setRepositoryState = (state, payload) => {
+export const setRepositoryState = ({ state }, { payload } = {}) => {
   state.items = payload.sounds;
 };
 
-export const setTempSelectedResourceId = (state, payload) => {
+export const setTempSelectedResourceId = ({ state }, { payload } = {}) => {
   state.tempSelectedResourceId = payload.resourceId;
 };
 
-export const addSfx = (state, payload) => {
+export const addSfx = ({ state }, { payload } = {}) => {
   const newSfx = {
     id: payload.id,
     resourceId: null,
@@ -56,32 +56,32 @@ export const addSfx = (state, payload) => {
   state.currentEditingId = newSfx.id;
 };
 
-export const setExistingSfxs = (state, payload) => {
+export const setExistingSfxs = ({ state }, { payload } = {}) => {
   state.sfx = payload.sfx.map((sfx) => ({
     volume: 500,
     ...sfx,
   }));
 };
 
-export const updateSfx = (state, payload) => {
+export const updateSfx = ({ state }, { payload } = {}) => {
   const index = state.sfx.findIndex((se) => se.id === payload.id);
   if (index !== -1) {
     state.sfx[index] = { ...state.sfx[index], ...payload };
   }
 };
 
-export const deleteSfx = (state, payload) => {
+export const deleteSfx = ({ state }, { payload } = {}) => {
   state.sfx = state.sfx.filter((se) => se.id !== payload.id);
   if (state.currentEditingId === payload.id) {
     state.currentEditingId = null;
   }
 };
 
-export const setCurrentEditingId = (state, payload) => {
+export const setCurrentEditingId = ({ state }, { payload } = {}) => {
   state.currentEditingId = payload.id;
 };
 
-export const showDropdownMenu = (state, { position, sfxId }) => {
+export const showDropdownMenu = ({ state }, { position, sfxId } = {}) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
@@ -96,7 +96,7 @@ export const showDropdownMenu = (state, { position, sfxId }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu = {
     isOpen: false,
     position: { x: 0, y: 0 },

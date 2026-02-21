@@ -10,31 +10,31 @@ export const createInitialState = () => ({
   repositoryState: {},
 });
 
-export const setMode = (state, mode) => {
+export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
 };
 
-export const setReady = (state) => {
+export const setReady = ({ state }, _payload = {}) => {
   state.ready = true;
 };
 
-export const setRepositoryState = (state, repositoryState) => {
+export const setRepositoryState = ({ state }, { repositoryState } = {}) => {
   state.repositoryState = repositoryState;
 };
 
-export const setCursorPosition = (state, position) => {
+export const setCursorPosition = ({ state }, { position } = {}) => {
   state.cursorPosition = position;
 };
 
-export const setIsNavigating = (state, isNavigating) => {
+export const setIsNavigating = ({ state }, { isNavigating } = {}) => {
   state.isNavigating = isNavigating;
 };
 
-export const setGoalColumn = (state, goalColumn) => {
+export const setGoalColumn = ({ state }, { goalColumn } = {}) => {
   state.goalColumn = goalColumn;
 };
 
-export const setNavigationDirection = (state, direction) => {
+export const setNavigationDirection = ({ state }, { direction } = {}) => {
   state.navigationDirection = direction;
 };
 

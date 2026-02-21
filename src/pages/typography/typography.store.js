@@ -7,14 +7,14 @@ const createAddColorForm = (colorFolderOptions) => ({
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      inputType: "input-text",
       label: "Color Name",
       description: "Enter the color name",
       required: true,
     },
     {
       name: "hex",
-      inputType: "colorPicker",
+      inputType: "color-picker",
       label: "Hex Value",
       description: "Choose or enter a hex color value",
       required: true,
@@ -173,50 +173,50 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setItems = (state, typographyData) => {
+export const setItems = ({ state }, { typographyData } = {}) => {
   state.typographyData = typographyData;
 };
 
-export const setColorsData = (state, colorsData) => {
+export const setColorsData = ({ state }, { colorsData } = {}) => {
   state.colorsData = colorsData;
 };
 
-export const setFontsData = (state, fontsData) => {
+export const setFontsData = ({ state }, { fontsData } = {}) => {
   state.fontsData = fontsData;
 };
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
 // Dialog management
-export const toggleDialog = (state) => {
+export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
 };
 
-export const setTargetGroupId = (state, groupId) => {
+export const setTargetGroupId = ({ state }, { groupId } = {}) => {
   state.targetGroupId = groupId;
 };
 
-export const setEditMode = (state, itemId) => {
+export const setEditMode = ({ state }, { itemId } = {}) => {
   state.editMode = true;
   state.editingItemId = itemId;
 };
 
-export const clearEditMode = (state) => {
+export const clearEditMode = ({ state }, _payload = {}) => {
   state.editMode = false;
   state.editingItemId = undefined;
 };
 
-export const updateFormValues = (state, formData) => {
+export const updateFormValues = ({ state }, { formData } = {}) => {
   const newValues = { ...state.currentFormValues, ...formData };
   if (newValues.previewText == null) {
     newValues.previewText = "";
@@ -224,7 +224,7 @@ export const updateFormValues = (state, formData) => {
   state.currentFormValues = newValues;
 };
 
-export const resetFormValues = (state) => {
+export const resetFormValues = ({ state }, _payload = {}) => {
   state.currentFormValues = {
     name: "",
     fontColor: "",
@@ -236,7 +236,7 @@ export const resetFormValues = (state) => {
   };
 };
 
-export const setFormValuesFromItem = (state, item) => {
+export const setFormValuesFromItem = ({ state }, { item } = {}) => {
   if (!item) {
     throw new Error("Item is required for setFormValuesFromItem");
   }
@@ -252,11 +252,11 @@ export const setFormValuesFromItem = (state, item) => {
 };
 
 // Add color dialog management
-export const openAddColorDialog = (state) => {
+export const openAddColorDialog = ({ state }, _payload = {}) => {
   state.isAddColorDialogOpen = true;
 };
 
-export const closeAddColorDialog = (state) => {
+export const closeAddColorDialog = ({ state }, _payload = {}) => {
   state.isAddColorDialogOpen = false;
   state.newColorData = {
     name: "",
@@ -265,16 +265,16 @@ export const closeAddColorDialog = (state) => {
   };
 };
 
-export const updateNewColorData = (state, data) => {
+export const updateNewColorData = ({ state }, { data } = {}) => {
   state.newColorData = { ...state.newColorData, ...data };
 };
 
 // Add font dialog management
-export const openAddFontDialog = (state) => {
+export const openAddFontDialog = ({ state }, _payload = {}) => {
   state.isAddFontDialogOpen = true;
 };
 
-export const closeAddFontDialog = (state) => {
+export const closeAddFontDialog = ({ state }, _payload = {}) => {
   state.isAddFontDialogOpen = false;
   state.selectedFontFile = undefined;
   state.hasSelectedFont = false;
@@ -285,11 +285,11 @@ export const closeAddFontDialog = (state) => {
   };
 };
 
-export const updateNewFontData = (state, data) => {
+export const updateNewFontData = ({ state }, { data } = {}) => {
   state.newFontData = { ...state.newFontData, ...data };
 };
 
-export const setSelectedFontFile = (state, data) => {
+export const setSelectedFontFile = ({ state }, { data } = {}) => {
   state.selectedFontFile = data.file;
   state.hasSelectedFont = true;
   state.selectedFontFileName = data.fileName;
@@ -297,7 +297,7 @@ export const setSelectedFontFile = (state, data) => {
   state.dragDropText = "Replace font file";
 };
 
-export const clearSelectedFontFile = (state) => {
+export const clearSelectedFontFile = ({ state }, _payload = {}) => {
   state.selectedFontFile = undefined;
   state.hasSelectedFont = false;
   state.selectedFontFileName = "";
@@ -496,7 +496,7 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Name",
         required: true,
       },
@@ -557,7 +557,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "previewText",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Preview Text",
         required: false,
       },

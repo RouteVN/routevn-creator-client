@@ -1,9 +1,9 @@
 export const handleAfterMount = async (deps) => {
   const { appService, store, render } = deps;
   const platform = appService.getPlatform();
-  store.setPlatform(platform);
+  store.setPlatform({ platform: platform });
   const projects = await appService.loadAllProjects();
-  store.setProjects(projects);
+  store.setProjects({ projects: projects });
   render();
 };
 
@@ -27,7 +27,7 @@ export const handleOpenButtonClick = async (deps) => {
 
     const importedProject = await appService.openExistingProject(selectedPath);
 
-    store.addProject(importedProject);
+    store.addProject({ project: importedProject });
     render();
 
     appService.showToast(
@@ -47,7 +47,7 @@ export const handleCloseDialogue = (deps) => {
 
 export const handleProjectsClick = async (deps, payload) => {
   const { appService } = deps;
-  const id = payload._event.currentTarget.id.replace("project-", "");
+  const id = payload._event.currentTarget.id.replace("project", "");
   appService.navigate("/project", { p: id });
 };
 
@@ -60,7 +60,7 @@ export const handleBrowseFolder = async (deps) => {
     });
 
     if (selected) {
-      store.setProjectPath(selected);
+      store.setProjectPath({ path: selected });
       render();
     }
   } catch (error) {
@@ -82,7 +82,7 @@ export const handleFormSubmit = async (deps, payload) => {
       name,
       description,
       template = "default",
-    } = payload._event.detail.formValues;
+    } = payload._event.detail.values;
 
     if (name === "_TEST_FILE_PERMISSIONS_") {
       window.location.href = "/test-permissions.html";
@@ -112,7 +112,7 @@ export const handleFormSubmit = async (deps, payload) => {
       template,
     });
 
-    store.addProject(newProject);
+    store.addProject({ project: newProject });
     store.toggleDialog();
     render();
   } catch (error) {
@@ -125,7 +125,7 @@ export const handleProjectContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const projectId = payload._event.currentTarget.id.replace("project-", "");
+  const projectId = payload._event.currentTarget.id.replace("project", "");
   const projects = store.selectProjects();
   const project = projects.find((p) => p.id === projectId);
 
@@ -194,6 +194,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   await appService.removeProjectEntry(projectId);
 
-  store.removeProject(projectId);
+  store.removeProject({ projectId: projectId });
   render();
 };

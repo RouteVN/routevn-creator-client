@@ -8,10 +8,10 @@ export const handleAfterMount = async (deps) => {
   // Set app version from appService
   const appVersion = appService.getAppVersion();
   if (appVersion) {
-    store.setAppVersion(appVersion);
+    store.setAppVersion({ version: appVersion });
   }
   const platform = appService.getPlatform();
-  store.setPlatform(platform);
+  store.setPlatform({ platform: platform });
   render();
 };
 

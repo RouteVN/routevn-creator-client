@@ -46,7 +46,7 @@ const createAddKeyframeForm = (property) => {
     fields: [
       {
         name: "duration",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Duration (ms)",
         required: true,
         placeholder: "Duration in milliseconds",
@@ -142,7 +142,7 @@ const editInitialValueForm = {
     {
       $when: "valueSource == 'custom'",
       name: "initialValue",
-      inputType: "inputText",
+      inputType: "input-text",
       label: "Custom Initial Value",
     },
   ],
@@ -304,7 +304,7 @@ const addTweenForm = {
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      inputType: "input-text",
       label: "Name",
       required: true,
     },
@@ -332,7 +332,7 @@ const editTweenForm = {
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      inputType: "input-text",
       label: "Name",
       required: true,
     },
@@ -390,11 +390,11 @@ export const createInitialState = () => ({
   },
 });
 
-export const setItems = (state, tweensData) => {
+export const setItems = ({ state }, { tweensData } = {}) => {
   state.tweensData = tweensData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -402,18 +402,18 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectTweensData = ({ state }) => state.tweensData;
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const setPopover = (state, { mode, x, y, payload }) => {
+export const setPopover = ({ state }, { mode, x, y, payload } = {}) => {
   state.popover.mode = mode;
   state.popover.x = x;
   state.popover.y = y;
   state.popover.payload = payload;
 };
 
-export const closePopover = (state) => {
+export const closePopover = ({ state }, _payload = {}) => {
   state.popover.mode = "none";
   state.popover.x = undefined;
   state.popover.y = undefined;
@@ -421,7 +421,7 @@ export const closePopover = (state) => {
   state.popover.formValues = {};
 };
 
-export const updatePopoverFormValues = (state, formValues) => {
+export const updatePopoverFormValues = ({ state }, { formValues } = {}) => {
   state.popover.formValues = formValues;
 };
 
@@ -438,10 +438,7 @@ export const selectFormState = ({ state }) => {
   };
 };
 
-export const openDialog = (
-  state,
-  { editMode = false, itemId = null, itemData = null } = {},
-) => {
+export const openDialog = ({ state }, { editMode, itemId, itemData } = {}) => {
   state.isDialogOpen = true;
   state.editMode = editMode;
   state.editItemId = itemId;
@@ -460,7 +457,7 @@ export const openDialog = (
   }
 };
 
-export const closeDialog = (state) => {
+export const closeDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = false;
   state.editMode = false;
   state.editItemId = null;
@@ -471,11 +468,14 @@ export const closeDialog = (state) => {
   state.properties = {};
 };
 
-export const setTargetGroupId = (state, groupId) => {
+export const setTargetGroupId = ({ state }, { groupId } = {}) => {
   state.targetGroupId = groupId;
 };
 
-export const setGraphicsServiceInitialized = (state, initialized) => {
+export const setGraphicsServiceInitialized = (
+  { state },
+  { initialized } = {},
+) => {
   state.isGraphicsServiceInitialized = initialized;
 };
 
@@ -484,10 +484,7 @@ export const selectIsGraphicsServiceInitialized = ({ state }) => {
 };
 
 // Helper function to create render state with animations
-export const createAnimationRenderState = (
-  properties,
-  includeAnimations = true,
-) => {
+const createAnimationRenderState = (properties, includeAnimations = true) => {
   const animations = [];
   if (includeAnimations && properties && Object.keys(properties).length > 0) {
     for (const [property, config] of Object.entries(properties)) {
@@ -555,7 +552,7 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
   return createAnimationRenderState(state.properties, true);
 };
 
-export const addProperty = (state, payload) => {
+export const addProperty = ({ state }, { payload } = {}) => {
   const { property, initialValue } = payload;
   if (state.properties[property]) {
     return;
@@ -566,7 +563,7 @@ export const addProperty = (state, payload) => {
   };
 };
 
-export const addKeyframe = (state, keyframe) => {
+export const addKeyframe = ({ state }, { keyframe } = {}) => {
   if (!state.properties[keyframe.property]) {
     state.properties[keyframe.property] = [];
   }
@@ -585,13 +582,13 @@ export const addKeyframe = (state, keyframe) => {
   });
 };
 
-export const deleteKeyframe = (state, payload) => {
+export const deleteKeyframe = ({ state }, { payload } = {}) => {
   const { property, index } = payload;
   const keyframes = state.properties[property].keyframes;
   keyframes.splice(index, 1);
 };
 
-export const deleteProperty = (state, payload) => {
+export const deleteProperty = ({ state }, { payload } = {}) => {
   const { property } = payload;
 
   state.selectedProperties = state.selectedProperties.filter(
@@ -601,7 +598,7 @@ export const deleteProperty = (state, payload) => {
   delete state.properties[property];
 };
 
-export const moveKeyframeRight = (state, payload) => {
+export const moveKeyframeRight = ({ state }, { payload } = {}) => {
   const { property, index } = payload;
   const numIndex = Number(index);
   const keyframes = state.properties[property].keyframes;
@@ -613,7 +610,7 @@ export const moveKeyframeRight = (state, payload) => {
   }
 };
 
-export const moveKeyframeLeft = (state, payload) => {
+export const moveKeyframeLeft = ({ state }, { payload } = {}) => {
   const { property, index } = payload;
   const numIndex = Number(index);
   const keyframes = state.properties[property].keyframes;
@@ -625,7 +622,7 @@ export const moveKeyframeLeft = (state, payload) => {
   }
 };
 
-export const updateKeyframe = (state, payload) => {
+export const updateKeyframe = ({ state }, { payload } = {}) => {
   const { property, index, keyframe } = payload;
   const keyframes = state.properties[property].keyframes;
 
@@ -637,7 +634,7 @@ export const updateKeyframe = (state, payload) => {
   };
 };
 
-export const updateInitialValue = (state, payload) => {
+export const updateInitialValue = ({ state }, { payload } = {}) => {
   const { property, initialValue } = payload;
   state.properties[property].initialValue = initialValue;
 };

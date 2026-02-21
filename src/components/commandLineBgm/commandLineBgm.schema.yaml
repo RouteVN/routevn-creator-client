@@ -1,0 +1,9 @@
+componentName: rvn-command-line-bgm
+propsSchema:
+  type: object
+  properties:
+    bgm:
+      type: object
+      properties:
+        resourceId:
+          type: string

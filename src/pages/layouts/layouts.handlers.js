@@ -5,14 +5,14 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { layouts } = projectService.getState();
-  store.setItems(layouts);
+  store.setItems({ layoutsData: layouts });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { layouts } = projectService.getState();
-  store.setItems(layouts);
+  store.setItems({ layoutsData: layouts });
   render();
 };
 
@@ -20,20 +20,20 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
   const { id } = payload._event.detail;
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
   render();
 };
 
 export const handleImageItemClick = (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
 };
 
@@ -55,7 +55,7 @@ export const handleAddLayoutClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
 
-  store.openAddDialog(groupId);
+  store.openAddDialog({ groupId: groupId });
   render();
 };
 
@@ -94,7 +94,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     const { layouts } = projectService.getState();
-    store.setItems(layouts);
+    store.setItems({ layoutsData: layouts });
   }
 
   render();
@@ -107,7 +107,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "layouts",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -117,13 +117,13 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { layouts } = projectService.getState();
-  store.setItems(layouts);
+  store.setItems({ layoutsData: layouts });
   render();
 };
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value || "";
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
@@ -425,7 +425,7 @@ const createLayoutTemplate = (layoutType) => {
 export const handleLayoutFormActionClick = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
 
-  const formData = payload._event.detail.formValues;
+  const formData = payload._event.detail.values;
   const targetGroupId = store.getState().targetGroupId;
 
   // Validate required fields
@@ -458,7 +458,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   });
 
   const { layouts } = projectService.getState();
-  store.setItems(layouts);
+  store.setItems({ layoutsData: layouts });
   store.closeAddDialog();
   render();
 };
@@ -493,6 +493,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ layoutsData: data });
   render();
 };

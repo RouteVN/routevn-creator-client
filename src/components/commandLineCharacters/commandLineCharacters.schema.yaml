@@ -1,0 +1,11 @@
+componentName: rvn-command-line-characters
+propsSchema:
+  type: object
+  properties:
+    character:
+      type: object
+      properties:
+        items:
+          type: array
+    presentationState:
+      type: object

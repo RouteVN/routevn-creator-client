@@ -36,22 +36,22 @@ export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
-export const setRepositoryState = (state, payload) => {
+export const setRepositoryState = ({ state }, { payload } = {}) => {
   state.imageItems = payload.images;
   state.layoutItems = payload.layouts;
   state.videoItems = payload.videos;
   state.tweenItems = payload.tweens || [];
 };
 
-export const setTab = (state, payload) => {
+export const setTab = ({ state }, { payload } = {}) => {
   state.tab = payload.tab;
 };
 
-export const setSelectedResource = (state, payload) => {
+export const setSelectedResource = ({ state }, { payload } = {}) => {
   state.selectedResourceId = payload.resourceId;
   state.selectedResourceType = payload.resourceType;
 
@@ -59,11 +59,11 @@ export const setSelectedResource = (state, payload) => {
   state.tab = payload.resourceType;
 };
 
-export const setTempSelectedResource = (state, payload) => {
+export const setTempSelectedResource = ({ state }, { payload } = {}) => {
   state.tempSelectedResourceId = payload.resourceId;
 };
 
-export const setPendingResourceId = (state, resourceId) => {
+export const setPendingResourceId = ({ state }, { resourceId } = {}) => {
   state.pendingResourceId = resourceId;
 };
 
@@ -71,11 +71,11 @@ export const selectPendingResourceId = ({ state }) => {
   return state.pendingResourceId;
 };
 
-export const clearPendingResourceId = (state) => {
+export const clearPendingResourceId = ({ state }, _payload = {}) => {
   state.pendingResourceId = undefined;
 };
 
-export const setSelectedTween = (state, payload) => {
+export const setSelectedTween = ({ state }, { payload } = {}) => {
   state.selectedTweenId = payload.tweenId;
 };
 
@@ -83,7 +83,7 @@ export const selectSelectedTween = ({ state }) => {
   return state.selectedTweenId;
 };
 
-export const setBackgroundLoop = (state, payload) => {
+export const setBackgroundLoop = ({ state }, { payload } = {}) => {
   state.backgroundLoop = payload.loop;
 };
 

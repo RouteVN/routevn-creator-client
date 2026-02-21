@@ -504,12 +504,12 @@ const dialogueForm = {
     {
       name: "dialogue-character-name",
       description: "Character Name",
-      inputType: "inputText",
+      inputType: "input-text",
     },
     {
       name: "dialogue-content",
       description: "Dialogue Content",
-      inputType: "inputText",
+      inputType: "input-text",
     },
   ],
 };
@@ -536,7 +536,7 @@ const choiceForm = {
     {
       $each: "choice, i in choices",
       name: "choices[${i}]",
-      inputType: "inputText",
+      inputType: "input-text",
       description: "Choice content text",
       placeholder: "Enter choice text",
     },
@@ -565,11 +565,11 @@ export const createInitialState = () => ({
   },
 });
 
-export const setItems = (state, layoutData) => {
+export const setItems = ({ state }, { layoutData } = {}) => {
   state.layoutData = layoutData;
 };
 
-export const setLayout = (state, payload) => {
+export const setLayout = ({ state }, { payload } = {}) => {
   const { id, layout } = payload;
   state.layout = {
     ...layout,
@@ -577,30 +577,30 @@ export const setLayout = (state, payload) => {
   };
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const updateSelectedItem = (state, updatedItem) => {
+export const updateSelectedItem = ({ state }, { updatedItem } = {}) => {
   if (state.selectedItemId && state.layoutData && state.layoutData.items) {
     state.layoutData.items[state.selectedItemId] = updatedItem;
   }
   state.lastUpdateDate = Date.now();
 };
 
-export const setImages = (state, images) => {
+export const setImages = ({ state }, { images } = {}) => {
   state.images = images;
 };
 
-export const setTypographyData = (state, typographyData) => {
+export const setTypographyData = ({ state }, { typographyData } = {}) => {
   state.typographyData = typographyData;
 };
 
-export const startDragging = (state) => {
+export const startDragging = ({ state }, _payload = {}) => {
   state.isDragging = true;
 };
 
-export const setDragStartPosition = (state, payload) => {
+export const setDragStartPosition = ({ state }, { payload } = {}) => {
   const { x, y, itemStartX, itemStartY } = payload;
   state.dragStartPosition = {
     x,
@@ -610,28 +610,31 @@ export const setDragStartPosition = (state, payload) => {
   };
 };
 
-export const stopDragging = (state, isDragging) => {
+export const stopDragging = ({ state }, { isDragging } = {}) => {
   state.isDragging = isDragging;
   state.dragStartPosition = undefined;
 };
 
-export const setColorsData = (state, colorsData) => {
+export const setColorsData = ({ state }, { colorsData } = {}) => {
   state.colorsData = colorsData;
 };
 
-export const setFontsData = (state, fontsData) => {
+export const setFontsData = ({ state }, { fontsData } = {}) => {
   state.fontsData = fontsData;
 };
 
-export const setVariablesData = (state, variablesData) => {
+export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
 
-export const setDialogueDefaultValue = (state, { name, fieldValue }) => {
+export const setDialogueDefaultValue = (
+  { state },
+  { name, fieldValue } = {},
+) => {
   state.dialogueDefaultValues[name] = fieldValue;
 };
 
-export const setChoiceDefaultValue = (state, { name, fieldValue }) => {
+export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
   if (name.startsWith("choices[")) {
     const index = parseInt(name.match(/\d+/)[0]);
     state.choiceDefaultValues.choices[index] = fieldValue;

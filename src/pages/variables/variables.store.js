@@ -41,7 +41,7 @@ const createForm = (selectedItem) => ({
           }
         : {
             name: "default",
-            inputType: "inputText",
+            inputType: "input-text",
             description: "Default",
           },
   ],
@@ -60,11 +60,11 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setItems = (state, variablesData) => {
+export const setItems = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 

@@ -1,27 +1,9 @@
-elementName: rvn-sound
-
-viewDataSchema:
-  type: object
-  properties:
-    showAudioPlayer:
-      type: boolean
-      default: false
-    playingSound:
-      type: object
-      default: null
-    audioPlayerLeft:
-      type: number
-      default: 0
-    audioPlayerRight:
-      type: number
-      default: 0
-
 refs:
-  file-explorer:
+  fileExplorer:
     eventListeners:
       data-changed:
         handler: handleDataChanged
-      click-item:
+      item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleFileExplorerDoubleClick
@@ -37,34 +19,32 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  rvn-audio-player:
+  rvnAudioPlayer:
     eventListeners:
       audio-player-close:
         handler: handleAudioPlayerClose
-  detail-form:
+  detailForm:
     eventListeners:
-      extra-event:
+      form-field-event:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
-
-
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
-          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-                  - rvn-file-explorer#fileExplorer .items=flatItems .repositoryTarget=repositoryTarget:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget: null
           - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview .navTitle=title .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .uploadText=uploadText .acceptedFileTypes=acceptedFileTypes:
+              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .context=context .defaultValues=defaultValues:
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
       - $if showAudioPlayer:
           - 'rtgl-view h=72 pos=fix cor=bottom z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
-              - rvn-audio-player fileId=${playingSound.fileId} autoPlay=true .title=playingSound.title:
+              - rvn-audio-player fileId=${playingSound.fileId} autoPlay=true :title=playingSound.title: null

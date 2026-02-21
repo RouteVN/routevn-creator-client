@@ -1,0 +1,6 @@
+componentName: rvn-command-line-next-line
+propsSchema:
+  type: object
+  properties:
+    nextLine:
+      type: object

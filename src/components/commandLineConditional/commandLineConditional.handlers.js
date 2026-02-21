@@ -1,45 +1,46 @@
 export const handleConditionTypeChange = (deps, payload) => {
   const { store, render } = deps;
-  const type = payload._event.target.value;
+  const type = payload._event.detail?.value ?? payload._event.target?.value;
 
-  store.setConditionType(type);
+  store.setConditionType({ type: type });
   render();
 };
 
 export const handleVariableSelect = (deps, payload) => {
   const { store, render } = deps;
-  const variable = payload._event.target.value;
+  const variable = payload._event.detail?.value ?? payload._event.target?.value;
 
-  store.setSelectedVariable(variable);
+  store.setSelectedVariable({ variable: variable });
   render();
 };
 
 export const handleOperatorSelect = (deps, payload) => {
   const { store, render } = deps;
-  const operator = payload._event.target.value;
+  const operator = payload._event.detail?.value ?? payload._event.target?.value;
 
-  store.setOperator(operator);
+  store.setOperator({ operator: operator });
   render();
 };
 
 export const handleValueInput = (deps, payload) => {
   const { store, render } = deps;
-  const value = payload._event.target.value;
+  const value = payload._event.detail?.value ?? payload._event.target?.value;
 
-  store.setComparisonValue(value);
+  store.setComparisonValue({ value: value });
   render();
 };
 
-export const handleSubmitClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+export const handleSubmitClick = (deps) => {
+  const { store, dispatchEvent } = deps;
+  const state = store.getState();
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         conditional: {
-          conditionType: payload._event.detail.conditionType,
-          selectedVariable: payload._event.detail.selectedVariable,
-          operator: payload._event.detail.operator,
-          comparisonValue: payload._event.detail.comparisonValue,
+          conditionType: state.conditionType,
+          selectedVariable: state.selectedVariable,
+          operator: state.operator,
+          comparisonValue: state.comparisonValue,
         },
       },
     }),

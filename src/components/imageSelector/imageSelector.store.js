@@ -9,7 +9,7 @@ export const selectSelectedImageId = ({ state }) => {
   return state.selectedImageId;
 };
 
-export const setSelectedImageId = (state, payload) => {
+export const setSelectedImageId = ({ state }, { payload } = {}) => {
   state.selectedImageId = payload.imageId;
 };
 
@@ -17,7 +17,7 @@ export const selectImages = ({ state }) => {
   return state.images;
 };
 
-export const setImages = (state, images) => {
+export const setImages = ({ state }, { images } = {}) => {
   state.images = images;
 };
 

@@ -1,6 +1,4 @@
-import { createWebPatch } from "@rettangoli/fe";
 import { createGlobalUI } from "@rettangoli/ui";
-import { h } from "snabbdom/build/h";
 
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -94,6 +92,4 @@ const deps = {
   pages: pageDependencies,
 };
 
-const patch = createWebPatch();
-
-export { h, patch, deps };
+export { deps };

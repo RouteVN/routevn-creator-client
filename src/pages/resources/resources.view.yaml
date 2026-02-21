@@ -1,34 +1,27 @@
-elementName: rvn-resources
-
-viewDataSchema:
-  type: object
-  properties: {}
-
 refs:
-  resource-*:
+  resource*:
     eventListeners:
       click:
         required: true
         handler: handleResourcesClick
-
 template:
   - rtgl-view w=f h=f p=md:
-    - rtgl-text s=h2: Resources
-    - rtgl-view d=h g=md:
-      - rtgl-view:
-        - rtgl-text s=h4: Assets
-        - rtgl-view g=sm w=200 p=md:
-          - $for asset, i in assets:
-              - rtgl-view#resource-${asset.id} h=32 av=c bgc=mu h-bgc=ac cur=p p=md w=f:
-                - rtgl-text s=sm: ${asset.label}
-      - rtgl-view:
-        - rtgl-text s=h4: User Interface
-        - rtgl-view g=sm w=200:
-          - $for uiItem, i in ui:
-              - rtgl-view#resource-${uiItem.id} h=32 av=c bgc=mu h-bgc=ac cur=p p=md w=f:
-                - rtgl-text s=sm: ${uiItem.label}
-        - rtgl-text s=h4 mt=md: System Config
-        - rtgl-view g=sm w=200:
-          - $for sysItem, i in system:
-              - rtgl-view#resource-${sysItem.id} h=32 av=c bgc=mu h-bgc=ac cur=p p=md w=f:
-                - rtgl-text s=sm: ${sysItem.label}
+      - rtgl-text s=h2: Resources
+      - rtgl-view d=h g=md:
+          - rtgl-view:
+              - rtgl-text s=h4: Assets
+              - rtgl-view g=sm w=200 p=md:
+                  - $for asset, i in assets:
+                      - rtgl-view#resource${asset.id} h=32 av=c bgc=mu h-bgc=ac cur=pointer p=md w=f:
+                          - rtgl-text s=sm: ${asset.label}
+          - rtgl-view:
+              - rtgl-text s=h4: User Interface
+              - rtgl-view g=sm w=200:
+                  - $for uiItem, i in ui:
+                      - rtgl-view#resource${uiItem.id} h=32 av=c bgc=mu h-bgc=ac cur=pointer p=md w=f:
+                          - rtgl-text s=sm: ${uiItem.label}
+              - rtgl-text s=h4 mt=md: System Config
+              - rtgl-view g=sm w=200:
+                  - $for sysItem, i in system:
+                      - rtgl-view#resource${sysItem.id} h=32 av=c bgc=mu h-bgc=ac cur=pointer p=md w=f:
+                          - rtgl-text s=sm: ${sysItem.label}

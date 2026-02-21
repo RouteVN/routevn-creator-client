@@ -569,7 +569,7 @@ export const createInitialState = () => {
   };
 };
 
-export const updateValueProperty = (state, payload) => {
+export const updateValueProperty = ({ state }, { payload } = {}) => {
   const { value, name } = payload;
   const keys = name.split(".");
 
@@ -599,7 +599,7 @@ export const updateValueProperty = (state, payload) => {
   }
 };
 
-export const openPopoverForm = (state, payload) => {
+export const openPopoverForm = ({ state }, { payload } = {}) => {
   const value = state.values[payload.name];
 
   const popoverFormValues = {
@@ -626,7 +626,7 @@ export const openPopoverForm = (state, payload) => {
   };
 };
 
-export const updatePopoverFormContext = (state, payload) => {
+export const updatePopoverFormContext = ({ state }, { payload } = {}) => {
   state.popover.context = {
     popoverFormValues: payload.values,
   };
@@ -634,7 +634,7 @@ export const updatePopoverFormContext = (state, payload) => {
   state.popover.key = state.popover.key + 1;
 };
 
-export const closePopoverForm = (state) => {
+export const closePopoverForm = ({ state }, _payload = {}) => {
   state.popover = {
     key: 0,
     open: false,
@@ -654,14 +654,14 @@ export const selectPopoverForm = ({ state }) => {
   return state.popover;
 };
 
-export const openImageSelectorDialog = (state, payload) => {
+export const openImageSelectorDialog = ({ state }, { payload } = {}) => {
   state.imageSelectorDialog = {
     open: true,
     name: payload.name,
   };
 };
 
-export const closeImageSelectorDialog = (state) => {
+export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
   state.imageSelectorDialog = {
     open: false,
     name: undefined,
@@ -669,15 +669,15 @@ export const closeImageSelectorDialog = (state) => {
   state.tempSelectedImageId = undefined;
 };
 
-export const setValues = (state, payload) => {
+export const setValues = ({ state }, { payload } = {}) => {
   state.values = payload.values;
 };
 
-export const setTypographyData = (state, typographyData) => {
+export const setTypographyData = ({ state }, { typographyData } = {}) => {
   state.typographyData = typographyData;
 };
 
-export const setVariablesData = (state, variablesData) => {
+export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
 
@@ -685,7 +685,7 @@ export const selectValues = ({ state }) => {
   return state.values;
 };
 
-export const setTempSelectedImageId = (state, payload) => {
+export const setTempSelectedImageId = ({ state }, { payload } = {}) => {
   state.tempSelectedImageId = payload.imageId;
 };
 
@@ -697,7 +697,7 @@ export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
 };
 
-export const selectViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, props: attrs }) => {
   // Transform typography data to options format
   const typographyGroups = toFlatGroups(state.typographyData);
   const typographyItems = typographyGroups.flatMap((group) =>
@@ -732,8 +732,8 @@ export const selectViewData = ({ state, attrs }) => {
   };
 
   const context = {
-    itemType: attrs["item-type"],
-    layoutType: attrs["layout-type"],
+    itemType: attrs.itemType,
+    layoutType: attrs.layoutType,
     typographyItems: typographyItems,
     typographyItemsWithNone: typographyItemsWithNone,
     variableOptionsWithNone: variableOptionsWithNone,

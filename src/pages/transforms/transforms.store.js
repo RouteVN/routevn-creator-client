@@ -45,7 +45,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Name",
         required: true,
       },
@@ -153,19 +153,19 @@ export const createInitialState = () => ({
   },
 });
 
-export const setItems = (state, transformData) => {
+export const setItems = ({ state }, { transformData } = {}) => {
   state.transformData = transformData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -175,7 +175,7 @@ export const toggleGroupCollapse = (state, groupId) => {
 };
 
 // Transform dialog management (moved from groupTransformsView)
-export const openTransformFormDialog = (state, options = {}) => {
+export const openTransformFormDialog = ({ state }, options = {}) => {
   const {
     editMode = false,
     itemId = null,
@@ -224,7 +224,7 @@ export const openTransformFormDialog = (state, options = {}) => {
   state.isDialogOpen = true;
 };
 
-export const closeTransformFormDialog = (state) => {
+export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   // Close dialog
   state.isDialogOpen = false;
 

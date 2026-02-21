@@ -1,82 +1,13 @@
-elementName: rvn-command-line-background
-
-viewDataSchema:
-  type: object
-  properties:
-    mode:
-      type: string
-      enum: ["current", "gallery"]
-    tab:
-      type: string
-      enum: ["image", "layout", "video"]
-    tabs:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          label:
-            type: string
-    breadcrumb:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          label:
-            type: string
-    items:
-      type: array
-    groups:
-      type: array
-    tempSelectedResourceId:
-      type: string
-    dialogueForm:
-      type: object
-      properties:
-        form:
-          type: object
-        defaultValues:
-          type: object
-          properties:
-            background:
-              type: string
-            tween:
-              type: string
-            loop:
-              type: boolean
-
-propsSchema:
-  type: object
-  properties:
-    background:
-      type: object
-      properties:
-        resourceId:
-          type: string
-        resourceType:
-          type: string
-          enum: ["image", "layout", "video"]
-        animations:
-          type: object
-          properties:
-            in:
-              type: string
-        loop:
-          type: boolean
-
 refs:
-  rvn-image-selector:
+  rvnImageSelector:
     eventListeners:
       image-selected:
         handler: handleImageSelected
-  resource-item-*:
+  resourceItem*:
     eventListeners:
       click:
         handler: handleResourceItemClick
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
@@ -84,7 +15,7 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbActionsClick
-  button-select:
+  buttonSelect:
     eventListeners:
       click:
         handler: handleButtonSelectClick
@@ -94,65 +25,63 @@ refs:
         handler: handleTabClick
   form:
     eventListeners:
-      extra-event:
+      form-field-event:
         handler: handleFormExtra
       form-change:
         handler: handleFormInputChange
-  background-image:
+  backgroundImage:
     eventListeners:
       click:
         handler: handleBackgroundImageClick
       contextmenu:
         handler: handleBackgroundImageRightClick
-  base-file-explorer:
+  baseFileExplorer:
     eventListeners:
-      click-item:
+      item-click:
         handler: handleFileExplorerClickItem
-
 template:
   - rtgl-view w=f h=f p=lg:
-      - rtgl-view d=h g=md:
-      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+      - rtgl-view d=h g=md: null
+      - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
       - $if mode == 'current':
-          - rtgl-form#form .form=dialogueForm.form .defaultValues=dialogueForm.defaultValues:
+          - rtgl-form#form :form=dialogueForm.form :defaultValues=dialogueForm.defaultValues:
               - $if selectedResource:
                   - $if selectedResource.resourceType == 'image':
-                      - rvn-file-image#background-image fileId=${selectedResource.fileId} w=355 h=200 slot=background cur=p:
+                      - rvn-file-image#backgroundImage fileId=${selectedResource.fileId} w=355 h=200 slot=background cur=pointer: null
                     $elif selectedResource.resourceType == 'layout':
-                      - rtgl-view#background-image w=355 h=200 bgc=mu av=c ah=c cur=p slot=background bw=xs bc=mu br=sm:
+                      - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background bw=xs bc=mu br=sm:
                           - rtgl-view av=c ah=c:
                               - rtgl-text s=lg: ${selectedResource.name}
                               - rtgl-text s=sm c=mu-fg: ${selectedResource.layoutTypeDisplay}
                     $elif selectedResource.resourceType == 'video':
-                      - rtgl-view#background-image w=355 h=200 cur=p slot=background pos=rel:
-                          - rvn-file-image fileId=${selectedResource.item.thumbnailFileId} w=355 h=200:
+                      - rtgl-view#backgroundImage w=355 h=200 cur=pointer slot=background pos=rel:
+                          - rvn-file-image fileId=${selectedResource.item.thumbnailFileId} w=355 h=200: null
                           - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
-                              - rtgl-icon icon=play s=xl c=fg:
+                              - rtgl-icon icon=play s=xl c=fg: null
                     $else:
-                      - rtgl-view#background-image w=355 h=200 bgc=mu av=c ah=c cur=p slot=background:
+                      - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background:
                           - rtgl-text s=md c=mu-fg: Select Background
                 $else:
-                  - rtgl-view#background-image w=355 h=200 bgc=mu av=c ah=c cur=p slot=background:
+                  - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background:
                       - rtgl-text s=md c=mu-fg: Select Background
-          - rtgl-view flex=1:
+          - rtgl-view flex=1: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#submit-button: Submit
-
+              - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
-          - rtgl-tabs#tabs selected-tab=${tab} .items=tabs:
+          - rtgl-tabs#tabs selected-tab=${tab} :items=tabs: null
           - 'rtgl-view d=h w=f g=lg mt=sm flex=1 style="min-height: 0;"':
               - rtgl-view h=f flex=1 sv:
-                  - rvn-base-file-explorer#base-file-explorer .items=items:
+                  - rvn-base-file-explorer#baseFileExplorer :items=items: null
               - rtgl-view h=f flex=2 sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvn-image-selector:
+                      - rvn-image-selector#rvnImageSelector: null
                     $elif tab == 'layout':
                       - $for group in groups:
                           - rtgl-view g=md:
                               - rtgl-text: ${group.name}
-                              - rtgl-view d=h w=f fw=w g=lg:
+                              - rtgl-view d=h w=f wrap g=lg:
                                   - $for item in group.children:
-                                      - rtgl-view#resource-item-${item.id} w=200 h=150 ah=c av=c bw=${item.bw} bc=${item.bc} br=sm cur=p:
+                                      - rtgl-view#resourceItem${item.id} w=200 h=150 ah=c av=c bw=${item.bw} bc=${item.bc} br=sm cur=pointer:
                                           - rtgl-view av=c ah=c:
                                               - rtgl-text s=md: ${item.name}
                                               - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
@@ -160,10 +89,10 @@ template:
                       - $for group in groups:
                           - rtgl-view g=md:
                               - rtgl-text: ${group.name}
-                              - rtgl-view d=h w=f fw=w g=lg:
+                              - rtgl-view d=h w=f wrap g=lg:
                                   - $for item in group.children:
-                                      - rtgl-view#resource-item-${item.id} w=200 h=150 cur=p g=sm bw=${item.bw} bc=${item.bc} br=sm:
-                                          - rvn-file-image w=200 h=120 fileId=${item.thumbnailFileId}:
+                                      - rtgl-view#resourceItem${item.id} w=200 h=150 cur=pointer g=sm bw=${item.bw} bc=${item.bc} br=sm:
+                                          - rvn-file-image w=200 h=120 fileId=${item.thumbnailFileId}: null
                                           - rtgl-text s=sm ah=c: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#button-select: Select
+              - rtgl-button#buttonSelect: Select

@@ -1,32 +1,9 @@
-elementName: rvn-lines-editor
-
-handleBeforeMountviewDataSchema:
-  type: object
-  properties:
-    selectedLineId:
-      type: string
-    mode:
-      type: string
-
-propsSchema:
-  type: object
-  properties:
-    lines:
-      type: array
-      items:
-        type: object
-        properties:
-    selectedLineId:
-      type: string
-    sectionLineChanges:
-      type: object
-
 refs:
   container:
     eventListeners:
       keydown:
         handler: handleContainerKeyDown
-  line-*:
+  line*:
     eventListeners:
       focus:
         handler: handleOnFocus
@@ -34,36 +11,26 @@ refs:
         handler: handleLineBlur
       input:
         handler: handleOnInput
-      # mousedown:
-      #   handler: handleBlockMouseDown
       mouseup:
         handler: handleLineMouseUp
-      # beforeinput:
-      #   handler: handleBlockBeforeInput
-      # compositionend:
-      #   handler: handleBlockCompositionEnd
-      # compositionstart:
-      #   handler: handleBlockCompositionStart
       keydown:
         handler: handleLineKeyDown
-  preview-*:
+  preview*:
     eventListeners:
       contextmenu:
         handler: handlePreviewRightClick
-
 styles:
-  'div[contenteditable]':
+  div[contenteditable]:
     font-size: 16px
     font-family: inherit
     line-height: 1.5
     word-break: break-word
-  'div[contenteditable]:focus':
+  div[contenteditable]:focus:
     outline: none
-  'rvn-file-image':
+  rvn-file-image:
     pointer-events: none
     user-select: none
-    -webkit-user-drag: none
-
+    '-webkit-user-drag': none
 template:
   - $if ready:
       - 'rtgl-view#container w=f tabindex=0 style="outline: none;"':
@@ -73,74 +40,73 @@ template:
                       - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
                   - rtgl-view wh=24 br=f mr=md:
                       - $if line.characterFileId:
-                          - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f:
+                          - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f: null
                   - rtgl-view d=h w=f:
                       - rtgl-view w=f:
-                          - 'div#line-${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=plaintext-only': ${line.actions.dialogue.content[0].text}
+                          - 'div#line${line.id} style="width: 100%; padding-bottom: 4px;" contenteditable=plaintext-only': ${line.actions.dialogue.content[0].text}
                           - $if line.sectionTransition:
-                              - rtgl-view#preview-sectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
-                                  - rtgl-svg svg="transition" wh=16:
-                                  - rtgl-svg svg="section" wh=16:
-                                  - rtgl-text s=sm: "Transition to section: ${line.transitionTarget}"
+                              - rtgl-view#previewSectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
+                                  - rtgl-svg svg="transition" wh=16: null
+                                  - rtgl-svg svg="section" wh=16: null
+                                  - rtgl-text s=sm: 'Transition to section: ${line.transitionTarget}'
                           - $if line.hasChoices:
-                              - rtgl-view#preview-choice data-type="choice" data-id="${line.id}" d=v:
+                              - rtgl-view#previewChoice data-type="choice" data-id="${line.id}" d=v:
                                   - rtgl-view d=h:
-                                      - rtgl-svg svg="choices" wh=16:
-                                      - rtgl-text s=sm: "Choices:"
+                                      - rtgl-svg svg="choices" wh=16: null
+                                      - rtgl-text s=sm: 'Choices:'
                                   - $for choice in line.choices:
                                       - rtgl-view d=h ml=sm:
-                                          - rtgl-text s=sm: "• ${choice.content}"
-
+                                          - rtgl-text s=sm: • ${choice.content}
                       - rtgl-view d=h:
                           - $if line.background:
-                              - rtgl-view#preview-background data-type="background" data-id="${line.id}" pos=rel mr=sm:
+                              - rtgl-view#previewBackground data-type="background" data-id="${line.id}" pos=rel mr=sm:
                                   - $if line.background.fileId:
-                                      - rvn-file-image w=36 h=24 fileId=${line.background.fileId}:
+                                      - rvn-file-image w=36 h=24 fileId=${line.background.fileId}: null
                                     $else:
                                       - rtgl-view w=36 h=24 av=c ah=c:
-                                          - rtgl-svg svg=image wh=24:
+                                          - rtgl-svg svg=image wh=24: null
                                   - $if line.background.changeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white:
+                                          - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.characterSprites:
-                              - rtgl-view#preview-character data-type="character" data-id="${line.id}" pos=rel mr=sm:
+                              - rtgl-view#previewCharacter data-type="character" data-id="${line.id}" pos=rel mr=sm:
                                   - $if line.characterSprites.items && line.characterSprites.items.length > 0:
                                       - rtgl-view d=h:
                                           - $for sprite in line.characterSprites.items:
-                                              - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f:
+                                              - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f: null
                                     $else:
                                       - rtgl-view w=36 h=24 av=c ah=c:
-                                          - rtgl-svg svg=character wh=24:
+                                          - rtgl-svg svg=character wh=24: null
                                   - $if line.characterSprites.changeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white:
+                                          - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.hasDialogueLayout:
-                              - rtgl-view#preview-dialogue data-type="dialogue" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
-                                  - rtgl-svg svg="dialogue" wh=24:
+                              - rtgl-view#previewDialogue data-type="dialogue" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
+                                  - rtgl-svg svg="dialogue" wh=24: null
                                   - $if line.dialogueChangeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white:
+                                          - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.hasBase:
-                              - rtgl-view#preview-base data-type="base" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
-                                  - rtgl-svg svg="screen" wh=24:
+                              - rtgl-view#previewBase data-type="base" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
+                                  - rtgl-svg svg="screen" wh=24: null
                                   - $if line.baseChangeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white:
+                                          - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.bgm:
-                              - rtgl-view#preview-bgm data-type="bgm" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
-                                  - rtgl-svg svg="music" wh=24:
+                              - rtgl-view#previewBgm data-type="bgm" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
+                                  - rtgl-svg svg="music" wh=24: null
                                   - $if line.bgm.changeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white:
+                                          - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.hasSfx:
-                              - rtgl-view#preview-sfx data-type="sfx" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
-                                  - rtgl-svg svg="audio" wh=24:
+                              - rtgl-view#previewSfx data-type="sfx" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
+                                  - rtgl-svg svg="audio" wh=24: null
                                   - $if line.sfxChangeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white:
+                                          - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.hasSetNextLineConfig:
-                              - rtgl-view#preview-setNextLineConfig data-type="setNextLineConfig" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
-                                  - rtgl-svg svg="settings" wh=24:
+                              - rtgl-view#previewSetNextLineConfig data-type="setNextLineConfig" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
+                                  - rtgl-svg svg="settings" wh=24: null
                                   - $if line.setNextLineConfigChangeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white:
+                                          - rtgl-svg svg=x wh=16 c=white: null

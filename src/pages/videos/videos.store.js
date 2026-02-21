@@ -37,15 +37,15 @@ export const createInitialState = () => ({
   selectedVideo: undefined,
 });
 
-export const setItems = (state, videosData) => {
+export const setItems = ({ state }, { videosData } = {}) => {
   state.videosData = videosData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
@@ -60,16 +60,16 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const setVideoVisible = (state, video) => {
+export const setVideoVisible = ({ state }, { video } = {}) => {
   state.videoVisible = true;
   state.selectedVideo = video;
 };
 
-export const setVideoNotVisible = (state) => {
+export const setVideoNotVisible = ({ state }, _payload = {}) => {
   state.videoVisible = false;
   state.selectedVideo = undefined;
 };

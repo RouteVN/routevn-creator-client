@@ -1,5 +1,15 @@
 import { fromEvent, tap } from "rxjs";
 
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+export const handleBeforeMount = (deps) => {
+  return mountLegacySubscriptions(deps);
+};
+
 const calculateForbiddenTargets = (sourceItem, allItems) => {
   if (!sourceItem) return [];
 
@@ -76,7 +86,7 @@ export const getSelectedItemIndex = (
   const lastItem = sortedItems[sortedItems.length - 1];
   if (mouseY > lastItem.bottom) {
     // Check if the last item belongs to an expanded folder
-    const lastItemId = lastItem.id.replace("item-", "");
+    const lastItemId = lastItem.id.replace("item", "");
     const lastActualItem = items.find((item) => item.id === lastItemId);
 
     if (lastActualItem?.parentId) {
@@ -110,7 +120,7 @@ export const getSelectedItemIndex = (
 
     if (mouseY >= currentItem.top && mouseY <= currentItem.bottom) {
       // Get the actual item data to check its type
-      const itemId = currentItem.id.replace("item-", "");
+      const itemId = currentItem.id.replace("item", "");
       const actualItem = items.find((item) => item.id === itemId);
       const isFolder = actualItem?.type === "folder";
 
@@ -170,13 +180,13 @@ export const getSelectedItemIndex = (
 };
 
 export const handleItemMouseDown = (deps, payload) => {
-  const { store, getRefIds, render, props, attrs } = deps;
+  const { store, refs, render, props, props: attrs } = deps;
 
   if (!attrs.draggable) {
     return;
   }
 
-  const refIds = getRefIds();
+  const refIds = refs;
 
   // Get the container element to calculate relative positions
   const containerRect =
@@ -187,7 +197,7 @@ export const handleItemMouseDown = (deps, payload) => {
     if (!key.startsWith("item-")) {
       return acc;
     }
-    const rect = ref.elm.getBoundingClientRect();
+    const rect = ref.getBoundingClientRect();
     acc[key] = {
       top: rect.top,
       bottom: rect.bottom,
@@ -199,7 +209,7 @@ export const handleItemMouseDown = (deps, payload) => {
     return acc;
   }, {});
 
-  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item", "");
   const sourceItem = props.items.find((item) => item.id === itemId);
   const forbiddenTargetIds = calculateForbiddenTargets(sourceItem, props.items);
   const visibleItems = getVisibleItems(props.items, store.selectCollapsedIds());
@@ -283,9 +293,9 @@ export const handleWindowMouseMove = (deps, payload) => {
   const isForbiddenDrop = forbiddenIndices.includes(result.index);
 
   if (isForbiddenDrop) {
-    store.setTargetDragIndex(-2);
-    store.setTargetDragPosition(0);
-    store.setTargetDropPosition("none");
+    store.setTargetDragIndex({ index: -2 });
+    store.setTargetDragPosition({ position: 0 });
+    store.setTargetDropPosition({ dropPosition: "none" });
     render();
     return;
   }
@@ -308,9 +318,9 @@ export const handleWindowMouseMove = (deps, payload) => {
 
   // If dragging would result in no movement, hide the drag indicators
   if (isNoOpDrop) {
-    store.setTargetDragIndex(-2); // -2 means no drag indicator
-    store.setTargetDragPosition(0);
-    store.setTargetDropPosition("none");
+    store.setTargetDragIndex({ index: -2 }); // -2 means no drag indicator
+    store.setTargetDragPosition({ position: 0 });
+    store.setTargetDropPosition({ dropPosition: "none" });
     render();
     return;
   }
@@ -326,13 +336,13 @@ export const handleWindowMouseMove = (deps, payload) => {
     return;
   }
 
-  store.setTargetDragIndex(result.index);
-  store.setTargetDragPosition(relativePosition);
-  store.setTargetDropPosition(result.dropPosition);
+  store.setTargetDragIndex({ index: result.index });
+  store.setTargetDragPosition({ position: relativePosition });
+  store.setTargetDropPosition({ dropPosition: result.dropPosition });
   render();
 };
 
-export const subscriptions = (deps) => {
+const subscriptions = (deps) => {
   return [
     fromEvent(window, "mousemove", { passive: true }).pipe(
       tap((e) => {
@@ -348,10 +358,10 @@ export const subscriptions = (deps) => {
 };
 
 export const handleContainerContextMenu = (deps, payload) => {
-  const { store, render, props, attrs } = deps;
+  const { store, render, props, props: attrs } = deps;
   payload._event.preventDefault();
 
-  if (!attrs["dropdown-menu"]) {
+  if (!attrs.dropdownMenu) {
     return;
   }
 
@@ -377,14 +387,14 @@ export const handleEmptyMessageClick = (deps, payload) => {
 };
 
 export const handleItemContextMenu = (deps, payload) => {
-  const { store, render, props, attrs } = deps;
+  const { store, render, props, props: attrs } = deps;
   payload._event.preventDefault();
 
-  if (!attrs["dropdown-menu"]) {
+  if (!attrs.dropdownMenu) {
     return;
   }
 
-  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item", "");
 
   // Find the item to get its type
   const item = props.items?.find((item) => item.id === itemId);
@@ -411,14 +421,14 @@ export const handleItemContextMenu = (deps, payload) => {
 
 export const handleItemClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item", "");
 
   // Update selected item
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
 
   dispatchEvent(
-    new CustomEvent("click-item", {
+    new CustomEvent("item-click", {
       detail: {
         id: itemId,
       },
@@ -428,7 +438,7 @@ export const handleItemClick = (deps, payload) => {
 
 export const handleItemDblClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item", "");
 
   dispatchEvent(
     new CustomEvent("dblclick-item", {
@@ -443,15 +453,15 @@ export const handlePageItemClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
 };
 
 export const handleArrowClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.stopPropagation(); // Prevent triggering item click
-  const folderId = payload._event.currentTarget.id.replace("arrow-", "");
-  store.toggleFolderExpand(folderId);
+  const folderId = payload._event.currentTarget.id.replace("arrow", "");
+  store.toggleFolderExpand({ folderId: folderId });
   render();
 };
 
@@ -505,7 +515,7 @@ export const handleFormActionClick = (deps, payload) => {
 
   // Extract action and values from detail (form structure may vary)
   const action = detail.actionId;
-  const values = detail.formValues;
+  const values = detail.values;
 
   if (action === "cancel") {
     store.hidePopover();

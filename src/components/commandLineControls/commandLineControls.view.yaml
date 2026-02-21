@@ -1,45 +1,5 @@
-elementName: rvn-command-line-controls
-
-viewDataSchema:
-  type: object
-  properties:
-    breadcrumb:
-      type: array
-      items:
-        type: object
-        properties:
-          text:
-            type: string
-          action:
-            type: string
-    disableUserClick:
-      type: boolean
-    autoPlay:
-      type: boolean
-    autoPlayDelay:
-      type: number
-    submitDisabled:
-      type: boolean
-    form:
-      type: object
-    defaultValues:
-      type: object
-
-propsSchema:
-  type: object
-  properties:
-    controls:
-      type: object
-      properties:
-        disableUserClick:
-          type: boolean
-        autoPlay:
-          type: boolean
-        autoPlayDelay:
-          type: number
-
 refs:
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
@@ -47,18 +7,15 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
-  controls-form:
+  controlsForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-
-      - rtgl-form#controls-form .defaultValues=defaultValues .form=form w=f:
-
-      - rtgl-view flex=1:
+          - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+      - rtgl-form#controlsForm :defaultValues=defaultValues :form=form w=f: null
+      - rtgl-view flex=1: null
       - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button dis=${submitDisabled}: Submit
+          - rtgl-button#submitButton disabled=${submitDisabled}: Submit

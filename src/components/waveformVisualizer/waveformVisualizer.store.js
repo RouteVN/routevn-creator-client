@@ -3,11 +3,11 @@ export const createInitialState = () => ({
   isLoading: true,
 });
 
-export const setLoading = (state, isLoading) => {
+export const setLoading = ({ state }, { isLoading } = {}) => {
   state.isLoading = isLoading;
 };
 
-export const setWaveformData = (state, data) => {
+export const setWaveformData = ({ state }, { data } = {}) => {
   // Validate waveform data structure
   if (data && !data.amplitudes) {
     throw new Error("Invalid waveform data: missing amplitudes field");
@@ -16,7 +16,7 @@ export const setWaveformData = (state, data) => {
   state.waveformData = data;
 };
 
-export const selectViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, props: attrs }) => {
   return {
     isLoading: state.isLoading,
     w: attrs.w || "250",

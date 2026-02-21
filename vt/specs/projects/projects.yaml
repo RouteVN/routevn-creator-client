@@ -1,3 +1,10 @@
 ---
 title: Initial Project Page Load
+url: /projects
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
 ---

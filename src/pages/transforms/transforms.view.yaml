@@ -1,29 +1,9 @@
-elementName: rvn-transforms
-
-viewDataSchema:
-  type: object
-  properties:
-    searchQuery:
-      type: string
-    isDialogOpen:
-      type: boolean
-    editMode:
-      type: boolean
-    editItemId:
-      type: string
-    dialogDefaultValues:
-      type: object
-    transformForm:
-      type: object
-    collapsedIds:
-      type: array
-
 refs:
-  file-explorer:
+  fileExplorer:
     eventListeners:
       data-changed:
         handler: handleDataChanged
-      click-item:
+      item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleTransformItemDoubleClick
@@ -39,45 +19,44 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  detail-form:
+  detailForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-  transform-dialog:
+  transformDialog:
     eventListeners:
       close:
         handler: handleTransformDialogClose
-  transform-form:
+  transformForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleTransformFormActionClick
       form-change:
         handler: handleTransformFormChange
-
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
-          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-                  - rvn-file-explorer#fileExplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview .navTitle=title .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery .collapsedIds=collapsedIds .emptyMessage="No transforms found" .uploadText="Upload Files" .acceptedFileTypes=[] .items=items:
+              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :collapsedIds=collapsedIds :emptyMessage="No transforms found" :uploadText="Upload Files" :acceptedFileTypes=[] :items=items: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rvn-transform-thumbnail .item=selectedItem w=f h=180:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
+                      - rvn-transform-thumbnail :item=selectedItem w=f h=180: null
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :defaultValues=defaultValues: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: "No selection"
-  - "rtgl-dialog#transform-dialog ?open=${isDialogOpen} s=lg":
-      - 'rtgl-view slot="content" d=h ah=c g=lg w=f':
-          - "$if isDialogOpen":
+                          - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dialog#transformDialog ?open=${isDialogOpen} s=lg:
+      - rtgl-view slot="content" d=h ah=c g=lg w=f:
+          - $if isDialogOpen:
               - rtgl-view flex=4:
-                  - rtgl-form#transform-form .defaultValues=dialogDefaultValues .form=transformForm w=f:
+                  - rtgl-form#transformForm :defaultValues=dialogDefaultValues :form=transformForm w=f: null
               - rtgl-view flex=6:
                   - rtgl-text: Preview
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                       - rtgl-view pos=abs cor=full:
-                          - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"':
+                          - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"': null

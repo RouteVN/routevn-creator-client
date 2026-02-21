@@ -1,83 +1,64 @@
-elementName: rvn-group-variables-view
-
-viewDataSchema:
-  type: object
-  properties:
-    searchQuery:
-      type: string
-
-propsSchema:
-  type: object
-  properties:
-    flatGroups:
-      type: array
-      description: Array of variable groups to display
-    selectedItemId:
-      type: string
-      description: ID of currently selected item
-
 refs:
-  search-input:
+  searchInput:
     eventListeners:
-      input-change:
+      value-input:
         handler: handleSearchInput
-  group-*:
+  group*:
     eventListeners:
       click:
         handler: handleGroupClick
-  variable-item-*:
+  variableItem*:
     eventListeners:
       click:
         handler: handleVariableItemClick
-  add-variable-button-*:
+  addVariableButton*:
     eventListeners:
       click:
         handler: handleAddVariableClick
-  add-variable-empty-*:
+  addVariableEmpty*:
     eventListeners:
       click:
         handler: handleAddVariableClick
-  add-variable-dialog:
+  addVariableDialog:
     eventListeners:
       close:
         handler: handleCloseDialog
-  variable-form:
+  variableForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleFormActionClick
       form-change:
         handler: handleDialogFormChange
-  row-*:
+  row*:
     eventListeners:
       click:
         handler: handleRowClick
       contextmenu:
         handler: handleRowContextMenu
-  context-menu:
+  contextMenu:
     eventListeners:
       close:
         handler: handleCloseContextMenu
-      click-item:
+      item-click:
         handler: handleContextMenuClickItem
-
 template:
   - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
       - rtgl-view g=lg w=f h=f:
           - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-              - rtgl-input#search-input s=sm placeholder="Search variables..." value=${searchQuery}:
+              - rtgl-input#searchInput s=sm placeholder="Search variables..." value=${searchQuery}: null
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md:
-                      - 'rtgl-view#group-${group.id} d=h w=f av=c bgc=bg cur=p style="position: sticky; top: 48px;"':
+                      - 'rtgl-view#group${group.id} d=h w=f av=c bgc=bg cur=pointer style="position: sticky; top: 48px;"':
                           - rtgl-view w=f d=h av=c:
                               - $if group.isCollapsed:
-                                  - rtgl-svg wh=16 svg=folderArrowRight:
+                                  - rtgl-svg wh=16 svg=folderArrowRight: null
                                 $else:
-                                  - rtgl-svg wh=16 svg=folderArrowDown:
+                                  - rtgl-svg wh=16 svg=folderArrowDown: null
                               - rtgl-view d=h av=c g=md:
-                                  - rtgl-svg wh=16 svg=folder:
+                                  - rtgl-svg wh=16 svg=folder: null
                                   - rtgl-text: ${group.fullLabel}
-                          - rtgl-button#add-variable-button-${group.id} s=sm flex=1 ip=s icon=plus: Add
+                          - rtgl-button#addVariableButton${group.id} s=sm flex=1 ip=s icon=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f mb=md p=sm:
                               - $if group.hasChildren:
@@ -93,7 +74,7 @@ template:
                                               - rtgl-text c=mu-fg s=sm: Default
                                       - $for item in group.children:
                                           - $if item.isSelected:
-                                              - rtgl-view#row-${item.id} d=h w=f pv=md bwb=xs cur=p g=md bgc=mu br=sm:
+                                              - rtgl-view#row${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu br=sm:
                                                   - rtgl-view flex=2:
                                                       - rtgl-text s=sm: ${item.name}
                                                   - rtgl-view flex=1:
@@ -103,7 +84,7 @@ template:
                                                   - rtgl-view flex=1:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
-                                              - rtgl-view#row-${item.id} d=h w=f pv=md bwb=xs cur=p g=md:
+                                              - rtgl-view#row${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md:
                                                   - rtgl-view flex=2:
                                                       - rtgl-text s=sm: ${item.name}
                                                   - rtgl-view flex=1:
@@ -113,8 +94,8 @@ template:
                                                   - rtgl-view flex=1:
                                                       - rtgl-text s=sm: ${item.default}
                                 $else:
-                                  - "rtgl-view#add-variable-empty-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
-                                      - rtgl-svg svg=plus wh=24:
+                                  - rtgl-view#addVariableEmpty${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
+                                      - rtgl-svg svg=plus wh=24: null
                                       - rtgl-text: Add Variable
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
@@ -122,13 +103,10 @@ template:
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
-                  - rtgl-view h=64:
-
+                  - rtgl-view h=64: null
           - $if flatGroups.length > 0:
-              - rtgl-view h=33vh:
-
-  - rtgl-dialog#add-variable-dialog s=md ?open=${isDialogOpen}:
+              - rtgl-view h=33vh: null
+  - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
       - rtgl-view slot=content g=md:
-          - rtgl-form#variable-form key=${isDialogOpen}-${defaultValues.type}-${defaultValues.default} .defaultValues=defaultValues .form=form w=f .context=context:
-
-  - rtgl-dropdown-menu#context-menu .items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}:
+          - rtgl-form#variableForm key=${isDialogOpen}-${defaultValues.type}-${defaultValues.default} :defaultValues=defaultValues :form=form w=f :context=context: null
+  - rtgl-dropdown-menu#contextMenu :items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

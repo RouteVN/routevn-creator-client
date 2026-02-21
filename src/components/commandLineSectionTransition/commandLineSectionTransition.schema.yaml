@@ -1,0 +1,15 @@
+componentName: rvn-command-line-section-transition
+propsSchema:
+  type: object
+  properties:
+    sectionTransition:
+      type: object
+      properties:
+        sceneId:
+          type: string
+        sectionId:
+          type: string
+        animation:
+          type: string
+    currentSceneId:
+      type: string

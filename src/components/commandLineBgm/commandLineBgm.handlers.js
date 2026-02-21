@@ -25,7 +25,7 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
-    placement: "bottom-start",
+    place: "bs",
   });
 
   if (result.item.key === "remove") {
@@ -77,7 +77,7 @@ export const handleFormChange = (deps, payload) => {
   store.setBgm({
     bgm: {
       resourceId: store.selectBgm().resourceId,
-      ...event.detail.formValues,
+      ...event.detail.values,
     },
   });
   render();
@@ -86,7 +86,7 @@ export const handleFormChange = (deps, payload) => {
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
   const resourceId = payload._event.currentTarget.id.replace(
-    "resource-item-",
+    "resourceItem",
     "",
   );
 

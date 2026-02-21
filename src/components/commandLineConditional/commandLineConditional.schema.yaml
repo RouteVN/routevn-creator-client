@@ -1,0 +1,4 @@
+componentName: rvn-command-line-conditional
+propsSchema:
+  type: object
+  properties: {}

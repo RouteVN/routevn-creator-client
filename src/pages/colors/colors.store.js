@@ -48,34 +48,34 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setItems = (state, colorsData) => {
+export const setItems = ({ state }, { colorsData } = {}) => {
   state.colorsData = colorsData;
 };
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const openEditDialog = (state, itemId) => {
+export const openEditDialog = ({ state }, { itemId } = {}) => {
   state.isEditDialogOpen = true;
   state.editItemId = itemId;
 };
 
-export const closeEditDialog = (state) => {
+export const closeEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = false;
   state.editItemId = null;
 };
 
-export const openAddDialog = (state, groupId) => {
+export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;
   state.targetGroupId = groupId;
 };
 
-export const closeAddDialog = (state) => {
+export const closeAddDialog = ({ state }, _payload = {}) => {
   state.isAddDialogOpen = false;
   state.targetGroupId = null;
   state.addDefaultValues = {
@@ -84,11 +84,11 @@ export const closeAddDialog = (state) => {
   };
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -177,13 +177,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "hex",
-        inputType: "colorPicker",
+        inputType: "color-picker",
         label: "Hex Value",
         required: true,
       },
@@ -213,13 +213,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        inputType: "input-text",
         label: "Color Name",
         required: true,
       },
       {
         name: "hex",
-        inputType: "colorPicker",
+        inputType: "color-picker",
         label: "Hex Value",
         required: true,
       },

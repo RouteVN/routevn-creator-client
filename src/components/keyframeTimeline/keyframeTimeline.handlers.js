@@ -3,7 +3,7 @@ export const handleMouseMove = (deps, payload) => {
   const rect = payload._event.currentTarget.getBoundingClientRect();
   const x = payload._event.clientX - rect.left;
 
-  store.setMousePosition(x);
+  store.setMousePosition({ x: x });
   render();
 };
 
@@ -15,7 +15,7 @@ export const handleMouseLeave = (deps, payload) => {
 
 export const handleAddKeyframe = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace("add-keyframe-", "");
+  const property = payload._event.currentTarget.id.replace("addKeyframe", "");
 
   // Dispatch event to parent to add keyframe - let the parent get the context
   dispatchEvent(
@@ -33,9 +33,8 @@ export const handleAddKeyframe = (deps, payload) => {
 
 export const handleKeyframeRightClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const [property, index] = payload._event.currentTarget.id
-    .replace("keyframe-", "")
-    .split("-");
+  const property = payload._event.currentTarget.dataset.property;
+  const index = payload._event.currentTarget.dataset.index;
 
   payload._event.preventDefault();
 
@@ -56,16 +55,13 @@ export const handleKeyframeRightClick = (deps, payload) => {
 
 export const handlePropertyNameRightClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace(
-    "property-name-",
-    "",
-  );
+  const property = payload._event.currentTarget.id.replace("propertyName", "");
 
   payload._event.preventDefault();
 
   // Dispatch event to parent to handle property right-click
   dispatchEvent(
-    new CustomEvent("property-name-right-click", {
+    new CustomEvent("propertyNameright-click", {
       detail: {
         property,
         x: payload._event.clientX,
@@ -79,13 +75,10 @@ export const handlePropertyNameRightClick = (deps, payload) => {
 
 export const handleInitialValueClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const property = payload._event.currentTarget.id.replace(
-    "initial-value-",
-    "",
-  );
+  const property = payload._event.currentTarget.id.replace("initialValue", "");
 
   dispatchEvent(
-    new CustomEvent("initial-value-click", {
+    new CustomEvent("initialValueclick", {
       detail: {
         property,
         x: payload._event.clientX,

@@ -3,23 +3,23 @@ import { resetState } from "./tweens.constants";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, render, graphicsService, getRefIds } = deps;
+  const { store, projectService, render, graphicsService, refs } = deps;
   await projectService.ensureRepository();
   const { tweens } = projectService.getState();
-  store.setItems(tweens || { tree: [], items: {} });
+  store.setItems({ tweensData: tweens || { tree: [], items: {} } });
 
   // Initialize graphicsService if canvas is present
-  const { canvas } = getRefIds();
+  const { canvas } = refs;
   if (
     graphicsService &&
     canvas &&
-    canvas.elm &&
+    canvas &&
     !store.selectIsGraphicsServiceInitialized()
   ) {
     await graphicsService.init({
-      canvas: canvas.elm,
+      canvas: canvas,
     });
-    store.setGraphicsServiceInitialized(true);
+    store.setGraphicsServiceInitialized({ initialized: true });
   }
 
   render();
@@ -31,7 +31,7 @@ export const handleDataChanged = async (deps) => {
 
   const tweenData = tweens || { tree: [], items: {} };
 
-  store.setItems(tweenData);
+  store.setItems({ tweensData: tweenData });
   render();
 };
 
@@ -39,20 +39,20 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
   const { id } = payload._event.detail;
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
   render();
 };
 
 export const handleAnimationItemClick = (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
 };
 
@@ -80,7 +80,7 @@ export const handleAnimationCreated = async (deps, payload) => {
   });
 
   const { tweens } = projectService.getState();
-  store.setItems(tweens);
+  store.setItems({ tweensData: tweens });
   render();
 };
 
@@ -104,7 +104,7 @@ export const handleAnimationUpdated = async (deps, payload) => {
   });
 
   const { tweens } = projectService.getState();
-  store.setItems(tweens);
+  store.setItems({ tweensData: tweens });
   render();
 };
 
@@ -115,7 +115,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "tweens",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -125,7 +125,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { tweens } = projectService.getState();
-  store.setItems(tweens);
+  store.setItems({ tweensData: tweens });
   render();
 };
 
@@ -133,14 +133,14 @@ export const handleFormChange = async (deps, payload) => {
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail.value || "";
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
 export const handleAddAnimationClick = async (deps, payload) => {
   const { store, render, graphicsService } = deps;
   const { groupId } = payload._event.detail;
-  store.setTargetGroupId(groupId);
+  store.setTargetGroupId({ groupId: groupId });
   store.openDialog();
   if (graphicsService) {
     graphicsService.render(resetState);
@@ -202,7 +202,7 @@ export const handleFormActionClick = (deps, payload) => {
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
     const formState = store.selectFormState();
     const { targetGroupId, editItemId, editMode, properties } = formState;
 
@@ -248,7 +248,7 @@ export const handleAddPropertiesClick = (deps, payload) => {
 export const handleAddPropertyFormSubmit = (deps, payload) => {
   const { store, render } = deps;
   const { property, initialValue, useInitialValue } =
-    payload._event.detail.formValues;
+    payload._event.detail.values;
 
   const defaultValues = {
     x: 960,
@@ -295,7 +295,7 @@ export const handleAddKeyframeFormSubmit = (deps, payload) => {
     payload: { property, index },
   } = store.selectPopover();
 
-  const formValues = payload._event.detail.formValues;
+  const formValues = payload._event.detail.values;
 
   if (formValues.duration < 1) {
     formValues.duration = 1;
@@ -396,7 +396,7 @@ export const handleEditKeyframeFormSubmit = (deps, payload) => {
     payload: { property, index },
   } = store.selectPopover();
 
-  const formValues = payload._event.detail.formValues;
+  const formValues = payload._event.detail.values;
 
   if (formValues.duration < 1) {
     formValues.duration = 1;
@@ -427,21 +427,21 @@ export const handleInitialValueClick = (deps, payload) => {
 export const handleAddPropertyFormChange = (deps, payload) => {
   const { store, render } = deps;
 
-  const { name, fieldValue } = payload._event.detail;
+  const { name, value: fieldValue } = payload._event.detail;
 
   const currentFormValues = store.selectPopover().formValues || {};
   const updatedFormValues = {
     ...currentFormValues,
     [name]: fieldValue,
   };
-  store.updatePopoverFormValues(updatedFormValues);
+  store.updatePopoverFormValues({ formValues: updatedFormValues });
   render();
 };
 
 export const handleEditInitialValueFormChange = (deps, payload) => {
   const { store, render } = deps;
 
-  const { name, fieldValue } = payload._event.detail;
+  const { name, value: fieldValue } = payload._event.detail;
 
   const currentFormValues = store.selectPopover().formValues || {};
   const updatedFormValues = {
@@ -449,7 +449,7 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
     [name]: fieldValue,
   };
 
-  store.updatePopoverFormValues(updatedFormValues);
+  store.updatePopoverFormValues({ formValues: updatedFormValues });
   render();
 };
 
@@ -474,7 +474,7 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
     payload: { property },
   } = store.selectPopover();
 
-  const { initialValue, valueSource } = payload._event.detail.formValues;
+  const { initialValue, valueSource } = payload._event.detail.values;
 
   const defaultValues = {
     x: 960,
@@ -530,6 +530,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ tweensData: data });
   render();
 };

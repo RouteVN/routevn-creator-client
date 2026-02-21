@@ -1,0 +1,14 @@
+componentName: rvn-system-actions
+propsSchema:
+  type: object
+  properties:
+    actions:
+      type: object
+    selectedLineId:
+      type: string
+    selectedLine:
+      type: object
+    currentSceneId:
+      type: string
+    presentationState:
+      type: object

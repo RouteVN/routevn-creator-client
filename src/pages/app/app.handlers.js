@@ -1,17 +1,25 @@
 import { filter, fromEvent, tap } from "rxjs";
 
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
 export const handleBeforeMount = (deps) => {
+  const cleanupSubscriptions = mountLegacySubscriptions(deps);
   const { appService } = deps;
   const currentPath = appService.getPath();
 
   if (currentPath === "/") {
     appService.navigate("/projects");
-    deps.store.setCurrentRoute("/projects");
+    deps.store.setCurrentRoute({ route: "/projects" });
   } else {
-    deps.store.setCurrentRoute(currentPath);
+    deps.store.setCurrentRoute({ route: currentPath });
   }
 
   deps.render();
+  return cleanupSubscriptions;
 };
 
 export const handleAfterMount = (deps) => {
@@ -23,14 +31,14 @@ export const handleAfterMount = (deps) => {
 
 export const handleRedirect = (deps, payload) => {
   const { appService } = deps;
-  deps.store.setCurrentRoute(payload.path);
+  deps.store.setCurrentRoute({ route: payload.path });
   appService.redirect(payload.path, payload.payload);
   deps.render();
 };
 
 export const handleWindowPop = (deps) => {
   const { appService } = deps;
-  deps.store.setCurrentRoute(appService.getPath());
+  deps.store.setCurrentRoute({ route: appService.getPath() });
   deps.render();
 };
 
@@ -72,7 +80,7 @@ export const handleUpdateColor = async (deps, payload) => {
   });
 };
 
-export const subscriptions = (deps) => {
+const subscriptions = (deps) => {
   const { subject } = deps;
   return [
     subject.pipe(

@@ -7,24 +7,20 @@ ui:
     outfile: static/public/rtgl-icons.js
 
 fe:
-   dirs: ['src/components', 'src/pages'] # directories that contain components
-   setup: 'src/setup.js' # path to setup.js file
-   outfile: '_site/public/main.js' # output this is separate from rettangoli file
+  dirs: ["src/components", "src/pages"] # directories that contain components
+  setup: "src/setup.web.js" # path to setup file
+  outfile: "_site/public/main.js" # output this is separate from rettangoli file
   #  watchPort: 3001
 
 # all visual testing configuration
 vt:
-  url: "http://localhost:3001"
-  path: 'vt'
-  name: "Rettangoli UI Visual Tests"
-  description: "Visual testing for Rettangoli UI components"
+  path: "vt"
+  url: "http://127.0.0.1:3001"
+  service:
+    start: "python3 -m http.server 3001 --directory _site"
+  name: "RouteVN Creator Visual Tests"
+  description: "Visual testing for RouteVN Creator pages"
   sections:
-    - title: "Components"
-      type: "groupLabel"
-      items:
-        - title: "Command Line Actions"
-          files: "examplescomponents/button"
-          description: "Button component tests"
-        - title: "Command Line Background"
-          files: "examplescomponents/image"
-          description: "Image component tests"
+    - title: "Projects"
+      files: "projects"
+      description: "Project list and creation flow visual tests"

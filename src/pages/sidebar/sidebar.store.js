@@ -49,7 +49,7 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setProjectImageUrl = (state, imageUrl) => {
+export const setProjectImageUrl = ({ state }, { imageUrl } = {}) => {
   state.header.image.src = imageUrl;
 };
 

@@ -1,0 +1,12 @@
+componentName: rvn-resource-types
+propsSchema:
+  type: object
+  properties:
+    resourceCategory:
+      type: string
+      enum:
+        - assets
+        - userInterface
+        - systemConfig
+    selectedResourceId:
+      type: string

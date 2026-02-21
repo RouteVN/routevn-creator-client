@@ -1,0 +1,4 @@
+componentName: rvn-typography
+propsSchema:
+  type: object
+  properties: {}

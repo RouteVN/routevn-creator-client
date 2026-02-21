@@ -1,64 +1,19 @@
-elementName: rvn-command-line-update-variable
-
-propsSchema:
-  type: object
-  properties:
-    updateVariable:
-      type: object
-      properties:
-        id:
-          type: string
-        operations:
-          type: array
-
-viewDataSchema:
-  type: object
-  properties:
-    initiated:
-      type: boolean
-    mode:
-      type: string
-    breadcrumb:
-      type: array
-    actionId:
-      type: string
-    operations:
-      type: array
-    variableOptions:
-      type: array
-    operationOptions:
-      type: array
-    booleanOptions:
-      type: array
-    showValueField:
-      type: boolean
-    valueInputType:
-      type: string
-    tempOperation:
-      type: object
-    dropdownMenu:
-      type: object
-    hasOperations:
-      type: boolean
-    canSaveOperation:
-      type: boolean
-
 refs:
-  add-operation-button:
+  addOperationButton:
     eventListeners:
       click:
         handler: handleAddOperationClick
-  operation-*:
+  operation*:
     eventListeners:
       click:
         handler: handleOperationClick
       contextmenu:
         handler: handleOperationContextMenu
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
-  save-operation-button:
+  saveOperationButton:
     eventListeners:
       click:
         handler: handleSaveOperationClick
@@ -66,71 +21,63 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcrumbClick
-  variable-select:
+  variableSelect:
     eventListeners:
-      option-selected:
+      value-change:
         handler: handleVariableSelectChange
-  operation-select:
+  operationSelect:
     eventListeners:
-      option-selected:
+      value-change:
         handler: handleOperationSelectChange
-  value-input:
+  valueInput:
     eventListeners:
-      input:
+      value-input:
         handler: handleValueInputChange
-  boolean-select:
+  booleanSelect:
     eventListeners:
-      option-selected:
+      value-change:
         handler: handleBooleanSelectChange
-  dropdown-menu:
+  dropdownMenu:
     eventListeners:
       close:
         handler: handleDropdownMenuClose
-      click-item:
+      item-click:
         handler: handleDropdownMenuClickItem
-
 template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current' && initiated:
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcrumb .items=breadcrumb:
+              - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
           - rtgl-view g=md mt=md w=f:
               - $for operation in operations:
-                  - rtgl-view#operation-${operation.id} cur=p d=h av=c ah=c g=md p=md bgc=mu h-bgc=ac br=md w=f:
-                      - rtgl-text s=sm: "${operation.variableName}:"
-                      - rtgl-text s=sm c=pr: "${operation.opLabel}"
+                  - rtgl-view#operation${operation.id} cur=pointer d=h av=c ah=c g=md p=md bgc=mu h-bgc=ac br=md w=f:
+                      - rtgl-text s=sm: '${operation.variableName}:'
+                      - rtgl-text s=sm c=pr: ${operation.opLabel}
                       - $if operation.op != 'toggle':
-                          - rtgl-text s=sm: "${operation.displayValue}"
-              - rtgl-button#add-operation-button v=ol w=f mt=md: + Add Operation
-          - rtgl-view flex=1:
+                          - rtgl-text s=sm: ${operation.displayValue}
+              - rtgl-button#addOperationButton v=ol w=f mt=md: + Add Operation
+          - rtgl-view flex=1: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#submit-button ?disabled=${!hasOperations}: Submit
-
+              - rtgl-button#submitButton ?disabled=${!hasOperations}: Submit
       - $if mode == 'edit' && initiated:
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcrumb .items=breadcrumb:
+              - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
           - rtgl-view g=md mt=md w=f:
               - rtgl-text s=sm c=mu-fg mb=sm: Variable
-              - rtgl-select#variable-select w=f .selectedValue=tempOperation.variableId .options=variableOptions placeholder="Choose a variable...":
-
+              - rtgl-select#variableSelect w=f :selectedValue=tempOperation.variableId :options=variableOptions placeholder="Choose a variable...": null
               - $if tempOperation.variableId:
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Operation
-                  - rtgl-select#operation-select w=f .selectedValue=tempOperation.op .options=operationOptions placeholder="Choose an operation...":
-
+                  - rtgl-select#operationSelect w=f :selectedValue=tempOperation.op :options=operationOptions placeholder="Choose an operation...": null
               - $if showValueField && valueInputType == 'number':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
-                  - rtgl-input#value-input type=number w=f placeholder="Enter number..." value=${tempOperation.value}:
-
+                  - rtgl-input#valueInput type=number w=f placeholder="Enter number..." value=${tempOperation.value}: null
               - $if showValueField && valueInputType == 'boolean':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
-                  - rtgl-select#boolean-select w=f .selectedValue=tempOperation.booleanValue .options=booleanOptions:
-
+                  - rtgl-select#booleanSelect w=f :selectedValue=tempOperation.booleanValue :options=booleanOptions: null
               - $if showValueField && valueInputType == 'string':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
-                  - rtgl-input#value-input w=f placeholder="Enter text..." value=${tempOperation.value}:
-
-          - rtgl-view flex=1:
+                  - rtgl-input#valueInput w=f placeholder="Enter text..." value=${tempOperation.value}: null
+          - rtgl-view flex=1: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#save-operation-button ?disabled=${!canSaveOperation}: Save Operation
-
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+              - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: Save Operation
+  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

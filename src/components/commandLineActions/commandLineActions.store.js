@@ -109,8 +109,8 @@ const PRESENTATION_ACTIONS = [
 
 export const createInitialState = () => ({});
 
-export const selectViewData = ({ attrs }) => {
-  const actionsType = attrs?.["actions-type"];
+export const selectViewData = ({ props: attrs }) => {
+  const actionsType = attrs?.actionsType;
   const items = {
     system: SYSTEM_ACTIONS,
     presentation: PRESENTATION_ACTIONS,
@@ -121,7 +121,7 @@ export const selectViewData = ({ attrs }) => {
   };
 };
 
-export const selectItems = ({ attrs }) => {
-  const actionsType = attrs?.["actions-type"];
+export const selectItems = ({ props: attrs }) => {
+  const actionsType = attrs?.actionsType;
   return actionsType === "system" ? SYSTEM_ACTIONS : PRESENTATION_ACTIONS;
 };

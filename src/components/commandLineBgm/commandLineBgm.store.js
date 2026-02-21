@@ -39,19 +39,19 @@ export const createInitialState = () => ({
   },
 });
 
-export const setBgmAudio = (state, payload) => {
+export const setBgmAudio = ({ state }, { payload } = {}) => {
   state.bgm.resourceId = payload.resourceId;
 };
 
-export const setBgm = (state, payload) => {
+export const setBgm = ({ state }, { payload } = {}) => {
   state.bgm = payload.bgm;
 };
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
-export const setRepositoryState = (state, payload) => {
+export const setRepositoryState = ({ state }, { payload } = {}) => {
   state.items = payload.sounds;
 };
 
@@ -63,7 +63,7 @@ export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-export const setTempSelectedResource = (state, payload) => {
+export const setTempSelectedResource = ({ state }, { payload } = {}) => {
   state.tempSelectedResourceId = payload.resourceId;
 };
 

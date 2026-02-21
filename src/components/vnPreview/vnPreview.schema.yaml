@@ -1,0 +1,4 @@
+componentName: rvn-vn-preview
+propsSchema:
+  type: object
+  properties: {}

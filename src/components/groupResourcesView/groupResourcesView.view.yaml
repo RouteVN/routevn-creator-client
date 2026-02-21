@@ -1,110 +1,45 @@
-elementName: rvn-group-resources-view
-
-viewDataSchema:
-  type: object
-  properties:
-    resourceType:
-      type: string
-    searchQuery:
-      type: string
-    imageHeight:
-      type: number
-    maxWidth:
-      type: number
-    navTitle:
-      type: string
-
-propsSchema:
-  type: object
-  properties:
-    resourceType:
-      type: string
-      description: Type of resource (fonts, images, audio, etc.)
-    flatGroups:
-      type: array
-      description: Array of resource groups to display (pre-filtered and processed by parent)
-    selectedItemId:
-      type: string
-      description: ID of currently selected item
-    searchQuery:
-      type: string
-      description: Current search query (controlled by parent)
-    collapsedIds:
-      type: array
-      description: Array of collapsed group IDs (controlled by parent)
-    navTitle:
-      type: string
-      description: Optional title to display in the header
-    uploadText:
-      type: string
-      description: Text to display in upload zone
-    acceptedFileTypes:
-      type: array
-      description: Array of accepted file extensions
-    searchPlaceholder:
-      type: string
-      description: Placeholder text for search input
-    emptyMessage:
-      type: string
-      description: Message to show when no items found
-    imageHeight:
-      type: number
-      description: Height for image items (for zoom control)
-    maxWidth:
-      type: number
-      description: Max width for image items (for zoom control)
-    zoomLevel:
-      type: number
-      description: Current zoom level for zoom controls
-    showZoomControls:
-      type: boolean
-      description: Whether to show zoom controls
-    backUrl:
-      type: string
-      description: URL to navigate back to when back button is clicked
-
 refs:
-  search-input:
+  searchInput:
     eventListeners:
-      input-change:
+      value-input:
         handler: handleSearchInput
-  context-menu:
+  contextMenu:
     eventListeners:
       close:
         handler: handleCloseContextMenu
-      click-item:
+      item-click:
         handler: handleContextMenuClickItem
-  zoom-slider:
+  zoomSlider:
     eventListeners:
       change:
         handler: handleZoomChange
-      input-change:
+      input:
         handler: handleZoomChange
-  zoom-out:
+  zoomOut:
     eventListeners:
       click:
         handler: handleZoomOut
-  zoom-in:
+  zoomIn:
     eventListeners:
       click:
         handler: handleZoomIn
-  upload-btn-*:
+  uploadBtn*:
     eventListeners:
       click:
         handler: handleUploadButtonClick
-  add-btn-*:
+  addBtn*:
     eventListeners:
       click:
         handler: handleAddButtonClick
-  drag-drop-bar-*:
+  dragDropBar*:
     eventListeners:
       file-selected:
         handler: handleDragDropFileSelected
-  group-*:
+  group*:
     eventListeners:
       click:
         handler: handleGroupClick
-  item-*:
+  item*:
     eventListeners:
       click:
         handler: handleItemClick
@@ -112,7 +47,7 @@ refs:
         handler: handleItemDoubleClick
       contextmenu:
         handler: handleItemContextMenu
-  transform-item-*:
+  transformItem*:
     eventListeners:
       click:
         handler: handleItemClick
@@ -120,13 +55,13 @@ refs:
         handler: handleItemDoubleClick
       contextmenu:
         handler: handleItemContextMenu
-  sprites-button-*:
+  spritesButton*:
     eventListeners:
       click:
         handler: handleSpritesButtonClick
       contextmenu:
         handler: handleItemContextMenu
-  group-dragDrop-*:
+  groupDragDrop*:
     eventListeners:
       dragenter:
         handler: handleDragEnter
@@ -136,153 +71,151 @@ refs:
         handler: handleDragLeave
       drop:
         handler: handleDrop
-  back-button:
+  backButton:
     eventListeners:
       click:
         handler: handleBackClick
-
 template:
-  - "rtgl-view w=f h=100vh g=lg":
+  - rtgl-view w=f h=100vh g=lg:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-          - rtgl-view w=f d=h av=c g=md fw=w:
+          - rtgl-view w=f d=h av=c g=md wrap:
               - rtgl-view av=c g=sm d=h flex=1:
-                - $if backUrl:
-                  - rtgl-button#back-button sq icon="chevronLeft" v="gh" mr=sm:
-                - $if navTitle:
-                    - rtgl-text c=mu-fg: ${navTitle}
+                  - $if backUrl:
+                      - rtgl-button#backButton sq icon="chevronLeft" v="gh" mr=sm: null
+                  - $if navTitle:
+                      - rtgl-text c=mu-fg: ${navTitle}
               - rtgl-view d=h av=c g=md flex=0:
-                - $if showZoomControls:
-                    - rtgl-view d=h av=c g=sm:
-                      - rtgl-button#zoom-out w=10 v="gh" s=sm: "-"
-                      - input#zoom-slider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}":
-                      - rtgl-button#zoom-in w=10 v="gh" s=sm: "+"
-                - rtgl-view av=c g=md:
-                    - rtgl-input#search-input s=sm placeholder="Search..." value=${searchQuery} flex=1:
+                  - $if showZoomControls:
+                      - rtgl-view d=h av=c g=sm:
+                          - rtgl-button#zoomOut w=10 v="gh" s=sm: '-'
+                          - input#zoomSlider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}": null
+                          - rtgl-button#zoomIn w=10 v="gh" s=sm: +
+                  - rtgl-view av=c g=md:
+                      - rtgl-input#searchInput s=sm placeholder="Search..." value=${searchQuery} flex=1: null
       - rtgl-view flex=1 w=f sv:
           - $if flatGroups.length > 0:
               - $for group in flatGroups:
-                  - rtgl-view#group-dragDrop-${group.id} w=f ph=md pos=rel:
+                  - rtgl-view#groupDragDrop${group.id} w=f ph=md pos=rel:
                       - $if draggingGroupId == group.id:
-                        - 'rtgl-view#overlay d=h av=c pos=abs w=f h=f bw=md bc=pr bgc=se op="0.5" style="top: 0; bottom: 0; left: 0; right: 0;"':  
-                          - rtgl-view#overlayText w=f f=h av=c ah=c:
-                            - rtgl-text s=lg: "Drag file to this area to upload"
-                      - 'rtgl-view#group-${group.id} d=h w=f av=c cur=p style="position: sticky; top: 0px;"':
+                          - 'rtgl-view#overlay d=h av=c pos=abs w=f h=f bw=md bc=pr bgc=se op="0.5" style="top: 0; bottom: 0; left: 0; right: 0;"':
+                              - rtgl-view#overlayText w=f f=h av=c ah=c:
+                                  - rtgl-text s=lg: Drag file to this area to upload
+                      - 'rtgl-view#group${group.id} d=h w=f av=c cur=pointer style="position: sticky; top: 0px;"':
                           - rtgl-view w=f d=h av=c:
-                            - $if group.isCollapsed:
-                                - rtgl-svg wh=16 svg=folderArrowRight:
-                              $else:
-                                - rtgl-svg wh=16 svg=folderArrowDown:
-                            - rtgl-view d=h av=c g=md:
-                                - rtgl-svg wh=16 svg=folder:
-                                - rtgl-text: ${group.fullLabel}
-                          - $if canUpload:   
-                              - rtgl-button#upload-btn-${group.id} s=sm flex=1 ip=s icon=upload: Upload
+                              - $if group.isCollapsed:
+                                  - rtgl-svg wh=16 svg=folderArrowRight: null
+                                $else:
+                                  - rtgl-svg wh=16 svg=folderArrowDown: null
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg wh=16 svg=folder: null
+                                  - rtgl-text: ${group.fullLabel}
+                          - $if canUpload:
+                              - rtgl-button#uploadBtn${group.id} s=sm flex=1 ip=s icon=upload: Upload
                             $else:
-                              - rtgl-button#add-btn-${group.id} s=sm flex=1 ip=s icon=plus: Add
+                              - rtgl-button#addBtn${group.id} s=sm flex=1 ip=s icon=plus: Add
                       - $if !group.isCollapsed:
-                          - rtgl-view w=f d=h p=sm fw=w g=md:
+                          - rtgl-view w=f d=h p=sm wrap g=md:
                               - $if group.hasChildren:
                                   - $for item in group.children:
-                                      - 'rtgl-view#item-${item.id} ${fullWidthAttr} cur=p style="${item.selectedStyle}"':
+                                      - rtgl-view#item${item.id} ${fullWidthAttr} cur=pointer style="${item.selectedStyle}":
                                           - $if resourceType == 'fonts':
                                               - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v bw=xs br=md:
-                                                  - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c:
+                                                  - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'videos':
                                               - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
-                                                  - rvn-file-image br=md w=${mediaWidth} h=${mediaHeight} fileId=${item.thumbnailFileId}:
+                                                  - rvn-file-image br=md w=${mediaWidth} h=${mediaHeight} fileId=${item.thumbnailFileId}: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'sounds':
                                               - $if item.waveformDataFileId:
                                                   - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
-                                                      - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}:
+                                                      - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}: null
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                                 $else:
-                                                  - rtgl-image bc=${item.borderColor} p=md g=md bw=xs br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png:
+                                                  - rtgl-image bc=${item.borderColor} p=md g=md bw=xs br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png: null
                                             $elif resourceType == 'images':
                                               - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
-                                                  - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                                  - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis mw=${maxWidth}: ${item.name}
                                             $elif resourceType == 'characterSprites':
                                               - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
-                                                  - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}:
+                                                  - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis mw=${maxWidth}: ${item.name}
                                             $elif resourceType == 'characters':
-                                              - rtgl-view bc=${item.borderColor} w=f d=h g=xl fw=w mt=lg bw=xs br=lg p=lg:
-                                                  - rvn-file-image w=96 h=96 br=f fileId=${item.fileId}:
+                                              - rtgl-view bc=${item.borderColor} w=f d=h g=xl wrap mt=lg bw=xs br=lg p=lg:
+                                                  - rvn-file-image w=96 h=96 br=f fileId=${item.fileId}: null
                                                   - rtgl-view flex=1 g=md:
                                                       - rtgl-text s=h2: ${item.name}
                                                       - rtgl-text c=mu-fg: ${item.description}
                                                   - rtgl-view h=f av=c:
-                                                      - rtgl-button#sprites-button-${item.id} v=se: Sprites
+                                                      - rtgl-button#spritesButton${item.id} v=se: Sprites
                                             $elif resourceType == 'colors':
                                               - 'rtgl-view bc=${item.borderColor} p=md g=md br=md g=sm bw=xs style="overflow: hidden;"':
-                                                  - 'rtgl-view w=${mediaWidth} h=${mediaHeight} style="background-color: ${item.hex}"':
+                                                  - 'rtgl-view w=${mediaWidth} h=${mediaHeight} style="background-color: ${item.hex}"': null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'typography':
                                               - rtgl-view bc=${item.borderColor} p=md g=md w=f br=md bw=xs:
-                                                  - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false:
+                                                  - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'layouts':
-                                              - rtgl-view bc=${item.borderColor} w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=p style="${item.selectedStyle}":
+                                              - rtgl-view bc=${item.borderColor} w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=pointer style="${item.selectedStyle}":
                                                   - rtgl-view av=c ah=c w=f ph=sm:
                                                       - rtgl-text s=md ellipsis w=f: ${item.name}
                                                       - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.layoutType}
                                             $elif resourceType == 'transforms':
-                                              - 'rtgl-view#transform-item-${item.id} bc=${item.borderColor} p=md g=md cur=p style="${item.selectedStyle}" br=md bw=xs':
-                                                  - rvn-transform-thumbnail .item=#{item}:
+                                              - rtgl-view#transformItem${item.id} bc=${item.borderColor} p=md g=md cur=pointer style="${item.selectedStyle}" br=md bw=xs:
+                                                  - rvn-transform-thumbnail :item=#{item}: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'tweens':
                                               - rtgl-view bc=${item.borderColor} p=md flex=1 h=f w=f bw=xs br=md bgc=bg:
                                                   - rtgl-text s=h4: ${item.name}
-                                                  - rtgl-view h=12:
-                                                  - rvn-keyframe-timeline .properties=#{item.properties}:
+                                                  - rtgl-view h=12: null
+                                                  - rvn-keyframe-timeline :properties=#{item.properties}: null
                                             $else:
                                               - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v p=md bw=xs br=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                 $else:
                                   - $if resourceType == 'characters':
                                       - rtgl-view mt=lg w=f:
-                                          - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
-                                              - rtgl-svg wh=24 svg=plus c=pr:
+                                          - rtgl-view#addBtn${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:
+                                              - rtgl-svg wh=24 svg=plus c=pr: null
                                               - rtgl-text s=md c=pr fw=500: Add Character
                                     $elif resourceType == 'colors':
-                                      - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
-                                          - rtgl-svg svg=plus wh=24:
+                                      - rtgl-view#addBtn${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
+                                          - rtgl-svg svg=plus wh=24: null
                                           - rtgl-text: Add Color
                                     $elif resourceType == 'typography':
-                                      - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p":
-                                          - rtgl-svg svg=plus wh=24 c=pr:
+                                      - rtgl-view#addBtn${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:
+                                          - rtgl-svg svg=plus wh=24 c=pr: null
                                           - rtgl-text s=md c=pr fw=500: Add Typography
                                     $elif resourceType == 'layouts':
-                                      - "rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=p":
-                                          - rtgl-svg svg=plus wh=24:
+                                      - rtgl-view#addBtn${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
+                                          - rtgl-svg svg=plus wh=24: null
                                           - rtgl-text: Add Layout
                                     $elif resourceType == 'transforms':
-                                      - rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c bw=xs br=md g=md cur=p:
-                                          - rtgl-svg svg=plus wh=24:
+                                      - rtgl-view#addBtn${group.id} w=f h=150 av=c ah=c bw=xs br=md g=md cur=pointer:
+                                          - rtgl-svg svg=plus wh=24: null
                                           - rtgl-text: Add Transform
                                     $elif resourceType == 'tweens':
                                       - rtgl-view w=f:
-                                          - rtgl-view#add-btn-${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=p:
-                                              - rtgl-svg svg=plus wh=24 c=pr:
+                                          - rtgl-view#addBtn${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:
+                                              - rtgl-svg svg=plus wh=24 c=pr: null
                                               - rtgl-text s=md c=pr fw=500: Add Tween Animation
                                     $else:
-                                      - rtgl-view#upload-btn-${group.id} w=f h=150 bw=xs br=md ah=c av=c g=sm cur=p bgc=${bgc}:
-                                        - rtgl-svg svg=upload wh=32:
-                                        - rtgl-text: ${uploadText}
+                                      - rtgl-view#uploadBtn${group.id} w=f h=150 bw=xs br=md ah=c av=c g=sm cur=pointer bgc=${bgc}:
+                                          - rtgl-svg svg=upload wh=32: null
+                                          - rtgl-text: ${uploadText}
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}
             $else:
               - rtgl-view w=f h=f av=c ah=c g=lg:
                   - $if canUpload:
-                      - rtgl-view#upload-btn-root w=300 h=200 bw=xs bc=bo br=md ah=c av=c g=sm cur=p:
-                          - rtgl-svg svg=upload wh=32:
+                      - rtgl-view#uploadBtnRoot w=300 h=200 bw=xs bc=bo br=md ah=c av=c g=sm cur=pointer:
+                          - rtgl-svg svg=upload wh=32: null
                           - rtgl-text: ${uploadText}
                     $else:
                       - rtgl-text s=lg c=mu-fg: No data
-
           - $if flatGroups.length > 0:
-              - rtgl-view h=33vh:
-  - rtgl-dropdown-menu#context-menu .items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}:
+              - rtgl-view h=33vh: null
+  - rtgl-dropdown-menu#contextMenu :items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

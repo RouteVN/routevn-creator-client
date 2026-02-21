@@ -1,21 +1,9 @@
-elementName: rvn-characters
-
-viewDataSchema:
-  type: object
-  properties:
-    searchQuery:
-      type: string
-    isDialogOpen:
-      type: boolean
-    avatarFileId:
-      type: string
-
 refs:
-  file-explorer:
+  fileExplorer:
     eventListeners:
       data-changed:
         handler: handleDataChanged
-      click-item:
+      item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleSpritesButtonClick
@@ -35,77 +23,76 @@ refs:
         handler: handleGroupToggle
       item-delete:
         handler: handleItemDelete
-  add-character-dialog:
+  addCharacterDialog:
     eventListeners:
       close:
         handler: handleCloseDialog
-  character-form:
+  characterForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleDialogFormActionClick
-  avatar-image:
+  avatarImage:
     eventListeners:
       click:
         handler: handleDialogAvatarClick
-  avatar-placeholder:
+  avatarPlaceholder:
     eventListeners:
       click:
         handler: handleDialogAvatarClick
-  detail-form:
+  detailForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-  edit-dialog:
+  editDialog:
     eventListeners:
       close:
         handler: handleEditDialogClose
-  edit-avatar-image:
+  editAvatarImage:
     eventListeners:
       click:
         handler: handleEditDialogAvatarClick
-  edit-avatar-placeholder:
+  editAvatarPlaceholder:
     eventListeners:
       click:
         handler: handleEditDialogAvatarClick
-  edit-form:
+  editForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleEditFormAction
-  detail-panel-avatar:
+  detailPanelAvatar:
     eventListeners:
       click:
         handler: handleDetailPanelAvatarClick
-
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
-          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-                  - rvn-file-explorer#fileExplorer .items=flatItems .repositoryTarget=repositoryTarget:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget: null
           - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview .navTitle=title full-width-item .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery show-zoom-controls=false:
+              - rvn-group-resources-view#groupview :navTitle=title full-width-item :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery show-zoom-controls=false: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues:
-                          - rvn-file-image#detail-panel-avatar slot="avatar" cur=p wh=128 br=f fileId="${selectedItem.fileId}":
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :defaultValues=defaultValues:
+                          - rvn-file-image#detailPanelAvatar slot="avatar" cur=pointer wh=128 br=f fileId="${selectedItem.fileId}": null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      - rtgl-dialog#add-character-dialog ?open=${isDialogOpen} s=md:
+      - rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md:
           - rtgl-view slot=content g=md:
-              - rtgl-form#character-form key=${isDialogOpen} .defaultValues=dialogDefaultValues .form=dialogForm w=f:
+              - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
                   - $if avatarFileId:
-                      - rvn-file-image#avatar-image fileId=${avatarFileId} wh=120 slot=avatar-slot cur=p br=md:
+                      - rvn-file-image#avatarImage fileId=${avatarFileId} wh=120 slot=avatar-slot cur=pointer br=md: null
                     $else:
-                      - rtgl-view#avatar-placeholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p:
+                      - rtgl-view#avatarPlaceholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                           - rtgl-text c=mu-fg s=sm: Click to Upload
-  - rtgl-dialog#edit-dialog ?open=${isEditDialogOpen} s=md:
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
-          - rtgl-form#edit-form key=${isEditDialogOpen} .defaultValues=editDefaultValues .form=editForm w=f:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
               - $if editAvatarFileId:
-                  - rvn-file-image#edit-avatar-image fileId=${editAvatarFileId} wh=120 slot=avatar-slot cur=p br=md:
+                  - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} wh=120 slot=avatar-slot cur=pointer br=md: null
                 $else:
-                  - rtgl-view#edit-avatar-placeholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=p:
+                  - rtgl-view#editAvatarPlaceholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                       - rtgl-text c=mu-fg s=sm: Click to Upload

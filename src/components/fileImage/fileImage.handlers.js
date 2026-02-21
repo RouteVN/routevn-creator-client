@@ -31,7 +31,7 @@ const getFileIdFromProps = (attrs, projectService) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, projectService, render } = deps;
+  const { store, props: attrs, projectService, render } = deps;
 
   await projectService.ensureRepository();
   const fileId = getFileIdFromProps(attrs, projectService);
@@ -42,12 +42,12 @@ export const handleAfterMount = async (deps) => {
 
   try {
     const { url } = await projectService.getFileContent(fileId);
-    store.setSrc(url);
+    store.setSrc({ src: url });
     render();
   } catch (error) {
     console.error("Failed to load image:", error);
   } finally {
-    store.setIsLoading(false);
+    store.setIsLoading({ isLoading: false });
     render();
   }
 };
@@ -56,23 +56,23 @@ export const handleOnUpdate = async (deps, payload) => {
   const { store, projectService, render } = deps;
 
   await projectService.ensureRepository();
-  const { newAttrs: attrs } = payload;
+  const { newProps: attrs } = payload;
   const fileId = getFileIdFromProps(attrs, projectService);
 
   if (!fileId) {
-    store.setSrc("/public/project_logo_placeholder.png");
-    store.setIsLoading(false);
+    store.setSrc({ src: "/public/project_logo_placeholder.png" });
+    store.setIsLoading({ isLoading: false });
     render();
     return;
   }
 
   try {
     const { url } = await projectService.getFileContent(fileId);
-    store.setSrc(url);
+    store.setSrc({ src: url });
     render();
   } catch (error) {
     console.error("Failed to load image:", error);
   } finally {
-    store.setIsLoading(false);
+    store.setIsLoading({ isLoading: false });
   }
 };

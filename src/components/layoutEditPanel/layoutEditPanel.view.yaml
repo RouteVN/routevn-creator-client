@@ -1,80 +1,68 @@
-elementName: rvn-layout-edit-panel
-
-propsSchema:
-  type: object
-  properties:
-    values:
-      type: object
-
 refs:
-  group-item-*:
+  groupItem*:
     eventListeners:
       click:
         handler: handleGroupItemClick
-  select-item-*:
+  selectItem*:
     eventListeners:
-      option-selected:
+      value-change:
         handler: handleOptionSelected
-  popover-form:
+  popoverForm:
     eventListeners:
       close:
         handler: handlePopverFormClose
   form:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleFormActions
       form-change:
         handler: handlePopoverFormChange
-  section-action-*:
+  sectionAction*:
     eventListeners:
       click:
         handler: handleSectionActionClick
-  system-actions:
+  systemActions:
     eventListeners:
       actions-change:
         handler: handleActionsChange
-  list-item-*:
+  listItem*:
     eventListeners:
       click:
         handler: handleListItemClick
       contextmenu:
         handler: handleListItemRightClick
-
-  image-selector-dialog:
+  imageSelectorDialog:
     eventListeners:
       close:
         action: closeImageSelectorDialog
-  image-selector:
+  imageSelector:
     eventListeners:
       image-selected:
         handler: handleImageSelectorImageSelected
-
-  confirm-image-selection:
+  confirmImageSelection:
     eventListeners:
       click:
         handler: handleImageSelectorSubmit
-        
-  cancel-image-selection:
+  cancelImageSelection:
     eventListeners:
       click:
         handler: handleImageSelectorCancel
-  list-bar-item-*:
+  listBarItem*:
     eventListeners:
       click:
         handler: handleListBarItemClick
       contextmenu:
         handler: handleListBarItemRightClick
-
 template:
   - $for section, i in config.sections:
       - $if i > 0:
-          - rtgl-view h=1 w=f bgc=mu mv=lg:
+          - rtgl-view h=1 w=f bgc=mu mv=lg: null
       - rtgl-view w=f g=md ph=md:
           - $if section.labelAction:
               - rtgl-view d=h w=f av=c:
                   - rtgl-text s=sm: ${section.label}
-                  - rtgl-view flex=1:
-                  - rtgl-button#section-action-${section.id} data-id=${section.id} icon=${section.labelAction} sq s=sm v=gh:
+                  - rtgl-view flex=1: null
+                  - rtgl-button#sectionAction${section.id} data-id=${section.id} icon=${section.labelAction} sq s=sm v=gh: null
             $else:
               - rtgl-text s=sm: ${section.label}
           - $for item in section.items:
@@ -83,45 +71,41 @@ template:
                       - $for field in item.fields:
                           - $if field.label:
                               - rtgl-text s=sm w=60: ${field.label}
-                          - rtgl-view#group-item-${field.name} data-name=${field.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=p bw=xs bc=bg h-bc=ac h=28:
+                          - rtgl-view#groupItem${field.name} data-name=${field.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
                               - $if field.svg:
-                                  - rtgl-svg svg=${field.svg} wh=16:
+                                  - rtgl-svg svg=${field.svg} wh=16: null
                               - rtgl-text s=xs: ${field.value}
                 $elif item.type == 'select':
-                  - 'rtgl-view d=h av=c w=f':
+                  - rtgl-view d=h av=c w=f:
                       - rtgl-text s=xs w=65: ${item.label}
                       - 'rtgl-view style="width: calc(100% - 65px);"':
-                        - rtgl-select#select-item-${item.name} data-name=${item.name} w=f no-clear .selectedValue=#{item.value} .options=#{item.options}:
+                          - rtgl-select#selectItem${item.name} data-name=${item.name} w=f no-clear :selectedValue=#{item.value} :options=#{item.options}: null
                 $elif item.type == 'list-item':
                   - $for listItem in item.items:
-                      - rtgl-view#list-item-${listItem.id} data-id=${listItem.id} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=p:
-                          - rtgl-svg svg=${listItem.svg} wh=16:
+                      - rtgl-view#listItem${listItem.id} data-id=${listItem.id} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:
+                          - rtgl-svg svg=${listItem.svg} wh=16: null
                           - rtgl-text s=xs: ${listItem.label}
                 $elif item.type == 'list-bar':
                   - $for barItem in item.items:
-                      - rtgl-view#list-bar-item-${barItem.name} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=p:
+                      - rtgl-view#listBarItem${barItem.name} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
                           - rtgl-text s=xs: ${barItem.label}
-                          - rtgl-view flex=1:
+                          - rtgl-view flex=1: null
                           - $if barItem.imageId:
-                              - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32:
+                              - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32: null
                             $else:
                               - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
                                   - rtgl-text s=xs c=mu: Not set
                 $elif item.type == 'popover-input':
-                  - rtgl-view#group-item-${item.name} data-name=${item.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=p bw=xs bc=bg h-bc=ac h=32 w=f:
+                  - rtgl-view#groupItem${item.name} data-name=${item.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
                       - rtgl-text s=sm: ${item.value}
-
-  - rtgl-view h=1 w=f bgc=mu mv=lg:
-
-  - rvn-system-actions#system-actions .actions=actionsData  action-type="system":
-
-  - rtgl-popover#popover-form ?open=${popover.open} placement=bottom x=${popover.x} y=${popover.y}:
+  - rtgl-view h=1 w=f bgc=mu mv=lg: null
+  - rvn-system-actions#systemActions :actions=actionsData  action-type="system": null
+  - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:
-        - rtgl-form#form autofocus key=${popover.key} slot=content .form=popover.form .defaultValues=popover.defaultValues .context=popover.context:
-
-  - rtgl-dialog#image-selector-dialog ?open=${imageSelectorDialog.open}:
+          - rtgl-form#form autofocus key=${popover.key} slot=content :form=popover.form :defaultValues=popover.defaultValues :context=popover.context: null
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
-          - rvn-image-selector#image-selector:
+          - rvn-image-selector#imageSelector: null
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancel-image-selection variant=se: Cancel
-              - rtgl-button#confirm-image-selection variant=pr: OK
+              - rtgl-button#cancelImageSelection variant=se: Cancel
+              - rtgl-button#confirmImageSelection variant=pr: OK

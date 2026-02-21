@@ -5,7 +5,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { videos } = projectService.getState();
-  store.setItems(videos);
+  store.setItems({ videosData: videos });
   render();
 };
 
@@ -13,7 +13,7 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const repository = await projectService.getRepository();
   const state = repository.getState();
-  store.setItems(state.videos);
+  store.setItems({ videosData: state.videos });
   render();
 };
 
@@ -23,7 +23,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If this is a folder, clear selection and context
   if (isFolder) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
     store.setContext({
       thumbnailFileId: {
         src: null,
@@ -33,7 +33,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
 
   // If we have item data with thumbnailFileId, set up media context for preview
   if (item && item.thumbnailFileId) {
@@ -53,7 +53,7 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
@@ -68,12 +68,12 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
 };
 
 export const handleVideoItemClick = async (deps, payload) => {
-  const { store, render, projectService, getRefIds } = deps;
+  const { store, render, projectService, refs } = deps;
   const { itemId } = payload._event.detail;
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
@@ -126,7 +126,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     const { videos } = projectService.getState();
-    store.setItems(videos);
+    store.setItems({ videosData: videos });
   }
 
   render();
@@ -187,7 +187,7 @@ export const handleFormExtraEvent = async (deps) => {
       src: uploadResult.downloadUrl,
     },
   });
-  store.setItems(videos);
+  store.setItems({ videosData: videos });
   render();
 };
 
@@ -198,7 +198,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "videos",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -208,7 +208,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { videos } = projectService.getState();
-  store.setItems(videos);
+  store.setItems({ videosData: videos });
   render();
 };
 
@@ -216,7 +216,7 @@ export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail.value || "";
 
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
@@ -227,7 +227,7 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
   // Find the video item
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
-    store.setSelectedItemId(itemId);
+    store.setSelectedItemId({ itemId: itemId });
   }
 
   const item = store.selectSelectedItem();
@@ -284,6 +284,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ videosData: data });
   render();
 };

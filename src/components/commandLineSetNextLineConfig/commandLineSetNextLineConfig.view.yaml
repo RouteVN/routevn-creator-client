@@ -1,25 +1,3 @@
-elementName: rvn-command-line-set-next-line-config
-
-viewDataSchema:
-  type: object
-  properties:
-    breadcrumb:
-      type: array
-    form:
-      type: object
-    defaultValues:
-      type: object
-    context:
-      type: object
-    formKey:
-      type: string
-
-propsSchema:
-  type: object
-  properties:
-    setNextLineConfig:
-      type: object
-
 refs:
   breadcumb:
     eventListeners:
@@ -29,18 +7,15 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
-
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-
-      - rtgl-form#form key=${formKey} .defaultValues=defaultValues .form=form .context=context w=f:
-
-      - rtgl-view flex=1:
+          - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+      - rtgl-form#form key=${formKey} :defaultValues=defaultValues :form=form :context=context w=f: null
+      - rtgl-view flex=1: null
       - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button: Submit
+          - rtgl-button#submitButton: Submit

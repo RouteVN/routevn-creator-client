@@ -1,0 +1,4 @@
+componentName: rvn-scenes
+propsSchema:
+  type: object
+  properties: {}

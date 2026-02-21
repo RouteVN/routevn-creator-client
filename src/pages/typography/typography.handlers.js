@@ -10,9 +10,9 @@ import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 // Helper function to sync repository state to store
 const syncRepositoryToStore = (store, projectService) => {
   const { typography, colors, fonts } = projectService.getState();
-  store.setItems(typography);
-  store.setColorsData(colors);
-  store.setFontsData(fonts);
+  store.setItems({ typographyData: typography });
+  store.setColorsData({ colorsData: colors });
+  store.setFontsData({ fontsData: fonts });
 };
 
 export const handleAfterMount = async (deps) => {
@@ -34,7 +34,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
   // If this is a folder, clear selection and context
   if (isFolder) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
     store.setContext({
       typographyPreview: {
         src: null,
@@ -44,7 +44,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
 
   if (item) {
     try {
@@ -178,12 +178,12 @@ const generateTypographyPreview = (item, colorsData, fontsData) => {
 };
 
 export const handleTypographyItemClick = (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId } = payload._event.detail;
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
@@ -340,7 +340,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "typography",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -394,8 +394,8 @@ export const handleFormExtraEvent = (deps) => {
 
   if (selectedItem) {
     // Set form values from the selected item and open edit dialog
-    store.setFormValuesFromItem(selectedItem);
-    store.setEditMode(selectedItemId);
+    store.setFormValuesFromItem({ item: selectedItem });
+    store.setEditMode({ itemId: selectedItemId });
     store.toggleDialog();
     render();
   }
@@ -406,7 +406,7 @@ export const handleAddTypographyClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
 
-  store.setTargetGroupId(groupId);
+  store.setTargetGroupId({ groupId: groupId });
   store.clearEditMode();
   store.resetFormValues(); // Reset form values for new typography
   store.toggleDialog();
@@ -423,10 +423,10 @@ export const handleTypographyItemDoubleClick = (deps, payload) => {
 
   if (item) {
     // Set form values from the item
-    store.setFormValuesFromItem(item);
+    store.setFormValuesFromItem({ item: item });
 
     // Set edit mode and open dialog
-    store.setEditMode(itemId);
+    store.setEditMode({ itemId: itemId });
     store.toggleDialog();
     render();
   }
@@ -436,7 +436,7 @@ export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
 
   // Update form values for preview
-  store.updateFormValues(payload._event.detail.formValues);
+  store.updateFormValues({ formData: payload._event.detail.values });
   render();
 };
 
@@ -480,7 +480,7 @@ export const handleFormActionClick = (deps, payload) => {
 
   if (actionId === "submit") {
     // Get form values from the event detail
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
 
     // Get the store state using selector
     const { targetGroupId, editMode, editingItemId } =
@@ -561,7 +561,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
   const { store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
     const newColorId = nanoid();
 
     // Create the color in the repository
@@ -637,7 +637,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
     const fontData = store.selectSelectedFontData();
 
     // Check if a font file was selected and uploaded
@@ -683,7 +683,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value || "";
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
@@ -728,6 +728,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ typographyData: data });
   render();
 };

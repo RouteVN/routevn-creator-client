@@ -11,11 +11,11 @@ export const createInitialState = () => ({
   draggingGroupId: null,
 });
 
-export const setZoomLevel = (state, zoomLevel) => {
+export const setZoomLevel = ({ state }, { zoomLevel } = {}) => {
   state.zoomLevel = zoomLevel;
 };
 
-export const setDraggingGroupId = (state, groupId) => {
+export const setDraggingGroupId = ({ state }, { groupId } = {}) => {
   state.draggingGroupId = groupId;
 };
 
@@ -23,7 +23,7 @@ export const selectDraggingGroupId = ({ state }) => state.draggingGroupId;
 
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
-export const toggleGroupCollapse = (state, { groupId }) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -32,7 +32,7 @@ export const toggleGroupCollapse = (state, { groupId }) => {
   }
 };
 
-export const showContextMenu = (state, { itemId, x, y }) => {
+export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
@@ -42,7 +42,7 @@ export const showContextMenu = (state, { itemId, x, y }) => {
   ];
 };
 
-export const hideContextMenu = (state) => {
+export const hideContextMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;
@@ -52,7 +52,7 @@ export const hideContextMenu = (state) => {
 
 export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
 
-export const selectViewData = ({ state, props, attrs }) => {
+export const selectViewData = ({ state, props, props: attrs }) => {
   // Calculate dimensions based on zoom level for all media types
   const baseHeight = props.imageHeight || 150;
   const baseWidth = props.maxWidth || 400;
@@ -99,7 +99,7 @@ export const selectViewData = ({ state, props, attrs }) => {
       "fonts",
     ].includes(props.resourceType),
     draggingGroupId: state.draggingGroupId,
-    fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
+    fullWidthAttr: attrs.fullWidthItem === true ? "w=f" : "",
     resourceType: props.resourceType || "default",
     flatGroups: finalProcessedGroups,
     selectedItemId: props.selectedItemId,
@@ -115,7 +115,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     mediaWidth,
     mediaHeight,
     zoomLevel: state.zoomLevel,
-    showZoomControls: attrs["show-zoom-controls"] === true,
+    showZoomControls: attrs.showZoomControls === true,
     backUrl: props.backUrl,
     itemProperties: props.itemProperties || {},
     items: props.items || {},

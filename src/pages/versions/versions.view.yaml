@@ -1,64 +1,43 @@
-elementName: rvn-versions
-
-viewDataSchema:
-  type: object
-  properties:
-    versions:
-      type: array
-      default: []
-    showVersionForm:
-      type: boolean
-      default: false
-    versionFormFields:
-      type: object
-      default: {}
-
 refs:
-  left-panel:
+  leftPanel:
     eventListeners:
       data-changed:
         handler: handleDataChanged
-  save-version-btn:
+  saveVersionBtn:
     eventListeners:
       click:
         handler: handleSaveVersionClick
-  version-form:
+  versionForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleVersionFormAction
-  version-form-popover:
+  versionFormPopover:
     eventListeners:
       close:
         handler: handleVersionFormClose
-  version-*:
-    #eventListeners:
-    #  contextmenu:
-    #    handler: handleVersionContextMenu
-  version-more-btn-*:
+  version-*: null
+  versionMoreBtn*:
     eventListeners:
       click:
         handler: handleVersionContextMenu
-  version-download-*:
+  versionDownload*:
     eventListeners:
       click:
         handler: handleDownloadZipClick
-  dropdown-menu:
+  dropdownMenu:
     eventListeners:
       close:
         handler: handleDropdownMenuClose
-      click-item:
+      item-click:
         handler: handleDropdownMenuClickItem
-
 template:
   - rtgl-view d=h w=f h=f:
-      - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+      - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
           - rtgl-view slot="content" w=f h=f:
-              - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-            # - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget:
-      # - rvn-resizable-panel#left-panel .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId .flatItems=flatItems .repositoryTarget=repositoryTarget:
+              - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
       - rtgl-view flex=1 p=lg d=v g=lg:
           - rtgl-text s=h2: Versions
-          - rtgl-button#save-version-btn v=pr s=md: Create new version
+          - rtgl-button#saveVersionBtn v=pr s=md: Create new version
           - rtgl-view w=f g=md flex=1 oy=a:
               - $if versions.length == 0:
                   - rtgl-view w=f h=200 ah=c av=c:
@@ -67,15 +46,14 @@ template:
                           - rtgl-text s=sm c=mu-fg: Save your first version to track changes
                 $else:
                   - $for item in versions:
-                      - rtgl-view#version-${item.id} h=auto w=f bw=xs pt=md pb=sm ph=lg d=h av=c:
+                      - rtgl-view#version${item.id} h=auto w=f bw=xs pt=md pb=sm ph=lg d=h av=c:
                           - rtgl-view flex=1 d=v g=xs:
                               - rtgl-text s=lg: ${item.name}
                               - rtgl-view flex=0 d=h g=sm av=c:
-                                  - rtgl-text s=xs c=mu-fg: "Action ${item.actionIndex} • ${item.formattedCreatedAt}"
-                                  - rtgl-button#version-download-${item.id} v=gh s=sm ip=s icon=download: Download Zip
+                                  - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
+                                  - rtgl-button#versionDownload${item.id} v=gh s=sm ip=s icon=download: Download Zip
                           - rtgl-view d=v g=xs:
-                              - rtgl-button#version-more-btn-${item.id} v=gh sq icon=ellipsis:
-      - rtgl-popover#version-form-popover ?open=${showVersionForm} x=300 y=100:
-          - rtgl-form#version-form key=${showVersionForm} slot=content .form=versionFormFields w=320:
-
-  - rtgl-dropdown-menu#dropdown-menu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} .items=dropdownMenu.items:
+                              - rtgl-button#versionMoreBtn${item.id} v=gh sq icon=ellipsis: null
+      - rtgl-popover#versionFormPopover ?open=${showVersionForm} x=300 y=100:
+          - rtgl-form#versionForm key=${showVersionForm} slot=content :form=versionFormFields w=320: null
+  - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=dropdownMenu.items: null

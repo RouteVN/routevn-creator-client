@@ -49,19 +49,19 @@ export const createInitialState = () => ({
   formValues: {},
 });
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
-export const setInitiated = (state) => {
+export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 
-export const setScenes = (state, payload) => {
+export const setScenes = ({ state }, { payload } = {}) => {
   state.scenes = payload.scenes;
 };
 
-export const setFormValues = (state, payload) => {
+export const setFormValues = ({ state }, { payload } = {}) => {
   state.formValues = payload;
 };
 

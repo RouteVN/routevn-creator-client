@@ -1,0 +1,30 @@
+componentName: rvn-resizable-panel
+propsSchema:
+  type: object
+  properties:
+    w:
+      type: string
+      default: '280'
+      description: Initial width of the panel
+    min-w:
+      type: string
+      default: '200'
+      description: Minimum width of the panel
+    max-w:
+      type: string
+      default: '600'
+      description: Maximum width of the panel
+    resize-side:
+      type: string
+      default: right
+      enum:
+        - left
+        - right
+      description: Which side to show the resize handle
+    panel-type:
+      type: string
+      default: file-explorer
+      enum:
+        - file-explorer
+        - detail-panel
+      description: Type of panel for localStorage key differentiation

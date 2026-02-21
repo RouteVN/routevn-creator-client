@@ -3,16 +3,16 @@ export const createInitialState = () => ({
   showHoverLine: false,
 });
 
-export const setMousePosition = (state, x) => {
+export const setMousePosition = ({ state }, { x } = {}) => {
   state.mouseX = x;
   state.showHoverLine = true;
 };
 
-export const hideTimelineLine = (state) => {
+export const hideTimelineLine = ({ state }, _payload = {}) => {
   state.showHoverLine = false;
 };
 
-export const selectViewData = ({ state, props, attrs }) => {
+export const selectViewData = ({ state, props, props: attrs }) => {
   let selectedProperties = [];
 
   if (props.properties) {

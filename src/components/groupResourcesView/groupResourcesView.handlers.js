@@ -22,7 +22,7 @@ export const handleDragEnter = (deps, payload) => {
   payload._event.preventDefault();
   payload._event.stopPropagation();
   const draggingGroupId = payload._event.currentTarget.id.replace(
-    "group-dragDrop-",
+    "groupDragDrop",
     "",
   );
 
@@ -34,7 +34,7 @@ export const handleDragEnter = (deps, payload) => {
     return;
   }
 
-  store.setDraggingGroupId(draggingGroupId);
+  store.setDraggingGroupId({ groupId: draggingGroupId });
   render();
 };
 
@@ -56,7 +56,7 @@ export const handleDragLeave = (deps, payload) => {
   // Only clear dragging if we're actually leaving the drop zone entirely
   // Check if relatedTarget is null or not contained within the current target
   if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-    store.setDraggingGroupId(null);
+    store.setDraggingGroupId({ groupId: null });
     render();
   }
 };
@@ -67,7 +67,7 @@ export const handleDrop = async (deps, payload) => {
   payload._event.stopPropagation();
   const targetGroupId = store.selectDraggingGroupId();
 
-  store.setDraggingGroupId(null);
+  store.setDraggingGroupId({ groupId: null });
   render();
 
   // Filter for accepted file types only
@@ -90,7 +90,7 @@ export const handleDrop = async (deps, payload) => {
       new CustomEvent("files-uploaded", {
         detail: {
           files,
-          originalEvent: event,
+          originalEvent: payload._event,
           targetGroupId,
         },
         bubbles: true,
@@ -108,7 +108,7 @@ export const handleDrop = async (deps, payload) => {
 
 export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = payload._event.currentTarget.id.replace("group-", "");
+  const groupId = payload._event.currentTarget.id.replace("group", "");
 
   // Handle group toggle locally
   store.toggleGroupCollapse({ groupId });
@@ -117,7 +117,7 @@ export const handleGroupClick = (deps, payload) => {
 
 export const handleItemClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item", "");
 
   // Forward item selection to parent
   dispatchEvent(
@@ -131,7 +131,7 @@ export const handleItemClick = (deps, payload) => {
 
 export const handleItemDoubleClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item-", "");
+  const itemId = payload._event.currentTarget.id.replace("item", "");
 
   // Forward double-click event to parent
   dispatchEvent(
@@ -148,7 +148,7 @@ export const handleUploadButtonClick = (deps, payload) => {
   const { props, dispatchEvent, appService } = deps;
   payload._event.stopPropagation();
   const targetGroupId = payload._event.currentTarget.id.replace(
-    "upload-btn-",
+    "uploadBtn",
     "",
   );
   const input = document.createElement("input");
@@ -179,7 +179,7 @@ export const handleUploadButtonClick = (deps, payload) => {
           new CustomEvent("files-uploaded", {
             detail: {
               files,
-              originalEvent: event,
+              originalEvent: e,
               targetGroupId,
             },
             bubbles: true,
@@ -199,8 +199,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const { _event: event } = payload;
   const { files } = event.detail;
   const targetGroupId = payload._event.currentTarget.id
-    .replace("drag-drop-bar-", "")
-    .replace("drag-drop-item-", "");
+    .replace("dragDropBar", "")
+    .replace("dragDropItem", "");
 
   // For fonts, load them for preview
   if (props.resourceType === "fonts") {
@@ -228,7 +228,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 export const handleAddButtonClick = (deps, payload) => {
   const { dispatchEvent } = deps;
   payload._event.stopPropagation();
-  const groupId = payload._event.currentTarget.id.replace("add-btn-", "");
+  const groupId = payload._event.currentTarget.id.replace("addBtn", "");
 
   dispatchEvent(
     new CustomEvent(`add-click`, {
@@ -244,7 +244,7 @@ export const handleSpritesButtonClick = (deps, payload) => {
   if (payload._event.stopPropagation) {
     payload._event.stopPropagation(); // Prevent group click
   }
-  const itemId = payload._event.currentTarget.id.replace("sprites-button-", "");
+  const itemId = payload._event.currentTarget.id.replace("spritesButton", "");
 
   // Forward sprites button click to parent
   dispatchEvent(
@@ -263,7 +263,7 @@ export const handleZoomChange = (deps, payload) => {
   );
 
   // Update internal state
-  store.setZoomLevel(zoomLevel);
+  store.setZoomLevel({ zoomLevel: zoomLevel });
   appService.setUserConfig("images.zoomLevel", zoomLevel);
   render();
 };
@@ -276,7 +276,7 @@ export const handleZoomIn = (deps) => {
   const newZoom = Math.min(4.0, currentZoom + 0.1);
 
   // Update internal state
-  store.setZoomLevel(newZoom);
+  store.setZoomLevel({ zoomLevel: newZoom });
   appService.setUserConfig("images.zoomLevel", newZoom);
   render();
 };
@@ -289,7 +289,7 @@ export const handleZoomOut = (deps) => {
   const newZoom = Math.max(0.5, currentZoom - 0.1);
 
   // Update internal state
-  store.setZoomLevel(newZoom);
+  store.setZoomLevel({ zoomLevel: newZoom });
   appService.setUserConfig("images.zoomLevel", newZoom);
   render();
 };
@@ -298,7 +298,7 @@ export const handleAfterMount = (deps) => {
   const { store, render, appService } = deps;
   const savedZoom = appService.getUserConfig("images.zoomLevel");
   if (savedZoom !== null && savedZoom !== undefined) {
-    store.setZoomLevel(savedZoom);
+    store.setZoomLevel({ zoomLevel: savedZoom });
     render();
   }
 };
@@ -307,9 +307,9 @@ export const handleItemContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
   const itemId = payload._event.currentTarget.id
-    .replace("item-", "")
-    .replace("transform-item-", "")
-    .replace("sprites-button-", "");
+    .replace("item", "")
+    .replace("transformItem", "")
+    .replace("spritesButton", "");
   const { clientX: x, clientY: y } = payload._event;
 
   store.showContextMenu({ itemId, x, y });

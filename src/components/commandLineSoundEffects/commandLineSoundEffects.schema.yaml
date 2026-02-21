@@ -1,0 +1,16 @@
+componentName: rvn-command-line-sound-effects
+propsSchema:
+  type: object
+  properties:
+    sfx:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              resourceId:
+                type: string

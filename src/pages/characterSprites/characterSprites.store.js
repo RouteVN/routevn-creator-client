@@ -34,27 +34,27 @@ export const createInitialState = () => ({
   fullImagePreviewFileId: undefined,
 });
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setItems = (state, spritesData) => {
+export const setItems = ({ state }, { spritesData } = {}) => {
   state.spritesData = spritesData;
 };
 
-export const setCharacterId = (state, characterId) => {
+export const setCharacterId = ({ state }, { characterId } = {}) => {
   state.characterId = characterId;
 };
 
-export const setCharacterName = (state, characterName) => {
+export const setCharacterName = ({ state }, { characterName } = {}) => {
   state.characterName = characterName;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, { query }) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
@@ -62,6 +62,10 @@ export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
   const flatItems = toFlatItems(state.spritesData);
   return flatItems.find((item) => item.id === state.selectedItemId);
+};
+
+export const selectSelectedItemId = ({ state }) => {
+  return state.selectedItemId;
 };
 
 export const selectCharacterId = ({ state }) => {
@@ -72,7 +76,7 @@ export const selectFlatItems = ({ state }) => {
   return toFlatItems(state.spritesData);
 };
 
-export const showFullImagePreview = (state, { itemId }) => {
+export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   const flatItems = toFlatItems(state.spritesData);
   const item = flatItems.find((item) => item.id === itemId);
 
@@ -82,7 +86,7 @@ export const showFullImagePreview = (state, { itemId }) => {
   }
 };
 
-export const hideFullImagePreview = (state) => {
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
 };
