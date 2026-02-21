@@ -56,4 +56,12 @@ rtgl ui build-svg
 echo "Building frontend bundle with ${SETUP_FILE}..."
 rtgl fe build -s "${SETUP_FILE}"
 
+# Prevent stale browser caches from serving an old /public/main.js bundle.
+BUILD_REV=$(date +%s)
+find _site -type f -name "*.html" -print0 | while IFS= read -r -d '' file; do
+  sed -i -E \
+    "s#<script type=\"module\" src=\"/public/main.js(\\?v=[^\"]*)?\"></script>#<script type=\"module\" src=\"/public/main.js?v=${BUILD_REV}\"></script>#g" \
+    "${file}"
+done
+
 echo "Build completed for ${BUILD_TYPE}"
