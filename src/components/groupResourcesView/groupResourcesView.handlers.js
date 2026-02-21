@@ -3,6 +3,17 @@ import {
   isFileTypeAccepted,
 } from "../../utils/fileTypeUtils.js";
 
+const getDataId = (event, attrName, fallbackPrefix = "") => {
+  const value = event?.currentTarget?.getAttribute?.(attrName);
+  if (value) {
+    return value;
+  }
+  if (!fallbackPrefix) {
+    return "";
+  }
+  return event?.currentTarget?.id?.replace(fallbackPrefix, "") || "";
+};
+
 export const handleSearchInput = (deps, payload) => {
   const { dispatchEvent } = deps;
   const searchQuery = payload._event.detail.value || "";
@@ -21,10 +32,14 @@ export const handleDragEnter = (deps, payload) => {
   const { store, render, props } = deps;
   payload._event.preventDefault();
   payload._event.stopPropagation();
-  const draggingGroupId = payload._event.currentTarget.id.replace(
+  const draggingGroupId = getDataId(
+    payload._event,
+    "data-group-id",
     "groupDragDrop",
-    "",
   );
+  if (!draggingGroupId) {
+    return;
+  }
 
   if (
     !["images", "videos", "sounds", "characterSprites", "fonts"].includes(
@@ -108,7 +123,10 @@ export const handleDrop = async (deps, payload) => {
 
 export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = payload._event.currentTarget.id.replace("group", "");
+  const groupId = getDataId(payload._event, "data-group-id", "group");
+  if (!groupId) {
+    return;
+  }
 
   // Handle group toggle locally
   store.toggleGroupCollapse({ groupId });
@@ -117,7 +135,10 @@ export const handleGroupClick = (deps, payload) => {
 
 export const handleItemClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item", "");
+  const itemId = getDataId(payload._event, "data-item-id", "item");
+  if (!itemId) {
+    return;
+  }
 
   // Forward item selection to parent
   dispatchEvent(
@@ -131,7 +152,10 @@ export const handleItemClick = (deps, payload) => {
 
 export const handleItemDoubleClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item", "");
+  const itemId = getDataId(payload._event, "data-item-id", "item");
+  if (!itemId) {
+    return;
+  }
 
   // Forward double-click event to parent
   dispatchEvent(
@@ -147,10 +171,10 @@ export const handleUploadButtonClick = (deps, payload) => {
   // Copy the logic in dragDrop.handlers.js
   const { props, dispatchEvent, appService } = deps;
   payload._event.stopPropagation();
-  const targetGroupId = payload._event.currentTarget.id.replace(
-    "uploadBtn",
-    "",
-  );
+  const targetGroupId = getDataId(payload._event, "data-group-id", "uploadBtn");
+  if (!targetGroupId) {
+    return;
+  }
   const input = document.createElement("input");
   input.type = "file";
   input.accept = getAcceptAttribute(props.acceptedFileTypes);
@@ -198,9 +222,11 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const { dispatchEvent, appService, props = {} } = deps;
   const { _event: event } = payload;
   const { files } = event.detail;
-  const targetGroupId = payload._event.currentTarget.id
-    .replace("dragDropBar", "")
-    .replace("dragDropItem", "");
+  const targetGroupId =
+    getDataId(payload._event, "data-group-id") ||
+    payload._event.currentTarget.id
+      .replace("dragDropBar", "")
+      .replace("dragDropItem", "");
 
   // For fonts, load them for preview
   if (props.resourceType === "fonts") {
@@ -228,7 +254,10 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 export const handleAddButtonClick = (deps, payload) => {
   const { dispatchEvent } = deps;
   payload._event.stopPropagation();
-  const groupId = payload._event.currentTarget.id.replace("addBtn", "");
+  const groupId = getDataId(payload._event, "data-group-id", "addBtn");
+  if (!groupId) {
+    return;
+  }
 
   dispatchEvent(
     new CustomEvent(`add-click`, {
@@ -244,7 +273,10 @@ export const handleSpritesButtonClick = (deps, payload) => {
   if (payload._event.stopPropagation) {
     payload._event.stopPropagation(); // Prevent group click
   }
-  const itemId = payload._event.currentTarget.id.replace("spritesButton", "");
+  const itemId = getDataId(payload._event, "data-item-id", "spritesButton");
+  if (!itemId) {
+    return;
+  }
 
   // Forward sprites button click to parent
   dispatchEvent(
@@ -306,10 +338,15 @@ export const handleAfterMount = (deps) => {
 export const handleItemContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
-  const itemId = payload._event.currentTarget.id
-    .replace("item", "")
-    .replace("transformItem", "")
-    .replace("spritesButton", "");
+  const itemId =
+    getDataId(payload._event, "data-item-id") ||
+    payload._event.currentTarget.id
+      .replace("item", "")
+      .replace("transformItem", "")
+      .replace("spritesButton", "");
+  if (!itemId) {
+    return;
+  }
   const { clientX: x, clientY: y } = payload._event;
 
   store.showContextMenu({ itemId, x, y });

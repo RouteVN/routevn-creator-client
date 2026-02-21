@@ -6,9 +6,23 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
+const getDataId = (event, attrName, fallbackPrefix = "") => {
+  const value = event?.currentTarget?.getAttribute?.(attrName);
+  if (value) {
+    return value;
+  }
+  if (!fallbackPrefix) {
+    return "";
+  }
+  return event?.currentTarget?.id?.replace(fallbackPrefix, "") || "";
+};
+
 export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = payload._event.currentTarget.id.replace("group", "");
+  const groupId = getDataId(payload._event, "data-group-id", "group");
+  if (!groupId) {
+    return;
+  }
 
   // Handle group collapse internally
   store.toggleGroupCollapse({ groupId: groupId });
@@ -60,10 +74,14 @@ export const handleAddVariableClick = (deps, payload) => {
   payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button (handles both button and empty state)
-  const buttonId = payload._event.currentTarget.id;
-  const groupId = buttonId
-    .replace("addVariableButton", "")
-    .replace("addVariableEmpty", "");
+  const groupId =
+    getDataId(payload._event, "data-group-id") ||
+    payload._event.currentTarget.id
+      .replace("addVariableButton", "")
+      .replace("addVariableEmpty", "");
+  if (!groupId) {
+    return;
+  }
   store.setTargetGroupId({ groupId: groupId });
 
   // Toggle dialog open
@@ -82,7 +100,10 @@ export const handleCloseDialog = (deps) => {
 
 export const handleRowClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("row", "");
+  const itemId = getDataId(payload._event, "data-item-id", "row");
+  if (!itemId) {
+    return;
+  }
 
   dispatchEvent(
     new CustomEvent("variable-item-click", {
@@ -98,7 +119,10 @@ export const handleRowContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   payload._event.stopPropagation();
 
-  const itemId = payload._event.currentTarget.id.replace("row", "");
+  const itemId = getDataId(payload._event, "data-item-id", "row");
+  if (!itemId) {
+    return;
+  }
   const x = payload._event.clientX;
   const y = payload._event.clientY;
 

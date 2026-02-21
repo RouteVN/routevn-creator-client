@@ -49,7 +49,7 @@ template:
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md:
-                      - 'rtgl-view#group${group.id} d=h w=f av=c bgc=bg cur=pointer style="position: sticky; top: 48px;"':
+                      - 'rtgl-view#groupRef${i} data-group-id=${group.id} d=h w=f av=c bgc=bg cur=pointer style="position: sticky; top: 48px;"':
                           - rtgl-view w=f d=h av=c:
                               - $if group.isCollapsed:
                                   - rtgl-svg wh=16 svg=folderArrowRight: null
@@ -58,7 +58,7 @@ template:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg wh=16 svg=folder: null
                                   - rtgl-text: ${group.fullLabel}
-                          - rtgl-button#addVariableButton${group.id} s=sm flex=1 ip=s icon=plus: Add
+                          - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm flex=1 ip=s icon=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f mb=md p=sm:
                               - $if group.hasChildren:
@@ -72,9 +72,9 @@ template:
                                               - rtgl-text c=mu-fg s=sm: Type
                                           - rtgl-view flex=1:
                                               - rtgl-text c=mu-fg s=sm: Default
-                                      - $for item in group.children:
+                                      - $for item, j in group.children:
                                           - $if item.isSelected:
-                                              - rtgl-view#row${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu br=sm:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu br=sm:
                                                   - rtgl-view flex=2:
                                                       - rtgl-text s=sm: ${item.name}
                                                   - rtgl-view flex=1:
@@ -84,7 +84,7 @@ template:
                                                   - rtgl-view flex=1:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
-                                              - rtgl-view#row${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md:
                                                   - rtgl-view flex=2:
                                                       - rtgl-text s=sm: ${item.name}
                                                   - rtgl-view flex=1:
@@ -94,7 +94,7 @@ template:
                                                   - rtgl-view flex=1:
                                                       - rtgl-text s=sm: ${item.default}
                                 $else:
-                                  - rtgl-view#addVariableEmpty${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
+                                  - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
                                       - rtgl-svg svg=plus wh=24: null
                                       - rtgl-text: Add Variable
             $elif searchQuery:

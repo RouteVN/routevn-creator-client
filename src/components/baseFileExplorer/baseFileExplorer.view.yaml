@@ -51,9 +51,9 @@ template:
                       - rtgl-text s=sm c=mu-fg ta=c: No items. Click to create a folder.
                 $else:
                   - $for item, i in items:
-                      - 'rtgl-view#item${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f h=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
+                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
-                              - rtgl-svg#arrow${item.id} svg=${item.arrowIcon} wh=16 cur=pointer: null
+                              - rtgl-svg#arrowRef${i} data-item-id=${item.id} svg=${item.arrowIcon} wh=16 cur=pointer: null
                             $else:
                               - rtgl-view wh=16: null
                           - rtgl-view d=h g=md av=c w=f:

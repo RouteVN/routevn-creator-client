@@ -10,6 +10,14 @@ export const handleBeforeMount = (deps) => {
   return mountLegacySubscriptions(deps);
 };
 
+const getItemIdFromEvent = (event, prefix = "item") => {
+  return (
+    event?.currentTarget?.getAttribute?.("data-item-id") ||
+    event?.currentTarget?.id?.replace(prefix, "") ||
+    ""
+  );
+};
+
 const calculateForbiddenTargets = (sourceItem, allItems) => {
   if (!sourceItem) return [];
 
@@ -86,7 +94,7 @@ export const getSelectedItemIndex = (
   const lastItem = sortedItems[sortedItems.length - 1];
   if (mouseY > lastItem.bottom) {
     // Check if the last item belongs to an expanded folder
-    const lastItemId = lastItem.id.replace("item", "");
+    const lastItemId = lastItem.id;
     const lastActualItem = items.find((item) => item.id === lastItemId);
 
     if (lastActualItem?.parentId) {
@@ -98,7 +106,7 @@ export const getSelectedItemIndex = (
       if (parentFolder?.type === "folder") {
         // Return the parent folder's below position
         const parentIndex = sortedItems.findIndex(
-          (item) => item.id === `item-${parentFolder.id}`,
+          (item) => item.id === parentFolder.id,
         );
         return {
           index: parentIndex,
@@ -120,7 +128,7 @@ export const getSelectedItemIndex = (
 
     if (mouseY >= currentItem.top && mouseY <= currentItem.bottom) {
       // Get the actual item data to check its type
-      const itemId = currentItem.id.replace("item", "");
+      const itemId = currentItem.id;
       const actualItem = items.find((item) => item.id === itemId);
       const isFolder = actualItem?.type === "folder";
 
@@ -194,11 +202,15 @@ export const handleItemMouseDown = (deps, payload) => {
 
   const itemRects = Object.keys(refIds).reduce((acc, key) => {
     const ref = refIds[key];
-    if (!key.startsWith("item-")) {
+    if (!key.startsWith("itemRef")) {
+      return acc;
+    }
+    const itemId = ref?.getAttribute?.("data-item-id");
+    if (!itemId) {
       return acc;
     }
     const rect = ref.getBoundingClientRect();
-    acc[key] = {
+    acc[itemId] = {
       top: rect.top,
       bottom: rect.bottom,
       height: rect.height,
@@ -209,7 +221,10 @@ export const handleItemMouseDown = (deps, payload) => {
     return acc;
   }, {});
 
-  const itemId = payload._event.currentTarget.id.replace("item", "");
+  const itemId = getItemIdFromEvent(payload._event);
+  if (!itemId) {
+    return;
+  }
   const sourceItem = props.items.find((item) => item.id === itemId);
   const forbiddenTargetIds = calculateForbiddenTargets(sourceItem, props.items);
   const visibleItems = getVisibleItems(props.items, store.selectCollapsedIds());
@@ -394,7 +409,10 @@ export const handleItemContextMenu = (deps, payload) => {
     return;
   }
 
-  const itemId = payload._event.currentTarget.id.replace("item", "");
+  const itemId = getItemIdFromEvent(payload._event);
+  if (!itemId) {
+    return;
+  }
 
   // Find the item to get its type
   const item = props.items?.find((item) => item.id === itemId);
@@ -421,7 +439,10 @@ export const handleItemContextMenu = (deps, payload) => {
 
 export const handleItemClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item", "");
+  const itemId = getItemIdFromEvent(payload._event);
+  if (!itemId) {
+    return;
+  }
 
   // Update selected item
   store.setSelectedItemId({ itemId: itemId });
@@ -438,7 +459,10 @@ export const handleItemClick = (deps, payload) => {
 
 export const handleItemDblClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("item", "");
+  const itemId = getItemIdFromEvent(payload._event);
+  if (!itemId) {
+    return;
+  }
 
   dispatchEvent(
     new CustomEvent("dblclick-item", {
@@ -460,7 +484,10 @@ export const handlePageItemClick = (deps, payload) => {
 export const handleArrowClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.stopPropagation(); // Prevent triggering item click
-  const folderId = payload._event.currentTarget.id.replace("arrow", "");
+  const folderId = getItemIdFromEvent(payload._event, "arrow");
+  if (!folderId) {
+    return;
+  }
   store.toggleFolderExpand({ folderId: folderId });
   render();
 };
