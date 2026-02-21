@@ -34,7 +34,7 @@ template:
                           - rtgl-text#propertyName${property.name} s=xs cur=pointer: ${property.name}
                       - $if editable:
                           - rtgl-button#addKeyframe${property.name} s=sm w=16 v=gh cur=pointer ml=xs: +
-                  - rtgl-view h=24 w=24 av=c ah=e av=e mr=sm ml=sm:
+                  - rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm:
                       - rtgl-text#initialValue${property.name} s=xs cur=pointer: ${property.initialValue}
                   - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
                       - $if property.keyframes && property.keyframes.length > 0:

@@ -150,7 +150,7 @@ template:
                                                   - rtgl-view h=f av=c:
                                                       - rtgl-button#spritesButtonRef${gIndex}x${itemIndex} data-item-id=${item.id} v=se: Sprites
                                             $elif resourceType == 'colors':
-                                              - 'rtgl-view bc=${item.borderColor} p=md g=md br=md g=sm bw=xs style="overflow: hidden;"':
+                                              - 'rtgl-view bc=${item.borderColor} p=md g=md br=md bw=xs style="overflow: hidden;"':
                                                   - 'rtgl-view w=${mediaWidth} h=${mediaHeight} style="background-color: ${item.hex}"': null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'typography':
@@ -172,7 +172,7 @@ template:
                                                   - rtgl-view h=12: null
                                                   - rvn-keyframe-timeline :properties=#{item.properties}: null
                                             $else:
-                                              - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v p=md bw=xs br=md:
+                                              - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v bw=xs br=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                 $else:
                                   - $if resourceType == 'characters':
