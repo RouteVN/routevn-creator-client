@@ -2,6 +2,8 @@ export const createInitialState = () => ({
   currentRoute: "/projects",
 });
 
+const SIDEBAR_WIDTH_PX = 64;
+
 const routesWithoutNavbar = ["/projects"];
 
 export const selectShowSidebar = ({ state }) => {
@@ -72,9 +74,11 @@ export const setCurrentRoute = ({ state }, { route } = {}) => {
 };
 
 export const selectViewData = ({ state }) => {
+  const showSidebar = selectShowSidebar({ state });
   return {
     ...state,
     currentRoutePattern: selectCurrentRoutePattern({ state }),
-    showSidebar: selectShowSidebar({ state }),
+    showSidebar,
+    contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",
   };
 };

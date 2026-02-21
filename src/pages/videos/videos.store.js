@@ -5,20 +5,20 @@ const form = {
   fields: [
     {
       name: "thumbnailFileId",
-      inputType: "image",
+      type: "image",
       src: "${thumbnailFileId.src}",
       width: 240,
       height: 135,
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "fileType",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Type",
     },
     {
       name: "fileSize",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Size",
     },
   ],

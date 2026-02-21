@@ -1,5 +1,18 @@
 import { fromEvent, tap } from "rxjs";
 
+const isBooleanAttrEnabled = (attrs, camelName, kebabName) => {
+  const compactName = kebabName.replaceAll("-", "");
+  const value =
+    attrs?.[camelName] ?? attrs?.[kebabName] ?? attrs?.[compactName];
+  if (value === undefined || value === null || value === false) {
+    return false;
+  }
+  if (typeof value === "string") {
+    return value !== "false";
+  }
+  return true;
+};
+
 const mountLegacySubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
@@ -190,7 +203,16 @@ export const getSelectedItemIndex = (
 export const handleItemMouseDown = (deps, payload) => {
   const { store, refs, render, props, props: attrs } = deps;
 
-  if (!attrs.draggable) {
+  // Drag should start only on primary button.
+  if (payload?._event?.button !== 0) {
+    return;
+  }
+
+  const isDragEnabled =
+    isBooleanAttrEnabled(attrs, "allowDrag", "allow-drag") ||
+    isBooleanAttrEnabled(attrs, "draggable", "draggable");
+
+  if (!isDragEnabled) {
     return;
   }
 
@@ -373,17 +395,17 @@ const subscriptions = (deps) => {
 };
 
 export const handleContainerContextMenu = (deps, payload) => {
-  const { store, render, props, props: attrs } = deps;
+  const { store, render, props } = deps;
   payload._event.preventDefault();
 
-  if (!attrs.dropdownMenu) {
-    return;
-  }
+  const emptyContextMenuItems = Array.isArray(props.emptyContextMenuItems)
+    ? props.emptyContextMenuItems
+    : undefined;
 
   // Show dropdown menu for empty space
   store.showDropdownMenuFileExplorerEmpty({
     position: { x: payload._event.clientX, y: payload._event.clientY },
-    emptyContextMenuItems: props.emptyContextMenuItems,
+    emptyContextMenuItems,
   });
   render();
 };
@@ -392,22 +414,22 @@ export const handleEmptyMessageClick = (deps, payload) => {
   const { store, render, props } = deps;
   payload._event.preventDefault();
 
+  const emptyContextMenuItems = Array.isArray(props.emptyContextMenuItems)
+    ? props.emptyContextMenuItems
+    : undefined;
+
   // Show dropdown menu when clicking on empty message
   const rect = payload._event.currentTarget.getBoundingClientRect();
   store.showDropdownMenuFileExplorerEmpty({
     position: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-    emptyContextMenuItems: props.emptyContextMenuItems,
+    emptyContextMenuItems,
   });
   render();
 };
 
 export const handleItemContextMenu = (deps, payload) => {
-  const { store, render, props, props: attrs } = deps;
+  const { store, render, props } = deps;
   payload._event.preventDefault();
-
-  if (!attrs.dropdownMenu) {
-    return;
-  }
 
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {
@@ -416,12 +438,15 @@ export const handleItemContextMenu = (deps, payload) => {
 
   // Find the item to get its type
   const item = props.items?.find((item) => item.id === itemId);
+  const contextMenuItems = Array.isArray(props.contextMenuItems)
+    ? props.contextMenuItems
+    : undefined;
 
   // Filter context menu items based on item type
-  let filteredMenuItems = props.contextMenuItems;
+  let filteredMenuItems = contextMenuItems;
   if (item && (item.type === "sprite" || item.type.startsWith("text"))) {
     // For sprite and text items, only show Rename and Delete options
-    filteredMenuItems = props.contextMenuItems?.filter(
+    filteredMenuItems = contextMenuItems?.filter(
       (menuItem) =>
         menuItem.value === "rename-item" || menuItem.value === "delete-item",
     );

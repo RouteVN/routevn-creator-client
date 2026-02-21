@@ -167,8 +167,41 @@ export const handleDropdownMenuClose = (deps) => {
   render();
 };
 
-export const handleDropdownMenuClickItem = async (deps, payload) => {
+export const handleDeleteDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeDeleteDialog();
+  render();
+};
+
+export const handleDeleteDialogCancel = (deps) => {
+  const { store, render } = deps;
+  store.closeDeleteDialog();
+  render();
+};
+
+export const handleDeleteDialogConfirm = async (deps) => {
   const { appService, store, render } = deps;
+  const projectId = store.selectDeleteDialogProjectId();
+  if (!projectId) {
+    store.closeDeleteDialog();
+    render();
+    return;
+  }
+
+  try {
+    await appService.removeProjectEntry(projectId);
+    store.removeProject({ projectId });
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    appService.showToast(`Failed to delete project: ${error.message || error}`);
+  } finally {
+    store.closeDeleteDialog();
+    render();
+  }
+};
+
+export const handleDropdownMenuClickItem = async (deps, payload) => {
+  const { store, render } = deps;
   const detail = payload._event.detail;
 
   const item = detail.item || detail;
@@ -199,21 +232,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   store.closeDropdownMenu();
-  render();
-
-  const confirmed = await appService.showDialog({
-    message: `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
-    title: "Delete Project",
-    confirmText: "Delete",
-    cancelText: "Cancel",
+  store.openDeleteDialog({
+    projectId: projectId,
+    projectName: project.name || "",
   });
-
-  if (!confirmed) {
-    return;
-  }
-
-  await appService.removeProjectEntry(projectId);
-
-  store.removeProject({ projectId: projectId });
   render();
 };

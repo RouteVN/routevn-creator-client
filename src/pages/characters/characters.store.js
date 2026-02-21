@@ -4,13 +4,13 @@ const form = {
   fields: [
     {
       name: "fileId",
-      inputType: "slot",
+      type: "slot",
       slot: "avatar",
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "description",
-      inputType: "popover-input",
+      type: "popover-input",
       description: "Description",
     },
   ],
@@ -33,18 +33,18 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "description",
-        inputType: "input-text",
+        type: "input-text",
         label: "Description",
         required: false,
       },
       {
-        inputType: "slot",
+        type: "slot",
         slot: "avatar-slot",
         label: "Avatar",
       },
@@ -55,7 +55,7 @@ export const createInitialState = () => ({
         {
           id: "submit",
           variant: "pr",
-          content: "Add Character",
+          label: "Add Character",
         },
       ],
     },
@@ -213,20 +213,20 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Name",
         description: "Enter the character name",
         required: true,
       },
       {
         name: "description",
-        inputType: "input-text",
+        type: "input-text",
         label: "Description",
         description: "Enter the character description",
         required: false,
       },
       {
-        inputType: "slot",
+        type: "slot",
         slot: "avatar-slot",
         label: "Avatar",
       },
@@ -237,7 +237,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Update Character",
+          label: "Update Character",
         },
       ],
     },

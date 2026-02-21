@@ -2,10 +2,10 @@ import { toFlatGroups, toFlatItems } from "insieme";
 
 const createForm = (selectedItem) => ({
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "scope",
-      inputType: "select",
+      type: "select",
       description: "Scope",
       options: [
         { value: "context", label: "Context" },
@@ -15,7 +15,7 @@ const createForm = (selectedItem) => ({
     },
     {
       name: "type",
-      inputType: "select",
+      type: "select",
       description: "Type",
       options: [
         { value: "string", label: "String" },
@@ -26,7 +26,7 @@ const createForm = (selectedItem) => ({
     selectedItem?.type === "boolean"
       ? {
           name: "default",
-          inputType: "select",
+          type: "select",
           description: "Default",
           options: [
             { value: "true", label: "True" },
@@ -36,12 +36,12 @@ const createForm = (selectedItem) => ({
       : selectedItem?.type === "number"
         ? {
             name: "default",
-            inputType: "input-number",
+            type: "input-number",
             description: "Default",
           }
         : {
             name: "default",
-            inputType: "input-text",
+            type: "input-text",
             description: "Default",
           },
   ],

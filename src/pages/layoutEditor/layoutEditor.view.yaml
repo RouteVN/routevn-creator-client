@@ -35,12 +35,12 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
-      - rtgl-view flex=1 h=f:
+      - rtgl-view w=1fg h=f:
           - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
               - rtgl-button#backButton sq icon="chevronLeft" v="gh" mr=sm: null
-              - rtgl-view flex=1:
+              - rtgl-view w=1fg:
                   - rtgl-text c=mu-fg: ${layout.name}
-          - rtgl-view flex=1 sv w=f:
+          - rtgl-view h=1fg sv w=f:
               - 'rtgl-view w=f bgc=mu pos=rel bwb=xs style="margin-left: 1px; aspect-ratio: 16/9;"':
                   - rtgl-view pos=abs cor=full:
                       - 'div#canvas style="width: 100%; height: 100%;display: flex; cursor: ${canvasCursor}"': null
@@ -53,7 +53,7 @@ template:
               - $if selectedItemId:
                   - rtgl-view h=48 w=f av=c ph=md:
                       - rtgl-text c=mu-fg: ${item.name} (${item.type})
-                  - rtgl-view w=f flex=1 sv pv=md:
+                  - rtgl-view w=f h=1fg sv pv=md:
                       - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} item-type=${item.type} :values=item :variablesData=variablesData: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:

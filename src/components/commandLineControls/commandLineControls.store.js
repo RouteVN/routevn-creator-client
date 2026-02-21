@@ -13,7 +13,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "disableUserClick",
-        inputType: "select",
+        type: "select",
         label: "Disable User Click",
         description: "",
         required: false,
@@ -25,7 +25,7 @@ export const createInitialState = () => ({
       },
       {
         name: "autoPlay",
-        inputType: "select",
+        type: "select",
         label: "Auto Play",
         description: "",
         required: false,
@@ -37,7 +37,7 @@ export const createInitialState = () => ({
       },
       {
         name: "autoPlayDelay",
-        inputType: "input-number",
+        type: "input-number",
         label: "Auto Play Delay (milliseconds)",
         description: "",
         required: false,

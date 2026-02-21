@@ -7,21 +7,21 @@ const createAddColorForm = (colorFolderOptions) => ({
   fields: [
     {
       name: "name",
-      inputType: "input-text",
+      type: "input-text",
       label: "Color Name",
       description: "Enter the color name",
       required: true,
     },
     {
       name: "hex",
-      inputType: "color-picker",
+      type: "color-picker",
       label: "Hex Value",
       description: "Choose or enter a hex color value",
       required: true,
     },
     {
       name: "folderId",
-      inputType: "select",
+      type: "select",
       label: "Folder",
       description: "Choose where to save the color",
       options: colorFolderOptions,
@@ -34,7 +34,7 @@ const createAddColorForm = (colorFolderOptions) => ({
       {
         id: "submit",
         variant: "pr",
-        content: "Add Color",
+        label: "Add Color",
       },
     ],
   },
@@ -47,7 +47,7 @@ const createAddFontForm = (fontFolderOptions) => ({
   fields: [
     {
       name: "folderId",
-      inputType: "select",
+      type: "select",
       label: "Folder",
       description: "Choose where to save the font",
       options: fontFolderOptions,
@@ -55,7 +55,7 @@ const createAddFontForm = (fontFolderOptions) => ({
     },
     {
       slot: "font-upload",
-      inputType: "slot",
+      type: "slot",
       label: "Font File",
       description: "Click or drag and drop a font file here",
       required: true,
@@ -67,7 +67,7 @@ const createAddFontForm = (fontFolderOptions) => ({
       {
         id: "submit",
         variant: "pr",
-        content: "Add Font",
+        label: "Add Font",
       },
     ],
   },
@@ -77,30 +77,30 @@ const form = {
   fields: [
     {
       name: "typographyPreview",
-      inputType: "image",
+      type: "image",
       src: "${typographyPreview.src}",
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "fontSize",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Font Size",
     },
     {
       name: "lineHeight",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Line Height",
     },
-    { name: "colorName", inputType: "read-only-text", description: "Color" },
-    { name: "fontName", inputType: "read-only-text", description: "Font" },
+    { name: "colorName", type: "read-only-text", description: "Color" },
+    { name: "fontName", type: "read-only-text", description: "Font" },
     {
       name: "fontWeight",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Font Weight",
     },
     {
       name: "previewText",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Preview Text",
     },
   ],
@@ -496,13 +496,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "fontColor",
-        inputType: "select",
+        type: "select",
         label: "Color",
         placeholder: "Choose a color",
         options: colorOptions,
@@ -511,7 +511,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontStyle",
-        inputType: "select",
+        type: "select",
         label: "Font Style",
         placeholder: "Choose a font",
         options: fontOptions,
@@ -520,7 +520,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontSize",
-        inputType: "slider-input",
+        type: "slider-input",
         label: "Font Size",
         min: 8,
         max: 72,
@@ -530,7 +530,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "lineHeight",
-        inputType: "slider-input",
+        type: "slider-input",
         label: "Line Height",
         min: 0.8,
         max: 3.0,
@@ -539,7 +539,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontWeight",
-        inputType: "select",
+        type: "select",
         label: "Font Weight",
         placeholder: "Choose font weight",
         options: [
@@ -557,7 +557,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "previewText",
-        inputType: "input-text",
+        type: "input-text",
         label: "Preview Text",
         required: false,
       },
@@ -568,7 +568,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: state.editMode ? "Update Typography" : "Add Typography",
+          label: state.editMode ? "Update Typography" : "Add Typography",
         },
       ],
     },

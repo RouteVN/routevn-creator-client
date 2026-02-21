@@ -5,25 +5,25 @@ const form = {
   fields: [
     {
       name: "fileId",
-      inputType: "waveform",
+      type: "waveform",
       waveformData: "${fileId.waveformData}",
       width: 240,
       height: 100,
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "fileType",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Type",
     },
     {
       name: "fileSize",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Size",
     },
     {
       name: "duration",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Duration",
     },
   ],

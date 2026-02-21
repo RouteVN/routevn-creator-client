@@ -53,12 +53,12 @@ template:
           - rtgl-view wh=f:
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-              - rtgl-view flex=1 sv w=f:
+              - rtgl-view h=1fg sv w=f:
                   - rtgl-form#form :form=form :defaultValues=defaultValues :context=context:
                       - rtgl-view#choicesContainer slot=choices g=md w=f:
                           - $for item, index in defaultValues.items:
                               - rtgl-view#choice${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
-                                  - rtgl-view flex=1 w=f:
+                                  - rtgl-view w=1fg:
                                       - rtgl-text: ${item.content}
                           - rtgl-button#addChoiceButton v=ol w=f mt=md: + Add Choice
               - rtgl-view d=h av=c ah=e w=f g=lg:
@@ -68,7 +68,7 @@ template:
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
               - rtgl-form#choiceForm :form=choiceFormTemplate :context=editFormContext :defaultValues=editForm: null
-              - rtgl-view flex=1: null
+              - rtgl-view h=1fg: null
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#cancelEditButton v=ol: Cancel
                   - rtgl-button#saveChoiceButton: Save Choice

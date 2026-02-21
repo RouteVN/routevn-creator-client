@@ -4,7 +4,7 @@ const form = {
   fields: [
     {
       name: "resourceId",
-      inputType: "select",
+      type: "select",
       label: "Layout",
       description: "Select which layout to display",
       required: true,

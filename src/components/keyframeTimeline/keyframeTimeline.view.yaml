@@ -44,5 +44,5 @@ template:
                           - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
                               - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null
                         $else:
-                          - rtgl-view d=h p=xs h=f flex=1 br=sm ah=c av=c:
+                          - rtgl-view d=h p=xs h=f w=1fg br=sm ah=c av=c:
                               - rtgl-text s=xs: No keyframes

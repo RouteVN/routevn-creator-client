@@ -10,7 +10,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "resourceId",
-        inputType: "select",
+        type: "select",
         label: "Base Layout",
         description: "",
         required: false,

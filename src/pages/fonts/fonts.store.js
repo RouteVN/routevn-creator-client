@@ -35,24 +35,24 @@ const form = {
   fields: [
     {
       name: "fontPreview",
-      inputType: "image",
+      type: "image",
     },
     {
       name: "fileId",
-      inputType: "font",
+      type: "font",
       previewText: "Aa",
       fontFamily: "${fileId.fontFamily}",
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "fontFamily",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Font Family",
     },
-    { name: "fileType", inputType: "read-only-text", description: "File Type" },
+    { name: "fileType", type: "read-only-text", description: "File Type" },
     {
       name: "fileSize",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Size",
     },
   ],
@@ -63,49 +63,49 @@ const fontInfoForm = {
   fields: [
     {
       name: "fontFamily",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Font Family",
     },
     {
       name: "fileName",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Name",
     },
     {
       name: "fileSize",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Size",
     },
     {
       name: "format",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Format",
     },
     // NOTE: The following fields are commented out because the current implementation
     // does not accurately extract this information from font files
     // {
     //   name: "weightClass",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Weight Class",
     // },
     // {
     //   name: "isVariableFont",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Variable Font",
     // },
     // {
     //   name: "supportsItalics",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Italic Support",
     // },
     // {
     //   name: "glyphCount",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Glyph Count",
     // },
     // {
     //   name: "languageSupport",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Languages",
     // },
   ],

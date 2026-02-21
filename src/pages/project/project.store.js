@@ -2,20 +2,20 @@ const form = {
   fields: [
     {
       name: "name",
-      inputType: "popover-input",
-      description: "Project Name",
+      type: "popover-input",
+      label: "Project Name",
       required: true,
     },
     {
       name: "description",
-      inputType: "popover-input",
-      description: "Description",
+      type: "popover-input",
+      label: "Description",
       required: true,
     },
     {
-      inputType: "slot",
+      type: "slot",
       slot: "icon-file-id",
-      description: "Project Icon",
+      label: "Project Icon",
     },
   ],
 };

@@ -211,7 +211,7 @@ export const selectViewData = ({ state }) => {
 
   const formFields = [
     {
-      inputType: "slot",
+      type: "slot",
       slot: "background",
       description: "Background",
     },
@@ -221,7 +221,7 @@ export const selectViewData = ({ state }) => {
     formFields.push({
       name: "loop",
       label: "Loop Video",
-      inputType: "select",
+      type: "select",
       options: [
         { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
@@ -232,7 +232,7 @@ export const selectViewData = ({ state }) => {
   formFields.push({
     name: "tween",
     label: "Tween Animation",
-    inputType: "select",
+    type: "select",
     options: tweenOptions,
   });
 

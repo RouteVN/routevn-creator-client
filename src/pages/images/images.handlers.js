@@ -139,6 +139,19 @@ export const handleImageItemClick = async (deps, payload) => {
   render();
 };
 
+export const handleImageItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload?._event?.detail || {};
+  const itemId = detail.itemId || detail.id;
+
+  if (!itemId) {
+    return;
+  }
+
+  store.showFullImagePreview({ itemId });
+  render();
+};
+
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { files, targetGroupId } = payload._event.detail;

@@ -504,12 +504,12 @@ const dialogueForm = {
     {
       name: "dialogue-character-name",
       description: "Character Name",
-      inputType: "input-text",
+      type: "input-text",
     },
     {
       name: "dialogue-content",
       description: "Dialogue Content",
-      inputType: "input-text",
+      type: "input-text",
     },
   ],
 };
@@ -520,7 +520,7 @@ const choiceForm = {
   fields: [
     {
       name: "choicesNum",
-      inputType: "select",
+      type: "select",
       description: "Number of Choices",
       options: [
         { label: "1", value: 1 },
@@ -536,7 +536,7 @@ const choiceForm = {
     {
       $each: "choice, i in choices",
       name: "choices[${i}]",
-      inputType: "input-text",
+      type: "input-text",
       description: "Choice content text",
       placeholder: "Enter choice text",
     },

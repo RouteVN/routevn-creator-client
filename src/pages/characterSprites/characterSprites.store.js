@@ -4,16 +4,16 @@ const form = {
   fields: [
     {
       name: "fileId",
-      inputType: "image",
+      type: "image",
       src: "${fileId.src}",
       width: 240,
       clickable: true,
       extraEvent: true,
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "description",
-      inputType: "popover-input",
+      type: "popover-input",
       description: "Description",
     },
   ],

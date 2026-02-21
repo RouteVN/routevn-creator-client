@@ -12,10 +12,10 @@ const hexToRgb = (hex) => {
 
 const form = {
   fields: [
-    { name: "colorImage", inputType: "image", src: "${colorImage.src}" },
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "hex", inputType: "read-only-text", description: "Hex Value" },
-    { name: "rgb", inputType: "read-only-text", description: "RGB Value" },
+    { name: "colorImage", type: "image", src: "${colorImage.src}" },
+    { name: "name", type: "popover-input", description: "Name" },
+    { name: "hex", type: "read-only-text", description: "Hex Value" },
+    { name: "rgb", type: "read-only-text", description: "RGB Value" },
   ],
 };
 
@@ -177,13 +177,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "hex",
-        inputType: "color-picker",
+        type: "color-picker",
         label: "Hex Value",
         required: true,
       },
@@ -194,7 +194,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Update Color",
+          label: "Update Color",
         },
       ],
     },
@@ -213,13 +213,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Color Name",
         required: true,
       },
       {
         name: "hex",
-        inputType: "color-picker",
+        type: "color-picker",
         label: "Hex Value",
         required: true,
       },
@@ -230,7 +230,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Add Color",
+          label: "Add Color",
         },
       ],
     },

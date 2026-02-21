@@ -4,7 +4,7 @@ const form = {
   fields: [
     {
       name: "sceneId",
-      inputType: "select",
+      type: "select",
       label: "Scene",
       description: "",
       required: true,
@@ -13,7 +13,7 @@ const form = {
     },
     {
       name: "sectionId",
-      inputType: "select",
+      type: "select",
       label: "Section",
       description: "",
       required: true,
@@ -22,7 +22,7 @@ const form = {
     },
     // {
     //   name: "animation",
-    //   inputType: "select",
+    //   type: "select",
     //   label: "Transition Animation",
     //   description: "",
     //   required: false,

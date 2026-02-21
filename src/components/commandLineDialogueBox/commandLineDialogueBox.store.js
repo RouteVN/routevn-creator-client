@@ -27,7 +27,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "mode",
-        inputType: "select",
+        type: "select",
         label: "Dialogue Mode",
         description: "",
         required: false,
@@ -38,7 +38,7 @@ export const createInitialState = () => ({
       },
       {
         name: "resourceId",
-        inputType: "select",
+        type: "select",
         label: "Dialogue Layout",
         description: "",
         required: false,
@@ -47,7 +47,7 @@ export const createInitialState = () => ({
       },
       {
         name: "characterId",
-        inputType: "select",
+        type: "select",
         label: "Dialogue Character",
         description: "",
         required: false,
@@ -57,7 +57,7 @@ export const createInitialState = () => ({
       {
         $when: 'values.mode == "nvl"',
         name: "clearPage",
-        inputType: "select",
+        type: "select",
         label: "Clear Page",
         description: "",
         required: false,
@@ -68,7 +68,7 @@ export const createInitialState = () => ({
       },
       {
         name: "clear",
-        inputType: "select",
+        type: "select",
         label: "Clear Dialogue",
         description: "",
         required: false,

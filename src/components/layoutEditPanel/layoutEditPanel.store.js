@@ -20,7 +20,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -28,7 +28,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -43,7 +43,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -51,7 +51,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -76,7 +76,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -84,7 +84,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -101,7 +101,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -109,7 +109,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -168,7 +168,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -176,7 +176,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -279,7 +279,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -287,7 +287,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -302,7 +302,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -310,7 +310,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -330,7 +330,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -338,7 +338,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -358,7 +358,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -366,7 +366,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -405,7 +405,7 @@ const config = {
                   // {
                   //   name: "contentType",
                   //   description: "Content Type",
-                  //   inputType: "select",
+                  //   type: "select",
                   //   options: [
                   //     { label: "Variable", value: "variable" },
                   //     { label: "Plain Text", value: "plain" },
@@ -415,7 +415,7 @@ const config = {
                   //   $when: 'popoverFormValues.contentType == "variable"',
                   //   name: "value",
                   //   description: "Variable",
-                  //   inputType: "select",
+                  //   type: "select",
                   //   options: [
                   //     {
                   //       label: "Dialogue Character Name",
@@ -435,7 +435,7 @@ const config = {
                   {
                     // $when: 'popoverFormValues.contentType == "plain"',
                     name: "value",
-                    inputType: "input-text",
+                    type: "input-text",
                   },
                 ],
                 actions: {
@@ -443,7 +443,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },

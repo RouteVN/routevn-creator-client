@@ -28,7 +28,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Project Name",
         required: true,
         testId: "project-name-input",
@@ -41,7 +41,7 @@ export const createInitialState = () => ({
       },
       {
         name: "description",
-        inputType: "input-text",
+        type: "input-text",
         label: "Description",
         description: "Enter a brief description of the project",
         required: true,
@@ -56,7 +56,7 @@ export const createInitialState = () => ({
       // comment since we only have 1 template
       // {
       //   name: "template",
-      //   inputType: "select",
+      //   type: "select",
       //   label: "Template",
       //   required: true,
       //   options: [{ value: "default", label: "Default" }],
@@ -64,7 +64,7 @@ export const createInitialState = () => ({
       {
         $when: "platform == 'tauri'",
         name: "projectPath",
-        inputType: "slot",
+        type: "slot",
         slot: "project-path-selector",
         label: "Project Location",
         required: true,
@@ -82,7 +82,7 @@ export const createInitialState = () => ({
         {
           id: "submit",
           variant: "pr",
-          content: "Submit",
+          label: "Submit",
           type: "submit",
           testId: "create-project-submit-button",
         },

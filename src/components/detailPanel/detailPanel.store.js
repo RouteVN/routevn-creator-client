@@ -23,7 +23,7 @@ export const createInitialState = () => ({
       fields: [
         {
           name: "text",
-          inputType: "input-textarea",
+          type: "input-textarea",
           label: "Text",
           description: "Enter the text",
           required: true,
@@ -35,7 +35,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            content: "Update Text",
+            label: "Update Text",
           },
         ],
       },
@@ -54,7 +54,7 @@ export const createInitialState = () => ({
       fields: [
         {
           name: "hex",
-          inputType: "color-picker",
+          type: "color-picker",
           label: "Hex Value",
           description: "Enter the hex color value (e.g., #ff0000)",
           required: true,
@@ -66,7 +66,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            content: "Update Color",
+            label: "Update Color",
           },
         ],
       },
@@ -89,7 +89,7 @@ export const createInitialState = () => ({
       fields: [
         {
           name: "fontColor",
-          inputType: "select",
+          type: "select",
           label: "Font Color",
           description: "Select a font color",
           placeholder: "Choose a color",
@@ -98,7 +98,7 @@ export const createInitialState = () => ({
         },
         {
           name: "fontStyle",
-          inputType: "select",
+          type: "select",
           label: "Font Style",
           description: "Select a font style",
           placeholder: "Choose a font",
@@ -107,21 +107,21 @@ export const createInitialState = () => ({
         },
         {
           name: "fontSize",
-          inputType: "input-text",
+          type: "input-text",
           label: "Font Size",
           description: "Enter the font size (e.g., 16, 18, 24)",
           required: true,
         },
         {
           name: "fontWeight",
-          inputType: "input-text",
+          type: "input-text",
           label: "Font Weight",
           description: "Enter the font weight (e.g., normal, bold, 400, 700)",
           required: true,
         },
         {
           name: "previewText",
-          inputType: "input-text",
+          type: "input-text",
           label: "Preview Text",
           description: "Text to display in the typography preview",
           required: false,
@@ -133,7 +133,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            content: "Update Typography",
+            label: "Update Typography",
           },
         ],
       },

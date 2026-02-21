@@ -3,14 +3,14 @@ import { toFlatGroups, toFlatItems } from "insieme";
 const form = {
   fields: [
     {
-      inputType: "slot",
+      type: "slot",
       slot: "audio",
       description: "Background Music",
     },
     {
       name: "loop",
       description: "Loop",
-      inputType: "select",
+      type: "select",
       options: [
         { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
@@ -19,7 +19,7 @@ const form = {
     {
       name: "volume",
       description: "Volume",
-      inputType: "slider-input",
+      type: "slider-input",
       min: 0,
       max: 1000,
       step: 1,

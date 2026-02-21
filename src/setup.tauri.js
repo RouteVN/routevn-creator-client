@@ -21,6 +21,7 @@ import Router from "./deps/infra/router";
 import { createGraphicsService } from "./deps/services/graphicsService";
 
 const guardedRtglConstructors = new WeakSet();
+const patchedRtglFormConstructors = new WeakSet();
 const rtglFeComponentTags = [
   "rtgl-accordion-item",
   "rtgl-breadcrumb",
@@ -111,7 +112,86 @@ const guardRtglAttributeUpdatesBeforeConnect = () => {
   });
 };
 
+const normalizeLegacyFormSchema = (schema) => {
+  if (!schema || typeof schema !== "object") {
+    return schema;
+  }
+
+  const normalizeField = (field) => {
+    if (!field || typeof field !== "object") {
+      return field;
+    }
+
+    const normalizedField = { ...field };
+
+    if (!normalizedField.type && normalizedField.inputType) {
+      normalizedField.type = normalizedField.inputType;
+    }
+
+    if (Array.isArray(normalizedField.fields)) {
+      normalizedField.fields = normalizedField.fields.map(normalizeField);
+    }
+
+    return normalizedField;
+  };
+
+  const normalizedSchema = { ...schema };
+
+  if (Array.isArray(schema.fields)) {
+    normalizedSchema.fields = schema.fields.map(normalizeField);
+  }
+
+  const buttons = schema.actions?.buttons;
+  if (Array.isArray(buttons)) {
+    normalizedSchema.actions = {
+      ...schema.actions,
+      buttons: buttons.map((button) => {
+        if (!button || typeof button !== "object") {
+          return button;
+        }
+
+        const normalizedButton = { ...button };
+        if (!normalizedButton.label && normalizedButton.content) {
+          normalizedButton.label = normalizedButton.content;
+        }
+
+        return normalizedButton;
+      }),
+    };
+  }
+
+  return normalizedSchema;
+};
+
+const patchRtglFormCompatibility = () => {
+  const ctor = customElements.get("rtgl-form");
+  if (!ctor || patchedRtglFormConstructors.has(ctor)) {
+    return;
+  }
+
+  const descriptor = Object.getOwnPropertyDescriptor(ctor.prototype, "form");
+  if (!descriptor || typeof descriptor.set !== "function") {
+    patchedRtglFormConstructors.add(ctor);
+    return;
+  }
+
+  Object.defineProperty(ctor.prototype, "form", {
+    get: descriptor.get,
+    set(value) {
+      return descriptor.set.call(this, normalizeLegacyFormSchema(value));
+    },
+    enumerable: descriptor.enumerable,
+    configurable: descriptor.configurable,
+  });
+
+  patchedRtglFormConstructors.add(ctor);
+};
+
 guardRtglAttributeUpdatesBeforeConnect();
+patchRtglFormCompatibility();
+customElements.whenDefined("rtgl-form").then(() => {
+  patchRtglFormCompatibility();
+});
 
 // Initialize app database
 const appDb = createDb({ path: "sqlite:app.db" });

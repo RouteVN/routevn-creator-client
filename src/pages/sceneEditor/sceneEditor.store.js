@@ -423,7 +423,7 @@ export const selectViewData = ({ state }) => {
         fields: [
           {
             name: "name",
-            inputType: "input-text",
+            type: "input-text",
             label: "Section Name",
             value: currentSection.name || "",
             required: true,
@@ -435,7 +435,7 @@ export const selectViewData = ({ state }) => {
             {
               id: "submit",
               variant: "pr",
-              content: "Rename",
+              label: "Rename",
             },
           ],
         },

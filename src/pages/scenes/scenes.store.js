@@ -3,16 +3,16 @@ import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "preview", inputType: "slot", slot: "preview" },
+    { name: "name", type: "popover-input", description: "Name" },
+    { name: "preview", type: "slot", slot: "preview" },
     {
       name: "sectionCount",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Sections",
     },
     {
       name: "sectionsList",
-      inputType: "slot",
+      type: "slot",
       slot: "sections-list",
       description: "Sections List",
     },
@@ -280,14 +280,14 @@ export const selectViewData = ({ state }, payload) => {
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Scene Name",
         description: "Enter the scene name",
         required: true,
       },
       {
         name: "folderId",
-        inputType: "select",
+        type: "select",
         label: "Folder",
         options: folderOptions.map((option) => ({
           value: option.id,
@@ -302,7 +302,7 @@ export const selectViewData = ({ state }, payload) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Create Scene",
+          label: "Create Scene",
         },
       ],
     },

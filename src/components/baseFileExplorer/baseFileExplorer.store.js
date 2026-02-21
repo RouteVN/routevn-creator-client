@@ -14,6 +14,19 @@ const EMPTY_CONTEXT_MENU_ITEMS = [
   { label: "New Folder", type: "item", value: "new-item" },
 ];
 
+const getBooleanAttr = (attrs, camelName, kebabName) => {
+  const compactName = kebabName.replaceAll("-", "");
+  const value =
+    attrs?.[camelName] ?? attrs?.[kebabName] ?? attrs?.[compactName];
+  if (value === undefined || value === null || value === false) {
+    return false;
+  }
+  if (typeof value === "string") {
+    return value !== "false";
+  }
+  return true;
+};
+
 export const createInitialState = () => ({
   isDragging: false,
   selectedItemId: undefined,
@@ -293,7 +306,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         fields: [
           {
             name: "name",
-            inputType: "input-text",
+            type: "input-text",
             label: "Name",
             required: true,
           },
@@ -304,7 +317,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
             {
               id: "submit",
               variant: "pr",
-              content: "Rename",
+              label: "Rename",
             },
           ],
         },
@@ -328,8 +341,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     popover: state.popover,
     form: renameForm,
     attrs,
-    noEmptyMessage: attrs.noEmptyMessage,
-    shrinkable: attrs.shrinkable,
+    noEmptyMessage: getBooleanAttr(attrs, "noEmptyMessage", "no-empty-message"),
+    shrinkable: getBooleanAttr(attrs, "shrinkable", "shrinkable"),
   };
 
   return viewData;

@@ -5,13 +5,13 @@ const layoutForm = {
   fields: [
     {
       name: "name",
-      inputType: "input-text",
+      type: "input-text",
       label: "Layout Name",
       required: true,
     },
     {
       name: "layoutType",
-      inputType: "select",
+      type: "select",
       label: "Layout Type",
       required: true,
       options: [
@@ -33,7 +33,7 @@ const layoutForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Add Layout",
+        label: "Add Layout",
       },
     ],
   },
@@ -41,10 +41,10 @@ const layoutForm = {
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "layoutTypeDisplay",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Layout Type",
     },
   ],

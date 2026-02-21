@@ -49,7 +49,7 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         description: "Version Name",
         required: true,
       },
@@ -60,12 +60,12 @@ export const selectViewData = ({ state }) => {
         {
           id: "cancel",
           variant: "se",
-          content: "Cancel",
+          label: "Cancel",
         },
         {
           id: "submit",
           variant: "pr",
-          content: "Save",
+          label: "Save",
         },
       ],
     },

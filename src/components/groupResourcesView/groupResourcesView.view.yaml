@@ -76,23 +76,23 @@ refs:
       click:
         handler: handleBackClick
 template:
-  - rtgl-view w=f h=100vh g=lg:
+  - 'rtgl-view w=f h=100vh g=lg style="min-width: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md wrap:
-              - rtgl-view av=c g=sm d=h flex=1:
+              - rtgl-view av=c g=sm d=h w=1fg:
                   - $if backUrl:
                       - rtgl-button#backButton sq icon="chevronLeft" v="gh" mr=sm: null
                   - $if navTitle:
                       - rtgl-text c=mu-fg: ${navTitle}
-              - rtgl-view d=h av=c g=md flex=0:
+              - rtgl-view d=h av=c g=md:
                   - $if showZoomControls:
                       - rtgl-view d=h av=c g=sm:
                           - rtgl-button#zoomOut w=10 v="gh" s=sm: '-'
                           - input#zoomSlider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}": null
                           - rtgl-button#zoomIn w=10 v="gh" s=sm: +
                   - rtgl-view av=c g=md:
-                      - rtgl-input#searchInput s=sm placeholder="Search..." value=${searchQuery} flex=1: null
-      - rtgl-view flex=1 w=f sv:
+                      - rtgl-input#searchInput s=sm placeholder="Search..." value=${searchQuery} h=1fg: null
+      - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
           - $if flatGroups.length > 0:
               - $for group, gIndex in flatGroups:
                   - rtgl-view#groupDragDropRef${gIndex} data-group-id=${group.id} w=f ph=md pos=rel:
@@ -110,11 +110,11 @@ template:
                                   - rtgl-svg wh=16 svg=folder: null
                                   - rtgl-text: ${group.fullLabel}
                           - $if canUpload:
-                              - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm flex=1 ip=s icon=upload: Upload
+                              - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg ip=s icon=upload: Upload
                             $else:
-                              - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm flex=1 ip=s icon=plus: Add
+                              - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg ip=s icon=plus: Add
                       - $if !group.isCollapsed:
-                          - rtgl-view w=f d=h p=sm wrap g=md:
+                          - 'rtgl-view w=f d=h p=sm wrap g=md style="min-width: 0;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} ${fullWidthAttr} cur=pointer style="${item.selectedStyle}":
@@ -134,9 +134,9 @@ template:
                                                 $else:
                                                   - rtgl-image bc=${item.borderColor} p=md g=md bw=xs br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png: null
                                             $elif resourceType == 'images':
-                                              - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
-                                                  - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
-                                                  - rtgl-text s=xs c=mu-fg ellipsis mw=${maxWidth}: ${item.name}
+                                              - 'rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md w=${maxWidth} style="max-width: 100%;"':
+                                                  - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif resourceType == 'characterSprites':
                                               - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:
                                                   - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
@@ -144,7 +144,7 @@ template:
                                             $elif resourceType == 'characters':
                                               - rtgl-view bc=${item.borderColor} w=f d=h g=xl wrap mt=lg bw=xs br=lg p=lg:
                                                   - rvn-file-image w=96 h=96 br=f fileId=${item.fileId}: null
-                                                  - rtgl-view flex=1 g=md:
+                                                  - rtgl-view w=1fg g=md:
                                                       - rtgl-text s=h2: ${item.name}
                                                       - rtgl-text c=mu-fg: ${item.description}
                                                   - rtgl-view h=f av=c:
@@ -167,7 +167,7 @@ template:
                                                   - rvn-transform-thumbnail :item=#{item}: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'tweens':
-                                              - rtgl-view bc=${item.borderColor} p=md flex=1 h=f w=f bw=xs br=md bgc=bg:
+                                              - rtgl-view bc=${item.borderColor} p=md h=1fg w=f bw=xs br=md bgc=bg:
                                                   - rtgl-text s=h4: ${item.name}
                                                   - rtgl-view h=12: null
                                                   - rvn-keyframe-timeline :properties=#{item.properties}: null

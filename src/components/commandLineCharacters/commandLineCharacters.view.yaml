@@ -54,7 +54,7 @@ template:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-          - rtgl-view flex=1 sv w=f:
+          - rtgl-view h=1fg sv w=f:
               - rtgl-form#form :form=form :defaultValues=defaultValues:
                   - rtgl-view#charactersContainer slot=characters g=md w=f cur=pointer:
                       - $for character, i in defaultValues.characters:
@@ -66,7 +66,7 @@ template:
                                       - rtgl-view w=120 h=120 av=c ah=c bgc=mu br=sm cur=pointer:
                                           - rtgl-text s=sm c=mu-fg: No Sprite
                                   - rtgl-text s=sm w=120 ah=c ellipsis=true: ${character.displayName}
-                              - rtgl-view flex=1 g=sm:
+                              - rtgl-view w=1fg g=sm:
                                   - rtgl-text s=sm c=mu-fg: Transform
                                   - rtgl-select#transform${i} :options=defaultValues.transformOptions :selectedValue=defaultValues.characters[${i}].transformId w=f: null
                       - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
@@ -75,10 +75,10 @@ template:
       - $if mode == 'character-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-              - rtgl-view h=f flex=1 sv:
+          - 'rtgl-view d=h w=f g=lg h=1fg style="min-height: 0;"':
+              - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=items no-empty-message: null
-              - rtgl-view h=f flex=2 sv g=lg:
+              - rtgl-view h=f w=2fg sv g=lg:
                   - $for group, i in groups:
                       - rtgl-view g=md:
                           - rtgl-text: ${group.name}
@@ -95,10 +95,10 @@ template:
       - $if mode == 'sprite-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-              - rtgl-view h=f flex=1 sv:
+          - 'rtgl-view d=h w=f g=lg h=1fg style="min-height: 0;"':
+              - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=spriteItems: null
-              - rtgl-view h=f flex=2 sv g=lg:
+              - rtgl-view h=f w=2fg sv g=lg:
                   - $for group, i in spriteGroups:
                       - rtgl-view g=md:
                           - rtgl-text: ${group.name}

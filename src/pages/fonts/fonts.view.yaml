@@ -40,7 +40,7 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget: null
-          - rtgl-view flex=1 h=f:
+          - rtgl-view w=1fg h=f:
               - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
@@ -53,9 +53,9 @@ template:
           - rtgl-view slot="content" p=xl:
               - $if selectedFontInfo:
                   - rtgl-view d=h g=lg h=f:
-                      - rtgl-view flex=1:
+                      - rtgl-view w=1fg:
                           - rtgl-form :form=fontInfoForm :defaultValues=fontInfoValues: null
-                      - rtgl-view flex=2 mt=xl:
+                      - rtgl-view w=2fg mt=xl:
                           - rtgl-view p=md bgc=bg-hover br=sm:
                               - 'rtgl-view d=h wrap style="gap: 4px;"':
                                   - $for glyph in glyphList:

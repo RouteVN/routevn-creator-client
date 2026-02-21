@@ -40,7 +40,7 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
-          - rtgl-view flex=1 h=f:
+          - rtgl-view w=1fg h=f:
               - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":

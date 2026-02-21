@@ -44,7 +44,7 @@ template:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-          - rtgl-view flex=1 sv w=f:
+          - rtgl-view h=1fg sv w=f:
               - rtgl-view g=md w=f:
                   - $for visual, i in defaultValues.visuals:
                       - rtgl-view#visual${i} data-index=${i} data-visual-id=${visual.id} d=h g=md av=t bgc=ac p=md br=md w=f:
@@ -57,7 +57,7 @@ template:
                               - rtgl-text s=sm w=120 ah=c ellipsis=true: ${visual.displayName}
                               - $if visual.resourceType:
                                   - rtgl-text s=xs c=mu-fg ah=c: (${visual.resourceType})
-                          - rtgl-view flex=1 g=sm:
+                          - rtgl-view w=1fg g=sm:
                               - rtgl-text s=sm c=mu-fg: Transform
                               - rtgl-select#transform${i} :options=defaultValues.transformOptions :selectedValue=defaultValues.visuals[${i}].transformId w=f: null
                   - rtgl-button#addVisualButton v=ol w=f mt=md: + Add Visual
@@ -66,8 +66,8 @@ template:
       - $if mode == 'resource-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-          - 'rtgl-view d=h w=f g=lg flex=1 style="min-height: 0;"':
-              - rtgl-view h=f flex=1 sv g=lg:
+          - 'rtgl-view d=h w=f g=lg h=1fg style="min-height: 0;"':
+              - rtgl-view h=f w=1fg sv g=lg:
                   - $for group, i in resourceGroups:
                       - rtgl-view g=md:
                           - rtgl-text: ${group.name}

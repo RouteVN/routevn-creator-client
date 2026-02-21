@@ -1,6 +1,8 @@
 export const createInitialState = () => ({
   zoomLevel: 1.0,
   collapsedIds: [],
+  lastClickedItemId: null,
+  lastClickedAt: 0,
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -22,6 +24,15 @@ export const setDraggingGroupId = ({ state }, { groupId } = {}) => {
 export const selectDraggingGroupId = ({ state }) => state.draggingGroupId;
 
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
+
+export const setLastItemClick = ({ state }, { itemId, timestamp } = {}) => {
+  state.lastClickedItemId = itemId || null;
+  state.lastClickedAt = timestamp || 0;
+};
+
+export const selectLastClickedItemId = ({ state }) => state.lastClickedItemId;
+
+export const selectLastClickedAt = ({ state }) => state.lastClickedAt;
 
 export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);

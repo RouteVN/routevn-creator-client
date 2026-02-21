@@ -10,4 +10,4 @@ refs:
       file-action:
         handler: handleFileAction
 template:
-  - rvn-base-file-explorer#baseFileExplorer draggable shrinkable dropdown-menu :items=items :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+  - rvn-base-file-explorer#baseFileExplorer allowDrag shrinkable dropdown-menu :items=items :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null

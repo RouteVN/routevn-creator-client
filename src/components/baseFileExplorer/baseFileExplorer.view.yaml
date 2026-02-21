@@ -58,7 +58,7 @@ template:
                               - rtgl-view wh=16: null
                           - rtgl-view d=h g=md av=c w=f:
                               - rtgl-svg svg=${item.svg} wh=16: null
-                              - 'rtgl-text s=sm ellipsis=true w=f flex=1 mr=xl style="min-width: 0"': ${item.name}
+                              - 'rtgl-text s=sm ellipsis=true w=1fg mr=xl style="min-width: 0"': ${item.name}
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
               - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null
       - rtgl-view#container w=f h=f: null

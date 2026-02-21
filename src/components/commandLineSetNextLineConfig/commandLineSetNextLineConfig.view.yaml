@@ -16,6 +16,6 @@ template:
       - rtgl-view d=h g=md:
           - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
       - rtgl-form#form key=${formKey} :defaultValues=defaultValues :form=form :context=context w=f: null
-      - rtgl-view flex=1: null
+      - rtgl-view h=1fg: null
       - rtgl-view d=h av=c ah=e w=f g=lg:
           - rtgl-button#submitButton: Submit

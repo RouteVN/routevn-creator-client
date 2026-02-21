@@ -58,40 +58,40 @@ template:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg wh=16 svg=folder: null
                                   - rtgl-text: ${group.fullLabel}
-                          - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm flex=1 ip=s icon=plus: Add
+                          - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg ip=s icon=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f mb=md p=sm:
                               - $if group.hasChildren:
                                   - rtgl-view w=f:
                                       - rtgl-view d=h w=f pv=sm bwb=xs g=md:
-                                          - rtgl-view flex=2:
+                                          - rtgl-view w=2fg:
                                               - rtgl-text c=mu-fg s=sm: Name
-                                          - rtgl-view flex=1:
+                                          - rtgl-view w=1fg:
                                               - rtgl-text c=mu-fg s=sm: Scope
-                                          - rtgl-view flex=1:
+                                          - rtgl-view w=1fg:
                                               - rtgl-text c=mu-fg s=sm: Type
-                                          - rtgl-view flex=1:
+                                          - rtgl-view w=1fg:
                                               - rtgl-text c=mu-fg s=sm: Default
                                       - $for item, j in group.children:
                                           - $if item.isSelected:
                                               - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu br=sm:
-                                                  - rtgl-view flex=2:
+                                                  - rtgl-view w=2fg:
                                                       - rtgl-text s=sm: ${item.name}
-                                                  - rtgl-view flex=1:
+                                                  - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.scope}
-                                                  - rtgl-view flex=1:
+                                                  - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.type}
-                                                  - rtgl-view flex=1:
+                                                  - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
                                               - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md:
-                                                  - rtgl-view flex=2:
+                                                  - rtgl-view w=2fg:
                                                       - rtgl-text s=sm: ${item.name}
-                                                  - rtgl-view flex=1:
+                                                  - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.scope}
-                                                  - rtgl-view flex=1:
+                                                  - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.type}
-                                                  - rtgl-view flex=1:
+                                                  - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.default}
                                 $else:
                                   - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:

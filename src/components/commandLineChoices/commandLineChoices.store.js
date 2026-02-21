@@ -5,14 +5,14 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
   fields: [
     {
       name: "content",
-      inputType: "input-text",
+      type: "input-text",
       label: "Choice Content",
       required: true,
       placeholder: "Enter choice content",
     },
     {
       name: "actionType",
-      inputType: "select",
+      type: "select",
       label: "Action",
       required: true,
       options: [
@@ -23,14 +23,14 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
     {
       $when: `values.actionType == 'sectionTransition'`,
       name: "sceneId",
-      inputType: "select",
+      type: "select",
       label: "Scene",
       options: "${scenes}",
     },
     {
       $when: `values.actionType == 'sectionTransition'`,
       name: "sectionId",
-      inputType: "select",
+      type: "select",
       label: "Section",
       options: "${sections}",
     },
@@ -202,13 +202,13 @@ const form = {
   fields: [
     {
       name: "resourceId",
-      inputType: "select",
+      type: "select",
       label: "Choices Layout",
       required: false,
       options: "${resourceOptions}",
     },
     {
-      inputType: "slot",
+      type: "slot",
       slot: "choices",
       description: "Choices",
     },

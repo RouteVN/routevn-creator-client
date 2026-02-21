@@ -61,7 +61,7 @@ template:
           - $if section.labelAction:
               - rtgl-view d=h w=f av=c:
                   - rtgl-text s=sm: ${section.label}
-                  - rtgl-view flex=1: null
+                  - rtgl-view w=1fg: null
                   - rtgl-button#sectionAction${i} data-id=${section.id} icon=${section.labelAction} sq s=sm v=gh: null
             $else:
               - rtgl-text s=sm: ${section.label}
@@ -71,7 +71,7 @@ template:
                       - $for field, k in item.fields:
                           - $if field.label:
                               - rtgl-text s=sm w=60: ${field.label}
-                          - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
+                          - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} w=1fg d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
                               - $if field.svg:
                                   - rtgl-svg svg=${field.svg} wh=16: null
                               - rtgl-text s=xs: ${field.value}
@@ -89,14 +89,14 @@ template:
                   - $for barItem, k in item.items:
                       - rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
                           - rtgl-text s=xs: ${barItem.label}
-                          - rtgl-view flex=1: null
+                          - rtgl-view w=1fg: null
                           - $if barItem.imageId:
                               - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32: null
                             $else:
                               - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
                                   - rtgl-text s=xs c=mu: Not set
                 $elif item.type == 'popover-input':
-                  - rtgl-view#groupItem${i}x${j} data-name=${item.name} flex=1 d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
+                  - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=actionsData  action-type="system": null

@@ -4,26 +4,28 @@ import { formatFileSize } from "../../utils/index.js";
 const form = {
   fields: [
     {
-      name: "fileId",
-      inputType: "image",
-      src: "${fileId.src}",
-      width: 240,
+      type: "slot",
+      slot: "image-file-id",
+      label: "Image",
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fileType",
-      inputType: "read-only-text",
-      description: "File Type",
+      type: "read-only-text",
+      label: "File Type",
+      content: "${fileType}",
     },
     {
       name: "fileSize",
-      inputType: "read-only-text",
-      description: "File Size",
+      type: "read-only-text",
+      label: "File Size",
+      content: "${fileSize}",
     },
     {
       name: "dimensions",
-      inputType: "read-only-text",
-      description: "Dimensions",
+      type: "read-only-text",
+      label: "Dimensions",
+      content: "${dimensions}",
     },
   ],
 };
@@ -35,6 +37,9 @@ export const createInitialState = () => ({
     fileId: {
       src: "",
     },
+    fileType: "",
+    fileSize: "",
+    dimensions: "",
   },
   searchQuery: "",
   fullImagePreviewVisible: false,
@@ -140,12 +145,30 @@ export const selectViewData = ({ state }) => {
   let detailFields;
   let defaultValues = {};
 
+  let formContext = {
+    ...state.context,
+    fileType: "",
+    fileSize: "",
+    dimensions: "",
+  };
+
   if (selectedItem) {
+    const formattedFileSize = formatFileSize(selectedItem.fileSize);
+    const formattedDimensions = `${selectedItem.width} × ${selectedItem.height}`;
+    const fileType = selectedItem.fileType;
+
     defaultValues = {
       name: selectedItem.name,
-      fileType: selectedItem.fileType,
-      fileSize: formatFileSize(selectedItem.fileSize),
-      dimensions: `${selectedItem.width} × ${selectedItem.height}`,
+      fileType,
+      fileSize: formattedFileSize,
+      dimensions: formattedDimensions,
+    };
+
+    formContext = {
+      ...state.context,
+      fileType,
+      fileSize: formattedFileSize,
+      dimensions: formattedDimensions,
     };
 
     detailFields = [
@@ -158,16 +181,16 @@ export const selectViewData = ({ state }) => {
         eventType: "image-file-selected",
       },
       { id: "name", type: "text", value: selectedItem.name, editable: true },
-      { type: "text", label: "File Type", value: selectedItem.fileType },
+      { type: "text", label: "File Type", value: fileType },
       {
         type: "text",
         label: "File Size",
-        value: formatFileSize(selectedItem.fileSize),
+        value: formattedFileSize,
       },
       {
         type: "text",
         label: "Dimensions",
-        value: `${selectedItem.width} × ${selectedItem.height}`,
+        value: formattedDimensions,
       },
     ];
   }
@@ -185,7 +208,7 @@ export const selectViewData = ({ state }) => {
     detailEmptyMessage,
     repositoryTarget: "images",
     form,
-    context: state.context,
+    context: formContext,
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "images",
@@ -194,6 +217,7 @@ export const selectViewData = ({ state }) => {
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
     imageHeight,
     maxWidth,
+    selectedImageFileId: selectedItem?.fileId,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
   };

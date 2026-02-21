@@ -30,7 +30,7 @@ export const setMode = ({ state }, { payload } = {}) => {
 const form = {
   fields: [
     {
-      inputType: "slot",
+      type: "slot",
       slot: "sfx",
       description: "Sound Effects",
     },

@@ -6,7 +6,7 @@ template:
   - rtgl-view d=h w=f h=f:
       - $if showSidebar:
           - rvn-sidebar: []
-      - rtgl-view w=f h=f:
+      - 'rtgl-view h=f style="width: ${contentWidth}; min-width: 0;"':
           - $if currentRoutePattern == "/projects":
               - rvn-projects: []
             $elif currentRoutePattern == "/project":

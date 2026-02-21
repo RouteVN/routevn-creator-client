@@ -50,14 +50,14 @@ template:
                               - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
                           - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
                   - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
-          - rtgl-view flex=1: null
+          - rtgl-view h=1fg: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
-          - 'rtgl-view d=h w=f g=lg mt=sm flex=1 style="min-height: 0;"':
-              - rtgl-view h=f flex=1 sv:
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
+              - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=items no-empty-message: null
-              - rtgl-view h=f flex=2 sv g=lg:
+              - rtgl-view h=f w=2fg sv g=lg:
                   - $for group, i in groups:
                       - rtgl-view g=md:
                           - rtgl-text: ${group.name}

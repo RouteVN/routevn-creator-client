@@ -90,7 +90,7 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
-          - rtgl-view flex=1 h=f:
+          - rtgl-view w=1fg h=f:
               - rvn-group-resources-view#groupview full-width-item :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery show-zoom-controls=false: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
@@ -101,7 +101,7 @@ template:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#addAnimationDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h g=md:
-          - rtgl-view flex=5:
+          - rtgl-view w=1fg:
               - rtgl-form#animationForm key=${isDialogOpen} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
                   - rtgl-view slot=timeline w=f:
                       - rvn-keyframe-timeline#dialogTimeline editable=true :properties=properties: null
@@ -109,7 +109,7 @@ template:
                           - $if addPropertyButtonVisible:
                               - rtgl-button#addPropertiesButton w=f v=se s=sm: + Add tween property
               - rtgl-view h=128: null
-          - rtgl-view flex=5:
+          - rtgl-view w=1fg:
               - rtgl-view d=h av=c ah=sb mb=md:
                   - rtgl-text: Preview
                   - rtgl-button#replayButton s=sm ml=md: Play Tween

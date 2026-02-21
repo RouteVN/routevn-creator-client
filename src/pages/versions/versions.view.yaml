@@ -34,10 +34,10 @@ template:
       - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
           - rtgl-view slot="content" w=f h=f:
               - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
-      - rtgl-view flex=1 p=lg d=v g=lg:
+      - rtgl-view w=1fg p=lg d=v g=lg:
           - rtgl-text s=h2: Versions
           - rtgl-button#saveVersionBtn v=pr s=md: Create new version
-          - rtgl-view w=f g=md flex=1 oy=a:
+          - rtgl-view w=f g=md h=1fg oy=a:
               - $if versions.length == 0:
                   - rtgl-view w=f h=200 ah=c av=c:
                       - rtgl-view d=v ah=c g=md:
@@ -46,9 +46,9 @@ template:
                 $else:
                   - $for item, i in versions:
                       - rtgl-view h=auto w=f bw=xs pt=md pb=sm ph=lg d=h av=c:
-                          - rtgl-view flex=1 d=v g=xs:
+                          - rtgl-view w=1fg d=v g=xs:
                               - rtgl-text s=lg: ${item.name}
-                              - rtgl-view flex=0 d=h g=sm av=c:
+                              - rtgl-view d=h g=sm av=c:
                                   - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
                                   - rtgl-button#versionDownloadRef${i} data-version-id="${item.id}" v=gh s=sm ip=s icon=download: Download Zip
                           - rtgl-view d=v g=xs:

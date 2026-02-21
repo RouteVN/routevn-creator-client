@@ -57,7 +57,7 @@ export const handleEditableNumberClick = (deps, payload) => {
     fields: [
       {
         name: field.name,
-        inputType: "slider-input",
+        type: "slider-input",
         label: field.label,
         description: field.description || "Adjust the value",
         min: field.min || 0,
@@ -71,7 +71,7 @@ export const handleEditableNumberClick = (deps, payload) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Submit",
+          label: "Submit",
         },
       ],
     },
@@ -304,7 +304,7 @@ export const handleEditableTextClick = (deps, payload) => {
     fields: [
       {
         name: field.name,
-        inputType: "input-text",
+        type: "input-text",
         label: field.label,
         description: "Enter new name",
         placeholder: field.value || "",
@@ -316,7 +316,7 @@ export const handleEditableTextClick = (deps, payload) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Submit",
+          label: "Submit",
         },
       ],
     },

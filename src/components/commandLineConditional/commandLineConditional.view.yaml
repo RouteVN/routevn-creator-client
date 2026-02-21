@@ -41,6 +41,6 @@ template:
           - rtgl-text: Preview
           - rtgl-view w=f p=md bgc=bg br=sm:
               - rtgl-text: IF
-      - rtgl-view flex=1: null
+      - rtgl-view h=1fg: null
       - rtgl-view d=h av=c ah=e w=f g=lg:
           - rtgl-button#submitButton: Submit

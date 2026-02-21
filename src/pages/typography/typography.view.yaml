@@ -64,7 +64,7 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
-          - rtgl-view flex=1 h=f:
+          - rtgl-view w=1fg h=f:
               - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery show-zoom-controls=false: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
@@ -76,11 +76,11 @@ template:
   - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen}:
       - $if isDialogOpen:
           - rtgl-view slot=content d=h g=md w=800:
-              - rtgl-view flex=1:
+              - rtgl-view w=1fg:
                   - rtgl-form#typographyForm key=${formKey} :defaultValues=dialogDefaultValues :form=dialogForm w=f: null
-              - rtgl-view flex=1 p=md bwl=xs d=v:
+              - rtgl-view w=1fg p=md bwl=xs d=v:
                   - rtgl-text s=lg fw=b mb=md: Preview
-                  - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true: null
+                  - rvn-font-preview h=1fg fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true: null
   - rtgl-dialog#addColorDialog ?open=${isAddColorDialogOpen} s=sm:
       - $if isAddColorDialogOpen:
           - rtgl-form#addColorForm slot=content :defaultValues=addColorDefaultValues :form=addColorForm w=f: null

@@ -3,8 +3,8 @@ import { resetState } from "./tweens.constants";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "duration", inputType: "read-only-text", description: "Duration" },
+    { name: "name", type: "popover-input", description: "Name" },
+    { name: "duration", type: "read-only-text", description: "Duration" },
   ],
 };
 
@@ -46,7 +46,7 @@ const createAddKeyframeForm = (property) => {
     fields: [
       {
         name: "duration",
-        inputType: "input-text",
+        type: "input-text",
         label: "Duration (ms)",
         required: true,
         placeholder: "Duration in milliseconds",
@@ -57,7 +57,7 @@ const createAddKeyframeForm = (property) => {
       },
       {
         name: "value",
-        inputType: "slider-input",
+        type: "slider-input",
         ...sliderConfig[property],
         label: "Value",
         required: true,
@@ -68,7 +68,7 @@ const createAddKeyframeForm = (property) => {
       },
       {
         name: "relative",
-        inputType: "select",
+        type: "select",
         label: "Value type",
         options: [
           { label: "Absolute", value: false },
@@ -82,7 +82,7 @@ const createAddKeyframeForm = (property) => {
       },
       {
         name: "easing",
-        inputType: "select",
+        type: "select",
         label: "Easing",
         options: [{ label: "Linear", value: "linear" }],
         required: true,
@@ -94,7 +94,7 @@ const createAddKeyframeForm = (property) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Add Keyframe",
+          label: "Add Keyframe",
         },
       ],
     },
@@ -118,7 +118,7 @@ const createUpdateKeyframeForm = (property) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Update Keyframe",
+          label: "Update Keyframe",
         },
       ],
     },
@@ -130,7 +130,7 @@ const editInitialValueForm = {
   fields: [
     {
       name: "valueSource",
-      inputType: "select",
+      type: "select",
       label: "Value Source",
       options: [
         { label: "Use Default Value", value: "default" },
@@ -142,7 +142,7 @@ const editInitialValueForm = {
     {
       $when: "valueSource == 'custom'",
       name: "initialValue",
-      inputType: "input-text",
+      type: "input-text",
       label: "Custom Initial Value",
     },
   ],
@@ -152,7 +152,7 @@ const editInitialValueForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Update Value",
+        label: "Update Value",
       },
     ],
   },
@@ -173,14 +173,14 @@ const createAddPropertyForm = (propertyOptions) => {
     fields: [
       {
         name: "property",
-        inputType: "select",
+        type: "select",
         label: "Property",
         options: propertyOptions,
         required: true,
       },
       {
         name: "useInitialValue",
-        inputType: "select",
+        type: "select",
         label: "Use initial value",
         tooltip: {
           content:
@@ -202,7 +202,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "x"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-input",
             min: 0,
             max: 1920,
             label: "Initial value",
@@ -210,7 +210,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "y"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-input",
             min: 0,
             max: 1080,
             label: "Initial value",
@@ -218,7 +218,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "alpha"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-input",
             step: 0.01,
             min: 0,
             max: 1,
@@ -227,7 +227,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "scaleX" || property == "scaleY"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-input",
             min: 0.1,
             max: 5,
             step: 0.1,
@@ -236,7 +236,7 @@ const createAddPropertyForm = (propertyOptions) => {
           // {
           //   $when: 'property == "rotation"',
           //   name: "initialValue",
-          //   inputType: "slider-input",
+          //   type: "slider-input",
           //   min: -360,
           //   max: 360,
           //   step: 1,
@@ -251,7 +251,7 @@ const createAddPropertyForm = (propertyOptions) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Add Property",
+          label: "Add Property",
         },
       ],
     },
@@ -304,13 +304,13 @@ const addTweenForm = {
   fields: [
     {
       name: "name",
-      inputType: "input-text",
+      type: "input-text",
       label: "Name",
       required: true,
     },
     {
       name: "properties",
-      inputType: "slot",
+      type: "slot",
       slot: "timeline",
       label: "Animation timeline",
     },
@@ -321,7 +321,7 @@ const addTweenForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Add Tween Animation",
+        label: "Add Tween Animation",
       },
     ],
   },
@@ -332,13 +332,13 @@ const editTweenForm = {
   fields: [
     {
       name: "name",
-      inputType: "input-text",
+      type: "input-text",
       label: "Name",
       required: true,
     },
     {
       name: "properties",
-      inputType: "slot",
+      type: "slot",
       slot: "timeline",
       label: "Animation timeline",
     },
@@ -349,7 +349,7 @@ const editTweenForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Update Tween Animation",
+        label: "Update Tween Animation",
       },
     ],
   },

@@ -192,7 +192,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
 const form = {
   fields: [
     {
-      inputType: "slot",
+      type: "slot",
       slot: "characters",
       description: "Characters",
     },

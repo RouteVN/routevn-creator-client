@@ -23,7 +23,7 @@ template:
                       - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"': null
               - rtgl-view ph=md d=h av=c w=f h=f p=md:
                   - rtgl-text w=250 ellipsis=true: ${title}
-                  - rtgl-view d=h av=c g=lg flex=1 ah=c:
+                  - rtgl-view d=h av=c g=lg w=1fg ah=c:
                       - rtgl-view#playPauseBtn cur=pointer:
                           - $if isPlaying:
                               - rtgl-svg wh=32 svg=pause: null

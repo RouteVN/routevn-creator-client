@@ -95,16 +95,16 @@ template:
   - rtgl-view w=f h=f:
       - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h:
           - rtgl-button#backButton sq icon="chevronLeft" v="gh" mr=sm: null
-          - rtgl-view flex=1:
+          - rtgl-view w=1fg:
               - rtgl-text c=mu-fg: ${scene.name}
-          - rtgl-view flex=1 d=h g=sm jc=e:
+          - rtgl-view w=1fg d=h g=sm jc=e:
               - rtgl-button#previewButton: Preview
           - rtgl-button#muteToggle sq v="gh" icon="${muteIcon}": null
-      - 'rtgl-view d=h w=f h=f flex=1 style="min-height: 0px"':
+      - 'rtgl-view d=h w=f h=1fg style="min-height: 0px"':
           - $if sectionsGraphView:
               - rtgl-view w="calc((100vw - 64px) / 2)":
                   - rtgl-view d=h w=f:
-                      - rtgl-view flex=1: null
+                      - rtgl-view w=1fg: null
                   - rtgl-view:
                       - rtgl-text: ${sectionsGraph}
             $else:
@@ -112,12 +112,12 @@ template:
                   - 'rtgl-view#sceneEditorLeftOverview w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
                       - rtgl-view d=h av=c g=sm bwb=xs p=lg w=f:
                           - rtgl-text s=lg fw=600: Sections Overview
-                          - rtgl-view flex=1: null
+                          - rtgl-view w=1fg: null
                           - rtgl-button#sectionsOverviewClose v=gh: Close
-                      - 'rtgl-view d=v w=f flex=1 sv p=md g=sm style="min-height: 0px;"':
+                      - 'rtgl-view d=v w=f h=1fg sv p=md g=sm style="min-height: 0px;"':
                           - $for section, sectionIndex in sectionsOverviewItems:
                               - rtgl-view#sectionOverviewRow${sectionIndex} data-section-id=${section.id} w=f d=h av=c g=sm p=md cur=pointer bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
-                                  - 'rtgl-text s=md c=${section.rowTextColor} w=f flex=1 style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
+                                  - 'rtgl-text s=md c=${section.rowTextColor} w=1fg style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
                                   - $if section.isDeadEnd:
                                       - rtgl-svg#sectionsOverviewWarning${sectionIndex} data-section-id=${section.id} svg=warning-dead-end wh=20: null
                 $else:
@@ -132,8 +132,8 @@ template:
                               - rtgl-text s=sm: +
                           - rtgl-view#sectionsOverview h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
                               - rtgl-text s=sm: ...
-                          - rtgl-view flex=1: null
-                      - rtgl-view w=f p=md sv flex=1:
+                          - rtgl-view w=1fg: null
+                      - rtgl-view w=f p=md sv h=1fg:
                           - rvn-lines-editor#linesEditor :lines=currentLines :selectedLineId=selectedLineId :sectionLineChanges=sectionLineChanges: null
                           - rtgl-view h=30vh: null
           - rtgl-view w=1 h=f bgc=mu: null

@@ -25,7 +25,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "input-text",
+        type: "input-text",
         label: "Name",
         required: true,
         tooltip: {
@@ -34,7 +34,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scope",
-        inputType: "select",
+        type: "select",
         label: "Scope",
         required: true,
         options: [
@@ -56,7 +56,7 @@ export const createInitialState = () => ({
       },
       {
         name: "type",
-        inputType: "select",
+        type: "select",
         label: "Type",
         required: true,
         options: [
@@ -68,7 +68,7 @@ export const createInitialState = () => ({
       {
         $when: "values.type == 'boolean'",
         name: "default",
-        inputType: "select",
+        type: "select",
         label: "Default",
         options: [
           { value: true, label: "True" },
@@ -79,14 +79,14 @@ export const createInitialState = () => ({
       {
         $when: "values.type == 'string'",
         name: "default",
-        inputType: "input-text",
+        type: "input-text",
         label: "Default",
         required: false,
       },
       {
         $when: "values.type == 'number'",
         name: "default",
-        inputType: "input-number",
+        type: "input-number",
         label: "Default",
         required: false,
       },
@@ -97,7 +97,7 @@ export const createInitialState = () => ({
         {
           id: "submit",
           variant: "pr",
-          content: "Add Variable",
+          label: "Add Variable",
         },
       ],
     },
