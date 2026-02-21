@@ -65,6 +65,38 @@ const isFeRuntimeComponent = (instance) => {
   );
 };
 
+const hasRequiredRefHandlers = (instance) => {
+  const refs = instance?.refs;
+  if (!refs || typeof refs !== "object") {
+    return true;
+  }
+
+  const handlers = instance?.transformedHandlers;
+  if (!handlers || typeof handlers !== "object") {
+    return false;
+  }
+
+  for (const refConfig of Object.values(refs)) {
+    const eventListeners = refConfig?.eventListeners;
+    if (!eventListeners || typeof eventListeners !== "object") {
+      continue;
+    }
+
+    for (const eventConfig of Object.values(eventListeners)) {
+      const handlerName = eventConfig?.handler;
+      if (
+        handlerName &&
+        typeof handlerName === "string" &&
+        typeof handlers[handlerName] !== "function"
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
+
 const patchRtglAttributeChangedCallback = (tagName) => {
   const ctor = customElements.get(tagName);
   if (!ctor || guardedRtglConstructors.has(ctor)) {
@@ -91,7 +123,8 @@ const patchRtglAttributeChangedCallback = (tagName) => {
       !this.isConnected ||
       !this.renderTarget ||
       !isRuntimeReady ||
-      !this.patch
+      !this.patch ||
+      !hasRequiredRefHandlers(this)
     ) {
       return;
     }

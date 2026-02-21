@@ -44,14 +44,14 @@ export const createInitialState = () => ({
   // Pan state
   isPanMode: false,
   isPanning: false,
-  panX: -120,
-  panY: -200,
+  panX: 0,
+  panY: 0,
   panStartX: 0,
   panStartY: 0,
   panStartMouseX: 0,
   panStartMouseY: 0,
   // Zoom state
-  zoomLevel: 1.5,
+  zoomLevel: 1,
 });
 
 export const startDragging = ({ state }, { itemId } = {}) => {

@@ -118,6 +118,59 @@ const getTransitionsForScene = (sections, layouts) => {
   return transitions;
 };
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const parseNumericConfig = (value, fallback) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const isViewportLikelyOffscreen = ({ items, zoomLevel, panX, panY }) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return false;
+  }
+
+  const viewportWidth = Number(window?.innerWidth) || 1200;
+  const viewportHeight = Number(window?.innerHeight) || 800;
+  const itemWidth = 140;
+  const itemHeight = 80;
+
+  return items.every((item) => {
+    const screenX = item.x * zoomLevel + panX;
+    const screenY = item.y * zoomLevel + panY;
+    return !(
+      screenX + itemWidth > 0 &&
+      screenX < viewportWidth &&
+      screenY + itemHeight > 0 &&
+      screenY < viewportHeight
+    );
+  });
+};
+
+const resolveInitialWhiteboardViewport = ({ appService, items }) => {
+  const defaultViewport = { zoomLevel: 1, panX: 0, panY: 0, didReset: false };
+
+  const zoomLevel = clamp(
+    parseNumericConfig(appService.getUserConfig("scenesMap.zoomLevel"), 1),
+    0.2,
+    2,
+  );
+  const panX = parseNumericConfig(
+    appService.getUserConfig("scenesMap.panX"),
+    0,
+  );
+  const panY = parseNumericConfig(
+    appService.getUserConfig("scenesMap.panY"),
+    0,
+  );
+
+  if (isViewportLikelyOffscreen({ items, zoomLevel, panX, panY })) {
+    return { ...defaultViewport, didReset: true };
+  }
+
+  return { zoomLevel, panX, panY, didReset: false };
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
@@ -144,18 +197,24 @@ export const handleAfterMount = async (deps) => {
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems({ items: sceneItems });
 
-  // Restore viewport state from userConfig
-  const savedZoomLevel = appService.getUserConfig("scenesMap.zoomLevel");
-  const savedPanX = appService.getUserConfig("scenesMap.panX");
-  const savedPanY = appService.getUserConfig("scenesMap.panY");
+  const initialViewport = resolveInitialWhiteboardViewport({
+    appService,
+    items: sceneItems,
+  });
 
   const { whiteboard } = refs;
 
   whiteboard.transformedHandlers.handleInitialZoomAndPanSetup({
-    panX: savedPanX || 0,
-    panY: savedPanY || 0,
-    zoomLevel: savedZoomLevel || 1,
+    panX: initialViewport.panX,
+    panY: initialViewport.panY,
+    zoomLevel: initialViewport.zoomLevel,
   });
+
+  if (initialViewport.didReset) {
+    appService.setUserConfig("scenesMap.zoomLevel", initialViewport.zoomLevel);
+    appService.setUserConfig("scenesMap.panX", initialViewport.panX);
+    appService.setUserConfig("scenesMap.panY", initialViewport.panY);
+  }
 
   render();
 };
