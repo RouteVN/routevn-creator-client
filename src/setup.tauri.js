@@ -70,7 +70,15 @@ const guardRtglAttributeUpdatesBeforeConnect = () => {
     }
 
     ctor.prototype.attributeChangedCallback = function (...args) {
-      if (!this.isConnected || !this.renderTarget) {
+      const isRuntimeReady =
+        typeof this?.transformedHandlers?.handleCallStoreAction === "function";
+      if (
+        !this.isConnected ||
+        !this.renderTarget ||
+        !isRuntimeReady ||
+        !this.store ||
+        !this.patch
+      ) {
         return;
       }
       return originalAttributeChangedCallback.apply(this, args);
