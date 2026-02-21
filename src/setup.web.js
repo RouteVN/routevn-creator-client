@@ -16,23 +16,7 @@ import Router from "./deps/infra/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 
 const guardedRtglConstructors = new WeakSet();
-const rtglComponentTags = [
-  "rtgl-button",
-  "rtgl-view",
-  "rtgl-text",
-  "rtgl-image",
-  "rtgl-svg",
-  "rtgl-input",
-  "rtgl-input-date",
-  "rtgl-input-time",
-  "rtgl-input-datetime",
-  "rtgl-input-number",
-  "rtgl-textarea",
-  "rtgl-color-picker",
-  "rtgl-slider",
-  "rtgl-checkbox",
-  "rtgl-dialog",
-  "rtgl-popover",
+const rtglFeComponentTags = [
   "rtgl-accordion-item",
   "rtgl-breadcrumb",
   "rtgl-dropdown-menu",
@@ -49,16 +33,6 @@ const rtglComponentTags = [
   "rtgl-tooltip",
   "rtgl-waveform",
 ];
-
-const isFeRuntimeComponent = (instance) => {
-  return (
-    !!instance &&
-    typeof instance === "object" &&
-    typeof instance.render === "function" &&
-    "template" in instance &&
-    ("transformedHandlers" in instance || "store" in instance)
-  );
-};
 
 const hasRequiredRefHandlers = (instance) => {
   const refs = instance?.refs;
@@ -106,12 +80,6 @@ const patchRtglAttributeChangedCallback = (tagName) => {
   }
 
   ctor.prototype.attributeChangedCallback = function (...args) {
-    // Only gate FE runtime components. Primitive web components must keep their
-    // native attribute updates working.
-    if (!isFeRuntimeComponent(this)) {
-      return originalAttributeChangedCallback.apply(this, args);
-    }
-
     const isRuntimeReady =
       typeof this?.transformedHandlers?.handleCallStoreAction === "function";
     if (
@@ -130,7 +98,7 @@ const patchRtglAttributeChangedCallback = (tagName) => {
 };
 
 const guardRtglAttributeUpdatesBeforeConnect = () => {
-  rtglComponentTags.forEach((tagName) => {
+  rtglFeComponentTags.forEach((tagName) => {
     patchRtglAttributeChangedCallback(tagName);
     customElements.whenDefined(tagName).then(() => {
       patchRtglAttributeChangedCallback(tagName);
