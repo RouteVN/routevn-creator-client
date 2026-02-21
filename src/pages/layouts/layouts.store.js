@@ -5,13 +5,13 @@ const layoutForm = {
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      type: "input-text",
       label: "Layout Name",
       required: true,
     },
     {
       name: "layoutType",
-      inputType: "select",
+      type: "select",
       label: "Layout Type",
       required: true,
       options: [
@@ -33,7 +33,7 @@ const layoutForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Add Layout",
+        label: "Add Layout",
       },
     ],
   },
@@ -41,10 +41,10 @@ const layoutForm = {
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "layoutTypeDisplay",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Layout Type",
     },
   ],
@@ -68,28 +68,28 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setFieldResources = (state, resources) => {
+export const setFieldResources = ({ state }, { resources } = {}) => {
   state.fieldResources = resources;
 };
 
-export const setItems = (state, layoutsData) => {
+export const setItems = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const openAddDialog = (state, groupId) => {
+export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;
   state.targetGroupId = groupId;
 };
 
-export const closeAddDialog = (state) => {
+export const closeAddDialog = ({ state }, _payload = {}) => {
   state.isAddDialogOpen = false;
   state.targetGroupId = null;
 };

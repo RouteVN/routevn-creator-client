@@ -8,10 +8,10 @@ export const handleAfterMount = async (deps) => {
   // Set app version from appService
   const appVersion = appService.getAppVersion();
   if (appVersion) {
-    store.setAppVersion(appVersion);
+    store.setAppVersion({ version: appVersion });
   }
   const platform = appService.getPlatform();
-  store.setPlatform(platform);
+  store.setPlatform({ platform: platform });
   render();
 };
 
@@ -29,7 +29,7 @@ export const handleCheckForUpdates = async (deps) => {
 export const handleClickSocialButton = async (deps, payload) => {
   const { appService, store } = deps;
   const { _event } = payload;
-  const id = _event.target.dataset.id;
+  const id = _event.currentTarget?.dataset?.id;
   const social = store.selectSocial({ id });
   appService.openUrl(social.href);
 };

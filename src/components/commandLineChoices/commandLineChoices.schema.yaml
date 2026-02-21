@@ -1,0 +1,22 @@
+componentName: rvn-command-line-choices
+propsSchema:
+  type: object
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+    choice:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+        resourceId:
+          type: string

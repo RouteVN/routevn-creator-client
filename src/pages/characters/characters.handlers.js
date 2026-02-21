@@ -6,14 +6,14 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { characters } = projectService.getState();
-  store.setItems(characters);
+  store.setItems({ charactersData: characters });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { characters } = projectService.getState();
-  store.setItems(characters);
+  store.setItems({ charactersData: characters });
   render();
 };
 
@@ -23,41 +23,41 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If this is a folder, clear selection
   if (isFolder) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
     render();
     return;
   }
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
   render();
 };
 
 export const handleCharacterItemClick = async (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
   render();
 };
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
   // Set the selected item (same as single click)
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
   // Open edit dialog for double-clicked character
-  store.openEditDialog(itemId);
+  store.openEditDialog({ itemId: itemId });
   render();
 };
 
@@ -110,7 +110,7 @@ export const handleCharacterCreated = async (deps, payload) => {
 
     // Update store with new data
     const { characters } = projectService.getState();
-    store.setItems(characters);
+    store.setItems({ charactersData: characters });
     render();
   } catch (error) {
     console.error("Failed to create character:", error);
@@ -193,7 +193,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 
       // Update the store with the new repository state and get new file URL
       const { characters } = projectService.getState();
-      store.setItems(characters);
+      store.setItems({ charactersData: characters });
       render();
     } else {
       console.error("Avatar upload failed:", file.name);
@@ -210,7 +210,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "characters",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -220,28 +220,28 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { characters } = projectService.getState();
-  store.setItems(characters);
+  store.setItems({ charactersData: characters });
   render();
 };
 
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value || "";
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
 export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse(groupId);
+  store.toggleGroupCollapse({ groupId: groupId });
   render();
 };
 
 export const handleAddCharacterClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
-  store.setTargetGroupId(groupId);
+  store.setTargetGroupId({ groupId: groupId });
   store.toggleDialog();
   render();
 };
@@ -258,7 +258,7 @@ export const handleDialogFormActionClick = (deps, payload) => {
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
 
@@ -308,7 +308,7 @@ export const handleDialogAvatarClick = async (deps) => {
       }
 
       const result = uploadResults[0];
-      store.setAvatarFileId(result.fileId);
+      store.setAvatarFileId({ fileId: result.fileId });
       render();
     }
   } catch (error) {
@@ -358,7 +358,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ charactersData: data });
   render();
 };
 
@@ -392,7 +392,7 @@ export const handleEditDialogAvatarClick = async (deps) => {
       }
 
       const result = uploadResults[0];
-      store.setEditAvatarFileId(result.fileId);
+      store.setEditAvatarFileId({ fileId: result.fileId });
       render();
     }
   } catch (error) {
@@ -404,7 +404,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const { store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
     const editItemId = store.getState().editItemId;
     const editAvatarFileId = store.getState().editAvatarFileId;
 
@@ -432,7 +432,7 @@ export const handleEditFormAction = async (deps, payload) => {
     });
 
     const { characters } = projectService.getState();
-    store.setItems(characters);
+    store.setItems({ charactersData: characters });
     store.closeEditDialog();
     render();
   }

@@ -1,42 +1,8 @@
-elementName: rvn-waveform-visualizer
-
 onMount:
   handler: handleAfterMount
-
-attrsSchema:
-  type: object
-  properties:
-    w:
-      type: string
-      description: Width of the waveform visualizer
-      default: '250'
-    h:
-      type: string
-      description: Height of the waveform visualizer
-      default: '150'
-
-propsSchema:
-  type: object
-  properties:
-    waveformDataFileId:
-      type: string
-      description: File ID of the waveform data in object storage
-    width:
-      type: number
-      default: 600
-      description: Width of the waveform visualization
-    height:
-      type: number
-      default: 400
-      description: Height of the waveform visualization
-    style:
-      type: object
-      description: Style configuration for the waveform
-
 refs:
   canvas:
     selector: canvas
-
 template:
   - $if waveformData:
-    - rtgl-waveform .waveformData=waveformData w=${w} h=${h}:
+      - rtgl-waveform :waveformData=waveformData w=${w} h=${h}: null

@@ -16,8 +16,8 @@
   ],
   "type": "module",
   "dependencies": {
-    "@rettangoli/fe": "0.0.10",
-    "@rettangoli/ui": "0.1.13",
+    "@rettangoli/fe": "1.0.0-rc3",
+    "@rettangoli/ui": "1.0.0-rc14",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "2.4.2",
     "@tauri-apps/plugin-fs": "^2.4.2",
@@ -46,8 +46,9 @@
     "build:tauri": "./scripts/build.sh tauri",
     "watch:web": "rtgl fe watch -s src/setup.web.js",
     "watch:tauri": "rtgl fe watch -s src/setup.tauri.js",
-    "vt:generate": "bun run build:web && rtgl vt generate --skip-screenshots && ./scripts/vt.sh",
-    "vt:report": "bun run build:web && rtgl vt generate && rtgl vt report",
+    "vt:generate": "bun run build:web && bash -lc 'IMAGE=\"han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.0-rc13\"; docker pull \"$IMAGE\" >/dev/null 2>&1 || IMAGE=\"han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.0-rc12\"; docker run --rm --user $(id -u):$(id -g) -v \"$PWD:/app\" -w /app \"$IMAGE\" rtgl vt screenshot'",
+    "vt:docker": "bun run vt:generate",
+    "vt:report": "bun run vt:generate && rtgl vt report",
     "vt:accept": "rtgl vt accept",
     "vt:serve": "bunx serve .rettangoli/vt/_site -p 3002",
     "serve": "bunx serve _site -p 3001",
@@ -66,7 +67,7 @@
     "lint-staged": "^16.1.2",
     "oxlint": "^1.19.0",
     "prettier": "3.6.2",
-    "rtgl": "0.0.38"
+    "rtgl": "1.0.0-rc15"
   },
   "lint-staged": {
     "src/**/*.{js}": [

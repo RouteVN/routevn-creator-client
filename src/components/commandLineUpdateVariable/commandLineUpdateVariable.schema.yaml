@@ -1,0 +1,11 @@
+componentName: rvn-command-line-update-variable
+propsSchema:
+  type: object
+  properties:
+    updateVariable:
+      type: object
+      properties:
+        id:
+          type: string
+        operations:
+          type: array

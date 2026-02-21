@@ -19,8 +19,8 @@ export const handleAfterMount = async (deps) => {
 export const handleAddChoiceClick = (deps) => {
   const { store, render } = deps;
 
-  store.setMode("editChoice");
-  store.setEditingIndex(-1); // -1 means new choice
+  store.setMode({ mode: "editChoice" });
+  store.setEditingIndex({ index: -1 }); // -1 means new choice
   render();
 };
 
@@ -31,8 +31,8 @@ export const handleChoiceClick = (deps, payload) => {
     payload._event.currentTarget.getAttribute("data-index"),
   );
 
-  store.setMode("editChoice");
-  store.setEditingIndex(index);
+  store.setMode({ mode: "editChoice" });
+  store.setEditingIndex({ index: index });
 
   render();
 };
@@ -56,8 +56,8 @@ export const handleChoiceContextMenu = (deps, payload) => {
 export const handleCancelEditClick = (deps) => {
   const { store, render } = deps;
 
-  store.setMode("list");
-  store.setEditingIndex(-1);
+  store.setMode({ mode: "list" });
+  store.setEditingIndex({ index: -1 });
 
   // Ensure we have a clean state before rendering using selectors
   const mode = store.selectMode();
@@ -98,9 +98,30 @@ export const handleSaveChoiceClick = (deps) => {
   render();
 };
 
+export const handleChoiceFormInput = (deps, payload) => {
+  const { store, render } = deps;
+
+  const detail = payload?._event?.detail || {};
+  const field =
+    detail.name ??
+    payload?._event?.target?.name ??
+    payload?._event?.currentTarget?.name;
+  const value =
+    detail.value ??
+    payload?._event?.target?.value ??
+    payload?._event?.currentTarget?.value;
+
+  if (!field) {
+    return;
+  }
+
+  store.updateEditForm({ field, value });
+  render();
+};
+
 export const handleChoiceFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = payload._event.detail;
+  const { name, value: fieldValue } = payload._event.detail;
 
   store.updateEditForm({ field: name, value: fieldValue });
   render();
@@ -143,23 +164,10 @@ export const handleSubmitClick = (deps) => {
 export const handleRemoveChoiceClick = (deps, payload) => {
   const { store, render } = deps;
   const index = parseInt(
-    payload._event.currentTarget.id.replace("remove-choice-", ""),
+    payload._event.currentTarget.id.replace("removeChoice", ""),
   );
 
-  store.removeChoice(index);
-  render();
-};
-
-export const handleChoiceContentInput = (deps, payload) => {
-  const { store, render } = deps;
-  const index = parseInt(
-    payload._event.currentTarget.id.replace("choice-content-", ""),
-  );
-
-  store.updateChoice({
-    index: index,
-    content: payload._event.currentTarget.value,
-  });
+  store.removeChoice({ index: index });
   render();
 };
 
@@ -177,7 +185,7 @@ export const handleFormExtra = (_deps) => {
 
 export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const { name, fieldValue } = payload._event.detail;
+  const { name, value: fieldValue } = payload._event.detail;
 
   if (name === "resourceId") {
     store.setSelectedResourceId({ resourceId: fieldValue });
@@ -197,7 +205,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const choiceIndex = store.selectDropdownMenuChoiceIndex();
 
   if (item.value === "delete" && choiceIndex !== null) {
-    store.removeChoice(choiceIndex);
+    store.removeChoice({ index: choiceIndex });
   }
 
   store.hideDropdownMenu();
@@ -214,8 +222,8 @@ export const handleBreadcumbClick = (deps, payload) => {
       }),
     );
   } else if (payload._event.detail.id === "list") {
-    store.setMode("list");
-    store.setEditingIndex(-1);
+    store.setMode({ mode: "list" });
+    store.setEditingIndex({ index: -1 });
 
     // Ensure we have a clean state before rendering using selectors
     const mode = store.selectMode();

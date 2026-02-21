@@ -1,70 +1,33 @@
-elementName: rvn-command-line-choices
-
-propsSchema:
-  type: object
-  properties:
-    layouts:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-    choice:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            type: object
-        resourceId:
-          type: string
-
-viewDataSchema:
-  type: object
-  properties:
-    layouts:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-
 refs:
-  add-choice-button:
+  addChoiceButton:
     eventListeners:
       click:
         handler: handleAddChoiceClick
-  choice-*:
+  choice*:
     eventListeners:
       click:
         handler: handleChoiceClick
       contextmenu:
         handler: handleChoiceContextMenu
-  remove-choice-*:
+  removeChoice*:
     eventListeners:
       click:
         handler: handleRemoveChoiceClick
-  cancel-edit-button:
+  cancelEditButton:
     eventListeners:
       click:
         handler: handleCancelEditClick
-  save-choice-button:
+  saveChoiceButton:
     eventListeners:
       click:
         handler: handleSaveChoiceClick
-  choice-form:
+  choiceForm:
     eventListeners:
-      input:
+      form-input:
         handler: handleChoiceFormInput
       form-change:
         handler: handleChoiceFormChange
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
@@ -74,46 +37,39 @@ refs:
         handler: handleBreadcumbClick
   form:
     eventListeners:
-      extra-event:
+      form-field-event:
         handler: handleFormExtra
       form-change:
         handler: handleFormChange
-  dropdown-menu:
+  dropdownMenu:
     eventListeners:
       close:
         handler: handleDropdownMenuClose
-      click-item:
+      item-click:
         handler: handleDropdownMenuClickItem
-
 template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == "list":
           - rtgl-view wh=f:
               - rtgl-view d=h g=md:
-                  - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-
-              # Form for choices and layout
-              - rtgl-view flex=1 sv w=f:
-                  - rtgl-form#form .form=form .defaultValues=defaultValues .context=context:
-                      - rtgl-view#choices-container slot=choices g=md w=f:
+                  - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+              - rtgl-view h=1fg sv w=f:
+                  - rtgl-form#form :form=form :defaultValues=defaultValues :context=context:
+                      - rtgl-view#choicesContainer slot=choices g=md w=f:
                           - $for item, index in defaultValues.items:
-                              - rtgl-view#choice-${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=p:
-                                  - rtgl-view flex=1 w=f:
+                              - rtgl-view#choice${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
+                                  - rtgl-view w=1fg:
                                       - rtgl-text: ${item.content}
-                          - rtgl-button#add-choice-button v=ol w=f mt=md: + Add Choice
-
+                          - rtgl-button#addChoiceButton v=ol w=f mt=md: + Add Choice
               - rtgl-view d=h av=c ah=e w=f g=lg:
-                  - rtgl-button#submit-button: Submit
+                  - rtgl-button#submitButton: Submit
         $elif mode == "editChoice":
           - rtgl-view wh=f:
               - rtgl-view d=h g=md:
-                  - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-
-              - rtgl-form#choice-form .form=choiceFormTemplate .context=editFormContext .defaultValues=editForm:
-
-              - rtgl-view flex=1:
+                  - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+              - rtgl-form#choiceForm :form=choiceFormTemplate :context=editFormContext :defaultValues=editForm: null
+              - rtgl-view h=1fg: null
               - rtgl-view d=h av=c ah=e w=f g=lg:
-                  - rtgl-button#cancel-edit-button v=ol: Cancel
-                  - rtgl-button#save-choice-button: Save Choice
-
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+                  - rtgl-button#cancelEditButton v=ol: Cancel
+                  - rtgl-button#saveChoiceButton: Save Choice
+  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

@@ -1,0 +1,22 @@
+componentName: rvn-command-line-background
+propsSchema:
+  type: object
+  properties:
+    background:
+      type: object
+      properties:
+        resourceId:
+          type: string
+        resourceType:
+          type: string
+          enum:
+            - image
+            - layout
+            - video
+        animations:
+          type: object
+          properties:
+            in:
+              type: string
+        loop:
+          type: boolean

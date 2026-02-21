@@ -41,15 +41,15 @@ export const createInitialState = () => ({
   },
 });
 
-export const setSceneId = (state, sceneId) => {
+export const setSceneId = ({ state }, { sceneId } = {}) => {
   state.sceneId = sceneId;
 };
 
-export const setRepositoryState = (state, repository) => {
+export const setRepositoryState = ({ state }, { repository } = {}) => {
   state.repositoryState = repository;
 };
 
-export const showPreviewSceneId = (state, payload) => {
+export const showPreviewSceneId = ({ state }, { payload } = {}) => {
   const { sceneId, sectionId, lineId } = payload;
   state.previewVisible = true;
   state.previewSceneId = sceneId;
@@ -57,21 +57,21 @@ export const showPreviewSceneId = (state, payload) => {
   state.previewLineId = lineId;
 };
 
-export const hidePreviewScene = (state) => {
+export const hidePreviewScene = ({ state }, _payload = {}) => {
   state.previewVisible = false;
   state.previewSectionId = undefined;
   state.previewLineId = undefined;
 };
 
-export const setPresentationState = (state, presentationState) => {
+export const setPresentationState = ({ state }, { presentationState } = {}) => {
   state.presentationState = presentationState;
 };
 
-export const setSectionLineChanges = (state, changes) => {
+export const setSectionLineChanges = ({ state }, { changes } = {}) => {
   state.sectionLineChanges = changes;
 };
 
-export const setSceneAssetLoading = (state, isLoading) => {
+export const setSceneAssetLoading = ({ state }, { isLoading } = {}) => {
   state.isSceneAssetLoading = isLoading;
 };
 
@@ -196,20 +196,20 @@ export const selectSelectedLineId = ({ state }) => {
   return state.selectedLineId;
 };
 
-export const setSelectedLineId = (state, selectedLineId) => {
+export const setSelectedLineId = ({ state }, { selectedLineId } = {}) => {
   state.selectedLineId = selectedLineId;
 };
 
-export const setSelectedSectionId = (state, selectedSectionId) => {
+export const setSelectedSectionId = ({ state }, { selectedSectionId } = {}) => {
   state.selectedSectionId = selectedSectionId;
 };
 
-export const openSectionsOverviewPanel = (state) => {
+export const openSectionsOverviewPanel = ({ state }, _payload = {}) => {
   state.sectionsOverviewPanel.isOpen = true;
   state.deadEndTooltip.open = false;
 };
 
-export const closeSectionsOverviewPanel = (state) => {
+export const closeSectionsOverviewPanel = ({ state }, _payload = {}) => {
   state.sectionsOverviewPanel.isOpen = false;
   state.deadEndTooltip.open = false;
 };
@@ -219,12 +219,12 @@ export const selectIsSectionsOverviewOpen = ({ state }) => {
 };
 
 // Set lock to prevent duplicate split/merge operations on the same line
-export const setLockingLineId = (state, lineId) => {
+export const setLockingLineId = ({ state }, { lineId } = {}) => {
   state.lockingLineId = lineId;
 };
 
 // Clear lock after split/merge operation completes
-export const clearLockingLineId = (state) => {
+export const clearLockingLineId = ({ state }, _payload = {}) => {
   state.lockingLineId = null;
 };
 
@@ -233,7 +233,10 @@ export const selectLockingLineId = ({ state }) => {
   return state.lockingLineId;
 };
 
-export const showSectionDropdownMenu = (state, { position, sectionId }) => {
+export const showSectionDropdownMenu = (
+  { state },
+  { position, sectionId } = {},
+) => {
   const scene = selectScene({ state });
   const items = [{ label: "Rename", type: "item", value: "rename-section" }];
 
@@ -251,7 +254,10 @@ export const showSectionDropdownMenu = (state, { position, sectionId }) => {
   };
 };
 
-export const showSectionsOverviewDropdownMenu = (state, { position }) => {
+export const showSectionsOverviewDropdownMenu = (
+  { state },
+  { position } = {},
+) => {
   const scene = selectScene({ state });
   const items = (scene?.sections || []).map((section, index) => ({
     label: `${index + 1}. ${section.name || `Section ${index + 1}`}`,
@@ -268,7 +274,10 @@ export const showSectionsOverviewDropdownMenu = (state, { position }) => {
   };
 };
 
-export const showActionsDropdownMenu = (state, { position, actionsType }) => {
+export const showActionsDropdownMenu = (
+  { state },
+  { position, actionsType } = {},
+) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
@@ -278,7 +287,7 @@ export const showActionsDropdownMenu = (state, { position, actionsType }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu = {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -288,7 +297,7 @@ export const hideDropdownMenu = (state) => {
   };
 };
 
-export const showPopover = (state, { position, sectionId }) => {
+export const showPopover = ({ state }, { position, sectionId } = {}) => {
   state.popover = {
     isOpen: true,
     position,
@@ -296,7 +305,7 @@ export const showPopover = (state, { position, sectionId }) => {
   };
 };
 
-export const hidePopover = (state) => {
+export const hidePopover = ({ state }, _payload = {}) => {
   state.popover = {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -304,7 +313,7 @@ export const hidePopover = (state) => {
   };
 };
 
-export const setLineTextContent = (state, { lineId, content }) => {
+export const setLineTextContent = ({ state }, { lineId, content } = {}) => {
   const scene = selectScene({ state });
   if (!scene) return;
 
@@ -414,7 +423,7 @@ export const selectViewData = ({ state }) => {
         fields: [
           {
             name: "name",
-            inputType: "inputText",
+            type: "input-text",
             label: "Section Name",
             value: currentSection.name || "",
             required: true,
@@ -426,7 +435,7 @@ export const selectViewData = ({ state }) => {
             {
               id: "submit",
               variant: "pr",
-              content: "Rename",
+              label: "Rename",
             },
           ],
         },
@@ -477,7 +486,7 @@ export const selectViewData = ({ state }) => {
   };
 };
 
-export const selectLineIdIndex = (state, props, payload) => {
+export const selectLineIdIndex = ({ state }, props, payload) => {
   const { lineId } = payload;
   return state.currentLines.findIndex((line) => line.id === lineId);
 };
@@ -527,7 +536,7 @@ export const selectSelectedLine = ({ state }) => {
     ?.lines.find((line) => line.id === state.selectedLineId);
 };
 
-export const toggleSectionsGraphView = (state) => {
+export const toggleSectionsGraphView = ({ state }, _payload = {}) => {
   state.sectionsGraphView = !state.sectionsGraphView;
 };
 
@@ -592,7 +601,7 @@ export const selectSectionTransitionsDAG = ({ state }) => {
   };
 };
 
-export const toggleMute = (state) => {
+export const toggleMute = ({ state }, _payload = {}) => {
   state.isMuted = !state.isMuted;
 };
 
@@ -600,7 +609,7 @@ export const selectIsMuted = ({ state }) => {
   return state.isMuted;
 };
 
-export const showDeadEndTooltip = (state, { x, y, content }) => {
+export const showDeadEndTooltip = ({ state }, { x, y, content } = {}) => {
   state.deadEndTooltip = {
     open: true,
     x,
@@ -609,7 +618,7 @@ export const showDeadEndTooltip = (state, { x, y, content }) => {
   };
 };
 
-export const hideDeadEndTooltip = (state) => {
+export const hideDeadEndTooltip = ({ state }, _payload = {}) => {
   state.deadEndTooltip = {
     ...state.deadEndTooltip,
     open: false,

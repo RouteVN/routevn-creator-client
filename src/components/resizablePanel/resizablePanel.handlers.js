@@ -1,12 +1,12 @@
 export const handleBeforeMount = (deps) => {
-  const { store, attrs, appService } = deps;
+  const { store, props: attrs, appService } = deps;
 
-  const panelType = attrs["panel-type"] || "file-explorer";
+  const panelType = attrs.panelType || "file-explorer";
 
   // Use the template's w attribute as the default width
   const defaultWidth = parseInt(attrs.w) || 280;
-  const minWidth = parseInt(attrs["min-w"]) || 200;
-  const maxWidth = parseInt(attrs["max-w"]) || 600;
+  const minWidth = parseInt(attrs.minW) || 200;
+  const maxWidth = parseInt(attrs.maxW) || 600;
 
   // Load from localStorage using userConfig pattern
   const configKey = `resizablePanel.${panelType}Width`;
@@ -41,35 +41,35 @@ export const handleResizeStart = (deps, payload) => {
 };
 
 const handleResizeMove = (deps, payload) => {
-  const { store, render, attrs, subject } = deps;
+  const { store, render, props: attrs, subject } = deps;
 
   if (!store.selectIsResizing()) return;
   const deltaX = payload.clientX - store.selectStartX();
 
   // Determine resize direction based on resize-side attr
-  const isResizeFromLeft = attrs["resize-side"] === "left";
+  const isResizeFromLeft = attrs.resizeSide === "left";
   const newWidth = isResizeFromLeft
     ? store.selectStartWidth() - deltaX // For left resize, movement is inverted
     : store.selectStartWidth() + deltaX; // For right resize, movement is normal
 
-  store.setPanelWidth(newWidth, attrs);
+  store.setPanelWidth({ width: newWidth });
 
   // Dispatch resize event via subject for other components to listen
   subject.dispatch("panel-resize", {
-    panelType: attrs["panel-type"] || "file-explorer",
+    panelType: attrs.panelType || "file-explorer",
     width: store.selectPanelWidth(),
-    resizeSide: attrs["resize-side"] || "right",
+    resizeSide: attrs.resizeSide || "right",
   });
 
   render();
 };
 
 const handleResizeEnd = (deps, _, listeners) => {
-  const { store, render, attrs, appService, subject } = deps;
+  const { store, render, props: attrs, appService, subject } = deps;
   const { handleMouseMove, handleMouseUp } = listeners;
 
   // Save final width to localStorage using userConfig pattern
-  const panelType = attrs["panel-type"] || "file-explorer";
+  const panelType = attrs.panelType || "file-explorer";
   const configKey = `resizablePanel.${panelType}Width`;
   const currentWidth = store.selectPanelWidth();
   appService.setUserConfig(configKey, currentWidth.toString());
@@ -78,10 +78,10 @@ const handleResizeEnd = (deps, _, listeners) => {
   subject.dispatch("panel-resize-end", {
     panelType,
     width: currentWidth,
-    resizeSide: attrs["resize-side"] || "right",
+    resizeSide: attrs.resizeSide || "right",
   });
 
-  store.setIsResizing(false);
+  store.setIsResizing({ isResizing: false });
   render();
 
   // Remove global event listeners

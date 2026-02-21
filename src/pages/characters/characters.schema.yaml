@@ -1,0 +1,4 @@
+componentName: rvn-characters
+propsSchema:
+  type: object
+  properties: {}

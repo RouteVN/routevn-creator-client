@@ -1,6 +1,4 @@
-import { createWebPatch } from "@rettangoli/fe";
 import { createGlobalUI } from "@rettangoli/ui";
-import { h } from "snabbdom/build/h";
 
 // Infra - Web
 import { createDb } from "./deps/infra/web/db.js";
@@ -16,6 +14,179 @@ import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import Router from "./deps/infra/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
+
+const guardedRtglConstructors = new WeakSet();
+const patchedRtglFormConstructors = new WeakSet();
+const rtglFeComponentTags = [
+  "rtgl-accordion-item",
+  "rtgl-breadcrumb",
+  "rtgl-dropdown-menu",
+  "rtgl-form",
+  "rtgl-global-ui",
+  "rtgl-navbar",
+  "rtgl-page-outline",
+  "rtgl-popover-input",
+  "rtgl-select",
+  "rtgl-sidebar",
+  "rtgl-slider-input",
+  "rtgl-table",
+  "rtgl-tabs",
+  "rtgl-tooltip",
+  "rtgl-waveform",
+];
+
+const hasRequiredRefHandlers = (instance) => {
+  const refs = instance?.refs;
+  if (!refs || typeof refs !== "object") {
+    return true;
+  }
+
+  const handlers = instance?.transformedHandlers;
+  if (!handlers || typeof handlers !== "object") {
+    return false;
+  }
+
+  for (const refConfig of Object.values(refs)) {
+    const eventListeners = refConfig?.eventListeners;
+    if (!eventListeners || typeof eventListeners !== "object") {
+      continue;
+    }
+
+    for (const eventConfig of Object.values(eventListeners)) {
+      const handlerName = eventConfig?.handler;
+      if (
+        handlerName &&
+        typeof handlerName === "string" &&
+        typeof handlers[handlerName] !== "function"
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
+
+const patchRtglAttributeChangedCallback = (tagName) => {
+  const ctor = customElements.get(tagName);
+  if (!ctor || guardedRtglConstructors.has(ctor)) {
+    return;
+  }
+
+  const originalAttributeChangedCallback =
+    ctor.prototype.attributeChangedCallback;
+  if (typeof originalAttributeChangedCallback !== "function") {
+    guardedRtglConstructors.add(ctor);
+    return;
+  }
+
+  ctor.prototype.attributeChangedCallback = function (...args) {
+    const isRuntimeReady =
+      typeof this?.transformedHandlers?.handleCallStoreAction === "function";
+    if (
+      !this.isConnected ||
+      !this.renderTarget ||
+      !isRuntimeReady ||
+      !this.patch ||
+      !hasRequiredRefHandlers(this)
+    ) {
+      return;
+    }
+    return originalAttributeChangedCallback.apply(this, args);
+  };
+
+  guardedRtglConstructors.add(ctor);
+};
+
+const guardRtglAttributeUpdatesBeforeConnect = () => {
+  rtglFeComponentTags.forEach((tagName) => {
+    patchRtglAttributeChangedCallback(tagName);
+    customElements.whenDefined(tagName).then(() => {
+      patchRtglAttributeChangedCallback(tagName);
+    });
+  });
+};
+
+const normalizeLegacyFormSchema = (schema) => {
+  if (!schema || typeof schema !== "object") {
+    return schema;
+  }
+
+  const normalizeField = (field) => {
+    if (!field || typeof field !== "object") {
+      return field;
+    }
+
+    const normalizedField = { ...field };
+
+    if (!normalizedField.type && normalizedField.inputType) {
+      normalizedField.type = normalizedField.inputType;
+    }
+
+    if (Array.isArray(normalizedField.fields)) {
+      normalizedField.fields = normalizedField.fields.map(normalizeField);
+    }
+
+    return normalizedField;
+  };
+
+  const normalizedSchema = { ...schema };
+
+  if (Array.isArray(schema.fields)) {
+    normalizedSchema.fields = schema.fields.map(normalizeField);
+  }
+
+  const buttons = schema.actions?.buttons;
+  if (Array.isArray(buttons)) {
+    normalizedSchema.actions = {
+      ...schema.actions,
+      buttons: buttons.map((button) => {
+        if (!button || typeof button !== "object") {
+          return button;
+        }
+
+        const normalizedButton = { ...button };
+        if (!normalizedButton.label && normalizedButton.content) {
+          normalizedButton.label = normalizedButton.content;
+        }
+
+        return normalizedButton;
+      }),
+    };
+  }
+
+  return normalizedSchema;
+};
+
+const patchRtglFormCompatibility = () => {
+  const ctor = customElements.get("rtgl-form");
+  if (!ctor || patchedRtglFormConstructors.has(ctor)) {
+    return;
+  }
+
+  const descriptor = Object.getOwnPropertyDescriptor(ctor.prototype, "form");
+  if (!descriptor || typeof descriptor.set !== "function") {
+    patchedRtglFormConstructors.add(ctor);
+    return;
+  }
+
+  Object.defineProperty(ctor.prototype, "form", {
+    get: descriptor.get,
+    set(value) {
+      return descriptor.set.call(this, normalizeLegacyFormSchema(value));
+    },
+    enumerable: descriptor.enumerable,
+    configurable: descriptor.configurable,
+  });
+
+  patchedRtglFormConstructors.add(ctor);
+};
+
+guardRtglAttributeUpdatesBeforeConnect();
+patchRtglFormCompatibility();
+customElements.whenDefined("rtgl-form").then(() => {
+  patchRtglFormCompatibility();
+});
 
 // Initialize app database using web adapter
 const appDb = createDb({ path: "app" });
@@ -91,6 +262,4 @@ const deps = {
   pages: pageDependencies,
 };
 
-const patch = createWebPatch();
-
-export { h, patch, deps };
+export { deps };

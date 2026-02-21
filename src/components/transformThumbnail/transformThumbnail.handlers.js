@@ -1,5 +1,5 @@
 export const handleAfterMount = async (deps) => {
-  const { props, render, getRefIds } = deps;
+  const { props, render, refs } = deps;
   const { item } = props;
   if (!item) return;
 
@@ -14,7 +14,7 @@ export const handleAfterMount = async (deps) => {
     zIndex: item.zIndex || 0,
   };
 
-  const canvas = getRefIds().canvas?.elm;
+  const canvas = refs.canvas;
   if (canvas) {
     renderTransform(config, canvas);
   }
@@ -23,7 +23,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleOnUpdate = (deps, changes) => {
-  const { render, getRefIds } = deps;
+  const { render, refs } = deps;
   const { item } = changes.newProps;
   if (!item) return;
 
@@ -38,7 +38,7 @@ export const handleOnUpdate = (deps, changes) => {
     zIndex: item.zIndex || 0,
   };
 
-  const canvas = getRefIds().canvas?.elm;
+  const canvas = refs.canvas;
   if (canvas) {
     renderTransform(config, canvas);
   }

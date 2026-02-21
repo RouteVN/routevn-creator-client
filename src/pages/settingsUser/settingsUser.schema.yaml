@@ -1,0 +1,4 @@
+componentName: rvn-settings-user
+propsSchema:
+  type: object
+  properties: {}

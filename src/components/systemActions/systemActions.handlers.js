@@ -12,20 +12,20 @@ export const handleAfterMount = async (deps) => {
   await projectService.ensureRepository();
   const repositoryState = projectService.getState();
 
-  store.setRepositoryState(repositoryState);
+  store.setRepositoryState({ repositoryState: repositoryState });
   render();
 };
 
 export const handleBeforeMount = (deps) => {
   const { props, render, store } = deps;
-  store.updateActions(props.actions);
+  store.updateActions({ payload: props.actions });
   render();
 };
 
 export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
-  store.updateActions(newProps.actions);
+  store.updateActions({ payload: newProps.actions });
   render();
 };
 

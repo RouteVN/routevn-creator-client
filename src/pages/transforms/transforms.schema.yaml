@@ -1,0 +1,4 @@
+componentName: rvn-transforms
+propsSchema:
+  type: object
+  properties: {}

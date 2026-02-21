@@ -38,7 +38,7 @@ export const handleBeforeMount = (deps) => {
 
 export const handleFormChange = (deps, payload) => {
   const { store, render, props } = deps;
-  const { formValues } = payload._event.detail;
+  const { values: formValues } = payload._event.detail;
 
   if (!formValues) {
     return;

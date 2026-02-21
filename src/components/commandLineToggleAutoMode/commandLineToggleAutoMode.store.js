@@ -5,7 +5,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "placeholder",
-        inputType: "read-only-text",
+        type: "read-only-text",
         label: "Toggle Auto Mode Action",
         description: "This action will toggle auto-advance mode on/off",
         required: false,

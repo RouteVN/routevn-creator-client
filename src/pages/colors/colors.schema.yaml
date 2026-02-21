@@ -1,0 +1,4 @@
+componentName: rvn-colors
+propsSchema:
+  type: object
+  properties: {}

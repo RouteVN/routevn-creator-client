@@ -2,22 +2,36 @@ export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail.value || "";
 
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
+};
+
+const getDataId = (event, attrName, fallbackPrefix = "") => {
+  const value = event?.currentTarget?.getAttribute?.(attrName);
+  if (value) {
+    return value;
+  }
+  if (!fallbackPrefix) {
+    return "";
+  }
+  return event?.currentTarget?.id?.replace(fallbackPrefix, "") || "";
 };
 
 export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = payload._event.currentTarget.id.replace("group-", "");
+  const groupId = getDataId(payload._event, "data-group-id", "group");
+  if (!groupId) {
+    return;
+  }
 
   // Handle group collapse internally
-  store.toggleGroupCollapse(groupId);
+  store.toggleGroupCollapse({ groupId: groupId });
   render();
 };
 
 export const handleVariableItemClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("variable-item-", "");
+  const itemId = payload._event.currentTarget.id.replace("variableItem", "");
 
   // Forward variable item selection to parent
   dispatchEvent(
@@ -32,7 +46,7 @@ export const handleVariableItemClick = (deps, payload) => {
 export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
   const prevValues = store.selectDefaultValues();
-  const newValues = payload._event.detail.formValues;
+  const newValues = payload._event.detail.values;
 
   // When type changes, set appropriate default value
   let defaultValue = newValues.default;
@@ -60,11 +74,15 @@ export const handleAddVariableClick = (deps, payload) => {
   payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button (handles both button and empty state)
-  const buttonId = payload._event.currentTarget.id;
-  const groupId = buttonId
-    .replace("add-variable-button-", "")
-    .replace("add-variable-empty-", "");
-  store.setTargetGroupId(groupId);
+  const groupId =
+    getDataId(payload._event, "data-group-id") ||
+    payload._event.currentTarget.id
+      .replace("addVariableButton", "")
+      .replace("addVariableEmpty", "");
+  if (!groupId) {
+    return;
+  }
+  store.setTargetGroupId({ groupId: groupId });
 
   // Toggle dialog open
   store.toggleDialog();
@@ -82,7 +100,10 @@ export const handleCloseDialog = (deps) => {
 
 export const handleRowClick = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const itemId = payload._event.currentTarget.id.replace("row-", "");
+  const itemId = getDataId(payload._event, "data-item-id", "row");
+  if (!itemId) {
+    return;
+  }
 
   dispatchEvent(
     new CustomEvent("variable-item-click", {
@@ -98,7 +119,10 @@ export const handleRowContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   payload._event.stopPropagation();
 
-  const itemId = payload._event.currentTarget.id.replace("row-", "");
+  const itemId = getDataId(payload._event, "data-item-id", "row");
+  if (!itemId) {
+    return;
+  }
   const x = payload._event.clientX;
   const y = payload._event.clientY;
 
@@ -139,7 +163,7 @@ export const handleFormActionClick = (deps, payload) => {
 
   if (actionId === "submit") {
     // Get form values from the event detail - it's in formValues
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
 
     // Don't submit if name is not set
     if (!formData.name || !formData.name.trim()) {

@@ -1,0 +1,6 @@
+componentName: rvn-command-line-toggle-skip-mode
+propsSchema:
+  type: object
+  properties:
+    toggleSkipMode:
+      type: object

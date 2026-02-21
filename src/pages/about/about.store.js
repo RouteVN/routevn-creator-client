@@ -57,10 +57,10 @@ export const selectState = ({ state }) => {
   return state;
 };
 
-export const setAppVersion = (state, version) => {
+export const setAppVersion = ({ state }, { version } = {}) => {
   state.appVersion = version;
 };
 
-export const setPlatform = (state, platform) => {
+export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform;
 };

@@ -1,45 +1,15 @@
-elementName: rvn-resizable-panel
-
-attrsSchema:
-  type: object
-  properties:
-    w:
-      type: string
-      default: "280"
-      description: "Initial width of the panel"
-    min-w:
-      type: string
-      default: "200"
-      description: "Minimum width of the panel"
-    max-w:
-      type: string
-      default: "600"
-      description: "Maximum width of the panel"
-    resize-side:
-      type: string
-      default: "right"
-      enum: ["left", "right"]
-      description: "Which side to show the resize handle"
-    panel-type:
-      type: string
-      default: "file-explorer"
-      enum: ["file-explorer", "detail-panel"]
-      description: "Type of panel for localStorage key differentiation"
-
 refs:
-  resize-handle:
+  resizeHandle:
     eventListeners:
       mousedown:
         handler: handleResizeStart
-
 template:
-  - "rtgl-view h=f w=${panelWidth} d=h pos=rel":
+  - rtgl-view h=f w=${panelWidth} d=h pos=rel:
       - $if resizeSide=="left":
-          - 'rtgl-view#resize-handle h=f ph=md style="cursor: col-resize; background: transparent; margin-left: calc(var(--spacing-md) * -1); margin-right: calc(var(--spacing-md) * -1);"':
-              - "rtgl-view w=1 h=f bgc=mu":
+          - 'rtgl-view#resizeHandle h=f ph=md style="cursor: col-resize; background: transparent; margin-left: calc(var(--spacing-md) * -1); margin-right: calc(var(--spacing-md) * -1);"':
+              - rtgl-view w=1 h=f bgc=mu: null
       - rtgl-view h=f w=f:
-          - slot name="content":
+          - slot name="content": null
       - $if resizeSide=="right":
-          - 'rtgl-view#resize-handle h=f ph=md style="cursor: col-resize; background: transparent; margin-left: calc(var(--spacing-md) * -1); margin-right: calc(var(--spacing-md) * -1);"':
-              - "rtgl-view w=1 h=f bgc=mu":
-
+          - 'rtgl-view#resizeHandle h=f ph=md style="cursor: col-resize; background: transparent; margin-left: calc(var(--spacing-md) * -1); margin-right: calc(var(--spacing-md) * -1);"':
+              - rtgl-view w=1 h=f bgc=mu: null

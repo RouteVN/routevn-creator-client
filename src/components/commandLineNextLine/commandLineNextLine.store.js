@@ -5,7 +5,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "placeholder",
-        inputType: "read-only-text",
+        type: "read-only-text",
         label: "Next Line Action",
         description: "This action will advance to the next line",
         required: false,

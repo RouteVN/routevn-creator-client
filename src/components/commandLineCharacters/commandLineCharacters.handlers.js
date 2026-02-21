@@ -34,11 +34,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleCharacterClick = (deps, payload) => {
   const { store, render } = deps;
-  const id = payload._event.currentTarget.id;
-
-  // Extract character index from ID (format: character-{id}-{index})
-  const parts = id.split("-");
-  const index = parseInt(parts[parts.length - 1]);
+  const index = parseInt(payload._event.currentTarget.dataset.index);
 
   // Set the character index for sprite selection
   store.setSelectedCharacterIndex({ index });
@@ -54,11 +50,7 @@ export const handleCharacterClick = (deps, payload) => {
 export const handleCharacterContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
-  const id = payload._event.currentTarget.id;
-
-  // Extract character index from ID (format: character-{id}-{index})
-  const parts = id.split("-");
-  const index = parseInt(parts[parts.length - 1]);
+  const index = parseInt(payload._event.currentTarget.dataset.index);
 
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
@@ -78,17 +70,26 @@ export const handleTransformChange = (deps, payload) => {
     payload._event.target?.value;
 
   // Extract index from ID (format: transform-{index})
-  const index = parseInt(id.replace("transform-", ""));
+  const index = parseInt(id.replace("transform", ""));
   store.updateCharacterTransform({ index, transform: value });
   render();
 };
 
+export const handleFormExtra = () => {
+  // Keep for compatibility with rtgl-form form-field-event wiring.
+};
+
+export const handleFormChange = () => {
+  // Transform updates are handled by direct value-change listeners on transform* refs.
+};
+
 export const handleCharacterItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const characterId = payload._event.currentTarget.id.replace(
-    "character-item-",
-    "",
-  );
+  const target = payload._event.currentTarget;
+  const characterId =
+    target?.dataset?.characterId ||
+    target?.id?.replace("characterItem", "") ||
+    "";
 
   // Add character to selected characters
   store.addCharacter({ id: characterId });
@@ -164,10 +165,10 @@ export const handleBreadcumbClick = (deps, payload) => {
 export const handleRemoveCharacterClick = (deps, payload) => {
   const { store, render } = deps;
   const index = parseInt(
-    payload._event.currentTarget.id.replace("remove-character-", ""),
+    payload._event.currentTarget.id.replace("removeCharacter", ""),
   );
 
-  store.removeCharacter(index);
+  store.removeCharacter({ index: index });
   render();
 };
 
@@ -181,23 +182,11 @@ export const handleAddCharacterClick = (deps) => {
   render();
 };
 
-export const handleCharacterSpriteClick = (deps, payload) => {
-  const { store, render } = deps;
-  const index = parseInt(
-    payload._event.currentTarget.id.replace("character-sprite-", ""),
-  );
-
-  store.setSelectedCharacterIndex({ index });
-  store.setMode({
-    mode: "sprite-select",
-  });
-
-  render();
-};
-
 export const handleSpriteItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const spriteId = payload._event.currentTarget.id.replace("sprite-item-", "");
+  const target = payload._event.currentTarget;
+  const spriteId =
+    target?.dataset?.spriteId || target?.id?.replace("spriteItem", "") || "";
 
   store.setTempSelectedSpriteId({
     spriteId: spriteId,
@@ -256,7 +245,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const characterIndex = store.selectDropdownMenuCharacterIndex();
 
   if (item.value === "delete" && characterIndex !== null) {
-    store.removeCharacter(characterIndex);
+    store.removeCharacter({ index: characterIndex });
   }
 
   store.hideDropdownMenu();

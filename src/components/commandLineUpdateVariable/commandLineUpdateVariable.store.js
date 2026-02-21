@@ -36,27 +36,27 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
-export const setInitiated = (state) => {
+export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 
-export const setVariablesData = (state, payload) => {
+export const setVariablesData = ({ state }, { payload } = {}) => {
   state.variablesData = payload.variables;
 };
 
-export const setActionId = (state, id) => {
+export const setActionId = ({ state }, { id } = {}) => {
   state.actionId = id;
 };
 
-export const setOperations = (state, operations) => {
+export const setOperations = ({ state }, { operations } = {}) => {
   state.operations = operations;
 };
 
-export const addOperation = (state, payload) => {
+export const addOperation = ({ state }, { payload } = {}) => {
   state.operations.push({
     id: payload.id,
     variableId: "",
@@ -67,14 +67,14 @@ export const addOperation = (state, payload) => {
   state.mode = "edit";
 };
 
-export const updateOperation = (state, payload) => {
+export const updateOperation = ({ state }, { payload } = {}) => {
   const index = state.operations.findIndex((op) => op.id === payload.id);
   if (index !== -1) {
     state.operations[index] = { ...state.operations[index], ...payload };
   }
 };
 
-export const deleteOperation = (state, operationId) => {
+export const deleteOperation = ({ state }, { operationId } = {}) => {
   state.operations = state.operations.filter((op) => op.id !== operationId);
   if (state.currentEditingId === operationId) {
     state.currentEditingId = null;
@@ -82,19 +82,19 @@ export const deleteOperation = (state, operationId) => {
   }
 };
 
-export const setCurrentEditingId = (state, payload) => {
+export const setCurrentEditingId = ({ state }, { payload } = {}) => {
   state.currentEditingId = payload.id;
 };
 
-export const setTempOperation = (state, payload) => {
+export const setTempOperation = ({ state }, { payload } = {}) => {
   state.tempOperation = { ...state.tempOperation, ...payload };
 };
 
-export const resetTempOperation = (state) => {
+export const resetTempOperation = ({ state }, _payload = {}) => {
   state.tempOperation = { variableId: "", op: "", value: "" };
 };
 
-export const showDropdownMenu = (state, { position, operationId }) => {
+export const showDropdownMenu = ({ state }, { position, operationId } = {}) => {
   state.dropdownMenu = {
     ...state.dropdownMenu,
     isOpen: true,
@@ -103,7 +103,7 @@ export const showDropdownMenu = (state, { position, operationId }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu = {
     ...state.dropdownMenu,
     isOpen: false,

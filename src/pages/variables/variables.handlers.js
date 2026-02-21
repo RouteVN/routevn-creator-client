@@ -5,7 +5,7 @@ export const handleAfterMount = async (deps) => {
   const { p } = appService.getPayload();
   const repository = await projectService.getRepositoryById(p);
   const { variables } = repository.getState();
-  store.setItems(variables || { tree: [], items: {} });
+  store.setItems({ variablesData: variables || { tree: [], items: {} } });
   render();
 };
 
@@ -19,14 +19,14 @@ export const handleDataChanged = async (deps) => {
 
   const variableData = variables || { tree: [], items: {} };
 
-  store.setItems(variableData);
+  store.setItems({ variablesData: variableData });
   render();
 };
 
 export const handleVariableItemClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
 };
 
@@ -64,7 +64,7 @@ export const handleVariableCreated = async (deps, payload) => {
 
   // Update store with new variables data
   const { variables } = repository.getState();
-  store.setItems(variables);
+  store.setItems({ variablesData: variables });
   render();
 };
 
@@ -86,11 +86,11 @@ export const handleVariableDelete = async (deps, payload) => {
 
   // Clear selection if deleted item was selected
   if (store.selectSelectedItemId() === itemId) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
   }
 
   const { variables } = repository.getState();
-  store.setItems(variables);
+  store.setItems({ variablesData: variables });
   render();
 };
 
@@ -99,7 +99,7 @@ export const handleFormChange = async (deps, payload) => {
   const { p } = appService.getPayload();
   const repository = await projectService.getRepositoryById(p);
   const fieldName = payload._event.detail.name;
-  const fieldValue = payload._event.detail.fieldValue;
+  const fieldValue = payload._event.detail.value;
 
   const updateValue = {
     [fieldName]: fieldValue,
@@ -128,6 +128,6 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { variables } = repository.getState();
-  store.setItems(variables);
+  store.setItems({ variablesData: variables });
   render();
 };

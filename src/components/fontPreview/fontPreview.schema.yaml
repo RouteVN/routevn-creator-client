@@ -1,0 +1,57 @@
+componentName: rvn-font-preview
+propsSchema:
+  type: object
+  properties:
+    previewText:
+      type: string
+      description: Text to display in preview
+    fontFamily:
+      type: string
+      description: Font family to use
+    fileId:
+      type: string
+      description: File ID for the font file
+    fontSize:
+      type: string
+      description: Font size in pixels
+      default: '100'
+    lineHeight:
+      type: string
+      description: Line height (e.g., 1.5, 1.2, 24px)
+      default: '1.5'
+    fontWeight:
+      type: string
+      description: Font weight
+      default: normal
+    color:
+      type: string
+      description: Text color
+      default: currentColor
+    width:
+      type: string
+      description: Preview container width
+      default: '200'
+    height:
+      type: string
+      description: Preview container height
+      default: '150'
+    backgroundColor:
+      type: string
+      description: Background color
+      default: transparent
+    textAlign:
+      type: string
+      description: Text alignment
+      default: left
+    av:
+      type: string
+      description: Vertical alignment
+      default: ''
+    ah:
+      type: string
+      description: Horizontal alignment
+      default: ''
+    showBorder:
+      type: string
+      description: Whether to show border around preview
+      default: 'true'

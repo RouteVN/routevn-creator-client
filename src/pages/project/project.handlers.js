@@ -5,7 +5,7 @@ export const handleAfterMount = async (deps) => {
   await projectService.ensureRepository();
   const state = projectService.getState();
   const { project } = state;
-  store.setProject(project);
+  store.setProject({ project: project });
   render();
 };
 
@@ -15,7 +15,7 @@ export const handleFormChange = async (deps, payload) => {
     type: "set",
     payload: {
       target: `project.${payload._event.detail.name}`,
-      value: payload._event.detail.fieldValue,
+      value: payload._event.detail.value,
     },
   });
 };
@@ -53,7 +53,7 @@ export const handleFormExtraEvent = async (deps) => {
         },
       });
 
-      store.setIconFileId(result.fileId);
+      store.setIconFileId({ iconFileId: result.fileId });
       subject.dispatch("project-image-update");
       render();
     }

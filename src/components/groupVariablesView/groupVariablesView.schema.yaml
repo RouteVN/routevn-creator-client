@@ -1,0 +1,10 @@
+componentName: rvn-group-variables-view
+propsSchema:
+  type: object
+  properties:
+    flatGroups:
+      type: array
+      description: Array of variable groups to display
+    selectedItemId:
+      type: string
+      description: ID of currently selected item

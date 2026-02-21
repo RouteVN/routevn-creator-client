@@ -36,11 +36,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleVisualClick = (deps, payload) => {
   const { store, render } = deps;
-  const id = payload._event.currentTarget.id;
-
-  // Extract visual index from ID (format: visual-{id}-{index})
-  const parts = id.split("-");
-  const index = parseInt(parts[parts.length - 1]);
+  const index = parseInt(payload._event.currentTarget.dataset.index);
 
   store.setSelectedVisualIndex({ index });
   store.setMode({
@@ -53,11 +49,7 @@ export const handleVisualClick = (deps, payload) => {
 export const handleVisualContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
-  const id = payload._event.currentTarget.id;
-
-  // Extract visual index from ID
-  const parts = id.split("-");
-  const index = parseInt(parts[parts.length - 1]);
+  const index = parseInt(payload._event.currentTarget.dataset.index);
 
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
@@ -76,17 +68,18 @@ export const handleTransformChange = (deps, payload) => {
     payload._event.target?.value;
 
   // Extract index from ID (format: transform-{index})
-  const index = parseInt(id.replace("transform-", ""));
+  const index = parseInt(id.replace("transform", ""));
   store.updateVisualTransform({ index, transform: value });
   render();
 };
 
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const resourceId = payload._event.currentTarget.id.replace(
-    "resource-item-",
-    "",
-  );
+  const target = payload._event.currentTarget;
+  const resourceId =
+    target?.dataset?.resourceId ||
+    target?.id?.replace("resourceItem", "") ||
+    "";
 
   store.setTempSelectedResourceId({ resourceId });
   render();
@@ -146,10 +139,10 @@ export const handleBreadcumbClick = (deps, payload) => {
 export const handleRemoveVisualClick = (deps, payload) => {
   const { store, render } = deps;
   const index = parseInt(
-    payload._event.currentTarget.id.replace("remove-visual-", ""),
+    payload._event.currentTarget.id.replace("removeVisual", ""),
   );
 
-  store.removeVisual(index);
+  store.removeVisual({ index: index });
   render();
 };
 
@@ -197,7 +190,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const visualIndex = store.selectDropdownMenuVisualIndex();
 
   if (item.value === "delete" && visualIndex !== null) {
-    store.removeVisual(visualIndex);
+    store.removeVisual({ index: visualIndex });
   }
 
   store.hideDropdownMenu();

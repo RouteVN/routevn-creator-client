@@ -2,11 +2,21 @@ import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+export const handleBeforeMount = (deps) => {
+  return mountLegacySubscriptions(deps);
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, appService } = deps;
   await projectService.ensureRepository();
   const { sounds } = projectService.getState();
-  store.setItems(sounds || { tree: [], items: {} });
+  store.setItems({ soundData: sounds || { tree: [], items: {} } });
 
   // Initialize audio player positions from userConfig
   const defaultLeft = parseInt(
@@ -26,7 +36,7 @@ export const handleDataChanged = async (deps) => {
   const { sounds } = projectService.getState();
   const soundData = sounds || { tree: [], items: {} };
 
-  store.setItems(soundData);
+  store.setItems({ soundData: soundData });
   render();
 };
 
@@ -36,7 +46,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If this is a folder, clear selection and context
   if (isFolder) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
     store.setContext({
       fileId: {
         waveformData: null,
@@ -46,7 +56,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
 
   // If we have item data with waveformDataFileId, set up media context for preview
   if (item && item.waveformDataFileId) {
@@ -69,7 +79,7 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
   const selectedItem = store.selectSelectedItem();
   if (selectedItem) {
@@ -82,12 +92,12 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
 };
 
 export const handleSoundItemClick = async (deps, payload) => {
-  const { store, render, projectService, getRefIds } = deps;
+  const { store, render, projectService, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
@@ -160,7 +170,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     const { sounds } = projectService.getState();
-    store.setItems(sounds);
+    store.setItems({ soundData: sounds });
   }
 
   render();
@@ -230,7 +240,7 @@ export const handleFormExtraEvent = async (deps) => {
       waveformData,
     },
   });
-  store.setItems(sounds);
+  store.setItems({ soundData: sounds });
   render();
 };
 
@@ -241,7 +251,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "sounds",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -251,7 +261,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { sounds } = projectService.getState();
-  store.setItems(sounds);
+  store.setItems({ soundData: sounds });
   render();
 };
 
@@ -259,7 +269,7 @@ export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail.value || "";
 
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
@@ -314,7 +324,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ soundData: data });
   render();
 };
 
@@ -334,7 +344,7 @@ export const handlePanelResize = (deps, payload) => {
   }
 };
 
-export const subscriptions = (deps) => {
+const subscriptions = (deps) => {
   const { subject } = deps;
   return [
     subject.pipe(

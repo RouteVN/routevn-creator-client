@@ -1,0 +1,13 @@
+componentName: rvn-command-line-controls
+propsSchema:
+  type: object
+  properties:
+    controls:
+      type: object
+      properties:
+        disableUserClick:
+          type: boolean
+        autoPlay:
+          type: boolean
+        autoPlayDelay:
+          type: number

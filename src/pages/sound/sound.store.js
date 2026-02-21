@@ -5,25 +5,25 @@ const form = {
   fields: [
     {
       name: "fileId",
-      inputType: "waveform",
+      type: "waveform",
       waveformData: "${fileId.waveformData}",
       width: 240,
       height: 100,
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "fileType",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Type",
     },
     {
       name: "fileSize",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Size",
     },
     {
       name: "duration",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Duration",
     },
   ],
@@ -47,15 +47,15 @@ export const createInitialState = () => ({
   audioPlayerRight: 0,
 });
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setItems = (state, soundData) => {
+export const setItems = ({ state }, { soundData } = {}) => {
   state.soundData = soundData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -69,17 +69,17 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const openAudioPlayer = (state, { fileId, fileName }) => {
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
   state.playingSound.fileId = fileId;
   state.playingSound.title = fileName;
   state.showAudioPlayer = true;
 };
 
-export const closeAudioPlayer = (state) => {
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
   state.showAudioPlayer = false;
   state.playingSound = {
     title: "",
@@ -87,19 +87,19 @@ export const closeAudioPlayer = (state) => {
   };
 };
 
-export const updateAudioPlayerLeft = (state, payload) => {
+export const updateAudioPlayerLeft = ({ state }, { payload } = {}) => {
   state.audioPlayerLeft = payload.width + 64;
 };
 
-export const updateAudioPlayerRight = (state, payload) => {
+export const updateAudioPlayerRight = ({ state }, { payload } = {}) => {
   state.audioPlayerRight = payload.width;
 };
 
-export const selectAudioPlayerLeft = (state) => {
+export const selectAudioPlayerLeft = ({ state }) => {
   return state.audioPlayerLeft;
 };
 
-export const selectAudioPlayerRight = (state) => {
+export const selectAudioPlayerRight = ({ state }) => {
   return state.audioPlayerRight;
 };
 

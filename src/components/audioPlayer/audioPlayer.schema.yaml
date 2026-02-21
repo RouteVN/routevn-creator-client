@@ -1,0 +1,15 @@
+componentName: rvn-audio-player
+propsSchema:
+  type: object
+  properties:
+    title:
+      type: string
+      description: Title of the audio player, used for accessibility
+      default: Audio Player
+    fileId:
+      type: string
+      description: ID of the audio file to play
+    autoPlay:
+      type: boolean
+      description: Whether to start playing automatically
+      default: false

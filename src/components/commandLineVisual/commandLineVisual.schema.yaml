@@ -1,0 +1,11 @@
+componentName: rvn-command-line-visual
+propsSchema:
+  type: object
+  properties:
+    visual:
+      type: object
+      properties:
+        items:
+          type: array
+    presentationState:
+      type: object

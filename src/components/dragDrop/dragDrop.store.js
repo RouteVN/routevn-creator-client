@@ -2,11 +2,11 @@ export const createInitialState = () => ({
   isDragging: false,
 });
 
-export const startDragging = (state) => {
+export const startDragging = ({ state }, _payload = {}) => {
   state.isDragging = true;
 };
 
-export const stopDragging = (state) => {
+export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
 };
 

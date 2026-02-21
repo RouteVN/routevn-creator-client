@@ -4,7 +4,7 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, attrs, render, audioService, appService } = deps;
+  const { store, props: attrs, render, audioService, appService } = deps;
 
   if (!attrs) {
     appService.showAlert({ message: "Missing fileId", title: "Error" });
@@ -14,40 +14,40 @@ export const handleBeforeMount = (deps) => {
   audioService.init();
 
   const handleTimeUpdate = (currentTime) => {
-    store.setCurrentTime(currentTime);
+    store.setCurrentTime({ currentTime: currentTime });
     render();
   };
   audioService.on("timeupdate", handleTimeUpdate);
 
   const handlePlay = () => {
-    store.setPlaying(true);
+    store.setPlaying({ isPlaying: true });
     render();
   };
   audioService.on("play", handlePlay);
 
   const handlePause = () => {
-    store.setPlaying(false);
+    store.setPlaying({ isPlaying: false });
     render();
   };
   audioService.on("pause", handlePause);
 
   const handleEnded = () => {
-    store.setPlaying(false);
-    store.setCurrentTime(0);
+    store.setPlaying({ isPlaying: false });
+    store.setCurrentTime({ currentTime: 0 });
     render();
   };
   audioService.on("ended", handleEnded);
 
   const handleLoaded = ({ duration }) => {
-    store.setDuration(duration);
-    store.setLoading(false);
+    store.setDuration({ duration: duration });
+    store.setLoading({ isLoading: false });
     render();
   };
   audioService.on("loaded", handleLoaded);
 
   const handleError = (error) => {
     console.error("Audio error:", error);
-    store.setLoading(false);
+    store.setLoading({ isLoading: false });
     render();
   };
   audioService.on("error", handleError);
@@ -55,10 +55,10 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, attrs, projectService, render, audioService } = deps;
+  const { store, props: attrs, projectService, render, audioService } = deps;
   const { fileId, autoPlay } = attrs;
   try {
-    store.setLoading(true);
+    store.setLoading({ isLoading: true });
     render();
 
     const { url } = await projectService.getFileContent(fileId);
@@ -69,14 +69,14 @@ export const handleAfterMount = async (deps) => {
     }
   } catch (error) {
     console.error("Error loading audio:", error);
-    store.setLoading(false);
+    store.setLoading({ isLoading: false });
     render();
   }
 };
 
 export const handleOnUpdate = async (deps, changes) => {
   const { oldProps } = changes;
-  const { store, attrs, projectService, render, audioService } = deps;
+  const { store, props: attrs, projectService, render, audioService } = deps;
   const { fileId, autoPlay } = attrs;
 
   if (oldProps.fileId === fileId) {
@@ -84,7 +84,7 @@ export const handleOnUpdate = async (deps, changes) => {
   }
 
   try {
-    store.setLoading(true);
+    store.setLoading({ isLoading: true });
     render();
 
     audioService.stop();
@@ -97,7 +97,7 @@ export const handleOnUpdate = async (deps, changes) => {
     }
   } catch (error) {
     console.error("Error loading audio:", error);
-    store.setLoading(false);
+    store.setLoading({ isLoading: false });
     render();
   }
 };

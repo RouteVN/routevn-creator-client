@@ -4,13 +4,13 @@ const form = {
   fields: [
     {
       name: "fileId",
-      inputType: "slot",
+      type: "slot",
       slot: "avatar",
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", description: "Name" },
     {
       name: "description",
-      inputType: "popover-input",
+      type: "popover-input",
       description: "Description",
     },
   ],
@@ -33,18 +33,18 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "description",
-        inputType: "inputText",
+        type: "input-text",
         label: "Description",
         required: false,
       },
       {
-        inputType: "slot",
+        type: "slot",
         slot: "avatar-slot",
         label: "Avatar",
       },
@@ -55,7 +55,7 @@ export const createInitialState = () => ({
         {
           id: "submit",
           variant: "pr",
-          content: "Add Character",
+          label: "Add Character",
         },
       ],
     },
@@ -66,19 +66,19 @@ export const createInitialState = () => ({
   editAvatarFileId: null,
 });
 
-export const setItems = (state, charactersData) => {
+export const setItems = ({ state }, { charactersData } = {}) => {
   state.charactersData = charactersData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -87,23 +87,23 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
-export const setTargetGroupId = (state, groupId) => {
+export const setTargetGroupId = ({ state }, { groupId } = {}) => {
   state.targetGroupId = groupId;
 };
 
-export const toggleDialog = (state) => {
+export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
 };
 
-export const setAvatarFileId = (state, fileId) => {
+export const setAvatarFileId = ({ state }, { fileId } = {}) => {
   state.avatarFileId = fileId;
 };
 
-export const clearAvatarState = (state) => {
+export const clearAvatarState = ({ state }, _payload = {}) => {
   state.avatarFileId = null;
 };
 
-export const openEditDialog = (state, itemId) => {
+export const openEditDialog = ({ state }, { itemId } = {}) => {
   state.isEditDialogOpen = true;
   state.editItemId = itemId;
 
@@ -113,13 +113,13 @@ export const openEditDialog = (state, itemId) => {
   state.editAvatarFileId = editItem?.fileId || null;
 };
 
-export const closeEditDialog = (state) => {
+export const closeEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = false;
   state.editItemId = null;
   state.editAvatarFileId = null;
 };
 
-export const setEditAvatarFileId = (state, fileId) => {
+export const setEditAvatarFileId = ({ state }, { fileId } = {}) => {
   state.editAvatarFileId = fileId;
 };
 
@@ -213,20 +213,20 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Name",
         description: "Enter the character name",
         required: true,
       },
       {
         name: "description",
-        inputType: "inputText",
+        type: "input-text",
         label: "Description",
         description: "Enter the character description",
         required: false,
       },
       {
-        inputType: "slot",
+        type: "slot",
         slot: "avatar-slot",
         label: "Avatar",
       },
@@ -237,7 +237,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Update Character",
+          label: "Update Character",
         },
       ],
     },

@@ -1,0 +1,9 @@
+componentName: rvn-command-line-push-layered-view
+propsSchema:
+  type: object
+  properties:
+    pushLayeredView:
+      type: object
+      properties:
+        resourceId:
+          type: string

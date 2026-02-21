@@ -1,21 +1,5 @@
-elementName: rvn-system-actions
-
-propsSchema:
-  type: object
-  properties:
-    actions:
-      type: object
-    selectedLineId:
-      type: string
-    selectedLine:
-      type: object
-    currentSceneId:
-      type: string
-    presentationState:
-      type: object
-
 refs:
-  command-line-*:
+  commandLine*:
     eventListeners:
       back-to-actions:
         handler: handleBackToActions
@@ -23,148 +7,147 @@ refs:
         handler: handleActionClicked
       submit:
         handler: handleCommandLineSubmit
-  add-action-button:
+  addActionButton:
     eventListeners:
       click:
         handler: handleAddActionButtonClicked
-  actions-dialog:
+  actionsDialog:
     eventListeners:
       close:
         handler: handleActionsDialogClose
-  action-item-*:
+  actionItem*:
     eventListeners:
       click:
         handler: handleActionItemClick
       contextmenu:
         handler: handleActionItemRightClick
-  dropdown-menu:
+  dropdownMenu:
     eventListeners:
       close:
         handler: handleDropdownMenuClose
-      click-item:
+      item-click:
         handler: handleDropdownMenuClickItem
-
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
           - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable:
               - $if preview.base:
-                  - rtgl-view#action-item-base data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=screen wh=24:
+                  - rtgl-view#actionItemBase data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=screen wh=24: null
                       - rtgl-text s=sm: ${preview.base.name}
               - $if preview.background:
-                  - rtgl-view#action-item-background data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=p:
+                  - rtgl-view#actionItemBackground data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=pointer:
                       - $if preview.background.type == 'image':
-                          - rtgl-svg svg=image wh=24:
-                          - rvn-file-image fileId=${preview.background.fileId} w=50 h=35:
+                          - rtgl-svg svg=image wh=24: null
+                          - rvn-file-image fileId=${preview.background.fileId} w=50 h=35: null
                           - rtgl-text s=sm: ${preview.background.name}
                         $elif preview.background.type == 'video':
-                          - rtgl-svg svg=video wh=24:
-                          - rvn-file-image fileId=${preview.background.thumbnailFileId} w=50 h=35:
+                          - rtgl-svg svg=video wh=24: null
+                          - rvn-file-image fileId=${preview.background.thumbnailFileId} w=50 h=35: null
                           - rtgl-text s=sm: ${preview.background.name}
                         $elif preview.background.type == 'layout':
-                          - rtgl-svg svg=layout wh=24:
+                          - rtgl-svg svg=layout wh=24: null
                           - rtgl-text s=sm: ${preview.background.name}
               - $if preview.bgm:
-                  - rtgl-view#action-item-bgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=music wh=24:
+                  - rtgl-view#actionItemBgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=music wh=24: null
                       - rtgl-text s=sm: ${preview.bgm.name}
               - $if preview.sfx:
-                  - rtgl-view#action-item-sfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=audio wh=24:
+                  - rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=audio wh=24: null
                       - rtgl-text s=sm: ${preview.sfx.names}
               - $if preview.character:
-                  - rtgl-view#action-item-character data-mode=character g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=character wh=24:
+                  - rtgl-view#actionItemCharacter data-mode=character g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=character wh=24: null
                       - rtgl-view d=h g=sm av=c:
                           - $for charData, i in preview.character:
-                              - rvn-file-image fileId=${charData.sprite.fileId} w=32 h=32:
+                              - rvn-file-image fileId=${charData.sprite.fileId} w=32 h=32: null
               - $if preview.visual:
-                  - rtgl-view#action-item-visual data-mode=visual g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=image wh=24:
-                      - rtgl-text s=sm: "${preview.visual.count} visual(s)"
+                  - rtgl-view#actionItemVisual data-mode=visual g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=image wh=24: null
+                      - rtgl-text s=sm: ${preview.visual.count} visual(s)
               - $if preview.sectionTransition:
-                  - rtgl-view#action-item-sectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg="transition" wh=24:
-                      - rtgl-text s=sm: "Transition to scene: ${preview.sectionTransition.scene.name} section: ${preview.sectionTransition.section.name}"
+                  - rtgl-view#actionItemSectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="transition" wh=24: null
+                      - rtgl-text s=sm: 'Transition to scene: ${preview.sectionTransition.scene.name} section: ${preview.sectionTransition.section.name}'
               - $if preview.dialogue:
-                  - rtgl-view#action-item-dialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=dialogue wh=24:
+                  - rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=dialogue wh=24: null
                       - rtgl-text s=sm: ${preview.dialogue.name}
               - $if preview.choice && preview.choice.items:
-                  - rtgl-view#action-item-choices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=p pv=md:
-                      - rtgl-svg svg=choices wh=24:
+                  - rtgl-view#actionItemChoices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
+                      - rtgl-svg svg=choices wh=24: null
                       - rtgl-view d=v:
-                          - rtgl-text s=sm mb=sm: "${preview.choice.layout.name}"
+                          - rtgl-text s=sm mb=sm: ${preview.choice.layout.name}
                           - $for choice in preview.choice.items:
-                              - rtgl-text s=xs c=mu-fg: "• ${choice.content}"
+                              - rtgl-text s=xs c=mu-fg: • ${choice.content}
               - $if preview.nextLine:
-                  - rtgl-view#action-item-nextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg="next-line" wh=24:
+                  - rtgl-view#actionItemNextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="next-line" wh=24: null
                       - rtgl-text s=sm: Next Line
               - $if preview.toggleAutoMode:
-                  - rtgl-view#action-item-toggleAutoMode data-mode=toggleAutoMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg="play" wh=24:
+                  - rtgl-view#actionItemToggleAutoMode data-mode=toggleAutoMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="play" wh=24: null
                       - rtgl-text s=sm: Toggle Auto Mode
               - $if preview.toggleSkipMode:
-                  - rtgl-view#action-item-toggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg="next-line" wh=24:
+                  - rtgl-view#actionItemToggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="next-line" wh=24: null
                       - rtgl-text s=sm: Toggle Skip Mode
               - $if preview.pushLayeredView:
-                  - rtgl-view#action-item-pushLayeredView data-mode=pushLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg="layers" wh=24:
-                      - rtgl-text s=sm: "Push view: ${preview.pushLayeredView.layout.name}"
+                  - rtgl-view#actionItemPushLayeredView data-mode=pushLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="layers" wh=24: null
+                      - rtgl-text s=sm: 'Push view: ${preview.pushLayeredView.layout.name}'
               - $if preview.popLayeredView:
-                  - rtgl-view#action-item-popLayeredView data-mode=popLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg="layers" wh=24:
+                  - rtgl-view#actionItemPopLayeredView data-mode=popLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="layers" wh=24: null
                       - rtgl-text s=sm: Pop current layered view
               - $if preview.setNextLineConfig:
-                  - rtgl-view#action-item-setNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=settings wh=24:
+                  - rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=settings wh=24: null
                       - rtgl-text s=sm: Next Line Config
               - $if preview.updateVariable:
-                  - rtgl-view#action-item-updateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=p:
-                      - rtgl-svg svg=variable wh=24:
+                  - rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=variable wh=24: null
                       - rtgl-text s=sm: ${preview.updateVariable.summary}
             $else:
               - rtgl-text s=sm c=mu-fg: No actions added yet
-          - rtgl-button#add-action-button v=ol w=f: +
-  - rtgl-dialog#actions-dialog key=${mode} ?open=${isActionsDialogOpen}:
+          - rtgl-button#addActionButton v=ol w=f: +
+  - rtgl-dialog#actionsDialog key=${mode} ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh:
           - $if mode == "actions":
-              - rvn-command-line-actions#command-line-actions actions-type=${actionsType}:
+              - rvn-command-line-actions#commandLineActions actions-type=${actionsType}: null
             $elif mode == "dialogue":
-              - rvn-command-line-dialogue-box#command-line-dialogue-box .layouts=dialogueLayouts .characters=allCharacters .dialogue=actions.dialogue:
+              - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=dialogueLayouts :characters=allCharacters :dialogue=actions.dialogue: null
             $elif mode == "choice":
-              - rvn-command-line-choices#command-line-choices .layouts=choiceLayouts .choice=actions.choice:
+              - rvn-command-line-choices#commandLineChoices :layouts=choiceLayouts :choice=actions.choice: null
             $elif mode == "background":
-              - rvn-command-line-background#command-line-background data-mode="background" .background=actions.background:
+              - rvn-command-line-background#commandLineBackground data-mode="background" :background=actions.background: null
             $elif mode == "bgm":
-              - rvn-command-line-bgm#command-line-bgm .bgm=actions.bgm:
+              - rvn-command-line-bgm#commandLineBgm :bgm=actions.bgm: null
             $elif mode == "sfx":
-              - rvn-command-line-sound-effects#command-line-sound-effects .sfx=actions.sfx:
+              - rvn-command-line-sound-effects#commandLineSoundEffects :sfx=actions.sfx: null
             $elif mode == "character":
-              - rvn-command-line-characters#command-line-characters .character=actions.character .presentationState=presentationState:
+              - rvn-command-line-characters#commandLineCharacters :character=actions.character :presentationState=presentationState: null
             $elif mode == "sectionTransition":
-              - rvn-command-line-section-transition#command-line-section-transition .sectionTransition=actions.sectionTransition .currentSceneId=currentSceneId:
+              - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=actions.sectionTransition :currentSceneId=currentSceneId: null
             $elif mode == "base":
-              - rvn-command-line-base#command-line-base .layouts=baseLayouts .base=actions.base:
+              - rvn-command-line-base#commandLineBase :layouts=baseLayouts :base=actions.base: null
             $elif mode == "nextLine":
-              - rvn-command-line-next-line#command-line-next-line .nextLine=selectedLine.actions.nextLine:
+              - rvn-command-line-next-line#commandLineNextLine :nextLine=selectedLine.actions.nextLine: null
             $elif mode == "toggleAutoMode":
-              - rvn-command-line-toggle-auto-mode#command-line-toggle-auto-mode .toggleAutoMode=actions.toggleAutoMode:
+              - rvn-command-line-toggle-auto-mode#commandLineToggleAutoMode :toggleAutoMode=actions.toggleAutoMode: null
             $elif mode == "toggleSkipMode":
-              - rvn-command-line-toggle-skip-mode#command-line-toggle-skip-mode .toggleSkipMode=actions.toggleSkipMode:
+              - rvn-command-line-toggle-skip-mode#commandLineToggleSkipMode :toggleSkipMode=actions.toggleSkipMode: null
             $elif mode == "pushLayeredView":
-              - rvn-command-line-push-layered-view#command-line-push-layered-view .pushLayeredView=actions.pushLayeredView:
+              - rvn-command-line-push-layered-view#commandLinePushLayeredView :pushLayeredView=actions.pushLayeredView: null
             $elif mode == "popLayeredView":
-              - rvn-command-line-pop-layered-view#command-line-pop-layered-view .popLayeredView=actions.popLayeredView:
+              - rvn-command-line-pop-layered-view#commandLinePopLayeredView :popLayeredView=actions.popLayeredView: null
             $elif mode == "visual":
-              - rvn-command-line-visual#command-line-visual .visual=actions.visual .presentationState=presentationState:
+              - rvn-command-line-visual#commandLineVisual :visual=actions.visual :presentationState=presentationState: null
             $elif mode == "setNextLineConfig":
-              - rvn-command-line-set-next-line-config#command-line-set-next-line-config .setNextLineConfig=actions.setNextLineConfig:
+              - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=actions.setNextLineConfig: null
             $elif mode == "updateVariable":
-              - rvn-command-line-update-variable#command-line-update-variable .updateVariable=actions.updateVariable:
+              - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=actions.updateVariable: null
             $elif mode == "controls":
-              - rvn-command-line-controls#command-line-controls .controls=selectedLine.controls:
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+              - rvn-command-line-controls#commandLineControls :controls=selectedLine.controls: null
+  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

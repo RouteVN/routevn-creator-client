@@ -1,0 +1,6 @@
+componentName: rvn-command-line-set-next-line-config
+propsSchema:
+  type: object
+  properties:
+    setNextLineConfig:
+      type: object

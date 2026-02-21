@@ -1,93 +1,20 @@
-elementName: rvn-command-line-dialogue-box
-
-viewDataSchema:
-  type: object
-  properties:
-    layouts:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-    characters:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-    submitDisabled:
-      type: boolean
-    form:
-      type: object
-    defaultValues:
-      type: object
-    context:
-      type: object
-
-propsSchema:
-  type: object
-  properties:
-    layouts:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-    characters:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-    dialogue:
-      type: object
-      properties:
-        mode:
-          type: string
-        clearPage:
-          type: boolean
-        clear:
-          type: boolean
-        gui:
-          type: object
-          properties:
-            resourceId:
-              type: string
-        characterId:
-          type: string
-
 refs:
   breadcumb:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
-  dialogue-form:
+  dialogueForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
-
 template:
   - rtgl-view w=f h=f p=lg:
-      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-
-      - rtgl-form#dialogue-form .defaultValues=defaultValues .form=form .context=context w=f:
-
-      - rtgl-view flex=1:
+      - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+      - rtgl-form#dialogueForm :defaultValues=defaultValues :form=form :context=context w=f: null
+      - rtgl-view h=1fg: null
       - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button: Submit
+          - rtgl-button#submitButton: Submit

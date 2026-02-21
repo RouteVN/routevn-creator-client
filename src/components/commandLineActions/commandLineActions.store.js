@@ -109,19 +109,20 @@ const PRESENTATION_ACTIONS = [
 
 export const createInitialState = () => ({});
 
-export const selectViewData = ({ attrs }) => {
-  const actionsType = attrs?.["actions-type"];
-  const items = {
-    system: SYSTEM_ACTIONS,
-    presentation: PRESENTATION_ACTIONS,
-  }[actionsType];
+export const selectViewData = ({ props: attrs }) => {
+  const actionsType = attrs?.actionsType;
+  const items =
+    {
+      system: SYSTEM_ACTIONS,
+      presentation: PRESENTATION_ACTIONS,
+    }[actionsType] || PRESENTATION_ACTIONS;
 
   return {
     items,
   };
 };
 
-export const selectItems = ({ attrs }) => {
-  const actionsType = attrs?.["actions-type"];
+export const selectItems = ({ props: attrs }) => {
+  const actionsType = attrs?.actionsType;
   return actionsType === "system" ? SYSTEM_ACTIONS : PRESENTATION_ACTIONS;
 };

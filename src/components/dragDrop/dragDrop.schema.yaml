@@ -1,0 +1,10 @@
+componentName: rvn-drag-drop
+propsSchema:
+  type: object
+  properties:
+    uploadText:
+      type: string
+      description: Text to display for upload action
+    acceptedFileTypes:
+      type: array
+      description: Array of accepted file extensions (e.g. ['.mp3', '.wav'])

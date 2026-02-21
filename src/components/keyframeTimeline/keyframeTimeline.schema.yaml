@@ -1,0 +1,40 @@
+componentName: rvn-keyframe-timeline
+propsSchema:
+  type: object
+  properties:
+    totalDuration:
+      type: string
+      description: Total duration of the animation (e.g., "4s")
+    selectedProperties:
+      type: array
+      description: Array of selected animation properties (for dialog usage)
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          initialValue:
+            type: number
+    properties:
+      type: object
+      description: Animation properties object with initialValue and keyframes
+    tracks:
+      type: array
+      description: Array of animation tracks
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          keyframes:
+            type: array
+            items:
+              type: object
+              properties:
+                start:
+                  type: number
+                duration:
+                  type: number
+    editable:
+      type: string
+      description: Whether the timeline is editable or not

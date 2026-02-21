@@ -1,0 +1,6 @@
+componentName: rvn-layout-edit-panel
+propsSchema:
+  type: object
+  properties:
+    values:
+      type: object

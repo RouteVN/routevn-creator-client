@@ -3,11 +3,11 @@ export const createInitialState = () => ({
   initiated: false,
 });
 
-export const setMode = (state, payload) => {
+export const setMode = ({ state }, { payload } = {}) => {
   state.mode = payload.mode;
 };
 
-export const setInitiated = (state) => {
+export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 

@@ -1,0 +1,26 @@
+componentName: rvn-waveform-visualizer
+propsSchema:
+  type: object
+  properties:
+    waveformDataFileId:
+      type: string
+      description: File ID of the waveform data in object storage
+    width:
+      type: number
+      default: 600
+      description: Width of the waveform visualization
+    height:
+      type: number
+      default: 400
+      description: Height of the waveform visualization
+    style:
+      type: object
+      description: Style configuration for the waveform
+    w:
+      type: string
+      description: Width of the waveform visualizer
+      default: '250'
+    h:
+      type: string
+      description: Height of the waveform visualizer
+      default: '150'

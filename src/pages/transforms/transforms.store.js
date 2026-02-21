@@ -2,14 +2,14 @@ import { toFlatGroups, toFlatItems } from "insieme";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "x", inputType: "read-only-text", description: "Position X" },
-    { name: "y", inputType: "read-only-text", description: "Position Y" },
-    { name: "scaleX", inputType: "read-only-text", description: "Scale X" },
-    { name: "scaleY", inputType: "read-only-text", description: "Scale Y" },
-    { name: "anchorX", inputType: "read-only-text", description: "Anchor X" },
-    { name: "anchorY", inputType: "read-only-text", description: "Anchor Y" },
-    //{ name: "rotation", inputType: "read-only-text", description: "Rotation" },
+    { name: "name", type: "popover-input", description: "Name" },
+    { name: "x", type: "read-only-text", description: "Position X" },
+    { name: "y", type: "read-only-text", description: "Position Y" },
+    { name: "scaleX", type: "read-only-text", description: "Scale X" },
+    { name: "scaleY", type: "read-only-text", description: "Scale Y" },
+    { name: "anchorX", type: "read-only-text", description: "Anchor X" },
+    { name: "anchorY", type: "read-only-text", description: "Anchor Y" },
+    //{ name: "rotation", type: "read-only-text", description: "Rotation" },
   ],
 };
 
@@ -45,13 +45,13 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "x",
-        inputType: "slider-input",
+        type: "slider-input",
         min: 0,
         max: 1920,
         step: 1,
@@ -60,7 +60,7 @@ export const createInitialState = () => ({
       },
       {
         name: "y",
-        inputType: "slider-input",
+        type: "slider-input",
         min: 0,
         max: 1080,
         step: 1,
@@ -69,7 +69,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scaleX",
-        inputType: "slider-input",
+        type: "slider-input",
         min: 0.1,
         max: 3,
         step: 0.1,
@@ -78,7 +78,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scaleY",
-        inputType: "slider-input",
+        type: "slider-input",
         min: 0.1,
         max: 3,
         step: 0.1,
@@ -87,7 +87,7 @@ export const createInitialState = () => ({
       },
       {
         name: "anchor",
-        inputType: "select",
+        type: "select",
         label: "Anchor",
         placeholder: "Choose a anchor",
         options: [
@@ -129,7 +129,7 @@ export const createInitialState = () => ({
       },
       // {
       //   name: "rotation",
-      //   inputType: "slider-input",
+      //   type: "slider-input",
       //   min: -360,
       //   max: 360,
       //   step: 1,
@@ -146,26 +146,26 @@ export const createInitialState = () => ({
         {
           id: "submit",
           variant: "pr",
-          content: "Add Transform",
+          label: "Add Transform",
         },
       ],
     },
   },
 });
 
-export const setItems = (state, transformData) => {
+export const setItems = ({ state }, { transformData } = {}) => {
   state.transformData = transformData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -175,7 +175,7 @@ export const toggleGroupCollapse = (state, groupId) => {
 };
 
 // Transform dialog management (moved from groupTransformsView)
-export const openTransformFormDialog = (state, options = {}) => {
+export const openTransformFormDialog = ({ state }, options = {}) => {
   const {
     editMode = false,
     itemId = null,
@@ -224,7 +224,7 @@ export const openTransformFormDialog = (state, options = {}) => {
   state.isDialogOpen = true;
 };
 
-export const closeTransformFormDialog = (state) => {
+export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   // Close dialog
   state.isDialogOpen = false;
 

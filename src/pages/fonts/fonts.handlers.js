@@ -8,14 +8,14 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { fonts } = projectService.getState();
-  store.setItems(fonts);
+  store.setItems({ fontsData: fonts });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { fonts } = projectService.getState();
-  store.setItems(fonts);
+  store.setItems({ fontsData: fonts });
   render();
 };
 
@@ -23,17 +23,17 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
   const { id } = payload._event.detail;
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
   render();
 };
 
 export const handleFontItemClick = (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
@@ -111,7 +111,7 @@ export const handleFormExtraEvent = async (deps) => {
       fontFamily: uploadResult.fontName,
     },
   });
-  store.setItems(fonts);
+  store.setItems({ fontsData: fonts });
   render();
 };
 
@@ -165,7 +165,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     const { fonts } = projectService.getState();
-    store.setItems(fonts);
+    store.setItems({ fontsData: fonts });
 
     // Load the newly uploaded fonts to ensure they're available
     const loadPromises = newFontItems.map((item) =>
@@ -203,16 +203,16 @@ export const handleFontItemDoubleClick = async (deps, payload) => {
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
 
   // Open modal with font info
-  store.setSelectedFontInfo(fontInfo);
-  store.setModalOpen(true);
+  store.setSelectedFontInfo({ fontInfo: fontInfo });
+  store.setModalOpen({ isOpen: true });
   render();
 };
 
 export const handleCloseModal = (deps) => {
   const { store, render } = deps;
 
-  store.setModalOpen(false);
-  store.setSelectedFontInfo(null);
+  store.setModalOpen({ isOpen: false });
+  store.setSelectedFontInfo({ fontInfo: null });
   render();
 };
 
@@ -223,7 +223,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "fonts",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -233,7 +233,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { fonts } = projectService.getState();
-  store.setItems(fonts);
+  store.setItems({ fontsData: fonts });
   render();
 };
 
@@ -241,7 +241,7 @@ export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail.value || "";
 
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
@@ -249,7 +249,7 @@ export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
   const groupId = payload._event.detail.groupId;
 
-  store.toggleGroupCollapse(groupId);
+  store.toggleGroupCollapse({ groupId: groupId });
   render();
 };
 
@@ -283,6 +283,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ fontsData: data });
   render();
 };

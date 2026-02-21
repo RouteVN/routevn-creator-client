@@ -1,0 +1,4 @@
+componentName: rvn-drag-drop-bar
+propsSchema:
+  type: object
+  properties: {}

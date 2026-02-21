@@ -1,0 +1,4 @@
+componentName: rvn-command-line-actions
+propsSchema:
+  type: object
+  properties: {}

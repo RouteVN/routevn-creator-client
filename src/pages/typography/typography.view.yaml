@@ -1,17 +1,9 @@
-elementName: rvn-typography
-
-viewDataSchema:
-  type: object
-  properties:
-    searchQuery:
-      type: string
-
 refs:
-  file-explorer:
+  fileExplorer:
     eventListeners:
       data-changed:
         handler: handleDataChanged
-      click-item:
+      item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleTypographyItemDoubleClick
@@ -29,78 +21,74 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  detail-form:
+  detailForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-      extra-event:
+      form-field-event:
         handler: handleFormExtraEvent
-  add-typography-dialog:
+  addTypographyDialog:
     eventListeners:
       close:
         handler: handleCloseDialog
-  typography-form:
+  typographyForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleFormActionClick
       form-change:
         handler: handleDialogFormChange
-  add-color-dialog:
+  addColorDialog:
     eventListeners:
       close:
         handler: handleAddColorDialogClose
-  add-color-form:
+  addColorForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleAddColorFormAction
-  add-font-dialog:
+  addFontDialog:
     eventListeners:
       close:
         handler: handleAddFontDialogClose
-  font-drag-drop:
+  fontDragDrop:
     eventListeners:
       file-selected:
         handler: handleFontFileSelected
-  add-font-form:
+  addFontForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleAddFontFormAction
-
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
-          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-                  - rvn-file-explorer#fileExplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
-          - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview .navTitle=title .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery show-zoom-controls=false:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+          - rtgl-view w=1fg h=f:
+              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery show-zoom-controls=false: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .context=context .defaultValues=defaultValues:
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-
-  - rtgl-dialog#add-typography-dialog ?open=${isDialogOpen}:
-    - $if isDialogOpen:
-      - rtgl-view slot=content d=h g=md w=800:
-          - rtgl-view flex=1:
-              - rtgl-form#typography-form key=${formKey} .defaultValues=dialogDefaultValues .form=dialogForm w=f:
-          - rtgl-view flex=1 p=md bwl=xs d=v:
-              - rtgl-text s=lg fw=b mb=md: Preview
-              - rvn-font-preview flex=1 fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true:
-
-  - rtgl-dialog#add-color-dialog ?open=${isAddColorDialogOpen} s=sm:
+  - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen}:
+      - $if isDialogOpen:
+          - rtgl-view slot=content d=h g=md w=800:
+              - rtgl-view w=1fg:
+                  - rtgl-form#typographyForm key=${formKey} :defaultValues=dialogDefaultValues :form=dialogForm w=f: null
+              - rtgl-view w=1fg p=md bwl=xs d=v:
+                  - rtgl-text s=lg fw=b mb=md: Preview
+                  - rvn-font-preview h=1fg fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true: null
+  - rtgl-dialog#addColorDialog ?open=${isAddColorDialogOpen} s=sm:
       - $if isAddColorDialogOpen:
-          - rtgl-form#add-color-form slot=content .defaultValues=addColorDefaultValues .form=addColorForm w=f:
-
-  - rtgl-dialog#add-font-dialog ?open=${isAddFontDialogOpen}:
+          - rtgl-form#addColorForm slot=content :defaultValues=addColorDefaultValues :form=addColorForm w=f: null
+  - rtgl-dialog#addFontDialog ?open=${isAddFontDialogOpen}:
       - $if isAddFontDialogOpen:
-          - rtgl-form#add-font-form slot=content .defaultValues=addFontDefaultValues .form=addFontForm w=f:
+          - rtgl-form#addFontForm slot=content :defaultValues=addFontDefaultValues :form=addFontForm w=f:
               - rtgl-view slot=font-upload d=v g=sm:
-                  - rvn-drag-drop#font-drag-drop uploadText="${dragDropText}" .acceptedFileTypes=fontFileTypes:
+                  - rvn-drag-drop#fontDragDrop uploadText="${dragDropText}" :acceptedFileTypes=fontFileTypes: null
                   - $if hasSelectedFont:
                       - rtgl-view d=h g=sm av=c mt=sm:
-                          - rtgl-text s=sm c=success: "Font selected: ${selectedFontFileName}"
+                          - rtgl-text s=sm c=success: 'Font selected: ${selectedFontFileName}'

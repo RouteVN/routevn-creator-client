@@ -29,23 +29,23 @@ export const createInitialState = () => ({
   isLoading: true,
 });
 
-export const setSrc = (state, src) => {
+export const setSrc = ({ state }, { src } = {}) => {
   state.src = src;
 };
 
-export const setIsLoading = (state, isLoading) => {
+export const setIsLoading = ({ state }, { isLoading } = {}) => {
   state.isLoading = isLoading;
 };
 
-export const selectSrc = (state) => {
+export const selectSrc = ({ state }) => {
   return state.src;
 };
 
-export const selectIsLoading = (state) => {
+export const selectIsLoading = ({ state }) => {
   return state.isLoading;
 };
 
-export const selectViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, props: attrs }) => {
   const { style: _style, ...restAttrs } = attrs;
   return {
     src: state.src,

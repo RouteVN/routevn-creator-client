@@ -11,17 +11,17 @@ export const handleAfterMount = async (deps) => {
 
   if (!updateVariable) {
     // Generate alphanumeric ID (route-engine requires alphanumeric only)
-    store.setActionId(nanoid(8).replace(/[^a-zA-Z0-9]/g, "a"));
-    store.setOperations([]);
+    store.setActionId({ id: nanoid(8).replace(/[^a-zA-Z0-9]/g, "a") });
+    store.setOperations({ operations: [] });
     store.setInitiated();
     render();
     return;
   }
 
   // Initialize from existing data
-  store.setActionId(
-    updateVariable.id || nanoid(8).replace(/[^a-zA-Z0-9]/g, "a"),
-  );
+  store.setActionId({
+    id: updateVariable.id || nanoid(8).replace(/[^a-zA-Z0-9]/g, "a"),
+  });
 
   const operations = (updateVariable.operations || []).map((op) => ({
     id: nanoid(),
@@ -30,7 +30,7 @@ export const handleAfterMount = async (deps) => {
     value: op.value ?? "",
   }));
 
-  store.setOperations(operations);
+  store.setOperations({ operations: operations });
   store.setInitiated();
   render();
 };
@@ -47,7 +47,9 @@ export const handleAddOperationClick = (deps, payload) => {
 
 export const handleOperationClick = (deps, payload) => {
   const { store, render } = deps;
-  const id = payload._event.currentTarget.id.replace("operation-", "");
+  const target = payload._event.currentTarget;
+  const id =
+    target?.dataset?.operationId || target?.id?.replace("operation", "") || "";
 
   const operations = store.selectOperations();
   const operation = operations.find((op) => op.id === id);
@@ -68,7 +70,9 @@ export const handleOperationContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
 
-  const id = payload._event.currentTarget.id.replace("operation-", "");
+  const target = payload._event.currentTarget;
+  const id =
+    target?.dataset?.operationId || target?.id?.replace("operation", "") || "";
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
     operationId: id,
@@ -113,7 +117,7 @@ export const handleOperationSelectChange = (deps, payload) => {
 
 export const handleValueInputChange = (deps, payload) => {
   const { store, render } = deps;
-  const value = payload._event.target.value;
+  const value = payload._event.detail?.value ?? payload._event.target?.value;
 
   store.setTempOperation({ value });
   render();
@@ -219,7 +223,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   store.hideDropdownMenu();
 
   if (item.value === "delete" && operationId) {
-    store.deleteOperation(operationId);
+    store.deleteOperation({ operationId: operationId });
   }
 
   render();

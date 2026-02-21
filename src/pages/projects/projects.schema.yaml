@@ -1,0 +1,4 @@
+componentName: rvn-projects
+propsSchema:
+  type: object
+  properties: {}

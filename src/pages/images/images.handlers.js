@@ -5,7 +5,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { images } = projectService.getState();
-  store.setItems(images);
+  store.setItems({ imagesData: images });
   render();
 };
 
@@ -15,7 +15,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If this is a folder, clear selection and context
   if (isFolder) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
     store.setContext({
       fileId: {
         src: null,
@@ -25,7 +25,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
 
   // If we have item data with fileId, set up media context for preview
   if (item && item.fileId) {
@@ -53,7 +53,7 @@ export const handleFileExplorerDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const repository = await projectService.getRepository();
   const state = repository.getState();
-  store.setItems(state.images);
+  store.setItems({ imagesData: state.images });
   render();
 };
 
@@ -112,18 +112,18 @@ export const handleFormExtraEvent = async (deps) => {
       src: uploadResult.downloadUrl,
     },
   });
-  store.setItems(images);
+  store.setItems({ imagesData: images });
   render();
 };
 
 export const handleImageItemClick = async (deps, payload) => {
-  const { store, render, projectService, getRefIds } = deps;
+  const { store, render, projectService, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
@@ -136,6 +136,19 @@ export const handleImageItemClick = async (deps, payload) => {
     },
   });
 
+  render();
+};
+
+export const handleImageItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload?._event?.detail || {};
+  const itemId = detail.itemId || detail.id;
+
+  if (!itemId) {
+    return;
+  }
+
+  store.showFullImagePreview({ itemId });
   render();
 };
 
@@ -170,7 +183,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     const { images } = projectService.getState();
-    store.setItems(images);
+    store.setItems({ imagesData: images });
   }
 
   render();
@@ -183,7 +196,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "images",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -193,7 +206,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { images } = projectService.getState();
-  store.setItems(images);
+  store.setItems({ imagesData: images });
   render();
 };
 
@@ -228,6 +241,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ imagesData: data });
   render();
 };

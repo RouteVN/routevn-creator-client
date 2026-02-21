@@ -1,5 +1,5 @@
 export const handleAfterMount = async (deps) => {
-  const { attrs = {}, projectService, render } = deps;
+  const { props: attrs = {}, projectService, render } = deps;
   const { fontFamily, fileId } = attrs;
 
   // Only load font if fontFamily and fileId are provided and not a generic fallback
