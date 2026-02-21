@@ -51,7 +51,7 @@ template:
                           - rtgl-text s=lg c=mu-fg: ${emptyMessage}
                           - rtgl-text s=sm c=mu-fg: ${emptySubMessage}
               - $for project, i in projects:
-                  - rtgl-view#project${project.id} h=auto w=f bw=xs p=md cur=pointer d=h av=c g=md:
+                  - rtgl-view#projectItem${i} data-project-id=${project.id} h=auto w=f bw=xs p=md cur=pointer d=h av=c g=md:
                       - $if project.iconUrl:
                           - rtgl-image wh=48 src=${project.iconUrl} bc=fg of=con br=sm: null
                         $else:

@@ -7,6 +7,14 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+const getProjectIdFromEvent = (event) => {
+  return (
+    event?.currentTarget?.getAttribute?.("data-project-id") ||
+    event?.currentTarget?.id?.replace("project", "") ||
+    ""
+  );
+};
+
 export const handleCreateButtonClick = async (deps) => {
   const { render, store } = deps;
   store.toggleDialog();
@@ -15,6 +23,9 @@ export const handleCreateButtonClick = async (deps) => {
 
 export const handleOpenButtonClick = async (deps) => {
   const { appService, store, render } = deps;
+  if (appService.getPlatform() === "web") {
+    return;
+  }
 
   try {
     const selectedPath = await appService.openFolderPicker({
@@ -47,12 +58,18 @@ export const handleCloseDialogue = (deps) => {
 
 export const handleProjectsClick = async (deps, payload) => {
   const { appService } = deps;
-  const id = payload._event.currentTarget.id.replace("project", "");
+  const id = getProjectIdFromEvent(payload._event);
+  if (!id) {
+    return;
+  }
   appService.navigate("/project", { p: id });
 };
 
 export const handleBrowseFolder = async (deps) => {
   const { appService, store, render } = deps;
+  if (appService.getPlatform() === "web") {
+    return;
+  }
 
   try {
     const selected = await appService.openFolderPicker({
@@ -125,7 +142,10 @@ export const handleProjectContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const projectId = payload._event.currentTarget.id.replace("project", "");
+  const projectId = getProjectIdFromEvent(payload._event);
+  if (!projectId) {
+    return;
+  }
   const projects = store.selectProjects();
   const project = projects.find((p) => p.id === projectId);
 
