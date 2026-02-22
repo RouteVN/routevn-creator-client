@@ -63,6 +63,17 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
 
 export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
 
+const parseBooleanAttr = (value, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (value === true || value === "") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+  }
+  return Boolean(value);
+};
+
 export const selectViewData = ({ state, props, props: attrs }) => {
   // Calculate dimensions based on zoom level for all media types
   const baseHeight = props.imageHeight || 150;
@@ -84,9 +95,11 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   // Function to recursively set borderColor based on selectedItemId
   const setBorderColorForItems = (items) => {
     return items.map((item) => {
+      const isSelected = item.id === props.selectedItemId;
       const updatedItem = {
         ...item,
-        borderColor: item.id === props.selectedItemId ? "fg" : "bo",
+        borderColor: isSelected ? "fg" : "bo",
+        itemBorderColor: isSelected ? "pr" : "tr",
       };
 
       // If item has children, recursively process them
@@ -100,6 +113,11 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
   // Apply borderColor to all items in processedFlatGroups
   const finalProcessedGroups = setBorderColorForItems(processedFlatGroups);
+  const fullWidthItemAttr = attrs.fullWidthItem ?? attrs["full-width-item"];
+  const showZoomControlsAttr =
+    attrs.showZoomControls ?? attrs["show-zoom-controls"];
+  const shouldUseFullWidthItems =
+    parseBooleanAttr(fullWidthItemAttr) || props.resourceType === "characters";
 
   return {
     canUpload: [
@@ -110,7 +128,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       "fonts",
     ].includes(props.resourceType),
     draggingGroupId: state.draggingGroupId,
-    fullWidthAttr: attrs.fullWidthItem === true ? "w=f" : "",
+    fullWidthAttr: shouldUseFullWidthItems ? "w=f" : "",
+    itemWidth: shouldUseFullWidthItems ? "f" : "auto",
     resourceType: props.resourceType || "default",
     flatGroups: finalProcessedGroups,
     selectedItemId: props.selectedItemId,
@@ -126,7 +145,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     mediaWidth,
     mediaHeight,
     zoomLevel: state.zoomLevel,
-    showZoomControls: attrs.showZoomControls === true,
+    showZoomControls: parseBooleanAttr(showZoomControlsAttr),
     backUrl: props.backUrl,
     itemProperties: props.itemProperties || {},
     items: props.items || {},

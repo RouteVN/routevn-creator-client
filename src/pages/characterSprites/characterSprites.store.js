@@ -164,6 +164,7 @@ export const selectViewData = ({ state }) => {
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "characterSprites",
+    acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
     title: state.characterName,

@@ -117,7 +117,7 @@ template:
                           - 'rtgl-view w=f d=h p=sm wrap g=md style="min-width: 0;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} ${fullWidthAttr} cur=pointer style="${item.selectedStyle}":
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} br=md:
                                           - $if resourceType == 'fonts':
                                               - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v bw=xs br=md:
                                                   - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c: null
@@ -158,12 +158,12 @@ template:
                                                   - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'layouts':
-                                              - rtgl-view bc=${item.borderColor} w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=pointer style="${item.selectedStyle}":
+                                              - rtgl-view bc=${item.borderColor} w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=pointer:
                                                   - rtgl-view av=c ah=c w=f ph=sm:
                                                       - rtgl-text s=md ellipsis w=f: ${item.name}
                                                       - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.layoutType}
                                             $elif resourceType == 'transforms':
-                                              - rtgl-view#transformItemRef${gIndex}x${itemIndex} data-item-id=${item.id} bc=${item.borderColor} p=md g=md cur=pointer style="${item.selectedStyle}" br=md bw=xs:
+                                              - rtgl-view#transformItemRef${gIndex}x${itemIndex} data-item-id=${item.id} bc=${item.borderColor} p=md g=md cur=pointer br=md bw=xs:
                                                   - rvn-transform-thumbnail :item=#{item}: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif resourceType == 'tweens':
