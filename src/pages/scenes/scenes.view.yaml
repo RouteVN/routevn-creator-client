@@ -75,7 +75,6 @@ template:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rtgl-text ml=lg s=sm c=mu-fg mv=md: Scenes
-                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-file-explorer#fileexplorer :items=flatItems :repositoryTarget=repositoryTarget: null
           - rtgl-view w=1fg h=f:
               - rvn-whiteboard#whiteboard :items=whiteboardItems :cursor=whiteboardCursor :selectedItemId=selectedItemId: null
