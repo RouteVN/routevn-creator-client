@@ -124,8 +124,12 @@ export const hideActionsDialog = ({ state }, _payload = {}) => {
   state.mode = "hidden";
 };
 
-export const setMode = ({ state }, { payload } = {}) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, payload = {}) => {
+  const mode = payload.mode ?? payload?.payload?.mode;
+  if (mode === undefined) {
+    return;
+  }
+  state.mode = mode;
 };
 
 // Moved from sceneEditor.store.js - now returns object instead of array
