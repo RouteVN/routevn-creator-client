@@ -16,6 +16,12 @@ export const createInitialState = () => ({
     items: [],
   },
 
+  deleteDialog: {
+    isOpen: false,
+    projectId: null,
+    projectName: "",
+  },
+
   defaultValues: {
     name: "",
     description: "",
@@ -160,12 +166,37 @@ export const closeDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.items = [];
 };
 
+export const openDeleteDialog = (
+  { state },
+  { projectId, projectName = "" } = {},
+) => {
+  state.deleteDialog.isOpen = true;
+  state.deleteDialog.projectId = projectId || null;
+  state.deleteDialog.projectName = projectName;
+};
+
+export const closeDeleteDialog = ({ state }, _payload = {}) => {
+  state.deleteDialog.isOpen = false;
+  state.deleteDialog.projectId = null;
+  state.deleteDialog.projectName = "";
+};
+
+export const selectDeleteDialogProjectId = ({ state }) => {
+  return state.deleteDialog.projectId;
+};
+
 export const selectViewData = ({ state }) => {
+  const deleteDialogProjectName = state.deleteDialog.projectName
+    ? `"${state.deleteDialog.projectName}"`
+    : "this project";
+
   return {
     ...state,
     context: {
       platform: state.platform,
     },
+    deleteDialogTitle: "Delete Project",
+    deleteDialogMessage: `Are you sure you want to delete ${deleteDialogProjectName}? This action cannot be undone.`,
     hasProjects: state.projects && state.projects.length > 0,
     emptyMessage:
       state.projects && state.projects.length === 0 ? "No projects yet" : "",
