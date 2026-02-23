@@ -328,11 +328,12 @@ const renderLayoutPreview = async (deps) => {
 export const handleAfterMount = async (deps) => {
   const { appService, store, projectService, render, refs, graphicsService } =
     deps;
-  const { layoutId } = appService.getPayload();
+  const payload = appService.getPayload() || {};
+  const { layoutId } = payload;
   const repository = await projectService.getRepository();
   const { layouts, images, typography, colors, fonts, variables } =
     repository.getState();
-  const layout = layouts.items[layoutId];
+  const layout = layoutId ? layouts.items?.[layoutId] : null;
   store.setLayout({ id: layoutId, layout });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images });

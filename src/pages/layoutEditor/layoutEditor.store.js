@@ -569,10 +569,17 @@ export const setItems = ({ state }, { layoutData } = {}) => {
   state.layoutData = layoutData;
 };
 
-export const setLayout = ({ state }, { id, layout } = {}) => {
+export const setLayout = ({ state }, payload = {}) => {
+  const { id = null, layout = null } = payload || {};
+
+  if (!layout && !id) {
+    state.layout = null;
+    return;
+  }
+
   state.layout = {
     ...layout,
-    id,
+    id: id || layout?.id || null,
   };
 };
 
