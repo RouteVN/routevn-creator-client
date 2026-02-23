@@ -1696,7 +1696,7 @@ export const handlePreviewClick = (deps) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  store.showPreviewSceneId({ sceneId, sectionId, lineId });
+  store.showPreviewSceneId({ payload: { sceneId, sectionId, lineId } });
   render();
 };
 
