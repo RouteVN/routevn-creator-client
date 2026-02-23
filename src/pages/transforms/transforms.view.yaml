@@ -33,6 +33,7 @@ refs:
         handler: handleTransformFormActionClick
       form-change:
         handler: handleTransformFormChange
+  canvas: {}
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
@@ -51,11 +52,11 @@ template:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#transformDialog ?open=${isDialogOpen} s=lg:
-      - rtgl-view slot="content" d=h ah=c g=lg w=f:
+      - rtgl-view slot="content" d=h lg-d=v ah=c g=lg w=f:
           - $if isDialogOpen:
-              - rtgl-view w=4fg:
+              - rtgl-view w=4fg lg-w=f:
                   - rtgl-form#transformForm :defaultValues=dialogDefaultValues :form=transformForm w=f: null
-              - rtgl-view w=6fg:
+              - rtgl-view w=6fg lg-w=f d=v g=md:
                   - rtgl-text: Preview
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
                       - rtgl-view pos=abs cor=full:
