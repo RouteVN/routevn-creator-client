@@ -28,6 +28,7 @@ refs:
     eventListeners:
       update:
         handler: handleLayoutEditPanelUpdateHandler
+  canvas: {}
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f:

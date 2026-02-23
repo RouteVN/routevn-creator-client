@@ -91,6 +91,7 @@ refs:
     eventListeners:
       close:
         handler: handleHidePreviewScene
+  canvas: {}
 template:
   - rtgl-view w=f h=f:
       - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h:

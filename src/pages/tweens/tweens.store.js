@@ -552,8 +552,7 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
   return createAnimationRenderState(state.properties, true);
 };
 
-export const addProperty = ({ state }, { payload } = {}) => {
-  const { property, initialValue } = payload;
+export const addProperty = ({ state }, { property, initialValue } = {}) => {
   if (state.properties[property]) {
     return;
   }

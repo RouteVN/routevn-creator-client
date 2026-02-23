@@ -569,8 +569,7 @@ export const setItems = ({ state }, { layoutData } = {}) => {
   state.layoutData = layoutData;
 };
 
-export const setLayout = ({ state }, { payload } = {}) => {
-  const { id, layout } = payload;
+export const setLayout = ({ state }, { id, layout } = {}) => {
   state.layout = {
     ...layout,
     id,
