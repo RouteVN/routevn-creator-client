@@ -87,12 +87,19 @@ export const closeAudioPlayer = ({ state }, _payload = {}) => {
   };
 };
 
-export const updateAudioPlayerLeft = ({ state }, { payload } = {}) => {
-  state.audioPlayerLeft = payload.width + 64;
+const resolveAudioPlayerWidth = (input = {}) => {
+  const widthValue = input?.payload?.width ?? input?.width;
+  const parsedWidth =
+    typeof widthValue === "number" ? widthValue : Number(widthValue);
+  return Number.isFinite(parsedWidth) ? parsedWidth : 0;
 };
 
-export const updateAudioPlayerRight = ({ state }, { payload } = {}) => {
-  state.audioPlayerRight = payload.width;
+export const updateAudioPlayerLeft = ({ state }, payload = {}) => {
+  state.audioPlayerLeft = resolveAudioPlayerWidth(payload) + 64;
+};
+
+export const updateAudioPlayerRight = ({ state }, payload = {}) => {
+  state.audioPlayerRight = resolveAudioPlayerWidth(payload);
 };
 
 export const selectAudioPlayerLeft = ({ state }) => {
