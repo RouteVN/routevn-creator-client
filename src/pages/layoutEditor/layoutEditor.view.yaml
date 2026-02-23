@@ -37,7 +37,7 @@ template:
                   - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
       - rtgl-view w=1fg h=f:
           - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
-              - rtgl-button#backButton sq icon="chevronLeft" v="gh" mr=sm: null
+              - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
               - rtgl-view w=1fg:
                   - rtgl-text c=mu-fg: ${layout.name}
           - rtgl-view h=1fg sv w=f:

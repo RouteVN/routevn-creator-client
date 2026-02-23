@@ -94,12 +94,12 @@ refs:
 template:
   - rtgl-view w=f h=f:
       - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h:
-          - rtgl-button#backButton sq icon="chevronLeft" v="gh" mr=sm: null
+          - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
           - rtgl-view w=1fg:
               - rtgl-text c=mu-fg: ${scene.name}
           - rtgl-view w=1fg d=h g=sm jc=e:
               - rtgl-button#previewButton: Preview
-          - rtgl-button#muteToggle sq v="gh" icon="${muteIcon}": null
+          - rtgl-button#muteToggle sq v="gh" pre="${muteIcon}": null
       - 'rtgl-view d=h w=f h=1fg style="min-height: 0px"':
           - $if sectionsGraphView:
               - rtgl-view w="calc((100vw - 64px) / 2)":

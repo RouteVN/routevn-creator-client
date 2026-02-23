@@ -81,7 +81,7 @@ template:
           - rtgl-view w=f d=h av=c g=md wrap:
               - rtgl-view av=c g=sm d=h w=1fg:
                   - $if backUrl:
-                      - rtgl-button#backButton sq icon="chevronLeft" v="gh" mr=sm: null
+                      - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
                   - $if navTitle:
                       - rtgl-text c=mu-fg: ${navTitle}
               - rtgl-view d=h av=c g=md:
@@ -110,9 +110,9 @@ template:
                                   - rtgl-svg wh=16 svg=folder: null
                                   - rtgl-text: ${group.fullLabel}
                           - $if canUpload:
-                              - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg ip=s icon=upload: Upload
+                              - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=upload: Upload
                             $else:
-                              - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg ip=s icon=plus: Add
+                              - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
                       - $if !group.isCollapsed:
                           - 'rtgl-view w=f d=h p=sm wrap g=md style="min-width: 0;"':
                               - $if group.hasChildren:

@@ -62,7 +62,7 @@ template:
               - rtgl-view d=h w=f av=c:
                   - rtgl-text s=sm: ${section.label}
                   - rtgl-view w=1fg: null
-                  - rtgl-button#sectionAction${i} data-id=${section.id} icon=${section.labelAction} sq s=sm v=gh: null
+                  - rtgl-button#sectionAction${i} data-id=${section.id} pre=${section.labelAction} sq s=sm v=gh: null
             $else:
               - rtgl-text s=sm: ${section.label}
           - $for item, j in section.items:

@@ -31,4 +31,4 @@ template:
                       - rtgl-text s=h4: Community
                       - rtgl-view d=h  av=c g=md:
                           - $for item, i in social:
-                              - rtgl-button#socialButton${i} data-id="${item.id}" v=se ip=s icon=${item.svg}: ${item.label}
+                              - rtgl-button#socialButton${i} data-id="${item.id}" v=se pre=${item.svg}: ${item.label}

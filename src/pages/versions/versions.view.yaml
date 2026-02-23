@@ -50,9 +50,9 @@ template:
                               - rtgl-text s=lg: ${item.name}
                               - rtgl-view d=h g=sm av=c:
                                   - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
-                                  - rtgl-button#versionDownloadRef${i} data-version-id="${item.id}" v=gh s=sm ip=s icon=download: Download Zip
+                                  - rtgl-button#versionDownloadRef${i} data-version-id="${item.id}" v=gh s=sm pre=download: Download Zip
                           - rtgl-view d=v g=xs:
-                              - rtgl-button#versionMoreBtnRef${i} data-version-id="${item.id}" v=gh sq icon=ellipsis: null
+                              - rtgl-button#versionMoreBtnRef${i} data-version-id="${item.id}" v=gh sq pre=ellipsis: null
       - rtgl-popover#versionFormPopover ?open=${showVersionForm} x=300 y=100:
           - rtgl-form#versionForm key=${showVersionForm} slot=content :form=versionFormFields w=320: null
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=dropdownMenu.items: null

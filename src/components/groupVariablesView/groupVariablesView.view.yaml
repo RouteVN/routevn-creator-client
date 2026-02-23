@@ -58,7 +58,7 @@ template:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg wh=16 svg=folder: null
                                   - rtgl-text: ${group.fullLabel}
-                          - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg ip=s icon=plus: Add
+                          - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f mb=md p=sm:
                               - $if group.hasChildren:

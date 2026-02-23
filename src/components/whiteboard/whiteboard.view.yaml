@@ -53,7 +53,7 @@ template:
                       - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac: null
       - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
           - rtgl-view d=h av=c gap=sm:
-              - rtgl-button#panBtn sq icon=hand v=${panModeV}: null
+              - rtgl-button#panBtn sq pre=hand v=${panModeV}: null
               - rtgl-button#zoomOutBtn v=se s=md sq: '-'
               - rtgl-view bgc=co p=sm br=full w=50 ah=c av=c:
                   - rtgl-text s=sm: ${zoomLevelPercent}%
