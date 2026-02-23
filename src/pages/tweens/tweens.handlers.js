@@ -138,18 +138,21 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleAddAnimationClick = async (deps, payload) => {
-  const { store, render, graphicsService } = deps;
+  const { store, render, graphicsService, refs } = deps;
   const { groupId } = payload._event.detail;
   store.setTargetGroupId({ groupId: groupId });
   store.openDialog();
-  if (graphicsService) {
+  render();
+
+  const { canvas } = refs;
+  if (canvas && graphicsService) {
+    await graphicsService.init({ canvas });
     graphicsService.render(resetState);
   }
-  render();
 };
 
 export const handleAnimationItemDoubleClick = async (deps, payload) => {
-  const { store, render, graphicsService } = deps;
+  const { store, render, graphicsService, refs } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -171,15 +174,18 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
       }
     }
 
-    if (graphicsService) {
-      graphicsService.render(resetState);
-    }
     store.openDialog({
       editMode: true,
       itemId,
       itemData: { ...itemData, parent },
     });
     render();
+
+    const { canvas } = refs;
+    if (canvas && graphicsService) {
+      await graphicsService.init({ canvas });
+      graphicsService.render(resetState);
+    }
   }
 };
 

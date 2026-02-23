@@ -83,6 +83,7 @@ refs:
         handler: handleClosePopover
       item-click:
         handler: handleKeyframeDropdownItemClick
+  canvas: {}
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
@@ -100,8 +101,8 @@ template:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#addAnimationDialog ?open=${isDialogOpen} s=lg:
-      - rtgl-view slot=content d=h g=md:
-          - rtgl-view w=1fg:
+      - rtgl-view slot=content d=h lg-d=v g=md:
+          - rtgl-view w=4fg lg-w=f:
               - rtgl-form#animationForm key=${isDialogOpen} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
                   - rtgl-view slot=timeline w=f:
                       - rvn-keyframe-timeline#dialogTimeline editable=true :properties=properties: null
@@ -109,7 +110,7 @@ template:
                           - $if addPropertyButtonVisible:
                               - rtgl-button#addPropertiesButton w=f v=se s=sm: + Add tween property
               - rtgl-view h=128: null
-          - rtgl-view w=1fg:
+          - rtgl-view w=6fg lg-w=f:
               - rtgl-view d=h av=c ah=sb mb=md:
                   - rtgl-text: Preview
                   - rtgl-button#replayButton s=sm ml=md: Play Tween
