@@ -10,21 +10,24 @@ const form = {
       width: 240,
       height: 100,
     },
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fileType",
       type: "read-only-text",
-      description: "File Type",
+      label: "File Type",
+      content: "${fileType}",
     },
     {
       name: "fileSize",
       type: "read-only-text",
-      description: "File Size",
+      label: "File Size",
+      content: "${fileSize}",
     },
     {
       name: "duration",
       type: "read-only-text",
-      description: "Duration",
+      label: "Duration",
+      content: "${duration}",
     },
   ],
 };
@@ -36,6 +39,9 @@ export const createInitialState = () => ({
     fileId: {
       waveformData: null,
     },
+    fileType: "",
+    fileSize: "",
+    duration: "",
   },
   searchQuery: "",
   playingSound: {
@@ -157,19 +163,36 @@ export const selectViewData = ({ state }) => {
 
   // Transform selectedItem into form defaults
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    fileType: "",
+    fileSize: "",
+    duration: "",
+  };
 
   if (selectedItem) {
+    const formattedFileSize = formatFileSize(selectedItem.fileSize);
+    const formattedDuration = selectedItem.duration
+      ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(
+          selectedItem.duration % 60,
+        )
+          .toString()
+          .padStart(2, "0")}`
+      : "Unknown";
+    const fileType = selectedItem.fileType || "";
+
     defaultValues = {
       name: selectedItem.name,
-      fileType: selectedItem.fileType,
-      fileSize: formatFileSize(selectedItem.fileSize),
-      duration: selectedItem.duration
-        ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(
-            selectedItem.duration % 60,
-          )
-            .toString()
-            .padStart(2, "0")}`
-        : "Unknown",
+      fileType,
+      fileSize: formattedFileSize,
+      duration: formattedDuration,
+    };
+
+    formContext = {
+      ...state.context,
+      fileType,
+      fileSize: formattedFileSize,
+      duration: formattedDuration,
     };
   }
 
@@ -181,7 +204,7 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     repositoryTarget: "sounds",
     form,
-    context: state.context,
+    context: formContext,
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "sounds",

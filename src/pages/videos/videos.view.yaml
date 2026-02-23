@@ -19,9 +19,9 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  dialogOverlay:
+  videoPreviewDialog:
     eventListeners:
-      click:
+      close:
         handler: handleOutsideVideoClick
   detailForm:
     eventListeners:
@@ -29,6 +29,10 @@ refs:
         handler: handleFormExtraEvent
       form-change:
         handler: handleFormChange
+  detailThumbnail:
+    eventListeners:
+      click:
+        handler: handleFormExtraEvent
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
@@ -41,19 +45,18 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues: null
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues:
+                          - $if selectedVideoThumbnailFileId:
+                              - rvn-file-image#detailThumbnail slot="video-thumbnail-file-id" fileId=${selectedVideoThumbnailFileId} w=240 h=135 br=md cur=pointer: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      - $if videoVisible:
-          - rtgl-view pos=fix cor=full ah=c z=9999:
-              - rtgl-view#dialogOverlay pos=fix cor=full ah=c av=c bgc=bg op=0.5: null
-              - rtgl-view h=10vh: null
+      - rtgl-dialog#videoPreviewDialog ?open=${videoVisible}:
+          - rtgl-view#dialogContainer slot=content bw=xs bgc=bg w=80vw h=80vh br=sm av=c ah=c:
               - $if selectedVideo:
-                  - rtgl-view#dialogContainer z=10000 bw=xs bgc=bg w=80% h=80% br=sm av=c ah=c:
-                      - $if selectedVideo.url:
-                          - video controls=true autoplay=true style="height:100%; width:100%;":
-                              - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
-                        $else:
-                          - rtgl-view w=f h=f av=c ah=c:
-                              - rtgl-text s=lg c=mu-fg: Loading video...
+                  - $if selectedVideo.url:
+                      - video controls=true autoplay=true style="height:100%; width:100%;":
+                          - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
+                    $else:
+                      - rtgl-view w=f h=f av=c ah=c:
+                          - rtgl-text s=lg c=mu-fg: Loading video...

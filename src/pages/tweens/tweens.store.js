@@ -3,8 +3,13 @@ import { resetState } from "./tweens.constants";
 
 const form = {
   fields: [
-    { name: "name", type: "popover-input", description: "Name" },
-    { name: "duration", type: "read-only-text", description: "Duration" },
+    { name: "name", type: "popover-input", label: "Name" },
+    {
+      name: "duration",
+      type: "read-only-text",
+      label: "Duration",
+      content: "${duration}",
+    },
   ],
 };
 
@@ -648,11 +653,18 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let context = {
+    duration: "",
+  };
   if (selectedItem) {
+    const duration = selectedItem.duration ?? "";
     defaultValues = {
       name: selectedItem.name,
-      duration: selectedItem.duration || "",
+      duration,
       keyframes: selectedItem.keyframes || "",
+    };
+    context = {
+      duration,
     };
   }
 
@@ -774,6 +786,7 @@ export const selectViewData = ({ state }) => {
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     form,
+    context,
     defaultValues,
     // Dialog state
     isDialogOpen: state.isDialogOpen,

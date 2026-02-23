@@ -60,8 +60,10 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
     const { url } = await projectService.getFileContent(selectedItem.fileId);
 
     store.setVideoVisible({
-      url,
-      fileType: selectedItem.fileType,
+      video: {
+        url,
+        fileType: selectedItem.fileType,
+      },
     });
   }
   render();
@@ -240,8 +242,10 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
   const { url } = await projectService.getFileContent(item.fileId);
 
   store.setVideoVisible({
-    url,
-    fileType: item.fileType,
+    video: {
+      url,
+      fileType: item.fileType,
+    },
   });
   render();
 };

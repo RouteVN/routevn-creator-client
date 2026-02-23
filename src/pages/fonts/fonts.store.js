@@ -43,17 +43,24 @@ const form = {
       previewText: "Aa",
       fontFamily: "${fileId.fontFamily}",
     },
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fontFamily",
       type: "read-only-text",
-      description: "Font Family",
+      label: "Font Family",
+      content: "${fontFamily}",
     },
-    { name: "fileType", type: "read-only-text", description: "File Type" },
+    {
+      name: "fileType",
+      type: "read-only-text",
+      label: "File Type",
+      content: "${fileType}",
+    },
     {
       name: "fileSize",
       type: "read-only-text",
-      description: "File Size",
+      label: "File Size",
+      content: "${fileSize}",
     },
   ],
 };
@@ -253,6 +260,16 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    fileId: {
+      ...state.context?.fileId,
+      fontFamily: state.context?.fileId?.fontFamily || "",
+    },
+    fontFamily: "",
+    fileType: "",
+    fileSize: "",
+  };
   let formWithPreview = { ...form };
 
   if (selectedItem) {
@@ -282,13 +299,29 @@ export const selectViewData = ({ state }) => {
       return extensionMap[extension] || `font/${extension}`;
     };
 
+    const fontFamily = selectedItem.fontFamily || "";
+    const fileType =
+      selectedItem.fileType || getFileTypeFromName(selectedItem.name);
+    const fileSize = selectedItem.fileSize
+      ? formatFileSize(selectedItem.fileSize)
+      : "";
+
     defaultValues = {
       name: selectedItem.name,
-      fontFamily: selectedItem.fontFamily || "",
-      fileType: selectedItem.fileType || getFileTypeFromName(selectedItem.name),
-      fileSize: selectedItem.fileSize
-        ? formatFileSize(selectedItem.fileSize)
-        : "",
+      fontFamily,
+      fileType,
+      fileSize,
+    };
+
+    formContext = {
+      ...state.context,
+      fileId: {
+        ...state.context?.fileId,
+        fontFamily,
+      },
+      fontFamily,
+      fileType,
+      fileSize,
     };
   }
 
@@ -318,7 +351,7 @@ export const selectViewData = ({ state }) => {
     title: "Fonts",
     form: formWithPreview,
     defaultValues,
-    context: state.context,
+    context: formContext,
     isModalOpen: state.isModalOpen,
     selectedFontInfo: state.selectedFontInfo,
     glyphList: state.selectedFontInfo?.glyphs || getGlyphList(),

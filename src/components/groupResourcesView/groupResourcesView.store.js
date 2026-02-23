@@ -96,10 +96,17 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const setBorderColorForItems = (items) => {
     return items.map((item) => {
       const isSelected = item.id === props.selectedItemId;
+      const isCharacterResource = props.resourceType === "characters";
       const updatedItem = {
         ...item,
         borderColor: isSelected ? "fg" : "bo",
-        itemBorderColor: isSelected ? "pr" : "tr",
+        itemBorderColor: isCharacterResource
+          ? isSelected
+            ? "pr"
+            : "bo"
+          : isSelected
+            ? "pr"
+            : "tr",
       };
 
       // If item has children, recursively process them

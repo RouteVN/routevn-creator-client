@@ -8,6 +8,8 @@ propsSchema:
       type: string
     br:
       type: string
+    wh:
+      type: string
     w:
       type: string
     h:

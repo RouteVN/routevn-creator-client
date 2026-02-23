@@ -4,22 +4,22 @@ import { formatFileSize } from "../../utils/index.js";
 const form = {
   fields: [
     {
-      name: "thumbnailFileId",
-      type: "image",
-      src: "${thumbnailFileId.src}",
-      width: 240,
-      height: 135,
+      type: "slot",
+      slot: "video-thumbnail-file-id",
+      label: "Thumbnail",
     },
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fileType",
       type: "read-only-text",
-      description: "File Type",
+      label: "File Type",
+      content: "${fileType}",
     },
     {
       name: "fileSize",
       type: "read-only-text",
-      description: "File Size",
+      label: "File Size",
+      content: "${fileSize}",
     },
   ],
 };
@@ -31,6 +31,8 @@ export const createInitialState = () => ({
     thumbnailFileId: {
       src: "",
     },
+    fileType: "",
+    fileSize: "",
   },
   searchQuery: "",
   videoVisible: false,
@@ -64,9 +66,14 @@ export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const setVideoVisible = ({ state }, { video } = {}) => {
+export const setVideoVisible = ({ state }, payload = {}) => {
+  const video = payload.video || {
+    url: payload.url,
+    fileType: payload.fileType,
+  };
+
   state.videoVisible = true;
-  state.selectedVideo = video;
+  state.selectedVideo = video?.url ? video : undefined;
 };
 
 export const setVideoNotVisible = ({ state }, _payload = {}) => {
@@ -122,12 +129,26 @@ export const selectViewData = ({ state }) => {
   // Transform selectedItem into detailPanel props
   let detailFields;
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    fileType: "",
+    fileSize: "",
+  };
 
   if (selectedItem) {
+    const fileType = selectedItem.fileType || "";
+    const fileSize = formatFileSize(selectedItem.fileSize);
+
     defaultValues = {
       name: selectedItem.name,
-      fileType: selectedItem.fileType,
-      fileSize: formatFileSize(selectedItem.fileSize),
+      fileType,
+      fileSize,
+    };
+
+    formContext = {
+      ...state.context,
+      fileType,
+      fileSize,
     };
 
     detailFields = [
@@ -164,7 +185,7 @@ export const selectViewData = ({ state }) => {
     repositoryTarget: "videos",
     title: "Videos",
     form,
-    context: state.context,
+    context: formContext,
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "videos",
@@ -172,5 +193,6 @@ export const selectViewData = ({ state }) => {
     acceptedFileTypes: [".mp4"],
     videoVisible: state.videoVisible,
     selectedVideo: state.selectedVideo,
+    selectedVideoThumbnailFileId: selectedItem?.thumbnailFileId,
   };
 };

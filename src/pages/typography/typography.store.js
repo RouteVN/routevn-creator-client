@@ -80,28 +80,42 @@ const form = {
       type: "image",
       src: "${typographyPreview.src}",
     },
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fontSize",
       type: "read-only-text",
-      description: "Font Size",
+      label: "Font Size",
+      content: "${fontSize}",
     },
     {
       name: "lineHeight",
       type: "read-only-text",
-      description: "Line Height",
+      label: "Line Height",
+      content: "${lineHeight}",
     },
-    { name: "colorName", type: "read-only-text", description: "Color" },
-    { name: "fontName", type: "read-only-text", description: "Font" },
+    {
+      name: "colorName",
+      type: "read-only-text",
+      label: "Color",
+      content: "${colorName}",
+    },
+    {
+      name: "fontName",
+      type: "read-only-text",
+      label: "Font",
+      content: "${fontName}",
+    },
     {
       name: "fontWeight",
       type: "read-only-text",
-      description: "Font Weight",
+      label: "Font Weight",
+      content: "${fontWeight}",
     },
     {
       name: "previewText",
       type: "read-only-text",
-      description: "Preview Text",
+      label: "Preview Text",
+      content: "${previewText}",
     },
   ],
 };
@@ -625,28 +639,38 @@ export const selectViewData = ({ state }) => {
     try {
       detailFormDefaultValues = {
         name: selectedItem.name,
-        fontSize: selectedItem.fontSize || "",
-        lineHeight: selectedItem.lineHeight || "",
+        fontSize: selectedItem.fontSize ?? "",
+        lineHeight: selectedItem.lineHeight ?? "",
         colorName: selectedItem.colorId
           ? getColorName(selectedItem.colorId)
           : "",
         fontName: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
-        fontWeight: selectedItem.fontWeight || "",
-        previewText: selectedItem.previewText || "",
+        fontWeight: selectedItem.fontWeight ?? "",
+        previewText: selectedItem.previewText ?? "",
       };
     } catch (error) {
       console.error("Failed to get detail form values:", error);
       detailFormDefaultValues = {
         name: selectedItem.name || "",
-        fontSize: selectedItem.fontSize || "",
-        lineHeight: selectedItem.lineHeight || "",
+        fontSize: selectedItem.fontSize ?? "",
+        lineHeight: selectedItem.lineHeight ?? "",
         colorName: "",
         fontName: "",
-        fontWeight: selectedItem.fontWeight || "",
-        previewText: selectedItem.previewText || "",
+        fontWeight: selectedItem.fontWeight ?? "",
+        previewText: selectedItem.previewText ?? "",
       };
     }
   }
+
+  const detailFormContext = {
+    ...state.context,
+    fontSize: detailFormDefaultValues.fontSize ?? "",
+    lineHeight: detailFormDefaultValues.lineHeight ?? "",
+    colorName: detailFormDefaultValues.colorName ?? "",
+    fontName: detailFormDefaultValues.fontName ?? "",
+    fontWeight: detailFormDefaultValues.fontWeight ?? "",
+    previewText: detailFormDefaultValues.previewText ?? "",
+  };
 
   return {
     flatItems,
@@ -661,7 +685,7 @@ export const selectViewData = ({ state }) => {
     colorsData: state.colorsData,
     fontsData: state.fontsData,
     form,
-    context: state.context,
+    context: detailFormContext,
     defaultValues: detailFormDefaultValues,
 
     // Dialog-related data

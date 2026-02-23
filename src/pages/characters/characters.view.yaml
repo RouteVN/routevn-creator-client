@@ -76,7 +76,7 @@ template:
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :defaultValues=defaultValues:
-                          - rvn-file-image#detailPanelAvatar slot="avatar" cur=pointer wh=128 br=f fileId="${selectedItem.fileId}": null
+                          - rvn-file-image#detailPanelAvatar slot="avatar" cur=pointer w=128 h=128 br=f fileId="${selectedItem.fileId}": null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
@@ -84,15 +84,19 @@ template:
           - rtgl-view slot=content g=md:
               - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
                   - $if avatarFileId:
-                      - rvn-file-image#avatarImage fileId=${avatarFileId} wh=120 slot=avatar-slot cur=pointer br=md: null
+                      - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                          - rvn-file-image#avatarImage fileId=${avatarFileId} w=120 h=120 cur=pointer br=md: null
                     $else:
-                      - rtgl-view#avatarPlaceholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: Click to Upload
+                      - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                          - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                              - rtgl-text c=mu-fg s=sm: Click to Upload
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
               - $if editAvatarFileId:
-                  - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} wh=120 slot=avatar-slot cur=pointer br=md: null
+                  - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                      - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} w=120 h=120 cur=pointer br=md: null
                 $else:
-                  - rtgl-view#editAvatarPlaceholder slot=avatar-slot wh=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                      - rtgl-text c=mu-fg s=sm: Click to Upload
+                  - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                      - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-text c=mu-fg s=sm: Click to Upload

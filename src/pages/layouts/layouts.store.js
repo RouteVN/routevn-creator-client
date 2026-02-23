@@ -41,11 +41,12 @@ const layoutForm = {
 
 const form = {
   fields: [
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "layoutTypeDisplay",
       type: "read-only-text",
-      description: "Layout Type",
+      label: "Layout Type",
+      content: "${layoutTypeDisplay}",
     },
   ],
 };
@@ -55,6 +56,9 @@ export const createInitialState = () => ({
   selectedItemId: null,
   searchQuery: "",
   fieldResources: {},
+  context: {
+    layoutTypeDisplay: "",
+  },
   isAddDialogOpen: false,
   targetGroupId: null,
   contextMenuItems: [
@@ -113,6 +117,9 @@ export const selectViewData = ({ state }) => {
 
   // Transform selectedItem into form defaults
   let defaultValues = {};
+  let context = {
+    layoutTypeDisplay: "",
+  };
 
   if (selectedItem) {
     const layoutTypeLabels = {
@@ -129,6 +136,10 @@ export const selectViewData = ({ state }) => {
 
     defaultValues = {
       name: selectedItem.name,
+      layoutTypeDisplay: layoutTypeLabel,
+    };
+
+    context = {
       layoutTypeDisplay: layoutTypeLabel,
     };
   }
@@ -182,6 +193,7 @@ export const selectViewData = ({ state }) => {
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     form,
+    context,
     defaultValues,
     fieldResources: state.fieldResources,
     searchQuery: state.searchQuery,

@@ -13,9 +13,19 @@ const hexToRgb = (hex) => {
 const form = {
   fields: [
     { name: "colorImage", type: "image", src: "${colorImage.src}" },
-    { name: "name", type: "popover-input", description: "Name" },
-    { name: "hex", type: "read-only-text", description: "Hex Value" },
-    { name: "rgb", type: "read-only-text", description: "RGB Value" },
+    { name: "name", type: "popover-input", label: "Name" },
+    {
+      name: "hex",
+      type: "read-only-text",
+      label: "Hex Value",
+      content: "${hex}",
+    },
+    {
+      name: "rgb",
+      type: "read-only-text",
+      label: "RGB Value",
+      content: "${rgb}",
+    },
   ],
 };
 
@@ -115,11 +125,23 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    hex: "",
+    rgb: "",
+  };
   if (selectedItem) {
+    const hex = selectedItem.hex ?? "";
+    const rgb = hexToRgb(hex);
     defaultValues = {
       name: selectedItem.name,
-      hex: selectedItem.hex || "",
-      rgb: hexToRgb(selectedItem.hex) || "",
+      hex,
+      rgb,
+    };
+    formContext = {
+      ...state.context,
+      hex,
+      rgb,
     };
   }
 
@@ -247,7 +269,7 @@ export const selectViewData = ({ state }) => {
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     form,
-    context: state.context,
+    context: formContext,
     defaultValues,
     isEditDialogOpen: state.isEditDialogOpen,
     editDefaultValues,

@@ -46,5 +46,5 @@ template:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
       - $if showAudioPlayer:
-          - 'rtgl-view h=72 pos=fix cor=bottom z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
+          - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
               - rvn-audio-player fileId=${playingSound.fileId} autoPlay=true :title=playingSound.title: null
