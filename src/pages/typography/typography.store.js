@@ -520,7 +520,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontSize",
-        type: "slider-input",
+        type: "slider-with-input",
         label: "Font Size",
         min: 8,
         max: 72,
@@ -530,7 +530,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "lineHeight",
-        type: "slider-input",
+        type: "slider-with-input",
         label: "Line Height",
         min: 0.8,
         max: 3.0,

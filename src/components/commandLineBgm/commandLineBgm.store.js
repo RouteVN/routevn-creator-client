@@ -19,7 +19,7 @@ const form = {
     {
       name: "volume",
       description: "Volume",
-      type: "slider-input",
+      type: "slider-with-input",
       min: 0,
       max: 1000,
       step: 1,

@@ -57,7 +57,7 @@ export const handleEditableNumberClick = (deps, payload) => {
     fields: [
       {
         name: field.name,
-        type: "slider-input",
+        type: "slider-with-input",
         label: field.label,
         description: field.description || "Adjust the value",
         min: field.min || 0,

@@ -51,7 +51,7 @@ export const createInitialState = () => ({
       },
       {
         name: "x",
-        type: "slider-input",
+        type: "slider-with-input",
         min: 0,
         max: 1920,
         step: 1,
@@ -60,7 +60,7 @@ export const createInitialState = () => ({
       },
       {
         name: "y",
-        type: "slider-input",
+        type: "slider-with-input",
         min: 0,
         max: 1080,
         step: 1,
@@ -69,7 +69,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scaleX",
-        type: "slider-input",
+        type: "slider-with-input",
         min: 0.1,
         max: 3,
         step: 0.1,
@@ -78,7 +78,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scaleY",
-        type: "slider-input",
+        type: "slider-with-input",
         min: 0.1,
         max: 3,
         step: 0.1,

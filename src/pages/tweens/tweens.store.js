@@ -57,7 +57,7 @@ const createAddKeyframeForm = (property) => {
       },
       {
         name: "value",
-        type: "slider-input",
+        type: "slider-with-input",
         ...sliderConfig[property],
         label: "Value",
         required: true,
@@ -202,7 +202,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "x"',
             name: "initialValue",
-            type: "slider-input",
+            type: "slider-with-input",
             min: 0,
             max: 1920,
             label: "Initial value",
@@ -210,7 +210,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "y"',
             name: "initialValue",
-            type: "slider-input",
+            type: "slider-with-input",
             min: 0,
             max: 1080,
             label: "Initial value",
@@ -218,7 +218,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "alpha"',
             name: "initialValue",
-            type: "slider-input",
+            type: "slider-with-input",
             step: 0.01,
             min: 0,
             max: 1,
@@ -227,7 +227,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "scaleX" || property == "scaleY"',
             name: "initialValue",
-            type: "slider-input",
+            type: "slider-with-input",
             min: 0.1,
             max: 5,
             step: 0.1,
@@ -236,7 +236,7 @@ const createAddPropertyForm = (propertyOptions) => {
           // {
           //   $when: 'property == "rotation"',
           //   name: "initialValue",
-          //   type: "slider-input",
+          //   type: "slider-with-input",
           //   min: -360,
           //   max: 360,
           //   step: 1,
