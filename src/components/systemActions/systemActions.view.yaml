@@ -115,7 +115,7 @@ template:
   - rtgl-dialog#actionsDialog key=${mode} ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh:
           - $if mode == "actions":
-              - rvn-command-line-actions#commandLineActions actions-type=${actionsType}: null
+              - rvn-command-line-actions#commandLineActions :actionsType=actionsType: null
             $elif mode == "dialogue":
               - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=dialogueLayouts :characters=allCharacters :dialogue=actions.dialogue: null
             $elif mode == "choice":

@@ -12,3 +12,10 @@ propsSchema:
       type: string
     presentationState:
       type: object
+    actionType:
+      type: string
+      enum:
+        - presentation
+        - system
+    showSelected:
+      type: boolean

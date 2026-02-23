@@ -2,7 +2,7 @@ export const handleBeforeMount = (deps) => {
   const actionsType = deps.props?.actionsType;
   if (!actionsType) {
     console.warn(
-      "[commandLineActions] Missing actions-type attribute. Falling back to presentation actions.",
+      "[commandLineActions] Missing actionsType prop. Falling back to presentation actions.",
     );
   }
 };

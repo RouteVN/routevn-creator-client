@@ -1,4 +1,9 @@
 componentName: rvn-command-line-actions
 propsSchema:
   type: object
-  properties: {}
+  properties:
+    actionsType:
+      type: string
+      enum:
+        - presentation
+        - system
