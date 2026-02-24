@@ -1,8 +1,8 @@
-import { toFlatGroups } from "#tree-state";
+import { toFlatGroups } from "#domain-structure";
 
 export const createInitialState = () => ({
   selectedImageId: undefined,
-  images: { items: {}, tree: [] }, // Add this - raw repository images data
+  images: { items: {}, order: [] }, // Add this - raw repository images data
 });
 
 export const selectSelectedImageId = ({ state }) => {
@@ -22,7 +22,7 @@ export const setImages = ({ state }, { images } = {}) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const images = state.images || { items: {}, tree: [] }; // Raw data from state
+  const images = state.images || { items: {}, order: [] }; // Raw data from state
   const selectedImageId = state.selectedImageId; // Use state instead of props
 
   // Process images into groups here, like in commandLineBackground

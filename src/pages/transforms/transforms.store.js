@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const form = {
   fields: [
@@ -44,7 +44,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  transformData: { tree: [], items: {} },
+  transformData: { order: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
   collapsedIds: [],

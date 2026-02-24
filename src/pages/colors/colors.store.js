@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const hexToRgb = (hex) => {
   if (!hex) return "";
@@ -30,7 +30,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  colorsData: { tree: [], items: {} },
+  colorsData: { order: [], items: {} },
   selectedItemId: null,
   isEditDialogOpen: false,
   editItemId: null,

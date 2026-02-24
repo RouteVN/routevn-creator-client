@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 import { formatFileSize } from "../../utils/index.js";
 
 const form = {
@@ -31,7 +31,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  imagesData: { tree: [], items: {} },
+  imagesData: { order: [], items: {} },
   selectedItemId: null,
   context: {
     fileId: {
@@ -60,7 +60,7 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
-  // state.imagesData contains the full structure with tree and items
+  // state.imagesData contains the full structure with order and items
   const flatItems = toFlatItems(state.imagesData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };

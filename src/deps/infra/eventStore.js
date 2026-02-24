@@ -3,11 +3,11 @@ import {
   createRepository,
   toFlatItems,
   toFlatGroups,
-  toTreeStructure,
-} from "#tree-state";
+  toHierarchyStructure,
+} from "#domain-structure";
 
 // Re-export utility functions from insieme
-export { toFlatItems, toFlatGroups, toTreeStructure };
+export { toFlatItems, toFlatGroups, toHierarchyStructure };
 
 /**
  * Create an insieme repository from a store

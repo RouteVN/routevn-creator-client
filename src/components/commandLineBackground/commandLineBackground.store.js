@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const tabs = [
   {
@@ -20,10 +20,10 @@ const tabs = [
 export const createInitialState = () => ({
   mode: "current",
   tab: "image", // "image", "layout", or "video"
-  imageItems: { items: {}, tree: [] },
-  layoutItems: { items: {}, tree: [] },
-  videoItems: { items: {}, tree: [] },
-  tweenItems: { items: {}, tree: [] },
+  imageItems: { items: {}, order: [] },
+  layoutItems: { items: {}, order: [] },
+  videoItems: { items: {}, order: [] },
+  tweenItems: { items: {}, order: [] },
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
@@ -175,7 +175,7 @@ export const selectViewData = ({ state }) => {
     layout: state.layoutItems,
     video: state.videoItems,
   };
-  const items = itemsMap[state.tab] || { item: {}, tree: [] };
+  const items = itemsMap[state.tab] || { item: {}, order: [] };
   const flatItems = toFlatItems(items).filter((item) => item.type === "folder");
   const flatGroups = toFlatGroups(items).map((group) => {
     return {

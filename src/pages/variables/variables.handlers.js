@@ -5,7 +5,7 @@ export const handleAfterMount = async (deps) => {
   const { p } = appService.getPayload();
   const repository = await projectService.getRepositoryById(p);
   const { variables } = repository.getState();
-  store.setItems({ variablesData: variables || { tree: [], items: {} } });
+  store.setItems({ variablesData: variables || { order: [], items: {} } });
   render();
 };
 
@@ -17,7 +17,7 @@ export const handleDataChanged = async (deps) => {
   const repositoryState = repository.getState();
   const { variables } = repositoryState;
 
-  const variableData = variables || { tree: [], items: {} };
+  const variableData = variables || { order: [], items: {} };
 
   store.setItems({ variablesData: variableData });
   render();
@@ -43,7 +43,7 @@ export const handleVariableCreated = async (deps, payload) => {
 
   // Add new variable to repository
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: "variables",
       value: {
@@ -74,7 +74,7 @@ export const handleVariableDelete = async (deps, payload) => {
   const { itemId } = payload._event.detail;
 
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: "variables",
       options: {
@@ -115,7 +115,7 @@ export const handleFormChange = async (deps, payload) => {
   }
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "variables",
       value: updateValue,

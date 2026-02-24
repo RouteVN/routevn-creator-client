@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
-import { toFlatItems } from "#tree-state";
+import { toFlatItems } from "#domain-structure";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
@@ -87,7 +87,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   const uploadResult = uploadedFiles[0];
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "fonts",
       value: {
@@ -149,7 +149,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     };
 
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "fonts",
         value: fontItem,
@@ -219,7 +219,7 @@ export const handleCloseModal = (deps) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "fonts",
       value: {
@@ -272,7 +272,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

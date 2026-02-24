@@ -12,7 +12,7 @@ export const handleAfterMount = (deps) => {
   const state = projectService.getState();
 
   // Extract images from repository state (raw data)
-  const images = state.images || { items: {}, tree: [] };
+  const images = state.images || { items: {}, order: [] };
 
   // Store raw images data - processing will happen in selectViewData
   store.setImages({ images: images });

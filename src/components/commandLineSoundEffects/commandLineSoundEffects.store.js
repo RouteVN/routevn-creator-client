@@ -1,8 +1,8 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 export const createInitialState = () => ({
   mode: "current",
-  items: { items: {}, tree: [] },
+  items: { items: {}, order: [] },
   /**
    * Array of sound effect objects with the following structure:
    * {

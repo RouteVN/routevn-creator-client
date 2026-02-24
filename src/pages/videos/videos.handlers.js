@@ -104,7 +104,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   for (const result of successfulUploads) {
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "videos",
         value: {
@@ -163,7 +163,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   const uploadResult = uploadedFiles[0];
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "videos",
       value: {
@@ -196,7 +196,7 @@ export const handleFormExtraEvent = async (deps) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "videos",
       value: {
@@ -277,7 +277,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

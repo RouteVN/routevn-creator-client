@@ -966,7 +966,7 @@ export const handleSectionAddClick = async (deps) => {
   }
 
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: `scenes.items.${sceneId}.sections`,
       value: {
@@ -978,7 +978,7 @@ export const handleSectionAddClick = async (deps) => {
               actions: actions,
             },
           },
-          tree: [
+          order: [
             {
               id: newLineId,
             },
@@ -1146,7 +1146,7 @@ export const handleSplitLine = async (deps, payload) => {
     : {};
 
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
       value: {
@@ -1235,7 +1235,7 @@ export const handleNewLine = async (deps) => {
     : {};
 
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
       value: {
@@ -1483,7 +1483,7 @@ export const handleMergeLines = async (deps, payload) => {
 
   // Delete current line
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
       options: {
@@ -1589,7 +1589,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   if (action === "delete-section") {
     // Delete section from repository
     await projectService.appendEvent({
-      type: "treeDelete",
+      type: "nodeDelete",
       payload: {
         target: `scenes.items.${sceneId}.sections`,
         options: {
@@ -1695,7 +1695,7 @@ export const handleFormActionClick = async (deps, payload) => {
     // Update section name in repository
     if (sectionId && values.name && sceneId) {
       await projectService.appendEvent({
-        type: "treeUpdate",
+        type: "nodeUpdate",
         payload: {
           target: `scenes.items.${sceneId}.sections`,
           value: {
@@ -1761,7 +1761,7 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   const sectionId = store.selectSelectedSectionId();
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
       value: updatedLine,
@@ -1902,7 +1902,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   const sectionId = store.selectSelectedSectionId();
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
       value: updatedLine,

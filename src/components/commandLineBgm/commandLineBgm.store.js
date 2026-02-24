@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const form = {
   fields: [
@@ -29,7 +29,7 @@ const form = {
 
 export const createInitialState = () => ({
   mode: "current",
-  items: { items: {}, tree: [] },
+  items: { items: {}, order: [] },
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
   bgm: {

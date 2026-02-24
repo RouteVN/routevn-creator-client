@@ -6,7 +6,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, refs } = deps;
   await projectService.ensureRepository();
   const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens || { tree: [], items: {} } });
+  store.setItems({ tweensData: tweens || { order: [], items: {} } });
 
   // Initialize graphicsService if canvas is present
   const { canvas } = refs;
@@ -29,7 +29,7 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { tweens } = projectService.getState();
 
-  const tweenData = tweens || { tree: [], items: {} };
+  const tweenData = tweens || { order: [], items: {} };
 
   store.setItems({ tweensData: tweenData });
   render();
@@ -61,7 +61,7 @@ export const handleAnimationCreated = async (deps, payload) => {
   const { groupId, name, properties } = payload._event.detail;
 
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: "tweens",
       value: {
@@ -89,7 +89,7 @@ export const handleAnimationUpdated = async (deps, payload) => {
   const { itemId, name, properties } = payload._event.detail;
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "tweens",
       value: {
@@ -111,7 +111,7 @@ export const handleAnimationUpdated = async (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "tweens",
       value: {
@@ -525,7 +525,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

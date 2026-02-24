@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "#tree-state";
+import { toFlatItems } from "#domain-structure";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)
@@ -60,7 +60,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { transforms } = projectService.getState();
-  store.setItems({ transformData: transforms || { tree: [], items: {} } });
+  store.setItems({ transformData: transforms || { order: [], items: {} } });
   render();
 };
 
@@ -68,7 +68,7 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { transforms } = projectService.getState();
 
-  const transformData = transforms || { tree: [], items: {} };
+  const transformData = transforms || { order: [], items: {} };
 
   store.setItems({ transformData: transformData });
   render();
@@ -197,7 +197,7 @@ export const handleTransformCreated = async (deps, payload) => {
     payload._event.detail;
 
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: "transforms",
       value: {
@@ -227,7 +227,7 @@ export const handleTransformCreated = async (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "transforms",
       value: {
@@ -252,7 +252,7 @@ export const handleTransformEdited = async (deps, payload) => {
 
   // Update repository directly
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "transforms",
       value: {
@@ -416,7 +416,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

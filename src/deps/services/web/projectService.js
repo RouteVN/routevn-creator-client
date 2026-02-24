@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
-import { createRepository } from "#tree-state";
+import { createRepository } from "#domain-structure";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
@@ -49,55 +49,55 @@ export const initialProjectData = {
   },
   images: {
     items: {},
-    tree: [],
+    order: [],
   },
   tweens: {
     items: {},
-    tree: [],
+    order: [],
   },
   sounds: {
     items: {},
-    tree: [],
+    order: [],
   },
   videos: {
     items: {},
-    tree: [],
+    order: [],
   },
   characters: {
     items: {},
-    tree: [],
+    order: [],
   },
   fonts: {
     items: {},
-    tree: [],
+    order: [],
   },
   transforms: {
     items: {},
-    tree: [],
+    order: [],
   },
   colors: {
     items: {},
-    tree: [],
+    order: [],
   },
   typography: {
     items: {},
-    tree: [],
+    order: [],
   },
   variables: {
     items: {},
-    tree: [],
+    order: [],
   },
   components: {
     items: {},
-    tree: [],
+    order: [],
   },
   layouts: {
     items: {},
-    tree: [],
+    order: [],
   },
   scenes: {
     items: {},
-    tree: [],
+    order: [],
   },
 };
 

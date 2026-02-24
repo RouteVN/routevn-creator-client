@@ -19,6 +19,24 @@ const lodashGet = (obj, path, defaultValue) => {
   return current !== undefined ? current : defaultValue;
 };
 
+const findNodeLocation = (nodes = [], targetId, parentId = "_root") => {
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    if (node.id === targetId) {
+      return { parentId };
+    }
+    const childResult = findNodeLocation(
+      node.children || [],
+      targetId,
+      node.id,
+    );
+    if (childResult) {
+      return childResult;
+    }
+  }
+  return null;
+};
+
 const isTextElementType = (type) =>
   [
     "text",
@@ -122,7 +140,7 @@ export const handleFileAction = async (deps, payload) => {
 
   if (item.value === "new-item") {
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: repositoryTarget,
         value: {
@@ -138,7 +156,7 @@ export const handleFileAction = async (deps, payload) => {
     });
   } else if (item.value === "add-container") {
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: repositoryTarget,
         value: {
@@ -154,7 +172,7 @@ export const handleFileAction = async (deps, payload) => {
     });
   } else if (item.value === "add-sprite") {
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: repositoryTarget,
         value: {
@@ -171,7 +189,7 @@ export const handleFileAction = async (deps, payload) => {
   } else if (item.value === "add-text") {
     const firstTypographyId = getFirstTypographyId(state.typography);
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: repositoryTarget,
         value: {
@@ -190,7 +208,7 @@ export const handleFileAction = async (deps, payload) => {
     // Handle rename confirmation from popover form
     if (itemId && detail.newName) {
       await projectService.appendEvent({
-        type: "treeUpdate",
+        type: "nodeUpdate",
         payload: {
           target: repositoryTarget,
           value: {
@@ -270,7 +288,7 @@ export const handleFileAction = async (deps, payload) => {
       }
 
       await projectService.appendEvent({
-        type: "treeDelete",
+        type: "nodeDelete",
         payload: {
           target: repositoryTarget,
           options: {
@@ -285,7 +303,7 @@ export const handleFileAction = async (deps, payload) => {
       targetData && targetData.items ? targetData.items[itemId] : null;
     if (currentItem) {
       await projectService.appendEvent({
-        type: "treePush",
+        type: "nodeInsert",
         payload: {
           target: repositoryTarget,
           value: {
@@ -315,7 +333,7 @@ export const handleFileAction = async (deps, payload) => {
     }
 
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: repositoryTarget,
         value,
@@ -334,14 +352,26 @@ export const handleFileAction = async (deps, payload) => {
       return;
     }
 
-    // Add the duplicated item with random number as seed
+    const duplicateId = nanoid();
+    const location = findNodeLocation(targetData?.order || [], itemId);
+    const duplicateName =
+      typeof currentItem.name === "string" && currentItem.name.length > 0
+        ? `${currentItem.name} Copy`
+        : "Copied Item";
+
+    // Duplicate in the same parent and place it right after the original node
     await projectService.appendEvent({
-      type: "treeCopy",
+      type: "nodeInsert",
       payload: {
         target: repositoryTarget,
         value: {
-          id: itemId,
-          seed: Math.floor(Math.random() * 0x7fffffff), // Max 31-bit integer
+          ...currentItem,
+          id: duplicateId,
+          name: duplicateName,
+        },
+        options: {
+          parent: location?.parentId || "_root",
+          position: { after: itemId },
         },
       },
     });
@@ -408,7 +438,7 @@ export const handleTargetChanged = async (deps, payload) => {
   }
 
   await projectService.appendEvent({
-    type: "treeMove",
+    type: "nodeMove",
     payload: {
       target: repositoryTarget,
       options: {

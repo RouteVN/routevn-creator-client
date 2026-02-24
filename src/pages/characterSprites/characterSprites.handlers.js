@@ -132,7 +132,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   if (successfulUploads.length > 0) {
     for (const result of successfulUploads) {
       await projectService.appendEvent({
-        type: "treePush",
+        type: "nodeInsert",
         payload: {
           target: `characters.items.${characterId}.sprites`,
           value: {
@@ -169,7 +169,7 @@ export const handleFormChange = async (deps, payload) => {
   const selectedItemId = store.selectSelectedItemId();
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: `characters.items.${characterId}.sprites`,
       value: {
@@ -185,7 +185,7 @@ export const handleFormChange = async (deps, payload) => {
   const { characters } = projectService.getState();
   const character = characters.items[characterId];
   store.setItems({
-    spritesData: character?.sprites || { items: {}, tree: [] },
+    spritesData: character?.sprites || { items: {}, order: [] },
   });
   render();
 };
@@ -220,7 +220,7 @@ export const handleFormExtraEvent = async (deps) => {
   const characterId = store.selectCharacterId();
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: `characters.items.${characterId}.sprites`,
       value: {
@@ -247,7 +247,7 @@ export const handleFormExtraEvent = async (deps) => {
     },
   });
   store.setItems({
-    spritesData: character?.sprites || { items: {}, tree: [] },
+    spritesData: character?.sprites || { items: {}, order: [] },
   });
   render();
 };
@@ -280,7 +280,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: `characters.items.${characterId}.sprites`,
       options: {
@@ -293,7 +293,7 @@ export const handleItemDelete = async (deps, payload) => {
   const { characters } = projectService.getState();
   const character = characters.items[characterId];
   store.setItems({
-    spritesData: character?.sprites || { items: {}, tree: [] },
+    spritesData: character?.sprites || { items: {}, order: [] },
   });
   render();
 };

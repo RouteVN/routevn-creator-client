@@ -4,16 +4,16 @@ export const handleAfterMount = async (deps) => {
   const { images, videos, layouts, transforms } = projectService.getState();
 
   store.setImages({
-    images: images || { tree: [], items: {} },
+    images: images || { order: [], items: {} },
   });
   store.setVideos({
-    videos: videos || { tree: [], items: {} },
+    videos: videos || { order: [], items: {} },
   });
   store.setLayouts({
-    layouts: layouts || { tree: [], items: {} },
+    layouts: layouts || { order: [], items: {} },
   });
   store.setTransforms({
-    transforms: transforms || { tree: [], items: {} },
+    transforms: transforms || { order: [], items: {} },
   });
 
   // Use presentationState if available, otherwise fall back to visual prop

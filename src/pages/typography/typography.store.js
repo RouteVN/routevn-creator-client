@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({
@@ -121,9 +121,9 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  typographyData: { tree: [], items: {} },
-  colorsData: { tree: [], items: {} },
-  fontsData: { tree: [], items: {} },
+  typographyData: { order: [], items: {} },
+  colorsData: { order: [], items: {} },
+  fontsData: { order: [], items: {} },
   selectedItemId: undefined,
   searchQuery: "",
   context: {

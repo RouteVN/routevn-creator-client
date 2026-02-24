@@ -1,5 +1,5 @@
-import { toTreeStructure } from "#tree-state";
-import { layoutTreeStructureToRenderState } from "../../utils/index.js";
+import { toHierarchyStructure } from "#domain-structure";
+import { layoutHierarchyStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
@@ -22,16 +22,16 @@ const appendMissingIds = (orderedIds, allIds) => {
   return result;
 };
 
-const getOrderedIdsFromTree = (tree, fallbackIds) => {
-  const orderedFromTree = Array.isArray(tree)
-    ? tree
+const getOrderedIdsFromHierarchy = (order, fallbackIds) => {
+  const orderedFromHierarchy = Array.isArray(order)
+    ? order
         .map((node) =>
           typeof node?.id === "string" && node.id.length > 0 ? node.id : null,
         )
         .filter((id) => id !== null)
     : [];
 
-  return appendMissingIds(orderedFromTree, fallbackIds);
+  return appendMissingIds(orderedFromHierarchy, fallbackIds);
 };
 
 export const createInitialState = () => ({
@@ -172,10 +172,10 @@ export const selectLayouts = ({ state }) => {
   const images = state.repositoryState.images?.items || {};
   const typography = state.repositoryState.typography || {
     items: {},
-    tree: [],
+    order: [],
   };
-  const colors = state.repositoryState.colors || { items: {}, tree: [] };
-  const fonts = state.repositoryState.fonts || { items: {}, tree: [] };
+  const colors = state.repositoryState.colors || { items: {}, order: [] };
+  const fonts = state.repositoryState.fonts || { items: {}, order: [] };
   const processedLayouts = {};
 
   Object.keys(layouts).forEach((layoutId) => {
@@ -185,8 +185,8 @@ export const selectLayouts = ({ state }) => {
         id: layoutId,
         name: layout.name,
         layoutType: layout.layoutType,
-        elements: layoutTreeStructureToRenderState(
-          toTreeStructure(layout.elements),
+        elements: layoutHierarchyStructureToRenderState(
+          toHierarchyStructure(layout.elements),
           images,
           typography,
           colors,
@@ -245,8 +245,8 @@ const buildSceneFromLegacyState = ({ state }) => {
   }
 
   const sectionItems = legacyScene.sections?.items || {};
-  const orderedSectionIds = getOrderedIdsFromTree(
-    legacyScene.sections?.tree,
+  const orderedSectionIds = getOrderedIdsFromHierarchy(
+    legacyScene.sections?.order,
     Object.keys(sectionItems),
   );
 
@@ -258,8 +258,8 @@ const buildSceneFromLegacyState = ({ state }) => {
     .filter((section) => !!section?.id && section.type !== "folder")
     .map((section) => {
       const lineItems = section.lines?.items || {};
-      const orderedLineIds = getOrderedIdsFromTree(
-        section.lines?.tree,
+      const orderedLineIds = getOrderedIdsFromHierarchy(
+        section.lines?.order,
         Object.keys(lineItems),
       );
 

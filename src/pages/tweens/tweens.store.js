@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 import { resetState } from "./tweens.constants";
 
 const form = {
@@ -361,7 +361,7 @@ const editTweenForm = {
 };
 
 export const createInitialState = () => ({
-  tweensData: { tree: [], items: {} },
+  tweensData: { order: [], items: {} },
   selectedItemId: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },

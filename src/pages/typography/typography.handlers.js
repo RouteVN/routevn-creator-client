@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "#tree-state";
+import { toFlatItems } from "#domain-structure";
 import {
   getTypographyCount,
   getTypographyRemovalCount,
@@ -231,7 +231,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   for (const result of successfulUploads) {
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "typography",
         value: {
@@ -271,7 +271,7 @@ const handleTypographyCreated = async (deps, payload) => {
   } = payload._event.detail;
 
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: "typography",
       value: {
@@ -310,7 +310,7 @@ const handleTypographyUpdated = async (deps, payload) => {
   } = payload._event.detail;
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "typography",
       value: {
@@ -336,7 +336,7 @@ const handleTypographyUpdated = async (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "typography",
       value: {
@@ -566,7 +566,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
 
     // Create the color in the repository
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "colors",
         value: {
@@ -651,7 +651,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
 
     // Create the font in the repository using the already uploaded file
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "fonts",
         value: {
@@ -717,7 +717,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

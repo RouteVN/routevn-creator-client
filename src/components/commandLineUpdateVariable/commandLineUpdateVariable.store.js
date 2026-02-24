@@ -19,7 +19,7 @@ const OPERATIONS_BY_TYPE = {
 export const createInitialState = () => ({
   mode: "current",
   initiated: false,
-  variablesData: { items: {}, tree: [] },
+  variablesData: { items: {}, order: [] },
   actionId: "",
   operations: [],
   currentEditingId: null,

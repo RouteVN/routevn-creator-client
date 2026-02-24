@@ -1,4 +1,4 @@
-import { toFlatItems } from "#tree-state";
+import { toFlatItems } from "#domain-structure";
 
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;

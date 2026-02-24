@@ -16,7 +16,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render, appService } = deps;
   await projectService.ensureRepository();
   const { sounds } = projectService.getState();
-  store.setItems({ soundData: sounds || { tree: [], items: {} } });
+  store.setItems({ soundData: sounds || { order: [], items: {} } });
 
   // Initialize audio player positions from userConfig
   const defaultLeft = parseInt(
@@ -34,7 +34,7 @@ export const handleAfterMount = async (deps) => {
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { sounds } = projectService.getState();
-  const soundData = sounds || { tree: [], items: {} };
+  const soundData = sounds || { order: [], items: {} };
 
   store.setItems({ soundData: soundData });
   render();
@@ -147,7 +147,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   // Add all items to repository
   for (const result of successfulUploads) {
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "sounds",
         value: {
@@ -212,7 +212,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   const uploadResult = uploadedFiles[0];
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "sounds",
       value: {
@@ -247,7 +247,7 @@ export const handleFormExtraEvent = async (deps) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "sounds",
       value: {
@@ -313,7 +313,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

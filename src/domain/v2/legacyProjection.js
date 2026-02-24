@@ -9,19 +9,19 @@ const cloneOr = (value, fallback) => {
   return structuredClone(value);
 };
 
-const walkTree = (nodes, parentId, callback) => {
+const walkHierarchy = (nodes, parentId, callback) => {
   if (!Array.isArray(nodes)) return;
   for (const node of nodes) {
     if (!node || typeof node.id !== "string") continue;
     callback(node, parentId);
-    walkTree(node.children, node.id, callback);
+    walkHierarchy(node.children, node.id, callback);
   }
 };
 
-const buildTreeParentMap = (tree) => {
+const buildHierarchyParentMap = (order) => {
   const parentById = new Map();
   const orderedIds = [];
-  walkTree(tree, null, (node, parentId) => {
+  walkHierarchy(order, null, (node, parentId) => {
     parentById.set(node.id, parentId);
     orderedIds.push(node.id);
   });
@@ -51,9 +51,11 @@ const projectLegacyLayouts = ({ legacyLayouts = {} }) => {
   const result = {};
   for (const [layoutId, legacyLayout] of Object.entries(legacyLayouts)) {
     if (!legacyLayout || typeof legacyLayout !== "object") continue;
-    const legacyElements = legacyLayout.elements || { items: {}, tree: [] };
+    const legacyElements = legacyLayout.elements || { items: {}, order: [] };
     const elementItems = legacyElements.items || {};
-    const { parentById, orderedIds } = buildTreeParentMap(legacyElements.tree);
+    const { parentById, orderedIds } = buildHierarchyParentMap(
+      legacyElements.order,
+    );
 
     const elements = {};
     for (const [elementId, element] of Object.entries(elementItems)) {
@@ -109,8 +111,8 @@ const projectLegacyResources = ({ legacyState }) => {
   for (const resourceType of RESOURCE_TYPES) {
     const legacyCollection = legacyState?.[resourceType] || {};
     const legacyItems = legacyCollection.items || {};
-    const { parentById, orderedIds } = buildTreeParentMap(
-      legacyCollection.tree,
+    const { parentById, orderedIds } = buildHierarchyParentMap(
+      legacyCollection.order,
     );
     const allIds = Object.keys(legacyItems);
 
@@ -174,20 +176,22 @@ export const projectLegacyStateToDomainState = ({
   }
 
   const sceneItems = legacyState?.scenes?.items || {};
-  const sceneTree = legacyState?.scenes?.tree || [];
-  const { orderedIds: sceneTreeOrder } = buildTreeParentMap(sceneTree);
+  const sceneHierarchy = legacyState?.scenes?.order || [];
+  const { orderedIds: sceneHierarchyOrder } =
+    buildHierarchyParentMap(sceneHierarchy);
 
   for (const [sceneId, scene] of Object.entries(sceneItems)) {
     if (!scene || scene.type !== "scene") continue;
-    const sections = scene.sections || { items: {}, tree: [] };
+    const sections = scene.sections || { items: {}, order: [] };
     const sectionItems = sections.items || {};
-    const sectionTree = sections.tree || [];
-    const { orderedIds: sectionTreeOrder } = buildTreeParentMap(sectionTree);
+    const sectionHierarchy = sections.order || [];
+    const { orderedIds: sectionHierarchyOrder } =
+      buildHierarchyParentMap(sectionHierarchy);
     const allSectionIds = Object.keys(sectionItems).filter(
       (sectionId) => sectionItems[sectionId]?.type !== "folder",
     );
     const sectionIds = appendMissingIds(
-      sectionTreeOrder.filter(
+      sectionHierarchyOrder.filter(
         (sectionId) => sectionItems[sectionId]?.type !== "folder",
       ),
       allSectionIds,
@@ -212,11 +216,15 @@ export const projectLegacyStateToDomainState = ({
 
     for (const [sectionId, section] of Object.entries(sectionItems)) {
       if (!section || section.type === "folder") continue;
-      const lines = section.lines || { items: {}, tree: [] };
+      const lines = section.lines || { items: {}, order: [] };
       const lineItems = lines.items || {};
-      const lineTree = lines.tree || [];
-      const { orderedIds: lineTreeOrder } = buildTreeParentMap(lineTree);
-      const lineIds = appendMissingIds(lineTreeOrder, Object.keys(lineItems));
+      const lineHierarchy = lines.order || [];
+      const { orderedIds: lineHierarchyOrder } =
+        buildHierarchyParentMap(lineHierarchy);
+      const lineIds = appendMissingIds(
+        lineHierarchyOrder,
+        Object.keys(lineItems),
+      );
       const initialLineId =
         lineIds.includes(section.initialLineId) && section.initialLineId
           ? section.initialLineId
@@ -251,7 +259,7 @@ export const projectLegacyStateToDomainState = ({
   }
 
   const allSceneIds = Object.keys(state.scenes);
-  const sceneOrder = appendMissingIds(sceneTreeOrder, allSceneIds).filter(
+  const sceneOrder = appendMissingIds(sceneHierarchyOrder, allSceneIds).filter(
     (sceneId) => !!state.scenes[sceneId],
   );
   state.story.sceneOrder = sceneOrder;

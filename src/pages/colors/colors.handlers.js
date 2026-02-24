@@ -91,7 +91,7 @@ export const handleColorCreated = async (deps, payload) => {
   const { groupId, name, hex } = payload._event.detail;
 
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: "colors",
       value: {
@@ -129,7 +129,7 @@ export const handleColorEdited = (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "colors",
       value: {
@@ -191,7 +191,7 @@ export const handleEditFormAction = async (deps, payload) => {
     }
     // Update the color in the repository
     await projectService.appendEvent({
-      type: "treeUpdate",
+      type: "nodeUpdate",
       payload: {
         target: "colors",
         value: {
@@ -256,7 +256,7 @@ export const handleAddFormAction = async (deps, payload) => {
 
     // Create the color in the repository
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "colors",
         value: {
@@ -312,7 +312,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

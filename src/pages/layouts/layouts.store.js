@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const layoutForm = {
   title: "Add Layout",
@@ -52,7 +52,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  layoutsData: { tree: [], items: {} },
+  layoutsData: { order: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
   fieldResources: {},

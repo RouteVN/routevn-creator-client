@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
 const form = {
@@ -27,8 +27,8 @@ const toFiniteNumberOr = (value, fallback) =>
   Number.isFinite(value) ? value : fallback;
 
 export const createInitialState = () => ({
-  scenesData: { tree: [], items: {} },
-  layoutsData: { tree: [], items: {} },
+  scenesData: { order: [], items: {} },
+  layoutsData: { order: [], items: {} },
   selectedItemId: null,
   whiteboardItems: [],
   isWaitingForTransform: false,
@@ -59,7 +59,7 @@ export const setItems = ({ state }, { scenesData } = {}) => {
 };
 
 export const setLayouts = ({ state }, { layoutsData } = {}) => {
-  state.layoutsData = layoutsData || { tree: [], items: {} };
+  state.layoutsData = layoutsData || { order: [], items: {} };
 };
 
 export const showPreviewSceneId = ({ state }, { payload } = {}) => {
@@ -206,7 +206,7 @@ export const selectViewData = ({ state }, payload) => {
     if (scenes && Object.keys(scenes.items || {}).length > 0) {
       // Initialize the scenes data
       state.scenesData = scenes;
-      state.layoutsData = repositoryLayouts || { tree: [], items: {} };
+      state.layoutsData = repositoryLayouts || { order: [], items: {} };
 
       // Transform only scene items (not folders) into whiteboard items
       const initialSceneId = story?.initialSceneId;
@@ -234,7 +234,7 @@ export const selectViewData = ({ state }, payload) => {
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
-  const selectedSceneFirstSectionId = selectedItem?.sections?.tree?.[0]?.id;
+  const selectedSceneFirstSectionId = selectedItem?.sections?.order?.[0]?.id;
   const selectedSceneInitialSectionId =
     selectedItem?.initialSectionId || selectedSceneFirstSectionId;
   const menuSceneId = repositoryState?.story?.initialSceneId;
@@ -244,7 +244,7 @@ export const selectViewData = ({ state }, payload) => {
   if (selectedItem?.type === "scene") {
     selectedSceneSections = toFlatItems(
       selectedItem.sections || {
-        tree: [],
+        order: [],
         items: {},
       },
     ).map((section, index) => {

@@ -1,8 +1,8 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
-import { toTreeStructure } from "#tree-state";
+import { toHierarchyStructure } from "#domain-structure";
 import {
   extractFileIdsFromRenderState,
-  layoutTreeStructureToRenderState,
+  layoutHierarchyStructureToRenderState,
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
@@ -172,9 +172,9 @@ const getRenderState = async (deps) => {
   const layoutId = store.selectLayoutId();
   const storeElements = store.selectItems();
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
-  const layoutTreeStructure = toTreeStructure(layoutElements);
-  const renderStateElements = layoutTreeStructureToRenderState(
-    layoutTreeStructure,
+  const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
+  const renderStateElements = layoutHierarchyStructureToRenderState(
+    layoutHierarchyStructure,
     imageItems,
     { items: typographyItems },
     { items: colorsItems },
@@ -182,7 +182,7 @@ const getRenderState = async (deps) => {
   );
   return {
     renderStateElements,
-    layoutTreeStructure,
+    layoutHierarchyStructure,
     fontsItems,
     imageItems,
     typographyItems,
@@ -358,15 +358,15 @@ export const handleAfterMount = async (deps) => {
     repository.getState();
   const layout = layoutId ? layouts.items?.[layoutId] : null;
   store.setLayout({ id: layoutId, layout });
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
+  store.setItems({ layoutData: layout?.elements || { items: {}, order: [] } });
   store.setImages({ images: images });
   store.setTypographyData({
-    typographyData: typography || { items: {}, tree: [] },
+    typographyData: typography || { items: {}, order: [] },
   });
-  store.setColorsData({ colorsData: colors || { items: {}, tree: [] } });
-  store.setFontsData({ fontsData: fonts || { items: {}, tree: [] } });
+  store.setColorsData({ colorsData: colors || { items: {}, order: [] } });
+  store.setFontsData({ fontsData: fonts || { items: {}, order: [] } });
   store.setVariablesData({
-    variablesData: variables || { items: {}, tree: [] },
+    variablesData: variables || { items: {}, order: [] },
   });
 
   const { canvas } = refs;
@@ -404,7 +404,7 @@ export const handleDataChanged = async (deps) => {
   const repository = await projectService.getRepository();
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
+  store.setItems({ layoutData: layout?.elements || { items: {}, order: [] } });
   render();
   await renderLayoutPreview(deps);
 };
@@ -548,7 +548,7 @@ async function handleDebouncedUpdate(deps, payload) {
 
   // Save to repository
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: `layouts.items.${layoutId}.elements`,
       value: updatedItem,
@@ -563,7 +563,7 @@ async function handleDebouncedUpdate(deps, payload) {
   const { layouts, images } = projectService.getState();
   const layout = layouts.items[layoutId];
 
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
+  store.setItems({ layoutData: layout?.elements || { items: {}, order: [] } });
   store.setImages({ images: images });
 }
 

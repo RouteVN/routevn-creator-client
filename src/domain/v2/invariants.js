@@ -141,7 +141,7 @@ const validateLayoutElementReferences = (state) => {
     for (const elementId of Object.keys(layout.elements || {})) {
       const placements = placementCount.get(elementId) || 0;
       if (placements !== 1) {
-        fail("Layout element must appear exactly once in tree", {
+        fail("Layout element must appear exactly once in order", {
           layoutId: layout.id,
           elementId,
           placements,

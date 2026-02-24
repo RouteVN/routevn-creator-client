@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 import { formatFileSize } from "../../utils/index.js";
 
 const form = {
@@ -33,7 +33,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  soundData: { tree: [], items: {} },
+  soundData: { order: [], items: {} },
   selectedItemId: null,
   context: {
     fileId: {

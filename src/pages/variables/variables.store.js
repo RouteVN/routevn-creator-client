@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const createForm = (selectedItem) => ({
   fields: [
@@ -48,7 +48,7 @@ const createForm = (selectedItem) => ({
 });
 
 export const createInitialState = () => ({
-  variablesData: { tree: [], items: {} },
+  variablesData: { order: [], items: {} },
   selectedItemId: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },

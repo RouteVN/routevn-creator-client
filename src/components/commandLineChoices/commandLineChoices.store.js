@@ -1,4 +1,4 @@
-import { toFlatItems } from "#tree-state";
+import { toFlatItems } from "#domain-structure";
 
 const CHOICE_FORM_TEMPLATE = Object.freeze({
   title: "Edit Choice",
@@ -60,7 +60,7 @@ export const createInitialState = () => ({
   },
   scenes: {
     items: {},
-    tree: [],
+    order: [],
   },
 });
 

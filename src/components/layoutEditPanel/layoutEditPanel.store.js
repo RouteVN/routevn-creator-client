@@ -1,5 +1,5 @@
 import { parseAndRender } from "jempl";
-import { toFlatGroups } from "#tree-state";
+import { toFlatGroups } from "#domain-structure";
 import { getFirstTypographyId } from "../../constants/typography.js";
 import { getVariableOptions } from "../../utils/index.js";
 
@@ -550,8 +550,8 @@ export const createInitialState = () => {
       form: undefined,
       context: {},
     },
-    typographyData: { tree: [], items: {} },
-    variablesData: { tree: [], items: {} },
+    typographyData: { order: [], items: {} },
+    variablesData: { order: [], items: {} },
     values: {
       x: 0,
       y: 0,

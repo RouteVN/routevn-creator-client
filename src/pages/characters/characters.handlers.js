@@ -75,7 +75,7 @@ export const handleCharacterCreated = async (deps, payload) => {
       name: name,
       description: description,
       sprites: {
-        tree: [
+        order: [
           {
             id: defaultSpritesFolderId,
             children: [],
@@ -97,7 +97,7 @@ export const handleCharacterCreated = async (deps, payload) => {
 
     // Add character to repository
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "characters",
         value: characterData,
@@ -180,7 +180,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 
       // Update the selected character in the repository with the new avatar
       await projectService.appendEvent({
-        type: "treeUpdate",
+        type: "nodeUpdate",
         payload: {
           target: "characters",
           value: updateData,
@@ -206,7 +206,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "characters",
       value: {
@@ -347,7 +347,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {
@@ -420,7 +420,7 @@ export const handleEditFormAction = async (deps, payload) => {
     }
 
     await projectService.appendEvent({
-      type: "treeUpdate",
+      type: "nodeUpdate",
       payload: {
         target: "characters",
         value: updateData,

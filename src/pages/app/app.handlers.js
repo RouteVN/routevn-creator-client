@@ -47,7 +47,7 @@ export const handleUpdateTransform = async (deps, payload) => {
   const { itemId, updates } = payload;
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "transforms",
       value: {
@@ -66,7 +66,7 @@ export const handleUpdateColor = async (deps, payload) => {
   const { itemId, updates } = payload;
 
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "colors",
       value: {

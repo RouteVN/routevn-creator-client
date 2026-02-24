@@ -1,10 +1,10 @@
 import {
   set,
   unset,
-  treePush,
-  treeDelete,
-  treeUpdate,
-  treeMove,
+  nodeInsert,
+  nodeDelete,
+  nodeUpdate,
+  nodeMove,
   init as initAction,
 } from "./actions.js";
 import { validateEventPayload } from "./validation.js";
@@ -12,19 +12,19 @@ import { validateEventPayload } from "./validation.js";
 /**
  * @typedef {import("./actions.js").SetPayload} SetPayload
  * @typedef {import("./actions.js").UnsetPayload} UnsetPayload
- * @typedef {import("./actions.js").TreePushPayload} TreePushPayload
- * @typedef {import("./actions.js").TreeDeletePayload} TreeDeletePayload
- * @typedef {import("./actions.js").TreeUpdatePayload} TreeUpdatePayload
- * @typedef {import("./actions.js").TreeMovePayload} TreeMovePayload
+ * @typedef {import("./actions.js").HierarchyPushPayload} HierarchyPushPayload
+ * @typedef {import("./actions.js").HierarchyDeletePayload} HierarchyDeletePayload
+ * @typedef {import("./actions.js").HierarchyUpdatePayload} HierarchyUpdatePayload
+ * @typedef {import("./actions.js").HierarchyMovePayload} HierarchyMovePayload
  * @typedef {import("./actions.js").InitPayload} InitPayload
  */
 
 /**
- * @typedef {SetPayload | UnsetPayload | TreePushPayload | TreeDeletePayload | TreeUpdatePayload | TreeMovePayload | InitPayload} RepositoryEventPayload
+ * @typedef {SetPayload | UnsetPayload | HierarchyPushPayload | HierarchyDeletePayload | HierarchyUpdatePayload | HierarchyMovePayload | InitPayload} RepositoryEventPayload
  */
 
 /**
- * @typedef {"set"|"unset"|"treePush"|"treeDelete"|"treeUpdate"|"treeMove"|"init"} RepositoryEventType
+ * @typedef {"set"|"unset"|"nodeInsert"|"nodeDelete"|"nodeUpdate"|"nodeMove"|"init"} RepositoryEventType
  */
 
 /**
@@ -136,7 +136,7 @@ export const createRepository = ({
    *
    * @param {Object} state - The current state
    * @param {Object} action - The action to apply
-   * @param {string} action.actionType - Type of action (set, unset, treePush, etc.)
+   * @param {string} action.actionType - Type of action (set, unset, nodeInsert, etc.)
    * @param {Object} action.payload - Action payload containing all action-specific data
    * @returns {Object} New state after applying the action
    */
@@ -151,14 +151,14 @@ export const createRepository = ({
       return set(state, payload);
     } else if (type === "unset") {
       return unset(state, payload);
-    } else if (type === "treePush") {
-      return treePush(state, payload);
-    } else if (type === "treeDelete") {
-      return treeDelete(state, payload);
-    } else if (type === "treeUpdate") {
-      return treeUpdate(state, payload);
-    } else if (type === "treeMove") {
-      return treeMove(state, payload);
+    } else if (type === "nodeInsert") {
+      return nodeInsert(state, payload);
+    } else if (type === "nodeDelete") {
+      return nodeDelete(state, payload);
+    } else if (type === "nodeUpdate") {
+      return nodeUpdate(state, payload);
+    } else if (type === "nodeMove") {
+      return nodeMove(state, payload);
     } else if (type === "init") {
       return initAction(state, payload);
     }

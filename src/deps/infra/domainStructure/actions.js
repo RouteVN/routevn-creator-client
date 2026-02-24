@@ -3,33 +3,33 @@
  */
 
 /**
- * @typedef {Object} TreeNode
+ * @typedef {Object} HierarchyNode
  * @property {string} id
- * @property {TreeNode[]} [children]
+ * @property {HierarchyNode[]} [children]
  */
 
 /**
- * @typedef {Object} TreeInsertRelativePosition
+ * @typedef {Object} HierarchyInsertRelativePosition
  * @property {string} [after]
  * @property {string} [before]
  */
 
 /**
- * @typedef {"first"|"last"|TreeInsertRelativePosition} TreeInsertPosition
+ * @typedef {"first"|"last"|HierarchyInsertRelativePosition} HierarchyInsertPosition
  */
 
 /**
- * @typedef {JsonObject} TreeItemMetadata
+ * @typedef {JsonObject} HierarchyItemMetadata
  */
 
 /**
- * @typedef {TreeItemMetadata & { id: string }} TreeItemInput
+ * @typedef {HierarchyItemMetadata & { id: string }} HierarchyItemInput
  */
 
 /**
- * @typedef {Object} TreeData
- * @property {Record<string, TreeItemMetadata>} items
- * @property {TreeNode[]} tree
+ * @typedef {Object} HierarchyData
+ * @property {Record<string, HierarchyItemMetadata>} items
+ * @property {HierarchyNode[]} order
  */
 
 /**
@@ -45,29 +45,29 @@
  */
 
 /**
- * @typedef {Object} TreePushPayload
+ * @typedef {Object} HierarchyPushPayload
  * @property {string} target
- * @property {TreeItemInput} value
- * @property {{ parent?: string, position?: TreeInsertPosition }} [options]
+ * @property {HierarchyItemInput} value
+ * @property {{ parent?: string, position?: HierarchyInsertPosition }} [options]
  */
 
 /**
- * @typedef {Object} TreeDeletePayload
+ * @typedef {Object} HierarchyDeletePayload
  * @property {string} target
  * @property {{ id: string }} options
  */
 
 /**
- * @typedef {Object} TreeUpdatePayload
+ * @typedef {Object} HierarchyUpdatePayload
  * @property {string} target
- * @property {TreeItemMetadata} value
+ * @property {HierarchyItemMetadata} value
  * @property {{ id: string, replace?: boolean }} options
  */
 
 /**
- * @typedef {Object} TreeMovePayload
+ * @typedef {Object} HierarchyMovePayload
  * @property {string} target
- * @property {{ id: string, parent?: string, position?: TreeInsertPosition }} options
+ * @property {{ id: string, parent?: string, position?: HierarchyInsertPosition }} options
  */
 
 /**
@@ -93,31 +93,31 @@ const get = (state, path) => {
 };
 
 /**
- * Helper function to find a node in the tree structure.
+ * Helper function to find a node in the order structure.
  * Returns node information including parent context.
  *
- * @param {Array} tree - The tree array to search
+ * @param {Array} order - The order array to search
  * @param {string} nodeId - The ID of the node to find
  * @returns {Object|null} Object containing { node, parent, parentArray } or null if not found
  *
  * @example
- * const result = findNodeInTree(tree, 'folder1');
- * // Returns: { node: { id: 'folder1', children: [] }, parent: null, parentArray: tree }
+ * const result = findNodeInHierarchy(order, 'folder1');
+ * // Returns: { node: { id: 'folder1', children: [] }, parent: null, parentArray: order }
  */
 /**
- * @param {TreeNode[]} tree
+ * @param {HierarchyNode[]} order
  * @param {string} nodeId
- * @returns {{ node: TreeNode, parent: TreeNode|null, parentArray: TreeNode[] } | null}
+ * @returns {{ node: HierarchyNode, parent: HierarchyNode|null, parentArray: HierarchyNode[] } | null}
  */
-const findNodeInTree = (tree, nodeId) => {
-  if (!tree || !Array.isArray(tree)) return null;
+const findNodeInHierarchy = (order, nodeId) => {
+  if (!order || !Array.isArray(order)) return null;
 
-  for (let node of tree) {
+  for (let node of order) {
     if (node && node.id === nodeId) {
-      return { node, parent: null, parentArray: tree };
+      return { node, parent: null, parentArray: order };
     }
     if (node && node.children) {
-      const result = findNodeInTree(node.children, nodeId);
+      const result = findNodeInHierarchy(node.children, nodeId);
       if (result) {
         return { ...result, parent: node };
       }
@@ -127,34 +127,34 @@ const findNodeInTree = (tree, nodeId) => {
 };
 
 /**
- * Helper function to remove a node from the tree structure.
+ * Helper function to remove a node from the order structure.
  * Recursively searches for and removes the node with the specified ID.
  *
- * @param {Array} tree - The tree array to modify
+ * @param {Array} order - The order array to modify
  * @param {string} nodeId - The ID of the node to remove
  * @returns {boolean} True if node was found and removed, false otherwise
  *
  * @example
- * const removed = removeNodeFromTree(tree, 'folder1');
+ * const removed = removeNodeFromHierarchy(order, 'folder1');
  * // Returns: true if 'folder1' was found and removed
  */
 /**
- * @param {TreeNode[]} tree
+ * @param {HierarchyNode[]} order
  * @param {string} nodeId
  * @returns {boolean}
  */
-const removeNodeFromTree = (tree, nodeId) => {
-  if (!tree || !Array.isArray(tree)) return false;
+const removeNodeFromHierarchy = (order, nodeId) => {
+  if (!order || !Array.isArray(order)) return false;
 
-  for (let i = 0; i < tree.length; i++) {
-    if (tree[i] && tree[i].id === nodeId) {
-      tree.splice(i, 1);
+  for (let i = 0; i < order.length; i++) {
+    if (order[i] && order[i].id === nodeId) {
+      order.splice(i, 1);
       return true;
     }
     if (
-      tree[i] &&
-      tree[i].children &&
-      removeNodeFromTree(tree[i].children, nodeId)
+      order[i] &&
+      order[i].children &&
+      removeNodeFromHierarchy(order[i].children, nodeId)
     ) {
       return true;
     }
@@ -164,22 +164,22 @@ const removeNodeFromTree = (tree, nodeId) => {
 
 /**
  * Helper function to collect all descendant IDs of a node.
- * Recursively traverses the tree to find all children and their descendants.
+ * Recursively traverses the order to find all children and their descendants.
  *
- * @param {Array} tree - The tree array to search
+ * @param {Array} order - The order array to search
  * @param {string} nodeId - The ID of the node whose descendants to collect
  * @returns {string[]} Array of all descendant IDs (excluding the node itself)
  *
  * @example
- * const descendants = collectDescendantIds(tree, 'folder1');
+ * const descendants = collectDescendantIds(order, 'folder1');
  * // Returns: ['file1', 'subfolder1', 'file2']
  */
 /**
- * @param {TreeNode[]} tree
+ * @param {HierarchyNode[]} order
  * @param {string} nodeId
  * @returns {string[]}
  */
-const collectDescendantIds = (tree, nodeId) => {
+const collectDescendantIds = (order, nodeId) => {
   const descendants = [];
 
   const findNodeAndCollect = (nodes, targetId) => {
@@ -211,7 +211,7 @@ const collectDescendantIds = (tree, nodeId) => {
     }
   };
 
-  findNodeAndCollect(tree, nodeId);
+  findNodeAndCollect(order, nodeId);
   return descendants;
 };
 
@@ -353,12 +353,12 @@ export const unset = (state, payload) => {
 };
 
 /**
- * Adds a new node to the tree structure at the specified target location.
+ * Adds a new node to the order structure at the specified target location.
  * Supports positioning options for ordering nodes within parent containers.
  *
  * @param {Object} state - The current state object
  * @param {Object} payload - Action payload
- * @param {string} payload.target - Path to the target tree data (e.g., 'fileExplorer')
+ * @param {string} payload.target - Path to the target order data (e.g., 'fileExplorer')
  * @param {Object} payload.value - Node data containing the node properties (must include id)
  * @param {string} payload.value.id - Unique identifier for the new node
  * @param {Object} [payload.options] - Configuration options for the operation
@@ -372,14 +372,14 @@ export const unset = (state, payload) => {
  *
  * @example
  * // Simple root addition
- * treePush(state, {
+ * nodeInsert(state, {
  *   target: 'fileExplorer',
  *   value: { id: 'folder1', name: 'New Folder', type: 'folder' }
  * });
  *
  * @example
  * // Complex nested insertion
- * treePush(state, {
+ * nodeInsert(state, {
  *   target: 'fileExplorer',
  *   value: { id: 'file1', name: 'File.txt', type: 'file' },
  *   options: { parent: 'folder1', position: { after: 'existingFile' } }
@@ -387,18 +387,18 @@ export const unset = (state, payload) => {
  */
 /**
  * @param {JsonObject} state
- * @param {TreePushPayload} payload
+ * @param {HierarchyPushPayload} payload
  * @returns {JsonObject}
  */
-export const treePush = (state, payload) => {
+export const nodeInsert = (state, payload) => {
   const { target, value, options = {} } = payload;
   const { parent = "_root", position = "first" } = options;
   const newState = structuredClone(state);
   const targetData = get(newState, target);
 
-  // Ensure tree and items exist
-  if (!targetData.tree) {
-    targetData.tree = [];
+  // Ensure order and items exist
+  if (!targetData.order) {
+    targetData.order = [];
   }
   if (!targetData.items) {
     targetData.items = {};
@@ -408,7 +408,7 @@ export const treePush = (state, payload) => {
   targetData.items[value.id] = { ...value };
   delete targetData.items[value.id].id; // Remove id from item data
 
-  // Create tree node
+  // Create order node
   const newNode = {
     id: value.id,
     children: [],
@@ -444,10 +444,10 @@ export const treePush = (state, payload) => {
 
   if (parent === "_root") {
     // Add to root level
-    insertAtPosition(targetData.tree, newNode, position);
+    insertAtPosition(targetData.order, newNode, position);
   } else {
     // Add to specific parent
-    const parentInfo = findNodeInTree(targetData.tree, parent);
+    const parentInfo = findNodeInHierarchy(targetData.order, parent);
     if (parentInfo && parentInfo.node) {
       if (!parentInfo.node.children) {
         parentInfo.node.children = [];
@@ -460,44 +460,44 @@ export const treePush = (state, payload) => {
 };
 
 /**
- * Removes a node and all its children from the tree structure.
+ * Removes a node and all its children from the order structure.
  * Cascades deletion to remove all descendants and their item data.
  *
  * @param {Object} state - The current state object
  * @param {Object} payload - Action payload
- * @param {string} payload.target - Path to the target tree data (e.g., 'fileExplorer')
+ * @param {string} payload.target - Path to the target order data (e.g., 'fileExplorer')
  * @param {Object} [payload.options] - Configuration options for the operation
  * @param {string} payload.options.id - ID of the node to delete
  * @returns {Object} New state with the node and all children removed
  *
  * @example
- * treeDelete(state, { target: 'fileExplorer', options: { id: 'folder1' } });
- * // This will delete 'folder1' and all its children from both tree and items
+ * nodeDelete(state, { target: 'fileExplorer', options: { id: 'folder1' } });
+ * // This will delete 'folder1' and all its children from both order and items
  */
 /**
  * @param {JsonObject} state
- * @param {TreeDeletePayload} payload
+ * @param {HierarchyDeletePayload} payload
  * @returns {JsonObject}
  */
-export const treeDelete = (state, payload) => {
+export const nodeDelete = (state, payload) => {
   const { target, options = {} } = payload;
   const { id } = options;
   const newState = structuredClone(state);
   const targetData = get(newState, target);
 
-  // Ensure tree and items exist
-  if (!targetData.tree) {
-    targetData.tree = [];
+  // Ensure order and items exist
+  if (!targetData.order) {
+    targetData.order = [];
   }
   if (!targetData.items) {
     targetData.items = {};
   }
 
-  // Collect all descendant IDs before removing from tree
-  const descendantIds = collectDescendantIds(targetData.tree, id);
+  // Collect all descendant IDs before removing from order
+  const descendantIds = collectDescendantIds(targetData.order, id);
 
-  // Remove from tree
-  removeNodeFromTree(targetData.tree, id);
+  // Remove from order
+  removeNodeFromHierarchy(targetData.order, id);
 
   // Remove the target node and all its descendants from items
   delete targetData.items[id];
@@ -509,12 +509,12 @@ export const treeDelete = (state, payload) => {
 };
 
 /**
- * Updates the properties of an existing node in the tree structure.
+ * Updates the properties of an existing node in the order structure.
  * Supports both partial merges and full replacement of item data.
  *
  * @param {Object} state - The current state object
  * @param {Object} payload - Action payload
- * @param {string} payload.target - Path to the target tree data (e.g., 'fileExplorer')
+ * @param {string} payload.target - Path to the target order data (e.g., 'fileExplorer')
  * @param {Object} payload.value - New item data to apply
  * @param {Object} [payload.options] - Configuration options for the operation
  * @param {string} payload.options.id - ID of the node to update
@@ -523,7 +523,7 @@ export const treeDelete = (state, payload) => {
  *
  * @example
  * // Partial update - merges with existing properties
- * treeUpdate(state, {
+ * nodeUpdate(state, {
  *   target: 'fileExplorer',
  *   value: { name: 'Renamed Folder', color: 'blue' },
  *   options: { id: 'folder1', replace: false }
@@ -531,7 +531,7 @@ export const treeDelete = (state, payload) => {
  *
  * @example
  * // Full replacement - overwrites all properties
- * treeUpdate(state, {
+ * nodeUpdate(state, {
  *   target: 'fileExplorer',
  *   value: { name: 'New Folder', type: 'folder', created: '2024-01-01' },
  *   options: { id: 'folder1', replace: true }
@@ -539,10 +539,10 @@ export const treeDelete = (state, payload) => {
  */
 /**
  * @param {JsonObject} state
- * @param {TreeUpdatePayload} payload
+ * @param {HierarchyUpdatePayload} payload
  * @returns {JsonObject}
  */
-export const treeUpdate = (state, payload) => {
+export const nodeUpdate = (state, payload) => {
   const { target, value, options = {} } = payload;
   const { id, replace = false } = options;
   const newState = structuredClone(state);
@@ -562,11 +562,11 @@ export const treeUpdate = (state, payload) => {
 };
 
 /**
- * Moves a node from one position to another in the tree structure.
+ * Moves a node from one position to another in the order structure.
  *
  * @param {Object} state - The current state object
  * @param {Object} payload - Action payload
- * @param {string} payload.target - Path to the target tree data (e.g., 'fileExplorer')
+ * @param {string} payload.target - Path to the target order data (e.g., 'fileExplorer')
  * @param {Object} [payload.options] - Configuration options for the operation
  * @param {string} payload.options.id - ID of the node to move
  * @param {string} [payload.options.parent='_root'] - ID of the new parent node ('_root' for root level)
@@ -579,28 +579,28 @@ export const treeUpdate = (state, payload) => {
  *
  * @example
  * // Move node 'file1' to root level at the beginning
- * const newState = treeMove(state, {
+ * const newState = nodeMove(state, {
  *   target: 'fileExplorer',
  *   options: { id: 'file1', parent: '_root', position: 'first' }
  * });
  *
  * @example
  * // Move node 'file2' to root level at the end
- * const newState = treeMove(state, {
+ * const newState = nodeMove(state, {
  *   target: 'fileExplorer',
  *   options: { id: 'file2', parent: '_root', position: 'last' }
  * });
  *
  * @example
  * // Move node 'file3' after 'folder1'
- * const newState = treeMove(state, {
+ * const newState = nodeMove(state, {
  *   target: 'fileExplorer',
  *   options: { id: 'file3', parent: '_root', position: { after: 'folder1' } }
  * });
  *
  * @example
  * // Move node 'file4' before 'file5' in 'folder2'
- * const newState = treeMove(state, {
+ * const newState = nodeMove(state, {
  *   target: 'fileExplorer',
  *   options: { id: 'file4', parent: 'folder2', position: { before: 'file5' } }
  * });
@@ -618,7 +618,7 @@ export const treeUpdate = (state, payload) => {
  * @example
  * init(state, {
  *   value: {
- *     explorer: { items: {}, tree: [] },
+ *     explorer: { items: {}, order: [] },
  *     settings: { theme: 'dark' }
  *   }
  * });
@@ -635,21 +635,21 @@ export const init = (_state, payload) => {
 
 /**
  * @param {JsonObject} state
- * @param {TreeMovePayload} payload
+ * @param {HierarchyMovePayload} payload
  * @returns {JsonObject}
  */
-export const treeMove = (state, payload) => {
+export const nodeMove = (state, payload) => {
   const { target, options = {} } = payload;
   const { id, parent = "_root", position = "first" } = options;
   const newState = structuredClone(state);
   const targetData = get(newState, target);
 
   // Find and remove node from current position
-  const nodeInfo = findNodeInTree(targetData.tree, id);
+  const nodeInfo = findNodeInHierarchy(targetData.order, id);
   if (!nodeInfo) return state;
 
   const nodeToMove = structuredClone(nodeInfo.node);
-  removeNodeFromTree(targetData.tree, id);
+  removeNodeFromHierarchy(targetData.order, id);
 
   // Helper function to insert node at the specified position
   const insertAtPosition = (array, node, position) => {
@@ -681,9 +681,9 @@ export const treeMove = (state, payload) => {
 
   // Insert at new position
   if (parent === "_root") {
-    insertAtPosition(targetData.tree, nodeToMove, position);
+    insertAtPosition(targetData.order, nodeToMove, position);
   } else {
-    const parentInfo = findNodeInTree(targetData.tree, parent);
+    const parentInfo = findNodeInHierarchy(targetData.order, parent);
     if (parentInfo && parentInfo.node) {
       if (!parentInfo.node.children) {
         parentInfo.node.children = [];

@@ -28,7 +28,7 @@ const schemas = {
     required: ["target"],
     additionalProperties: false,
   },
-  treePush: {
+  nodeInsert: {
     type: "object",
     properties: {
       target: { type: "string", minLength: 1 },
@@ -42,7 +42,7 @@ const schemas = {
     required: ["target", "value"],
     additionalProperties: false,
   },
-  treeDelete: {
+  nodeDelete: {
     type: "object",
     properties: {
       target: { type: "string", minLength: 1 },
@@ -55,7 +55,7 @@ const schemas = {
     required: ["target", "options"],
     additionalProperties: false,
   },
-  treeUpdate: {
+  nodeUpdate: {
     type: "object",
     properties: {
       target: { type: "string", minLength: 1 },
@@ -72,7 +72,7 @@ const schemas = {
     required: ["target", "value", "options"],
     additionalProperties: false,
   },
-  treeMove: {
+  nodeMove: {
     type: "object",
     properties: {
       target: { type: "string", minLength: 1 },
@@ -119,7 +119,7 @@ export class EventValidationError extends Error {
 /**
  * Validates an event payload against the schema for its type
  *
- * @param {string} eventType - The type of event (set, unset, treePush, etc.)
+ * @param {string} eventType - The type of event (set, unset, nodeInsert, etc.)
  * @param {unknown} payload - The event payload to validate
  * @throws {EventValidationError} If the payload does not match the schema
  */
@@ -136,7 +136,7 @@ export const validateEventPayload = (eventType, payload) => {
  * Test helper for validating event payloads
  * Returns true if valid, throws EventValidationError if invalid
  *
- * @param {string} eventType - The type of event (set, unset, treePush, etc.)
+ * @param {string} eventType - The type of event (set, unset, nodeInsert, etc.)
  * @param {unknown} payload - The event payload to validate
  * @returns {boolean} true if validation passes
  * @throws {EventValidationError} If the payload does not match the schema

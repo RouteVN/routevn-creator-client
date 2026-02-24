@@ -5,7 +5,7 @@ import {
   createLegacyEventCommand,
   createProjectCollabService,
 } from "../src/collab/v2/index.js";
-import { validateEventPayload } from "../src/deps/infra/treeState/validation.js";
+import { validateEventPayload } from "../src/deps/infra/domainStructure/validation.js";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -115,7 +115,7 @@ const commandSprite = createLegacyEventCommand({
   projectId,
   actor,
   event: {
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "characters.items.char-7.sprites",
       value: { name: "Pose A" },
@@ -132,7 +132,7 @@ const commandLayoutElement = createLegacyEventCommand({
   projectId,
   actor,
   event: {
-    type: "treeMove",
+    type: "nodeMove",
     payload: {
       target: "layouts.items.layout-2.elements",
       options: {

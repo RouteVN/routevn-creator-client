@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from "#tree-state";
+import { toFlatItems, toFlatGroups } from "#domain-structure";
 import { parseAndRender } from "jempl";
 
 const contextMenuItems = [
@@ -547,14 +547,14 @@ export const createInitialState = () => ({
   lastUpdateDate: undefined,
   isDragging: false,
   dragStartPosition: undefined,
-  layoutData: { tree: [], items: {} },
+  layoutData: { order: [], items: {} },
   selectedItemId: null,
   layout: null,
-  images: { tree: [], items: {} },
-  typographyData: { tree: [], items: {} },
-  colorsData: { tree: [], items: {} },
-  fontsData: { tree: [], items: {} },
-  variablesData: { tree: [], items: {} },
+  images: { order: [], items: {} },
+  typographyData: { order: [], items: {} },
+  colorsData: { order: [], items: {} },
+  fontsData: { order: [], items: {} },
+  variablesData: { order: [], items: {} },
   dialogueDefaultValues: {
     "dialogue-character-name": "Character",
     "dialogue-content": "This is a sample dialogue content.",

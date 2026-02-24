@@ -1,14 +1,14 @@
-import { toFlatItems } from "#tree-state";
+import { toFlatItems } from "#domain-structure";
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
   const { characters, transforms } = projectService.getState();
   store.setItems({
-    items: characters || { tree: [], items: {} },
+    items: characters || { order: [], items: {} },
   });
   store.setTransforms({
-    transforms: transforms || { tree: [], items: {} },
+    transforms: transforms || { order: [], items: {} },
   });
 
   // Use presentationState if available, otherwise fall back to character prop

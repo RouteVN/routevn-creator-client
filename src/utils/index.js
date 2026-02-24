@@ -538,7 +538,7 @@ const normalizeSliderChange = (change, sliderId) => {
   };
 };
 
-export const layoutTreeStructureToRenderState = (
+export const layoutHierarchyStructureToRenderState = (
   layout,
   imageItems,
   typographyData,
@@ -848,7 +848,7 @@ export const layoutTreeStructureToRenderState = (
 /**
  * Gets variable options from variablesData for use in dropdowns.
  *
- * @param {Object} variablesData - Variables data from repository { items: {}, tree: [] }
+ * @param {Object} variablesData - Variables data from repository { items: {}, order: [] }
  * @param {Object} options - Filter options
  * @param {string} options.type - Filter by variable type ('number', 'boolean', 'string', 'object')
  * @param {boolean} options.showType - Show type in label (e.g., "volume (number)")

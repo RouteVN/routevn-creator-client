@@ -69,7 +69,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   for (const result of successfulUploads) {
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "layouts",
         value: {
@@ -81,7 +81,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
           fileSize: result.file.size,
           elements: {
             items: {},
-            tree: [],
+            order: [],
           },
         },
         options: {
@@ -103,7 +103,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "layouts",
       value: {
@@ -191,7 +191,7 @@ const createLayoutTemplate = (layoutType) => {
           },
         },
       },
-      tree: [
+      order: [
         {
           id: containerId,
           children: [
@@ -306,7 +306,7 @@ const createLayoutTemplate = (layoutType) => {
           },
         },
       },
-      tree: [
+      order: [
         {
           id: nvlContainerId,
           children: [
@@ -372,7 +372,7 @@ const createLayoutTemplate = (layoutType) => {
           },
         },
       },
-      tree: [
+      order: [
         {
           id: rootId,
           children: [
@@ -408,7 +408,7 @@ const createLayoutTemplate = (layoutType) => {
           y: 0,
         },
       },
-      tree: [
+      order: [
         {
           id: spriteId,
         },
@@ -418,7 +418,7 @@ const createLayoutTemplate = (layoutType) => {
 
   return {
     items: {},
-    tree: [],
+    order: [],
   };
 };
 
@@ -440,7 +440,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
 
   // Create the layout directly in the repository (like colors page does)
   await projectService.appendEvent({
-    type: "treePush",
+    type: "nodeInsert",
     payload: {
       target: "layouts",
       value: {
@@ -482,7 +482,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: resourceType,
       options: {

@@ -45,7 +45,7 @@ const getTransitionsFromLayout = (layout) => {
  *             }
  *           },
  *         },
- *         "tree": []
+ *         "order": []
  *       }
  *     }
  *   }
@@ -235,7 +235,7 @@ export const handleAfterMount = async (deps) => {
   const legacyState = projectService.getState();
   const domainState = projectService.getDomainState();
   const { scenes, layouts } = legacyState;
-  const scenesData = scenes || { tree: [], items: {} };
+  const scenesData = scenes || { order: [], items: {} };
 
   // Set the scenes data
   store.setItems({ scenesData: scenesData });
@@ -289,7 +289,7 @@ export const handleDataChanged = async (deps) => {
   const legacyState = projectService.getState();
   const domainState = projectService.getDomainState();
   const { scenes, layouts } = legacyState;
-  const sceneData = scenes || { tree: [], items: {} };
+  const sceneData = scenes || { order: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
   const currentWhiteboardItems = store.selectWhiteboardItems() || [];
@@ -393,7 +393,7 @@ export const handleAddSceneClick = (deps) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   await projectService.appendEvent({
-    type: "treeUpdate",
+    type: "nodeUpdate",
     payload: {
       target: "scenes",
       value: {
@@ -532,15 +532,15 @@ export const handleSceneFormAction = async (deps, payload) => {
       };
     });
 
-    // Create tree array with all line IDs in order
-    const lineTree = [
+    // Create order array with all line IDs in order
+    const lineHierarchy = [
       { id: stepId },
       ...additionalLineIds.map((id) => ({ id })),
     ];
 
     // Add new scene to repository
     const repositoryAction = {
-      type: "treePush",
+      type: "nodeInsert",
       target: "scenes",
       value: {
         parent: formData.folderId || "_root",
@@ -560,11 +560,11 @@ export const handleSceneFormAction = async (deps, payload) => {
                 name: "Section New",
                 lines: {
                   items: lineItems,
-                  tree: lineTree,
+                  order: lineHierarchy,
                 },
               },
             },
-            tree: [
+            order: [
               {
                 id: sectionId,
               },
@@ -575,7 +575,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     };
 
     await projectService.appendEvent({
-      type: "treePush",
+      type: "nodeInsert",
       payload: {
         target: "scenes",
         value: repositoryAction.value.item,
@@ -611,7 +611,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
 
   // Remove from repository
   await projectService.appendEvent({
-    type: "treeDelete",
+    type: "nodeDelete",
     payload: {
       target: "scenes",
       options: {
@@ -702,7 +702,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   if (item.value === "delete-item" && itemId) {
     // Remove from repository
     projectService.appendEvent({
-      type: "treeDelete",
+      type: "nodeDelete",
       payload: {
         target: "scenes",
         options: {

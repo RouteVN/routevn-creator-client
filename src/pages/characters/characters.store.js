@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const form = {
   fields: [
@@ -17,7 +17,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  charactersData: { tree: [], items: {} },
+  charactersData: { order: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
   collapsedIds: [],
@@ -128,7 +128,7 @@ export const selectAvatarFileId = ({ state }) => state.avatarFileId;
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
-  // state.charactersData contains the full structure with tree and items
+  // state.charactersData contains the full structure with order and items
   const flatItems = toFlatItems(state.charactersData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };

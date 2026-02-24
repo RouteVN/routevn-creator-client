@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#tree-state";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 import { formatFileSize } from "../../utils/index.js";
 
 const fontToBase64Image = (fontFamily, text = "Aa") => {
@@ -119,7 +119,7 @@ const fontInfoForm = {
 };
 
 export const createInitialState = () => ({
-  fontsData: { tree: [], items: {} },
+  fontsData: { order: [], items: {} },
   selectedItemId: null,
   context: {
     fileId: {
