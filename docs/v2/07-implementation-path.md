@@ -39,7 +39,7 @@ Done criteria:
 ## Phase 2: Insieme Upgrade + Sync Server (2-3 days)
 
 - Upgrade dependency from `insieme@0.0.8` to current 1.x release.
-- Stand up sync server using `scripts/collab-v2/start-sync-server.mjs`.
+- Stand up sync server using `scripts/collab-v2/start-sync-server.js`.
 - Replace demo auth/authz with production auth provider.
 - Implement validation pipeline:
   - command schema validation
@@ -96,4 +96,3 @@ Done criteria:
 - Add server-side canonical serialization for command dedupe.
 - Replace `Date.now()` in mutable reducers with event timestamp metadata.
 - Add domain-level migration blocker that rejects malformed in-memory state early.
-

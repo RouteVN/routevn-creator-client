@@ -10,7 +10,7 @@ try {
   ({ default: Database } = await import("better-sqlite3"));
 } catch {
   throw new Error(
-    "better-sqlite3 is required to run start-sync-server.mjs (npm i -D better-sqlite3)",
+    "better-sqlite3 is required to run start-sync-server.js (npm i -D better-sqlite3)",
   );
 }
 

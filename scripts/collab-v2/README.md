@@ -11,7 +11,7 @@ This folder contains bootstrap scripts for RouteVN V2 authoritative collaboratio
 
 ## Files
 
-- `start-sync-server.mjs`: in-process sync server bootstrap
+- `start-sync-server.js`: in-process sync server bootstrap
 - `sql/server-schema.sql`: reference server schema
 - `sql/client-schema.sql`: reference client schema
 
