@@ -1,4 +1,10 @@
 componentName: rvn-vn-preview
 propsSchema:
   type: object
-  properties: {}
+  properties:
+    sceneId:
+      type: string
+    sectionId:
+      type: string
+    lineId:
+      type: string
