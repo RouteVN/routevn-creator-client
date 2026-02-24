@@ -1,4 +1,4 @@
-import { toFlatItems } from "#insieme-compat";
+import { toFlatItems } from "#tree-state";
 
 const CHOICE_FORM_TEMPLATE = Object.freeze({
   title: "Edit Choice",

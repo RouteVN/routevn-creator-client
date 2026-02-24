@@ -1,5 +1,5 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
-import { toTreeStructure } from "#insieme-compat";
+import { toTreeStructure } from "#tree-state";
 import {
   extractFileIdsFromRenderState,
   layoutTreeStructureToRenderState,

@@ -1,4 +1,4 @@
-import { toFlatItems } from "#insieme-compat";
+import { toFlatItems } from "#tree-state";
 
 const getFileIdFromProps = (attrs, projectService) => {
   // Validate that both fileId and imageId are not passed

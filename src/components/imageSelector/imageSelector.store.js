@@ -1,4 +1,4 @@
-import { toFlatGroups } from "#insieme-compat";
+import { toFlatGroups } from "#tree-state";
 
 export const createInitialState = () => ({
   selectedImageId: undefined,

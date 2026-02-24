@@ -2,7 +2,7 @@ import { createSyncServer, createSqliteSyncStore } from "insieme";
 import { processCommand } from "../../src/domain/v2/engine.js";
 import { createEmptyProjectState } from "../../src/domain/v2/model.js";
 import { validateCommand } from "../../src/domain/v2/validateCommand.js";
-import { validateEventPayload } from "../../src/deps/infra/insiemeCompat/validation.js";
+import { validateEventPayload } from "../../src/deps/infra/treeState/validation.js";
 
 let Database;
 try {

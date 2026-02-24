@@ -3,7 +3,7 @@ import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
-import { createRepository } from "#insieme-compat";
+import { createRepository } from "#tree-state";
 import { createInsiemeTauriStoreAdapter } from "../infra/tauri/tauriRepositoryAdapter";
 import { loadTemplate, getTemplateFiles } from "../../utils/templateLoader";
 import { createBundle } from "../../utils/bundleUtils";

@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from "#insieme-compat";
+import { toFlatItems, toFlatGroups } from "#tree-state";
 import { parseAndRender } from "jempl";
 
 const contextMenuItems = [

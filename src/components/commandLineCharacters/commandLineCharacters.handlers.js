@@ -1,4 +1,4 @@
-import { toFlatItems } from "#insieme-compat";
+import { toFlatItems } from "#tree-state";
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;

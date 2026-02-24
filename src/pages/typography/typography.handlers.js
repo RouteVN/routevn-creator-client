@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "#insieme-compat";
+import { toFlatItems } from "#tree-state";
 import {
   getTypographyCount,
   getTypographyRemovalCount,

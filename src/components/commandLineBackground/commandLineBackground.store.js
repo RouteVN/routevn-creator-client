@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#insieme-compat";
+import { toFlatGroups, toFlatItems } from "#tree-state";
 
 const tabs = [
   {

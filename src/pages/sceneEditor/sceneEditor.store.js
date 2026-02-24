@@ -1,4 +1,4 @@
-import { toFlatItems, toTreeStructure } from "#insieme-compat";
+import { toFlatItems, toTreeStructure } from "#tree-state";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";

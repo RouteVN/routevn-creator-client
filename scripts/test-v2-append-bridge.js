@@ -5,7 +5,7 @@ import {
   createLegacyEventCommand,
   createProjectCollabService,
 } from "../src/collab/v2/index.js";
-import { validateEventPayload } from "../src/deps/infra/insiemeCompat/validation.js";
+import { validateEventPayload } from "../src/deps/infra/treeState/validation.js";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

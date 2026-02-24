@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
-import { createRepository } from "#insieme-compat";
+import { createRepository } from "#tree-state";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,

@@ -15,7 +15,7 @@
     "visual-novel-creator"
   ],
   "imports": {
-    "#insieme-compat": "./src/deps/infra/insiemeCompat/index.js"
+    "#tree-state": "./src/deps/infra/treeState/index.js"
   },
   "type": "module",
   "dependencies": {

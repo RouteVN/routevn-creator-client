@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#insieme-compat";
+import { toFlatGroups, toFlatItems } from "#tree-state";
 import { formatFileSize } from "../../utils/index.js";
 
 const fontToBase64Image = (fontFamily, text = "Aa") => {

@@ -1,5 +1,5 @@
 import { parseAndRender } from "jempl";
-import { toFlatGroups } from "#insieme-compat";
+import { toFlatGroups } from "#tree-state";
 import { getFirstTypographyId } from "../../constants/typography.js";
 import { getVariableOptions } from "../../utils/index.js";
 

@@ -1,4 +1,4 @@
-import { toTreeStructure } from "#insieme-compat";
+import { toTreeStructure } from "#tree-state";
 import { layoutTreeStructureToRenderState } from "./index.js";
 
 export function constructProjectData(state, options = {}) {
