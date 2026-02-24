@@ -68,6 +68,46 @@ export const handleVariableCreated = async (deps, payload) => {
   render();
 };
 
+export const handleVariableUpdated = async (deps, payload) => {
+  const { store, render, projectService, appService } = deps;
+  const { p } = appService.getPayload();
+  const repository = await projectService.getRepositoryById(p);
+  const {
+    itemId,
+    name,
+    scope,
+    type,
+    default: defaultValue,
+  } = payload._event.detail;
+
+  if (!itemId) {
+    return;
+  }
+
+  await repository.addEvent({
+    type: "treeUpdate",
+    payload: {
+      target: "variables",
+      value: {
+        name,
+        scope,
+        type,
+        default: defaultValue,
+      },
+      options: {
+        id: itemId,
+        replace: false,
+      },
+    },
+  });
+
+  store.setSelectedItemId({ itemId });
+
+  const { variables } = repository.getState();
+  store.setItems({ variablesData: variables });
+  render();
+};
+
 export const handleVariableDelete = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const { p } = appService.getPayload();
@@ -96,32 +136,29 @@ export const handleVariableDelete = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, appService, render, store } = deps;
+  const fieldName = payload._event.detail.name;
+  if (fieldName !== "name") {
+    return;
+  }
+
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
   const { p } = appService.getPayload();
   const repository = await projectService.getRepositoryById(p);
-  const fieldName = payload._event.detail.name;
   const fieldValue = payload._event.detail.value;
-
-  const updateValue = {
-    [fieldName]: fieldValue,
-  };
-
-  // Set predefined default when type changes
-  if (fieldName === "type") {
-    const typeDefaults = {
-      string: "",
-      number: 0,
-      boolean: false,
-    };
-    updateValue.default = typeDefaults[fieldValue] ?? "";
-  }
 
   await repository.addEvent({
     type: "treeUpdate",
     payload: {
       target: "variables",
-      value: updateValue,
+      value: {
+        name: fieldValue,
+      },
       options: {
-        id: store.selectSelectedItemId(),
+        id: selectedItemId,
         replace: false,
       },
     },
