@@ -557,12 +557,12 @@ export const handleAfterMount = async (deps) => {
     },
   );
 
-  graphicsService.initRouteEngine(initialProjectData);
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: true,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
+  graphicsService.initRouteEngine(initialProjectData);
 
   render();
   setTimeout(() => {
@@ -1773,13 +1773,12 @@ export const handleHidePreviewScene = async (deps) => {
       lineId: store.selectSelectedLineId(),
     },
   );
-  graphicsService.initRouteEngine(initialProjectData);
-
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
+  graphicsService.initRouteEngine(initialProjectData);
 
   await renderSceneState(store, graphicsService);
 };
