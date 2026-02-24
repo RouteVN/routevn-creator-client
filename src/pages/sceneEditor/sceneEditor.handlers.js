@@ -143,15 +143,13 @@ const isMinimalAdvDialogue = (dialogue) => {
 };
 
 const shouldInheritNvlModeFromPreviousLine = ({
-  scenes,
-  sceneId,
+  domainState,
   sectionId,
   lineId,
   existingDialogue,
 }) => {
-  const linesData =
-    scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines;
-  if (!linesData) {
+  const section = domainState?.sections?.[sectionId];
+  if (!section) {
     return false;
   }
 
@@ -163,19 +161,19 @@ const shouldInheritNvlModeFromPreviousLine = ({
     return false;
   }
 
-  const currentIndex = (linesData.tree || []).findIndex(
-    (line) => line.id === lineId,
-  );
+  const lineOrder = section.lineIds || [];
+  const currentIndex = lineOrder.indexOf(lineId);
   if (currentIndex <= 0) {
     return false;
   }
 
-  const previousLineId = linesData.tree[currentIndex - 1]?.id;
+  const previousLineId = lineOrder[currentIndex - 1];
   if (!previousLineId) {
     return false;
   }
 
-  const previousDialogue = linesData.items?.[previousLineId]?.actions?.dialogue;
+  const previousDialogue =
+    domainState?.lines?.[previousLineId]?.actions?.dialogue;
   return previousDialogue?.mode === "nvl";
 };
 
@@ -432,14 +430,11 @@ async function writeDialogueContent(
   const { projectService } = deps;
 
   // Get existing dialogue to preserve other properties (layoutId, characterId, etc.)
-  const { scenes } = projectService.getState();
+  const domainState = projectService.getDomainState();
   const existingDialogue =
-    scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines?.items?.[
-      lineId
-    ]?.actions?.dialogue || {};
+    domainState?.lines?.[lineId]?.actions?.dialogue || {};
   const shouldInheritNvlMode = shouldInheritNvlModeFromPreviousLine({
-    scenes,
-    sceneId,
+    domainState,
     sectionId,
     lineId,
     existingDialogue,
@@ -1092,11 +1087,9 @@ export const handleSplitLine = async (deps, payload) => {
   await flushDialogueQueue(deps);
 
   // Get existing actions data to preserve everything except dialogue content
-  const { scenes } = projectService.getState();
+  const domainState = projectService.getDomainState();
   const existingDialogue =
-    scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines?.items?.[
-      lineId
-    ]?.actions?.dialogue || {};
+    domainState?.lines?.[lineId]?.actions?.dialogue || {};
 
   // First, update the current line with the left content
   // Only update the dialogue.content, preserve everything else
@@ -1137,8 +1130,7 @@ export const handleSplitLine = async (deps, payload) => {
   const shouldInheritNvl =
     existingDialogue?.mode === "nvl" ||
     shouldInheritNvlModeFromPreviousLine({
-      scenes,
-      sceneId,
+      domainState,
       sectionId,
       lineId,
       existingDialogue,
@@ -1224,13 +1216,12 @@ export const handleNewLine = async (deps) => {
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   const selectedLine = store.selectSelectedLine();
-  const scenes = projectService.getState().scenes;
+  const domainState = projectService.getDomainState();
   const existingDialogue = selectedLine?.actions?.dialogue || {};
   const shouldInheritNvl =
     existingDialogue?.mode === "nvl" ||
     shouldInheritNvlModeFromPreviousLine({
-      scenes,
-      sceneId,
+      domainState,
       sectionId,
       lineId: selectedLine?.id,
       existingDialogue,
