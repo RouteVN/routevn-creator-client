@@ -183,15 +183,25 @@ export const projectLegacyStateToDomainState = ({
     const sectionItems = sections.items || {};
     const sectionTree = sections.tree || [];
     const { orderedIds: sectionTreeOrder } = buildTreeParentMap(sectionTree);
-    const sectionIds = appendMissingIds(
-      sectionTreeOrder,
-      Object.keys(sectionItems),
+    const allSectionIds = Object.keys(sectionItems).filter(
+      (sectionId) => sectionItems[sectionId]?.type !== "folder",
     );
+    const sectionIds = appendMissingIds(
+      sectionTreeOrder.filter(
+        (sectionId) => sectionItems[sectionId]?.type !== "folder",
+      ),
+      allSectionIds,
+    );
+    const initialSectionId =
+      sectionIds.includes(scene.initialSectionId) && scene.initialSectionId
+        ? scene.initialSectionId
+        : (sectionIds[0] ?? null);
 
     state.scenes[sceneId] = {
       id: sceneId,
       name: scene.name || `Scene ${sceneId}`,
       sectionIds,
+      initialSectionId,
       position: cloneOr(scene.position, { x: 200, y: 200 }),
       createdAt: toFiniteTimestamp(scene.createdAt, now),
       updatedAt: toFiniteTimestamp(
@@ -207,12 +217,17 @@ export const projectLegacyStateToDomainState = ({
       const lineTree = lines.tree || [];
       const { orderedIds: lineTreeOrder } = buildTreeParentMap(lineTree);
       const lineIds = appendMissingIds(lineTreeOrder, Object.keys(lineItems));
+      const initialLineId =
+        lineIds.includes(section.initialLineId) && section.initialLineId
+          ? section.initialLineId
+          : (lineIds[0] ?? null);
 
       state.sections[sectionId] = {
         id: sectionId,
         sceneId,
         name: section.name || `Section ${sectionId}`,
         lineIds,
+        initialLineId,
         createdAt: toFiniteTimestamp(section.createdAt, now),
         updatedAt: toFiniteTimestamp(
           section.updatedAt,
