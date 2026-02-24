@@ -48,6 +48,7 @@ export const selectViewData = ({ state, props }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
       label: "Base",

@@ -271,6 +271,7 @@ export const selectViewData = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
   ];
 
@@ -278,6 +279,7 @@ export const selectViewData = ({ state }) => {
     breadcrumb.push({
       id: "current",
       label: "Characters",
+      click: true,
     });
     breadcrumb.push({
       label: "Select",
@@ -286,10 +288,12 @@ export const selectViewData = ({ state }) => {
     breadcrumb.push({
       id: "current",
       label: "Characters",
+      click: true,
     });
     breadcrumb.push({
       id: "character-select",
       label: selectedCharacterName || "Character",
+      click: true,
     });
     breadcrumb.push({
       label: "Sprite Selection",

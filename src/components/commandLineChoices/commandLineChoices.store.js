@@ -270,6 +270,7 @@ export const selectViewData = ({ state, props }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
   ];
 
@@ -277,6 +278,7 @@ export const selectViewData = ({ state, props }) => {
     breadcrumb.push({
       id: "list",
       label: "Choices",
+      click: true,
     });
     breadcrumb.push({
       label: editModeTitle,

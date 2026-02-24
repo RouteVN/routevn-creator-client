@@ -108,6 +108,7 @@ export const selectBreadcrumb = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
   ];
 
@@ -115,6 +116,7 @@ export const selectBreadcrumb = ({ state }) => {
     breadcrumb.push({
       id: "current",
       label: "Background",
+      click: true,
     });
     breadcrumb.push({
       label: "Select",

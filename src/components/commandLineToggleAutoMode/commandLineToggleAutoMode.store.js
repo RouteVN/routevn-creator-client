@@ -23,6 +23,7 @@ export const selectViewData = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
       label: "Toggle Auto Mode",

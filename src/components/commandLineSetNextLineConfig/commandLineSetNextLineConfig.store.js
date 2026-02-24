@@ -118,7 +118,7 @@ export const setDefaultValues = ({ state }, { payload } = {}) => {
 
 export const selectViewData = ({ state }) => {
   const breadcrumb = [
-    { id: "actions", label: "Actions" },
+    { id: "actions", label: "Actions", click: true },
     { label: "Next Line Config" },
   ];
 

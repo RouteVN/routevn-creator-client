@@ -46,7 +46,7 @@ export const selectViewData = ({ state }) => {
   const allLayouts = layouts.filter((item) => item.type === "layout");
 
   const breadcrumb = [
-    { id: "actions", label: "Actions" },
+    { id: "actions", label: "Actions", click: true },
     { label: "Push Layered View" },
   ];
 

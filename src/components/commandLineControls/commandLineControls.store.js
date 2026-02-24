@@ -76,9 +76,9 @@ export const selectViewData = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
-      id: "current",
       label: "Controls",
     },
   ];

@@ -227,6 +227,7 @@ export const selectViewData = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
   ];
 
@@ -234,6 +235,7 @@ export const selectViewData = ({ state }) => {
     breadcrumb.push({
       id: "current",
       label: "Visuals",
+      click: true,
     });
     breadcrumb.push({
       label: "Select Resource",

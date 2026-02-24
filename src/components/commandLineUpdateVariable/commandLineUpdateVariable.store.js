@@ -173,10 +173,10 @@ export const selectViewData = ({ state }) => {
   });
 
   const breadcrumb = [
-    { id: "actions", label: "Actions" },
+    { id: "actions", label: "Actions", click: true },
     ...(state.mode === "edit"
       ? [
-          { id: "current", label: "Update Variable" },
+          { id: "current", label: "Update Variable", click: true },
           { label: "Edit Operation" },
         ]
       : [{ label: "Update Variable" }]),
