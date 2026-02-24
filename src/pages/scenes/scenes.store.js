@@ -3,18 +3,19 @@ import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
 const form = {
   fields: [
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     { name: "preview", type: "slot", slot: "preview" },
     {
       name: "sectionCount",
       type: "read-only-text",
-      description: "Sections",
+      label: "Sections",
+      content: "${sectionCount}",
     },
     {
       name: "sectionsList",
       type: "slot",
       slot: "sections-list",
-      description: "Sections List",
+      label: "Sections List",
     },
   ],
 };

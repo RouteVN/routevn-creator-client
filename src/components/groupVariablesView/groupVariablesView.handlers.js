@@ -207,7 +207,7 @@ export const handleCloseContextMenu = (deps) => {
 };
 
 export const handleFormActionClick = (deps, payload) => {
-  const { store, render, dispatchEvent, props } = deps;
+  const { store, render, dispatchEvent, props, appService } = deps;
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
@@ -219,6 +219,7 @@ export const handleFormActionClick = (deps, payload) => {
 
     // Don't submit if name is not set
     if (!name) {
+      appService.showToast("Variable name is required.", { title: "Warning" });
       return;
     }
 
@@ -233,6 +234,17 @@ export const handleFormActionClick = (deps, payload) => {
       formData.scope ?? storeState.defaultValues?.scope ?? "context";
     const type = formData.type ?? storeState.defaultValues?.type ?? "string";
     if (isEditMode && !editingItemId) {
+      appService.showToast(
+        "Unable to update variable. Please reopen the editor and try again.",
+        { title: "Warning" },
+      );
+      return;
+    }
+    if (!isEditMode && !targetGroupId) {
+      appService.showToast(
+        "Unable to add variable. Please select a group and try again.",
+        { title: "Warning" },
+      );
       return;
     }
 
@@ -244,6 +256,9 @@ export const handleFormActionClick = (deps, payload) => {
           item.name === name && (!isEditMode || item.id !== editingItemId),
       );
     if (isDuplicateName) {
+      appService.showToast("Variable name must be unique.", {
+        title: "Warning",
+      });
       return;
     }
 

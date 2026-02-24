@@ -54,7 +54,7 @@ template:
               - $if selectedFontInfo:
                   - rtgl-view d=h g=lg h=f:
                       - rtgl-view w=1fg:
-                          - rtgl-form :form=fontInfoForm :defaultValues=fontInfoValues: null
+                          - rtgl-form :form=fontInfoForm :defaultValues=fontInfoValues :context=fontInfoValues: null
                       - rtgl-view w=2fg mt=xl:
                           - rtgl-view p=md bgc=bg-hover br=sm:
                               - 'rtgl-view d=h wrap style="gap: 4px;"':

@@ -71,22 +71,26 @@ const fontInfoForm = {
     {
       name: "fontFamily",
       type: "read-only-text",
-      description: "Font Family",
+      label: "Font Family",
+      content: "${fontFamily}",
     },
     {
       name: "fileName",
       type: "read-only-text",
-      description: "File Name",
+      label: "File Name",
+      content: "${fileName}",
     },
     {
       name: "fileSize",
       type: "read-only-text",
-      description: "File Size",
+      label: "File Size",
+      content: "${fileSize}",
     },
     {
       name: "format",
       type: "read-only-text",
-      description: "Format",
+      label: "Format",
+      content: "${format}",
     },
     // NOTE: The following fields are commented out because the current implementation
     // does not accurately extract this information from font files

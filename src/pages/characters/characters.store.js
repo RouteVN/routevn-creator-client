@@ -7,11 +7,11 @@ const form = {
       type: "slot",
       slot: "avatar",
     },
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "description",
       type: "popover-input",
-      description: "Description",
+      label: "Description",
     },
   ],
 };
