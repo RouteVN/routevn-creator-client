@@ -12,10 +12,20 @@ const hexToRgb = (hex) => {
 
 const form = {
   fields: [
-    { name: "colorImage", inputType: "image", src: "${colorImage.src}" },
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "hex", inputType: "read-only-text", description: "Hex Value" },
-    { name: "rgb", inputType: "read-only-text", description: "RGB Value" },
+    { name: "colorImage", type: "image", src: "${colorImage.src}" },
+    { name: "name", type: "popover-input", label: "Name" },
+    {
+      name: "hex",
+      type: "read-only-text",
+      label: "Hex Value",
+      content: "${hex}",
+    },
+    {
+      name: "rgb",
+      type: "read-only-text",
+      label: "RGB Value",
+      content: "${rgb}",
+    },
   ],
 };
 
@@ -48,34 +58,34 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setItems = (state, colorsData) => {
+export const setItems = ({ state }, { colorsData } = {}) => {
   state.colorsData = colorsData;
 };
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const openEditDialog = (state, itemId) => {
+export const openEditDialog = ({ state }, { itemId } = {}) => {
   state.isEditDialogOpen = true;
   state.editItemId = itemId;
 };
 
-export const closeEditDialog = (state) => {
+export const closeEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = false;
   state.editItemId = null;
 };
 
-export const openAddDialog = (state, groupId) => {
+export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;
   state.targetGroupId = groupId;
 };
 
-export const closeAddDialog = (state) => {
+export const closeAddDialog = ({ state }, _payload = {}) => {
   state.isAddDialogOpen = false;
   state.targetGroupId = null;
   state.addDefaultValues = {
@@ -84,11 +94,11 @@ export const closeAddDialog = (state) => {
   };
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -115,11 +125,23 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    hex: "",
+    rgb: "",
+  };
   if (selectedItem) {
+    const hex = selectedItem.hex ?? "";
+    const rgb = hexToRgb(hex);
     defaultValues = {
       name: selectedItem.name,
-      hex: selectedItem.hex || "",
-      rgb: hexToRgb(selectedItem.hex) || "",
+      hex,
+      rgb,
+    };
+    formContext = {
+      ...state.context,
+      hex,
+      rgb,
     };
   }
 
@@ -177,13 +199,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "hex",
-        inputType: "colorPicker",
+        type: "color-picker",
         label: "Hex Value",
         required: true,
       },
@@ -194,7 +216,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Update Color",
+          label: "Update Color",
         },
       ],
     },
@@ -213,13 +235,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Color Name",
         required: true,
       },
       {
         name: "hex",
-        inputType: "colorPicker",
+        type: "color-picker",
         label: "Hex Value",
         required: true,
       },
@@ -230,7 +252,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Add Color",
+          label: "Add Color",
         },
       ],
     },
@@ -247,7 +269,7 @@ export const selectViewData = ({ state }) => {
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     form,
-    context: state.context,
+    context: formContext,
     defaultValues,
     isEditDialogOpen: state.isEditDialogOpen,
     editDefaultValues,

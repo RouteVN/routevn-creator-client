@@ -23,7 +23,7 @@ export const createInitialState = () => ({
       fields: [
         {
           name: "text",
-          inputType: "inputTextArea",
+          type: "input-textarea",
           label: "Text",
           description: "Enter the text",
           required: true,
@@ -35,7 +35,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            content: "Update Text",
+            label: "Update Text",
           },
         ],
       },
@@ -54,7 +54,7 @@ export const createInitialState = () => ({
       fields: [
         {
           name: "hex",
-          inputType: "colorPicker",
+          type: "color-picker",
           label: "Hex Value",
           description: "Enter the hex color value (e.g., #ff0000)",
           required: true,
@@ -66,7 +66,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            content: "Update Color",
+            label: "Update Color",
           },
         ],
       },
@@ -89,7 +89,7 @@ export const createInitialState = () => ({
       fields: [
         {
           name: "fontColor",
-          inputType: "select",
+          type: "select",
           label: "Font Color",
           description: "Select a font color",
           placeholder: "Choose a color",
@@ -98,7 +98,7 @@ export const createInitialState = () => ({
         },
         {
           name: "fontStyle",
-          inputType: "select",
+          type: "select",
           label: "Font Style",
           description: "Select a font style",
           placeholder: "Choose a font",
@@ -107,21 +107,21 @@ export const createInitialState = () => ({
         },
         {
           name: "fontSize",
-          inputType: "inputText",
+          type: "input-text",
           label: "Font Size",
           description: "Enter the font size (e.g., 16, 18, 24)",
           required: true,
         },
         {
           name: "fontWeight",
-          inputType: "inputText",
+          type: "input-text",
           label: "Font Weight",
           description: "Enter the font weight (e.g., normal, bold, 400, 700)",
           required: true,
         },
         {
           name: "previewText",
-          inputType: "inputText",
+          type: "input-text",
           label: "Preview Text",
           description: "Text to display in the typography preview",
           required: false,
@@ -133,7 +133,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            content: "Update Typography",
+            label: "Update Typography",
           },
         ],
       },
@@ -153,8 +153,8 @@ export const selectField = ({ props }, name) => {
 };
 
 export const showPopover = (
-  state,
-  { position, fields, actions, defaultValues = {} },
+  { state },
+  { position, fields, actions, defaultValues } = {},
 ) => {
   state.popover = {
     isOpen: true,
@@ -165,14 +165,14 @@ export const showPopover = (
   };
 };
 
-export const hidePopover = (state) => {
+export const hidePopover = ({ state }, _payload = {}) => {
   state.popover = {
     isOpen: false,
     position: { x: 0, y: 0 },
   };
 };
 
-export const showColorDialog = (state, { fieldIndex, itemData }) => {
+export const showColorDialog = ({ state }, { fieldIndex, itemData } = {}) => {
   state.colorDialog.isOpen = true;
   state.colorDialog.fieldIndex = fieldIndex;
 
@@ -182,7 +182,7 @@ export const showColorDialog = (state, { fieldIndex, itemData }) => {
   };
 };
 
-export const hideColorDialog = (state) => {
+export const hideColorDialog = ({ state }, _payload = {}) => {
   state.colorDialog.isOpen = false;
   state.colorDialog.fieldIndex = -1;
 
@@ -193,8 +193,8 @@ export const hideColorDialog = (state) => {
 };
 
 export const showTypographyDialog = (
-  state,
-  { fieldIndex, itemData, colorOptions, fontOptions },
+  { state },
+  { fieldIndex, itemData, colorOptions, fontOptions } = {},
 ) => {
   state.typographyDialog.isOpen = true;
   state.typographyDialog.fieldIndex = fieldIndex;
@@ -221,7 +221,7 @@ export const showTypographyDialog = (
   }
 };
 
-export const hideTypographyDialog = (state) => {
+export const hideTypographyDialog = ({ state }, _payload = {}) => {
   state.typographyDialog.isOpen = false;
   state.typographyDialog.fieldIndex = -1;
 
@@ -236,8 +236,8 @@ export const hideTypographyDialog = (state) => {
 };
 
 export const showImageSelectorDialog = (
-  state,
-  { fieldIndex, groups, currentValue },
+  { state },
+  { fieldIndex, groups, currentValue } = {},
 ) => {
   state.imageSelectorDialog.isOpen = true;
   state.imageSelectorDialog.fieldIndex = fieldIndex;
@@ -245,14 +245,14 @@ export const showImageSelectorDialog = (
   state.imageSelectorDialog.selectedImageId = currentValue || null;
 };
 
-export const hideImageSelectorDialog = (state) => {
+export const hideImageSelectorDialog = ({ state }, _payload = {}) => {
   state.imageSelectorDialog.isOpen = false;
   state.imageSelectorDialog.fieldIndex = -1;
   state.imageSelectorDialog.groups = [];
   state.imageSelectorDialog.selectedImageId = null;
 };
 
-export const setTempSelectedImageId = (state, { imageId }) => {
+export const setTempSelectedImageId = ({ state }, { imageId } = {}) => {
   state.imageSelectorDialog.selectedImageId = imageId;
 };
 

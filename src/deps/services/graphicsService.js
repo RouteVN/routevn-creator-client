@@ -172,6 +172,10 @@ export const createGraphicsService = async ({ subject }) => {
         if (canvas.children.length > 0) {
           canvas.removeChild(canvas.children[0]);
         }
+        // Keep Pixi's internal render resolution (1920x1080) but scale display to container.
+        routeGraphics.canvas.style.width = "100%";
+        routeGraphics.canvas.style.height = "100%";
+        routeGraphics.canvas.style.display = "block";
         canvas.appendChild(routeGraphics.canvas);
       }
     },

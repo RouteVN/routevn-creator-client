@@ -25,7 +25,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Name",
         required: true,
         tooltip: {
@@ -34,7 +34,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scope",
-        inputType: "select",
+        type: "select",
         label: "Scope",
         required: true,
         options: [
@@ -56,7 +56,7 @@ export const createInitialState = () => ({
       },
       {
         name: "type",
-        inputType: "select",
+        type: "select",
         label: "Type",
         required: true,
         options: [
@@ -68,7 +68,7 @@ export const createInitialState = () => ({
       {
         $when: "values.type == 'boolean'",
         name: "default",
-        inputType: "select",
+        type: "select",
         label: "Default",
         options: [
           { value: true, label: "True" },
@@ -79,14 +79,14 @@ export const createInitialState = () => ({
       {
         $when: "values.type == 'string'",
         name: "default",
-        inputType: "inputText",
+        type: "input-text",
         label: "Default",
         required: false,
       },
       {
         $when: "values.type == 'number'",
         name: "default",
-        inputType: "input-number",
+        type: "input-number",
         label: "Default",
         required: false,
       },
@@ -97,7 +97,7 @@ export const createInitialState = () => ({
         {
           id: "submit",
           variant: "pr",
-          content: "Add Variable",
+          label: "Add Variable",
         },
       ],
     },
@@ -108,7 +108,7 @@ export const selectDefaultValues = ({ state }) => {
   return state.defaultValues;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -117,30 +117,30 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
-export const updateFormValues = (state, payload) => {
+export const updateFormValues = ({ state }, { payload } = {}) => {
   state.defaultValues = payload;
 };
 
-export const toggleDialog = (state) => {
+export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const setTargetGroupId = (state, groupId) => {
+export const setTargetGroupId = ({ state }, { groupId } = {}) => {
   state.targetGroupId = groupId;
 };
 
-export const showContextMenu = (state, { itemId, x, y }) => {
+export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
 };
 
-export const hideContextMenu = (state) => {
+export const hideContextMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.targetItemId = null;
 };

@@ -5,7 +5,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "placeholder",
-        inputType: "read-only-text",
+        type: "read-only-text",
         label: "Toggle Skip Mode Action",
         description: "This action will toggle skip mode on/off",
         required: false,
@@ -23,6 +23,7 @@ export const selectViewData = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
       label: "Toggle Skip Mode",

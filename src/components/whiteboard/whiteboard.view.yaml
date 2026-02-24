@@ -1,61 +1,3 @@
-elementName: rvn-whiteboard
-
-viewDataSchema:
-  type: object
-  properties:
-    items:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-          x:
-            type: number
-          y:
-            type: number
-          borderColor:
-            type: string
-    selectedItemId:
-      type: string
-    isPanMode:
-      type: boolean
-    panX:
-      type: number
-    panY:
-      type: number
-    zoomLevel:
-      type: number
-    zoomLevelPercent:
-      type: number
-    containerCursor:
-      type: string
-    itemCursor:
-      type: string
-
-propsSchema:
-  type: object
-  properties:
-    items:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-          x:
-            type: number
-          y:
-            type: number
-    cursor:
-      type: string
-    selectedItemId:
-      type: string
-
 refs:
   container:
     eventListeners:
@@ -65,7 +7,8 @@ refs:
         handler: handleContainerMouseDown
       contextmenu:
         handler: handleContainerContextMenu
-  item-*:
+  canvas: {}
+  item*:
     eventListeners:
       mousedown:
         required: true
@@ -74,47 +17,45 @@ refs:
         handler: handleItemDoubleClick
       contextmenu:
         handler: handleItemContextMenu
-  zoom-in-btn:
+  zoomInBtn:
     eventListeners:
       click:
         handler: handleZoomInClick
-  zoom-out-btn:
+  zoomOutBtn:
     eventListeners:
       click:
         handler: handleZoomOutClick
-  pan-btn:
+  panBtn:
     eventListeners:
       click:
         handler: handlePanButtonClick
-
 template:
   - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: ${gridSize}px ${gridSize}px; background-position: ${panX}px ${panY}px;"':
-      - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; width: 0px; height: 0px;"':
-          - $for item in items:
+      - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; min-width: 100%; min-height: 100%;"':
+          - $for item, itemIndex in items:
               - $if item.isInit == true:
-                - 'rtgl-view d=h av=c pos=abs style="left: calc(${item.x}px - 80px); top: calc(${item.y}px + 5px); z-index: 10; user-select: none;"':
-                  - rtgl-view w=50 h=50 ah=c av=c p=md bgc=ac br=f bw=sm:
-                      - rtgl-text s=sm: "Start"
-                  - rtgl-view w=30 h=2 bgc=ac:
-              - 'rtgl-view#item-${item.id} w=120 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+                  - 'rtgl-view d=h av=c pos=abs style="left: calc(${item.x}px - 80px); top: calc(${item.y}px + 5px); z-index: 10; user-select: none;"':
+                      - rtgl-view w=50 h=50 ah=c av=c p=md bgc=ac br=f bw=sm:
+                          - rtgl-text s=sm: Start
+                      - rtgl-view w=30 h=2 bgc=ac: null
+              - 'rtgl-view#itemRef${itemIndex} data-item-id=${item.id} w=120 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
                   - rtgl-view cur=${itemCursor} w=120 h=f av=c ah=c p=md bgc=mu bw=sm bc=${item.borderColor} br=md:
-                      - rtgl-text s=sm: "${item.name}"
+                      - rtgl-text s=sm: ${item.name}
           - $for arrow in arrowsList:
-            - svg#${arrow.id} style="${arrow.style}" width="${arrow.svgWidth}" height="${arrow.svgHeight}":
-              - defs:
-                - marker id="arrowhead" fill="#ccc" markerWidth=10 markerHeight=10 refX=10 refY=5 orient="auto":
-                  - polygon points="0 0, 10 5, 0 10":
-              - path d="${arrow.path}" stroke="#ccc" fill="none" z-index="1000" marker-end="url(#arrowhead)":
+              - svg data-arrow-id="${arrow.id}" style="${arrow.style}" width="${arrow.svgWidth}" height="${arrow.svgHeight}":
+                  - defs:
+                      - marker id="arrowhead" fill="#ccc" markerWidth=10 markerHeight=10 refX=10 refY=5 orient="auto":
+                          - polygon points="0 0, 10 5, 0 10": null
+                  - path d="${arrow.path}" stroke="#ccc" fill="none" z-index="1000" marker-end="url(#arrowhead)": null
       - $if showMinimap:
-        - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px;"':
-          - $for item in minimapData.items:
-            - 'rtgl-view d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
-              - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac:
-          #- 'rtgl-view d=h pos=abs w=10 h=10 bgc=de style="left: ${minimapData.scaledPan.x}px; top: ${minimapData.scaledPan.y}px; z-index: 10; user-select: none;"':
+          - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px;"':
+              - $for item in minimapData.items:
+                  - 'rtgl-view d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+                      - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac: null
       - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
           - rtgl-view d=h av=c gap=sm:
-              - rtgl-button#pan-btn sq icon=hand v=${panModeV}:
-              - "rtgl-button#zoom-out-btn v=se s=md sq": "-"
-              - "rtgl-view bgc=co p=sm br=full w=50 ah=c av=c":
-                  - rtgl-text s=sm: "${zoomLevelPercent}%"
-              - "rtgl-button#zoom-in-btn v=se s=md sq": "+"
+              - rtgl-button#panBtn sq pre=hand v=${panModeV}: null
+              - rtgl-button#zoomOutBtn v=se s=md sq: '-'
+              - rtgl-view bgc=co p=sm br=full w=50 ah=c av=c:
+                  - rtgl-text s=sm: ${zoomLevelPercent}%
+              - rtgl-button#zoomInBtn v=se s=md sq: +

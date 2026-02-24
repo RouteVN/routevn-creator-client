@@ -12,9 +12,9 @@ export const handleAfterMount = async (deps) => {
     globalUI.showAlert({ message: "Character not found", title: "Error" });
   }
 
-  store.setCharacterId(characterId);
-  store.setCharacterName(character.name);
-  store.setItems(character.sprites);
+  store.setCharacterId({ characterId: characterId });
+  store.setCharacterName({ characterName: character.name });
+  store.setItems({ spritesData: character.sprites });
   render();
 };
 
@@ -30,8 +30,8 @@ export const handleDataChanged = async (deps) => {
     return;
   }
 
-  store.setCharacterName(character.name);
-  store.setItems(character.sprites);
+  store.setCharacterName({ characterName: character.name });
+  store.setItems({ spritesData: character.sprites });
   render();
 };
 
@@ -54,7 +54,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   // If this is a folder, clear selection and context
   if (actualIsFolder) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
     store.setContext({
       fileId: {
         src: null,
@@ -64,7 +64,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
 
   // If we have item data with fileId, set up media context for preview
   if (actualItem && actualItem.fileId) {
@@ -89,12 +89,12 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 };
 
 export const handleImageItemClick = async (deps, payload) => {
-  const { store, render, projectService, getRefIds } = deps;
+  const { store, render, projectService, refs } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
@@ -157,7 +157,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
     // Update store with the latest repository state
     const { characters } = projectService.getState();
     const character = characters.items[characterId];
-    store.setItems(character.sprites);
+    store.setItems({ spritesData: character.sprites });
   }
 
   render();
@@ -175,7 +175,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: `characters.items.${characterId}.sprites`,
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: selectedItemId,
@@ -186,7 +186,9 @@ export const handleFormChange = async (deps, payload) => {
 
   const { characters } = projectService.getState();
   const character = characters.items[characterId];
-  store.setItems(character?.sprites || { items: {}, tree: [] });
+  store.setItems({
+    spritesData: character?.sprites || { items: {}, tree: [] },
+  });
   render();
 };
 
@@ -247,7 +249,9 @@ export const handleFormExtraEvent = async (deps) => {
       src: uploadResult.downloadUrl,
     },
   });
-  store.setItems(character?.sprites || { items: {}, tree: [] });
+  store.setItems({
+    spritesData: character?.sprites || { items: {}, tree: [] },
+  });
   render();
 };
 
@@ -292,6 +296,8 @@ export const handleItemDelete = async (deps, payload) => {
   // Refresh data and update store
   const { characters } = projectService.getState();
   const character = characters.items[characterId];
-  store.setItems(character?.sprites || { items: {}, tree: [] });
+  store.setItems({
+    spritesData: character?.sprites || { items: {}, tree: [] },
+  });
   render();
 };

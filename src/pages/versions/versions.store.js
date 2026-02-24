@@ -14,7 +14,7 @@ export const createInitialState = () => ({
   },
 });
 
-export const openDropdownMenu = (state, { x, y, versionId }) => {
+export const openDropdownMenu = ({ state }, { x, y, versionId } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
@@ -24,7 +24,7 @@ export const openDropdownMenu = (state, { x, y, versionId }) => {
   ];
 };
 
-export const closeDropdownMenu = (state) => {
+export const closeDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;
@@ -49,7 +49,7 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         description: "Version Name",
         required: true,
       },
@@ -60,12 +60,12 @@ export const selectViewData = ({ state }) => {
         {
           id: "cancel",
           variant: "se",
-          content: "Cancel",
+          label: "Cancel",
         },
         {
           id: "submit",
           variant: "pr",
-          content: "Save",
+          label: "Save",
         },
       ],
     },
@@ -88,27 +88,27 @@ export const selectViewData = ({ state }) => {
   };
 };
 
-export const setVersions = (state, versions) => {
+export const setVersions = ({ state }, { versions } = {}) => {
   state.versions = versions;
 };
 
-export const setShowVersionForm = (state, show) => {
+export const setShowVersionForm = ({ state }, { show } = {}) => {
   state.showVersionForm = show;
 };
 
-export const setVersionFormData = (state, data) => {
+export const setVersionFormData = ({ state }, { data } = {}) => {
   state.versionFormData = data;
 };
 
-export const resetVersionForm = (state) => {
+export const resetVersionForm = ({ state }, _payload = {}) => {
   state.showVersionForm = false;
   state.versionFormData = {};
 };
 
-export const addVersion = (state, version) => {
+export const addVersion = ({ state }, { version } = {}) => {
   state.versions = [version, ...state.versions];
 };
 
-export const deleteVersion = (state, versionId) => {
+export const deleteVersion = ({ state }, { versionId } = {}) => {
   state.versions = state.versions.filter((v) => v.id !== versionId);
 };

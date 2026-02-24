@@ -1,0 +1,29 @@
+componentName: rvn-file-explorer
+propsSchema:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          id:
+            type: string
+          level:
+            type: number
+          hasChildren:
+            type: boolean
+          parentId:
+            type: string
+    contextMenuItems:
+      type: array
+      description: Menu items for right-clicking on an item
+    emptyContextMenuItems:
+      type: array
+      description: Menu items for right-clicking on empty space
+    repositoryTarget:
+      type: string
+      description: Repository target for data operations (e.g. 'images', 'sounds')
+      required: true

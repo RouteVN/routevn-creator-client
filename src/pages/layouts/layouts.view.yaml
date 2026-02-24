@@ -1,17 +1,9 @@
-elementName: rvn-layouts
-
-viewDataSchema:
-  type: object
-  properties:
-    searchQuery:
-      type: string
-
 refs:
-  file-explorer:
+  fileExplorer:
     eventListeners:
       data-changed:
         handler: handleDataChanged
-      click-item:
+      item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleItemDoubleClick
@@ -29,34 +21,33 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  detail-form:
+  detailForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-  add-layout-dialog:
+  addLayoutDialog:
     eventListeners:
       close:
         handler: handleAddDialogClose
-  layout-form:
+  layoutForm:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleLayoutFormActionClick
-
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
-          - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-                  - rvn-file-explorer#fileExplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
-          - rtgl-view flex=1 h=f:
-              - rvn-group-resources-view#groupview .navTitle=title .resourceType=resourceType .flatGroups=flatGroups .selectedItemId=selectedItemId .searchQuery=searchQuery:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+          - rtgl-view w=1fg h=f:
+              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detail-form key=${selectedItemId} w=f h=f .form=form .defaultValues=defaultValues .fieldResources=fieldResources:
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues :fieldResources=fieldResources: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-  - rtgl-dialog#add-layout-dialog ?open=${isAddDialogOpen} s=md:
-      - rtgl-form#layout-form slot=content .defaultValues=layoutFormDefaults .form=layoutForm w=f:
+  - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md:
+      - rtgl-form#layoutForm slot=content :defaultValues=layoutFormDefaults :form=layoutForm w=f: null

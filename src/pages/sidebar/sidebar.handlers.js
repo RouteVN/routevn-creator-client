@@ -1,5 +1,15 @@
 import { filter, tap } from "rxjs";
 
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+export const handleBeforeMount = (deps) => {
+  return mountLegacySubscriptions(deps);
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
   await projectService.ensureRepository();
@@ -11,7 +21,7 @@ export const handleAfterMount = async (deps) => {
   }
 
   const { url } = await projectService.getFileContent(project.iconFileId);
-  store.setProjectImageUrl(url);
+  store.setProjectImageUrl({ imageUrl: url });
   render();
 };
 
@@ -43,11 +53,11 @@ export const handleProjectImageUpdate = async (deps) => {
   }
 
   const { url } = await projectService.getFileContent(project.iconFileId);
-  store.setProjectImageUrl(url);
+  store.setProjectImageUrl({ imageUrl: url });
   render();
 };
 
-export const subscriptions = (deps) => {
+const subscriptions = (deps) => {
   const { subject, render } = deps;
   return [
     subject.pipe(

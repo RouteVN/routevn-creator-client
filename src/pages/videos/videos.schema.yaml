@@ -1,0 +1,4 @@
+componentName: rvn-videos
+propsSchema:
+  type: object
+  properties: {}

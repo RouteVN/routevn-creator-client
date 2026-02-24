@@ -13,7 +13,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "disableUserClick",
-        inputType: "select",
+        type: "select",
         label: "Disable User Click",
         description: "",
         required: false,
@@ -25,7 +25,7 @@ export const createInitialState = () => ({
       },
       {
         name: "autoPlay",
-        inputType: "select",
+        type: "select",
         label: "Auto Play",
         description: "",
         required: false,
@@ -37,7 +37,7 @@ export const createInitialState = () => ({
       },
       {
         name: "autoPlayDelay",
-        inputType: "inputNumber",
+        type: "input-number",
         label: "Auto Play Delay (milliseconds)",
         description: "",
         required: false,
@@ -51,17 +51,17 @@ export const createInitialState = () => ({
   },
 });
 
-export const setDisableUserClick = (state, { disableUserClick }) => {
+export const setDisableUserClick = ({ state }, { disableUserClick } = {}) => {
   state.disableUserClick = disableUserClick;
   state.defaultValues.disableUserClick = disableUserClick;
 };
 
-export const setAutoPlay = (state, { autoPlay }) => {
+export const setAutoPlay = ({ state }, { autoPlay } = {}) => {
   state.autoPlay = autoPlay;
   state.defaultValues.autoPlay = autoPlay;
 };
 
-export const setAutoPlayDelay = (state, { autoPlayDelay }) => {
+export const setAutoPlayDelay = ({ state }, { autoPlayDelay } = {}) => {
   state.autoPlayDelay = autoPlayDelay;
   state.defaultValues.autoPlayDelay = autoPlayDelay;
 };
@@ -76,9 +76,9 @@ export const selectViewData = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
-      id: "current",
       label: "Controls",
     },
   ];

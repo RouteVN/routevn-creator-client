@@ -1,0 +1,13 @@
+componentName: rvn-lines-editor
+propsSchema:
+  type: object
+  properties:
+    lines:
+      type: array
+      items:
+        type: object
+        properties: null
+    selectedLineId:
+      type: string
+    sectionLineChanges:
+      type: object

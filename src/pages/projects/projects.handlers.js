@@ -1,10 +1,18 @@
 export const handleAfterMount = async (deps) => {
   const { appService, store, render } = deps;
   const platform = appService.getPlatform();
-  store.setPlatform(platform);
+  store.setPlatform({ platform: platform });
   const projects = await appService.loadAllProjects();
-  store.setProjects(projects);
+  store.setProjects({ projects: projects });
   render();
+};
+
+const getProjectIdFromEvent = (event) => {
+  return (
+    event?.currentTarget?.getAttribute?.("data-project-id") ||
+    event?.currentTarget?.id?.replace("project", "") ||
+    ""
+  );
 };
 
 export const handleCreateButtonClick = async (deps) => {
@@ -15,6 +23,9 @@ export const handleCreateButtonClick = async (deps) => {
 
 export const handleOpenButtonClick = async (deps) => {
   const { appService, store, render } = deps;
+  if (appService.getPlatform() === "web") {
+    return;
+  }
 
   try {
     const selectedPath = await appService.openFolderPicker({
@@ -27,7 +38,7 @@ export const handleOpenButtonClick = async (deps) => {
 
     const importedProject = await appService.openExistingProject(selectedPath);
 
-    store.addProject(importedProject);
+    store.addProject({ project: importedProject });
     render();
 
     appService.showToast(
@@ -47,12 +58,18 @@ export const handleCloseDialogue = (deps) => {
 
 export const handleProjectsClick = async (deps, payload) => {
   const { appService } = deps;
-  const id = payload._event.currentTarget.id.replace("project-", "");
+  const id = getProjectIdFromEvent(payload._event);
+  if (!id) {
+    return;
+  }
   appService.navigate("/project", { p: id });
 };
 
 export const handleBrowseFolder = async (deps) => {
   const { appService, store, render } = deps;
+  if (appService.getPlatform() === "web") {
+    return;
+  }
 
   try {
     const selected = await appService.openFolderPicker({
@@ -60,7 +77,7 @@ export const handleBrowseFolder = async (deps) => {
     });
 
     if (selected) {
-      store.setProjectPath(selected);
+      store.setProjectPath({ path: selected });
       render();
     }
   } catch (error) {
@@ -82,7 +99,7 @@ export const handleFormSubmit = async (deps, payload) => {
       name,
       description,
       template = "default",
-    } = payload._event.detail.formValues;
+    } = payload._event.detail.values;
 
     if (name === "_TEST_FILE_PERMISSIONS_") {
       window.location.href = "/test-permissions.html";
@@ -112,7 +129,7 @@ export const handleFormSubmit = async (deps, payload) => {
       template,
     });
 
-    store.addProject(newProject);
+    store.addProject({ project: newProject });
     store.toggleDialog();
     render();
   } catch (error) {
@@ -125,7 +142,10 @@ export const handleProjectContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const projectId = payload._event.currentTarget.id.replace("project-", "");
+  const projectId = getProjectIdFromEvent(payload._event);
+  if (!projectId) {
+    return;
+  }
   const projects = store.selectProjects();
   const project = projects.find((p) => p.id === projectId);
 
@@ -147,8 +167,41 @@ export const handleDropdownMenuClose = (deps) => {
   render();
 };
 
-export const handleDropdownMenuClickItem = async (deps, payload) => {
+export const handleDeleteDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeDeleteDialog();
+  render();
+};
+
+export const handleDeleteDialogCancel = (deps) => {
+  const { store, render } = deps;
+  store.closeDeleteDialog();
+  render();
+};
+
+export const handleDeleteDialogConfirm = async (deps) => {
   const { appService, store, render } = deps;
+  const projectId = store.selectDeleteDialogProjectId();
+  if (!projectId) {
+    store.closeDeleteDialog();
+    render();
+    return;
+  }
+
+  try {
+    await appService.removeProjectEntry(projectId);
+    store.removeProject({ projectId });
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    appService.showToast(`Failed to delete project: ${error.message || error}`);
+  } finally {
+    store.closeDeleteDialog();
+    render();
+  }
+};
+
+export const handleDropdownMenuClickItem = async (deps, payload) => {
+  const { store, render } = deps;
   const detail = payload._event.detail;
 
   const item = detail.item || detail;
@@ -179,21 +232,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   store.closeDropdownMenu();
-  render();
-
-  const confirmed = await appService.showDialog({
-    message: `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
-    title: "Delete Project",
-    confirmText: "Delete",
-    cancelText: "Cancel",
+  store.openDeleteDialog({
+    projectId: projectId,
+    projectName: project.name || "",
   });
-
-  if (!confirmed) {
-    return;
-  }
-
-  await appService.removeProjectEntry(projectId);
-
-  store.removeProject(projectId);
   render();
 };

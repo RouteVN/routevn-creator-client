@@ -4,7 +4,7 @@ const form = {
   fields: [
     {
       name: "resourceId",
-      inputType: "select",
+      type: "select",
       label: "Layout",
       description: "Select which layout to display",
       required: true,
@@ -25,20 +25,20 @@ export const createInitialState = () => ({
   formValues: {},
 });
 
-export const setMode = (state, payload) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
-export const setInitiated = (state) => {
+export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 
-export const setLayouts = (state, payload) => {
-  state.layouts = payload.layouts;
+export const setLayouts = ({ state }, { layouts } = {}) => {
+  state.layouts = layouts;
 };
 
-export const setFormValues = (state, payload) => {
-  state.formValues = payload;
+export const setFormValues = ({ state }, { payload, ...rest } = {}) => {
+  state.formValues = payload ?? rest;
 };
 
 export const selectViewData = ({ state }) => {
@@ -46,7 +46,7 @@ export const selectViewData = ({ state }) => {
   const allLayouts = layouts.filter((item) => item.type === "layout");
 
   const breadcrumb = [
-    { id: "actions", label: "Actions" },
+    { id: "actions", label: "Actions", click: true },
     { label: "Push Layered View" },
   ];
 

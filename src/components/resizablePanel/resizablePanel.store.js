@@ -5,37 +5,40 @@ export const createInitialState = () => ({
   startWidth: 280,
 });
 
-export const setPanelWidth = (state, width, attrs = {}) => {
+export const setPanelWidth = ({ state, props: attrs }, { width } = {}) => {
   // Use attrs for min/max if available, otherwise use defaults
-  const minWidth = parseInt(attrs["min-w"]) || 200;
-  const maxWidth = parseInt(attrs["max-w"]) || 600;
+  const minWidth = parseInt(attrs.minW) || 200;
+  const maxWidth = parseInt(attrs.maxW) || 600;
   const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, width));
   state.panelWidth = constrainedWidth;
 };
 
-export const setIsResizing = (state, isResizing) => {
+export const setIsResizing = ({ state }, { isResizing } = {}) => {
   state.isResizing = isResizing;
 };
 
-export const startResize = (state, { startX, startWidth }) => {
+export const startResize = ({ state }, { startX, startWidth } = {}) => {
   state.isResizing = true;
   state.startX = startX;
   state.startWidth = startWidth;
 };
 
-export const initializePanelWidth = (state, { width, minWidth, maxWidth }) => {
+export const initializePanelWidth = (
+  { state },
+  { width, minWidth, maxWidth } = {},
+) => {
   const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, width));
   state.panelWidth = constrainedWidth;
   state.startWidth = constrainedWidth;
 };
 
-export const selectViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, props: attrs }) => {
   return {
     w: parseInt(attrs.w) || 280,
-    minW: parseInt(attrs["min-w"]) || 200,
-    maxW: parseInt(attrs["max-w"]) || 600,
-    resizeSide: attrs["resize-side"] || "right",
-    panelType: attrs["panel-type"] || "file-explorer",
+    minW: parseInt(attrs.minW) || 200,
+    maxW: parseInt(attrs.maxW) || 600,
+    resizeSide: attrs.resizeSide || "right",
+    panelType: attrs.panelType || "file-explorer",
     panelWidth: state.panelWidth,
     isResizing: state.isResizing,
   };

@@ -118,15 +118,68 @@ const getTransitionsForScene = (sections, layouts) => {
   return transitions;
 };
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const parseNumericConfig = (value, fallback) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const isViewportLikelyOffscreen = ({ items, zoomLevel, panX, panY }) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return false;
+  }
+
+  const viewportWidth = Number(window?.innerWidth) || 1200;
+  const viewportHeight = Number(window?.innerHeight) || 800;
+  const itemWidth = 140;
+  const itemHeight = 80;
+
+  return items.every((item) => {
+    const screenX = item.x * zoomLevel + panX;
+    const screenY = item.y * zoomLevel + panY;
+    return !(
+      screenX + itemWidth > 0 &&
+      screenX < viewportWidth &&
+      screenY + itemHeight > 0 &&
+      screenY < viewportHeight
+    );
+  });
+};
+
+const resolveInitialWhiteboardViewport = ({ appService, items }) => {
+  const defaultViewport = { zoomLevel: 1, panX: 0, panY: 0, didReset: false };
+
+  const zoomLevel = clamp(
+    parseNumericConfig(appService.getUserConfig("scenesMap.zoomLevel"), 1),
+    0.2,
+    2,
+  );
+  const panX = parseNumericConfig(
+    appService.getUserConfig("scenesMap.panX"),
+    0,
+  );
+  const panY = parseNumericConfig(
+    appService.getUserConfig("scenesMap.panY"),
+    0,
+  );
+
+  if (isViewportLikelyOffscreen({ items, zoomLevel, panX, panY })) {
+    return { ...defaultViewport, didReset: true };
+  }
+
+  return { zoomLevel, panX, panY, didReset: false };
+};
+
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, render, getRefIds, appService } = deps;
+  const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
   const { scenes, story, layouts } = projectService.getState();
   const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
-  store.setItems(scenesData);
-  store.setLayouts(layouts);
+  store.setItems({ scenesData: scenesData });
+  store.setLayouts({ layoutsData: layouts });
 
   // Transform only scene items (not folders) into whiteboard items
   const initialSceneId = story?.initialSceneId;
@@ -142,20 +195,26 @@ export const handleAfterMount = async (deps) => {
     }));
 
   // Initialize whiteboard with scene items only
-  store.setWhiteboardItems(sceneItems);
+  store.setWhiteboardItems({ items: sceneItems });
 
-  // Restore viewport state from userConfig
-  const savedZoomLevel = appService.getUserConfig("scenesMap.zoomLevel");
-  const savedPanX = appService.getUserConfig("scenesMap.panX");
-  const savedPanY = appService.getUserConfig("scenesMap.panY");
-
-  const { whiteboard } = getRefIds();
-
-  whiteboard.elm.transformedHandlers.handleInitialZoomAndPanSetup({
-    panX: savedPanX || 0,
-    panY: savedPanY || 0,
-    zoomLevel: savedZoomLevel || 1,
+  const initialViewport = resolveInitialWhiteboardViewport({
+    appService,
+    items: sceneItems,
   });
+
+  const { whiteboard } = refs;
+
+  whiteboard.transformedHandlers.handleInitialZoomAndPanSetup({
+    panX: initialViewport.panX,
+    panY: initialViewport.panY,
+    zoomLevel: initialViewport.zoomLevel,
+  });
+
+  if (initialViewport.didReset) {
+    appService.setUserConfig("scenesMap.zoomLevel", initialViewport.zoomLevel);
+    appService.setUserConfig("scenesMap.panX", initialViewport.panX);
+    appService.setUserConfig("scenesMap.panY", initialViewport.panY);
+  }
 
   render();
 };
@@ -203,9 +262,9 @@ export const handleDataChanged = async (deps) => {
     });
 
   // Update both scenes data and whiteboard items
-  store.setItems(sceneData);
-  store.setLayouts(layouts);
-  store.setWhiteboardItems(sceneItems);
+  store.setItems({ scenesData: sceneData });
+  store.setLayouts({ layoutsData: layouts });
+  store.setWhiteboardItems({ items: sceneItems });
   render();
 };
 
@@ -252,7 +311,7 @@ export const handleWhiteboardItemSelected = (deps, payload) => {
   const { itemId } = payload._event.detail;
 
   // Update selected item for detail panel
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
 };
 
@@ -277,7 +336,7 @@ export const handleAddSceneClick = (deps) => {
   const { store, render } = deps;
 
   // Start waiting for transform
-  store.setWaitingForTransform(true);
+  store.setWaitingForTransform({ isWaiting: true });
   render();
 };
 
@@ -288,7 +347,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "scenes",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -298,7 +357,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { scenes } = projectService.getState();
-  store.setItems(scenes);
+  store.setItems({ scenesData: scenes });
   render();
 };
 
@@ -316,8 +375,8 @@ export const handleWhiteboardClick = (deps, payload) => {
     // Show the form at the clicked position
     store.setSceneFormPosition({ x: formX, y: formY });
     store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
-    store.setWaitingForTransform(false);
-    store.setShowSceneForm(true);
+    store.setWaitingForTransform({ isWaiting: false });
+    store.setShowSceneForm({ show: true });
     render();
   }
 };
@@ -332,7 +391,7 @@ export const handleWhiteboardCanvasContextMenu = (deps, payload) => {
   // Show the form at the right-clicked position
   store.setSceneFormPosition({ x: formX, y: formY });
   store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
-  store.setShowSceneForm(true);
+  store.setShowSceneForm({ show: true });
   render();
 };
 
@@ -353,7 +412,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     const sceneWhiteboardPosition = store.selectSceneWhiteboardPosition();
 
     // Get form values from the event detail (same pattern as typography)
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
 
     // Use a simple ID generator instead of nanoid
     const newSceneId = `scene-${Date.now()}-${Math.random()
@@ -487,7 +546,7 @@ export const handleSceneFormAction = async (deps, payload) => {
 
     // Update store with new scenes data
     const { scenes: updatedScenes } = projectService.getState();
-    store.setItems(updatedScenes);
+    store.setItems({ scenesData: updatedScenes });
 
     // Reset form
     store.resetSceneForm();
@@ -513,19 +572,19 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
 
   // Update store with new scenes data
   const { scenes: updatedScenes } = projectService.getState();
-  store.setItems(updatedScenes);
+  store.setItems({ scenesData: updatedScenes });
 
   // Remove from whiteboard items
   const currentWhiteboardItems = store.selectWhiteboardItems();
   const updatedWhiteboardItems = currentWhiteboardItems.filter(
     (item) => item.id !== itemId,
   );
-  store.setWhiteboardItems(updatedWhiteboardItems);
+  store.setWhiteboardItems({ items: updatedWhiteboardItems });
 
   // Clear selection if the deleted item was selected
   const selectedItemId = store.selectSelectedItemId();
   if (selectedItemId === itemId) {
-    store.setSelectedItemId(null);
+    store.setSelectedItemId({ itemId: null });
   }
 
   render();
@@ -575,7 +634,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
     // Get updated scenes data
     const { scenes: updatedScenes, story } = projectService.getState();
-    store.setItems(updatedScenes);
+    store.setItems({ scenesData: updatedScenes });
 
     // Update whiteboard items with new colors
     const currentWhiteboardItems = store.selectWhiteboardItems();
@@ -584,7 +643,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       ...item,
       isInit: item.id === initialSceneId,
     }));
-    store.setWhiteboardItems(updatedWhiteboardItems);
+    store.setWhiteboardItems({ items: updatedWhiteboardItems });
 
     render();
   }
@@ -604,19 +663,19 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
     // Update store with new scenes data
     const { scenes: updatedScenes } = projectService.getState();
-    store.setItems(updatedScenes);
+    store.setItems({ scenesData: updatedScenes });
 
     // Remove from whiteboard items
     const currentWhiteboardItems = store.selectWhiteboardItems();
     const updatedWhiteboardItems = currentWhiteboardItems.filter(
       (item) => item.id !== itemId,
     );
-    store.setWhiteboardItems(updatedWhiteboardItems);
+    store.setWhiteboardItems({ items: updatedWhiteboardItems });
 
     // Clear selection if the deleted item was selected
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId === itemId) {
-      store.setSelectedItemId(null);
+      store.setSelectedItemId({ itemId: null });
     }
 
     render();
@@ -626,7 +685,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 export const handleClickShowScenePreview = (deps, payload) => {
   const { store, render } = deps;
   store.showPreviewSceneId({
-    sceneId: payload._event.target.dataset.sceneId,
+    payload: { sceneId: payload._event.target.dataset.sceneId },
   });
   render();
 };

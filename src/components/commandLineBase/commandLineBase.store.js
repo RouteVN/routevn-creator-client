@@ -10,7 +10,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "resourceId",
-        inputType: "select",
+        type: "select",
         label: "Base Layout",
         description: "",
         required: false,
@@ -25,11 +25,11 @@ export const createInitialState = () => ({
   },
 });
 
-export const setLayouts = (state, layouts) => {
+export const setLayouts = ({ state }, { layouts } = {}) => {
   state.layouts = layouts;
 };
 
-export const setSelectedResourceId = (state, { resourceId }) => {
+export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
   state.selectedLayoutId = resourceId;
   state.defaultValues.resourceId = resourceId;
 };
@@ -48,6 +48,7 @@ export const selectViewData = ({ state, props }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
       label: "Base",

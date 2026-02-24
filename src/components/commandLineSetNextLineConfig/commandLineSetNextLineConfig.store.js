@@ -12,7 +12,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "applyMode",
-        inputType: "select",
+        type: "select",
         label: "Apply Mode",
         description: "",
         required: false,
@@ -27,7 +27,7 @@ export const createInitialState = () => ({
       },
       {
         name: "manualEnabled",
-        inputType: "select",
+        type: "select",
         label: "Click to Advance",
         description: "",
         required: false,
@@ -44,7 +44,7 @@ export const createInitialState = () => ({
       // {
       //   $when: `values.manualEnabled == true`,
       //   name: "manualRequireLineCompleted",
-      //   inputType: "select",
+      //   type: "select",
       //   label: "Require Line Complete",
       //   description: "",
       //   required: false,
@@ -59,7 +59,7 @@ export const createInitialState = () => ({
       // },
       {
         name: "autoEnabled",
-        inputType: "select",
+        type: "select",
         label: "Auto Advance",
         description: "",
         required: false,
@@ -75,7 +75,7 @@ export const createInitialState = () => ({
       {
         $when: `values.autoEnabled == true`,
         name: "autoTrigger",
-        inputType: "select",
+        type: "select",
         label: "Timer Start",
         description: "",
         required: false,
@@ -91,7 +91,7 @@ export const createInitialState = () => ({
       {
         $when: `values.autoEnabled == true`,
         name: "autoDelay",
-        inputType: "input-number",
+        type: "input-number",
         label: "Delay (ms)",
         description: "",
         required: false,
@@ -109,7 +109,7 @@ export const createInitialState = () => ({
   },
 });
 
-export const setDefaultValues = (state, payload) => {
+export const setDefaultValues = ({ state }, { payload } = {}) => {
   state.defaultValues = {
     ...state.defaultValues,
     ...payload,
@@ -118,7 +118,7 @@ export const setDefaultValues = (state, payload) => {
 
 export const selectViewData = ({ state }) => {
   const breadcrumb = [
-    { id: "actions", label: "Actions" },
+    { id: "actions", label: "Actions", click: true },
     { label: "Next Line Config" },
   ];
 

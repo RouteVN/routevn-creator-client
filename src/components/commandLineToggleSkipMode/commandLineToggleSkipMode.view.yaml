@@ -1,41 +1,20 @@
-elementName: rvn-command-line-toggle-skip-mode
-
-viewDataSchema:
-  type: object
-  properties:
-    submitDisabled:
-      type: boolean
-    form:
-      type: object
-    defaultValues:
-      type: object
-
-propsSchema:
-  type: object
-  properties:
-    toggleSkipMode:
-      type: object
-
 refs:
   breadcumb:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
-  toggle-skip-mode-form:
+  toggleSkipModeForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
-
 template:
   - rtgl-view w=f h=f p=lg:
-      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
-
-      - rtgl-form#toggle-skip-mode-form .defaultValues=defaultValues .form=form w=f:
-
-      - rtgl-view flex=1:
+      - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+      - rtgl-form#toggleSkipModeForm :defaultValues=defaultValues :form=form w=f: null
+      - rtgl-view h=1fg: null
       - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submit-button: Submit
+          - rtgl-button#submitButton: Submit

@@ -3,17 +3,17 @@ export const createInitialState = () => ({
   initiated: false,
 });
 
-export const setMode = (state, payload) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
-export const setInitiated = (state) => {
+export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 
 export const selectViewData = ({ state }) => {
   const breadcrumb = [
-    { id: "actions", label: "Actions" },
+    { id: "actions", label: "Actions", click: true },
     { label: "Pop Layered View" },
   ];
 

@@ -4,7 +4,7 @@ const form = {
   fields: [
     {
       name: "sceneId",
-      inputType: "select",
+      type: "select",
       label: "Scene",
       description: "",
       required: true,
@@ -13,7 +13,7 @@ const form = {
     },
     {
       name: "sectionId",
-      inputType: "select",
+      type: "select",
       label: "Section",
       description: "",
       required: true,
@@ -22,7 +22,7 @@ const form = {
     },
     // {
     //   name: "animation",
-    //   inputType: "select",
+    //   type: "select",
     //   label: "Transition Animation",
     //   description: "",
     //   required: false,
@@ -49,20 +49,20 @@ export const createInitialState = () => ({
   formValues: {},
 });
 
-export const setMode = (state, payload) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
-export const setInitiated = (state) => {
+export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 
-export const setScenes = (state, payload) => {
-  state.scenes = payload.scenes;
+export const setScenes = ({ state }, { scenes } = {}) => {
+  state.scenes = scenes;
 };
 
-export const setFormValues = (state, payload) => {
-  state.formValues = payload;
+export const setFormValues = ({ state }, values = {}) => {
+  state.formValues = values;
 };
 
 export const selectViewData = ({ state, props }) => {
@@ -79,6 +79,7 @@ export const selectViewData = ({ state, props }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
       label: "Transition",

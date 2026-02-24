@@ -1,23 +1,5 @@
-elementName: rvn-command-line-pop-layered-view
-
-propsSchema:
-  type: object
-  properties:
-    popLayeredView:
-      type: object
-
-viewDataSchema:
-  type: object
-  properties:
-    initiated:
-      type: boolean
-    mode:
-      type: string
-    breadcrumb:
-      type: array
-
 refs:
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
@@ -25,11 +7,10 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcrumbClick
-
 template:
   - $if mode == 'current' && initiated:
       - rtgl-view g=md w=f:
-          - rtgl-breadcrumb#breadcrumb .items=breadcrumb:
+          - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
           - rtgl-text s=sm: Pop the current layered view and return to the previous view.
           - rtgl-view d=h g=md w=f ah=e mt=lg:
-              - rtgl-button#submit-button variant=pr: Submit
+              - rtgl-button#submitButton variant=pr: Submit

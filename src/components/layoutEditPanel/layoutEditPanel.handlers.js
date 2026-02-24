@@ -1,9 +1,12 @@
 export const handleBeforeMount = (deps) => {
   const { props, store } = deps;
+  const values = props.values || {};
   store.setValues({
-    values: props.values || {},
+    values,
   });
-  store.setVariablesData(props.variablesData || { items: {}, tree: [] });
+  store.setVariablesData({
+    variablesData: props.variablesData || { items: {}, tree: [] },
+  });
 };
 
 export const handleAfterMount = async (deps) => {
@@ -12,18 +15,23 @@ export const handleAfterMount = async (deps) => {
   const { typography } = projectService.getState();
 
   // Store raw typography data
-  store.setTypographyData(typography || { items: {}, tree: [] });
+  store.setTypographyData({
+    typographyData: typography || { items: {}, tree: [] },
+  });
   render();
 };
 
 export const handleOnUpdate = (deps, payload) => {
-  const { oldAttrs, newAttrs, newProps } = payload;
+  const { oldProps, newProps } = payload;
   const { store, render } = deps;
-  if (oldAttrs?.key !== newAttrs?.key) {
+  if (oldProps?.key !== newProps?.key) {
+    const values = newProps.values || {};
     store.setValues({
-      values: newProps.values || {},
+      values,
     });
-    store.setVariablesData(newProps.variablesData || { items: {}, tree: [] });
+    store.setVariablesData({
+      variablesData: newProps.variablesData || { items: {}, tree: [] },
+    });
     render();
   }
 };
@@ -76,13 +84,13 @@ export const handleOptionSelected = (deps, payload) => {
 };
 
 export const handleSectionActionClick = async (deps, payload) => {
-  const { render, store, appService, getRefIds } = deps;
+  const { render, store, appService, refs } = deps;
   const { _event } = payload;
   const id = _event.currentTarget.dataset.id;
 
   if (id === "actions") {
-    const systemActions = getRefIds()["system-actions"];
-    systemActions.elm.transformedHandlers.open({
+    const systemActions = refs["systemActions"];
+    systemActions.transformedHandlers.open({
       mode: "actions",
     });
   } else if (id === "images") {
@@ -101,7 +109,7 @@ export const handleSectionActionClick = async (deps, payload) => {
       items,
       x: _event.clientX,
       y: _event.clientY,
-      placement: "bottom-start",
+      place: "bs",
     });
     if (!result) {
       return;
@@ -123,7 +131,7 @@ export const handleFormActions = (deps, payload) => {
   const { name } = store.selectPopoverForm();
   store.updateValueProperty({
     name,
-    value: _event.detail.formValues.value,
+    value: _event.detail.values.value,
   });
 
   store.closePopoverForm();
@@ -135,7 +143,7 @@ export const handleFormActions = (deps, payload) => {
       detail: {
         formValues,
         name,
-        value: _event.detail.formValues.value,
+        value: _event.detail.values.value,
       },
     }),
   );
@@ -185,7 +193,7 @@ export const handlePopoverFormChange = async (deps, payload) => {
   const { _event } = payload;
 
   store.updatePopoverFormContext({
-    values: _event.detail.formValues,
+    values: _event.detail.values,
   });
   render();
 };
@@ -205,7 +213,7 @@ export const handleListBarItemRightClick = async (deps, payload) => {
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
-    placement: "bottom-start",
+    place: "bs",
   });
   if (!result) {
     return;
@@ -254,11 +262,11 @@ export const handleListBarItemRightClick = async (deps, payload) => {
 
 // --- List Item ---
 export const handleListItemClick = async (deps, payload) => {
-  const { render, getRefIds } = deps;
+  const { render, refs } = deps;
   const { _event: event } = payload;
-  const systemActions = getRefIds()["system-actions"];
+  const systemActions = refs["systemActions"];
   const { id } = event.currentTarget.dataset;
-  systemActions.elm.transformedHandlers.open({
+  systemActions.transformedHandlers.open({
     mode: id,
   });
   render();
@@ -273,7 +281,7 @@ export const handleListItemRightClick = async (deps, payload) => {
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
-    placement: "bottom-start",
+    place: "bs",
   });
   if (!result) {
     return;

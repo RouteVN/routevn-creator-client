@@ -1,6 +1,8 @@
 export const createInitialState = () => ({
   zoomLevel: 1.0,
   collapsedIds: [],
+  lastClickedItemId: null,
+  lastClickedAt: 0,
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -11,11 +13,11 @@ export const createInitialState = () => ({
   draggingGroupId: null,
 });
 
-export const setZoomLevel = (state, zoomLevel) => {
+export const setZoomLevel = ({ state }, { zoomLevel } = {}) => {
   state.zoomLevel = zoomLevel;
 };
 
-export const setDraggingGroupId = (state, groupId) => {
+export const setDraggingGroupId = ({ state }, { groupId } = {}) => {
   state.draggingGroupId = groupId;
 };
 
@@ -23,7 +25,16 @@ export const selectDraggingGroupId = ({ state }) => state.draggingGroupId;
 
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
-export const toggleGroupCollapse = (state, { groupId }) => {
+export const setLastItemClick = ({ state }, { itemId, timestamp } = {}) => {
+  state.lastClickedItemId = itemId || null;
+  state.lastClickedAt = timestamp || 0;
+};
+
+export const selectLastClickedItemId = ({ state }) => state.lastClickedItemId;
+
+export const selectLastClickedAt = ({ state }) => state.lastClickedAt;
+
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -32,7 +43,7 @@ export const toggleGroupCollapse = (state, { groupId }) => {
   }
 };
 
-export const showContextMenu = (state, { itemId, x, y }) => {
+export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
@@ -42,7 +53,7 @@ export const showContextMenu = (state, { itemId, x, y }) => {
   ];
 };
 
-export const hideContextMenu = (state) => {
+export const hideContextMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;
@@ -52,7 +63,18 @@ export const hideContextMenu = (state) => {
 
 export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
 
-export const selectViewData = ({ state, props, attrs }) => {
+const parseBooleanAttr = (value, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (value === true || value === "") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+  }
+  return Boolean(value);
+};
+
+export const selectViewData = ({ state, props, props: attrs }) => {
   // Calculate dimensions based on zoom level for all media types
   const baseHeight = props.imageHeight || 150;
   const baseWidth = props.maxWidth || 400;
@@ -73,9 +95,18 @@ export const selectViewData = ({ state, props, attrs }) => {
   // Function to recursively set borderColor based on selectedItemId
   const setBorderColorForItems = (items) => {
     return items.map((item) => {
+      const isSelected = item.id === props.selectedItemId;
+      const isCharacterResource = props.resourceType === "characters";
       const updatedItem = {
         ...item,
-        borderColor: item.id === props.selectedItemId ? "fg" : "bo",
+        borderColor: isSelected ? "fg" : "bo",
+        itemBorderColor: isCharacterResource
+          ? isSelected
+            ? "pr"
+            : "bo"
+          : isSelected
+            ? "pr"
+            : "tr",
       };
 
       // If item has children, recursively process them
@@ -89,6 +120,11 @@ export const selectViewData = ({ state, props, attrs }) => {
 
   // Apply borderColor to all items in processedFlatGroups
   const finalProcessedGroups = setBorderColorForItems(processedFlatGroups);
+  const fullWidthItemAttr = attrs.fullWidthItem ?? attrs["full-width-item"];
+  const showZoomControlsAttr =
+    attrs.showZoomControls ?? attrs["show-zoom-controls"];
+  const shouldUseFullWidthItems =
+    parseBooleanAttr(fullWidthItemAttr) || props.resourceType === "characters";
 
   return {
     canUpload: [
@@ -99,7 +135,8 @@ export const selectViewData = ({ state, props, attrs }) => {
       "fonts",
     ].includes(props.resourceType),
     draggingGroupId: state.draggingGroupId,
-    fullWidthAttr: attrs["full-width-item"] === true ? "w=f" : "",
+    fullWidthAttr: shouldUseFullWidthItems ? "w=f" : "",
+    itemWidth: shouldUseFullWidthItems ? "f" : "auto",
     resourceType: props.resourceType || "default",
     flatGroups: finalProcessedGroups,
     selectedItemId: props.selectedItemId,
@@ -115,7 +152,7 @@ export const selectViewData = ({ state, props, attrs }) => {
     mediaWidth,
     mediaHeight,
     zoomLevel: state.zoomLevel,
-    showZoomControls: attrs["show-zoom-controls"] === true,
+    showZoomControls: parseBooleanAttr(showZoomControlsAttr),
     backUrl: props.backUrl,
     itemProperties: props.itemProperties || {},
     items: props.items || {},

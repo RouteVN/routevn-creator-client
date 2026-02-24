@@ -1,5 +1,5 @@
 export const handleAfterMount = async (deps) => {
-  const { attrs, store, render, projectService } = deps;
+  const { props: attrs, store, render, projectService } = deps;
 
   if (!attrs.waveformDataFileId) {
     return;
@@ -10,35 +10,35 @@ export const handleAfterMount = async (deps) => {
       attrs.waveformDataFileId,
     );
 
-    store.setWaveformData(waveformData);
-    store.setLoading(false);
+    store.setWaveformData({ data: waveformData });
+    store.setLoading({ isLoading: false });
     render();
   } catch {
-    store.setLoading(false);
+    store.setLoading({ isLoading: false });
     render();
   }
 };
 
 export const handleOnUpdate = async (deps, payload) => {
   const { store, render, projectService } = deps;
-  const { newAttrs: attrs } = payload;
+  const { newProps: attrs } = payload;
 
   if (!attrs?.waveformDataFileId) {
     return;
   }
 
-  store.setLoading(true);
+  store.setLoading({ isLoading: true });
 
   try {
     const waveformData = await projectService.downloadMetadata(
       attrs.waveformDataFileId,
     );
 
-    store.setWaveformData(waveformData);
-    store.setLoading(false);
+    store.setWaveformData({ data: waveformData });
+    store.setLoading({ isLoading: false });
     render();
   } catch {
-    store.setLoading(false);
+    store.setLoading({ isLoading: false });
     render();
   }
 };

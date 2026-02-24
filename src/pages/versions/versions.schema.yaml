@@ -1,0 +1,4 @@
+componentName: rvn-versions
+propsSchema:
+  type: object
+  properties: {}

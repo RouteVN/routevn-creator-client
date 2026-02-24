@@ -1,5 +1,6 @@
 export const createInitialState = () => ({
   mode: "actions",
+  actions: {},
   isActionsDialogOpen: false,
   dropdownMenu: {
     isOpen: false,
@@ -16,7 +17,7 @@ export const createInitialState = () => ({
   repositoryState: {}, // Add this - default to empty object
 });
 
-export const selectViewData = ({ state, props, attrs }) => {
+export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
   const { actions: actionsObject, preview } = selectActionsData({
     props,
@@ -79,8 +80,8 @@ export const selectViewData = ({ state, props, attrs }) => {
     dialogueLayouts,
     allCharacters: filteredCharacters,
     selectedLine: props.selectedLine,
-    actionsType: attrs["action-type"],
-    showSelected: !!attrs["show-selected"],
+    actionsType: attrs.actionType,
+    showSelected: !!attrs.showSelected,
   };
 };
 
@@ -88,12 +89,12 @@ export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
 
-export const setRepositoryState = (state, repositoryState) => {
+export const setRepositoryState = ({ state }, { repositoryState } = {}) => {
   state.repositoryState = repositoryState;
 };
 
 export const selectDisplayActions = ({ state }) => {
-  const { actions } = state;
+  const actions = state.actions || {};
   return Object.entries(actions).map(([key, value]) => {
     return {
       name: key,
@@ -103,38 +104,43 @@ export const selectDisplayActions = ({ state }) => {
 };
 
 export const selectAction = ({ state }) => {
-  return state.actions;
+  return state.actions || {};
 };
 
-export const updateActions = (state, payload) => {
+export const updateActions = ({ state }, { payload } = {}) => {
+  const nextPayload = payload || {};
   state.actions = {
     ...state.actions,
-    ...payload,
+    ...nextPayload,
   };
 };
 
-export const showActionsDialog = (state) => {
+export const showActionsDialog = ({ state }, _payload = {}) => {
   state.isActionsDialogOpen = true;
 };
 
-export const hideActionsDialog = (state) => {
+export const hideActionsDialog = ({ state }, _payload = {}) => {
   state.isActionsDialogOpen = false;
   state.mode = "hidden";
 };
 
-export const setMode = (state, payload) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, payload = {}) => {
+  const mode = payload.mode ?? payload?.payload?.mode;
+  if (mode === undefined) {
+    return;
+  }
+  state.mode = mode;
 };
 
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
-  const { actions, presentationState = {} } = props;
+  const actions = props.actions || {};
+  const presentationState =
+    props.presentationState && typeof props.presentationState === "object"
+      ? props.presentationState
+      : {};
 
-  if (!actions) {
-    return {};
-  }
-
-  const repositoryStateData = state.repositoryState;
+  const repositoryStateData = state.repositoryState || {};
   // Images, videos and sounds: accessed directly by ID (e.g., images[id])
   const images = repositoryStateData.images?.items || {};
   const videos = repositoryStateData.videos?.items || {};
@@ -142,6 +148,8 @@ export const selectActionsData = ({ props, state }) => {
   const scenes = repositoryStateData.scenes || {};
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsTree = repositoryStateData.layouts || {};
+  const layoutsItems = layoutsTree.items || {};
+  const sceneItems = scenes.items || {};
 
   const actionsObject = {};
   const preview = {};
@@ -150,7 +158,7 @@ export const selectActionsData = ({ props, state }) => {
     const backgroundImage = images[presentationState.background.resourceId];
     const backgroundVideo = videos[presentationState.background.resourceId];
     const backgroundLayout =
-      layoutsTree.items?.[presentationState.background.resourceId];
+      layoutsItems[presentationState.background.resourceId];
     actionsObject.background = presentationState.background;
     if (backgroundImage) {
       preview.background = { ...backgroundImage, type: "image" };
@@ -163,7 +171,7 @@ export const selectActionsData = ({ props, state }) => {
 
   if (presentationState.layout) {
     actionsObject.layout = presentationState.layout;
-    preview.layout = layoutsTree.items[presentationState.layout.resourceId];
+    preview.layout = layoutsItems[presentationState.layout.resourceId];
   }
 
   if (presentationState.bgm) {
@@ -214,18 +222,18 @@ export const selectActionsData = ({ props, state }) => {
 
   if (actions.sectionTransition) {
     actionsObject.sectionTransition = actions.sectionTransition;
-    const scene = scenes.items[actions.sectionTransition.sceneId];
+    const scene = sceneItems[actions.sectionTransition.sceneId];
     if (scene) {
       preview.sectionTransition = {
         scene,
-        section: scene.sections.items[actions.sectionTransition.sectionId],
+        section: scene.sections?.items?.[actions.sectionTransition.sectionId],
       };
     }
   }
 
   if (actions.pushLayeredView) {
     actionsObject.pushLayeredView = actions.pushLayeredView;
-    const layout = layoutsTree.items[actions.pushLayeredView.resourceId];
+    const layout = layoutsItems[actions.pushLayeredView.resourceId];
     if (layout) {
       preview.pushLayeredView = {
         layout,
@@ -247,8 +255,8 @@ export const selectActionsData = ({ props, state }) => {
     } else {
       preview.dialogue = {
         name:
-          layoutsTree.items?.[presentationState.dialogue.gui?.resourceId]
-            ?.name || "No layout",
+          layoutsItems[presentationState.dialogue.gui?.resourceId]?.name ||
+          "No layout",
       };
     }
   }
@@ -256,14 +264,14 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.choice) {
     actionsObject.choice = actions.choice;
     preview.choice = {
-      layout: layoutsTree.items[actions.choice.layoutId],
+      layout: layoutsItems[actions.choice.layoutId],
       items: actions.choice.items,
     };
   }
 
   if (presentationState.base) {
     actionsObject.base = presentationState.base;
-    preview.base = layoutsTree.items[presentationState.base.resourceId];
+    preview.base = layoutsItems[presentationState.base.resourceId];
   }
 
   // Next Line
@@ -292,7 +300,7 @@ export const selectActionsData = ({ props, state }) => {
       items: presentationState.visual.items.map((item) => {
         const imageData = images[item.resourceId];
         const videoData = videos[item.resourceId];
-        const layoutData = layoutsTree.items?.[item.resourceId];
+        const layoutData = layoutsItems[item.resourceId];
         return {
           ...item,
           resource: imageData || videoData || layoutData,
@@ -312,11 +320,14 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.updateVariable) {
     actionsObject.updateVariable = actions.updateVariable;
     const variableItems = repositoryStateData.variables?.items || {};
+    const operations = Array.isArray(actions.updateVariable.operations)
+      ? actions.updateVariable.operations
+      : [];
 
     // Build summary string showing operations
     const summary =
-      actions.updateVariable.operations
-        ?.map((op) => {
+      operations
+        .map((op) => {
           const variable = variableItems[op.variableId];
           const varName = variable?.name || op.variableId;
           if (op.op === "toggle") {
@@ -338,7 +349,7 @@ export const selectActionsData = ({ props, state }) => {
 
     preview.updateVariable = {
       summary,
-      operationCount: actions.updateVariable.operations?.length || 0,
+      operationCount: operations.length,
     };
   }
 
@@ -348,7 +359,7 @@ export const selectActionsData = ({ props, state }) => {
   };
 };
 
-export const showDropdownMenu = (state, { position, actionType }) => {
+export const showDropdownMenu = ({ state }, { position, actionType } = {}) => {
   state.dropdownMenu = {
     ...state.dropdownMenu,
     isOpen: true,
@@ -357,7 +368,7 @@ export const showDropdownMenu = (state, { position, actionType }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.actionType = null;
 };
@@ -366,6 +377,6 @@ export const selectDropdownMenuActionType = ({ state }) => {
   return state.dropdownMenu.actionType;
 };
 
-export const deleteAction = (state, _actionType) => {
+export const deleteAction = ({ state }, { _actionType } = {}) => {
   hideDropdownMenu(state);
 };

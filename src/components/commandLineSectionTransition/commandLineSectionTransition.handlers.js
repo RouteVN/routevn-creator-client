@@ -103,7 +103,7 @@ export const handleBreadcumbClick = (deps, payload) => {
 
 export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
-  const { formValues } = payload._event.detail;
+  const { values: formValues } = payload._event.detail;
 
   store.setFormValues(formValues);
   render();

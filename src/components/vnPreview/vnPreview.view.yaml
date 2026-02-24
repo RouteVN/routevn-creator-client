@@ -1,24 +1,10 @@
-elementName: rvn-vn-preview
-
-viewDataSchema:
-  type: object
-  properties: {}
-
-attrsSchema:
-  sceneId:
-    type: string
-  sectionId:
-    type: string
-  lineId:
-    type: string
-
-refs: {}
-
+refs:
+  canvas: {}
 template:
   - 'rtgl-view pos=fix w=100vw h=100vh style="left: 0; top: 0; background: black; justify-content: center;" z=3500':
-    - 'rtgl-view w=f pos=rel bwb=xs style="aspect-ratio: 16/9; max-width: 100%; max-height: 100%"':
-      - rtgl-view pos=abs cor=full:
-        - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex; justify-content: center"':
-      - $if isAssetLoading:
-          - rtgl-view pos=abs cor=full bgc=bg op=0.6 av=c ah=c:
-              - rtgl-text s=sm: Loading assets...
+      - 'rtgl-view w=f pos=rel bwb=xs style="aspect-ratio: 16/9; max-width: 100%; max-height: 100%"':
+          - rtgl-view pos=abs cor=full:
+              - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex; justify-content: center"': null
+          - $if isAssetLoading:
+              - rtgl-view pos=abs cor=full bgc=bg op=0.6 av=c ah=c:
+                  - rtgl-text s=sm: Loading assets...

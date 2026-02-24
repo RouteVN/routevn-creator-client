@@ -2,10 +2,12 @@ export const createInitialState = () => ({
   currentRoute: "/projects",
 });
 
+const SIDEBAR_WIDTH_PX = 64;
+
 const routesWithoutNavbar = ["/projects"];
 
-export const selectShowSidebar = (state, props, payload) => {
-  const currentRoutePattern = selectCurrentRoutePattern(state, props, payload);
+export const selectShowSidebar = ({ state }) => {
+  const currentRoutePattern = selectCurrentRoutePattern({ state });
   const normalizedPattern = currentRoutePattern?.replace(/\/$/, "");
   const normalizedRoutesWithoutNavbar = routesWithoutNavbar.map((route) =>
     route.replace(/\/$/, ""),
@@ -13,7 +15,7 @@ export const selectShowSidebar = (state, props, payload) => {
   return !normalizedRoutesWithoutNavbar.includes(normalizedPattern);
 };
 
-export const selectCurrentRoutePattern = (state) => {
+export const selectCurrentRoutePattern = ({ state }) => {
   const routePatterms = [
     "/project",
     "/projects",
@@ -67,14 +69,16 @@ export const selectCurrentRoutePattern = (state) => {
   return routePattern;
 };
 
-export const setCurrentRoute = (state, payload) => {
-  state.currentRoute = payload;
+export const setCurrentRoute = ({ state }, { route } = {}) => {
+  state.currentRoute = route;
 };
 
-export const selectViewData = ({ state, props }, payload) => {
+export const selectViewData = ({ state }) => {
+  const showSidebar = selectShowSidebar({ state });
   return {
     ...state,
-    currentRoutePattern: selectCurrentRoutePattern(state, props, payload),
-    showSidebar: selectShowSidebar(state, props, payload),
+    currentRoutePattern: selectCurrentRoutePattern({ state }),
+    showSidebar,
+    contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",
   };
 };

@@ -1,0 +1,4 @@
+componentName: rvn-tweens
+propsSchema:
+  type: object
+  properties: {}

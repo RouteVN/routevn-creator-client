@@ -40,7 +40,7 @@ const getContrastBackground = (color) => {
   return "transparent";
 };
 
-export const selectViewData = ({ attrs }) => {
+export const selectViewData = ({ props: attrs }) => {
   const height = attrs.height ? parseInt(attrs.height) : null;
   const textColor = attrs.color || "currentColor";
   const providedBackground = attrs.backgroundColor;

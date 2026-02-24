@@ -1,6 +1,6 @@
 export const handleFormChange = (deps, payload) => {
   const { render } = deps;
-  const { formValues } = payload._event.detail;
+  const { values: formValues } = payload._event.detail;
 
   if (!formValues) {
     return;

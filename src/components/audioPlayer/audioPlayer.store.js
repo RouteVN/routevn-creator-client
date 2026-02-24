@@ -5,19 +5,19 @@ export const createInitialState = () => ({
   duration: 0,
 });
 
-export const setLoading = (state, isLoading) => {
+export const setLoading = ({ state }, { isLoading } = {}) => {
   state.isLoading = isLoading;
 };
 
-export const setPlaying = (state, isPlaying) => {
+export const setPlaying = ({ state }, { isPlaying } = {}) => {
   state.isPlaying = isPlaying;
 };
 
-export const setCurrentTime = (state, currentTime) => {
+export const setCurrentTime = ({ state }, { currentTime } = {}) => {
   state.currentTime = Math.max(0, Math.min(currentTime, state.duration));
 };
 
-export const setDuration = (state, duration) => {
+export const setDuration = ({ state }, { duration } = {}) => {
   state.duration = duration;
 };
 

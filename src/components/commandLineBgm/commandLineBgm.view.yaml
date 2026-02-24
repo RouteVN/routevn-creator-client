@@ -1,59 +1,19 @@
-elementName: rvn-command-line-bgm
-
-viewDataSchema:
-  type: object
-  properties:
-    mode:
-      type: string
-      enum: ["current", "gallery"]
-    items:
-      type: array
-    groups:
-      type: array
-    tempSelectedResourceId:
-      type: string
-    breadcrumb:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          label:
-            type: string
-    form:
-      type: object
-    defaultValues:
-      type: object
-      properties:
-        audio:
-          type: string
-
-propsSchema:
-  type: object
-  properties:
-    bgm:
-      type: object
-      properties:
-        resourceId:
-          type: string
-
 refs:
   form:
     eventListeners:
-      extra-event:
+      form-field-event:
         handler: handleFormExtra
       form-change:
         handler: handleFormChange
-  base-file-explorer:
+  baseFileExplorer:
     eventListeners:
-      click-item:
+      item-click:
         handler: handleFileExplorerItemClick
-  resource-item-*:
+  resourceItem*:
     eventListeners:
       click:
         handler: handleResourceItemClick
-  submit-button:
+  submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
@@ -61,50 +21,48 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbActionsClick
-  button-select:
+  buttonSelect:
     eventListeners:
       click:
         handler: handleButtonSelectClick
-  audio-waveform:
+  audioWaveform:
     eventListeners:
       click:
         handler: handleAudioWaveformClick
       contextmenu:
         handler: handleAudioWaveformRightClick
-
 template:
   - rtgl-view w=f h=f p=lg:
-      - rtgl-view d=h g=md:
-      - rtgl-breadcrumb#breadcumb .items=breadcrumb:
+      - rtgl-view d=h g=md: null
+      - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
       - $if mode == 'current':
-          - rtgl-form#form key=${audio.id} .form=form .defaultValues=defaultValues:
+          - rtgl-form#form key=${audio.id} :form=form :defaultValues=defaultValues:
               - $if defaultValues.audioWaveformDataFileId:
                   - rtgl-view slot=audio:
-                      - "rvn-waveform-visualizer#audio-waveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 cur=p":
+                      - rvn-waveform-visualizer#audioWaveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 cur=pointer: null
                       - rtgl-text s=sm ah=c: ${audio.name}
                 $else:
-                  - rtgl-view#audio-waveform w=250 h=150 bgc=mu av=c ah=c cur=p slot=audio:
+                  - rtgl-view#audioWaveform w=250 h=150 bgc=mu av=c ah=c cur=pointer slot=audio:
                       - rtgl-text s=md c=mu-fg: Select BGM
-          - rtgl-view flex=1:
+          - rtgl-view h=1fg: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#submit-button: Submit
-
+              - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
-          - 'rtgl-view d=h w=f g=lg mt=sm flex=1 style="min-height: 0;"':
-              - rtgl-view h=f flex=1 sv:
-                  - rvn-base-file-explorer#base-file-explorer .items=items no-empty-message:
-              - rtgl-view h=f flex=2 sv g=lg:
-                  - $for group in groups:
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
+              - rtgl-view h=f w=1fg sv:
+                  - rvn-base-file-explorer#baseFileExplorer :items=items no-empty-message: null
+              - rtgl-view h=f w=2fg sv g=lg:
+                  - $for group, i in groups:
                       - rtgl-view g=md:
                           - rtgl-text: ${group.name}
-                          - rtgl-view d=h w=f fw=w g=lg:
-                              - $for item in group.children:
-                                  - rtgl-view#resource-item-${item.id} cur=p bw=${item.bw} bc=${item.bc} g=sm:
+                          - rtgl-view d=h w=f wrap g=lg:
+                              - $for item, j in group.children:
+                                  - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=${item.bw} bc=${item.bc} g=sm:
                                       - $if item.waveformDataFileId:
-                                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 h=120:
+                                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 h=120: null
                                           - rtgl-text s=sm ah=c: ${item.name}
                                         $else:
                                           - rtgl-view w=225 h=120 av=c ah=c bgc=ac:
                                               - rtgl-text s=sm c=mu-fg: No waveform
           - rtgl-view d=h av=c ah=e w=f g=lg:
-              - rtgl-button#button-select: Select
+              - rtgl-button#buttonSelect: Select

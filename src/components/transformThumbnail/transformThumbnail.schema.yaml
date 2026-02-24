@@ -1,0 +1,44 @@
+componentName: rvn-transform-thumbnail
+propsSchema:
+  type: object
+  properties:
+    item:
+      type: object
+      description: Transform item data
+      properties:
+        x:
+          type: string
+          description: Width of the transform thumbnail
+          default: 0
+        'y':
+          type: string
+          description: Height of the transform thumbnail
+          default: 0
+        scaleX:
+          type: string
+          description: Horizontal scale factor for the transform thumbnail
+          default: 1
+        scaleY:
+          type: string
+          description: Vertical scale factor for the transform thumbnail
+          default: 1
+        rotation:
+          type: string
+          description: Rotation angle in degrees for the transform thumbnail
+          default: 0
+        anchorX:
+          type: string
+          description: Anchor point X coordinate
+          default: 0
+        anchorY:
+          type: string
+          description: Anchor point Y coordinate
+          default: 0
+    w:
+      type: string
+      description: Width of the transform thumbnail
+      default: '320'
+    h:
+      type: string
+      description: Height of the transform thumbnail
+      default: '180'

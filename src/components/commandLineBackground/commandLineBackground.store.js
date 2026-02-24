@@ -36,34 +36,42 @@ export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-export const setMode = (state, payload) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
-export const setRepositoryState = (state, payload) => {
-  state.imageItems = payload.images;
-  state.layoutItems = payload.layouts;
-  state.videoItems = payload.videos;
-  state.tweenItems = payload.tweens || [];
+export const setRepositoryState = (
+  { state },
+  { images, layouts, videos, tweens } = {},
+) => {
+  state.imageItems = images;
+  state.layoutItems = layouts;
+  state.videoItems = videos;
+  state.tweenItems = tweens || [];
 };
 
-export const setTab = (state, payload) => {
-  state.tab = payload.tab;
+export const setTab = ({ state }, { tab } = {}) => {
+  state.tab = tab;
 };
 
-export const setSelectedResource = (state, payload) => {
-  state.selectedResourceId = payload.resourceId;
-  state.selectedResourceType = payload.resourceType;
+export const setSelectedResource = (
+  { state },
+  { resourceId, resourceType } = {},
+) => {
+  state.selectedResourceId = resourceId;
+  state.selectedResourceType = resourceType;
 
   // Automatically set the tab based on resource type
-  state.tab = payload.resourceType;
+  if (resourceType) {
+    state.tab = resourceType;
+  }
 };
 
-export const setTempSelectedResource = (state, payload) => {
-  state.tempSelectedResourceId = payload.resourceId;
+export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {
+  state.tempSelectedResourceId = resourceId;
 };
 
-export const setPendingResourceId = (state, resourceId) => {
+export const setPendingResourceId = ({ state }, { resourceId } = {}) => {
   state.pendingResourceId = resourceId;
 };
 
@@ -71,20 +79,20 @@ export const selectPendingResourceId = ({ state }) => {
   return state.pendingResourceId;
 };
 
-export const clearPendingResourceId = (state) => {
+export const clearPendingResourceId = ({ state }, _payload = {}) => {
   state.pendingResourceId = undefined;
 };
 
-export const setSelectedTween = (state, payload) => {
-  state.selectedTweenId = payload.tweenId;
+export const setSelectedTween = ({ state }, { tweenId } = {}) => {
+  state.selectedTweenId = tweenId;
 };
 
 export const selectSelectedTween = ({ state }) => {
   return state.selectedTweenId;
 };
 
-export const setBackgroundLoop = (state, payload) => {
-  state.backgroundLoop = payload.loop;
+export const setBackgroundLoop = ({ state }, { loop } = {}) => {
+  state.backgroundLoop = loop;
 };
 
 export const selectBackgroundLoop = ({ state }) => {
@@ -100,6 +108,7 @@ export const selectBreadcrumb = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
   ];
 
@@ -107,6 +116,7 @@ export const selectBreadcrumb = ({ state }) => {
     breadcrumb.push({
       id: "current",
       label: "Background",
+      click: true,
     });
     breadcrumb.push({
       label: "Select",
@@ -211,7 +221,7 @@ export const selectViewData = ({ state }) => {
 
   const formFields = [
     {
-      inputType: "slot",
+      type: "slot",
       slot: "background",
       description: "Background",
     },
@@ -221,7 +231,7 @@ export const selectViewData = ({ state }) => {
     formFields.push({
       name: "loop",
       label: "Loop Video",
-      inputType: "select",
+      type: "select",
       options: [
         { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
@@ -232,7 +242,7 @@ export const selectViewData = ({ state }) => {
   formFields.push({
     name: "tween",
     label: "Tween Animation",
-    inputType: "select",
+    type: "select",
     options: tweenOptions,
   });
 

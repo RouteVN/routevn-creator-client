@@ -1,0 +1,6 @@
+componentName: rvn-command-line-toggle-auto-mode
+propsSchema:
+  type: object
+  properties:
+    toggleAutoMode:
+      type: object

@@ -66,20 +66,37 @@ export const getFileType = (result) => {
   throw new Error("Unknown file type");
 };
 
+const normalizeAcceptedFileTypes = (acceptedFileTypes) => {
+  if (Array.isArray(acceptedFileTypes)) {
+    return acceptedFileTypes
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean);
+  }
+  if (typeof acceptedFileTypes === "string") {
+    return acceptedFileTypes
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 export const getAcceptAttribute = (acceptedFileTypes) => {
-  if (!acceptedFileTypes || acceptedFileTypes.length === 0) {
+  const normalizedTypes = normalizeAcceptedFileTypes(acceptedFileTypes);
+  if (normalizedTypes.length === 0) {
     return "*/*"; // Accept all files if no types specified
   }
-  return acceptedFileTypes.join(",");
+  return normalizedTypes.join(",");
 };
 
 export const isFileTypeAccepted = (file, acceptedFileTypes) => {
-  if (!acceptedFileTypes || acceptedFileTypes.length === 0) {
+  const normalizedTypes = normalizeAcceptedFileTypes(acceptedFileTypes);
+  if (normalizedTypes.length === 0) {
     return true; // Accept all files if no types specified
   }
 
   const fileName = file.name.toLowerCase();
-  return acceptedFileTypes.some((type) => {
+  return normalizedTypes.some((type) => {
     const extension = type.toLowerCase();
     return fileName.endsWith(extension);
   });

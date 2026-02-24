@@ -15,6 +15,12 @@ import { filter, tap, debounceTime } from "rxjs";
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
 
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
 const findNonCloneablePaths = (root, limit = 5) => {
   const paths = [];
   const queue = [{ value: root, path: "$" }];
@@ -187,7 +193,7 @@ const resetAssetLoadCache = () => {
 
 const setSceneAssetLoading = (deps, isLoading) => {
   const { store, render } = deps;
-  store.setSceneAssetLoading(isLoading);
+  store.setSceneAssetLoading({ isLoading: isLoading });
   render();
 };
 
@@ -384,7 +390,7 @@ async function renderSceneState(store, graphicsService, payload = {}) {
 
   // Update presentation state after rendering
   const presentationState = graphicsService.engineSelectPresentationState();
-  store.setPresentationState(presentationState);
+  store.setPresentationState({ presentationState: presentationState });
 }
 
 function createProjectDataWithSelectedEntryPoint(projectData, selection) {
@@ -456,10 +462,12 @@ async function flushDialogueQueue(deps) {
 
 export const handleBeforeMount = (deps) => {
   const { graphicsService, store } = deps;
+  const cleanupSubscriptions = mountLegacySubscriptions(deps);
 
   return async () => {
+    cleanupSubscriptions();
     await flushDialogueQueue(deps);
-    store.setSceneAssetLoading(false);
+    store.setSceneAssetLoading({ isLoading: false });
     resetAssetLoadCache();
     graphicsService.destroy();
   };
@@ -471,12 +479,12 @@ async function updateSectionChanges(deps) {
   if (!sectionId) return;
 
   const changes = graphicsService.engineSelectSectionLineChanges({ sectionId });
-  store.setSectionLineChanges(changes);
+  store.setSectionLineChanges({ changes: changes });
 }
 
 export const handleAfterMount = async (deps) => {
   const {
-    getRefIds,
+    refs,
     graphicsService,
     store,
     projectService,
@@ -507,8 +515,8 @@ export const handleAfterMount = async (deps) => {
     }
   }
 
-  store.setSceneId(sceneId);
-  store.setRepositoryState(state);
+  store.setSceneId({ sceneId: sceneId });
+  store.setRepositoryState({ repository: state });
 
   // Get scene to set selected section and line
   const scene = store.selectScene();
@@ -516,27 +524,27 @@ export const handleAfterMount = async (deps) => {
     const selectedSection =
       scene.sections.find((section) => section.id === payloadSectionId) ||
       scene.sections[0];
-    store.setSelectedSectionId(selectedSection.id);
+    store.setSelectedSectionId({ selectedSectionId: selectedSection.id });
 
     // Select requested line in selected section when available, otherwise first line
     if (selectedSection.lines && selectedSection.lines.length > 0) {
       const selectedLine =
         selectedSection.lines.find((line) => line.id === payloadLineId) ||
         selectedSection.lines[0];
-      store.setSelectedLineId(selectedLine.id);
+      store.setSelectedLineId({ selectedLineId: selectedLine.id });
     } else {
-      store.setSelectedLineId(undefined);
+      store.setSelectedLineId({ selectedLineId: undefined });
     }
   }
 
-  const { canvas } = getRefIds();
+  const { canvas } = refs;
 
   resetAssetLoadCache();
-  store.setSceneAssetLoading(false);
+  store.setSceneAssetLoading({ isLoading: false });
 
   const beforeHandleActions = createBeforeHandleActionsHook(deps);
   await graphicsService.init({
-    canvas: canvas.elm,
+    canvas: canvas,
     beforeHandleActions,
   });
   const projectData = store.selectProjectData();
@@ -563,13 +571,19 @@ export const handleAfterMount = async (deps) => {
 };
 
 const scrollSectionTabIntoView = (deps, sectionId) => {
-  const { getRefIds } = deps;
+  const { refs } = deps;
 
   requestAnimationFrame(() => {
-    const refIds = getRefIds?.();
-    const tabRef = refIds?.[`section-tab-${sectionId}`];
+    const refIds = refs?.();
+    const refElements = Object.values(refIds || {});
+    const tabRef = refElements.find(
+      (element) => element?.dataset?.sectionId === sectionId,
+    );
     const tabElement =
-      tabRef?.elm || document.getElementById(`section-tab-${sectionId}`);
+      tabRef ||
+      Array.from(document.querySelectorAll("[data-section-id]")).find(
+        (element) => element.getAttribute("data-section-id") === sectionId,
+      );
 
     tabElement?.scrollIntoView({
       behavior: "smooth",
@@ -581,15 +595,15 @@ const scrollSectionTabIntoView = (deps, sectionId) => {
 
 const selectSection = async (deps, sectionId) => {
   const { store, render, subject } = deps;
-  store.setSelectedSectionId(sectionId);
+  store.setSelectedSectionId({ selectedSectionId: sectionId });
   const scene = store.selectScene();
   const nextSection = scene?.sections?.find(
     (section) => section.id === sectionId,
   );
   if (nextSection && nextSection.lines && nextSection.lines.length > 0) {
-    store.setSelectedLineId(nextSection.lines[0].id);
+    store.setSelectedLineId({ selectedLineId: nextSection.lines[0].id });
   } else {
-    store.setSelectedLineId(undefined);
+    store.setSelectedLineId({ selectedLineId: undefined });
   }
 
   await updateSectionChanges(deps);
@@ -609,7 +623,10 @@ export const handleSectionTabClick = async (deps, payload) => {
     return;
   }
 
-  const sectionId = payload._event.currentTarget.id.replace("section-tab-", "");
+  const sectionId =
+    payload._event.currentTarget?.dataset?.sectionId ||
+    payload._event.currentTarget?.id?.replace("sectionTab", "") ||
+    "";
   await selectSection(deps, sectionId);
 };
 
@@ -658,7 +675,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     });
 
     const state = projectService.getState();
-    store.setRepositoryState(state);
+    store.setRepositoryState({ repository: state });
     render();
 
     // Render the canvas with the latest data
@@ -700,7 +717,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     });
 
     const state = projectService.getState();
-    store.setRepositoryState(state);
+    store.setRepositoryState({ repository: state });
     render();
 
     // Render the canvas with the latest data
@@ -742,7 +759,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     });
 
     const state = projectService.getState();
-    store.setRepositoryState(state);
+    store.setRepositoryState({ repository: state });
     render();
 
     // Render the canvas with the latest data
@@ -797,7 +814,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   });
 
   const state = projectService.getState();
-  store.setRepositoryState(state);
+  store.setRepositoryState({ repository: state });
   render();
 
   // Trigger debounced canvas render
@@ -831,8 +848,10 @@ export const handleEditorDataChanged = async (deps, payload) => {
 };
 
 export const handleAddActionsButtonClick = (deps) => {
-  const { store, render } = deps;
-  store.setMode("actions");
+  const { refs, render } = deps;
+  refs.systemActions?.transformedHandlers?.open?.({
+    mode: "actions",
+  });
   render();
 };
 
@@ -922,10 +941,10 @@ export const handleSectionAddClick = async (deps) => {
 
   // Update store with new repository state
   const state = projectService.getState();
-  store.setRepositoryState(state);
+  store.setRepositoryState({ repository: state });
 
-  store.setSelectedSectionId(newSectionId);
-  store.setSelectedLineId(newLineId);
+  store.setSelectedSectionId({ selectedSectionId: newSectionId });
+  store.setSelectedLineId({ selectedLineId: newLineId });
   render();
   scrollSectionTabIntoView(deps, newSectionId);
 
@@ -977,10 +996,10 @@ export const handleSectionsOverviewWarningMouseLeave = (deps) => {
 
 export const handleSectionsOverviewRowClick = async (deps, payload) => {
   const { store } = deps;
-  const sectionId = payload._event.currentTarget.id.replace(
-    "section-overview-row-",
-    "",
-  );
+  const sectionId =
+    payload._event.currentTarget?.dataset?.sectionId ||
+    payload._event.currentTarget?.id?.replace("sectionOverviewRow", "") ||
+    "";
 
   if (!sectionId) {
     return;
@@ -991,7 +1010,7 @@ export const handleSectionsOverviewRowClick = async (deps, payload) => {
 };
 
 export const handleSplitLine = async (deps, payload) => {
-  const { projectService, store, render, getRefIds, subject } = deps;
+  const { projectService, store, render, refs, subject } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
@@ -1008,7 +1027,7 @@ export const handleSplitLine = async (deps, payload) => {
   }
 
   // Mark this line as being processed IMMEDIATELY to prevent duplicate operations
-  store.setLockingLineId(lineId);
+  store.setLockingLineId({ lineId: lineId });
 
   const newLineId = nanoid();
 
@@ -1106,23 +1125,23 @@ export const handleSplitLine = async (deps, payload) => {
 
   // Update store with new repository state (pending updates were already flushed)
   const state = projectService.getState();
-  store.setRepositoryState(state);
+  store.setRepositoryState({ repository: state });
 
   // Handle UI updates immediately for responsiveness
   // Pre-configure the linesEditor before rendering
-  const refIds = getRefIds();
-  const linesEditorRef = refIds["lines-editor"];
+  const refIds = refs;
+  const linesEditorRef = refIds["linesEditor"];
 
   if (linesEditorRef) {
     // Set cursor position to 0 (beginning of new line)
-    linesEditorRef.elm.store.setCursorPosition(0);
-    linesEditorRef.elm.store.setGoalColumn(0);
-    linesEditorRef.elm.store.setNavigationDirection("down");
-    linesEditorRef.elm.store.setIsNavigating(true);
+    linesEditorRef.store.setCursorPosition({ position: 0 });
+    linesEditorRef.store.setGoalColumn({ goalColumn: 0 });
+    linesEditorRef.store.setNavigationDirection({ direction: "down" });
+    linesEditorRef.store.setIsNavigating({ isNavigating: true });
   }
 
   // Update selectedLineId through the store (not directly in linesEditor)
-  store.setSelectedLineId(newLineId);
+  store.setSelectedLineId({ selectedLineId: newLineId });
 
   // Render after setting the selected line ID
   render();
@@ -1130,15 +1149,15 @@ export const handleSplitLine = async (deps, payload) => {
   // Use requestAnimationFrame for focus operations
   requestAnimationFrame(() => {
     if (linesEditorRef) {
-      linesEditorRef.elm.transformedHandlers.updateSelectedLine({
+      linesEditorRef.transformedHandlers.updateSelectedLine({
         currentLineId: newLineId,
       });
 
-      linesEditorRef.elm.transformedHandlers.forceSyncContentLine({
+      linesEditorRef.transformedHandlers.forceSyncContentLine({
         lineId,
       });
 
-      linesEditorRef.elm.render();
+      linesEditorRef.render();
     }
 
     // Clear the splitting lock - allows new line to be split if Enter is still held
@@ -1199,7 +1218,7 @@ export const handleNewLine = async (deps) => {
 };
 
 export const handleLineNavigation = (deps, payload) => {
-  const { store, getRefIds, render, subject, graphicsService } = deps;
+  const { store, refs, render, subject, graphicsService } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
@@ -1222,17 +1241,17 @@ export const handleLineNavigation = (deps, payload) => {
       return;
     }
 
-    store.setSelectedLineId(targetLineId);
+    store.setSelectedLineId({ selectedLineId: targetLineId });
     render();
 
     // Check if we need to scroll the line into view using provided coordinates
     if (lineRect) {
       requestAnimationFrame(() => {
-        const refIds = getRefIds();
-        const linesEditorRef = refIds["lines-editor"];
+        const refIds = refs;
+        const linesEditorRef = refIds["linesEditor"];
 
-        if (linesEditorRef && linesEditorRef.elm) {
-          const linesEditorElm = linesEditorRef.elm;
+        if (linesEditorRef) {
+          const linesEditorElm = linesEditorRef;
 
           // The scroll container is actually the parent of the lines-editor component
           // It's the rtgl-view with 'sv' (scroll vertical) attribute
@@ -1253,20 +1272,20 @@ export const handleLineNavigation = (deps, payload) => {
             // First try shadow DOM
             if (linesEditorElm.shadowRoot) {
               lineElement = linesEditorElm.shadowRoot.querySelector(
-                `#line-${targetLineId}`,
+                `#line${targetLineId}`,
               );
             }
 
             // If not found, try regular DOM inside the component
             if (!lineElement) {
               lineElement = linesEditorElm.querySelector(
-                `#line-${targetLineId}`,
+                `#line${targetLineId}`,
               );
             }
 
             // Last resort: search in the whole document
             if (!lineElement) {
-              lineElement = document.querySelector(`#line-${targetLineId}`);
+              lineElement = document.querySelector(`#line${targetLineId}`);
             }
 
             if (lineElement) {
@@ -1302,11 +1321,11 @@ export const handleLineNavigation = (deps, payload) => {
 
   // Handle navigation to different line
   if (nextLineId && nextLineId !== currentLineId) {
-    const refIds = getRefIds();
-    const linesEditorRef = refIds["lines-editor"];
+    const refIds = refs;
+    const linesEditorRef = refIds["linesEditor"];
 
     // Update selectedLineId through the store
-    store.setSelectedLineId(nextLineId);
+    store.setSelectedLineId({ selectedLineId: nextLineId });
 
     // Handle cursor positioning based on direction
     if (linesEditorRef) {
@@ -1315,24 +1334,30 @@ export const handleLineNavigation = (deps, payload) => {
           // Special value: position at end of target line (for ArrowLeft navigation)
           // Set a large goal column - updateSelectedLine will clamp to actual text length
           // when direction is "end"
-          linesEditorRef.elm.store.setCursorPosition(Number.MAX_SAFE_INTEGER);
-          linesEditorRef.elm.store.setGoalColumn(Number.MAX_SAFE_INTEGER);
-          linesEditorRef.elm.store.setNavigationDirection("end"); // Special direction for end positioning
+          linesEditorRef.store.setCursorPosition({
+            position: Number.MAX_SAFE_INTEGER,
+          });
+          linesEditorRef.store.setGoalColumn({
+            goalColumn: Number.MAX_SAFE_INTEGER,
+          });
+          linesEditorRef.store.setNavigationDirection({ direction: "end" }); // Special direction for end positioning
         } else {
-          linesEditorRef.elm.store.setCursorPosition(targetCursorPosition);
+          linesEditorRef.store.setCursorPosition({
+            position: targetCursorPosition,
+          });
           if (targetCursorPosition === 0) {
             // When moving to beginning, set goal column to 0 as well
-            linesEditorRef.elm.store.setGoalColumn(0);
+            linesEditorRef.store.setGoalColumn({ goalColumn: 0 });
           }
         }
       }
 
       // Set direction flag in store before calling updateSelectedLine
       if (direction) {
-        linesEditorRef.elm.store.setNavigationDirection(direction);
+        linesEditorRef.store.setNavigationDirection({ direction: direction });
       }
 
-      linesEditorRef.elm.transformedHandlers.updateSelectedLine({
+      linesEditorRef.transformedHandlers.updateSelectedLine({
         currentLineId: nextLineId,
       });
     }
@@ -1342,7 +1367,7 @@ export const handleLineNavigation = (deps, payload) => {
       render();
       // Also render the linesEditor to update line colors
       if (linesEditorRef) {
-        linesEditorRef.elm.render();
+        linesEditorRef.render();
       }
 
       // Trigger debounced canvas render
@@ -1360,7 +1385,7 @@ export const handleLineNavigation = (deps, payload) => {
 };
 
 export const handleMergeLines = async (deps, payload) => {
-  const { store, getRefIds, render, projectService, subject } = deps;
+  const { store, refs, render, projectService, subject } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
@@ -1377,7 +1402,7 @@ export const handleMergeLines = async (deps, payload) => {
     return;
   }
 
-  store.setLockingLineId(currentLineId);
+  store.setLockingLineId({ lineId: currentLineId });
 
   // Flush pending dialogue updates before modifying repository
   await flushDialogueQueue(deps);
@@ -1434,20 +1459,20 @@ export const handleMergeLines = async (deps, payload) => {
 
   // Update repository state in store to reflect the changes
   const state = projectService.getState();
-  store.setRepositoryState(state);
+  store.setRepositoryState({ repository: state });
 
   // Update selected line to the previous one
-  store.setSelectedLineId(prevLineId);
+  store.setSelectedLineId({ selectedLineId: prevLineId });
 
   // Pre-configure the linesEditor for cursor positioning
-  const refIds = getRefIds();
-  const linesEditorRef = refIds["lines-editor"];
+  const refIds = refs;
+  const linesEditorRef = refIds["linesEditor"];
 
   if (linesEditorRef) {
     // Set cursor position to where the previous content ended
-    linesEditorRef.elm.store.setCursorPosition(prevContentLength);
-    linesEditorRef.elm.store.setGoalColumn(prevContentLength);
-    linesEditorRef.elm.store.setIsNavigating(true);
+    linesEditorRef.store.setCursorPosition({ position: prevContentLength });
+    linesEditorRef.store.setGoalColumn({ goalColumn: prevContentLength });
+    linesEditorRef.store.setIsNavigating({ isNavigating: true });
   }
 
   // Render and then focus
@@ -1455,10 +1480,10 @@ export const handleMergeLines = async (deps, payload) => {
 
   requestAnimationFrame(() => {
     if (linesEditorRef) {
-      linesEditorRef.elm.transformedHandlers.updateSelectedLine({
+      linesEditorRef.transformedHandlers.updateSelectedLine({
         currentLineId: prevLineId,
       });
-      linesEditorRef.elm.render();
+      linesEditorRef.render();
     }
 
     requestAnimationFrame(() => {
@@ -1478,7 +1503,10 @@ export const handleSectionTabRightClick = (deps, payload) => {
 
   payload._event.preventDefault(); // Prevent default browser context menu
 
-  const sectionId = payload._event.currentTarget.id.replace("section-tab-", "");
+  const sectionId =
+    payload._event.currentTarget?.dataset?.sectionId ||
+    payload._event.currentTarget?.id?.replace("sectionTab", "") ||
+    "";
 
   store.showSectionDropdownMenu({
     position: {
@@ -1492,8 +1520,7 @@ export const handleSectionTabRightClick = (deps, payload) => {
 };
 
 export const handleActionsDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.setMode("lines-editor");
+  const { render } = deps;
   render();
 };
 
@@ -1518,7 +1545,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   store.hideDropdownMenu();
 
   if (typeof action === "string" && action.startsWith("go-to-section:")) {
-    const nextSectionId = action.replace("go-to-section:", "");
+    const nextSectionId = action.replace("goToSection:", "");
     if (nextSectionId) {
       await selectSection(deps, nextSectionId);
       return;
@@ -1539,12 +1566,14 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
     // Update store with new repository state
     const state = projectService.getState();
-    store.setRepositoryState(state);
+    store.setRepositoryState({ repository: state });
 
     // Update scene data and select first remaining section
     const newScene = store.selectScene();
     if (newScene && newScene.sections.length > 0) {
-      store.setSelectedSectionId(newScene.sections[0].id);
+      store.setSelectedSectionId({
+        selectedSectionId: newScene.sections[0].id,
+      });
     }
   } else if (action === "rename-section") {
     // Show rename popover using the stored position
@@ -1593,7 +1622,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       }
 
       const state = projectService.getState();
-      store.setRepositoryState(state);
+      store.setRepositoryState({ repository: state });
 
       // Trigger re-render to update the view
       subject.dispatch("sceneEditor.renderCanvas", {});
@@ -1615,7 +1644,7 @@ export const handleFormActionClick = async (deps, payload) => {
 
   // Extract action and values from detail
   const action = detail.action || detail.actionId;
-  const values = detail.values || detail.formValues || detail;
+  const values = detail.values || detail;
 
   if (action === "cancel") {
     store.hidePopover();
@@ -1649,7 +1678,7 @@ export const handleFormActionClick = async (deps, payload) => {
 
       // Update store with new repository state
       const state = projectService.getState();
-      store.setRepositoryState(state);
+      store.setRepositoryState({ repository: state });
     }
 
     render();
@@ -1667,7 +1696,7 @@ export const handlePreviewClick = (deps) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  store.showPreviewSceneId({ sceneId, sectionId, lineId });
+  store.showPreviewSceneId({ payload: { sceneId, sectionId, lineId } });
   render();
 };
 
@@ -1713,24 +1742,24 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   });
   // Update store with new repository state
   const state = projectService.getState();
-  store.setRepositoryState(state);
+  store.setRepositoryState({ repository: state });
   // Trigger re-render
   render();
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleHidePreviewScene = async (deps) => {
-  const { store, render, graphicsService, getRefIds } = deps;
+  const { store, render, graphicsService, refs } = deps;
 
   store.hidePreviewScene();
   render();
 
-  const { canvas } = getRefIds();
+  const { canvas } = refs;
   resetAssetLoadCache();
-  store.setSceneAssetLoading(false);
+  store.setSceneAssetLoading({ isLoading: false });
   const beforeHandleActions = createBeforeHandleActionsHook(deps);
   await graphicsService.init({
-    canvas: canvas.elm,
+    canvas: canvas,
     beforeHandleActions,
   });
 
@@ -1776,7 +1805,7 @@ async function handleRenderCanvas(deps, payload) {
 }
 
 // RxJS subscriptions for handling events with throttling/debouncing
-export const subscriptions = (deps) => {
+const subscriptions = (deps) => {
   const { subject, dialogueQueueService } = deps;
 
   // Register write callback for dialogue queue (debounce is handled by the service)
@@ -1855,7 +1884,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   });
   // Update store with new repository state
   const state = projectService.getState();
-  store.setRepositoryState(state);
+  store.setRepositoryState({ repository: state });
   // Trigger re-render
   render();
 

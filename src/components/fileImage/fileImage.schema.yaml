@@ -1,0 +1,17 @@
+componentName: rvn-file-image
+propsSchema:
+  type: object
+  properties:
+    fileId:
+      type: string
+    imageId:
+      type: string
+    br:
+      type: string
+    wh:
+      type: string
+    w:
+      type: string
+    h:
+      type: string
+  required: []

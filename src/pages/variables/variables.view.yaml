@@ -1,9 +1,3 @@
-elementName: rvn-variables
-
-viewDataSchema:
-  type: object
-  properties: {}
-
 refs:
   fileexplorer:
     eventListeners:
@@ -17,24 +11,23 @@ refs:
         handler: handleVariableCreated
       variable-delete:
         handler: handleVariableDelete
-  detail-form:
+  detailForm:
     eventListeners:
       form-change:
         handler: handleFormChange
-
 template:
-  - rtgl-view d=h w=f h=f: 
-    - rtgl-view d=h h=f w=f:
-      - rvn-resizable-panel#file-explorer w=300 min-w=200 max-w=500 resize-side="right":
-        - rtgl-view slot="content" w=f h=f:
-          - rvn-resource-types .resourceCategory=resourceCategory .selectedResourceId=selectedResourceId:
-          - rvn-file-explorer#fileexplorer .items=flatItems .repositoryTarget=repositoryTarget .contextMenuItems=contextMenuItems .emptyContextMenuItems=emptyContextMenuItems:
-      - rtgl-view flex=1 h=f:
-        - rvn-group-variables-view#groupview .flatGroups=flatGroups .selectedItemId=selectedItemId:
-      - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-        - rtgl-view wh=f slot="content":
-          - $if selectedItemId:
-            - rtgl-form#detail-form key=${selectedItemId}-${defaultValues.name}-${defaultValues.type}-${defaultValues.default} w=f h=f .form=form .defaultValues=defaultValues:
-            $else:
-              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                  - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-view d=h w=f h=f:
+      - rtgl-view d=h h=f w=f:
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileexplorer :items=flatItems :repositoryTarget=repositoryTarget :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+          - rtgl-view w=1fg h=f:
+              - rvn-group-variables-view#groupview :flatGroups=flatGroups :selectedItemId=selectedItemId: null
+          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-form#detailForm key=${selectedItemId}-${defaultValues.name}-${defaultValues.type}-${defaultValues.default} w=f h=f :form=form :defaultValues=defaultValues: null
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection

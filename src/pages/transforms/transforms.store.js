@@ -2,14 +2,44 @@ import { toFlatGroups, toFlatItems } from "insieme";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "x", inputType: "read-only-text", description: "Position X" },
-    { name: "y", inputType: "read-only-text", description: "Position Y" },
-    { name: "scaleX", inputType: "read-only-text", description: "Scale X" },
-    { name: "scaleY", inputType: "read-only-text", description: "Scale Y" },
-    { name: "anchorX", inputType: "read-only-text", description: "Anchor X" },
-    { name: "anchorY", inputType: "read-only-text", description: "Anchor Y" },
-    //{ name: "rotation", inputType: "read-only-text", description: "Rotation" },
+    { name: "name", type: "popover-input", label: "Name" },
+    {
+      name: "x",
+      type: "read-only-text",
+      label: "Position X",
+      content: "${x}",
+    },
+    {
+      name: "y",
+      type: "read-only-text",
+      label: "Position Y",
+      content: "${y}",
+    },
+    {
+      name: "scaleX",
+      type: "read-only-text",
+      label: "Scale X",
+      content: "${scaleX}",
+    },
+    {
+      name: "scaleY",
+      type: "read-only-text",
+      label: "Scale Y",
+      content: "${scaleY}",
+    },
+    {
+      name: "anchorX",
+      type: "read-only-text",
+      label: "Anchor X",
+      content: "${anchorX}",
+    },
+    {
+      name: "anchorY",
+      type: "read-only-text",
+      label: "Anchor Y",
+      content: "${anchorY}",
+    },
+    //{ name: "rotation", type: "read-only-text", description: "Rotation" },
   ],
 };
 
@@ -31,6 +61,14 @@ export const createInitialState = () => ({
   targetGroupId: null,
   editMode: false,
   editItemId: null,
+  context: {
+    x: "",
+    y: "",
+    scaleX: "",
+    scaleY: "",
+    anchorX: "",
+    anchorY: "",
+  },
   defaultValues: {
     name: "",
     x: "0",
@@ -45,13 +83,13 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "x",
-        inputType: "slider-input",
+        type: "slider-with-input",
         min: 0,
         max: 1920,
         step: 1,
@@ -60,7 +98,7 @@ export const createInitialState = () => ({
       },
       {
         name: "y",
-        inputType: "slider-input",
+        type: "slider-with-input",
         min: 0,
         max: 1080,
         step: 1,
@@ -69,7 +107,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scaleX",
-        inputType: "slider-input",
+        type: "slider-with-input",
         min: 0.1,
         max: 3,
         step: 0.1,
@@ -78,7 +116,7 @@ export const createInitialState = () => ({
       },
       {
         name: "scaleY",
-        inputType: "slider-input",
+        type: "slider-with-input",
         min: 0.1,
         max: 3,
         step: 0.1,
@@ -87,7 +125,7 @@ export const createInitialState = () => ({
       },
       {
         name: "anchor",
-        inputType: "select",
+        type: "select",
         label: "Anchor",
         placeholder: "Choose a anchor",
         options: [
@@ -129,7 +167,7 @@ export const createInitialState = () => ({
       },
       // {
       //   name: "rotation",
-      //   inputType: "slider-input",
+      //   type: "slider-input",
       //   min: -360,
       //   max: 360,
       //   step: 1,
@@ -146,26 +184,26 @@ export const createInitialState = () => ({
         {
           id: "submit",
           variant: "pr",
-          content: "Add Transform",
+          label: "Add Transform",
         },
       ],
     },
   },
 });
 
-export const setItems = (state, transformData) => {
+export const setItems = ({ state }, { transformData } = {}) => {
   state.transformData = transformData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -175,7 +213,7 @@ export const toggleGroupCollapse = (state, groupId) => {
 };
 
 // Transform dialog management (moved from groupTransformsView)
-export const openTransformFormDialog = (state, options = {}) => {
+export const openTransformFormDialog = ({ state }, options = {}) => {
   const {
     editMode = false,
     itemId = null,
@@ -224,7 +262,7 @@ export const openTransformFormDialog = (state, options = {}) => {
   state.isDialogOpen = true;
 };
 
-export const closeTransformFormDialog = (state) => {
+export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   // Close dialog
   state.isDialogOpen = false;
 
@@ -275,16 +313,42 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    x: "",
+    y: "",
+    scaleX: "",
+    scaleY: "",
+    anchorX: "",
+    anchorY: "",
+  };
   if (selectedItem) {
+    const x = String(selectedItem.x ?? 0);
+    const y = String(selectedItem.y ?? 0);
+    const scaleX = String(selectedItem.scaleX ?? 1);
+    const scaleY = String(selectedItem.scaleY ?? 1);
+    const anchorX = String(selectedItem.anchorX ?? 0);
+    const anchorY = String(selectedItem.anchorY ?? 0);
+
     defaultValues = {
       name: selectedItem.name,
-      x: selectedItem.x || "",
-      y: selectedItem.y || "",
-      scaleX: selectedItem.scaleX || "",
-      scaleY: selectedItem.scaleY || "",
-      anchorX: selectedItem.anchorX || "",
-      anchorY: selectedItem.anchorY || "",
+      x,
+      y,
+      scaleX,
+      scaleY,
+      anchorX,
+      anchorY,
       //rotation: selectedItem.rotation || "",
+    };
+
+    formContext = {
+      ...state.context,
+      x,
+      y,
+      scaleX,
+      scaleY,
+      anchorX,
+      anchorY,
     };
   }
 
@@ -348,6 +412,7 @@ export const selectViewData = ({ state }) => {
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     form,
+    context: formContext,
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "transforms",

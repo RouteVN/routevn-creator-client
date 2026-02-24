@@ -1,0 +1,18 @@
+componentName: rvn-command-line-base
+propsSchema:
+  type: object
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+    base:
+      type: object
+      properties:
+        resourceId:
+          type: string

@@ -1,0 +1,4 @@
+componentName: rvn-character-sprites
+propsSchema:
+  type: object
+  properties: {}

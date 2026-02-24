@@ -1,24 +1,26 @@
 export const handleEditableImageClick = (deps, payload) => {
-  const { getRefIds } = deps;
+  const { refs } = deps;
 
   // Extract the field index from the element ID
   const fieldIndex = payload._event.currentTarget.id.replace(
-    "editable-image-",
+    "editableImage",
     "",
   );
 
   // Get the corresponding file input and trigger click
-  const refIds = getRefIds();
-  const fileInputRef = refIds[`file-input-${fieldIndex}`];
+  const refIds = refs;
+  const fileInputRef = refIds[`fileInput${fieldIndex}`];
 
-  if (fileInputRef && fileInputRef.elm) {
-    fileInputRef.elm.click();
+  if (fileInputRef) {
+    fileInputRef.click();
   }
 };
 
 export const handleSelectChange = (deps, payload) => {
   const { dispatchEvent } = deps;
-  const id = payload._event.currentTarget.id.replace("select-", "");
+  const target = payload._event.currentTarget;
+  const id =
+    target?.dataset?.fieldName || target?.id?.replace("select", "") || "";
 
   dispatchEvent(
     new CustomEvent("item-update", {
@@ -37,10 +39,11 @@ export const handleEditableNumberClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const fieldName = payload._event.currentTarget.id.replace(
-    "editable-number-",
-    "",
-  );
+  const target = payload._event.currentTarget;
+  const fieldName =
+    target?.dataset?.fieldName ||
+    target?.id?.replace("editableNumber", "") ||
+    "";
   const field = store.selectField(fieldName);
 
   // Calculate position for left-bottom placement relative to mouse cursor
@@ -54,7 +57,7 @@ export const handleEditableNumberClick = (deps, payload) => {
     fields: [
       {
         name: field.name,
-        inputType: "slider-input",
+        type: "slider-with-input",
         label: field.label,
         description: field.description || "Adjust the value",
         min: field.min || 0,
@@ -68,7 +71,7 @@ export const handleEditableNumberClick = (deps, payload) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Submit",
+          label: "Submit",
         },
       ],
     },
@@ -84,7 +87,7 @@ export const handleFileInputChange = (deps, payload) => {
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
-    payload._event.currentTarget.id.replace("file-input-", ""),
+    payload._event.currentTarget.id.replace("fileInput", ""),
   );
   const field = props.fields[fieldIndex];
   const file = payload._event.target.files[0];
@@ -109,20 +112,20 @@ export const handleFileInputChange = (deps, payload) => {
 };
 
 export const handleEditableAudioClick = (deps, payload) => {
-  const { getRefIds } = deps;
+  const { refs } = deps;
 
   // Extract the field index from the element ID
   const fieldIndex = payload._event.currentTarget.id.replace(
-    "editable-audio-",
+    "editableAudio",
     "",
   );
 
   // Get the corresponding audio file input and trigger click
-  const refIds = getRefIds();
-  const audioFileInputRef = refIds[`file-input-${fieldIndex}`];
+  const refIds = refs;
+  const audioFileInputRef = refIds[`fileInput${fieldIndex}`];
 
-  if (audioFileInputRef && audioFileInputRef.elm) {
-    audioFileInputRef.elm.click();
+  if (audioFileInputRef) {
+    audioFileInputRef.click();
   }
 };
 
@@ -153,7 +156,7 @@ export const handleFormActionClick = (deps, payload) => {
 
   // Extract action and values from detail - use correct property names
   const action = detail.actionId;
-  const values = detail.formValues;
+  const values = detail.values;
 
   if (action === "cancel") {
     store.hidePopover();
@@ -184,7 +187,7 @@ export const handleColorFieldClick = (deps, payload) => {
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
-    payload._event.currentTarget.id.replace("color-field-", ""),
+    payload._event.currentTarget.id.replace("colorField", ""),
   );
   const field = props.fields[fieldIndex];
 
@@ -212,7 +215,7 @@ export const handleColorFormActionClick = (deps, payload) => {
   const detail = payload._event.detail;
 
   // Extract values from detail
-  const values = detail.formValues;
+  const values = detail.values;
 
   // Get current dialog state
   const state = store.getState ? store.getState() : store._state || store.state;
@@ -236,21 +239,21 @@ export const handleColorFormActionClick = (deps, payload) => {
 };
 
 export const handleFontFieldClick = (deps, payload) => {
-  const { getRefIds, props } = deps;
+  const { refs, props } = deps;
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
-    payload._event.currentTarget.id.replace("font-field-", ""),
+    payload._event.currentTarget.id.replace("fontField", ""),
   );
   const field = props.fields[fieldIndex];
 
   if (field && field.editable) {
     // Get the corresponding file input and trigger click
-    const refIds = getRefIds();
-    const fileInputRef = refIds[`file-input-${fieldIndex}`];
+    const refIds = refs;
+    const fileInputRef = refIds[`fileInput${fieldIndex}`];
 
-    if (fileInputRef && fileInputRef.elm) {
-      fileInputRef.elm.click();
+    if (fileInputRef) {
+      fileInputRef.click();
     }
   }
 };
@@ -260,7 +263,7 @@ export const handleTypographySelectChange = (deps, payload) => {
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
-    payload._event.currentTarget.id.replace("typography-select-", ""),
+    payload._event.currentTarget.id.replace("typographySelect", ""),
   );
   const field = props.fields[fieldIndex];
   const selectedValue = payload._event.detail.value;
@@ -283,10 +286,9 @@ export const handleEditableTextClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
 
-  const fieldName = payload._event.currentTarget.id.replace(
-    "editable-text-",
-    "",
-  );
+  const target = payload._event.currentTarget;
+  const fieldName =
+    target?.dataset?.fieldName || target?.id?.replace("editableText", "") || "";
 
   const field = store.selectField(fieldName);
 
@@ -302,7 +304,7 @@ export const handleEditableTextClick = (deps, payload) => {
     fields: [
       {
         name: field.name,
-        inputType: "inputText",
+        type: "input-text",
         label: field.label,
         description: "Enter new name",
         placeholder: field.value || "",
@@ -314,7 +316,7 @@ export const handleEditableTextClick = (deps, payload) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Submit",
+          label: "Submit",
         },
       ],
     },
@@ -336,7 +338,7 @@ export const handleTypographyFormActionClick = (deps, payload) => {
   const detail = payload._event.detail;
 
   // Extract values from detail
-  const values = detail.formValues;
+  const values = detail.values;
 
   // Get current dialog state
   const state = store.getState ? store.getState() : store._state || store.state;
@@ -368,7 +370,7 @@ export const handleImageSelectorFieldClick = (deps, payload) => {
 
   // Extract field index from element ID
   const fieldIndex = parseInt(
-    payload._event.currentTarget.id.replace("image-selector-field-", ""),
+    payload._event.currentTarget.id.replace("imageSelectorField", ""),
   );
   const field = props.fields[fieldIndex];
 
@@ -445,7 +447,7 @@ export const handleClearImage = (deps, payload) => {
 
   // Extract field index from element ID
   const fieldIndex = parseInt(
-    payload._event.currentTarget.id.replace("clear-image-", ""),
+    payload._event.currentTarget.id.replace("clearImage", ""),
   );
   const field = props.fields[fieldIndex];
 

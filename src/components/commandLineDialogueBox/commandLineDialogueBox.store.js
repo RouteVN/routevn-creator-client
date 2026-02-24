@@ -27,7 +27,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "mode",
-        inputType: "select",
+        type: "select",
         label: "Dialogue Mode",
         description: "",
         required: false,
@@ -38,7 +38,7 @@ export const createInitialState = () => ({
       },
       {
         name: "resourceId",
-        inputType: "select",
+        type: "select",
         label: "Dialogue Layout",
         description: "",
         required: false,
@@ -47,7 +47,7 @@ export const createInitialState = () => ({
       },
       {
         name: "characterId",
-        inputType: "select",
+        type: "select",
         label: "Dialogue Character",
         description: "",
         required: false,
@@ -57,7 +57,7 @@ export const createInitialState = () => ({
       {
         $when: 'values.mode == "nvl"',
         name: "clearPage",
-        inputType: "select",
+        type: "select",
         label: "Clear Page",
         description: "",
         required: false,
@@ -68,7 +68,7 @@ export const createInitialState = () => ({
       },
       {
         name: "clear",
-        inputType: "select",
+        type: "select",
         label: "Clear Dialogue",
         description: "",
         required: false,
@@ -85,33 +85,33 @@ export const createInitialState = () => ({
   },
 });
 
-export const setLayouts = (state, layouts) => {
+export const setLayouts = ({ state }, { layouts } = {}) => {
   state.layouts = layouts;
 };
 
-export const setSelectedResource = (state, { resourceId }) => {
+export const setSelectedResource = ({ state }, { resourceId } = {}) => {
   state.selectedResourceId = resourceId;
   state.defaultValues.resourceId = resourceId;
 };
 
-export const setSelectedCharacterId = (state, { characterId }) => {
+export const setSelectedCharacterId = ({ state }, { characterId } = {}) => {
   state.selectedCharacterId = characterId;
   state.defaultValues.characterId = characterId;
 };
 
-export const setSelectedMode = (state, { mode }) => {
+export const setSelectedMode = ({ state }, { mode } = {}) => {
   const selectedMode = mode === "nvl" ? "nvl" : "adv";
   state.selectedMode = selectedMode;
   state.defaultValues.mode = selectedMode;
 };
 
-export const setClearPage = (state, { clearPage }) => {
+export const setClearPage = ({ state }, { clearPage } = {}) => {
   const clearPageValue = toBoolean(clearPage);
   state.clearPage = clearPageValue;
   state.defaultValues.clearPage = clearPageValue;
 };
 
-export const setClear = (state, { clear }) => {
+export const setClear = ({ state }, { clear } = {}) => {
   const clearValue = toBoolean(clear);
   state.clear = clearValue;
   state.defaultValues.clear = clearValue;
@@ -147,6 +147,7 @@ export const selectViewData = ({ state, props }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
     {
       label: "Dialogue Box",

@@ -7,21 +7,21 @@ const createAddColorForm = (colorFolderOptions) => ({
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      type: "input-text",
       label: "Color Name",
       description: "Enter the color name",
       required: true,
     },
     {
       name: "hex",
-      inputType: "colorPicker",
+      type: "color-picker",
       label: "Hex Value",
       description: "Choose or enter a hex color value",
       required: true,
     },
     {
       name: "folderId",
-      inputType: "select",
+      type: "select",
       label: "Folder",
       description: "Choose where to save the color",
       options: colorFolderOptions,
@@ -34,7 +34,7 @@ const createAddColorForm = (colorFolderOptions) => ({
       {
         id: "submit",
         variant: "pr",
-        content: "Add Color",
+        label: "Add Color",
       },
     ],
   },
@@ -47,7 +47,7 @@ const createAddFontForm = (fontFolderOptions) => ({
   fields: [
     {
       name: "folderId",
-      inputType: "select",
+      type: "select",
       label: "Folder",
       description: "Choose where to save the font",
       options: fontFolderOptions,
@@ -55,7 +55,7 @@ const createAddFontForm = (fontFolderOptions) => ({
     },
     {
       slot: "font-upload",
-      inputType: "slot",
+      type: "slot",
       label: "Font File",
       description: "Click or drag and drop a font file here",
       required: true,
@@ -67,7 +67,7 @@ const createAddFontForm = (fontFolderOptions) => ({
       {
         id: "submit",
         variant: "pr",
-        content: "Add Font",
+        label: "Add Font",
       },
     ],
   },
@@ -77,31 +77,45 @@ const form = {
   fields: [
     {
       name: "typographyPreview",
-      inputType: "image",
+      type: "image",
       src: "${typographyPreview.src}",
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fontSize",
-      inputType: "read-only-text",
-      description: "Font Size",
+      type: "read-only-text",
+      label: "Font Size",
+      content: "${fontSize}",
     },
     {
       name: "lineHeight",
-      inputType: "read-only-text",
-      description: "Line Height",
+      type: "read-only-text",
+      label: "Line Height",
+      content: "${lineHeight}",
     },
-    { name: "colorName", inputType: "read-only-text", description: "Color" },
-    { name: "fontName", inputType: "read-only-text", description: "Font" },
+    {
+      name: "colorName",
+      type: "read-only-text",
+      label: "Color",
+      content: "${colorName}",
+    },
+    {
+      name: "fontName",
+      type: "read-only-text",
+      label: "Font",
+      content: "${fontName}",
+    },
     {
       name: "fontWeight",
-      inputType: "read-only-text",
-      description: "Font Weight",
+      type: "read-only-text",
+      label: "Font Weight",
+      content: "${fontWeight}",
     },
     {
       name: "previewText",
-      inputType: "read-only-text",
-      description: "Preview Text",
+      type: "read-only-text",
+      label: "Preview Text",
+      content: "${previewText}",
     },
   ],
 };
@@ -173,50 +187,50 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setItems = (state, typographyData) => {
+export const setItems = ({ state }, { typographyData } = {}) => {
   state.typographyData = typographyData;
 };
 
-export const setColorsData = (state, colorsData) => {
+export const setColorsData = ({ state }, { colorsData } = {}) => {
   state.colorsData = colorsData;
 };
 
-export const setFontsData = (state, fontsData) => {
+export const setFontsData = ({ state }, { fontsData } = {}) => {
   state.fontsData = fontsData;
 };
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
 // Dialog management
-export const toggleDialog = (state) => {
+export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
 };
 
-export const setTargetGroupId = (state, groupId) => {
+export const setTargetGroupId = ({ state }, { groupId } = {}) => {
   state.targetGroupId = groupId;
 };
 
-export const setEditMode = (state, itemId) => {
+export const setEditMode = ({ state }, { itemId } = {}) => {
   state.editMode = true;
   state.editingItemId = itemId;
 };
 
-export const clearEditMode = (state) => {
+export const clearEditMode = ({ state }, _payload = {}) => {
   state.editMode = false;
   state.editingItemId = undefined;
 };
 
-export const updateFormValues = (state, formData) => {
+export const updateFormValues = ({ state }, { formData } = {}) => {
   const newValues = { ...state.currentFormValues, ...formData };
   if (newValues.previewText == null) {
     newValues.previewText = "";
@@ -224,7 +238,7 @@ export const updateFormValues = (state, formData) => {
   state.currentFormValues = newValues;
 };
 
-export const resetFormValues = (state) => {
+export const resetFormValues = ({ state }, _payload = {}) => {
   state.currentFormValues = {
     name: "",
     fontColor: "",
@@ -236,7 +250,7 @@ export const resetFormValues = (state) => {
   };
 };
 
-export const setFormValuesFromItem = (state, item) => {
+export const setFormValuesFromItem = ({ state }, { item } = {}) => {
   if (!item) {
     throw new Error("Item is required for setFormValuesFromItem");
   }
@@ -252,11 +266,11 @@ export const setFormValuesFromItem = (state, item) => {
 };
 
 // Add color dialog management
-export const openAddColorDialog = (state) => {
+export const openAddColorDialog = ({ state }, _payload = {}) => {
   state.isAddColorDialogOpen = true;
 };
 
-export const closeAddColorDialog = (state) => {
+export const closeAddColorDialog = ({ state }, _payload = {}) => {
   state.isAddColorDialogOpen = false;
   state.newColorData = {
     name: "",
@@ -265,16 +279,16 @@ export const closeAddColorDialog = (state) => {
   };
 };
 
-export const updateNewColorData = (state, data) => {
+export const updateNewColorData = ({ state }, { data } = {}) => {
   state.newColorData = { ...state.newColorData, ...data };
 };
 
 // Add font dialog management
-export const openAddFontDialog = (state) => {
+export const openAddFontDialog = ({ state }, _payload = {}) => {
   state.isAddFontDialogOpen = true;
 };
 
-export const closeAddFontDialog = (state) => {
+export const closeAddFontDialog = ({ state }, _payload = {}) => {
   state.isAddFontDialogOpen = false;
   state.selectedFontFile = undefined;
   state.hasSelectedFont = false;
@@ -285,11 +299,11 @@ export const closeAddFontDialog = (state) => {
   };
 };
 
-export const updateNewFontData = (state, data) => {
+export const updateNewFontData = ({ state }, { data } = {}) => {
   state.newFontData = { ...state.newFontData, ...data };
 };
 
-export const setSelectedFontFile = (state, data) => {
+export const setSelectedFontFile = ({ state }, { data } = {}) => {
   state.selectedFontFile = data.file;
   state.hasSelectedFont = true;
   state.selectedFontFileName = data.fileName;
@@ -297,7 +311,7 @@ export const setSelectedFontFile = (state, data) => {
   state.dragDropText = "Replace font file";
 };
 
-export const clearSelectedFontFile = (state) => {
+export const clearSelectedFontFile = ({ state }, _payload = {}) => {
   state.selectedFontFile = undefined;
   state.hasSelectedFont = false;
   state.selectedFontFileName = "";
@@ -496,13 +510,13 @@ export const selectViewData = ({ state }) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Name",
         required: true,
       },
       {
         name: "fontColor",
-        inputType: "select",
+        type: "select",
         label: "Color",
         placeholder: "Choose a color",
         options: colorOptions,
@@ -511,7 +525,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontStyle",
-        inputType: "select",
+        type: "select",
         label: "Font Style",
         placeholder: "Choose a font",
         options: fontOptions,
@@ -520,7 +534,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontSize",
-        inputType: "slider-input",
+        type: "slider-with-input",
         label: "Font Size",
         min: 8,
         max: 72,
@@ -530,7 +544,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "lineHeight",
-        inputType: "slider-input",
+        type: "slider-with-input",
         label: "Line Height",
         min: 0.8,
         max: 3.0,
@@ -539,7 +553,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontWeight",
-        inputType: "select",
+        type: "select",
         label: "Font Weight",
         placeholder: "Choose font weight",
         options: [
@@ -557,7 +571,7 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "previewText",
-        inputType: "inputText",
+        type: "input-text",
         label: "Preview Text",
         required: false,
       },
@@ -568,7 +582,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          content: state.editMode ? "Update Typography" : "Add Typography",
+          label: state.editMode ? "Update Typography" : "Add Typography",
         },
       ],
     },
@@ -625,28 +639,38 @@ export const selectViewData = ({ state }) => {
     try {
       detailFormDefaultValues = {
         name: selectedItem.name,
-        fontSize: selectedItem.fontSize || "",
-        lineHeight: selectedItem.lineHeight || "",
+        fontSize: selectedItem.fontSize ?? "",
+        lineHeight: selectedItem.lineHeight ?? "",
         colorName: selectedItem.colorId
           ? getColorName(selectedItem.colorId)
           : "",
         fontName: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
-        fontWeight: selectedItem.fontWeight || "",
-        previewText: selectedItem.previewText || "",
+        fontWeight: selectedItem.fontWeight ?? "",
+        previewText: selectedItem.previewText ?? "",
       };
     } catch (error) {
       console.error("Failed to get detail form values:", error);
       detailFormDefaultValues = {
         name: selectedItem.name || "",
-        fontSize: selectedItem.fontSize || "",
-        lineHeight: selectedItem.lineHeight || "",
+        fontSize: selectedItem.fontSize ?? "",
+        lineHeight: selectedItem.lineHeight ?? "",
         colorName: "",
         fontName: "",
-        fontWeight: selectedItem.fontWeight || "",
-        previewText: selectedItem.previewText || "",
+        fontWeight: selectedItem.fontWeight ?? "",
+        previewText: selectedItem.previewText ?? "",
       };
     }
   }
+
+  const detailFormContext = {
+    ...state.context,
+    fontSize: detailFormDefaultValues.fontSize ?? "",
+    lineHeight: detailFormDefaultValues.lineHeight ?? "",
+    colorName: detailFormDefaultValues.colorName ?? "",
+    fontName: detailFormDefaultValues.fontName ?? "",
+    fontWeight: detailFormDefaultValues.fontWeight ?? "",
+    previewText: detailFormDefaultValues.previewText ?? "",
+  };
 
   return {
     flatItems,
@@ -661,7 +685,7 @@ export const selectViewData = ({ state }) => {
     colorsData: state.colorsData,
     fontsData: state.fontsData,
     form,
-    context: state.context,
+    context: detailFormContext,
     defaultValues: detailFormDefaultValues,
 
     // Dialog-related data

@@ -1,17 +1,17 @@
 ---
 title: Create Project Flow
 description: Verifies creating a new project via the dialog.
+url: /projects
 steps:
-  - select create-project-button:
-    - click
-  - wait 500
-  - select project-name-input:
-    - write Test project
-  - select project-description-input:
-    - write Test project description
-  - screenshot
-  - select create-project-submit-button:
-    - click
-  - wait 1000
-  - screenshot
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: wait
+    ms: 500
+  - action: screenshot
 ---

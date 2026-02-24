@@ -35,25 +35,32 @@ const form = {
   fields: [
     {
       name: "fontPreview",
-      inputType: "image",
+      type: "image",
     },
     {
       name: "fileId",
-      inputType: "font",
+      type: "font",
       previewText: "Aa",
       fontFamily: "${fileId.fontFamily}",
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fontFamily",
-      inputType: "read-only-text",
-      description: "Font Family",
+      type: "read-only-text",
+      label: "Font Family",
+      content: "${fontFamily}",
     },
-    { name: "fileType", inputType: "read-only-text", description: "File Type" },
+    {
+      name: "fileType",
+      type: "read-only-text",
+      label: "File Type",
+      content: "${fileType}",
+    },
     {
       name: "fileSize",
-      inputType: "read-only-text",
-      description: "File Size",
+      type: "read-only-text",
+      label: "File Size",
+      content: "${fileSize}",
     },
   ],
 };
@@ -63,49 +70,49 @@ const fontInfoForm = {
   fields: [
     {
       name: "fontFamily",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Font Family",
     },
     {
       name: "fileName",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Name",
     },
     {
       name: "fileSize",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "File Size",
     },
     {
       name: "format",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Format",
     },
     // NOTE: The following fields are commented out because the current implementation
     // does not accurately extract this information from font files
     // {
     //   name: "weightClass",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Weight Class",
     // },
     // {
     //   name: "isVariableFont",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Variable Font",
     // },
     // {
     //   name: "supportsItalics",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Italic Support",
     // },
     // {
     //   name: "glyphCount",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Glyph Count",
     // },
     // {
     //   name: "languageSupport",
-    //   inputType: "read-only-text",
+    //   type: "read-only-text",
     //   description: "Languages",
     // },
   ],
@@ -125,11 +132,11 @@ export const createInitialState = () => ({
   collapsedIds: [],
 });
 
-export const setItems = (state, fontsData) => {
+export const setItems = ({ state }, { fontsData } = {}) => {
   state.fontsData = fontsData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -141,23 +148,23 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setModalOpen = (state, isOpen) => {
+export const setModalOpen = ({ state }, { isOpen } = {}) => {
   state.isModalOpen = isOpen;
 };
 
-export const setSelectedFontInfo = (state, fontInfo) => {
+export const setSelectedFontInfo = ({ state }, { fontInfo } = {}) => {
   state.selectedFontInfo = fontInfo;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const toggleGroupCollapse = (state, groupId) => {
+export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
     state.collapsedIds.splice(index, 1);
@@ -166,7 +173,7 @@ export const toggleGroupCollapse = (state, groupId) => {
   }
 };
 
-export const getGlyphList = () => {
+export const getGlyphList = (_context = {}, _payload = {}) => {
   const glyphs = [];
 
   const addGlyph = (char) => {
@@ -200,12 +207,6 @@ export const getGlyphList = () => {
   }
 
   return glyphs;
-};
-
-export const getUnicodeValue = (char) => {
-  if (!char) return "";
-  const code = char.charCodeAt(0);
-  return `U+${code.toString(16).toUpperCase().padStart(4, "0")}`;
 };
 
 export const selectViewData = ({ state }) => {
@@ -259,6 +260,16 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    fileId: {
+      ...state.context?.fileId,
+      fontFamily: state.context?.fileId?.fontFamily || "",
+    },
+    fontFamily: "",
+    fileType: "",
+    fileSize: "",
+  };
   let formWithPreview = { ...form };
 
   if (selectedItem) {
@@ -288,13 +299,29 @@ export const selectViewData = ({ state }) => {
       return extensionMap[extension] || `font/${extension}`;
     };
 
+    const fontFamily = selectedItem.fontFamily || "";
+    const fileType =
+      selectedItem.fileType || getFileTypeFromName(selectedItem.name);
+    const fileSize = selectedItem.fileSize
+      ? formatFileSize(selectedItem.fileSize)
+      : "";
+
     defaultValues = {
       name: selectedItem.name,
-      fontFamily: selectedItem.fontFamily || "",
-      fileType: selectedItem.fileType || getFileTypeFromName(selectedItem.name),
-      fileSize: selectedItem.fileSize
-        ? formatFileSize(selectedItem.fileSize)
-        : "",
+      fontFamily,
+      fileType,
+      fileSize,
+    };
+
+    formContext = {
+      ...state.context,
+      fileId: {
+        ...state.context?.fileId,
+        fontFamily,
+      },
+      fontFamily,
+      fileType,
+      fileSize,
     };
   }
 
@@ -324,7 +351,7 @@ export const selectViewData = ({ state }) => {
     title: "Fonts",
     form: formWithPreview,
     defaultValues,
-    context: state.context,
+    context: formContext,
     isModalOpen: state.isModalOpen,
     selectedFontInfo: state.selectedFontInfo,
     glyphList: state.selectedFontInfo?.glyphs || getGlyphList(),

@@ -1,24 +1,14 @@
-elementName: rvn-image-selector
-
-propsSchema:
-  type: object
-  properties: {}
-
-viewDataSchema:
-  type: object
-  properties: {}
-
 refs:
-  image-item-*:
+  imageItem*:
     eventListeners:
       click:
         handler: handleImageItemClick
-
 template:
-  - rtgl-view#container flex=1 sv g=lg:
+  - rtgl-view#container h=1fg sv g=lg:
       - $for group, i in groups:
-          - 'rtgl-view#item-${group.id} mb=sm w=f bgc=bg style="position: sticky; top: 0"':
+          - 'rtgl-view#groupRef${i} data-group-id=${group.id} mb=sm w=f bgc=bg style="position: sticky; top: 0"':
               - rtgl-text: ${group.name}
-          - rtgl-view d=h w=f fw=w g=lg:
+          - rtgl-view d=h w=f wrap g=lg:
               - $for item, j in group.children:
-                  - rvn-file-image#image-item-${item.id} w=200 h=150 fileId=${item.fileId} cur=p key=${item.bw} bw=${item.bw}:
+                  - rtgl-view#imageItemRef${i}x${j} data-item-id=${item.id} w=200 h=150 bw=${item.bw} bc=${item.bc} br=sm cur=pointer style=${item.selectedStyle} key=${item.id}:
+                      - rvn-file-image w=200 h=150 fileId=${item.fileId}: null

@@ -1,31 +1,11 @@
-elementName: rvn-sidebar
-
 title: okok
 description: okok
-viewDataSchema:
-  type: object
-  properties:
-    header:
-      type: object
-    items:
-      type: array
-      items:
-        type: object
-        properties: {}
-    itemsEncoded:
-      type: string
-    selectedItemId:
-      type: string
-
 refs:
   sidebar:
     eventListeners:
-      itemClick:
+      item-click:
         handler: handleItemClick
-      headerClick:
+      header-click:
         handler: handleHeaderClick
-
-
 template:
-  - rtgl-sidebar#sidebar mode=shrunk-lg .header=header .items=items .selectedItemId=selectedItemId: []
-  
+  - rtgl-sidebar#sidebar mode=shrunk-lg :header=header :items=items :selectedItemId=selectedItemId: []

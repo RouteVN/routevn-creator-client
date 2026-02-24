@@ -23,31 +23,31 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = (state, payload) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
 const form = {
   fields: [
     {
-      inputType: "slot",
+      type: "slot",
       slot: "sfx",
       description: "Sound Effects",
     },
   ],
 };
 
-export const setRepositoryState = (state, payload) => {
-  state.items = payload.sounds;
+export const setRepositoryState = ({ state }, { sounds } = {}) => {
+  state.items = sounds;
 };
 
-export const setTempSelectedResourceId = (state, payload) => {
-  state.tempSelectedResourceId = payload.resourceId;
+export const setTempSelectedResourceId = ({ state }, { resourceId } = {}) => {
+  state.tempSelectedResourceId = resourceId;
 };
 
-export const addSfx = (state, payload) => {
+export const addSfx = ({ state }, { id } = {}) => {
   const newSfx = {
-    id: payload.id,
+    id,
     resourceId: null,
     name: "New Sound Effect",
     volume: 500,
@@ -56,32 +56,32 @@ export const addSfx = (state, payload) => {
   state.currentEditingId = newSfx.id;
 };
 
-export const setExistingSfxs = (state, payload) => {
-  state.sfx = payload.sfx.map((sfx) => ({
+export const setExistingSfxs = ({ state }, { sfx = [] } = {}) => {
+  state.sfx = sfx.map((item) => ({
     volume: 500,
-    ...sfx,
+    ...item,
   }));
 };
 
-export const updateSfx = (state, payload) => {
-  const index = state.sfx.findIndex((se) => se.id === payload.id);
+export const updateSfx = ({ state }, updates = {}) => {
+  const index = state.sfx.findIndex((se) => se.id === updates.id);
   if (index !== -1) {
-    state.sfx[index] = { ...state.sfx[index], ...payload };
+    state.sfx[index] = { ...state.sfx[index], ...updates };
   }
 };
 
-export const deleteSfx = (state, payload) => {
-  state.sfx = state.sfx.filter((se) => se.id !== payload.id);
-  if (state.currentEditingId === payload.id) {
+export const deleteSfx = ({ state }, { id } = {}) => {
+  state.sfx = state.sfx.filter((se) => se.id !== id);
+  if (state.currentEditingId === id) {
     state.currentEditingId = null;
   }
 };
 
-export const setCurrentEditingId = (state, payload) => {
-  state.currentEditingId = payload.id;
+export const setCurrentEditingId = ({ state }, { id } = {}) => {
+  state.currentEditingId = id;
 };
 
-export const showDropdownMenu = (state, { position, sfxId }) => {
+export const showDropdownMenu = ({ state }, { position, sfxId } = {}) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
@@ -96,7 +96,7 @@ export const showDropdownMenu = (state, { position, sfxId }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu = {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -143,6 +143,7 @@ export const selectBreadcrumb = ({ state }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
   ];
 
@@ -150,6 +151,7 @@ export const selectBreadcrumb = ({ state }) => {
     breadcrumb.push({
       id: "current",
       label: "Sound Effects",
+      click: true,
     });
     breadcrumb.push({
       label: "Audio Selection",

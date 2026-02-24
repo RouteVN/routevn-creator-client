@@ -1,0 +1,6 @@
+componentName: rvn-command-line-pop-layered-view
+propsSchema:
+  type: object
+  properties:
+    popLayeredView:
+      type: object

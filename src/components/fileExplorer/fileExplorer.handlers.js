@@ -50,7 +50,7 @@ export const handleClickItem = async (deps, payload) => {
 
   // Forward the event with enhanced detail containing item data
   dispatchEvent(
-    new CustomEvent("click-item", {
+    new CustomEvent("item-click", {
       detail: {
         ...payload._event.detail,
         item: selectedItem,
@@ -97,9 +97,9 @@ export const handleDblClickItem = async (deps, payload) => {
 };
 
 export const handlePageItemClick = (deps, payload) => {
-  const { getRefIds } = deps;
-  const { "base-file-explorer": baseFileExplorer } = getRefIds();
-  baseFileExplorer.elm.transformedHandlers.handlePageItemClick(payload);
+  const { refs } = deps;
+  const { baseFileExplorer } = refs;
+  baseFileExplorer.transformedHandlers.handlePageItemClick(payload);
 };
 
 export const handleFileAction = async (deps, payload) => {

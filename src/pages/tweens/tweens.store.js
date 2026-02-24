@@ -3,8 +3,13 @@ import { resetState } from "./tweens.constants";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "duration", inputType: "read-only-text", description: "Duration" },
+    { name: "name", type: "popover-input", label: "Name" },
+    {
+      name: "duration",
+      type: "read-only-text",
+      label: "Duration",
+      content: "${duration}",
+    },
   ],
 };
 
@@ -46,7 +51,7 @@ const createAddKeyframeForm = (property) => {
     fields: [
       {
         name: "duration",
-        inputType: "inputText",
+        type: "input-text",
         label: "Duration (ms)",
         required: true,
         placeholder: "Duration in milliseconds",
@@ -57,7 +62,7 @@ const createAddKeyframeForm = (property) => {
       },
       {
         name: "value",
-        inputType: "slider-input",
+        type: "slider-with-input",
         ...sliderConfig[property],
         label: "Value",
         required: true,
@@ -68,7 +73,7 @@ const createAddKeyframeForm = (property) => {
       },
       {
         name: "relative",
-        inputType: "select",
+        type: "select",
         label: "Value type",
         options: [
           { label: "Absolute", value: false },
@@ -82,7 +87,7 @@ const createAddKeyframeForm = (property) => {
       },
       {
         name: "easing",
-        inputType: "select",
+        type: "select",
         label: "Easing",
         options: [{ label: "Linear", value: "linear" }],
         required: true,
@@ -94,7 +99,7 @@ const createAddKeyframeForm = (property) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Add Keyframe",
+          label: "Add Keyframe",
         },
       ],
     },
@@ -118,7 +123,7 @@ const createUpdateKeyframeForm = (property) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Update Keyframe",
+          label: "Update Keyframe",
         },
       ],
     },
@@ -130,7 +135,7 @@ const editInitialValueForm = {
   fields: [
     {
       name: "valueSource",
-      inputType: "select",
+      type: "select",
       label: "Value Source",
       options: [
         { label: "Use Default Value", value: "default" },
@@ -142,7 +147,7 @@ const editInitialValueForm = {
     {
       $when: "valueSource == 'custom'",
       name: "initialValue",
-      inputType: "inputText",
+      type: "input-text",
       label: "Custom Initial Value",
     },
   ],
@@ -152,7 +157,7 @@ const editInitialValueForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Update Value",
+        label: "Update Value",
       },
     ],
   },
@@ -173,14 +178,14 @@ const createAddPropertyForm = (propertyOptions) => {
     fields: [
       {
         name: "property",
-        inputType: "select",
+        type: "select",
         label: "Property",
         options: propertyOptions,
         required: true,
       },
       {
         name: "useInitialValue",
-        inputType: "select",
+        type: "select",
         label: "Use initial value",
         tooltip: {
           content:
@@ -202,7 +207,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "x"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-with-input",
             min: 0,
             max: 1920,
             label: "Initial value",
@@ -210,7 +215,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "y"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-with-input",
             min: 0,
             max: 1080,
             label: "Initial value",
@@ -218,7 +223,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "alpha"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-with-input",
             step: 0.01,
             min: 0,
             max: 1,
@@ -227,7 +232,7 @@ const createAddPropertyForm = (propertyOptions) => {
           {
             $when: 'property == "scaleX" || property == "scaleY"',
             name: "initialValue",
-            inputType: "slider-input",
+            type: "slider-with-input",
             min: 0.1,
             max: 5,
             step: 0.1,
@@ -236,7 +241,7 @@ const createAddPropertyForm = (propertyOptions) => {
           // {
           //   $when: 'property == "rotation"',
           //   name: "initialValue",
-          //   inputType: "slider-input",
+          //   type: "slider-with-input",
           //   min: -360,
           //   max: 360,
           //   step: 1,
@@ -251,7 +256,7 @@ const createAddPropertyForm = (propertyOptions) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Add Property",
+          label: "Add Property",
         },
       ],
     },
@@ -304,13 +309,13 @@ const addTweenForm = {
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      type: "input-text",
       label: "Name",
       required: true,
     },
     {
       name: "properties",
-      inputType: "slot",
+      type: "slot",
       slot: "timeline",
       label: "Animation timeline",
     },
@@ -321,7 +326,7 @@ const addTweenForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Add Tween Animation",
+        label: "Add Tween Animation",
       },
     ],
   },
@@ -332,13 +337,13 @@ const editTweenForm = {
   fields: [
     {
       name: "name",
-      inputType: "inputText",
+      type: "input-text",
       label: "Name",
       required: true,
     },
     {
       name: "properties",
-      inputType: "slot",
+      type: "slot",
       slot: "timeline",
       label: "Animation timeline",
     },
@@ -349,7 +354,7 @@ const editTweenForm = {
       {
         id: "submit",
         variant: "pr",
-        content: "Update Tween Animation",
+        label: "Update Tween Animation",
       },
     ],
   },
@@ -390,11 +395,11 @@ export const createInitialState = () => ({
   },
 });
 
-export const setItems = (state, tweensData) => {
+export const setItems = ({ state }, { tweensData } = {}) => {
   state.tweensData = tweensData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -402,18 +407,18 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectTweensData = ({ state }) => state.tweensData;
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const setPopover = (state, { mode, x, y, payload }) => {
+export const setPopover = ({ state }, { mode, x, y, payload } = {}) => {
   state.popover.mode = mode;
   state.popover.x = x;
   state.popover.y = y;
   state.popover.payload = payload;
 };
 
-export const closePopover = (state) => {
+export const closePopover = ({ state }, _payload = {}) => {
   state.popover.mode = "none";
   state.popover.x = undefined;
   state.popover.y = undefined;
@@ -421,7 +426,7 @@ export const closePopover = (state) => {
   state.popover.formValues = {};
 };
 
-export const updatePopoverFormValues = (state, formValues) => {
+export const updatePopoverFormValues = ({ state }, { formValues } = {}) => {
   state.popover.formValues = formValues;
 };
 
@@ -438,10 +443,7 @@ export const selectFormState = ({ state }) => {
   };
 };
 
-export const openDialog = (
-  state,
-  { editMode = false, itemId = null, itemData = null } = {},
-) => {
+export const openDialog = ({ state }, { editMode, itemId, itemData } = {}) => {
   state.isDialogOpen = true;
   state.editMode = editMode;
   state.editItemId = itemId;
@@ -460,7 +462,7 @@ export const openDialog = (
   }
 };
 
-export const closeDialog = (state) => {
+export const closeDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = false;
   state.editMode = false;
   state.editItemId = null;
@@ -471,11 +473,14 @@ export const closeDialog = (state) => {
   state.properties = {};
 };
 
-export const setTargetGroupId = (state, groupId) => {
+export const setTargetGroupId = ({ state }, { groupId } = {}) => {
   state.targetGroupId = groupId;
 };
 
-export const setGraphicsServiceInitialized = (state, initialized) => {
+export const setGraphicsServiceInitialized = (
+  { state },
+  { initialized } = {},
+) => {
   state.isGraphicsServiceInitialized = initialized;
 };
 
@@ -484,10 +489,7 @@ export const selectIsGraphicsServiceInitialized = ({ state }) => {
 };
 
 // Helper function to create render state with animations
-export const createAnimationRenderState = (
-  properties,
-  includeAnimations = true,
-) => {
+const createAnimationRenderState = (properties, includeAnimations = true) => {
   const animations = [];
   if (includeAnimations && properties && Object.keys(properties).length > 0) {
     for (const [property, config] of Object.entries(properties)) {
@@ -555,8 +557,7 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
   return createAnimationRenderState(state.properties, true);
 };
 
-export const addProperty = (state, payload) => {
-  const { property, initialValue } = payload;
+export const addProperty = ({ state }, { property, initialValue } = {}) => {
   if (state.properties[property]) {
     return;
   }
@@ -566,7 +567,7 @@ export const addProperty = (state, payload) => {
   };
 };
 
-export const addKeyframe = (state, keyframe) => {
+export const addKeyframe = ({ state }, { keyframe } = {}) => {
   if (!state.properties[keyframe.property]) {
     state.properties[keyframe.property] = [];
   }
@@ -585,13 +586,13 @@ export const addKeyframe = (state, keyframe) => {
   });
 };
 
-export const deleteKeyframe = (state, payload) => {
+export const deleteKeyframe = ({ state }, { payload } = {}) => {
   const { property, index } = payload;
   const keyframes = state.properties[property].keyframes;
   keyframes.splice(index, 1);
 };
 
-export const deleteProperty = (state, payload) => {
+export const deleteProperty = ({ state }, { payload } = {}) => {
   const { property } = payload;
 
   state.selectedProperties = state.selectedProperties.filter(
@@ -601,7 +602,7 @@ export const deleteProperty = (state, payload) => {
   delete state.properties[property];
 };
 
-export const moveKeyframeRight = (state, payload) => {
+export const moveKeyframeRight = ({ state }, { payload } = {}) => {
   const { property, index } = payload;
   const numIndex = Number(index);
   const keyframes = state.properties[property].keyframes;
@@ -613,7 +614,7 @@ export const moveKeyframeRight = (state, payload) => {
   }
 };
 
-export const moveKeyframeLeft = (state, payload) => {
+export const moveKeyframeLeft = ({ state }, { payload } = {}) => {
   const { property, index } = payload;
   const numIndex = Number(index);
   const keyframes = state.properties[property].keyframes;
@@ -625,7 +626,7 @@ export const moveKeyframeLeft = (state, payload) => {
   }
 };
 
-export const updateKeyframe = (state, payload) => {
+export const updateKeyframe = ({ state }, { payload } = {}) => {
   const { property, index, keyframe } = payload;
   const keyframes = state.properties[property].keyframes;
 
@@ -637,7 +638,7 @@ export const updateKeyframe = (state, payload) => {
   };
 };
 
-export const updateInitialValue = (state, payload) => {
+export const updateInitialValue = ({ state }, { payload } = {}) => {
   const { property, initialValue } = payload;
   state.properties[property].initialValue = initialValue;
 };
@@ -652,11 +653,18 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let context = {
+    duration: "",
+  };
   if (selectedItem) {
+    const duration = selectedItem.duration ?? "";
     defaultValues = {
       name: selectedItem.name,
-      duration: selectedItem.duration || "",
+      duration,
       keyframes: selectedItem.keyframes || "",
+    };
+    context = {
+      duration,
     };
   }
 
@@ -778,6 +786,7 @@ export const selectViewData = ({ state }) => {
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     form,
+    context,
     defaultValues,
     // Dialog state
     isDialogOpen: state.isDialogOpen,

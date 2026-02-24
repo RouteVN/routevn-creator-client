@@ -5,26 +5,29 @@ const form = {
   fields: [
     {
       name: "fileId",
-      inputType: "waveform",
+      type: "waveform",
       waveformData: "${fileId.waveformData}",
       width: 240,
       height: 100,
     },
-    { name: "name", inputType: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "fileType",
-      inputType: "read-only-text",
-      description: "File Type",
+      type: "read-only-text",
+      label: "File Type",
+      content: "${fileType}",
     },
     {
       name: "fileSize",
-      inputType: "read-only-text",
-      description: "File Size",
+      type: "read-only-text",
+      label: "File Size",
+      content: "${fileSize}",
     },
     {
       name: "duration",
-      inputType: "read-only-text",
-      description: "Duration",
+      type: "read-only-text",
+      label: "Duration",
+      content: "${duration}",
     },
   ],
 };
@@ -36,6 +39,9 @@ export const createInitialState = () => ({
     fileId: {
       waveformData: null,
     },
+    fileType: "",
+    fileSize: "",
+    duration: "",
   },
   searchQuery: "",
   playingSound: {
@@ -47,15 +53,15 @@ export const createInitialState = () => ({
   audioPlayerRight: 0,
 });
 
-export const setContext = (state, context) => {
+export const setContext = ({ state }, { context } = {}) => {
   state.context = context;
 };
 
-export const setItems = (state, soundData) => {
+export const setItems = ({ state }, { soundData } = {}) => {
   state.soundData = soundData;
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
@@ -69,17 +75,17 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setSearchQuery = (state, query) => {
+export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
 };
 
-export const openAudioPlayer = (state, { fileId, fileName }) => {
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
   state.playingSound.fileId = fileId;
   state.playingSound.title = fileName;
   state.showAudioPlayer = true;
 };
 
-export const closeAudioPlayer = (state) => {
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
   state.showAudioPlayer = false;
   state.playingSound = {
     title: "",
@@ -87,19 +93,26 @@ export const closeAudioPlayer = (state) => {
   };
 };
 
-export const updateAudioPlayerLeft = (state, payload) => {
-  state.audioPlayerLeft = payload.width + 64;
+const resolveAudioPlayerWidth = (input = {}) => {
+  const widthValue = input?.payload?.width ?? input?.width;
+  const parsedWidth =
+    typeof widthValue === "number" ? widthValue : Number(widthValue);
+  return Number.isFinite(parsedWidth) ? parsedWidth : 0;
 };
 
-export const updateAudioPlayerRight = (state, payload) => {
-  state.audioPlayerRight = payload.width;
+export const updateAudioPlayerLeft = ({ state }, payload = {}) => {
+  state.audioPlayerLeft = resolveAudioPlayerWidth(payload) + 64;
 };
 
-export const selectAudioPlayerLeft = (state) => {
+export const updateAudioPlayerRight = ({ state }, payload = {}) => {
+  state.audioPlayerRight = resolveAudioPlayerWidth(payload);
+};
+
+export const selectAudioPlayerLeft = ({ state }) => {
   return state.audioPlayerLeft;
 };
 
-export const selectAudioPlayerRight = (state) => {
+export const selectAudioPlayerRight = ({ state }) => {
   return state.audioPlayerRight;
 };
 
@@ -150,19 +163,36 @@ export const selectViewData = ({ state }) => {
 
   // Transform selectedItem into form defaults
   let defaultValues = {};
+  let formContext = {
+    ...state.context,
+    fileType: "",
+    fileSize: "",
+    duration: "",
+  };
 
   if (selectedItem) {
+    const formattedFileSize = formatFileSize(selectedItem.fileSize);
+    const formattedDuration = selectedItem.duration
+      ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(
+          selectedItem.duration % 60,
+        )
+          .toString()
+          .padStart(2, "0")}`
+      : "Unknown";
+    const fileType = selectedItem.fileType || "";
+
     defaultValues = {
       name: selectedItem.name,
-      fileType: selectedItem.fileType,
-      fileSize: formatFileSize(selectedItem.fileSize),
-      duration: selectedItem.duration
-        ? `${Math.floor(selectedItem.duration / 60).toString()}:${Math.floor(
-            selectedItem.duration % 60,
-          )
-            .toString()
-            .padStart(2, "0")}`
-        : "Unknown",
+      fileType,
+      fileSize: formattedFileSize,
+      duration: formattedDuration,
+    };
+
+    formContext = {
+      ...state.context,
+      fileType,
+      fileSize: formattedFileSize,
+      duration: formattedDuration,
     };
   }
 
@@ -174,7 +204,7 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     repositoryTarget: "sounds",
     form,
-    context: state.context,
+    context: formContext,
     defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "sounds",

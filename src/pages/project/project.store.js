@@ -2,20 +2,20 @@ const form = {
   fields: [
     {
       name: "name",
-      inputType: "popover-input",
-      description: "Project Name",
+      type: "popover-input",
+      label: "Project Name",
       required: true,
     },
     {
       name: "description",
-      inputType: "popover-input",
-      description: "Description",
+      type: "popover-input",
+      label: "Description",
       required: true,
     },
     {
-      inputType: "slot",
+      type: "slot",
       slot: "icon-file-id",
-      description: "Project Icon",
+      label: "Project Icon",
     },
   ],
 };
@@ -29,12 +29,12 @@ export const createInitialState = () => ({
   dataLoaded: false,
 });
 
-export const setProject = (state, project) => {
+export const setProject = ({ state }, { project } = {}) => {
   state.project = project;
   state.dataLoaded = true;
 };
 
-export const setIconFileId = (state, iconFileId) => {
+export const setIconFileId = ({ state }, { iconFileId } = {}) => {
   state.project.iconFileId = iconFileId;
 };
 

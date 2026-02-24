@@ -3,16 +3,16 @@ import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
 const form = {
   fields: [
-    { name: "name", inputType: "popover-input", description: "Name" },
-    { name: "preview", inputType: "slot", slot: "preview" },
+    { name: "name", type: "popover-input", description: "Name" },
+    { name: "preview", type: "slot", slot: "preview" },
     {
       name: "sectionCount",
-      inputType: "read-only-text",
+      type: "read-only-text",
       description: "Sections",
     },
     {
       name: "sectionsList",
-      inputType: "slot",
+      type: "slot",
       slot: "sections-list",
       description: "Sections List",
     },
@@ -52,21 +52,21 @@ export const createInitialState = () => ({
   },
 });
 
-export const setItems = (state, scenesData) => {
+export const setItems = ({ state }, { scenesData } = {}) => {
   state.scenesData = scenesData;
 };
 
-export const setLayouts = (state, layoutsData) => {
+export const setLayouts = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData || { tree: [], items: {} };
 };
 
-export const showPreviewSceneId = (state, payload) => {
+export const showPreviewSceneId = ({ state }, { payload } = {}) => {
   const { sceneId } = payload;
   state.previewVisible = true;
   state.previewSceneId = sceneId;
 };
 
-export const hidePreviewScene = (state) => {
+export const hidePreviewScene = ({ state }, _payload = {}) => {
   state.previewVisible = false;
 };
 
@@ -77,7 +77,7 @@ export const selectPreviewScene = ({ state }) => {
   };
 };
 
-export const setSelectedItemId = (state, itemId) => {
+export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   if (state.selectedItemId !== itemId) {
     state.sectionsListOpen = false;
     state.deadEndTooltip.open = false;
@@ -85,11 +85,11 @@ export const setSelectedItemId = (state, itemId) => {
   state.selectedItemId = itemId;
 };
 
-export const toggleSectionsList = (state) => {
+export const toggleSectionsList = ({ state }, _payload = {}) => {
   state.sectionsListOpen = !state.sectionsListOpen;
 };
 
-export const showDeadEndTooltip = (state, { x, y, content }) => {
+export const showDeadEndTooltip = ({ state }, { x, y, content } = {}) => {
   state.deadEndTooltip = {
     open: true,
     x,
@@ -98,14 +98,14 @@ export const showDeadEndTooltip = (state, { x, y, content }) => {
   };
 };
 
-export const hideDeadEndTooltip = (state) => {
+export const hideDeadEndTooltip = ({ state }, _payload = {}) => {
   state.deadEndTooltip = {
     ...state.deadEndTooltip,
     open: false,
   };
 };
 
-export const updateItemPosition = (state, { itemId, x, y }) => {
+export const updateItemPosition = ({ state }, { itemId, x, y } = {}) => {
   const item = state.whiteboardItems.find((item) => item.id === itemId);
   if (item) {
     item.x = x;
@@ -113,11 +113,11 @@ export const updateItemPosition = (state, { itemId, x, y }) => {
   }
 };
 
-export const addWhiteboardItem = (state, newItem) => {
+export const addWhiteboardItem = ({ state }, { newItem } = {}) => {
   state.whiteboardItems.push(newItem);
 };
 
-export const setWhiteboardItems = (state, items) => {
+export const setWhiteboardItems = ({ state }, { items } = {}) => {
   state.whiteboardItems = items;
 };
 
@@ -125,27 +125,27 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
-export const setWaitingForTransform = (state, isWaiting) => {
+export const setWaitingForTransform = ({ state }, { isWaiting } = {}) => {
   state.isWaitingForTransform = isWaiting;
 };
 
-export const setShowSceneForm = (state, show) => {
+export const setShowSceneForm = ({ state }, { show } = {}) => {
   state.showSceneForm = show;
 };
 
-export const setSceneFormPosition = (state, position) => {
+export const setSceneFormPosition = ({ state }, { position } = {}) => {
   state.sceneFormPosition = position;
 };
 
-export const setSceneWhiteboardPosition = (state, position) => {
+export const setSceneWhiteboardPosition = ({ state }, { position } = {}) => {
   state.sceneWhiteboardPosition = position;
 };
 
-export const setSceneFormData = (state, data) => {
+export const setSceneFormData = ({ state }, { data } = {}) => {
   state.sceneFormData = { ...state.sceneFormData, ...data };
 };
 
-export const resetSceneForm = (state) => {
+export const resetSceneForm = ({ state }, _payload = {}) => {
   state.showSceneForm = false;
   state.isWaitingForTransform = false;
   state.sceneFormPosition = { x: 0, y: 0 };
@@ -153,7 +153,7 @@ export const resetSceneForm = (state) => {
 };
 
 // Dropdown menu functions
-export const showDropdownMenu = (state, { position, itemId }) => {
+export const showDropdownMenu = ({ state }, { position, itemId } = {}) => {
   state.dropdownMenu = {
     isOpen: true,
     position,
@@ -162,7 +162,7 @@ export const showDropdownMenu = (state, { position, itemId }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu = {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -280,14 +280,14 @@ export const selectViewData = ({ state }, payload) => {
     fields: [
       {
         name: "name",
-        inputType: "inputText",
+        type: "input-text",
         label: "Scene Name",
         description: "Enter the scene name",
         required: true,
       },
       {
         name: "folderId",
-        inputType: "select",
+        type: "select",
         label: "Folder",
         options: folderOptions.map((option) => ({
           value: option.id,
@@ -302,7 +302,7 @@ export const selectViewData = ({ state }, payload) => {
         {
           id: "submit",
           variant: "pr",
-          content: "Create Scene",
+          label: "Create Scene",
         },
       ],
     },

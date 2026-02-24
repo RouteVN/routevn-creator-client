@@ -36,45 +36,45 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = (state, payload) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
-export const setInitiated = (state) => {
+export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 
-export const setVariablesData = (state, payload) => {
-  state.variablesData = payload.variables;
+export const setVariablesData = ({ state }, { variables } = {}) => {
+  state.variablesData = variables;
 };
 
-export const setActionId = (state, id) => {
+export const setActionId = ({ state }, { id } = {}) => {
   state.actionId = id;
 };
 
-export const setOperations = (state, operations) => {
+export const setOperations = ({ state }, { operations } = {}) => {
   state.operations = operations;
 };
 
-export const addOperation = (state, payload) => {
+export const addOperation = ({ state }, { id } = {}) => {
   state.operations.push({
-    id: payload.id,
+    id: id,
     variableId: "",
     op: "",
     value: "",
   });
-  state.currentEditingId = payload.id;
+  state.currentEditingId = id;
   state.mode = "edit";
 };
 
-export const updateOperation = (state, payload) => {
-  const index = state.operations.findIndex((op) => op.id === payload.id);
+export const updateOperation = ({ state }, params = {}) => {
+  const index = state.operations.findIndex((op) => op.id === params.id);
   if (index !== -1) {
-    state.operations[index] = { ...state.operations[index], ...payload };
+    state.operations[index] = { ...state.operations[index], ...params };
   }
 };
 
-export const deleteOperation = (state, operationId) => {
+export const deleteOperation = ({ state }, { operationId } = {}) => {
   state.operations = state.operations.filter((op) => op.id !== operationId);
   if (state.currentEditingId === operationId) {
     state.currentEditingId = null;
@@ -82,19 +82,19 @@ export const deleteOperation = (state, operationId) => {
   }
 };
 
-export const setCurrentEditingId = (state, payload) => {
-  state.currentEditingId = payload.id;
+export const setCurrentEditingId = ({ state }, { id } = {}) => {
+  state.currentEditingId = id;
 };
 
-export const setTempOperation = (state, payload) => {
-  state.tempOperation = { ...state.tempOperation, ...payload };
+export const setTempOperation = ({ state }, params = {}) => {
+  state.tempOperation = { ...state.tempOperation, ...params };
 };
 
-export const resetTempOperation = (state) => {
+export const resetTempOperation = ({ state }, _payload = {}) => {
   state.tempOperation = { variableId: "", op: "", value: "" };
 };
 
-export const showDropdownMenu = (state, { position, operationId }) => {
+export const showDropdownMenu = ({ state }, { position, operationId } = {}) => {
   state.dropdownMenu = {
     ...state.dropdownMenu,
     isOpen: true,
@@ -103,7 +103,7 @@ export const showDropdownMenu = (state, { position, operationId }) => {
   };
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu = {
     ...state.dropdownMenu,
     isOpen: false,
@@ -173,10 +173,10 @@ export const selectViewData = ({ state }) => {
   });
 
   const breadcrumb = [
-    { id: "actions", label: "Actions" },
+    { id: "actions", label: "Actions", click: true },
     ...(state.mode === "edit"
       ? [
-          { id: "current", label: "Update Variable" },
+          { id: "current", label: "Update Variable", click: true },
           { label: "Edit Operation" },
         ]
       : [{ label: "Update Variable" }]),

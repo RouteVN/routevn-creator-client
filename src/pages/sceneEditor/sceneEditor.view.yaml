@@ -1,18 +1,5 @@
-elementName: rvn-scene-editor
-
-viewDataSchema:
-  type: object
-  properties:
-    currentLines:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-
 refs:
-  lines-editor:
+  linesEditor:
     eventListeners:
       editor-data-changed:
         handler: handleEditorDataChanged
@@ -26,39 +13,39 @@ refs:
         handler: handleMergeLines
       delete-action:
         handler: handleLineDeleteActionItem
-  section-tab-*:
+  sectionTab*:
     eventListeners:
       click:
         handler: handleSectionTabClick
       contextmenu:
         handler: handleSectionTabRightClick
-  section-add:
+  sectionAdd:
     eventListeners:
       click:
         handler: handleSectionAddClick
-  sections-overview:
+  sectionsOverview:
     eventListeners:
       click:
         handler: handleSectionsOverviewClick
-  sections-overview-close:
+  sectionsOverviewClose:
     eventListeners:
       click:
         handler: handleSectionsOverviewClose
-  section-overview-row-*:
+  sectionOverviewRow*:
     eventListeners:
       click:
         handler: handleSectionsOverviewRowClick
-  sections-overview-warning-*:
+  sectionsOverviewWarning*:
     eventListeners:
       mouseenter:
         handler: handleSectionsOverviewWarningMouseEnter
       mouseleave:
         handler: handleSectionsOverviewWarningMouseLeave
-  dropdown-menu:
+  dropdownMenu:
     eventListeners:
       close:
         handler: handleDropdownMenuClickOverlay
-      click-item:
+      item-click:
         handler: handleDropdownMenuClickItem
   popover:
     eventListeners:
@@ -66,21 +53,21 @@ refs:
         handler: handlePopoverClickOverlay
   form:
     eventListeners:
-      action-click:
+      form-action:
         handler: handleFormActionClick
-  add-actions-button:
+  addActionsButton:
     eventListeners:
       click:
         handler: handleAddActionsButtonClick
-  toggle-sections-graph-view:
+  toggleSectionsGraphView:
     eventListeners:
       click:
         handler: handleToggleSectionsGraphView
-  actions-dialog:
+  actionsDialog:
     eventListeners:
       close:
         handler: handleActionsDialogClose
-  system-actions:
+  systemActions:
     eventListeners:
       submit:
         handler: handleCommandLineSubmit
@@ -88,92 +75,85 @@ refs:
         handler: handleSystemActionsActionDelete
       actions-change:
         handler: handleCommandLineSubmit
-  back-button:
+  backButton:
     eventListeners:
       click:
         handler: handleBackClick
-  preview-button:
+  previewButton:
     eventListeners:
       click:
         handler: handlePreviewClick
-  mute-toggle:
+  muteToggle:
     eventListeners:
       click:
         handler: handleMuteToggle
-  vn-preview:
+  vnPreview:
     eventListeners:
       close:
         handler: handleHidePreviewScene
-
+  canvas: {}
 template:
   - rtgl-view w=f h=f:
       - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h:
-          - rtgl-button#back-button sq icon="chevronLeft" v="gh" mr=sm:
-          - rtgl-view flex=1:
+          - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
+          - rtgl-view w=1fg:
               - rtgl-text c=mu-fg: ${scene.name}
-          - rtgl-view flex=1 d=h g=sm jc=e:
-              - rtgl-button#preview-button: Preview
-          - rtgl-button#mute-toggle sq v="gh" icon="${muteIcon}":
-      - 'rtgl-view d=h w=f h=f flex=1 style="min-height: 0px"':
+          - rtgl-view w=1fg d=h g=sm jc=e:
+              - rtgl-button#previewButton: Preview
+          - rtgl-button#muteToggle sq v="gh" pre="${muteIcon}": null
+      - 'rtgl-view d=h w=f h=1fg style="min-height: 0px"':
           - $if sectionsGraphView:
-              - 'rtgl-view w="calc((100vw - 64px) / 2)"':
+              - rtgl-view w="calc((100vw - 64px) / 2)":
                   - rtgl-view d=h w=f:
-                      - rtgl-view flex=1:
-                      # Toggle graph view button - commented out for now
-                      # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
-                      #     - rtgl-text s=sm: "<>"
+                      - rtgl-view w=1fg: null
                   - rtgl-view:
                       - rtgl-text: ${sectionsGraph}
             $else:
               - $if sectionsOverviewOpen:
-                  - 'rtgl-view#scene-editor-left-overview w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
+                  - 'rtgl-view#sceneEditorLeftOverview w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
                       - rtgl-view d=h av=c g=sm bwb=xs p=lg w=f:
                           - rtgl-text s=lg fw=600: Sections Overview
-                          - rtgl-view flex=1:
-                          - rtgl-button#sections-overview-close v=gh: Close
-                      - 'rtgl-view d=v w=f flex=1 sv p=md g=sm style="min-height: 0px;"':
-                          - $for section in sectionsOverviewItems:
-                              - rtgl-view#section-overview-row-${section.id} w=f d=h av=c g=sm p=md cur=p bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
-                                  - 'rtgl-text s=md c=${section.rowTextColor} w=f flex=1 style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
+                          - rtgl-view w=1fg: null
+                          - rtgl-button#sectionsOverviewClose v=gh: Close
+                      - 'rtgl-view d=v w=f h=1fg sv p=md g=sm style="min-height: 0px;"':
+                          - $for section, sectionIndex in sectionsOverviewItems:
+                              - rtgl-view#sectionOverviewRow${sectionIndex} data-section-id=${section.id} w=f d=h av=c g=sm p=md cur=pointer bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
+                                  - 'rtgl-text s=md c=${section.rowTextColor} w=1fg style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
                                   - $if section.isDeadEnd:
-                                      - rtgl-svg#sections-overview-warning-${section.id} svg=warning-dead-end wh=20:
+                                      - rtgl-svg#sectionsOverviewWarning${sectionIndex} data-section-id=${section.id} svg=warning-dead-end wh=20: null
                 $else:
-                  - 'rtgl-view#scene-editor-left-editor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
-                      - 'rtgl-view d=h g=xs w=f':
+                  - 'rtgl-view#sceneEditorLeftEditor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
+                      - rtgl-view d=h g=xs w=f:
                           - rtgl-view d=h sh:
                               - rtgl-view d=h g=xs:
-                                  - $for section in sections:
-                                      - rtgl-view#section-tab-${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=p:
+                              - $for section, sectionIndex in sections:
+                                      - rtgl-view#sectionTab${sectionIndex} data-section-id=${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=pointer:
                                           - rtgl-text s=sm: ${section.name}
-                          - rtgl-view#section-add h=32 av=c ph=lg ah=c cur=p bgc=mu:
+                          - rtgl-view#sectionAdd h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
                               - rtgl-text s=sm: +
-                          - rtgl-view#sections-overview h=32 av=c ph=lg ah=c cur=p bgc=mu:
+                          - rtgl-view#sectionsOverview h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
                               - rtgl-text s=sm: ...
-
-                          - rtgl-view flex=1:
-                          # Toggle graph view button - commented out for now
-                          # - rtgl-view#toggle-sections-graph-view h=32 av=c ph=lg ah=c bw=sm cur=p:
-                          #     - rtgl-text s=sm: "<>"
-                      - "rtgl-view w=f p=md sv flex=1":
-                          - rvn-lines-editor#lines-editor .lines=currentLines .selectedLineId=selectedLineId .sectionLineChanges=sectionLineChanges:
-                          - rtgl-view h=30vh:
-          - rtgl-view w=1 h=f bgc=mu:
+                          - rtgl-view w=1fg: null
+                      - rtgl-view w=f p=md sv h=1fg:
+                          - rvn-lines-editor#linesEditor :lines=currentLines :selectedLineId=selectedLineId :sectionLineChanges=sectionLineChanges: null
+                          - rtgl-view h=30vh: null
+          - rtgl-view w=1 h=f bgc=mu: null
           - rtgl-view w=f:
               - rtgl-view:
                   - rtgl-view w=700 h=400 bgc=fg pos=rel:
-                      - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex;"':
+                      - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex;"': null
                       - $if isSceneAssetLoading:
                           - rtgl-view pos=abs cor=full bgc=bg op=0.7 av=c ah=c:
                               - rtgl-text s=sm: Loading assets...
-              - rtgl-view w=f h=1 bgc=mu:
+              - rtgl-view w=f h=1 bgc=mu: null
               - rtgl-view w=f m=md:
                   - rtgl-view d=h av=c:
                       - rtgl-text s=sm c=mu-fg: State
                   - rtgl-view g=md w=f pv=md:
-                      - rvn-system-actions#system-actions show-selected .actions=selectedLineActions .selectedLineId=selectedLineId .selectedLine=selectedLine .currentSceneId=scene.id action-type="presentation" .presentationState=presentationState:
-  - rtgl-dropdown-menu#dropdown-menu .items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}:
+                      - rvn-system-actions#systemActions :showSelected=true :actions=selectedLineActions :selectedLineId=selectedLineId :selectedLine=selectedLine :currentSceneId=scene.id :actionType="'presentation'" :presentationState=presentationState: null
+  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
-      - rtgl-form#form slot=content .form=form:
-  - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} placement="top" content="${deadEndTooltip.content}":
+      - rtgl-form#form slot=content :form=form: null
+  - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
   - $if previewVisible:
-      - rvn-vn-preview#vn-preview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}":
+      - rvn-vn-preview#vnPreview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}": null

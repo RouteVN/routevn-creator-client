@@ -5,14 +5,14 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
   fields: [
     {
       name: "content",
-      inputType: "inputText",
+      type: "input-text",
       label: "Choice Content",
       required: true,
       placeholder: "Enter choice content",
     },
     {
       name: "actionType",
-      inputType: "select",
+      type: "select",
       label: "Action",
       required: true,
       options: [
@@ -23,14 +23,14 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
     {
       $when: `values.actionType == 'sectionTransition'`,
       name: "sceneId",
-      inputType: "select",
+      type: "select",
       label: "Scene",
       options: "${scenes}",
     },
     {
       $when: `values.actionType == 'sectionTransition'`,
       name: "sectionId",
-      inputType: "select",
+      type: "select",
       label: "Section",
       options: "${sections}",
     },
@@ -64,11 +64,11 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = (state, mode) => {
+export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
 };
 
-export const setEditingIndex = (state, index) => {
+export const setEditingIndex = ({ state }, { index } = {}) => {
   state.editingIndex = index;
 
   if (index >= 0 && state.items && state.items[index]) {
@@ -95,29 +95,28 @@ export const setEditingIndex = (state, index) => {
   }
 };
 
-export const updateEditForm = (state, { field, value }) => {
+export const updateEditForm = ({ state }, { field, value } = {}) => {
   state.editForm[field] = value;
 };
 
-export const addChoice = (state) => {
+export const addChoice = ({ state }, _payload = {}) => {
   state.items.push({
     content: `Choice ${state.items.length + 1}`,
     action: { type: "continue" },
   });
 };
 
-export const removeChoice = (state, index) => {
+export const removeChoice = ({ state }, { index } = {}) => {
   if (state.items.length > 1) {
     state.items.splice(index, 1);
   }
 };
 
-export const setScenes = (state, payload) => {
-  const { scenes } = payload;
+export const setScenes = ({ state }, { scenes } = {}) => {
   state.scenes = scenes;
 };
 
-export const saveChoice = (state) => {
+export const saveChoice = ({ state }, _payload = {}) => {
   const { editingIndex, editForm } = state;
 
   const actions = {};
@@ -152,30 +151,29 @@ export const saveChoice = (state) => {
   state.editingIndex = -1;
 };
 
-export const updateChoice = (state, { index, content, target }) => {
+export const updateChoice = ({ state }, { index, content, target } = {}) => {
   if (state.items[index]) {
     if (content !== undefined) state.items[index].content = content;
     if (target !== undefined) state.items[index].target = target;
   }
 };
 
-export const setSelectedResourceId = (state, payload) => {
-  state.selectedResourceId = payload.resourceId;
+export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
+  state.selectedResourceId = resourceId;
 };
 
-export const showDropdownMenu = (state, { position, choiceIndex }) => {
+export const showDropdownMenu = ({ state }, { position, choiceIndex } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
   state.dropdownMenu.choiceIndex = choiceIndex;
 };
 
-export const hideDropdownMenu = (state) => {
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.choiceIndex = null;
 };
 
-export const setItems = (state, payload) => {
-  const { items } = payload;
+export const setItems = ({ state }, { items } = {}) => {
   state.items = items;
 };
 
@@ -202,13 +200,13 @@ const form = {
   fields: [
     {
       name: "resourceId",
-      inputType: "select",
+      type: "select",
       label: "Choices Layout",
       required: false,
       options: "${resourceOptions}",
     },
     {
-      inputType: "slot",
+      type: "slot",
       slot: "choices",
       description: "Choices",
     },
@@ -272,6 +270,7 @@ export const selectViewData = ({ state, props }) => {
     {
       id: "actions",
       label: "Actions",
+      click: true,
     },
   ];
 
@@ -279,6 +278,7 @@ export const selectViewData = ({ state, props }) => {
     breadcrumb.push({
       id: "list",
       label: "Choices",
+      click: true,
     });
     breadcrumb.push({
       label: editModeTitle,

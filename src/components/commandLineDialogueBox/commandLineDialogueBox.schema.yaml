@@ -1,0 +1,38 @@
+componentName: rvn-command-line-dialogue-box
+propsSchema:
+  type: object
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+    characters:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+    dialogue:
+      type: object
+      properties:
+        mode:
+          type: string
+        clearPage:
+          type: boolean
+        clear:
+          type: boolean
+        gui:
+          type: object
+          properties:
+            resourceId:
+              type: string
+        characterId:
+          type: string

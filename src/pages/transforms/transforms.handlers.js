@@ -60,7 +60,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { transforms } = projectService.getState();
-  store.setItems(transforms || { tree: [], items: {} });
+  store.setItems({ transformData: transforms || { tree: [], items: {} } });
   render();
 };
 
@@ -70,7 +70,7 @@ export const handleDataChanged = async (deps) => {
 
   const transformData = transforms || { tree: [], items: {} };
 
-  store.setItems(transformData);
+  store.setItems({ transformData: transformData });
   render();
 };
 
@@ -78,25 +78,25 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
   const { id } = payload._event.detail;
 
-  store.setSelectedItemId(id);
+  store.setSelectedItemId({ itemId: id });
   render();
 };
 
 export const handleTransformItemClick = (deps, payload) => {
-  const { store, render, getRefIds } = deps;
+  const { store, render, refs } = deps;
   const { itemId } = payload._event.detail;
 
-  const { fileExplorer } = getRefIds();
-  fileExplorer.elm.transformedHandlers.handlePageItemClick({
+  const { fileExplorer } = refs;
+  fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
 
-  store.setSelectedItemId(itemId);
+  store.setSelectedItemId({ itemId: itemId });
   render();
 };
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {
-  const { store, render, graphicsService, getRefIds } = deps;
+  const { store, render, graphicsService, refs } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
 
@@ -119,10 +119,10 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
   render();
 
   // Initialize graphicsService after dialog is opened and canvas is in DOM
-  const { canvas } = getRefIds();
-  if (canvas && canvas.elm) {
+  const { canvas } = refs;
+  if (canvas) {
     await graphicsService.init({
-      canvas: canvas.elm,
+      canvas: canvas,
     });
   }
 
@@ -147,7 +147,7 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
 };
 
 export const handleAddTransformClick = async (deps, payload) => {
-  const { store, render, graphicsService, getRefIds } = deps;
+  const { store, render, graphicsService, refs } = deps;
   payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button
@@ -162,10 +162,10 @@ export const handleAddTransformClick = async (deps, payload) => {
   });
   render();
 
-  const { canvas } = getRefIds();
-  if (canvas && canvas.elm) {
+  const { canvas } = refs;
+  if (canvas) {
     await graphicsService.init({
-      canvas: canvas.elm,
+      canvas: canvas,
     });
   }
 
@@ -184,10 +184,10 @@ export const handleAddTransformClick = async (deps, payload) => {
 
 export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
-  const groupId = payload._event.currentTarget.id.replace("group-", "");
+  const groupId = payload._event.currentTarget.id.replace("group", "");
 
   // Handle group collapse internally
-  store.toggleGroupCollapse(groupId);
+  store.toggleGroupCollapse({ groupId: groupId });
   render();
 };
 
@@ -220,7 +220,7 @@ export const handleTransformCreated = async (deps, payload) => {
   });
 
   const { transforms } = projectService.getState();
-  store.setItems(transforms);
+  store.setItems({ transformData: transforms });
   render();
 };
 
@@ -231,7 +231,7 @@ export const handleFormChange = async (deps, payload) => {
     payload: {
       target: "transforms",
       value: {
-        [payload._event.detail.name]: payload._event.detail.fieldValue,
+        [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
         id: store.selectSelectedItemId(),
@@ -241,7 +241,7 @@ export const handleFormChange = async (deps, payload) => {
   });
 
   const { transforms } = projectService.getState();
-  store.setItems(transforms);
+  store.setItems({ transformData: transforms });
   render();
 };
 
@@ -274,21 +274,21 @@ export const handleTransformEdited = async (deps, payload) => {
 
   // Update local state and render immediately
   const { transforms } = projectService.getState();
-  store.setItems(transforms);
+  store.setItems({ transformData: transforms });
   render();
 };
 
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value || "";
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 
 export const handleGroupToggle = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse(groupId);
+  store.toggleGroupCollapse({ groupId: groupId });
   render();
 };
 
@@ -309,7 +309,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
 
   if (actionId === "submit") {
     // Get form values from the event detail - it's in formValues
-    const formData = payload._event.detail.formValues;
+    const formData = payload._event.detail.values;
 
     if (!formData.name || !formData.name.trim()) {
       appService.showToast("Transform name is required", { title: "Warning" });
@@ -368,7 +368,7 @@ export const handleTransformFormActionClick = (deps, payload) => {
 export const handleTransformFormChange = async (deps, payload) => {
   const { render, graphicsService } = deps;
 
-  const formValues = payload._event.detail.formValues;
+  const formValues = payload._event.detail.values;
 
   const x = parseInt(formValues.x || 0);
   const y = parseInt(formValues.y || 0);
@@ -427,6 +427,6 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];
-  store.setItems(data);
+  store.setItems({ transformData: data });
   render();
 };

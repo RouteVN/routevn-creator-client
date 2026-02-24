@@ -1,0 +1,4 @@
+componentName: rvn-fonts
+propsSchema:
+  type: object
+  properties: {}

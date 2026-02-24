@@ -20,7 +20,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -28,7 +28,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -43,7 +43,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -51,7 +51,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -76,7 +76,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -84,7 +84,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -101,7 +101,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -109,7 +109,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -168,7 +168,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -176,7 +176,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -279,7 +279,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -287,7 +287,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -302,7 +302,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -310,7 +310,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -330,7 +330,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -338,7 +338,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -358,7 +358,7 @@ const config = {
                 fields: [
                   {
                     name: "value",
-                    inputType: "input-number",
+                    type: "input-number",
                   },
                 ],
                 actions: {
@@ -366,7 +366,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -405,7 +405,7 @@ const config = {
                   // {
                   //   name: "contentType",
                   //   description: "Content Type",
-                  //   inputType: "select",
+                  //   type: "select",
                   //   options: [
                   //     { label: "Variable", value: "variable" },
                   //     { label: "Plain Text", value: "plain" },
@@ -415,7 +415,7 @@ const config = {
                   //   $when: 'popoverFormValues.contentType == "variable"',
                   //   name: "value",
                   //   description: "Variable",
-                  //   inputType: "select",
+                  //   type: "select",
                   //   options: [
                   //     {
                   //       label: "Dialogue Character Name",
@@ -435,7 +435,7 @@ const config = {
                   {
                     // $when: 'popoverFormValues.contentType == "plain"',
                     name: "value",
-                    inputType: "input-text",
+                    type: "input-text",
                   },
                 ],
                 actions: {
@@ -443,7 +443,7 @@ const config = {
                     {
                       id: "submit",
                       variant: "pr",
-                      content: "Submit",
+                      label: "Submit",
                     },
                   ],
                 },
@@ -569,8 +569,10 @@ export const createInitialState = () => {
   };
 };
 
-export const updateValueProperty = (state, payload) => {
-  const { value, name } = payload;
+export const updateValueProperty = ({ state }, { value, name } = {}) => {
+  if (!name) {
+    return;
+  }
   const keys = name.split(".");
 
   if (keys.length === 1) {
@@ -599,8 +601,11 @@ export const updateValueProperty = (state, payload) => {
   }
 };
 
-export const openPopoverForm = (state, payload) => {
-  const value = state.values[payload.name];
+export const openPopoverForm = ({ state }, { x, y, name, form } = {}) => {
+  if (!name) {
+    return;
+  }
+  const value = state.values[name];
 
   const popoverFormValues = {
     value,
@@ -615,26 +620,26 @@ export const openPopoverForm = (state, payload) => {
   state.popover = {
     key: state.popover.key + 1,
     open: true,
-    x: payload.x,
-    y: payload.y,
+    x,
+    y,
     defaultValues: popoverFormValues,
-    name: payload.name,
-    form: payload.form,
+    name,
+    form,
     context: {
       popoverFormValues,
     },
   };
 };
 
-export const updatePopoverFormContext = (state, payload) => {
+export const updatePopoverFormContext = ({ state }, { values = {} } = {}) => {
   state.popover.context = {
-    popoverFormValues: payload.values,
+    popoverFormValues: values,
   };
-  state.popover.defaultValues = payload.values;
+  state.popover.defaultValues = values;
   state.popover.key = state.popover.key + 1;
 };
 
-export const closePopoverForm = (state) => {
+export const closePopoverForm = ({ state }, _payload = {}) => {
   state.popover = {
     key: 0,
     open: false,
@@ -654,14 +659,14 @@ export const selectPopoverForm = ({ state }) => {
   return state.popover;
 };
 
-export const openImageSelectorDialog = (state, payload) => {
+export const openImageSelectorDialog = ({ state }, { name } = {}) => {
   state.imageSelectorDialog = {
     open: true,
-    name: payload.name,
+    name,
   };
 };
 
-export const closeImageSelectorDialog = (state) => {
+export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
   state.imageSelectorDialog = {
     open: false,
     name: undefined,
@@ -669,15 +674,15 @@ export const closeImageSelectorDialog = (state) => {
   state.tempSelectedImageId = undefined;
 };
 
-export const setValues = (state, payload) => {
-  state.values = payload.values;
+export const setValues = ({ state }, { values } = {}) => {
+  state.values = values ?? {};
 };
 
-export const setTypographyData = (state, typographyData) => {
+export const setTypographyData = ({ state }, { typographyData } = {}) => {
   state.typographyData = typographyData;
 };
 
-export const setVariablesData = (state, variablesData) => {
+export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
 
@@ -685,8 +690,8 @@ export const selectValues = ({ state }) => {
   return state.values;
 };
 
-export const setTempSelectedImageId = (state, payload) => {
-  state.tempSelectedImageId = payload.imageId;
+export const setTempSelectedImageId = ({ state }, { imageId } = {}) => {
+  state.tempSelectedImageId = imageId;
 };
 
 export const selectImageSelectorDialog = ({ state }) => {
@@ -697,7 +702,7 @@ export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
 };
 
-export const selectViewData = ({ state, attrs }) => {
+export const selectViewData = ({ state, props: attrs }) => {
   // Transform typography data to options format
   const typographyGroups = toFlatGroups(state.typographyData);
   const typographyItems = typographyGroups.flatMap((group) =>
@@ -732,8 +737,8 @@ export const selectViewData = ({ state, attrs }) => {
   };
 
   const context = {
-    itemType: attrs["item-type"],
-    layoutType: attrs["layout-type"],
+    itemType: attrs.itemType,
+    layoutType: attrs.layoutType,
     typographyItems: typographyItems,
     typographyItemsWithNone: typographyItemsWithNone,
     variableOptionsWithNone: variableOptionsWithNone,
