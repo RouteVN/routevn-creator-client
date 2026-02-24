@@ -1,4 +1,4 @@
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#insieme-compat";
 
 const createTransitionKey = (transition) => {
   if (!transition) {

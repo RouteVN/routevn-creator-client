@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "insieme";
+import { toFlatGroups, toFlatItems } from "#insieme-compat";
 
 const hexToRgb = (hex) => {
   if (!hex) return "";

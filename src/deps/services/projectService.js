@@ -3,10 +3,15 @@ import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
-import { createRepository } from "insieme";
+import { createRepository } from "#insieme-compat";
 import { createInsiemeTauriStoreAdapter } from "../infra/tauri/tauriRepositoryAdapter";
 import { loadTemplate, getTemplateFiles } from "../../utils/templateLoader";
 import { createBundle } from "../../utils/bundleUtils";
+import {
+  createLegacyEventCommand,
+  createProjectCollabService,
+  createWebSocketTransport,
+} from "../../collab/v2/index.js";
 import {
   getImageDimensions,
   getVideoDimensions,
@@ -34,6 +39,7 @@ const loadFont = async (fontName, fontUrl) => {
  * Default empty project data structure
  */
 export const initialProjectData = {
+  model_version: 2,
   project: {
     name: "",
     description: "",
@@ -95,6 +101,14 @@ export const initialProjectData = {
   },
 };
 
+const assertV2State = (state) => {
+  if (!state || state.model_version !== 2) {
+    throw new Error(
+      "Unsupported project model version. RouteVN V2 only supports model_version=2 projects.",
+    );
+  }
+};
+
 /**
  * Create a project service that manages repositories and operations for projects.
  * Gets current projectId from router query params automatically.
@@ -105,11 +119,24 @@ export const initialProjectData = {
  * @param {Object} params.filePicker - File picker instance
  */
 export const createProjectService = ({ router, db, filePicker }) => {
+  const collabLog = (level, message, meta = {}) => {
+    const fn =
+      level === "error"
+        ? console.error.bind(console)
+        : level === "warn"
+          ? console.warn.bind(console)
+          : console.log.bind(console);
+    fn(`[routevn.collab.tauri] ${message}`, meta);
+  };
+
   // Repository cache
   const repositoriesByProject = new Map();
   const repositoriesByPath = new Map();
   const adaptersByProject = new Map();
   const adaptersByPath = new Map();
+  const collabSessionsByProject = new Map();
+  const collabSessionModeByProject = new Map();
+  const localCollabActorsByProject = new Map();
 
   // Initialization locks - prevents duplicate initialization
   const initLocksByProject = new Map(); // projectId -> Promise<Repository>
@@ -123,6 +150,104 @@ export const createProjectService = ({ router, db, filePicker }) => {
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
     return p;
+  };
+
+  const getBasePartitions = (projectId, partitions) =>
+    partitions || [
+      `project:${projectId}:story`,
+      `project:${projectId}:resources`,
+      `project:${projectId}:layouts`,
+      `project:${projectId}:settings`,
+    ];
+
+  const getOrCreateLocalActor = (projectId) => {
+    const existing = localCollabActorsByProject.get(projectId);
+    if (existing) return existing;
+    const actor = {
+      userId: `local-${projectId}`,
+      clientId: `local-${nanoid()}`,
+    };
+    localCollabActorsByProject.set(projectId, actor);
+    return actor;
+  };
+
+  const createSessionForProject = async ({
+    projectId,
+    token,
+    userId,
+    clientId,
+    endpointUrl,
+    partitions,
+    mode,
+  }) => {
+    collabLog("info", "create session requested", {
+      projectId,
+      endpointUrl: endpointUrl || null,
+      mode,
+      hasToken: Boolean(token),
+      userId,
+      clientId,
+    });
+
+    const repository = await getRepositoryByProject(projectId);
+    const state = repository.getState();
+    assertV2State(state);
+
+    const resolvedProjectId = state.project?.id || projectId;
+    const resolvedPartitions = getBasePartitions(resolvedProjectId, partitions);
+    const collabSession = createProjectCollabService({
+      projectId: resolvedProjectId,
+      projectName: state.project?.name || "",
+      projectDescription: state.project?.description || "",
+      token,
+      actor: {
+        userId,
+        clientId,
+      },
+      partitions: resolvedPartitions,
+      logger: (entry) => {
+        collabLog("debug", "sync-client", entry);
+      },
+    });
+
+    await collabSession.start();
+    collabLog("info", "session started", {
+      projectId: resolvedProjectId,
+      mode,
+      partitions: resolvedPartitions,
+      online: Boolean(endpointUrl),
+    });
+    if (endpointUrl) {
+      collabLog("info", "attaching websocket transport", {
+        endpointUrl,
+      });
+      const transport = createWebSocketTransport({
+        url: endpointUrl,
+        label: "routevn.collab.tauri.transport",
+      });
+      await collabSession.setOnlineTransport(transport);
+      collabLog("info", "websocket transport attached", {
+        endpointUrl,
+      });
+    }
+
+    collabSessionsByProject.set(projectId, collabSession);
+    collabSessionModeByProject.set(projectId, mode);
+    return collabSession;
+  };
+
+  const ensureCommandSessionForProject = async (projectId) => {
+    const existing = collabSessionsByProject.get(projectId);
+    if (existing) return existing;
+
+    const actor = getOrCreateLocalActor(projectId);
+    return createSessionForProject({
+      projectId,
+      token: `user:${actor.userId}:client:${actor.clientId}`,
+      userId: actor.userId,
+      clientId: actor.clientId,
+      mode: "local",
+    });
   };
 
   // Get or create repository by path
@@ -146,6 +271,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
           snapshotInterval: 500, // Auto-save snapshot every 500 events
         });
         await repository.init({ initialState: initialProjectData });
+        assertV2State(repository.getState());
         repositoriesByPath.set(projectPath, repository);
         adaptersByPath.set(projectPath, store);
         return repository;
@@ -420,12 +546,41 @@ export const createProjectService = ({ router, db, filePicker }) => {
     async appendEvent(event) {
       const repository = await getCurrentRepository();
       await repository.addEvent(event);
+
+      try {
+        const currentProjectId = getCurrentProjectId();
+        if (!currentProjectId) return;
+
+        const session = await ensureCommandSessionForProject(currentProjectId);
+        const state = repository.getState();
+        assertV2State(state);
+
+        const projectId = state.project?.id || currentProjectId;
+        const actor =
+          typeof session.getActor === "function"
+            ? session.getActor()
+            : getOrCreateLocalActor(currentProjectId);
+        const command = createLegacyEventCommand({ projectId, actor, event });
+
+        if (typeof session.submitLegacyCommand === "function") {
+          await session.submitLegacyCommand(command);
+        } else {
+          await session.submitCommand(command);
+        }
+      } catch (error) {
+        console.warn(
+          "appendEvent command bridge failed; local event persisted only",
+          error,
+        );
+      }
     },
 
     // Sync state access - requires ensureRepository() to be called first
     getState() {
       const repository = getCachedRepository();
-      return repository.getState();
+      const state = repository.getState();
+      assertV2State(state);
+      return state;
     },
 
     async getEvents() {
@@ -473,6 +628,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       const initData = {
         ...initialProjectData,
         ...templateData,
+        model_version: 2,
         project: { name, description },
       };
 
@@ -485,6 +641,92 @@ export const createProjectService = ({ router, db, filePicker }) => {
       await repository.init({ initialState: initData });
 
       await store.app.set("creator_version", "1");
+    },
+
+    async createCollabSession({
+      token,
+      userId,
+      clientId = nanoid(),
+      endpointUrl,
+      partitions,
+    }) {
+      const currentProjectId = getCurrentProjectId();
+      if (!currentProjectId) {
+        throw new Error("No project selected (missing ?p= in URL)");
+      }
+      collabLog("info", "createCollabSession called", {
+        currentProjectId,
+        endpointUrl: endpointUrl || null,
+        hasToken: Boolean(token),
+        userId,
+        clientId,
+      });
+
+      const existing = collabSessionsByProject.get(currentProjectId);
+      const existingMode = collabSessionModeByProject.get(currentProjectId);
+      if (existing) {
+        collabLog("info", "existing session found", {
+          currentProjectId,
+          existingMode,
+        });
+        const hasExplicitIdentity = Boolean(token && userId);
+        if (hasExplicitIdentity && existingMode === "local") {
+          await existing.stop();
+          collabSessionsByProject.delete(currentProjectId);
+          collabSessionModeByProject.delete(currentProjectId);
+          collabLog("info", "replaced local session with explicit identity", {
+            currentProjectId,
+          });
+        } else {
+          if (endpointUrl) {
+            const transport = createWebSocketTransport({ url: endpointUrl });
+            await existing.setOnlineTransport(transport);
+            collabLog("info", "updated existing session transport", {
+              currentProjectId,
+              endpointUrl,
+            });
+          }
+          return existing;
+        }
+      }
+      return createSessionForProject({
+        projectId: currentProjectId,
+        token,
+        userId,
+        clientId,
+        endpointUrl,
+        partitions,
+        mode: "explicit",
+      });
+    },
+
+    getCollabSession() {
+      const currentProjectId = getCurrentProjectId();
+      if (!currentProjectId) return null;
+      return collabSessionsByProject.get(currentProjectId) || null;
+    },
+
+    async stopCollabSession(projectId) {
+      const targetProjectId = projectId || getCurrentProjectId();
+      if (!targetProjectId) return;
+      const session = collabSessionsByProject.get(targetProjectId);
+      if (!session) return;
+      await session.stop();
+      collabSessionsByProject.delete(targetProjectId);
+      collabSessionModeByProject.delete(targetProjectId);
+      collabLog("info", "session stopped", {
+        projectId: targetProjectId,
+      });
+    },
+
+    async submitCommand(command) {
+      const session = this.getCollabSession();
+      if (!session) {
+        throw new Error(
+          "Collaboration session not initialized. Call createCollabSession() first.",
+        );
+      }
+      return session.submitCommand(command);
     },
 
     // File operations - uses current project

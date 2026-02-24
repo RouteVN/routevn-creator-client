@@ -14,6 +14,9 @@
     "visual-novel-tools",
     "visual-novel-creator"
   ],
+  "imports": {
+    "#insieme-compat": "./src/deps/infra/insiemeCompat/index.js"
+  },
   "type": "module",
   "dependencies": {
     "@rettangoli/fe": "1.0.0-rc3",
@@ -28,7 +31,7 @@
     "esbuild": "^0.25.11",
     "file-type": "^21.0.0",
     "immer": "^10.1.1",
-    "insieme": "0.0.8",
+    "insieme": "1.0.0-rc2",
     "jempl": "1.0.0",
     "js-yaml": "^4.1.0",
     "jsdom": "^26.1.0",
@@ -46,6 +49,10 @@
     "build:tauri": "./scripts/build.sh tauri",
     "watch:web": "rtgl fe watch -s src/setup.web.js",
     "watch:tauri": "rtgl fe watch -s src/setup.tauri.js",
+    "test:v2-smoke": "node scripts/test-v2-smoke.mjs",
+    "test:v2-convergence": "node scripts/test-v2-convergence.mjs",
+    "test:v2-integration": "node scripts/test-v2-integration.mjs",
+    "test:v2-append-bridge": "node scripts/test-v2-append-bridge.mjs",
     "vt:generate": "bun run build:web && bash -lc 'IMAGE=\"han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.0-rc13\"; docker pull \"$IMAGE\" >/dev/null 2>&1 || IMAGE=\"han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.0-rc12\"; docker run --rm --user $(id -u):$(id -g) -v \"$PWD:/app\" -w /app \"$IMAGE\" rtgl vt screenshot'",
     "vt:docker": "bun run vt:generate",
     "vt:report": "bun run vt:generate && rtgl vt report",

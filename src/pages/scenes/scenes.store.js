@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "insieme";
+import { toFlatGroups, toFlatItems } from "#insieme-compat";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
 const form = {
@@ -23,6 +23,8 @@ const CONTEXT_MENU_ITEMS = [
   { label: "Set Initial Scene", type: "item", value: "set-initial" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
+const toFiniteNumberOr = (value, fallback) =>
+  Number.isFinite(value) ? value : fallback;
 
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
@@ -214,8 +216,8 @@ export const selectViewData = ({ state }, payload) => {
         .map(([sceneId, scene]) => ({
           id: sceneId,
           name: scene.name || `Scene ${sceneId}`,
-          x: scene.position?.x || 200,
-          y: scene.position?.y || 200,
+          x: toFiniteNumberOr(scene.position?.x, 200),
+          y: toFiniteNumberOr(scene.position?.y, 200),
           isInitial: sceneId === initialSceneId,
         }));
 

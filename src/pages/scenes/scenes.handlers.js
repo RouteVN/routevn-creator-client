@@ -119,6 +119,8 @@ const getTransitionsForScene = (sections, layouts) => {
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const toFiniteNumberOr = (value, fallback) =>
+  Number.isFinite(value) ? value : fallback;
 
 const parseNumericConfig = (value, fallback) => {
   const numericValue = Number(value);
@@ -188,8 +190,8 @@ export const handleAfterMount = async (deps) => {
     .map(([sceneId, scene]) => ({
       id: sceneId,
       name: scene.name || `Scene ${sceneId}`,
-      x: scene.position?.x || 200,
-      y: scene.position?.y || 200,
+      x: toFiniteNumberOr(scene.position?.x, 200),
+      y: toFiniteNumberOr(scene.position?.y, 200),
       isInit: sceneId === initialSceneId,
       transitions: getTransitionsForScene(scene.sections, layouts),
     }));
@@ -291,18 +293,29 @@ export const handleWhiteboardItemPositionUpdating = async (deps, payload) => {
 export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { itemId, x, y } = payload._event.detail;
+  const nextX = Number(x);
+  const nextY = Number(y);
+
+  if (!itemId || !Number.isFinite(nextX) || !Number.isFinite(nextY)) {
+    console.error("[scenes] invalid position payload from whiteboard", {
+      itemId,
+      x,
+      y,
+    });
+    return;
+  }
 
   // Update position in repository using 'set' action
-  projectService.appendEvent({
+  await projectService.appendEvent({
     type: "set",
     payload: {
       target: `scenes.items.${itemId}.position`,
-      value: { x, y },
+      value: { x: nextX, y: nextY },
     },
   });
 
   // Update local whiteboard state (already updated by position-updating, but keeping for consistency)
-  store.updateItemPosition({ itemId, x, y });
+  store.updateItemPosition({ itemId, x: nextX, y: nextY });
   render();
 };
 

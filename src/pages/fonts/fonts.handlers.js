@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#insieme-compat";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 

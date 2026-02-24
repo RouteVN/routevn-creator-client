@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#insieme-compat";
 import {
   extractFileIdsForLayouts,
   extractSceneIdsFromValue,
@@ -611,6 +611,62 @@ const selectSection = async (deps, sectionId) => {
   render();
   scrollSectionTabIntoView(deps, sectionId);
   subject.dispatch("sceneEditor.renderCanvas", {});
+};
+
+const reconcileSceneSelection = (store) => {
+  const scene = store.selectScene();
+  const previousSectionId = store.selectSelectedSectionId();
+  const previousLineId = store.selectSelectedLineId();
+
+  if (!scene || !Array.isArray(scene.sections) || scene.sections.length === 0) {
+    if (previousSectionId !== undefined) {
+      store.setSelectedSectionId({ selectedSectionId: undefined });
+    }
+    if (previousLineId !== undefined) {
+      store.setSelectedLineId({ selectedLineId: undefined });
+    }
+    return {
+      sectionId: undefined,
+      lineId: undefined,
+    };
+  }
+
+  const resolvedSection =
+    scene.sections.find((section) => section.id === previousSectionId) ||
+    scene.sections[0];
+  const resolvedSectionId = resolvedSection?.id;
+  const resolvedLine =
+    resolvedSection?.lines?.find((line) => line.id === previousLineId) ||
+    resolvedSection?.lines?.[0];
+  const resolvedLineId = resolvedLine?.id;
+
+  if (resolvedSectionId !== previousSectionId) {
+    store.setSelectedSectionId({ selectedSectionId: resolvedSectionId });
+  }
+
+  if (resolvedLineId !== previousLineId) {
+    store.setSelectedLineId({ selectedLineId: resolvedLineId });
+  }
+
+  return {
+    sectionId: resolvedSectionId,
+    lineId: resolvedLineId,
+  };
+};
+
+export const handleDataChanged = async (deps) => {
+  const { store, projectService, render, subject } = deps;
+  await projectService.ensureRepository();
+  const repositoryState = projectService.getState();
+  store.setRepositoryState({ repository: repositoryState });
+
+  reconcileSceneSelection(store);
+
+  await updateSectionChanges(deps);
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipAnimations: true,
+  });
 };
 
 const isSectionsOverviewOpen = (store) => {

@@ -1,4 +1,4 @@
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#insieme-compat";
 
 export const createInitialState = () => ({
   ready: false,

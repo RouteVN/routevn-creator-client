@@ -1,5 +1,5 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
-import { toTreeStructure } from "insieme";
+import { toTreeStructure } from "#insieme-compat";
 import {
   extractFileIdsFromRenderState,
   layoutTreeStructureToRenderState,
@@ -544,11 +544,10 @@ export const handleArrowKeyDown = async (deps, payload) => {
  */
 async function handleDebouncedUpdate(deps, payload) {
   const { projectService, store } = deps;
-  const repository = await projectService.getRepository();
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
   // Save to repository
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: `layouts.items.${layoutId}.elements`,
@@ -561,7 +560,7 @@ async function handleDebouncedUpdate(deps, payload) {
   });
 
   // For form/keyboard updates, sync store with repository
-  const { layouts, images } = repository.getState();
+  const { layouts, images } = projectService.getState();
   const layout = layouts.items[layoutId];
 
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });

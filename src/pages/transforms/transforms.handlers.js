@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#insieme-compat";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)

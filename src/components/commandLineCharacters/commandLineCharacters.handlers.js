@@ -1,4 +1,4 @@
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#insieme-compat";
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;

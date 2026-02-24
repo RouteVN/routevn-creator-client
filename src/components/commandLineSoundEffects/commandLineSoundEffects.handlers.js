@@ -1,4 +1,4 @@
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#insieme-compat";
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {

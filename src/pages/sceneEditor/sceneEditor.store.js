@@ -1,4 +1,4 @@
-import { toFlatItems, toTreeStructure } from "insieme";
+import { toFlatItems, toTreeStructure } from "#insieme-compat";
 import { layoutTreeStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";
@@ -348,7 +348,7 @@ export const selectViewData = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) {
     return {
-      scene: null,
+      scene: { id: "", name: "Scene", sections: [] },
       sections: [],
       sectionsOverviewOpen: false,
       sectionsOverviewItems: [],

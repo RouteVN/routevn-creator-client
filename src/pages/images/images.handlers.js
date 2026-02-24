@@ -1,5 +1,16 @@
 import { nanoid } from "nanoid";
+import { filter, tap } from "rxjs";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+
+const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
+
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+export const handleBeforeMount = (deps) => mountLegacySubscriptions(deps);
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -55,6 +66,18 @@ export const handleFileExplorerDataChanged = async (deps) => {
   const state = repository.getState();
   store.setItems({ imagesData: state.images });
   render();
+};
+
+const subscriptions = (deps) => {
+  const { subject } = deps;
+  return [
+    subject.pipe(
+      filter(({ action }) => action === COLLAB_IMAGES_REFRESH_ACTION),
+      tap(() => {
+        void deps.handlers.handleFileExplorerDataChanged(deps);
+      }),
+    ),
+  ];
 };
 
 export const handleFormExtraEvent = async (deps) => {

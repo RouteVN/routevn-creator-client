@@ -33,7 +33,6 @@ export const handleVariableItemClick = (deps, payload) => {
 export const handleVariableCreated = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
   const {
     groupId,
     name,
@@ -43,7 +42,7 @@ export const handleVariableCreated = async (deps, payload) => {
   } = payload._event.detail;
 
   // Add new variable to repository
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treePush",
     payload: {
       target: "variables",
@@ -63,6 +62,7 @@ export const handleVariableCreated = async (deps, payload) => {
   });
 
   // Update store with new variables data
+  const repository = await projectService.getRepositoryById(p);
   const { variables } = repository.getState();
   store.setItems({ variablesData: variables });
   render();
@@ -71,10 +71,9 @@ export const handleVariableCreated = async (deps, payload) => {
 export const handleVariableDelete = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
   const { itemId } = payload._event.detail;
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: "variables",
@@ -89,6 +88,7 @@ export const handleVariableDelete = async (deps, payload) => {
     store.setSelectedItemId({ itemId: null });
   }
 
+  const repository = await projectService.getRepositoryById(p);
   const { variables } = repository.getState();
   store.setItems({ variablesData: variables });
   render();
@@ -97,7 +97,6 @@ export const handleVariableDelete = async (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, appService, render, store } = deps;
   const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
   const fieldName = payload._event.detail.name;
   const fieldValue = payload._event.detail.value;
 
@@ -115,7 +114,7 @@ export const handleFormChange = async (deps, payload) => {
     updateValue.default = typeDefaults[fieldValue] ?? "";
   }
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: "variables",
@@ -127,6 +126,7 @@ export const handleFormChange = async (deps, payload) => {
     },
   });
 
+  const repository = await projectService.getRepositoryById(p);
   const { variables } = repository.getState();
   store.setItems({ variablesData: variables });
   render();

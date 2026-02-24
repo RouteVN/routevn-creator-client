@@ -32,6 +32,7 @@ export const initializeProject = async ({
   // Add project info to template data
   const initData = {
     ...templateData,
+    model_version: 2,
     project: {
       name,
       description,

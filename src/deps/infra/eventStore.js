@@ -4,7 +4,7 @@ import {
   toFlatItems,
   toFlatGroups,
   toTreeStructure,
-} from "insieme";
+} from "#insieme-compat";
 
 // Re-export utility functions from insieme
 export { toFlatItems, toFlatGroups, toTreeStructure };

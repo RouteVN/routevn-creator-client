@@ -111,7 +111,6 @@ export const handleImageItemClick = async (deps, payload) => {
 
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, projectService, globalUI } = deps;
-  const repository = await projectService.getRepository();
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -132,7 +131,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     for (const result of successfulUploads) {
-      await repository.addEvent({
+      await projectService.appendEvent({
         type: "treePush",
         payload: {
           target: `characters.items.${characterId}.sprites`,
@@ -165,12 +164,11 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  const repository = await projectService.getRepository();
 
   const characterId = store.selectCharacterId();
   const selectedItemId = store.selectSelectedItemId();
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: `characters.items.${characterId}.sprites`,
@@ -194,7 +192,6 @@ export const handleFormChange = async (deps, payload) => {
 
 export const handleFormExtraEvent = async (deps) => {
   const { projectService, appService, store, render } = deps;
-  const repository = await projectService.getRepository();
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -222,7 +219,7 @@ export const handleFormExtraEvent = async (deps) => {
   const uploadResult = uploadedFiles[0];
   const characterId = store.selectCharacterId();
 
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
       target: `characters.items.${characterId}.sprites`,
@@ -264,7 +261,6 @@ export const handleSearchInput = (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, store, render } = deps;
-  const repository = await projectService.getRepository();
   const { itemId } = payload._event.detail;
 
   const characterId = store.selectCharacterId();
@@ -283,7 +279,7 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await repository.addEvent({
+  await projectService.appendEvent({
     type: "treeDelete",
     payload: {
       target: `characters.items.${characterId}.sprites`,

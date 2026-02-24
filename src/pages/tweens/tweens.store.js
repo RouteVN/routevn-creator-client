@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "insieme";
+import { toFlatGroups, toFlatItems } from "#insieme-compat";
 import { resetState } from "./tweens.constants";
 
 const form = {
