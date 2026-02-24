@@ -34,7 +34,7 @@ refs:
   imageSelectorDialog:
     eventListeners:
       close:
-        action: closeImageSelectorDialog
+        handler: handleImageSelectorCancel
   imageSelector:
     eventListeners:
       image-selected:

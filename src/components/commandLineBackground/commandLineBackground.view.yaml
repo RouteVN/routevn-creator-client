@@ -74,7 +74,7 @@ template:
                   - rvn-base-file-explorer#baseFileExplorer :items=items: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvnImageSelector: null
+                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId}: null
                     $elif tab == 'layout':
                       - $for group, i in groups:
                           - rtgl-view g=md:

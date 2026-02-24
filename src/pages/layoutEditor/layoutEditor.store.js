@@ -606,8 +606,18 @@ export const startDragging = ({ state }, _payload = {}) => {
   state.isDragging = true;
 };
 
-export const setDragStartPosition = ({ state }, { payload } = {}) => {
-  const { x, y, itemStartX, itemStartY } = payload;
+export const setDragStartPosition = (
+  { state },
+  { x, y, itemStartX, itemStartY } = {},
+) => {
+  if (
+    typeof x !== "number" ||
+    typeof y !== "number" ||
+    typeof itemStartX !== "number" ||
+    typeof itemStartY !== "number"
+  ) {
+    return;
+  }
   state.dragStartPosition = {
     x,
     y,
@@ -616,7 +626,7 @@ export const setDragStartPosition = ({ state }, { payload } = {}) => {
   };
 };
 
-export const stopDragging = ({ state }, { isDragging } = {}) => {
+export const stopDragging = ({ state }, { isDragging = false } = {}) => {
   state.isDragging = isDragging;
   state.dragStartPosition = undefined;
 };

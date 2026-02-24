@@ -569,8 +569,10 @@ export const createInitialState = () => {
   };
 };
 
-export const updateValueProperty = ({ state }, { payload } = {}) => {
-  const { value, name } = payload;
+export const updateValueProperty = ({ state }, { value, name } = {}) => {
+  if (!name) {
+    return;
+  }
   const keys = name.split(".");
 
   if (keys.length === 1) {
@@ -599,8 +601,11 @@ export const updateValueProperty = ({ state }, { payload } = {}) => {
   }
 };
 
-export const openPopoverForm = ({ state }, { payload } = {}) => {
-  const value = state.values[payload.name];
+export const openPopoverForm = ({ state }, { x, y, name, form } = {}) => {
+  if (!name) {
+    return;
+  }
+  const value = state.values[name];
 
   const popoverFormValues = {
     value,
@@ -615,22 +620,22 @@ export const openPopoverForm = ({ state }, { payload } = {}) => {
   state.popover = {
     key: state.popover.key + 1,
     open: true,
-    x: payload.x,
-    y: payload.y,
+    x,
+    y,
     defaultValues: popoverFormValues,
-    name: payload.name,
-    form: payload.form,
+    name,
+    form,
     context: {
       popoverFormValues,
     },
   };
 };
 
-export const updatePopoverFormContext = ({ state }, { payload } = {}) => {
+export const updatePopoverFormContext = ({ state }, { values = {} } = {}) => {
   state.popover.context = {
-    popoverFormValues: payload.values,
+    popoverFormValues: values,
   };
-  state.popover.defaultValues = payload.values;
+  state.popover.defaultValues = values;
   state.popover.key = state.popover.key + 1;
 };
 
@@ -654,10 +659,10 @@ export const selectPopoverForm = ({ state }) => {
   return state.popover;
 };
 
-export const openImageSelectorDialog = ({ state }, { payload } = {}) => {
+export const openImageSelectorDialog = ({ state }, { name } = {}) => {
   state.imageSelectorDialog = {
     open: true,
-    name: payload.name,
+    name,
   };
 };
 
@@ -669,8 +674,8 @@ export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
   state.tempSelectedImageId = undefined;
 };
 
-export const setValues = ({ state }, { payload } = {}) => {
-  state.values = payload.values;
+export const setValues = ({ state }, { values } = {}) => {
+  state.values = values ?? {};
 };
 
 export const setTypographyData = ({ state }, { typographyData } = {}) => {
@@ -685,8 +690,8 @@ export const selectValues = ({ state }) => {
   return state.values;
 };
 
-export const setTempSelectedImageId = ({ state }, { payload } = {}) => {
-  state.tempSelectedImageId = payload.imageId;
+export const setTempSelectedImageId = ({ state }, { imageId } = {}) => {
+  state.tempSelectedImageId = imageId;
 };
 
 export const selectImageSelectorDialog = ({ state }) => {

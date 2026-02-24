@@ -1,3 +1,12 @@
+export const handleBeforeMount = (deps) => {
+  const { store, props } = deps;
+  if (props?.selectedImageId) {
+    store.setSelectedImageId({
+      imageId: props.selectedImageId,
+    });
+  }
+};
+
 export const handleAfterMount = (deps) => {
   const { store, projectService, render } = deps;
   const state = projectService.getState();
@@ -8,6 +17,17 @@ export const handleAfterMount = (deps) => {
   // Store raw images data - processing will happen in selectViewData
   store.setImages({ images: images });
   render();
+};
+
+export const handleOnUpdate = (deps, payload) => {
+  const { store, render } = deps;
+  const newSelectedImageId = payload?.newProps?.selectedImageId;
+  if (newSelectedImageId !== undefined) {
+    store.setSelectedImageId({
+      imageId: newSelectedImageId,
+    });
+    render();
+  }
 };
 
 export const handleImageItemClick = (deps, payload) => {

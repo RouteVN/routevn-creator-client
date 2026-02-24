@@ -27,6 +27,8 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
   return sanitized || fallback;
 };
 
+const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
+
 // File content cache to avoid redundant API calls
 const fileContentCache = new Map();
 
@@ -95,13 +97,23 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
     const cacheKey = fileId;
 
     if (fileContentCache.has(cacheKey)) {
-      url = fileContentCache.get(cacheKey);
-    } else {
+      const cachedUrl = fileContentCache.get(cacheKey);
+      if (!isBlobUrl(cachedUrl)) {
+        url = cachedUrl;
+      } else {
+        // Blob URLs are short-lived and can be revoked by consumers.
+        fileContentCache.delete(cacheKey);
+      }
+    }
+
+    if (!url) {
       // Fetch from API if not in cache
       const result = await projectService.getFileContent(fileId);
       url = result.url;
-      // Store in cache for future use
-      fileContentCache.set(cacheKey, url);
+      // Cache only stable URLs. Blob URLs can become invalid after revoke.
+      if (!isBlobUrl(url)) {
+        fileContentCache.set(cacheKey, url);
+      }
     }
 
     // Use type from fileObj, default to image/png
@@ -214,114 +226,125 @@ const calculateAbsolutePosition = (
 };
 
 const renderLayoutPreview = async (deps) => {
-  const { store, graphicsService, projectService } = deps;
+  try {
+    const { store, graphicsService, projectService } = deps;
 
-  const { renderStateElements, fontsItems } = await getRenderState(deps);
+    const { renderStateElements, fontsItems } = await getRenderState(deps);
 
-  const choicesData = store.selectChoicesData();
+    const choicesData = store.selectChoicesData();
 
-  const selectedItem = store.selectSelectedItem();
+    const selectedItem = store.selectSelectedItem();
 
-  const fileReferences = extractFileIdsFromRenderState(renderStateElements);
-  const assets = await loadAssets(deps, fileReferences, fontsItems);
-  await graphicsService.loadAssets(assets);
-
-  let elementsToRender = renderStateElements;
-
-  // Get variables from repository and extract default values
-  const repository = await projectService.getRepository();
-  const { variables: variablesData } = repository.getState();
-  const variableItems = variablesData?.items || {};
-  const variables = {};
-  const TYPE_DEFAULTS = { number: 0, boolean: false, string: "", object: {} };
-  Object.entries(variableItems).forEach(([id, config]) => {
-    if (config.type !== "folder") {
-      variables[id] =
-        config.default !== undefined
-          ? config.default
-          : TYPE_DEFAULTS[config.type];
+    const fileReferences = extractFileIdsFromRenderState(renderStateElements);
+    let assets = await loadAssets(deps, fileReferences, fontsItems);
+    try {
+      await graphicsService.loadAssets(assets);
+    } catch {
+      // Recover from stale URL cache (especially revoked blob URLs).
+      fileContentCache.clear();
+      assets = await loadAssets(deps, fileReferences, fontsItems);
+      await graphicsService.loadAssets(assets);
     }
-  });
 
-  const dialogueDefaultValues = store.selectDialogueDefaultValues();
-  const characterName = dialogueDefaultValues["dialogue-character-name"];
-  const dialogueContent = dialogueDefaultValues["dialogue-content"];
-  const data = {
-    variables,
-    dialogue: {
-      content: [{ text: dialogueContent }],
-      character: { name: characterName },
-      lines: [
-        {
-          content: [{ text: dialogueContent }],
-          characterName,
-        },
-        {
-          content: [{ text: "Narration line sample for NVL layouts." }],
-          characterName: "",
-        },
-      ],
-    },
-    choice: choicesData,
-  };
+    let elementsToRender = renderStateElements;
 
-  const finalElements = parseAndRender(elementsToRender, data);
+    // Get variables from repository and extract default values
+    const repository = await projectService.getRepository();
+    const { variables: variablesData } = repository.getState();
+    const variableItems = variablesData?.items || {};
+    const variables = {};
+    const TYPE_DEFAULTS = { number: 0, boolean: false, string: "", object: {} };
+    Object.entries(variableItems).forEach(([id, config]) => {
+      if (config.type !== "folder") {
+        variables[id] =
+          config.default !== undefined
+            ? config.default
+            : TYPE_DEFAULTS[config.type];
+      }
+    });
 
-  const parsedState = graphicsService.parse({
-    elements: finalElements,
-  });
+    const dialogueDefaultValues = store.selectDialogueDefaultValues();
+    const characterName = dialogueDefaultValues["dialogue-character-name"];
+    const dialogueContent = dialogueDefaultValues["dialogue-content"];
+    const data = {
+      variables,
+      dialogue: {
+        content: [{ text: dialogueContent }],
+        character: { name: characterName },
+        lines: [
+          {
+            content: [{ text: dialogueContent }],
+            characterName,
+          },
+          {
+            content: [{ text: "Narration line sample for NVL layouts." }],
+            characterName: "",
+          },
+        ],
+      },
+      choice: choicesData,
+    };
 
-  if (!selectedItem) {
-    graphicsService.render({
+    const finalElements = parseAndRender(elementsToRender, data);
+
+    const parsedState = graphicsService.parse({
       elements: finalElements,
-      animations: [],
     });
-    return;
-  }
 
-  const result = calculateAbsolutePosition(
-    parsedState.elements,
-    selectedItem.id,
-  );
+    if (!selectedItem) {
+      graphicsService.render({
+        elements: finalElements,
+        animations: [],
+      });
+      return;
+    }
 
-  if (result) {
-    const redDot = {
-      id: "selected-anchor",
-      type: "rect",
-      x: result.x + result.originX - 6,
-      y: result.y + result.originY - 6,
-      radius: 6,
-      width: 12,
-      height: 12,
-      fill: "white",
-    };
+    const result = calculateAbsolutePosition(
+      parsedState.elements,
+      selectedItem.id,
+    );
 
-    const border = {
-      id: "selected-border",
-      type: "rect",
-      x: result.x,
-      y: result.y,
-      fill: "transparent",
-      width: result.width ?? 0,
-      height: result.height ?? 0,
-      border: {
-        color: "white",
-        width: 2,
-        alpha: 1,
-      },
-      hover: {
-        cursor: "all-scroll",
-      },
-      drag: {
-        move: {},
-        start: {},
-        end: {},
-      },
-    };
-    graphicsService.render({
-      elements: [...finalElements, border, redDot],
-      animations: [],
-    });
+    if (result) {
+      const redDot = {
+        id: "selected-anchor",
+        type: "rect",
+        x: result.x + result.originX - 6,
+        y: result.y + result.originY - 6,
+        radius: 6,
+        width: 12,
+        height: 12,
+        fill: "white",
+      };
+
+      const border = {
+        id: "selected-border",
+        type: "rect",
+        x: result.x,
+        y: result.y,
+        fill: "transparent",
+        width: result.width ?? 0,
+        height: result.height ?? 0,
+        border: {
+          color: "white",
+          width: 2,
+          alpha: 1,
+        },
+        hover: {
+          cursor: "all-scroll",
+        },
+        drag: {
+          move: {},
+          start: {},
+          end: {},
+        },
+      };
+      graphicsService.render({
+        elements: [...finalElements, border, redDot],
+        animations: [],
+      });
+    }
+  } catch (error) {
+    console.error("[layoutEditor] Failed to render preview", error);
   }
 };
 
@@ -733,11 +756,21 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
 
 export const handleCanvasMouseMove = (deps, payload) => {
   const { store, subject } = deps;
+  if (
+    !payload ||
+    typeof payload.x !== "number" ||
+    typeof payload.y !== "number"
+  ) {
+    return;
+  }
   const { x, y } = payload;
 
   const drag = store.selectDragging();
 
   const item = store.selectSelectedItem();
+  if (!item) {
+    return;
+  }
   if (!drag.dragStartPosition) {
     store.setDragStartPosition({
       x,
@@ -771,7 +804,7 @@ export const handlePointerUp = (deps) => {
   if (!currentItem) {
     return;
   }
-  store.startDragging(null);
+  store.startDragging({});
   render();
 };
 
@@ -781,6 +814,6 @@ export const handlePointerDown = (deps) => {
   if (!currentItem) {
     return;
   }
-  store.stopDragging();
+  store.stopDragging({ isDragging: false });
   render();
 };

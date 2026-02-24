@@ -1,4 +1,6 @@
 componentName: rvn-image-selector
 propsSchema:
   type: object
-  properties: {}
+  properties:
+    selectedImageId:
+      type: string

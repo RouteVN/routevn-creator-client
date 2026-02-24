@@ -33,7 +33,11 @@ export const selectViewData = ({ state }) => {
         const isSelected = child.id === selectedImageId;
         return {
           ...child,
-          bw: isSelected ? "md" : "",
+          bw: isSelected ? "md" : "xs",
+          bc: isSelected ? "pr" : "mu",
+          selectedStyle: isSelected
+            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
+            : "",
         };
       }),
     };

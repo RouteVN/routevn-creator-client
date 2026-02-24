@@ -14,7 +14,7 @@ export const handleAfterMount = async (deps) => {
     const formValues = {
       sceneId: props?.currentSceneId,
     };
-    store.setFormValues({ payload: formValues });
+    store.setFormValues(formValues);
     store.setInitiated();
     render();
     return;
@@ -39,7 +39,7 @@ export const handleAfterMount = async (deps) => {
     formValues.sectionId = transition.sectionId;
   }
 
-  store.setFormValues({ payload: formValues });
+  store.setFormValues(formValues);
   store.setInitiated();
   render();
 };
@@ -105,7 +105,7 @@ export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
   const { values: formValues } = payload._event.detail;
 
-  store.setFormValues({ payload: formValues });
+  store.setFormValues(formValues);
   render();
 };
 

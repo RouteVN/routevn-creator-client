@@ -1,7 +1,8 @@
 export const handleBeforeMount = (deps) => {
   const { props, store } = deps;
+  const values = props.values || {};
   store.setValues({
-    values: props.values || {},
+    values,
   });
   store.setVariablesData({
     variablesData: props.variablesData || { items: {}, tree: [] },
@@ -24,8 +25,9 @@ export const handleOnUpdate = (deps, payload) => {
   const { oldProps, newProps } = payload;
   const { store, render } = deps;
   if (oldProps?.key !== newProps?.key) {
+    const values = newProps.values || {};
     store.setValues({
-      values: newProps.values || {},
+      values,
     });
     store.setVariablesData({
       variablesData: newProps.variablesData || { items: {}, tree: [] },
