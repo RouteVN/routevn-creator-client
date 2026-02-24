@@ -173,28 +173,78 @@ const resolveInitialWhiteboardViewport = ({ appService, items }) => {
   return { zoomLevel, panX, panY, didReset: false };
 };
 
+const getOrderedSceneIds = (domainState) => {
+  const domainScenes = domainState?.scenes || {};
+  const fromDomainOrder = Array.isArray(domainState?.story?.sceneOrder)
+    ? domainState.story.sceneOrder
+    : [];
+  const allSceneIds = Object.keys(domainScenes);
+  const ordered = [...fromDomainOrder];
+  for (const sceneId of allSceneIds) {
+    if (!ordered.includes(sceneId)) {
+      ordered.push(sceneId);
+    }
+  }
+  return ordered.filter((sceneId) => !!domainScenes[sceneId]);
+};
+
+const buildSceneWhiteboardItems = ({
+  domainState,
+  legacyState,
+  currentWhiteboardItems = [],
+}) => {
+  const domainScenes = domainState?.scenes || {};
+  const initialSceneId = domainState?.story?.initialSceneId || null;
+  const legacyScenesById = legacyState?.scenes?.items || {};
+  const orderedSceneIds = getOrderedSceneIds(domainState);
+  const layouts = legacyState?.layouts;
+
+  return orderedSceneIds.map((sceneId) => {
+    const scene = domainScenes[sceneId] || {};
+    const legacyScene = legacyScenesById[sceneId];
+    const existingWhiteboardItem = currentWhiteboardItems.find(
+      (wb) => wb.id === sceneId,
+    );
+
+    return {
+      id: sceneId,
+      name: scene.name || legacyScene?.name || `Scene ${sceneId}`,
+      x: toFiniteNumberOr(
+        scene.position?.x,
+        toFiniteNumberOr(
+          legacyScene?.position?.x,
+          existingWhiteboardItem?.x ?? 200,
+        ),
+      ),
+      y: toFiniteNumberOr(
+        scene.position?.y,
+        toFiniteNumberOr(
+          legacyScene?.position?.y,
+          existingWhiteboardItem?.y ?? 200,
+        ),
+      ),
+      isInit: sceneId === initialSceneId,
+      transitions: getTransitionsForScene(legacyScene?.sections, layouts),
+    };
+  });
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
-  const { scenes, story, layouts } = projectService.getState();
+  const legacyState = projectService.getState();
+  const domainState = projectService.getDomainState();
+  const { scenes, layouts } = legacyState;
   const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
   store.setItems({ scenesData: scenesData });
   store.setLayouts({ layoutsData: layouts });
 
-  // Transform only scene items (not folders) into whiteboard items
-  const initialSceneId = story?.initialSceneId;
-  const sceneItems = Object.entries(scenesData.items || {})
-    .filter(([, item]) => item.type === "scene")
-    .map(([sceneId, scene]) => ({
-      id: sceneId,
-      name: scene.name || `Scene ${sceneId}`,
-      x: toFiniteNumberOr(scene.position?.x, 200),
-      y: toFiniteNumberOr(scene.position?.y, 200),
-      isInit: sceneId === initialSceneId,
-      transitions: getTransitionsForScene(scene.sections, layouts),
-    }));
+  const sceneItems = buildSceneWhiteboardItems({
+    domainState,
+    legacyState,
+  });
 
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems({ items: sceneItems });
@@ -236,32 +286,19 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { scenes, story, layouts } = projectService.getState();
+  const legacyState = projectService.getState();
+  const domainState = projectService.getDomainState();
+  const { scenes, layouts } = legacyState;
   const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
   const currentWhiteboardItems = store.selectWhiteboardItems() || [];
 
-  // Transform only scene items (not folders) into whiteboard items, preserving current positions
-  const initialSceneId = story?.initialSceneId;
-  const sceneItems = Object.entries(sceneData.items || {})
-    .filter(([, item]) => item.type === "scene")
-    .map(([sceneId, scene]) => {
-      // Check if this scene already exists in whiteboard with a different position
-      const existingWhiteboardItem = currentWhiteboardItems.find(
-        (wb) => wb.id === sceneId,
-      );
-
-      return {
-        id: sceneId,
-        name: scene.name || `Scene ${sceneId}`,
-        // Use repository position if available, otherwise use existing whiteboard position, finally default to 200,200
-        x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
-        y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
-        isInit: sceneId === initialSceneId,
-        transitions: getTransitionsForScene(scene.sections, layouts),
-      };
-    });
+  const sceneItems = buildSceneWhiteboardItems({
+    domainState,
+    legacyState,
+    currentWhiteboardItems,
+  });
 
   // Update both scenes data and whiteboard items
   store.setItems({ scenesData: sceneData });

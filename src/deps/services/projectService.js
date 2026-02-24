@@ -19,6 +19,7 @@ import {
   extractVideoThumbnail,
   detectFileType,
 } from "../../utils/fileProcessors";
+import { projectLegacyStateToDomainState } from "../../domain/v2/legacyProjection.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -581,6 +582,15 @@ export const createProjectService = ({ router, db, filePicker }) => {
       const state = repository.getState();
       assertV2State(state);
       return state;
+    },
+    getDomainState() {
+      const legacyState = this.getState();
+      const projectId =
+        legacyState?.project?.id || getCurrentProjectId() || "unknown-project";
+      return projectLegacyStateToDomainState({
+        legacyState,
+        projectId,
+      });
     },
 
     async getEvents() {
