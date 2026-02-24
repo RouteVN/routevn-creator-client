@@ -153,7 +153,7 @@ export const handleSaveOperationClick = (deps, payload) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload._event.stopPropagation();
-  const { dispatchEvent, store } = deps;
+  const { dispatchEvent, store, appService } = deps;
   const state = store.getState();
   const { actionId, operations, variablesData } = state;
   const variableItems = variablesData?.items || {};
@@ -179,20 +179,25 @@ export const handleSubmitClick = (deps, payload) => {
       return result;
     });
 
-  if (validOperations.length > 0) {
-    dispatchEvent(
-      new CustomEvent("submit", {
-        detail: {
-          updateVariable: {
-            id: actionId,
-            operations: validOperations,
-          },
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+  if (validOperations.length === 0) {
+    appService.showToast("Please add at least one valid variable operation.", {
+      title: "Warning",
+    });
+    return;
   }
+
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        updateVariable: {
+          id: actionId,
+          operations: validOperations,
+        },
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleBreadcrumbClick = (deps, payload) => {
