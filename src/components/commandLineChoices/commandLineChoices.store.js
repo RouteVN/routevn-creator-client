@@ -112,8 +112,7 @@ export const removeChoice = ({ state }, { index } = {}) => {
   }
 };
 
-export const setScenes = ({ state }, { payload } = {}) => {
-  const { scenes } = payload;
+export const setScenes = ({ state }, { scenes } = {}) => {
   state.scenes = scenes;
 };
 
@@ -159,8 +158,8 @@ export const updateChoice = ({ state }, { index, content, target } = {}) => {
   }
 };
 
-export const setSelectedResourceId = ({ state }, { payload } = {}) => {
-  state.selectedResourceId = payload.resourceId;
+export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
+  state.selectedResourceId = resourceId;
 };
 
 export const showDropdownMenu = ({ state }, { position, choiceIndex } = {}) => {
@@ -174,8 +173,7 @@ export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.choiceIndex = null;
 };
 
-export const setItems = ({ state }, { payload } = {}) => {
-  const { items } = payload;
+export const setItems = ({ state }, { items } = {}) => {
   state.items = items;
 };
 

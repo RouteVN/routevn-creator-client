@@ -25,20 +25,20 @@ export const createInitialState = () => ({
   formValues: {},
 });
 
-export const setMode = ({ state }, { payload } = {}) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
 export const setInitiated = ({ state }, _payload = {}) => {
   state.initiated = true;
 };
 
-export const setLayouts = ({ state }, { payload } = {}) => {
-  state.layouts = payload.layouts;
+export const setLayouts = ({ state }, { layouts } = {}) => {
+  state.layouts = layouts;
 };
 
-export const setFormValues = ({ state }, { payload } = {}) => {
-  state.formValues = payload;
+export const setFormValues = ({ state }, { payload, ...rest } = {}) => {
+  state.formValues = payload ?? rest;
 };
 
 export const selectViewData = ({ state }) => {

@@ -25,31 +25,31 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = ({ state }, { payload } = {}) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
-export const setImages = ({ state }, { payload } = {}) => {
-  state.images = payload.images;
+export const setImages = ({ state }, { images } = {}) => {
+  state.images = images;
 };
 
-export const setVideos = ({ state }, { payload } = {}) => {
-  state.videos = payload.videos;
+export const setVideos = ({ state }, { videos } = {}) => {
+  state.videos = videos;
 };
 
-export const setLayouts = ({ state }, { payload } = {}) => {
-  state.layouts = payload.layouts;
+export const setLayouts = ({ state }, { layouts } = {}) => {
+  state.layouts = layouts;
 };
 
-export const setTransforms = ({ state }, { payload } = {}) => {
-  state.transforms = payload.transforms;
+export const setTransforms = ({ state }, { transforms } = {}) => {
+  state.transforms = transforms;
 };
 
 const generateVisualId = () => {
   return `visual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const addVisual = ({ state }, { payload } = {}) => {
+export const addVisual = ({ state }, { resourceId } = {}) => {
   const transformItems = toFlatItems(state.transforms).filter(
     (item) => item.type === "transform",
   );
@@ -58,7 +58,7 @@ export const addVisual = ({ state }, { payload } = {}) => {
 
   state.selectedVisuals.push({
     id: generateVisualId(),
-    resourceId: payload.resourceId,
+    resourceId: resourceId,
     transformId: defaultTransform,
   });
 };
@@ -83,12 +83,12 @@ export const clearVisuals = ({ state }, _payload = {}) => {
   state.selectedVisuals = [];
 };
 
-export const setTempSelectedResourceId = ({ state }, { payload } = {}) => {
-  state.tempSelectedResourceId = payload.resourceId;
+export const setTempSelectedResourceId = ({ state }, { resourceId } = {}) => {
+  state.tempSelectedResourceId = resourceId;
 };
 
-export const setSelectedVisualIndex = ({ state }, { payload } = {}) => {
-  state.selectedVisualIndex = payload.index;
+export const setSelectedVisualIndex = ({ state }, { index } = {}) => {
+  state.selectedVisualIndex = index;
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -122,8 +122,8 @@ export const selectSelectedVisualIndex = ({ state }) => {
   return state.selectedVisualIndex;
 };
 
-export const setExistingVisuals = ({ state }, { payload } = {}) => {
-  state.selectedVisuals = payload.visuals;
+export const setExistingVisuals = ({ state }, { visuals } = {}) => {
+  state.selectedVisuals = visuals;
 };
 
 export const selectVisualsWithRepositoryData = ({ state }) => {

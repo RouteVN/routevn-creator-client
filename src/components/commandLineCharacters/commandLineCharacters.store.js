@@ -25,19 +25,19 @@ export const createInitialState = () => ({
   },
 });
 
-export const setMode = ({ state }, { payload } = {}) => {
-  state.mode = payload.mode;
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
 };
 
-export const setItems = ({ state }, { payload } = {}) => {
-  state.items = payload.items;
+export const setItems = ({ state }, { items } = {}) => {
+  state.items = items;
 };
 
-export const setTransforms = ({ state }, { payload } = {}) => {
-  state.transforms = payload.transforms;
+export const setTransforms = ({ state }, { transforms } = {}) => {
+  state.transforms = transforms;
 };
 
-export const addCharacter = ({ state }, { payload } = {}) => {
+export const addCharacter = ({ state }, { id } = {}) => {
   // Get the first available transform as default
   const transformItems = toFlatItems(state.transforms).filter(
     (item) => item.type === "transform",
@@ -47,7 +47,7 @@ export const addCharacter = ({ state }, { payload } = {}) => {
 
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
-    id: payload.id,
+    id: id,
     transformId: defaultTransform,
     sprites: [],
     spriteName: "",
@@ -91,16 +91,16 @@ export const clearCharacters = ({ state }, _payload = {}) => {
   state.selectedCharacters = [];
 };
 
-export const setTempSelectedCharacterId = ({ state }, { payload } = {}) => {
-  state.tempSelectedCharacterId = payload.characterId;
+export const setTempSelectedCharacterId = ({ state }, { characterId } = {}) => {
+  state.tempSelectedCharacterId = characterId;
 };
 
-export const setTempSelectedSpriteId = ({ state }, { payload } = {}) => {
-  state.tempSelectedSpriteId = payload.spriteId;
+export const setTempSelectedSpriteId = ({ state }, { spriteId } = {}) => {
+  state.tempSelectedSpriteId = spriteId;
 };
 
-export const setSelectedCharacterIndex = ({ state }, { payload } = {}) => {
-  state.selectedCharacterIndex = payload.index;
+export const setSelectedCharacterIndex = ({ state }, { index } = {}) => {
+  state.selectedCharacterIndex = index;
 };
 
 export const selectTempSelectedCharacterId = ({ state }) => {
@@ -141,8 +141,8 @@ export const selectSelectedCharacterIndex = ({ state }) => {
   return state.selectedCharacterIndex;
 };
 
-export const setExistingCharacters = ({ state }, { payload } = {}) => {
-  state.selectedCharacters = payload.characters;
+export const setExistingCharacters = ({ state }, { characters } = {}) => {
+  state.selectedCharacters = characters;
 };
 
 export const selectCharactersWithRepositoryData = ({ state }) => {
