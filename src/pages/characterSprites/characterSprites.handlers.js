@@ -1,6 +1,89 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
+const resolveDetailItemId = (detail = {}) => {
+  return detail.itemId || detail.id || detail.item?.id || "";
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const createDetailFormValues = (item, imageSrc) => {
+  if (!item) {
+    return {
+      fileId: null,
+      name: "",
+      description: "",
+    };
+  }
+
+  return {
+    fileId: imageSrc || null,
+    name: item.name || "",
+    description: item.description || "No description provided",
+  };
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
 export const handleAfterMount = async (deps) => {
   const { appService, store, projectService, render, globalUI } = deps;
   const { characterId } = appService.getPayload();
@@ -32,12 +115,39 @@ export const handleDataChanged = async (deps) => {
 
   store.setCharacterName({ characterName: character.name });
   store.setItems({ spritesData: character.sprites });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  let imageSrc = null;
+
+  if (selectedItem?.fileId) {
+    const { url } = await projectService.getFileContent(selectedItem.fileId);
+    imageSrc = url;
+  }
+
+  store.setContext({
+    context: {
+      fileId: {
+        src: imageSrc,
+      },
+    },
+  });
+  const detailValues = createDetailFormValues(selectedItem, imageSrc);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render, projectService } = deps;
-  const { id, item, isFolder } = payload._event.detail;
+  const detail = payload?._event?.detail || {};
+  const id = resolveDetailItemId(detail);
+  const { item, isFolder } = detail;
 
   // For characterSprites, get item data from our own store since BaseFileExplorer
   // can't access the nested character.sprites data structure
@@ -56,27 +166,47 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   if (actualIsFolder) {
     store.setSelectedItemId({ itemId: null });
     store.setContext({
-      fileId: {
-        src: null,
+      context: {
+        fileId: {
+          src: null,
+        },
       },
     });
     render();
     return;
   }
 
-  store.setSelectedItemId({ itemId: id });
-
-  // If we have item data with fileId, set up media context for preview
-  if (actualItem && actualItem.fileId) {
-    const { url } = await projectService.getFileContent(actualItem.fileId);
-    store.setContext({
-      fileId: {
-        src: url,
-      },
-    });
+  if (!id) {
+    return;
   }
 
+  store.setSelectedItemId({ itemId: id });
+  const selectedItem = actualItem || store.selectSelectedItem();
+  let imageSrc = null;
+
+  // If we have item data with fileId, set up media context for preview
+  if (selectedItem?.fileId) {
+    const { url } = await projectService.getFileContent(selectedItem.fileId);
+    imageSrc = url;
+  }
+
+  store.setContext({
+    context: {
+      fileId: {
+        src: imageSrc,
+      },
+    },
+  });
+
+  const detailValues = createDetailFormValues(selectedItem, imageSrc);
   render();
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: id,
+    });
+  }
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -90,7 +220,12 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 
 export const handleImageItemClick = async (deps, payload) => {
   const { store, render, projectService, refs } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const detail = payload?._event?.detail || {};
+  const itemId = resolveDetailItemId(detail);
+  if (!itemId) {
+    return;
+  }
+
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
@@ -98,15 +233,30 @@ export const handleImageItemClick = async (deps, payload) => {
     _event: { detail: { itemId } },
   });
 
-  const selectedItem = store.selectSelectedItem();
+  const selectedItem = detail.item || store.selectSelectedItem();
+  let imageSrc = null;
 
-  const { url } = await projectService.getFileContent(selectedItem.fileId);
+  if (selectedItem?.fileId) {
+    const { url } = await projectService.getFileContent(selectedItem.fileId);
+    imageSrc = url;
+  }
+
   store.setContext({
-    fileId: {
-      src: url,
+    context: {
+      fileId: {
+        src: imageSrc,
+      },
     },
   });
+  const detailValues = createDetailFormValues(selectedItem, imageSrc);
   render();
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: itemId,
+    });
+  }
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
@@ -189,7 +339,20 @@ export const handleFormChange = async (deps, payload) => {
   store.setItems({
     spritesData: character?.sprites || { items: {}, tree: [] },
   });
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(
+    selectedItem,
+    store.getState()?.context?.fileId?.src || null,
+  );
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFormExtraEvent = async (deps) => {
@@ -221,6 +384,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   const uploadResult = uploadedFiles[0];
   const characterId = store.selectCharacterId();
+  const selectedItemId = store.selectSelectedItemId();
 
   await repository.addEvent({
     type: "treeUpdate",
@@ -245,14 +409,29 @@ export const handleFormExtraEvent = async (deps) => {
   const { characters } = projectService.getState();
   const character = characters.items[characterId];
   store.setContext({
-    fileId: {
-      src: uploadResult.downloadUrl,
+    context: {
+      fileId: {
+        src: uploadResult.downloadUrl,
+      },
     },
   });
   store.setItems({
     spritesData: character?.sprites || { items: {}, tree: [] },
   });
+  const updatedSelectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(
+    updatedSelectedItem,
+    uploadResult.downloadUrl,
+  );
   render();
+
+  if (updatedSelectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleSearchInput = (deps, payload) => {

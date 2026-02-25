@@ -56,6 +56,97 @@ const createRenderState = ({
   };
 };
 
+const resolveDetailItemId = (detail = {}) => {
+  return detail.itemId || detail.id || detail.item?.id || "";
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      name: "",
+      x: "",
+      y: "",
+      scaleX: "",
+      scaleY: "",
+      anchorX: "",
+      anchorY: "",
+    };
+  }
+
+  return {
+    name: item.name || "",
+    x: String(item.x ?? 0),
+    y: String(item.y ?? 0),
+    scaleX: String(item.scaleX ?? 1),
+    scaleY: String(item.scaleY ?? 1),
+    anchorX: String(item.anchorX ?? 0),
+    anchorY: String(item.anchorY ?? 0),
+  };
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
@@ -71,20 +162,49 @@ export const handleDataChanged = async (deps) => {
   const transformData = transforms || { tree: [], items: {} };
 
   store.setItems({ transformData: transformData });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const detail = payload?._event?.detail || {};
+  const id = resolveDetailItemId(detail);
+  if (!id) {
+    return;
+  }
 
   store.setSelectedItemId({ itemId: id });
+  const selectedItem = detail.item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: id,
+    });
+  }
 };
 
 export const handleTransformItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail;
+  const detail = payload?._event?.detail || {};
+  const itemId = resolveDetailItemId(detail);
+  if (!itemId) {
+    return;
+  }
 
   const { fileExplorer } = refs;
   fileExplorer.transformedHandlers.handlePageItemClick({
@@ -92,7 +212,17 @@ export const handleTransformItemClick = (deps, payload) => {
   });
 
   store.setSelectedItemId({ itemId: itemId });
+  const selectedItem = detail.item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: itemId,
+    });
+  }
 };
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {
@@ -226,6 +356,7 @@ export const handleTransformCreated = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
   await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
@@ -234,7 +365,7 @@ export const handleFormChange = async (deps, payload) => {
         [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
-        id: store.selectSelectedItemId(),
+        id: selectedItemId,
         replace: false,
       },
     },
@@ -242,7 +373,17 @@ export const handleFormChange = async (deps, payload) => {
 
   const { transforms } = projectService.getState();
   store.setItems({ transformData: transforms });
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleTransformEdited = async (deps, payload) => {
@@ -275,7 +416,18 @@ export const handleTransformEdited = async (deps, payload) => {
   // Update local state and render immediately
   const { transforms } = projectService.getState();
   store.setItems({ transformData: transforms });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem && selectedItemId === itemId) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleSearchInput = (deps, payload) => {
