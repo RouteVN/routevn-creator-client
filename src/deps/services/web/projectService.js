@@ -943,7 +943,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
               return;
             }
 
-            for (const event of legacyEvents) {
+            for (const event of applyResult.events) {
               await repository.addEvent(event);
             }
 
