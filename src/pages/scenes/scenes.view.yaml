@@ -3,6 +3,8 @@ refs:
     eventListeners:
       data-changed:
         handler: handleDataChanged
+      item-click:
+        handler: handleFileExplorerSelectionChanged
   whiteboard:
     eventListeners:
       item-position-changed:

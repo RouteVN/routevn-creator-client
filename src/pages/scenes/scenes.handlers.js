@@ -171,6 +171,10 @@ const resolveInitialWhiteboardViewport = ({ appService, items }) => {
   return { zoomLevel, panX, panY, didReset: false };
 };
 
+const resolveDetailItemId = (detail = {}) => {
+  return detail.itemId || detail.id || detail.item?.id || "";
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
@@ -265,6 +269,26 @@ export const handleDataChanged = async (deps) => {
   store.setItems({ scenesData: sceneData });
   store.setLayouts({ layoutsData: layouts });
   store.setWhiteboardItems({ items: sceneItems });
+  render();
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload?._event?.detail || {};
+  const itemId = resolveDetailItemId(detail);
+  const isFolder = detail.isFolder === true || detail.item?.type === "folder";
+
+  if (isFolder) {
+    store.setSelectedItemId({ itemId: null });
+    render();
+    return;
+  }
+
+  if (!itemId) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
   render();
 };
 
