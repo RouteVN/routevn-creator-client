@@ -2,6 +2,76 @@ import { nanoid } from "nanoid";
 import { validateIconDimensions } from "../../utils/fileProcessors";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
+const getCharacterItemById = ({ store, itemId } = {}) => {
+  if (!itemId) return null;
+  const item = store.getState().charactersData?.items?.[itemId];
+  if (!item || item.type !== "character") return null;
+  return item;
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const syncEditFormValues = ({ deps, values, attempt = 0 } = {}) => {
+  const formRef = deps?.refs?.editForm;
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncEditFormValues({ deps, values, attempt: attempt + 1 });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncEditFormValues({ deps, values, attempt: attempt + 1 });
+    }, 0);
+  }
+};
+
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) return;
+
+  const { store, render } = deps;
+  const characterItem = getCharacterItemById({ store, itemId });
+  if (!characterItem) return;
+
+  store.setSelectedItemId({ itemId: itemId });
+  store.openEditDialog({ itemId: itemId });
+  render();
+
+  syncEditFormValues({
+    deps,
+    values: {
+      name: characterItem.name || "",
+      description: characterItem.description || "",
+    },
+  });
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
@@ -45,20 +115,23 @@ export const handleCharacterItemClick = async (deps, payload) => {
 };
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { itemId, isFolder } = payload._event.detail;
+  const { store, refs } = deps;
+  const detail = payload?._event?.detail || {};
+  const isFolder = detail.isFolder === true;
   if (isFolder) return;
 
-  // Set the selected item (same as single click)
-  store.setSelectedItemId({ itemId: itemId });
+  const candidateIds = [detail.itemId, detail.id, store.selectSelectedItemId()];
+  const itemId = candidateIds.find((candidateId) =>
+    getCharacterItemById({ store, itemId: candidateId }),
+  );
+  if (!itemId) return;
 
   const { fileExplorer } = refs;
   fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
-  // Open edit dialog for double-clicked character
-  store.openEditDialog({ itemId: itemId });
-  render();
+
+  openEditDialogWithValues({ deps, itemId: itemId });
 };
 
 export const handleCharacterCreated = async (deps, payload) => {
