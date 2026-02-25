@@ -78,6 +78,12 @@ const toDomainState = ({ state, projectId }) => {
   );
 };
 
+const toLegacyStateForUi = ({ state, projectId }) => {
+  assertV2State(state);
+  const domainState = toDomainState({ state, projectId });
+  return projectDomainStateToLegacyState({ domainState });
+};
+
 /**
  * Create a project service for the web that manages repositories and operations.
  * Gets current projectId from router query params automatically.
@@ -716,6 +722,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   let currentRepository = null;
   let currentProjectId = null;
   let currentAdapter = null;
+  const uiRepositoryViewsByProject = new Map();
 
   // Get current projectId from URL query params
   const getCurrentProjectId = () => {
@@ -1125,6 +1132,54 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     return currentAdapter;
   };
 
+  const createUiRepositoryView = (repository, projectIdHint) =>
+    new Proxy(repository, {
+      get(target, prop) {
+        if (prop === "getState") {
+          return (untilEventIndex) => {
+            const rawState = target.getState(untilEventIndex);
+            const resolvedProjectId =
+              rawState?.project?.id ||
+              projectIdHint ||
+              getCurrentProjectId() ||
+              "unknown-project";
+            return toLegacyStateForUi({
+              state: rawState,
+              projectId: resolvedProjectId,
+            });
+          };
+        }
+        if (prop === "getDomainState") {
+          return (untilEventIndex) => {
+            const rawState = target.getState(untilEventIndex);
+            assertV2State(rawState);
+            const resolvedProjectId =
+              rawState?.project?.id ||
+              projectIdHint ||
+              getCurrentProjectId() ||
+              "unknown-project";
+            return toDomainState({
+              state: rawState,
+              projectId: resolvedProjectId,
+            });
+          };
+        }
+
+        const value = Reflect.get(target, prop);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+  const getUiRepositoryByProject = async (projectId) => {
+    if (uiRepositoryViewsByProject.has(projectId)) {
+      return uiRepositoryViewsByProject.get(projectId);
+    }
+    const repository = await getRepositoryByProject(projectId);
+    const view = createUiRepositoryView(repository, projectId);
+    uiRepositoryViewsByProject.set(projectId, view);
+    return view;
+  };
+
   // File operations helpers
   const storeFile = async (file) => {
     const adapter = getCachedAdapter();
@@ -1415,16 +1470,25 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   return {
     // Repository access - uses current project from URL
     async getRepository() {
-      return getCurrentRepository();
+      const projectId = getCurrentProjectId();
+      if (!projectId) {
+        throw new Error("No project selected (missing ?p= in URL)");
+      }
+      return getUiRepositoryByProject(projectId);
     },
     async getRepositoryById(projectId) {
-      return getRepositoryByProject(projectId);
+      return getUiRepositoryByProject(projectId);
     },
     getAdapterById(projectId) {
       return adaptersByProject.get(projectId);
     },
     async ensureRepository() {
-      return getCurrentRepository();
+      const projectId = getCurrentProjectId();
+      if (!projectId) {
+        throw new Error("No project selected (missing ?p= in URL)");
+      }
+      await getCurrentRepository();
+      return getUiRepositoryByProject(projectId);
     },
     async updateProjectFields({ patch }) {
       const context = await ensureTypedCommandContext();
