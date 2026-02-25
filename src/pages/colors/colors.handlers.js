@@ -20,6 +20,76 @@ const hexToBase64Image = (hex) => {
   return canvas.toDataURL("image/png");
 };
 
+const getColorItemById = ({ store, itemId } = {}) => {
+  if (!itemId) return null;
+  const item = store.getState().colorsData?.items?.[itemId];
+  if (!item || item.type !== "color") return null;
+  return item;
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const syncEditFormValues = ({ deps, values, attempt = 0 } = {}) => {
+  const formRef = deps?.refs?.editForm;
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncEditFormValues({ deps, values, attempt: attempt + 1 });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncEditFormValues({ deps, values, attempt: attempt + 1 });
+    }, 0);
+  }
+};
+
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) return;
+
+  const { store, render } = deps;
+  const colorItem = getColorItemById({ store, itemId });
+  if (!colorItem) return;
+
+  store.setSelectedItemId({ itemId: itemId });
+  store.openEditDialog({ itemId: itemId });
+  render();
+
+  syncEditFormValues({
+    deps,
+    values: {
+      name: colorItem.name || "",
+      hex: colorItem.hex || "",
+    },
+  });
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
@@ -158,11 +228,19 @@ export const handleFormChange = async (deps, payload) => {
 };
 
 export const handleColorItemDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
-  const { itemId, isFolder } = payload._event.detail;
+  const { store } = deps;
+  const detail = payload?._event?.detail || {};
+  const isFolder = detail.isFolder === true;
+
   if (isFolder) return;
-  store.openEditDialog({ itemId: itemId });
-  render();
+
+  const candidateIds = [detail.itemId, detail.id, store.selectSelectedItemId()];
+  const itemId = candidateIds.find((candidateId) =>
+    getColorItemById({ store, itemId: candidateId }),
+  );
+  if (!itemId) return;
+
+  openEditDialogWithValues({ deps, itemId: itemId });
 };
 
 export const handleAddColorClick = (deps, payload) => {
@@ -223,13 +301,12 @@ export const handleEditFormAction = async (deps, payload) => {
 };
 
 export const handleFormFieldClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   // Check if the clicked field is the color image
   if (payload._event.detail.name === "colorImage") {
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId) {
-      store.openEditDialog({ itemId: selectedItemId });
-      render();
+      openEditDialogWithValues({ deps, itemId: selectedItemId });
     }
   }
 };
