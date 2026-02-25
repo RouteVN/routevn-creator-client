@@ -18,7 +18,7 @@ import {
   extractVideoThumbnail,
   detectFileType,
 } from "../../utils/fileProcessors";
-import { projectLegacyStateToDomainState } from "../../domain/v2/legacyProjection.js";
+import { createEmptyProjectState } from "../../domain/v2/model.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -35,71 +35,14 @@ const loadFont = async (fontName, fontUrl) => {
   return fontFace;
 };
 
-/**
- * Default empty project data structure
- */
-export const initialProjectData = {
-  model_version: 2,
-  project: {
+const createInitialProjectData = (projectId = "") =>
+  createEmptyProjectState({
+    projectId,
     name: "",
     description: "",
-  },
-  story: {
-    initialSceneId: "",
-  },
-  images: {
-    items: {},
-    order: [],
-  },
-  tweens: {
-    items: {},
-    order: [],
-  },
-  sounds: {
-    items: {},
-    order: [],
-  },
-  videos: {
-    items: {},
-    order: [],
-  },
-  characters: {
-    items: {},
-    order: [],
-  },
-  fonts: {
-    items: {},
-    order: [],
-  },
-  transforms: {
-    items: {},
-    order: [],
-  },
-  colors: {
-    items: {},
-    order: [],
-  },
-  typography: {
-    items: {},
-    order: [],
-  },
-  variables: {
-    items: {},
-    order: [],
-  },
-  components: {
-    items: {},
-    order: [],
-  },
-  layouts: {
-    items: {},
-    order: [],
-  },
-  scenes: {
-    items: {},
-    order: [],
-  },
-};
+  });
+
+export const initialProjectData = createInitialProjectData();
 
 const assertV2State = (state) => {
   if (!state || state.model_version !== 2) {
@@ -1104,13 +1047,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       return state;
     },
     getDomainState() {
-      const legacyState = this.getState();
-      const projectId =
-        legacyState?.project?.id || getCurrentProjectId() || "unknown-project";
-      return projectLegacyStateToDomainState({
-        legacyState,
-        projectId,
-      });
+      return this.getState();
     },
 
     async getEvents() {
@@ -1142,7 +1079,13 @@ export const createProjectService = ({ router, db, filePicker }) => {
     },
 
     // Initialize a new project at a given path
-    async initializeProject({ name, description, projectPath, template }) {
+    async initializeProject({
+      name,
+      description,
+      projectPath,
+      projectId,
+      template,
+    }) {
       if (!template) {
         throw new Error("Template is required for project initialization");
       }
@@ -1152,14 +1095,40 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
       // Load template data first
       const templateData = await loadTemplate(template);
+      const isCanonicalDomainTemplate = Boolean(
+        templateData &&
+          typeof templateData === "object" &&
+          templateData.model_version === 2 &&
+          templateData.resources &&
+          templateData.story &&
+          templateData.scenes &&
+          templateData.sections &&
+          templateData.lines &&
+          templateData.layouts &&
+          templateData.variables,
+      );
+      if (!isCanonicalDomainTemplate) {
+        throw new Error(
+          "Template repository.json must be canonical v2 domain state.",
+        );
+      }
       await copyTemplateFiles(template, filesPath);
 
       // Merge template with project info
       const initData = {
-        ...initialProjectData,
+        ...createInitialProjectData(projectId),
         ...templateData,
         model_version: 2,
-        project: { name, description },
+        project: {
+          ...templateData?.project,
+          id:
+            typeof projectId === "string" && projectId.length > 0
+              ? projectId
+              : (templateData?.project?.id ?? "unknown-project"),
+          name,
+          description,
+          updatedAt: Date.now(),
+        },
       };
 
       // Create store and initialize repository with the full data

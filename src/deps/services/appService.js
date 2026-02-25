@@ -291,6 +291,7 @@ export const createAppService = ({
         name,
         description,
         projectPath,
+        projectId: deviceProjectId,
         template,
       });
 

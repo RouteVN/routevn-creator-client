@@ -3,7 +3,6 @@ import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 import { loadTemplate, getTemplateFiles } from "../../../utils/templateLoader";
 import { createEmptyProjectState } from "../../../domain/v2/model.js";
-import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
 
 const buildInitialDomainState = ({
   templateData,
@@ -20,16 +19,24 @@ const buildInitialDomainState = ({
     name,
     description,
   });
-  const rawDomainState =
+  const isCanonicalDomainTemplate = Boolean(
     templateData &&
-    typeof templateData === "object" &&
-    templateData.resources &&
-    typeof templateData.resources === "object"
-      ? structuredClone(templateData)
-      : projectLegacyStateToDomainState({
-          legacyState: templateData,
-          projectId: resolvedProjectId,
-        });
+      typeof templateData === "object" &&
+      templateData.model_version === 2 &&
+      templateData.resources &&
+      templateData.story &&
+      templateData.scenes &&
+      templateData.sections &&
+      templateData.lines &&
+      templateData.layouts &&
+      templateData.variables,
+  );
+  if (!isCanonicalDomainTemplate) {
+    throw new Error(
+      "Template repository.json must be canonical v2 domain state.",
+    );
+  }
+  const rawDomainState = structuredClone(templateData);
   const now = Date.now();
 
   return {

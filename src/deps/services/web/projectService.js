@@ -21,7 +21,6 @@ import {
 import { processCommand } from "../../../domain/v2/engine.js";
 import { createEmptyProjectState } from "../../../domain/v2/model.js";
 import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
-import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -60,7 +59,13 @@ const isDomainState = (state) =>
     state &&
       typeof state === "object" &&
       state.model_version === 2 &&
-      state.resources,
+      state.resources &&
+      state.story &&
+      state.scenes &&
+      state.sections &&
+      state.lines &&
+      state.layouts &&
+      state.variables,
   );
 
 const toDomainState = ({ state, projectId }) => {
@@ -68,10 +73,9 @@ const toDomainState = ({ state, projectId }) => {
     return structuredClone(state);
   }
 
-  return projectLegacyStateToDomainState({
-    legacyState: state,
-    projectId,
-  });
+  throw new Error(
+    `Unsupported project state format for '${projectId}'. Canonical v2 domain state is required.`,
+  );
 };
 
 /**
@@ -584,31 +588,7 @@ const projectTypedCommandToDomainSetEvents = ({
   domainStateBefore,
   domainStateAfter,
   command,
-  forceFullState = false,
 }) => {
-  if (forceFullState) {
-    const fullTargets = [
-      "project",
-      "story",
-      "scenes",
-      "sections",
-      "lines",
-      "resources",
-      "layouts",
-      "variables",
-    ];
-    return fullTargets.map((target) => ({
-      type: "set",
-      payload: {
-        target,
-        value: structuredClone(domainStateAfter?.[target]),
-        options: {
-          replace: true,
-        },
-      },
-    }));
-  }
-
   const targets = new Set();
 
   if (
@@ -692,20 +672,10 @@ const applyTypedCommandToRepository = async ({
     state: domainStateBefore,
     command,
   });
-  const requiresDomainBootstrap =
-    !isDomainState(stateBeforeApply) ||
-    !stateBeforeApply?.story ||
-    !stateBeforeApply?.scenes ||
-    !stateBeforeApply?.sections ||
-    !stateBeforeApply?.lines ||
-    !stateBeforeApply?.resources ||
-    !stateBeforeApply?.layouts ||
-    !stateBeforeApply?.variables;
   const projectedEvents = projectTypedCommandToDomainSetEvents({
     domainStateBefore,
     domainStateAfter,
     command,
-    forceFullState: requiresDomainBootstrap,
   });
   for (const event of projectedEvents) {
     await repository.addEvent(event);
