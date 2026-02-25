@@ -150,7 +150,7 @@ template:
                   - rtgl-view d=h av=c:
                       - rtgl-text s=sm c=mu-fg: State
                   - rtgl-view g=md w=f pv=md:
-                      - rvn-system-actions#systemActions :showSelected=true :actions=selectedLineActions :selectedLineId=selectedLineId :selectedLine=selectedLine :currentSceneId=scene.id :actionType="'presentation'" :presentationState=presentationState: null
+                      - rvn-system-actions#systemActions :showSelected=true :actions=selectedLineActions :selectedLineId=selectedLineId :selectedLine=selectedLine :currentSceneId=scene.id actionType=presentation :presentationState=presentationState: null
   - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content :form=form: null
