@@ -71,22 +71,26 @@ const fontInfoForm = {
     {
       name: "fontFamily",
       type: "read-only-text",
-      description: "Font Family",
+      label: "Font Family",
+      content: "${fontFamily}",
     },
     {
       name: "fileName",
       type: "read-only-text",
-      description: "File Name",
+      label: "File Name",
+      content: "${fileName}",
     },
     {
       name: "fileSize",
       type: "read-only-text",
-      description: "File Size",
+      label: "File Size",
+      content: "${fileSize}",
     },
     {
       name: "format",
       type: "read-only-text",
-      description: "Format",
+      label: "Format",
+      content: "${format}",
     },
     // NOTE: The following fields are commented out because the current implementation
     // does not accurately extract this information from font files
@@ -270,19 +274,9 @@ export const selectViewData = ({ state }) => {
     fileType: "",
     fileSize: "",
   };
-  let formWithPreview = { ...form };
-
   if (selectedItem) {
     // Generate font preview image for the main form
     const previewImage = fontToBase64Image(selectedItem.fontFamily, "Aa");
-
-    // Update the form with the preview image
-    formWithPreview.fields = form.fields.map((field) => {
-      if (field.name === "fontPreview") {
-        return { ...field, src: previewImage };
-      }
-      return field;
-    });
 
     // Get file type from extension if browser MIME type is empty
     const getFileTypeFromName = (fileName) => {
@@ -307,6 +301,7 @@ export const selectViewData = ({ state }) => {
       : "";
 
     defaultValues = {
+      fontPreview: previewImage || null,
       name: selectedItem.name,
       fontFamily,
       fileType,
@@ -349,7 +344,7 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     repositoryTarget: "fonts",
     title: "Fonts",
-    form: formWithPreview,
+    form,
     defaultValues,
     context: formContext,
     isModalOpen: state.isModalOpen,

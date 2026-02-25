@@ -1,51 +1,28 @@
 import { toFlatGroups, toFlatItems } from "#domain-structure";
 
-const createForm = (selectedItem) => ({
+const form = {
   fields: [
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "scope",
-      type: "select",
-      description: "Scope",
-      options: [
-        { value: "context", label: "Context" },
-        { value: "global-device", label: "Global Device" },
-        { value: "global-account", label: "Global Account" },
-      ],
+      type: "read-only-text",
+      label: "Scope",
+      content: "${scope}",
     },
     {
       name: "type",
-      type: "select",
-      description: "Type",
-      options: [
-        { value: "string", label: "String" },
-        { value: "number", label: "Number" },
-        { value: "boolean", label: "Boolean" },
-      ],
+      type: "read-only-text",
+      label: "Type",
+      content: "${type}",
     },
-    selectedItem?.type === "boolean"
-      ? {
-          name: "default",
-          type: "select",
-          description: "Default",
-          options: [
-            { value: "true", label: "True" },
-            { value: "false", label: "False" },
-          ],
-        }
-      : selectedItem?.type === "number"
-        ? {
-            name: "default",
-            type: "input-number",
-            description: "Default",
-          }
-        : {
-            name: "default",
-            type: "input-text",
-            description: "Default",
-          },
+    {
+      name: "default",
+      type: "read-only-text",
+      label: "Default",
+      content: "${default}",
+    },
   ],
-});
+};
 
 export const createInitialState = () => ({
   variablesData: { order: [], items: {} },
@@ -70,6 +47,12 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectSelectedItem = ({ state }) => {
+  if (!state.selectedItemId) return null;
+  const flatItems = toFlatItems(state.variablesData);
+  return flatItems.find((item) => item.id === state.selectedItemId) || null;
+};
+
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.variablesData);
   const flatGroups = toFlatGroups(state.variablesData);
@@ -80,6 +63,12 @@ export const selectViewData = ({ state }) => {
     : null;
 
   let defaultValues = {};
+  let formContext = {
+    scope: "",
+    type: "",
+    default: "",
+  };
+
   if (selectedItem) {
     let defaultValue = selectedItem.default ?? "";
     // Convert boolean to string for form display
@@ -88,6 +77,12 @@ export const selectViewData = ({ state }) => {
     }
     defaultValues = {
       name: selectedItem.name,
+      scope: selectedItem.scope || "",
+      type: selectedItem.type || "",
+      default: defaultValue,
+    };
+
+    formContext = {
       scope: selectedItem.scope || "",
       type: selectedItem.type || "",
       default: defaultValue,
@@ -101,7 +96,8 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "variables",
     repositoryTarget: "variables",
     selectedItemId: state.selectedItemId,
-    form: createForm(selectedItem),
+    form,
+    context: formContext,
     defaultValues,
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,

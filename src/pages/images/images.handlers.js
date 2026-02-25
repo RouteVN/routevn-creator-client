@@ -1,6 +1,92 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { formatFileSize } from "../../utils/index.js";
+
+const resolveDetailItemId = (detail = {}) => {
+  return detail.itemId || detail.id || detail.item?.id || "";
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      name: "",
+      fileType: "",
+      fileSize: "",
+      dimensions: "",
+    };
+  }
+
+  return {
+    name: item.name || "",
+    fileType: item.fileType || "",
+    fileSize: formatFileSize(item.fileSize),
+    dimensions: `${item.width} × ${item.height}`,
+  };
+};
 
 const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
 
@@ -22,34 +108,54 @@ export const handleAfterMount = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render, projectService } = deps;
-  const { id, item, isFolder } = payload._event.detail;
+  const detail = payload?._event?.detail || {};
+  const id = resolveDetailItemId(detail);
+  const { item, isFolder } = detail;
 
   // If this is a folder, clear selection and context
   if (isFolder) {
     store.setSelectedItemId({ itemId: null });
     store.setContext({
-      fileId: {
-        src: null,
+      context: {
+        fileId: {
+          src: null,
+        },
       },
     });
     render();
     return;
   }
 
-  store.setSelectedItemId({ itemId: id });
-
-  // If we have item data with fileId, set up media context for preview
-  if (item && item.fileId) {
-    const { url } = await projectService.getFileContent(item.fileId);
-
-    store.setContext({
-      fileId: {
-        src: url,
-      },
-    });
+  if (!id) {
+    return;
   }
 
+  store.setSelectedItemId({ itemId: id });
+  const selectedItem = item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
+
+  let imageSrc = null;
+  if (selectedItem?.fileId) {
+    const { url } = await projectService.getFileContent(selectedItem.fileId);
+    imageSrc = url;
+  }
+
+  store.setContext({
+    context: {
+      fileId: {
+        src: imageSrc,
+      },
+    },
+  });
+
   render();
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: id,
+    });
+  }
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -65,7 +171,18 @@ export const handleFileExplorerDataChanged = async (deps) => {
   const repository = await projectService.getRepository();
   const state = repository.getState();
   store.setItems({ imagesData: state.images });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 const subscriptions = (deps) => {
@@ -125,17 +242,35 @@ export const handleFormExtraEvent = async (deps) => {
   // Update the store with the new repository state
   const { images } = projectService.getState();
   store.setContext({
-    fileId: {
-      src: uploadResult.downloadUrl,
+    context: {
+      fileId: {
+        src: uploadResult.downloadUrl,
+      },
     },
   });
   store.setItems({ imagesData: images });
+  const selectedItemId = store.selectSelectedItemId();
+  const updatedSelectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(updatedSelectedItem);
   render();
+
+  if (updatedSelectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleImageItemClick = async (deps, payload) => {
   const { store, render, projectService, refs } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const detail = payload?._event?.detail || {};
+  const itemId = resolveDetailItemId(detail);
+
+  if (!itemId) {
+    return;
+  }
 
   store.setSelectedItemId({ itemId: itemId });
 
@@ -145,15 +280,30 @@ export const handleImageItemClick = async (deps, payload) => {
   });
 
   const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
+  let imageSrc = null;
 
-  const { url } = await projectService.getFileContent(selectedItem.fileId);
+  if (selectedItem?.fileId) {
+    const { url } = await projectService.getFileContent(selectedItem.fileId);
+    imageSrc = url;
+  }
+
   store.setContext({
-    fileId: {
-      src: url,
+    context: {
+      fileId: {
+        src: imageSrc,
+      },
     },
   });
 
   render();
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: itemId,
+    });
+  }
 };
 
 export const handleImageItemDoubleClick = (deps, payload) => {
@@ -203,9 +353,10 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
   await projectService.updateResourceItem({
     resourceType: "images",
-    resourceId: store.selectSelectedItemId(),
+    resourceId: selectedItemId,
     patch: {
       [payload._event.detail.name]: payload._event.detail.value,
     },
@@ -213,7 +364,17 @@ export const handleFormChange = async (deps, payload) => {
 
   const { images } = projectService.getState();
   store.setItems({ imagesData: images });
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleItemDelete = async (deps, payload) => {

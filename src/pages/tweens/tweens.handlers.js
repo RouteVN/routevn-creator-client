@@ -2,6 +2,87 @@ import { nanoid } from "nanoid";
 import { resetState } from "./tweens.constants";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
+const resolveDetailItemId = (detail = {}) => {
+  return detail.itemId || detail.id || detail.item?.id || "";
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      name: "",
+      duration: "",
+    };
+  }
+
+  return {
+    name: item.name || "",
+    duration: item.duration ?? "",
+  };
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, refs } = deps;
   await projectService.ensureRepository();
@@ -32,20 +113,49 @@ export const handleDataChanged = async (deps) => {
   const tweenData = tweens || { order: [], items: {} };
 
   store.setItems({ tweensData: tweenData });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const detail = payload?._event?.detail || {};
+  const id = resolveDetailItemId(detail);
+  if (!id) {
+    return;
+  }
 
   store.setSelectedItemId({ itemId: id });
+  const selectedItem = detail.item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: id,
+    });
+  }
 };
 
 export const handleAnimationItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const detail = payload?._event?.detail || {};
+  const itemId = resolveDetailItemId(detail);
+  if (!itemId) {
+    return;
+  }
 
   const { fileExplorer } = refs;
   fileExplorer.transformedHandlers.handlePageItemClick({
@@ -53,7 +163,17 @@ export const handleAnimationItemClick = (deps, payload) => {
   });
 
   store.setSelectedItemId({ itemId: itemId });
+  const selectedItem = detail.item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: itemId,
+    });
+  }
 };
 
 export const handleAnimationCreated = async (deps, payload) => {
@@ -94,14 +214,26 @@ export const handleAnimationUpdated = async (deps, payload) => {
 
   const { tweens } = projectService.getState();
   store.setItems({ tweensData: tweens });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem && selectedItemId === itemId) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
   await projectService.updateResourceItem({
     resourceType: "tweens",
-    resourceId: store.selectSelectedItemId(),
+    resourceId: selectedItemId,
     patch: {
       [payload._event.detail.name]: payload._event.detail.value,
     },
@@ -109,7 +241,17 @@ export const handleFormChange = async (deps, payload) => {
 
   const { tweens } = projectService.getState();
   store.setItems({ tweensData: tweens });
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 // Handlers forwarded from groupResourcesView

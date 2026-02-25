@@ -33,6 +33,8 @@ refs:
     eventListeners:
       click:
         handler: handleRowClick
+      dblclick:
+        handler: handleRowDoubleClick
       contextmenu:
         handler: handleRowContextMenu
   contextMenu:
@@ -108,5 +110,5 @@ template:
               - rtgl-view h=33vh: null
   - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
       - rtgl-view slot=content g=md:
-          - rtgl-form#variableForm key=${isDialogOpen}-${defaultValues.type}-${defaultValues.default} :defaultValues=defaultValues :form=form w=f :context=context: null
+          - rtgl-form#variableForm key=${dialogKey} :defaultValues=defaultValues :form=form w=f :context=context: null
   - rtgl-dropdown-menu#contextMenu :items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

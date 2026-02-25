@@ -34,6 +34,12 @@ const getOrderedIdsFromHierarchy = (order, fallbackIds) => {
   return appendMissingIds(orderedFromHierarchy, fallbackIds);
 };
 
+const toPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+};
+
 export const createInitialState = () => ({
   sceneId: undefined,
   selectedLineId: undefined,
@@ -85,8 +91,10 @@ export const setDomainState = ({ state }, { domainState } = {}) => {
   state.domainState = domainState || {};
 };
 
-export const showPreviewSceneId = ({ state }, { payload } = {}) => {
-  const { sceneId, sectionId, lineId } = payload;
+export const showPreviewSceneId = (
+  { state },
+  { sceneId, sectionId, lineId } = {},
+) => {
   state.previewVisible = true;
   state.previewSceneId = sceneId;
   state.previewSectionId = sectionId;
@@ -575,7 +583,7 @@ export const selectViewData = ({ state }) => {
     form: renameForm,
     selectedLineId: state.selectedLineId,
     selectedLine,
-    selectedLineActions: selectedLine?.actions || {},
+    selectedLineActions: toPlainObject(selectedLine?.actions),
     repositoryState,
     sectionsGraphView: state.sectionsGraphView,
     layouts: Object.entries(selectLayouts({ state })).map(([id, item]) => ({

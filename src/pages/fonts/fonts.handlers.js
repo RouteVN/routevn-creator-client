@@ -2,7 +2,131 @@ import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { toFlatItems } from "#domain-structure";
 import { getFileType } from "../../utils/fileTypeUtils";
+import { formatFileSize } from "../../utils/index.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+
+const fontToBase64Image = (fontFamily, text = "Aa") => {
+  if (!fontFamily) return "";
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = 200;
+  canvas.height = 100;
+
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(0, 0, 200, 100);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `48px "${fontFamily}", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 100, 50);
+
+  return canvas.toDataURL("image/png");
+};
+
+const getFileTypeFromName = (fileName) => {
+  if (!fileName) return "";
+  const extension = fileName.toLowerCase().split(".").pop();
+  const extensionMap = {
+    ttf: "font/ttf",
+    otf: "font/otf",
+    woff: "font/woff",
+    woff2: "font/woff2",
+    ttc: "font/ttc",
+    eot: "font/eot",
+  };
+
+  return extensionMap[extension] || `font/${extension}`;
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (selectedItemId && selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      fontPreview: null,
+      name: "",
+      fontFamily: "",
+      fileType: "",
+      fileSize: "",
+    };
+  }
+
+  const fontFamily = item.fontFamily || "";
+  const fileType = item.fileType || getFileTypeFromName(item.name);
+  const fileSize = item.fileSize ? formatFileSize(item.fileSize) : "";
+  const fontPreview = fontToBase64Image(fontFamily, "Aa") || null;
+
+  return {
+    fontPreview,
+    name: item.name || "",
+    fontFamily,
+    fileType,
+    fileSize,
+  };
+};
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -21,10 +145,39 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const { id, item, isFolder } = payload._event.detail;
+
+  if (isFolder) {
+    store.setSelectedItemId({ itemId: null });
+    store.setContext({
+      context: {
+        fileId: {
+          fontFamily: "",
+        },
+      },
+    });
+    render();
+    return;
+  }
 
   store.setSelectedItemId({ itemId: id });
+
+  const selectedItem = item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
+  store.setContext({
+    context: {
+      fileId: {
+        fontFamily: detailValues.fontFamily,
+      },
+    },
+  });
+
   render();
+  syncDetailFormValues({
+    deps,
+    values: detailValues,
+    selectedItemId: id,
+  });
 };
 
 export const handleFontItemClick = (deps, payload) => {
@@ -38,14 +191,21 @@ export const handleFontItemClick = (deps, payload) => {
   });
 
   const selectedItem = store.selectSelectedItem();
-  if (selectedItem) {
-    store.setContext({
+  const detailValues = createDetailFormValues(selectedItem);
+  store.setContext({
+    context: {
       fileId: {
-        fontFamily: selectedItem.fontFamily || "",
+        fontFamily: detailValues.fontFamily,
       },
-    });
-  }
+    },
+  });
+
   render();
+  syncDetailFormValues({
+    deps,
+    values: detailValues,
+    selectedItemId: itemId,
+  });
 };
 
 export const handleFormExtraEvent = async (deps) => {
@@ -101,8 +261,10 @@ export const handleFormExtraEvent = async (deps) => {
   // Update the store with the new repository state
   const { fonts } = projectService.getState();
   store.setContext({
-    fileId: {
-      fontFamily: uploadResult.fontName,
+    context: {
+      fileId: {
+        fontFamily: uploadResult.fontName,
+      },
     },
   });
   store.setItems({ fontsData: fonts });

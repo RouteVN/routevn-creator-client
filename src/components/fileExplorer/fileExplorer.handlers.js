@@ -117,12 +117,20 @@ const applyCharacterSpritesPatch = async ({
   return nextSprites;
 };
 
+const getDetailItemId = (detail = {}) => {
+  return detail.id || detail.itemId || detail.item?.id || "";
+};
+
 // Forward click-item event from base component
 export const handleClickItem = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
   await projectService.ensureRepository();
   const state = projectService.getState();
-  const { id } = payload._event.detail;
+  const detail = payload._event.detail || {};
+  const id = getDetailItemId(detail);
+  if (!id) {
+    return;
+  }
 
   // Get the clicked item from the repository based on repositoryTarget
   const repositoryTarget = props.repositoryTarget;
@@ -140,7 +148,9 @@ export const handleClickItem = async (deps, payload) => {
   dispatchEvent(
     new CustomEvent("item-click", {
       detail: {
-        ...payload._event.detail,
+        ...detail,
+        id,
+        itemId: id,
         item: selectedItem,
         repositoryTarget,
         isFolder: selectedItem && selectedItem.type === "folder",

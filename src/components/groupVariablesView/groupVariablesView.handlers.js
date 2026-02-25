@@ -17,6 +17,27 @@ const getDataId = (event, attrName, fallbackPrefix = "") => {
   return event?.currentTarget?.id?.replace(fallbackPrefix, "") || "";
 };
 
+const getDefaultValueByType = (type) => {
+  if (type === "number") {
+    return 0;
+  }
+  if (type === "boolean") {
+    return false;
+  }
+  return "";
+};
+
+const findVariableWithGroup = (flatGroups = [], itemId) => {
+  for (const group of flatGroups) {
+    for (const item of group.children || []) {
+      if (item.id === itemId) {
+        return { group, item };
+      }
+    }
+  }
+  return null;
+};
+
 export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
   const groupId = getDataId(payload._event, "data-group-id", "group");
@@ -51,13 +72,7 @@ export const handleDialogFormChange = (deps, payload) => {
   // When type changes, set appropriate default value
   let defaultValue = newValues.default;
   if (newValues.type !== prevValues.type) {
-    if (newValues.type === "number") {
-      defaultValue = 0;
-    } else if (newValues.type === "boolean") {
-      defaultValue = false;
-    } else {
-      defaultValue = "";
-    }
+    defaultValue = getDefaultValueByType(newValues.type);
   }
 
   // Update form values for preview
@@ -82,19 +97,15 @@ export const handleAddVariableClick = (deps, payload) => {
   if (!groupId) {
     return;
   }
-  store.setTargetGroupId({ groupId: groupId });
 
-  // Toggle dialog open
-  store.toggleDialog();
+  store.openAddDialog({ groupId: groupId });
   render();
 };
 
 export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
 
-  // Close dialog
-  store.toggleDialog();
-  store.updateFormValues({});
+  store.closeDialog();
   render();
 };
 
@@ -112,6 +123,44 @@ export const handleRowClick = (deps, payload) => {
       composed: true,
     }),
   );
+};
+
+export const handleRowDoubleClick = (deps, payload) => {
+  const { store, render, dispatchEvent, props } = deps;
+  const itemId = getDataId(payload._event, "data-item-id", "row");
+  if (!itemId) {
+    return;
+  }
+
+  const found = findVariableWithGroup(props.flatGroups, itemId);
+  if (!found) {
+    return;
+  }
+
+  const { group, item } = found;
+  const type = item.type || "string";
+  const defaultValue =
+    item.default === undefined ? getDefaultValueByType(type) : item.default;
+
+  dispatchEvent(
+    new CustomEvent("variable-item-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+
+  store.openEditDialog({
+    groupId: group.id,
+    itemId,
+    defaultValues: {
+      name: item.name || "",
+      scope: item.scope || "context",
+      type,
+      default: defaultValue,
+    },
+  });
+  render();
 };
 
 export const handleRowContextMenu = (deps, payload) => {
@@ -156,7 +205,7 @@ export const handleCloseContextMenu = (deps) => {
 };
 
 export const handleFormActionClick = (deps, payload) => {
-  const { store, render, dispatchEvent, props } = deps;
+  const { store, render, dispatchEvent, props, appService } = deps;
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
@@ -164,55 +213,92 @@ export const handleFormActionClick = (deps, payload) => {
   if (actionId === "submit") {
     // Get form values from the event detail - it's in formValues
     const formData = payload._event.detail.values;
+    const name = formData.name?.trim();
 
     // Don't submit if name is not set
-    if (!formData.name || !formData.name.trim()) {
+    if (!name) {
+      appService.showToast("Variable name is required.", { title: "Warning" });
       return;
     }
 
-    // Don't submit if name already exists
-    const existingNames = (props.flatGroups || [])
-      .flatMap((g) => g.children || [])
-      .map((item) => item.name);
-    if (existingNames.includes(formData.name.trim())) {
-      return;
-    }
-
-    // Get the target group ID from store - access the internal state properly
+    // Get current dialog state
     const storeState = store.getState
       ? store.getState()
       : store._state || store.state;
     const targetGroupId = storeState.targetGroupId;
+    const isEditMode = storeState.dialogMode === "edit";
+    const editingItemId = storeState.editingItemId;
+    const scope =
+      formData.scope ?? storeState.defaultValues?.scope ?? "context";
+    const type = formData.type ?? storeState.defaultValues?.type ?? "string";
+    if (isEditMode && !editingItemId) {
+      appService.showToast(
+        "Unable to update variable. Please reopen the editor and try again.",
+        { title: "Warning" },
+      );
+      return;
+    }
+    if (!isEditMode && !targetGroupId) {
+      appService.showToast(
+        "Unable to add variable. Please select a group and try again.",
+        { title: "Warning" },
+      );
+      return;
+    }
+
+    // Don't submit if name already exists
+    const isDuplicateName = (props.flatGroups || [])
+      .flatMap((group) => group.children || [])
+      .some(
+        (item) =>
+          item.name === name && (!isEditMode || item.id !== editingItemId),
+      );
+    if (isDuplicateName) {
+      appService.showToast("Variable name must be unique.", {
+        title: "Warning",
+      });
+      return;
+    }
 
     // Set default value based on type if not provided
     let defaultValue = formData.default;
     if (defaultValue === undefined || defaultValue === "") {
-      if (formData.type === "number") {
-        defaultValue = 0;
-      } else if (formData.type === "boolean") {
-        defaultValue = false;
-      } else {
-        defaultValue = "";
-      }
+      defaultValue = getDefaultValueByType(type);
     }
 
-    // Forward variable creation to parent
-    dispatchEvent(
-      new CustomEvent("variable-created", {
-        detail: {
-          groupId: targetGroupId,
-          name: formData.name,
-          scope: formData.scope,
-          type: formData.type,
-          default: defaultValue,
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    if (isEditMode) {
+      dispatchEvent(
+        new CustomEvent("variable-updated", {
+          detail: {
+            itemId: editingItemId,
+            name,
+            scope,
+            type,
+            default: defaultValue,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } else {
+      // Forward variable creation to parent
+      dispatchEvent(
+        new CustomEvent("variable-created", {
+          detail: {
+            groupId: targetGroupId,
+            name,
+            scope,
+            type,
+            default: defaultValue,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
 
     // Close dialog
-    store.toggleDialog();
+    store.closeDialog();
     render();
   }
 };

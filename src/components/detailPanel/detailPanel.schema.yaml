@@ -22,3 +22,6 @@ propsSchema:
     images:
       type: object
       description: Repository images data for imageId to fileId conversion
+    onFieldChange:
+      type: function
+      description: Optional callback for controlled field updates

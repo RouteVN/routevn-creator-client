@@ -107,7 +107,7 @@ export const selectAction = ({ state }) => {
   return state.actions || {};
 };
 
-export const updateActions = ({ state }, { payload } = {}) => {
+export const updateActions = ({ state }, payload = {}) => {
   const nextPayload = payload || {};
   state.actions = {
     ...state.actions,
@@ -125,7 +125,7 @@ export const hideActionsDialog = ({ state }, _payload = {}) => {
 };
 
 export const setMode = ({ state }, payload = {}) => {
-  const mode = payload.mode ?? payload?.payload?.mode;
+  const mode = payload.mode;
   if (mode === undefined) {
     return;
   }

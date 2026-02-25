@@ -554,12 +554,12 @@ export const handleAfterMount = async (deps) => {
     },
   );
 
-  graphicsService.initRouteEngine(initialProjectData);
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: true,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
+  graphicsService.initRouteEngine(initialProjectData);
 
   render();
   setTimeout(() => {
@@ -1602,9 +1602,8 @@ export const handleFormActionClick = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const detail = payload._event.detail;
 
-  // Extract action and values from detail
-  const action = detail.action || detail.actionId;
-  const values = detail.values || detail;
+  const action = detail.actionId;
+  const values = detail.values;
 
   if (action === "cancel") {
     store.hidePopover();
@@ -1646,7 +1645,7 @@ export const handlePreviewClick = (deps) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  store.showPreviewSceneId({ payload: { sceneId, sectionId, lineId } });
+  store.showPreviewSceneId({ sceneId, sectionId, lineId });
   render();
 };
 
@@ -1706,13 +1705,12 @@ export const handleHidePreviewScene = async (deps) => {
       lineId: store.selectSelectedLineId(),
     },
   );
-  graphicsService.initRouteEngine(initialProjectData);
-
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
+  graphicsService.initRouteEngine(initialProjectData);
 
   await renderSceneState(store, graphicsService);
 };

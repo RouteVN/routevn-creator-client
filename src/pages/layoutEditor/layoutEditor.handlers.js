@@ -388,7 +388,11 @@ export const handleRenderOnly = (deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render } = deps;
-  const itemId = payload._event.detail.id;
+  const detail = payload._event.detail || {};
+  const itemId = detail.id || detail.itemId || detail.item?.id;
+  if (!itemId) {
+    return;
+  }
   store.setSelectedItemId({ itemId: itemId });
   render();
   await renderLayoutPreview(deps);

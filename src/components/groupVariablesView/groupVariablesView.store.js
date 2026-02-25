@@ -1,8 +1,17 @@
+const DEFAULT_FORM_VALUES = {
+  name: "",
+  scope: "context",
+  type: "string",
+  default: "",
+};
+
 export const createInitialState = () => ({
   collapsedIds: [],
   searchQuery: "",
   isDialogOpen: false,
   targetGroupId: null,
+  dialogMode: "add",
+  editingItemId: null,
 
   dropdownMenu: {
     isOpen: false,
@@ -12,12 +21,7 @@ export const createInitialState = () => ({
     items: [{ label: "Delete", type: "item", value: "delete-item" }],
   },
 
-  defaultValues: {
-    name: "",
-    scope: "context",
-    type: "string",
-    default: "",
-  },
+  defaultValues: structuredClone(DEFAULT_FORM_VALUES),
 
   form: {
     title: "Add Variable",
@@ -117,12 +121,45 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   }
 };
 
-export const updateFormValues = ({ state }, { payload } = {}) => {
-  state.defaultValues = payload;
+export const updateFormValues = ({ state }, payload = {}) => {
+  state.defaultValues = {
+    ...state.defaultValues,
+    ...payload,
+  };
 };
 
 export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
+};
+
+export const openAddDialog = ({ state }, { groupId } = {}) => {
+  state.isDialogOpen = true;
+  state.targetGroupId = groupId;
+  state.dialogMode = "add";
+  state.editingItemId = null;
+  state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
+};
+
+export const openEditDialog = (
+  { state },
+  { groupId, itemId, defaultValues } = {},
+) => {
+  state.isDialogOpen = true;
+  state.targetGroupId = groupId;
+  state.dialogMode = "edit";
+  state.editingItemId = itemId;
+  state.defaultValues = {
+    ...structuredClone(DEFAULT_FORM_VALUES),
+    ...defaultValues,
+  };
+};
+
+export const closeDialog = ({ state }, _payload = {}) => {
+  state.isDialogOpen = false;
+  state.targetGroupId = null;
+  state.dialogMode = "add";
+  state.editingItemId = null;
+  state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
@@ -206,6 +243,26 @@ export const selectViewData = ({ state, props }) => {
     .filter((group) => group.shouldDisplay);
 
   const defaultValues = structuredClone(state.defaultValues);
+  const form = structuredClone(state.form);
+  const submitButton = form.actions?.buttons?.find(
+    (button) => button.id === "submit",
+  );
+
+  if (state.dialogMode === "edit") {
+    form.title = "Edit Variable";
+    form.description = "Update variable";
+    if (submitButton) {
+      submitButton.label = "Update Variable";
+    }
+  } else {
+    form.title = "Add Variable";
+    form.description = "Create a new variable";
+    if (submitButton) {
+      submitButton.label = "Add Variable";
+    }
+  }
+
+  const dialogKey = `${state.dialogMode}-${state.editingItemId || "new"}-${defaultValues.type}-${String(defaultValues.default)}`;
 
   return {
     flatGroups,
@@ -213,7 +270,10 @@ export const selectViewData = ({ state, props }) => {
     searchQuery: state.searchQuery,
     isDialogOpen: state.isDialogOpen,
     defaultValues: defaultValues,
-    form: state.form,
+    form,
+    dialogKey,
+    dialogMode: state.dialogMode,
+    editingItemId: state.editingItemId,
     context: {
       values: defaultValues,
     },

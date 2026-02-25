@@ -567,12 +567,14 @@ export const addProperty = ({ state }, { property, initialValue } = {}) => {
   };
 };
 
-export const addKeyframe = ({ state }, { keyframe } = {}) => {
-  if (!state.properties[keyframe.property]) {
-    state.properties[keyframe.property] = [];
+export const addKeyframe = ({ state }, keyframe = {}) => {
+  if (!keyframe.property) {
+    return;
   }
-
-  const keyframes = state.properties[keyframe.property].keyframes;
+  const keyframes = state.properties[keyframe.property]?.keyframes;
+  if (!Array.isArray(keyframes)) {
+    return;
+  }
   let index = keyframe.index;
   if (keyframe.index === undefined) {
     index = keyframes.length;
@@ -586,14 +588,20 @@ export const addKeyframe = ({ state }, { keyframe } = {}) => {
   });
 };
 
-export const deleteKeyframe = ({ state }, { payload } = {}) => {
+export const deleteKeyframe = ({ state }, payload = {}) => {
   const { property, index } = payload;
-  const keyframes = state.properties[property].keyframes;
+  const keyframes = state.properties[property]?.keyframes;
+  if (!Array.isArray(keyframes)) {
+    return;
+  }
   keyframes.splice(index, 1);
 };
 
-export const deleteProperty = ({ state }, { payload } = {}) => {
+export const deleteProperty = ({ state }, payload = {}) => {
   const { property } = payload;
+  if (!property) {
+    return;
+  }
 
   state.selectedProperties = state.selectedProperties.filter(
     (p) => p.name !== property,
@@ -602,10 +610,13 @@ export const deleteProperty = ({ state }, { payload } = {}) => {
   delete state.properties[property];
 };
 
-export const moveKeyframeRight = ({ state }, { payload } = {}) => {
+export const moveKeyframeRight = ({ state }, payload = {}) => {
   const { property, index } = payload;
   const numIndex = Number(index);
-  const keyframes = state.properties[property].keyframes;
+  const keyframes = state.properties[property]?.keyframes;
+  if (!Array.isArray(keyframes)) {
+    return;
+  }
 
   if (numIndex < keyframes.length - 1) {
     const temp = keyframes[numIndex];
@@ -614,10 +625,13 @@ export const moveKeyframeRight = ({ state }, { payload } = {}) => {
   }
 };
 
-export const moveKeyframeLeft = ({ state }, { payload } = {}) => {
+export const moveKeyframeLeft = ({ state }, payload = {}) => {
   const { property, index } = payload;
   const numIndex = Number(index);
-  const keyframes = state.properties[property].keyframes;
+  const keyframes = state.properties[property]?.keyframes;
+  if (!Array.isArray(keyframes)) {
+    return;
+  }
 
   if (numIndex > 0) {
     const temp = keyframes[numIndex];
@@ -626,9 +640,12 @@ export const moveKeyframeLeft = ({ state }, { payload } = {}) => {
   }
 };
 
-export const updateKeyframe = ({ state }, { payload } = {}) => {
+export const updateKeyframe = ({ state }, payload = {}) => {
   const { property, index, keyframe } = payload;
-  const keyframes = state.properties[property].keyframes;
+  const keyframes = state.properties[property]?.keyframes;
+  if (!Array.isArray(keyframes) || !keyframe) {
+    return;
+  }
 
   keyframes[index] = {
     ...keyframe,
@@ -638,8 +655,11 @@ export const updateKeyframe = ({ state }, { payload } = {}) => {
   };
 };
 
-export const updateInitialValue = ({ state }, { payload } = {}) => {
+export const updateInitialValue = ({ state }, payload = {}) => {
   const { property, initialValue } = payload;
+  if (!property || !state.properties[property]) {
+    return;
+  }
   state.properties[property].initialValue = initialValue;
 };
 

@@ -1,3 +1,9 @@
+const toPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+};
+
 export const open = (deps, payload) => {
   const { store, render } = deps;
   const { mode } = payload;
@@ -18,14 +24,14 @@ export const handleAfterMount = async (deps) => {
 
 export const handleBeforeMount = (deps) => {
   const { props, render, store } = deps;
-  store.updateActions({ payload: props.actions });
+  store.updateActions(toPlainObject(props.actions));
   render();
 };
 
 export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
-  store.updateActions({ payload: newProps.actions });
+  store.updateActions(toPlainObject(newProps.actions));
   render();
 };
 

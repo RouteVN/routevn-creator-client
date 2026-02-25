@@ -1,6 +1,102 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
+import { formatFileSize } from "../../utils/index.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+
+const resolveDetailItemId = (detail = {}) => {
+  return detail.itemId || detail.id || detail.item?.id || "";
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const formatDuration = (duration) => {
+  if (!duration && duration !== 0) {
+    return "Unknown";
+  }
+
+  return `${Math.floor(duration / 60).toString()}:${Math.floor(duration % 60)
+    .toString()
+    .padStart(2, "0")}`;
+};
+
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      name: "",
+      fileType: "",
+      fileSize: "",
+      duration: "",
+    };
+  }
+
+  return {
+    name: item.name || "",
+    fileType: item.fileType || "",
+    fileSize: formatFileSize(item.fileSize),
+    duration: formatDuration(item.duration),
+  };
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
 
 const mountLegacySubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -37,41 +133,72 @@ export const handleDataChanged = async (deps) => {
   const soundData = sounds || { order: [], items: {} };
 
   store.setItems({ soundData: soundData });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render, projectService } = deps;
-  const { id, item, isFolder } = payload._event.detail;
+  const detail = payload?._event?.detail || {};
+  const id = resolveDetailItemId(detail);
+  const { item, isFolder } = detail;
 
   // If this is a folder, clear selection and context
   if (isFolder) {
     store.setSelectedItemId({ itemId: null });
     store.setContext({
-      fileId: {
-        waveformData: null,
+      context: {
+        fileId: {
+          waveformData: null,
+        },
       },
     });
     render();
     return;
   }
 
+  if (!id) {
+    return;
+  }
+
   store.setSelectedItemId({ itemId: id });
+  const selectedItem = item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
+  let waveformData = null;
 
   // If we have item data with waveformDataFileId, set up media context for preview
-  if (item && item.waveformDataFileId) {
-    const waveformData = await projectService.downloadMetadata(
-      item.waveformDataFileId,
+  if (selectedItem?.waveformDataFileId) {
+    waveformData = await projectService.downloadMetadata(
+      selectedItem.waveformDataFileId,
     );
+  }
 
-    store.setContext({
+  store.setContext({
+    context: {
       fileId: {
         waveformData,
       },
-    });
-  }
+    },
+  });
 
   render();
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: id,
+    });
+  }
 };
 
 export const handleFileExplorerDoubleClick = async (deps, payload) => {
@@ -93,7 +220,12 @@ export const handleFileExplorerDoubleClick = async (deps, payload) => {
 
 export const handleSoundItemClick = async (deps, payload) => {
   const { store, render, projectService, refs } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const detail = payload?._event?.detail || {};
+  const itemId = resolveDetailItemId(detail);
+  if (!itemId) {
+    return;
+  }
+
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
@@ -101,16 +233,26 @@ export const handleSoundItemClick = async (deps, payload) => {
     _event: { detail: { itemId } },
   });
 
-  const selectedItem = store.selectSelectedItem();
+  const selectedItem = detail.item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
 
   if (!selectedItem?.waveformDataFileId) {
     // Clear waveform data when no waveformDataFileId
     store.setContext({
-      fileId: {
-        waveformData: null,
+      context: {
+        fileId: {
+          waveformData: null,
+        },
       },
     });
     render();
+    if (selectedItem) {
+      syncDetailFormValues({
+        deps,
+        values: detailValues,
+        selectedItemId: itemId,
+      });
+    }
     return;
   }
 
@@ -119,11 +261,20 @@ export const handleSoundItemClick = async (deps, payload) => {
   );
 
   store.setContext({
-    fileId: {
-      waveformData,
+    context: {
+      fileId: {
+        waveformData,
+      },
     },
   });
   render();
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: itemId,
+    });
+  }
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
@@ -206,6 +357,7 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
+  const selectedItemId = store.selectSelectedItemId();
   await projectService.updateResourceItem({
     resourceType: "sounds",
     resourceId: selectedItem.id,
@@ -225,19 +377,32 @@ export const handleFormExtraEvent = async (deps) => {
   const waveformData = uploadResult.waveformData;
 
   store.setContext({
-    fileId: {
-      waveformData,
+    context: {
+      fileId: {
+        waveformData,
+      },
     },
   });
   store.setItems({ soundData: sounds });
+  const updatedSelectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(updatedSelectedItem);
   render();
+
+  if (updatedSelectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
   await projectService.updateResourceItem({
     resourceType: "sounds",
-    resourceId: store.selectSelectedItemId(),
+    resourceId: selectedItemId,
     patch: {
       [payload._event.detail.name]: payload._event.detail.value,
     },
@@ -245,7 +410,17 @@ export const handleFormChange = async (deps, payload) => {
 
   const { sounds } = projectService.getState();
   store.setItems({ soundData: sounds });
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleSearchInput = (deps, payload) => {

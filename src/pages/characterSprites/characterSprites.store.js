@@ -5,16 +5,15 @@ const form = {
     {
       name: "fileId",
       type: "image",
-      src: "${fileId.src}",
       width: 240,
       clickable: true,
       extraEvent: true,
     },
-    { name: "name", type: "popover-input", description: "Name" },
+    { name: "name", type: "popover-input", label: "Name" },
     {
       name: "description",
       type: "popover-input",
-      description: "Description",
+      label: "Description",
     },
   ],
 };
@@ -105,6 +104,7 @@ export const selectViewData = ({ state }) => {
 
   if (selectedItem) {
     defaultValues = {
+      fileId: state.context?.fileId?.src || null,
       name: selectedItem.name,
       description: selectedItem.description || "No description provided",
     };

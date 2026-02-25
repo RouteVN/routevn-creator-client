@@ -3,6 +3,8 @@ refs:
     eventListeners:
       data-changed:
         handler: handleDataChanged
+      item-click:
+        handler: handleFileExplorerSelectionChanged
   whiteboard:
     eventListeners:
       item-position-changed:
@@ -81,7 +83,7 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :defaultValues=defaultValues:
+                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues:
                           - rtgl-button#previewButton slot="preview" data-scene-id="${selectedItemId}": Preview
                           - rtgl-view slot="sections-list" d=v w=f g=sm:
                               - rtgl-view#sectionsListToggle d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:

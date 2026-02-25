@@ -20,6 +20,154 @@ const hexToBase64Image = (hex) => {
   return canvas.toDataURL("image/png");
 };
 
+const hexToRgb = (hex) => {
+  if (!hex) return "";
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return "";
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
+const getColorItemById = ({ store, itemId } = {}) => {
+  if (!itemId) return null;
+  const item = store.getState().colorsData?.items?.[itemId];
+  if (!item || item.type !== "color") return null;
+  return item;
+};
+
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const syncEditFormValues = ({ deps, values, attempt = 0 } = {}) => {
+  const formRef = deps?.refs?.editForm;
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncEditFormValues({ deps, values, attempt: attempt + 1 });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncEditFormValues({ deps, values, attempt: attempt + 1 });
+    }, 0);
+  }
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (selectedItemId && selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      colorImage: null,
+      name: "",
+      hex: "",
+      rgb: "",
+    };
+  }
+
+  const hex = item.hex ?? "";
+  const colorImage = hex ? hexToBase64Image(hex) : null;
+
+  return {
+    colorImage,
+    name: item.name || "",
+    hex,
+    rgb: hexToRgb(hex),
+  };
+};
+
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) return;
+
+  const { store, render } = deps;
+  const colorItem = getColorItemById({ store, itemId });
+  if (!colorItem) return;
+
+  store.setSelectedItemId({ itemId: itemId });
+  store.openEditDialog({ itemId: itemId });
+  render();
+
+  syncEditFormValues({
+    deps,
+    values: {
+      name: colorItem.name || "",
+      hex: colorItem.hex || "",
+    },
+  });
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
@@ -43,8 +191,10 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   if (isFolder) {
     store.setSelectedItemId({ itemId: null });
     store.setContext({
-      colorImage: {
-        src: null,
+      context: {
+        colorImage: {
+          src: null,
+        },
       },
     });
     render();
@@ -52,17 +202,22 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: id });
-
-  // If we have item data with hex value, set up color context for preview
-  if (item && item.hex) {
-    store.setContext({
+  const selectedItem = item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
+  store.setContext({
+    context: {
       colorImage: {
-        src: hexToBase64Image(item.hex),
+        src: detailValues.colorImage,
       },
-    });
-  }
+    },
+  });
 
   render();
+  syncDetailFormValues({
+    deps,
+    values: detailValues,
+    selectedItemId: id,
+  });
 };
 
 export const handleColorItemClick = (deps, payload) => {
@@ -76,14 +231,21 @@ export const handleColorItemClick = (deps, payload) => {
   });
 
   const selectedItem = store.selectSelectedItem();
-  if (selectedItem && selectedItem.hex) {
-    store.setContext({
+  const detailValues = createDetailFormValues(selectedItem);
+  store.setContext({
+    context: {
       colorImage: {
-        src: hexToBase64Image(selectedItem.hex),
+        src: detailValues.colorImage,
       },
-    });
-  }
+    },
+  });
+
   render();
+  syncDetailFormValues({
+    deps,
+    values: detailValues,
+    selectedItemId: itemId,
+  });
 };
 
 export const handleColorCreated = async (deps, payload) => {
@@ -137,8 +299,10 @@ export const handleFormChange = async (deps, payload) => {
   // Update context if hex value changed
   if (payload._event.detail.name === "hex") {
     store.setContext({
-      colorImage: {
-        src: hexToBase64Image(payload._event.detail.value),
+      context: {
+        colorImage: {
+          src: hexToBase64Image(payload._event.detail.value),
+        },
       },
     });
   }
@@ -147,11 +311,19 @@ export const handleFormChange = async (deps, payload) => {
 };
 
 export const handleColorItemDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
-  const { itemId, isFolder } = payload._event.detail;
+  const { store } = deps;
+  const detail = payload?._event?.detail || {};
+  const isFolder = detail.isFolder === true;
+
   if (isFolder) return;
-  store.openEditDialog({ itemId: itemId });
-  render();
+
+  const candidateIds = [detail.itemId, detail.id, store.selectSelectedItemId()];
+  const itemId = candidateIds.find((candidateId) =>
+    getColorItemById({ store, itemId: candidateId }),
+  );
+  if (!itemId) return;
+
+  openEditDialogWithValues({ deps, itemId: itemId });
 };
 
 export const handleAddColorClick = (deps, payload) => {
@@ -194,8 +366,10 @@ export const handleEditFormAction = async (deps, payload) => {
     // Update context if this is the selected item
     if (editItemId === store.getState().selectedItemId) {
       store.setContext({
-        colorImage: {
-          src: hexToBase64Image(formData.hex),
+        context: {
+          colorImage: {
+            src: hexToBase64Image(formData.hex),
+          },
         },
       });
     }
@@ -206,13 +380,12 @@ export const handleEditFormAction = async (deps, payload) => {
 };
 
 export const handleFormFieldClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   // Check if the clicked field is the color image
   if (payload._event.detail.name === "colorImage") {
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId) {
-      store.openEditDialog({ itemId: selectedItemId });
-      render();
+      openEditDialogWithValues({ deps, itemId: selectedItemId });
     }
   }
 };
