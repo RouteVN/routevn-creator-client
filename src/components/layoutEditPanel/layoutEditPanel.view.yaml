@@ -91,7 +91,7 @@ template:
                           - rtgl-text s=xs: ${barItem.label}
                           - rtgl-view w=1fg: null
                           - $if barItem.imageId:
-                              - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32: null
+                              - rvn-file-image imageId=${barItem.imageId} h=32: null
                             $else:
                               - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
                                   - rtgl-text s=xs c=mu: Not set
