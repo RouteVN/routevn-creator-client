@@ -4,3 +4,9 @@ propsSchema:
   properties:
     values:
       type: object
+    variablesData:
+      type: object
+    itemType:
+      type: string
+    layoutType:
+      type: string

@@ -14,4 +14,8 @@ propsSchema:
       type: string
     h:
       type: string
+    bw:
+      type: string
+    key:
+      type: string
   required: []
