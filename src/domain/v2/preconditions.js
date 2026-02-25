@@ -18,11 +18,15 @@ export const assertCommandPreconditions = (state, command) => {
   }
 
   switch (command.type) {
+    case COMMAND_TYPES.PROJECT_UPDATE:
+      return;
+
     case COMMAND_TYPES.SCENE_CREATE:
       assert(!state.scenes[p.sceneId], "scene already exists", {
         sceneId: p.sceneId,
       });
       return;
+    case COMMAND_TYPES.SCENE_UPDATE:
     case COMMAND_TYPES.SCENE_RENAME:
     case COMMAND_TYPES.SCENE_DELETE:
     case COMMAND_TYPES.SCENE_SET_INITIAL:
@@ -89,6 +93,7 @@ export const assertCommandPreconditions = (state, command) => {
       );
       return;
     case COMMAND_TYPES.RESOURCE_RENAME:
+    case COMMAND_TYPES.RESOURCE_UPDATE:
     case COMMAND_TYPES.RESOURCE_MOVE:
     case COMMAND_TYPES.RESOURCE_DELETE:
       assert(
@@ -145,15 +150,54 @@ export const assertCommandPreconditions = (state, command) => {
       return;
 
     case COMMAND_TYPES.VARIABLE_CREATE:
-      assert(!state.variables[p.variableId], "variable already exists", {
-        variableId: p.variableId,
-      });
+      assert(
+        !state.variables?.items?.[p.variableId],
+        "variable already exists",
+        {
+          variableId: p.variableId,
+        },
+      );
+      if (p.parentId !== undefined && p.parentId !== null) {
+        assert(p.parentId !== p.variableId, "variable cannot parent itself", {
+          variableId: p.variableId,
+          parentId: p.parentId,
+        });
+        assert(
+          !!state.variables?.items?.[p.parentId],
+          "variable parent not found",
+          {
+            variableId: p.variableId,
+            parentId: p.parentId,
+          },
+        );
+      }
       return;
     case COMMAND_TYPES.VARIABLE_UPDATE:
     case COMMAND_TYPES.VARIABLE_DELETE:
-      assert(!!state.variables[p.variableId], "variable not found", {
+      assert(!!state.variables?.items?.[p.variableId], "variable not found", {
         variableId: p.variableId,
       });
+      if (
+        command.type === COMMAND_TYPES.VARIABLE_UPDATE &&
+        p.patch &&
+        Object.prototype.hasOwnProperty.call(p.patch, "parentId")
+      ) {
+        const parentId = p.patch.parentId;
+        if (parentId !== undefined && parentId !== null) {
+          assert(parentId !== p.variableId, "variable cannot parent itself", {
+            variableId: p.variableId,
+            parentId,
+          });
+          assert(
+            !!state.variables?.items?.[parentId],
+            "variable parent not found",
+            {
+              variableId: p.variableId,
+              parentId,
+            },
+          );
+        }
+      }
       return;
 
     default:

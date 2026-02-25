@@ -48,6 +48,7 @@ export const createProjectCollabService = ({
   projectId,
   projectName = "",
   projectDescription = "",
+  initialState,
   token,
   actor,
   transport,
@@ -62,11 +63,14 @@ export const createProjectCollabService = ({
   let baseTransport = transport || null;
   let runtimeStore = clientStore || null;
 
-  let projectedState = createEmptyProjectState({
-    projectId,
-    name: projectName,
-    description: projectDescription,
-  });
+  let projectedState =
+    initialState && typeof initialState === "object"
+      ? structuredClone(initialState)
+      : createEmptyProjectState({
+          projectId,
+          name: projectName,
+          description: projectDescription,
+        });
 
   const emitCommittedCommand = ({
     command,
@@ -110,13 +114,9 @@ export const createProjectCollabService = ({
         command?.actor?.clientId === actor?.clientId &&
         command?.actor?.userId === actor?.userId;
 
-      // Legacy event envelope is still the source of truth for RouteVN UI state.
-      // It is forwarded via onCommittedCommand and not projected via V2 reducer.
-      if (command.type !== "legacy.event.apply") {
-        const result = processCommand({ state: projectedState, command });
-        projectedState = result.state;
-        typedStateMutated = true;
-      }
+      const result = processCommand({ state: projectedState, command });
+      projectedState = result.state;
+      typedStateMutated = true;
 
       appliedEventIds.add(dedupeId);
       if (committedEvent?.id) {
@@ -223,20 +223,6 @@ export const createProjectCollabService = ({
         event: commandToSyncEvent(command),
       });
 
-      return command.id;
-    },
-
-    async submitLegacyCommand(command) {
-      const partitions = commandPartitions(command);
-      if (partitions.length === 0) {
-        throw new Error("Command must include at least one partition");
-      }
-
-      const client = await ensureSyncClient();
-      await client.submitEvent({
-        partitions,
-        event: commandToSyncEvent(command),
-      });
       return command.id;
     },
 

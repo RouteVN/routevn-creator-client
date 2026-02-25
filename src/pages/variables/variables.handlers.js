@@ -1,21 +1,16 @@
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, appService, render } = deps;
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
-  const { variables } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables || { order: [], items: {} } });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
-
-  const repositoryState = repository.getState();
-  const { variables } = repositoryState;
+  const { store, render, projectService } = deps;
+  const { variables } = projectService.getState();
 
   const variableData = variables || { order: [], items: {} };
 
@@ -31,8 +26,7 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
+  const { store, render, projectService } = deps;
   const {
     groupId,
     name,
@@ -41,46 +35,27 @@ export const handleVariableCreated = async (deps, payload) => {
     default: defaultValue,
   } = payload._event.detail;
 
-  // Add new variable to repository
-  await projectService.appendEvent({
-    type: "nodeInsert",
-    payload: {
-      target: "variables",
-      value: {
-        id: nanoid(),
-        itemType: "variable",
-        name: name,
-        scope: scope,
-        type: type,
-        default: defaultValue,
-      },
-      options: {
-        parent: groupId,
-        position: "last",
-      },
-    },
+  await projectService.createVariableItem({
+    variableId: nanoid(),
+    name,
+    scope,
+    type,
+    defaultValue,
+    parentId: groupId,
+    position: "last",
   });
 
-  // Update store with new variables data
-  const repository = await projectService.getRepositoryById(p);
-  const { variables } = repository.getState();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables });
   render();
 };
 
 export const handleVariableDelete = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
+  const { store, render, projectService } = deps;
   const { itemId } = payload._event.detail;
 
-  await projectService.appendEvent({
-    type: "nodeDelete",
-    payload: {
-      target: "variables",
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteVariableItem({
+    variableId: itemId,
   });
 
   // Clear selection if deleted item was selected
@@ -88,15 +63,13 @@ export const handleVariableDelete = async (deps, payload) => {
     store.setSelectedItemId({ itemId: null });
   }
 
-  const repository = await projectService.getRepositoryById(p);
-  const { variables } = repository.getState();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables });
   render();
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { projectService, appService, render, store } = deps;
-  const { p } = appService.getPayload();
+  const { projectService, render, store } = deps;
   const fieldName = payload._event.detail.name;
   const fieldValue = payload._event.detail.value;
 
@@ -114,20 +87,12 @@ export const handleFormChange = async (deps, payload) => {
     updateValue.default = typeDefaults[fieldValue] ?? "";
   }
 
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "variables",
-      value: updateValue,
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
-    },
+  await projectService.updateVariableItem({
+    variableId: store.selectSelectedItemId(),
+    patch: updateValue,
   });
 
-  const repository = await projectService.getRepositoryById(p);
-  const { variables } = repository.getState();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables });
   render();
 };

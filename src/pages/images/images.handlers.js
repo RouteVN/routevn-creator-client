@@ -109,22 +109,16 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "images",
-      value: {
-        fileId: uploadResult.fileId,
-        name: uploadResult.displayName,
-        fileType: uploadResult.file.type,
-        fileSize: uploadResult.file.size,
-        width: uploadResult.dimensions.width,
-        height: uploadResult.dimensions.height,
-      },
-      options: {
-        id: selectedItem.id,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "images",
+    resourceId: selectedItem.id,
+    patch: {
+      fileId: uploadResult.fileId,
+      name: uploadResult.displayName,
+      fileType: uploadResult.file.type,
+      fileSize: uploadResult.file.size,
+      width: uploadResult.dimensions.width,
+      height: uploadResult.dimensions.height,
     },
   });
 
@@ -182,25 +176,20 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   const successfulUploads = await projectService.uploadFiles(files);
   for (const result of successfulUploads) {
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: "images",
-        value: {
-          id: nanoid(),
-          type: "image",
-          fileId: result.fileId,
-          name: result.displayName,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-          width: result.dimensions.width,
-          height: result.dimensions.height,
-        },
-        options: {
-          parent: id,
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "images",
+      resourceId: nanoid(),
+      data: {
+        type: "image",
+        fileId: result.fileId,
+        name: result.displayName,
+        fileType: result.file.type,
+        fileSize: result.file.size,
+        width: result.dimensions.width,
+        height: result.dimensions.height,
       },
+      parentId: id,
+      position: "last",
     });
   }
 
@@ -214,17 +203,11 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "images",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "images",
+    resourceId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -252,14 +235,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "nodeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)

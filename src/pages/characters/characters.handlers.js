@@ -96,16 +96,12 @@ export const handleCharacterCreated = async (deps, payload) => {
     }
 
     // Add character to repository
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: "characters",
-        value: characterData,
-        options: {
-          parent: groupId,
-          position: "last",
-        },
-      },
+    await projectService.createResourceItem({
+      resourceType: "characters",
+      resourceId: characterData.id,
+      data: characterData,
+      parentId: groupId,
+      position: "last",
     });
 
     // Update store with new data
@@ -179,16 +175,10 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       };
 
       // Update the selected character in the repository with the new avatar
-      await projectService.appendEvent({
-        type: "nodeUpdate",
-        payload: {
-          target: "characters",
-          value: updateData,
-          options: {
-            id: selectedItem.id,
-            replace: false,
-          },
-        },
+      await projectService.updateResourceItem({
+        resourceType: "characters",
+        resourceId: selectedItem.id,
+        patch: updateData,
       });
 
       // Update the store with the new repository state and get new file URL
@@ -205,17 +195,11 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "characters",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "characters",
+    resourceId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -346,14 +330,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "nodeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
@@ -419,16 +398,10 @@ export const handleEditFormAction = async (deps, payload) => {
       updateData.fileId = editAvatarFileId;
     }
 
-    await projectService.appendEvent({
-      type: "nodeUpdate",
-      payload: {
-        target: "characters",
-        value: updateData,
-        options: {
-          id: editItemId,
-          replace: false,
-        },
-      },
+    await projectService.updateResourceItem({
+      resourceType: "characters",
+      resourceId: editItemId,
+      patch: updateData,
     });
 
     const { characters } = projectService.getState();

@@ -1,6 +1,10 @@
 import { validateIconDimensions } from "../../utils/fileProcessors";
 
 export const handleAfterMount = async (deps) => {
+  await handleDataChanged(deps);
+};
+
+export const handleDataChanged = async (deps) => {
   const { projectService, store, render } = deps;
   await projectService.ensureRepository();
   const state = projectService.getState();
@@ -11,11 +15,9 @@ export const handleAfterMount = async (deps) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService } = deps;
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `project.${payload._event.detail.name}`,
-      value: payload._event.detail.value,
+  await projectService.updateProjectFields({
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 };
@@ -45,11 +47,9 @@ export const handleFormExtraEvent = async (deps) => {
 
     if (successfulUploads.length > 0) {
       const result = successfulUploads[0];
-      await projectService.appendEvent({
-        type: "set",
-        payload: {
-          target: "project.iconFileId",
-          value: result.fileId,
+      await projectService.updateProjectFields({
+        patch: {
+          iconFileId: result.fileId,
         },
       });
 

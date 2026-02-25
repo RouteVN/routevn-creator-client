@@ -65,9 +65,28 @@ const validateEnvelope = (command, errors) => {
   }
 };
 
+const validatePatchObject = (payload, errors, field = "patch") => {
+  if (
+    !payload?.[field] ||
+    typeof payload[field] !== "object" ||
+    Array.isArray(payload[field])
+  ) {
+    errors.push(`payload.${field} must be an object`);
+  }
+};
+
 const commandPayloadValidators = {
+  [COMMAND_TYPES.PROJECT_UPDATE]: (payload, errors) => {
+    requireFields(payload, ["patch"], errors);
+    validatePatchObject(payload, errors);
+  },
+
   [COMMAND_TYPES.SCENE_CREATE]: (payload, errors) => {
     requireFields(payload, ["sceneId", "name"], errors);
+  },
+  [COMMAND_TYPES.SCENE_UPDATE]: (payload, errors) => {
+    requireFields(payload, ["sceneId", "patch"], errors);
+    validatePatchObject(payload, errors);
   },
   [COMMAND_TYPES.SCENE_RENAME]: (payload, errors) => {
     requireFields(payload, ["sceneId", "name"], errors);
@@ -108,6 +127,7 @@ const commandPayloadValidators = {
   },
   [COMMAND_TYPES.LINE_UPDATE_ACTIONS]: (payload, errors) => {
     requireFields(payload, ["lineId", "patch"], errors);
+    validatePatchObject(payload, errors);
   },
   [COMMAND_TYPES.LINE_DELETE]: (payload, errors) => {
     requireFields(payload, ["lineId"], errors);
@@ -118,6 +138,10 @@ const commandPayloadValidators = {
 
   [COMMAND_TYPES.RESOURCE_CREATE]: (payload, errors) => {
     requireFields(payload, ["resourceType", "resourceId", "data"], errors);
+  },
+  [COMMAND_TYPES.RESOURCE_UPDATE]: (payload, errors) => {
+    requireFields(payload, ["resourceType", "resourceId", "patch"], errors);
+    validatePatchObject(payload, errors);
   },
   [COMMAND_TYPES.RESOURCE_RENAME]: (payload, errors) => {
     requireFields(payload, ["resourceType", "resourceId", "name"], errors);

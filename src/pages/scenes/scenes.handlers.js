@@ -273,15 +273,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleSetInitialScene = async (sceneId, deps) => {
   const { projectService } = deps;
-
-  // Set the initialSceneId in the story object
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: "story.initialSceneId",
-      value: sceneId,
-    },
-  });
+  await projectService.setInitialScene({ sceneId });
 };
 
 export const handleDataChanged = async (deps) => {
@@ -342,12 +334,10 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
     return;
   }
 
-  // Update position in repository using 'set' action
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${itemId}.position`,
-      value: { x: nextX, y: nextY },
+  await projectService.updateSceneItem({
+    sceneId: itemId,
+    patch: {
+      position: { x: nextX, y: nextY },
     },
   });
 
@@ -392,17 +382,10 @@ export const handleAddSceneClick = (deps) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "scenes",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateSceneItem({
+    sceneId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -532,59 +515,36 @@ export const handleSceneFormAction = async (deps, payload) => {
       };
     });
 
-    // Create order array with all line IDs in order
-    const lineHierarchy = [
-      { id: stepId },
-      ...additionalLineIds.map((id) => ({ id })),
-    ];
-
-    // Add new scene to repository
-    const repositoryAction = {
-      type: "nodeInsert",
-      target: "scenes",
-      value: {
-        parent: formData.folderId || "_root",
-        position: "last",
-        item: {
-          id: newSceneId,
-          type: "scene",
-          name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
-          createdAt: new Date().toISOString(),
-          position: {
-            x: sceneWhiteboardPosition.x,
-            y: sceneWhiteboardPosition.y,
-          },
-          sections: {
-            items: {
-              [sectionId]: {
-                name: "Section New",
-                lines: {
-                  items: lineItems,
-                  order: lineHierarchy,
-                },
-              },
-            },
-            order: [
-              {
-                id: sectionId,
-              },
-            ],
-          },
-        },
-      },
-    };
-
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: "scenes",
-        value: repositoryAction.value.item,
-        options: {
-          parent: repositoryAction.value.parent,
-          position: repositoryAction.value.position,
+    await projectService.createSceneItem({
+      sceneId: newSceneId,
+      name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+      parentId: formData.folderId || null,
+      position: "last",
+      data: {
+        position: {
+          x: sceneWhiteboardPosition.x,
+          y: sceneWhiteboardPosition.y,
         },
       },
     });
+    await projectService.createSectionItem({
+      sceneId: newSceneId,
+      sectionId,
+      name: "Section New",
+      position: "last",
+    });
+
+    const allLineIds = [stepId, ...additionalLineIds];
+    let previousLineId = null;
+    for (const currentLineId of allLineIds) {
+      await projectService.createLineItem({
+        sectionId,
+        lineId: currentLineId,
+        line: lineItems[currentLineId] || { actions: {} },
+        afterLineId: previousLineId,
+      });
+      previousLineId = currentLineId;
+    }
 
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
@@ -609,16 +569,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { itemId } = payload._event.detail;
 
-  // Remove from repository
-  await projectService.appendEvent({
-    type: "nodeDelete",
-    payload: {
-      target: "scenes",
-      options: {
-        id: itemId,
-      },
-    },
-  });
+  await projectService.deleteSceneItem({ sceneId: itemId });
 
   // Update store with new scenes data
   const { scenes: updatedScenes } = projectService.getState();
@@ -673,14 +624,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle set initial scene action
   if (item.value === "set-initial" && itemId) {
-    // Set the initialSceneId in the story object
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: "story.initialSceneId",
-        value: itemId,
-      },
-    });
+    await projectService.setInitialScene({ sceneId: itemId });
 
     // Get updated scenes data
     const { scenes: updatedScenes, story } = projectService.getState();
@@ -700,16 +644,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
-    // Remove from repository
-    projectService.appendEvent({
-      type: "nodeDelete",
-      payload: {
-        target: "scenes",
-        options: {
-          id: itemId,
-        },
-      },
-    });
+    await projectService.deleteSceneItem({ sceneId: itemId });
 
     // Update store with new scenes data
     const { scenes: updatedScenes } = projectService.getState();

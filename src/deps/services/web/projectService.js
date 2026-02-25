@@ -7,7 +7,7 @@ import {
 } from "../../infra/web/webRepositoryAdapter.js";
 import { createBundle } from "../../../utils/bundleUtils.js";
 import {
-  createLegacyEventCommand,
+  createCommandEnvelope,
   createProjectCollabService,
   createWebSocketTransport,
 } from "../../../collab/v2/index.js";
@@ -18,6 +18,7 @@ import {
   extractVideoThumbnail,
   detectFileType,
 } from "../../../utils/fileProcessors.js";
+import { processCommand } from "../../../domain/v2/engine.js";
 import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
 
 // Font loading helper
@@ -122,6 +123,607 @@ const countImageEntries = (imagesData) =>
     (item) => item?.type === "image",
   ).length;
 
+const normalizeParentId = (parentId) => {
+  if (typeof parentId !== "string" || parentId.length === 0) return null;
+  return parentId === "_root" ? null : parentId;
+};
+
+const findOrderNodeById = (nodes = [], id) => {
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    if (node.id === id) return node;
+    const found = findOrderNodeById(node.children || [], id);
+    if (found) return found;
+  }
+  return null;
+};
+
+const getSiblingOrderNodes = (collection, parentId) => {
+  const normalizedParentId = normalizeParentId(parentId);
+  if (!normalizedParentId) {
+    return Array.isArray(collection?.order) ? collection.order : [];
+  }
+  const parentNode = findOrderNodeById(
+    collection?.order || [],
+    normalizedParentId,
+  );
+  return Array.isArray(parentNode?.children) ? parentNode.children : [];
+};
+
+const resolveIndexFromLegacyPosition = ({
+  siblings = [],
+  position,
+  movingId = null,
+}) => {
+  const filtered = Array.isArray(siblings)
+    ? siblings.filter((node) => node?.id && node.id !== movingId)
+    : [];
+
+  if (position === "first") return 0;
+  if (position === "last" || position === undefined || position === null) {
+    return filtered.length;
+  }
+
+  if (position && typeof position === "object") {
+    if (typeof position.before === "string") {
+      const beforeIndex = filtered.findIndex(
+        (node) => node.id === position.before,
+      );
+      return beforeIndex >= 0 ? beforeIndex : filtered.length;
+    }
+    if (typeof position.after === "string") {
+      const afterIndex = filtered.findIndex(
+        (node) => node.id === position.after,
+      );
+      return afterIndex >= 0 ? afterIndex + 1 : filtered.length;
+    }
+  }
+
+  return filtered.length;
+};
+
+const uniquePartitions = (...partitions) => {
+  const seen = new Set();
+  const output = [];
+  for (const partition of partitions) {
+    if (typeof partition !== "string" || partition.length === 0) continue;
+    if (seen.has(partition)) continue;
+    seen.add(partition);
+    output.push(partition);
+  }
+  return output;
+};
+
+const findSectionLocation = (state, sectionId) => {
+  const sceneItems = state?.scenes?.items || {};
+  for (const [sceneId, scene] of Object.entries(sceneItems)) {
+    const sections = scene?.sections || { items: {}, order: [] };
+    const section = sections.items?.[sectionId];
+    if (!section) continue;
+    return {
+      sceneId,
+      scene,
+      section,
+      sectionCollection: sections,
+    };
+  }
+  return null;
+};
+
+const hasCommandTypePrefix = (commandType, prefix) =>
+  typeof commandType === "string" && commandType.startsWith(prefix);
+
+const isDirectDomainProjectionCommand = (command) =>
+  command?.type === "project.update" ||
+  hasCommandTypePrefix(command?.type, "resource.") ||
+  hasCommandTypePrefix(command?.type, "scene.") ||
+  hasCommandTypePrefix(command?.type, "section.") ||
+  hasCommandTypePrefix(command?.type, "line.") ||
+  hasCommandTypePrefix(command?.type, "layout.") ||
+  hasCommandTypePrefix(command?.type, "variable.");
+
+const uniqueIdsInOrder = (orderIds, existingIds) => {
+  const existingSet = new Set(existingIds);
+  const seen = new Set();
+  const output = [];
+
+  for (const id of Array.isArray(orderIds) ? orderIds : []) {
+    if (typeof id !== "string" || id.length === 0) continue;
+    if (!existingSet.has(id)) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    output.push(id);
+  }
+
+  for (const id of existingIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    output.push(id);
+  }
+
+  return output;
+};
+
+const buildHierarchyOrderFromFlatCollection = (collection) => {
+  const items = collection?.items || {};
+  const ids = Object.keys(items);
+  const orderedIds = uniqueIdsInOrder(collection?.order, ids);
+  const idSet = new Set(ids);
+  const ROOT = "__root__";
+  const childrenByParent = new Map();
+  childrenByParent.set(ROOT, []);
+
+  for (const id of orderedIds) {
+    const item = items[id];
+    const rawParentId = item?.parentId;
+    const parentId =
+      typeof rawParentId === "string" &&
+      rawParentId.length > 0 &&
+      rawParentId !== id &&
+      idSet.has(rawParentId)
+        ? rawParentId
+        : null;
+    const key = parentId || ROOT;
+    if (!childrenByParent.has(key)) {
+      childrenByParent.set(key, []);
+    }
+    childrenByParent.get(key).push(id);
+  }
+
+  const visited = new Set();
+  const buildNodes = (parentKey) => {
+    const idsForParent = childrenByParent.get(parentKey) || [];
+    const nodes = [];
+    for (const id of idsForParent) {
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const children = buildNodes(id);
+      if (children.length > 0) {
+        nodes.push({
+          id,
+          children,
+        });
+      } else {
+        nodes.push({ id });
+      }
+    }
+    return nodes;
+  };
+
+  const rootNodes = buildNodes(ROOT);
+  for (const id of orderedIds) {
+    if (visited.has(id)) continue;
+    visited.add(id);
+    rootNodes.push({ id });
+  }
+  return rootNodes;
+};
+
+const projectDomainResourceCollectionToLegacy = (domainCollection) => {
+  const items = domainCollection?.items || {};
+  const projectedItems = {};
+  for (const [resourceId, resource] of Object.entries(items)) {
+    projectedItems[resourceId] = {
+      id: resourceId,
+      ...structuredClone(resource || {}),
+    };
+  }
+
+  return {
+    items: projectedItems,
+    order: buildHierarchyOrderFromFlatCollection({
+      items,
+      order: domainCollection?.order || [],
+    }),
+  };
+};
+
+const flattenHierarchyIds = (nodes, output = []) => {
+  if (!Array.isArray(nodes)) return output;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    output.push(node.id);
+    flattenHierarchyIds(node.children || [], output);
+  }
+  return output;
+};
+
+const projectDomainLayoutElementsToLegacy = ({
+  layout,
+  existingLegacyElements = {},
+}) => {
+  const existingItems = existingLegacyElements?.items || {};
+  const projectedItems = {};
+
+  for (const [elementId, element] of Object.entries(layout?.elements || {})) {
+    const existingElement = existingItems?.[elementId] || {};
+    const elementClone = structuredClone(element || {});
+    delete elementClone.children;
+    delete elementClone.parentId;
+    projectedItems[elementId] = {
+      ...structuredClone(existingElement),
+      ...elementClone,
+      id: elementId,
+    };
+  }
+
+  const visited = new Set();
+  const makeNode = (elementId) => {
+    if (visited.has(elementId)) return null;
+    const element = layout?.elements?.[elementId];
+    if (!element) return null;
+    visited.add(elementId);
+
+    const children = [];
+    for (const childId of element.children || []) {
+      if (layout?.elements?.[childId]?.parentId !== elementId) continue;
+      const childNode = makeNode(childId);
+      if (childNode) children.push(childNode);
+    }
+
+    if (children.length > 0) {
+      return {
+        id: elementId,
+        children,
+      };
+    }
+
+    return { id: elementId };
+  };
+
+  const order = [];
+  for (const rootId of layout?.rootElementOrder || []) {
+    const node = makeNode(rootId);
+    if (node) order.push(node);
+  }
+
+  for (const elementId of Object.keys(layout?.elements || {})) {
+    if (visited.has(elementId)) continue;
+    const node = makeNode(elementId);
+    if (node) order.push(node);
+  }
+
+  return {
+    items: projectedItems,
+    order,
+  };
+};
+
+const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
+  const legacyLayouts = legacyState?.layouts || { items: {}, order: [] };
+  const legacyOrderIds = flattenHierarchyIds(legacyLayouts?.order || []);
+  const layoutIds = Object.keys(domainState?.layouts || {});
+  const orderedLayoutIds = uniqueIdsInOrder(legacyOrderIds, layoutIds);
+  const projectedItems = {};
+
+  for (const layoutId of orderedLayoutIds) {
+    const layout = domainState?.layouts?.[layoutId];
+    if (!layout) continue;
+    const existingLayout = legacyLayouts?.items?.[layoutId] || {};
+    const layoutClone = structuredClone(layout || {});
+    delete layoutClone.elements;
+    delete layoutClone.rootElementOrder;
+
+    projectedItems[layoutId] = {
+      ...structuredClone(existingLayout),
+      ...layoutClone,
+      id: layoutId,
+      type: "layout",
+      elements: projectDomainLayoutElementsToLegacy({
+        layout,
+        existingLegacyElements: existingLayout?.elements,
+      }),
+    };
+  }
+
+  return {
+    items: projectedItems,
+    order: buildLegacyNodeOrder(orderedLayoutIds),
+  };
+};
+
+const projectDomainVariablesToLegacy = ({ domainState }) => {
+  const domainVariables = domainState?.variables || { items: {}, order: [] };
+  const items = domainVariables.items || {};
+  const projectedItems = {};
+
+  for (const [variableId, variable] of Object.entries(items)) {
+    const clone = structuredClone(variable || {});
+    delete clone.parentId;
+
+    if (clone.type === "folder") {
+      projectedItems[variableId] = {
+        ...clone,
+        id: variableId,
+        type: "folder",
+      };
+      continue;
+    }
+
+    const valueType =
+      typeof clone.type === "string" && clone.type.length > 0
+        ? clone.type
+        : clone.variableType || "string";
+    const defaultValue = Object.prototype.hasOwnProperty.call(clone, "default")
+      ? structuredClone(clone.default)
+      : structuredClone(clone.value ?? "");
+
+    projectedItems[variableId] = {
+      ...clone,
+      id: variableId,
+      itemType: "variable",
+      type: valueType,
+      variableType: valueType,
+      default: defaultValue,
+      value: structuredClone(defaultValue),
+    };
+  }
+
+  return {
+    items: projectedItems,
+    order: buildHierarchyOrderFromFlatCollection({
+      items,
+      order: domainVariables.order || [],
+    }),
+  };
+};
+
+const buildLegacyNodeOrder = (orderedIds) =>
+  orderedIds.map((id) => ({
+    id,
+  }));
+
+const resolveStorySceneOrder = (domainState) => {
+  const sceneIds = Object.keys(domainState?.scenes || {});
+  return uniqueIdsInOrder(domainState?.story?.sceneOrder || [], sceneIds);
+};
+
+const resolveSceneSectionOrder = (domainState, sceneId) => {
+  const scene = domainState?.scenes?.[sceneId] || {};
+  const sectionIds = Object.keys(domainState?.sections || {}).filter(
+    (id) => domainState.sections[id]?.sceneId === sceneId,
+  );
+  return uniqueIdsInOrder(scene.sectionIds || [], sectionIds);
+};
+
+const resolveSectionLineOrder = (domainState, sectionId) => {
+  const section = domainState?.sections?.[sectionId] || {};
+  const lineIds = Object.keys(domainState?.lines || {}).filter(
+    (id) => domainState.lines[id]?.sectionId === sectionId,
+  );
+  return uniqueIdsInOrder(section.lineIds || [], lineIds);
+};
+
+const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
+  const legacyScenesItems = legacyState?.scenes?.items || {};
+  const sceneOrder = resolveStorySceneOrder(domainState);
+  const scenesItems = {};
+
+  for (const sceneId of sceneOrder) {
+    const scene = domainState?.scenes?.[sceneId];
+    if (!scene) continue;
+    const existingScene = legacyScenesItems?.[sceneId] || {};
+    const existingSections = existingScene?.sections || {};
+    const existingSectionItems = existingSections?.items || {};
+    const sectionOrder = resolveSceneSectionOrder(domainState, sceneId);
+    const sectionItems = {};
+
+    for (const sectionId of sectionOrder) {
+      const section = domainState?.sections?.[sectionId];
+      if (!section) continue;
+      const existingSection = existingSectionItems?.[sectionId] || {};
+      const existingLines = existingSection?.lines || {};
+      const existingLineItems = existingLines?.items || {};
+      const lineOrder = resolveSectionLineOrder(domainState, sectionId);
+      const lineItems = {};
+
+      for (const lineId of lineOrder) {
+        const line = domainState?.lines?.[lineId];
+        if (!line) continue;
+        const existingLine = existingLineItems?.[lineId] || {};
+        lineItems[lineId] = {
+          ...structuredClone(existingLine),
+          ...structuredClone(line),
+          id: lineId,
+        };
+      }
+
+      sectionItems[sectionId] = {
+        ...structuredClone(existingSection),
+        ...structuredClone(section),
+        id: sectionId,
+        type: "section",
+        lines: {
+          items: lineItems,
+          order: buildLegacyNodeOrder(lineOrder),
+        },
+      };
+    }
+
+    scenesItems[sceneId] = {
+      ...structuredClone(existingScene),
+      ...structuredClone(scene),
+      id: sceneId,
+      type: "scene",
+      sections: {
+        items: sectionItems,
+        order: buildLegacyNodeOrder(sectionOrder),
+      },
+    };
+  }
+
+  return {
+    story: {
+      ...legacyState?.story,
+      initialSceneId: domainState?.story?.initialSceneId || null,
+    },
+    scenes: {
+      items: scenesItems,
+      order: buildLegacyNodeOrder(sceneOrder),
+    },
+  };
+};
+
+const toStableJsonString = (value) => {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return `__non_serializable__:${String(value)}`;
+  }
+};
+
+const projectTypedCommandToLegacySetEvents = ({
+  legacyState,
+  domainState,
+  command,
+}) => {
+  const targets = new Set();
+
+  if (command.type === "project.update") {
+    targets.add("project");
+  }
+
+  if (hasCommandTypePrefix(command.type, "resource.")) {
+    targets.add("project");
+    if (
+      typeof command?.payload?.resourceType === "string" &&
+      command.payload.resourceType.length > 0
+    ) {
+      targets.add(command.payload.resourceType);
+    }
+  }
+
+  if (
+    hasCommandTypePrefix(command.type, "scene.") ||
+    hasCommandTypePrefix(command.type, "section.") ||
+    hasCommandTypePrefix(command.type, "line.")
+  ) {
+    targets.add("project");
+    targets.add("story");
+    targets.add("scenes");
+  }
+
+  if (hasCommandTypePrefix(command.type, "layout.")) {
+    targets.add("project");
+    targets.add("layouts");
+  }
+
+  if (hasCommandTypePrefix(command.type, "variable.")) {
+    targets.add("project");
+    targets.add("variables");
+  }
+
+  if (targets.size === 0) {
+    return [];
+  }
+
+  const nextState = structuredClone(legacyState || {});
+  if (targets.has("project")) {
+    nextState.project = {
+      ...legacyState?.project,
+      ...structuredClone(domainState?.project),
+    };
+  }
+
+  for (const target of targets) {
+    if (
+      target === "project" ||
+      target === "story" ||
+      target === "scenes" ||
+      target === "layouts" ||
+      target === "variables"
+    ) {
+      continue;
+    }
+    const domainCollection = domainState?.resources?.[target];
+    if (!domainCollection) continue;
+    nextState[target] =
+      projectDomainResourceCollectionToLegacy(domainCollection);
+  }
+
+  if (targets.has("story") || targets.has("scenes")) {
+    const projectedStory = projectDomainStoryToLegacy({
+      domainState,
+      legacyState,
+    });
+    if (targets.has("story")) {
+      nextState.story = projectedStory.story;
+    }
+    if (targets.has("scenes")) {
+      nextState.scenes = projectedStory.scenes;
+    }
+  }
+
+  if (targets.has("layouts")) {
+    nextState.layouts = projectDomainLayoutsToLegacy({
+      domainState,
+      legacyState,
+    });
+  }
+
+  if (targets.has("variables")) {
+    nextState.variables = projectDomainVariablesToLegacy({
+      domainState,
+    });
+  }
+
+  const events = [];
+  for (const target of targets) {
+    const prevValue = legacyState?.[target];
+    const nextValue = nextState?.[target];
+    if (toStableJsonString(prevValue) === toStableJsonString(nextValue)) {
+      continue;
+    }
+    events.push({
+      type: "set",
+      payload: {
+        target,
+        value: structuredClone(nextValue),
+        options: {
+          replace: true,
+        },
+      },
+    });
+  }
+
+  return events;
+};
+
+const applyTypedCommandToRepository = async ({
+  repository,
+  command,
+  projectId,
+}) => {
+  const stateBeforeApply = repository.getState();
+  if (!isDirectDomainProjectionCommand(command)) {
+    throw new Error(
+      `No typed projection handler for command type '${command?.type || "unknown"}'`,
+    );
+  }
+
+  const domainStateBefore = projectLegacyStateToDomainState({
+    legacyState: stateBeforeApply,
+    projectId,
+  });
+  const { state: domainStateAfter } = processCommand({
+    state: domainStateBefore,
+    command,
+  });
+  const projectedEvents = projectTypedCommandToLegacySetEvents({
+    legacyState: stateBeforeApply,
+    domainState: domainStateAfter,
+    command,
+  });
+  for (const event of projectedEvents) {
+    await repository.addEvent(event);
+  }
+
+  return {
+    mode: "typed_domain_projection",
+    events: projectedEvents,
+  };
+};
+
 export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   const collabLog = (level, message, meta = {}) => {
     const fn =
@@ -203,87 +805,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     return committedIds;
   };
 
-  const hashString = (value) => {
-    let hash = 2166136261;
-    for (let index = 0; index < value.length; index += 1) {
-      hash ^= value.charCodeAt(index);
-      hash +=
-        (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-    }
-    return (hash >>> 0).toString(36);
-  };
-
-  const buildSeedMetadataKey = ({ projectId, endpointUrl }) =>
-    `collab.seed.init.v1.${projectId}.${hashString(endpointUrl)}`;
-
-  const maybeSeedServerFromLocalInit = async ({
-    projectId,
-    resolvedProjectId,
-    endpointUrl,
-    actor,
-    repository,
-    collabSession,
-  }) => {
-    const diagnostics = collabDiagnosticsByProject.get(projectId) || {};
-    const syncedCursor = Number(diagnostics.lastSyncedCursor);
-
-    if (!Number.isFinite(syncedCursor) || syncedCursor !== 0) {
-      return;
-    }
-
-    const adapter = adaptersByProject.get(projectId);
-    if (!adapter?.app) {
-      return;
-    }
-
-    const seedKey = buildSeedMetadataKey({
-      projectId: resolvedProjectId,
-      endpointUrl,
-    });
-    const existingSeed = await adapter.app.get(seedKey);
-    if (existingSeed?.status === "seeded") {
-      return;
-    }
-
-    const localEvents = await repository.getEvents();
-    const initEvent = localEvents.find((event) => event?.type === "init") || {
-      type: "init",
-      payload: {
-        value: repository.getState(),
-      },
-    };
-
-    const seedId = `seed-init:${resolvedProjectId}:${hashString(
-      JSON.stringify(initEvent?.payload?.value || {}),
-    )}`;
-
-    await collabSession.submitLegacyCommand(
-      createLegacyEventCommand({
-        projectId: resolvedProjectId,
-        actor,
-        event: initEvent,
-        commandId: seedId,
-      }),
-    );
-
-    await adapter.app.set(seedKey, {
-      status: "seeded",
-      seedId,
-      endpointUrl,
-      seededAt: Date.now(),
-    });
-    collabLog("info", "seeded server from local init", {
-      projectId: resolvedProjectId,
-      endpointUrl,
-      seedId,
-    });
-    updateCollabDiagnostics(projectId, {
-      status: "seeded_from_local_init",
-      lastSeedId: seedId,
-      lastSeedAt: Date.now(),
-    });
-  };
-
   const queueCollabApply = (projectId, task) => {
     const previous =
       collabApplyQueueByProject.get(projectId) || Promise.resolve();
@@ -342,6 +863,10 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
       projectDescription: state.project?.description || "",
+      initialState: projectLegacyStateToDomainState({
+        legacyState: state,
+        projectId: resolvedProjectId,
+      }),
       token,
       actor,
       partitions: resolvedPartitions,
@@ -372,75 +897,82 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         isFromCurrentActor,
       }) =>
         queueCollabApply(projectId, async () => {
-          const applyLegacyCommand = async ({
+          const applyCommittedCommandToRepository = async ({
             command,
             committedEvent,
             sourceType,
             isFromCurrentActor,
           }) => {
-            const isLegacyEventCommand = command?.type === "legacy.event.apply";
-            const shouldApplyRemoteLegacyEvent =
-              isLegacyEventCommand &&
-              (!isFromCurrentActor || sourceType === "broadcast");
-
-            if (
-              isLegacyEventCommand &&
-              isFromCurrentActor &&
-              sourceType !== "broadcast"
-            ) {
+            if (isFromCurrentActor) {
               collabLog(
                 "debug",
-                "legacy event skipped (current actor source)",
+                "typed command skipped (current actor source)",
                 {
                   projectId,
                   sourceType,
                   commandId: command?.id || null,
+                  commandType: command?.type || null,
                   committedId: Number.isFinite(
                     Number(committedEvent?.committed_id),
                   )
                     ? Number(committedEvent.committed_id)
                     : null,
-                  actor: command?.actor || null,
                 },
               );
-            }
-
-            if (!shouldApplyRemoteLegacyEvent) {
-              return;
-            }
-
-            const remoteEvent = command?.payload?.event;
-            if (!remoteEvent || typeof remoteEvent !== "object") {
               return;
             }
 
             const beforeState = repository.getState();
             const beforeImagesCount = countImageEntries(beforeState?.images);
-            await repository.addEvent(remoteEvent);
+            const applyResult = await applyTypedCommandToRepository({
+              repository,
+              command,
+              projectId: resolvedProjectId,
+            });
+            if (applyResult.events.length === 0) {
+              collabLog(
+                "warn",
+                "typed command ignored (no projection events)",
+                {
+                  projectId,
+                  sourceType,
+                  commandType: command?.type || null,
+                  commandId: command?.id || null,
+                },
+              );
+              return;
+            }
+
+            for (const event of legacyEvents) {
+              await repository.addEvent(event);
+            }
+
             const afterState = repository.getState();
             const afterImagesCount = countImageEntries(afterState?.images);
-            collabLog("info", "remote legacy event applied to repository", {
+            collabLog("info", "remote typed command applied to repository", {
               projectId,
-              eventType: remoteEvent?.type || null,
-              eventTarget: remoteEvent?.payload?.target || null,
+              commandType: command?.type || null,
+              applyMode: applyResult.mode,
+              eventCount: applyResult.events.length,
               beforeImagesCount,
               afterImagesCount,
               sourceType,
-              isFromCurrentActor,
             });
             updateCollabDiagnostics(projectId, {
-              status: "remote_legacy_event_applied",
+              status: "remote_typed_command_applied",
               sourceType,
-              lastRemoteEventType: remoteEvent.type || null,
+              lastRemoteCommandType: command?.type || null,
             });
             if (typeof onRemoteEvent === "function") {
-              onRemoteEvent({
-                projectId,
-                sourceType,
-                command,
-                committedEvent,
-                event: remoteEvent,
-              });
+              for (const event of applyResult.events) {
+                onRemoteEvent({
+                  projectId,
+                  sourceType,
+                  command,
+                  committedEvent,
+                  event,
+                });
+              }
             }
           };
 
@@ -471,7 +1003,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
             }
           }
 
-          await applyLegacyCommand({
+          await applyCommittedCommandToRepository({
             command,
             committedEvent,
             sourceType,
@@ -515,14 +1047,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       });
       collabLog("info", "websocket transport attached", {
         endpointUrl,
-      });
-      await maybeSeedServerFromLocalInit({
-        projectId,
-        resolvedProjectId,
-        endpointUrl,
-        actor,
-        repository,
-        collabSession,
       });
     }
 
@@ -767,6 +1291,147 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     return processor(file);
   };
 
+  const ensureTypedCommandContext = async () => {
+    const repository = await getCurrentRepository();
+    const currentProjectId = getCurrentProjectId();
+    if (!currentProjectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+    const state = repository.getState();
+    assertV2State(state);
+
+    const projectId = state.project?.id || currentProjectId;
+    const session = await ensureCommandSessionForProject(currentProjectId);
+    const actor =
+      typeof session.getActor === "function"
+        ? session.getActor()
+        : getOrCreateLocalActor(currentProjectId);
+
+    return {
+      repository,
+      state,
+      session,
+      actor,
+      projectId,
+      currentProjectId,
+    };
+  };
+
+  const submitTypedCommandWithContext = async ({
+    context,
+    scope,
+    type,
+    payload,
+    partitions = [],
+  }) => {
+    const basePartition = `project:${context.projectId}:${scope}`;
+    const command = createCommandEnvelope({
+      projectId: context.projectId,
+      scope,
+      partition: basePartition,
+      partitions: uniquePartitions(basePartition, ...partitions),
+      type,
+      payload,
+      actor: context.actor,
+    });
+
+    await context.session.submitCommand(command);
+
+    const applyResult = await applyTypedCommandToRepository({
+      repository: context.repository,
+      command,
+      projectId: context.projectId,
+    });
+
+    return {
+      commandId: command.id,
+      legacyEventCount: applyResult.events.length,
+      applyMode: applyResult.mode,
+    };
+  };
+
+  const resolveResourceIndex = ({
+    state,
+    resourceType,
+    parentId,
+    position,
+    index,
+    movingId = null,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const collection = state?.[resourceType];
+    const siblings = getSiblingOrderNodes(collection, parentId);
+    return resolveIndexFromLegacyPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveSceneIndex = ({
+    state,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(state?.scenes, parentId);
+    return resolveIndexFromLegacyPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveSectionIndex = ({
+    scene,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(scene?.sections, parentId);
+    return resolveIndexFromLegacyPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveLineIndex = ({
+    section,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(section?.lines, parentId);
+    return resolveIndexFromLegacyPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveLayoutElementIndex = ({
+    layout,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(layout?.elements, parentId);
+    return resolveIndexFromLegacyPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
   return {
     // Repository access - uses current project from URL
     async getRepository() {
@@ -781,36 +1446,748 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     async ensureRepository() {
       return getCurrentRepository();
     },
+    async updateProjectFields({ patch }) {
+      const context = await ensureTypedCommandContext();
+      const keys = Object.keys(patch || {}).filter(
+        (key) =>
+          key && key !== "id" && key !== "createdAt" && key !== "updatedAt",
+      );
+      if (keys.length === 0) return;
+
+      const basePartition = `project:${context.projectId}:settings`;
+      const partitions = uniquePartitions(
+        basePartition,
+        ...keys.map((key) => `${basePartition}:project_field:${key}`),
+      );
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "project.update",
+        payload: {
+          patch: structuredClone(patch),
+        },
+        partitions,
+      });
+    },
+    async createSceneItem({
+      sceneId,
+      name,
+      parentId = null,
+      position = "last",
+      index,
+      data = {},
+    }) {
+      const context = await ensureTypedCommandContext();
+      const nextSceneId = sceneId || nanoid();
+      const resolvedIndex = resolveSceneIndex({
+        state: context.state,
+        parentId,
+        position,
+        index,
+      });
+      const basePartition = `project:${context.projectId}:story`;
+      const scenePartition = `${basePartition}:scene:${nextSceneId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.create",
+        payload: {
+          sceneId: nextSceneId,
+          name,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+          data: structuredClone(data || {}),
+        },
+        partitions: [basePartition, scenePartition],
+      });
+      return nextSceneId;
+    },
+    async updateSceneItem({ sceneId, patch }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const scenePartition = `${basePartition}:scene:${sceneId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.update",
+        payload: {
+          sceneId,
+          patch: structuredClone(patch || {}),
+        },
+        partitions: [basePartition, scenePartition],
+      });
+    },
+    async renameSceneItem({ sceneId, name }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const scenePartition = `${basePartition}:scene:${sceneId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.rename",
+        payload: {
+          sceneId,
+          name,
+        },
+        partitions: [basePartition, scenePartition],
+      });
+    },
+    async deleteSceneItem({ sceneId }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const scenePartition = `${basePartition}:scene:${sceneId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.delete",
+        payload: {
+          sceneId,
+        },
+        partitions: [basePartition, scenePartition],
+      });
+    },
+    async setInitialScene({ sceneId }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const scenePartition = `${basePartition}:scene:${sceneId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.set_initial",
+        payload: {
+          sceneId,
+        },
+        partitions: [basePartition, scenePartition],
+      });
+    },
+    async reorderSceneItem({
+      sceneId,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const resolvedIndex = resolveSceneIndex({
+        state: context.state,
+        parentId,
+        position,
+        index,
+        movingId: sceneId,
+      });
+      const basePartition = `project:${context.projectId}:story`;
+      const scenePartition = `${basePartition}:scene:${sceneId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.reorder",
+        payload: {
+          sceneId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [basePartition, scenePartition],
+      });
+    },
+    async createSectionItem({
+      sceneId,
+      sectionId,
+      name,
+      parentId = null,
+      position = "last",
+      index,
+      data = {},
+    }) {
+      const context = await ensureTypedCommandContext();
+      const nextSectionId = sectionId || nanoid();
+      const scene = context.state?.scenes?.items?.[sceneId];
+      const resolvedIndex = resolveSectionIndex({
+        scene,
+        parentId,
+        position,
+        index,
+      });
+      const basePartition = `project:${context.projectId}:story`;
+      const scenePartition = `${basePartition}:scene:${sceneId}`;
+      const sectionPartition = `${basePartition}:section:${nextSectionId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "section.create",
+        payload: {
+          sceneId,
+          sectionId: nextSectionId,
+          name,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+          data: structuredClone(data || {}),
+        },
+        partitions: [basePartition, scenePartition, sectionPartition],
+      });
+
+      return nextSectionId;
+    },
+    async renameSectionItem({ sectionId, name }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const sectionPartition = `${basePartition}:section:${sectionId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "section.rename",
+        payload: {
+          sectionId,
+          name,
+        },
+        partitions: [basePartition, sectionPartition],
+      });
+    },
+    async deleteSectionItem({ sectionId }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const sectionPartition = `${basePartition}:section:${sectionId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "section.delete",
+        payload: {
+          sectionId,
+        },
+        partitions: [basePartition, sectionPartition],
+      });
+    },
+    async reorderSectionItem({
+      sectionId,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const sectionLocation = findSectionLocation(context.state, sectionId);
+      const resolvedIndex = resolveSectionIndex({
+        scene: sectionLocation?.scene,
+        parentId,
+        position,
+        index,
+        movingId: sectionId,
+      });
+      const basePartition = `project:${context.projectId}:story`;
+      const sectionPartition = `${basePartition}:section:${sectionId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "section.reorder",
+        payload: {
+          sectionId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [basePartition, sectionPartition],
+      });
+    },
+    async createLineItem({
+      sectionId,
+      lineId,
+      line = {},
+      afterLineId,
+      parentId = null,
+      position,
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const nextLineId = lineId || nanoid();
+      const sectionLocation = findSectionLocation(context.state, sectionId);
+      const resolvedPosition =
+        position || (afterLineId ? { after: afterLineId } : undefined);
+      const resolvedIndex = resolveLineIndex({
+        section: sectionLocation?.section,
+        parentId,
+        position: resolvedPosition || "last",
+        index,
+      });
+      const basePartition = `project:${context.projectId}:story`;
+      const sectionPartition = `${basePartition}:section:${sectionId}`;
+      const linePartition = `${basePartition}:line:${nextLineId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.insert_after",
+        payload: {
+          sectionId,
+          lineId: nextLineId,
+          line: structuredClone(line || {}),
+          afterLineId: afterLineId || null,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position: resolvedPosition || "last",
+        },
+        partitions: [basePartition, sectionPartition, linePartition],
+      });
+
+      return nextLineId;
+    },
+    async updateLineActions({ lineId, patch, replace = false }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const linePartition = `${basePartition}:line:${lineId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.update_actions",
+        payload: {
+          lineId,
+          patch: structuredClone(patch || {}),
+          replace: replace === true,
+        },
+        partitions: [basePartition, linePartition],
+      });
+    },
+    async deleteLineItem({ lineId }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:story`;
+      const linePartition = `${basePartition}:line:${lineId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.delete",
+        payload: {
+          lineId,
+        },
+        partitions: [basePartition, linePartition],
+      });
+    },
+    async moveLineItem({
+      lineId,
+      toSectionId,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const targetSection = findSectionLocation(context.state, toSectionId);
+      const resolvedIndex = resolveLineIndex({
+        section: targetSection?.section,
+        parentId,
+        position,
+        index,
+        movingId: lineId,
+      });
+      const basePartition = `project:${context.projectId}:story`;
+      const sectionPartition = `${basePartition}:section:${toSectionId}`;
+      const linePartition = `${basePartition}:line:${lineId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.move",
+        payload: {
+          lineId,
+          toSectionId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [basePartition, sectionPartition, linePartition],
+      });
+    },
+    async createResourceItem({
+      resourceType,
+      resourceId,
+      data,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const nextResourceId = resourceId || nanoid();
+      const resolvedIndex = resolveResourceIndex({
+        state: context.state,
+        resourceType,
+        parentId,
+        position,
+        index,
+      });
+      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${nextResourceId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        type: "resource.create",
+        payload: {
+          resourceType,
+          resourceId: nextResourceId,
+          data: structuredClone(data),
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [entityPartition],
+      });
+      return nextResourceId;
+    },
+    async updateResourceItem({ resourceType, resourceId, patch }) {
+      const context = await ensureTypedCommandContext();
+      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${resourceId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        type: "resource.update",
+        payload: {
+          resourceType,
+          resourceId,
+          patch: structuredClone(patch),
+        },
+        partitions: [entityPartition],
+      });
+    },
+    async moveResourceItem({
+      resourceType,
+      resourceId,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const resolvedIndex = resolveResourceIndex({
+        state: context.state,
+        resourceType,
+        parentId,
+        position,
+        index,
+        movingId: resourceId,
+      });
+      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${resourceId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        type: "resource.move",
+        payload: {
+          resourceType,
+          resourceId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [entityPartition],
+      });
+    },
+    async deleteResourceItem({ resourceType, resourceId }) {
+      const context = await ensureTypedCommandContext();
+      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${resourceId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        type: "resource.delete",
+        payload: {
+          resourceType,
+          resourceId,
+        },
+        partitions: [entityPartition],
+      });
+    },
+    async duplicateResourceItem({
+      resourceType,
+      sourceId,
+      newId,
+      parentId,
+      position,
+      index,
+      name,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const collection = context.state?.[resourceType];
+      const sourceItem = collection?.items?.[sourceId];
+      const resolvedParentId = normalizeParentId(
+        parentId ?? sourceItem?.parentId ?? null,
+      );
+      const resolvedPosition = position || { after: sourceId };
+      const resolvedIndex = resolveResourceIndex({
+        state: context.state,
+        resourceType,
+        parentId: resolvedParentId,
+        position: resolvedPosition,
+        index,
+      });
+      const sourcePartition = `project:${context.projectId}:resources:${resourceType}:${sourceId}`;
+      const newPartition = `project:${context.projectId}:resources:${resourceType}:${newId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        type: "resource.duplicate",
+        payload: {
+          resourceType,
+          sourceId,
+          newId,
+          parentId: resolvedParentId,
+          index: resolvedIndex,
+          position: resolvedPosition,
+          name: typeof name === "string" && name.length > 0 ? name : undefined,
+        },
+        partitions: [sourcePartition, newPartition],
+      });
+    },
+    async createLayoutItem({
+      layoutId,
+      name,
+      layoutType = "normal",
+      elements = { items: {}, order: [] },
+      parentId = null,
+      position = "last",
+      data = {},
+    }) {
+      const context = await ensureTypedCommandContext();
+      const nextLayoutId = layoutId || nanoid();
+      const basePartition = `project:${context.projectId}:layouts`;
+      const layoutPartition = `${basePartition}:layout:${nextLayoutId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.create",
+        payload: {
+          layoutId: nextLayoutId,
+          name,
+          layoutType,
+          elements: structuredClone(elements || { items: {}, order: [] }),
+          parentId: normalizeParentId(parentId),
+          position,
+          data: structuredClone(data || {}),
+        },
+        partitions: [basePartition, layoutPartition],
+      });
+
+      return nextLayoutId;
+    },
+    async renameLayoutItem({ layoutId, name }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:layouts`;
+      const layoutPartition = `${basePartition}:layout:${layoutId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.rename",
+        payload: {
+          layoutId,
+          name,
+        },
+        partitions: [basePartition, layoutPartition],
+      });
+    },
+    async deleteLayoutItem({ layoutId }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:layouts`;
+      const layoutPartition = `${basePartition}:layout:${layoutId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.delete",
+        payload: {
+          layoutId,
+        },
+        partitions: [basePartition, layoutPartition],
+      });
+    },
+    async updateLayoutElement({ layoutId, elementId, patch, replace = true }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:layouts`;
+      const layoutPartition = `${basePartition}:layout:${layoutId}`;
+      const elementPartition = `${layoutPartition}:element:${elementId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.update",
+        payload: {
+          layoutId,
+          elementId,
+          patch: structuredClone(patch || {}),
+          replace: replace === true,
+        },
+        partitions: [basePartition, layoutPartition, elementPartition],
+      });
+    },
+    async createLayoutElement({
+      layoutId,
+      elementId,
+      element,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const nextElementId = elementId || nanoid();
+      const layout = context.state?.layouts?.items?.[layoutId];
+      const resolvedIndex = resolveLayoutElementIndex({
+        layout,
+        parentId,
+        position,
+        index,
+      });
+      const basePartition = `project:${context.projectId}:layouts`;
+      const layoutPartition = `${basePartition}:layout:${layoutId}`;
+      const elementPartition = `${layoutPartition}:element:${nextElementId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.create",
+        payload: {
+          layoutId,
+          elementId: nextElementId,
+          element: structuredClone(element || {}),
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [basePartition, layoutPartition, elementPartition],
+      });
+
+      return nextElementId;
+    },
+    async moveLayoutElement({
+      layoutId,
+      elementId,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const layout = context.state?.layouts?.items?.[layoutId];
+      const resolvedIndex = resolveLayoutElementIndex({
+        layout,
+        parentId,
+        position,
+        index,
+        movingId: elementId,
+      });
+      const basePartition = `project:${context.projectId}:layouts`;
+      const layoutPartition = `${basePartition}:layout:${layoutId}`;
+      const elementPartition = `${layoutPartition}:element:${elementId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.move",
+        payload: {
+          layoutId,
+          elementId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [basePartition, layoutPartition, elementPartition],
+      });
+    },
+    async deleteLayoutElement({ layoutId, elementId }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:layouts`;
+      const layoutPartition = `${basePartition}:layout:${layoutId}`;
+      const elementPartition = `${layoutPartition}:element:${elementId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.delete",
+        payload: {
+          layoutId,
+          elementId,
+        },
+        partitions: [basePartition, layoutPartition, elementPartition],
+      });
+    },
+    async createVariableItem({
+      variableId,
+      name,
+      scope = "global",
+      type = "string",
+      defaultValue = "",
+      parentId = null,
+      position = "last",
+    }) {
+      const context = await ensureTypedCommandContext();
+      const nextVariableId = variableId || nanoid();
+      const basePartition = `project:${context.projectId}:settings`;
+      const variablePartition = `${basePartition}:variable:${nextVariableId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "variable.create",
+        payload: {
+          variableId: nextVariableId,
+          name,
+          variableType: type,
+          initialValue: defaultValue,
+          parentId: normalizeParentId(parentId),
+          position,
+          data: {
+            scope,
+          },
+        },
+        partitions: [basePartition, variablePartition],
+      });
+
+      return nextVariableId;
+    },
+    async updateVariableItem({ variableId, patch }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:settings`;
+      const variablePartition = `${basePartition}:variable:${variableId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "variable.update",
+        payload: {
+          variableId,
+          patch: structuredClone(patch || {}),
+        },
+        partitions: [basePartition, variablePartition],
+      });
+    },
+    async deleteVariableItem({ variableId }) {
+      const context = await ensureTypedCommandContext();
+      const basePartition = `project:${context.projectId}:settings`;
+      const variablePartition = `${basePartition}:variable:${variableId}`;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "variable.delete",
+        payload: {
+          variableId,
+        },
+        partitions: [basePartition, variablePartition],
+      });
+    },
     async appendEvent(event) {
-      const repository = await getCurrentRepository();
-      await repository.addEvent(event);
-
-      try {
-        const currentProjectId = getCurrentProjectId();
-        if (!currentProjectId) return;
-
-        const session = await ensureCommandSessionForProject(currentProjectId);
-        const state = repository.getState();
-        assertV2State(state);
-
-        const projectId = state.project?.id || currentProjectId;
-        const actor =
-          typeof session.getActor === "function"
-            ? session.getActor()
-            : getOrCreateLocalActor(currentProjectId);
-        const command = createLegacyEventCommand({ projectId, actor, event });
-
-        if (typeof session.submitLegacyCommand === "function") {
-          await session.submitLegacyCommand(command);
-        } else {
-          await session.submitCommand(command);
-        }
-      } catch (error) {
-        console.warn(
-          "appendEvent command bridge failed; local event persisted only",
-          error,
-        );
-      }
+      void event;
+      throw new Error(
+        "appendEvent is no longer supported in typed-collab mode. Use typed command APIs.",
+      );
     },
     getState() {
       const repository = getCachedRepository();

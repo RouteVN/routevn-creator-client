@@ -422,11 +422,7 @@ function createProjectDataWithSelectedEntryPoint(projectData, selection) {
 }
 
 // Shared helper to write dialogue content to repository
-async function writeDialogueContent(
-  deps,
-  lineId,
-  { sceneId, sectionId, content },
-) {
+async function writeDialogueContent(deps, lineId, { sectionId, content }) {
   const { projectService } = deps;
 
   // Get existing dialogue to preserve other properties (layoutId, characterId, etc.)
@@ -440,17 +436,16 @@ async function writeDialogueContent(
     existingDialogue,
   });
 
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-      value: {
+  await projectService.updateLineActions({
+    lineId,
+    patch: {
+      dialogue: {
         ...existingDialogue,
         ...(shouldInheritNvlMode ? { mode: "nvl" } : {}),
         content,
       },
-      options: { replace: true },
     },
+    replace: false,
   });
 }
 
@@ -696,8 +691,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     graphicsService,
     appService,
   } = deps;
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
 
   // Handle section/scene transitions
@@ -720,15 +713,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: safeDetail,
-        options: {
-          replace: false,
-        },
-      },
+    await projectService.updateLineActions({
+      lineId,
+      patch: safeDetail,
+      replace: false,
     });
 
     syncStoreProjectState(store, projectService);
@@ -761,15 +749,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: safeDetail,
-        options: {
-          replace: false,
-        },
-      },
+    await projectService.updateLineActions({
+      lineId,
+      patch: safeDetail,
+      replace: false,
     });
 
     syncStoreProjectState(store, projectService);
@@ -802,15 +785,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: safeDetail,
-        options: {
-          replace: false,
-        },
-      },
+    await projectService.updateLineActions({
+      lineId,
+      patch: safeDetail,
+      replace: false,
     });
 
     syncStoreProjectState(store, projectService);
@@ -856,15 +834,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-      value: submissionData,
-      options: {
-        replace: false,
-      },
-    },
+  await projectService.updateLineActions({
+    lineId,
+    patch: submissionData,
+    replace: false,
   });
 
   syncStoreProjectState(store, projectService);
@@ -887,7 +860,6 @@ export const handleEditorDataChanged = async (deps, payload) => {
   store.setLineTextContent({ lineId, content });
 
   // Queue the pending update and schedule debounced write
-  const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   dialogueQueueService.setAndSchedule(lineId, { sceneId, sectionId, content });
 
@@ -965,31 +937,19 @@ export const handleSectionAddClick = async (deps) => {
     };
   }
 
-  await projectService.appendEvent({
-    type: "nodeInsert",
-    payload: {
-      target: `scenes.items.${sceneId}.sections`,
-      value: {
-        id: newSectionId,
-        name: newSectionName,
-        lines: {
-          items: {
-            [newLineId]: {
-              actions: actions,
-            },
-          },
-          order: [
-            {
-              id: newLineId,
-            },
-          ],
-        },
-      },
-      options: {
-        parent: "_root",
-        position: "last",
-      },
+  await projectService.createSectionItem({
+    sceneId,
+    sectionId: newSectionId,
+    name: newSectionName,
+    position: "last",
+  });
+  await projectService.createLineItem({
+    sectionId: newSectionId,
+    lineId: newLineId,
+    line: {
+      actions,
     },
+    position: "last",
   });
 
   // Update store with new repository state
@@ -1067,7 +1027,6 @@ export const handleSplitLine = async (deps, payload) => {
     return;
   }
 
-  const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = payload._event.detail;
 
@@ -1098,27 +1057,25 @@ export const handleSplitLine = async (deps, payload) => {
     : [{ text: "" }];
 
   if (existingDialogue && Object.keys(existingDialogue).length > 0) {
-    // If dialogue exists, update only the content
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
-        value: leftContentArray,
-        options: {
-          replace: true,
-        },
-      },
-    });
-  } else {
-    // If no dialogue exists but we have content, create minimal dialogue
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-        value: {
+    await projectService.updateLineActions({
+      lineId,
+      patch: {
+        dialogue: {
+          ...existingDialogue,
           content: leftContentArray,
         },
       },
+      replace: false,
+    });
+  } else {
+    await projectService.updateLineActions({
+      lineId,
+      patch: {
+        dialogue: {
+          content: leftContentArray,
+        },
+      },
+      replace: false,
     });
   }
 
@@ -1145,19 +1102,13 @@ export const handleSplitLine = async (deps, payload) => {
       }
     : {};
 
-  await projectService.appendEvent({
-    type: "nodeInsert",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: {
-        id: newLineId,
-        actions: newLineActions,
-      },
-      options: {
-        parent: "_root",
-        position: { after: lineId },
-      },
+  await projectService.createLineItem({
+    sectionId,
+    lineId: newLineId,
+    line: {
+      actions: newLineActions,
     },
+    afterLineId: lineId,
   });
 
   // Update store with new repository state (pending updates were already flushed)
@@ -1212,7 +1163,6 @@ export const handleNewLine = async (deps) => {
     return;
   }
 
-  const sceneId = store.selectSceneId();
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   const selectedLine = store.selectSelectedLine();
@@ -1234,19 +1184,13 @@ export const handleNewLine = async (deps) => {
       }
     : {};
 
-  await projectService.appendEvent({
-    type: "nodeInsert",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: {
-        id: newLineId,
-        actions: newLineActions,
-      },
-      options: {
-        parent: "_root",
-        position: "last",
-      },
+  await projectService.createLineItem({
+    sectionId,
+    lineId: newLineId,
+    line: {
+      actions: newLineActions,
     },
+    position: "last",
   });
 
   render();
@@ -1427,7 +1371,6 @@ export const handleMergeLines = async (deps, payload) => {
 
   const { prevLineId, currentLineId, contentToAppend } = payload._event.detail;
 
-  const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
   // Check if this line is already being processed (split/merge)
@@ -1467,30 +1410,18 @@ export const handleMergeLines = async (deps, payload) => {
 
   const finalContent = [{ text: mergedContent }];
   // Update previous line with merged content
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions.dialogue`,
-      value: {
+  await projectService.updateLineActions({
+    lineId: prevLineId,
+    patch: {
+      dialogue: {
         ...existingDialogue,
         content: finalContent,
       },
-      options: {
-        replace: true,
-      },
     },
+    replace: false,
   });
 
-  // Delete current line
-  await projectService.appendEvent({
-    type: "nodeDelete",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      options: {
-        id: currentLineId,
-      },
-    },
-  });
+  await projectService.deleteLineItem({ lineId: currentLineId });
 
   // Update repository state in store to reflect the changes
   syncStoreProjectState(store, projectService);
@@ -1587,15 +1518,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   if (action === "delete-section") {
-    // Delete section from repository
-    await projectService.appendEvent({
-      type: "nodeDelete",
-      payload: {
-        target: `scenes.items.${sceneId}.sections`,
-        options: {
-          id: sectionId,
-        },
-      },
+    await projectService.deleteSectionItem({
+      sceneId,
+      sectionId,
     });
 
     // Update store with new repository state
@@ -1633,24 +1558,27 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
             content: currentActions.dialogue.content,
           };
 
-          await projectService.appendEvent({
-            type: "set",
-            payload: {
-              target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
-              value: updatedDialogue,
-              options: {
-                replace: true,
-              },
+          await projectService.updateLineActions({
+            lineId: selectedLineId,
+            patch: {
+              dialogue: updatedDialogue,
             },
+            replace: false,
           });
         }
       } else {
-        // For all other actions types, use unset to remove completely
-        await projectService.appendEvent({
-          type: "unset",
-          payload: {
-            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
-          },
+        const stateBefore = projectService.getState();
+        const currentActions =
+          stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
+            selectedSectionId
+          ]?.lines?.items?.[selectedLineId]?.actions || {};
+        const nextActions = structuredClone(currentActions);
+        delete nextActions[actionsType];
+
+        await projectService.updateLineActions({
+          lineId: selectedLineId,
+          patch: nextActions,
+          replace: true,
         });
       }
 
@@ -1692,20 +1620,11 @@ export const handleFormActionClick = async (deps, payload) => {
     // Hide popover
     store.hidePopover();
 
-    // Update section name in repository
     if (sectionId && values.name && sceneId) {
-      await projectService.appendEvent({
-        type: "nodeUpdate",
-        payload: {
-          target: `scenes.items.${sceneId}.sections`,
-          value: {
-            name: values.name,
-          },
-          options: {
-            id: sectionId,
-            replace: false,
-          },
-        },
+      await projectService.renameSectionItem({
+        sceneId,
+        sectionId,
+        name: values.name,
       });
 
       // Update store with new repository state
@@ -1750,26 +1669,10 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
       delete newActions[actionType];
     }
   }
-  // Create updated line object
-  const updatedLine = {
-    ...selectedLine,
-    actions: newActions,
-  };
-
-  // Save directly to repository - this will update the state
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
-
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: updatedLine,
-      options: {
-        id: selectedLine.id,
-        replace: true,
-      },
-    },
+  await projectService.updateLineActions({
+    lineId: selectedLine.id,
+    patch: newActions,
+    replace: true,
   });
   // Update store with new repository state
   syncStoreProjectState(store, projectService);
@@ -1891,26 +1794,10 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
     // For non-inherited actions, delete as before
     delete newActions[actionType];
   }
-  // Create updated line object
-  const updatedLine = {
-    ...selectedLine,
-    actions: newActions,
-  };
-
-  // Save directly to repository - this will update the state
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
-
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: updatedLine,
-      options: {
-        id: selectedLine.id,
-        replace: true,
-      },
-    },
+  await projectService.updateLineActions({
+    lineId: selectedLine.id,
+    patch: newActions,
+    replace: true,
   });
   // Update store with new repository state
   syncStoreProjectState(store, projectService);

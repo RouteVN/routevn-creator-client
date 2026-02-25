@@ -139,24 +139,65 @@ const projectLegacyResources = ({ legacyState }) => {
 };
 
 const projectLegacyVariables = ({ legacyVariables = {} }) => {
-  const result = {};
+  const result = {
+    items: {},
+    order: [],
+  };
   const items = legacyVariables.items || {};
+  const { parentById, orderedIds } = buildHierarchyParentMap(
+    legacyVariables.order,
+  );
+  const allIds = Object.keys(items);
+  result.order = appendMissingIds(orderedIds, allIds);
+
   for (const [variableId, variable] of Object.entries(items)) {
-    if (!variable || variable.type === "folder") continue;
-    result[variableId] = {
+    if (!variable || typeof variable !== "object") continue;
+    const parentId = parentById.has(variableId)
+      ? parentById.get(variableId)
+      : (variable?.parentId ?? null);
+    const createdAt = toFiniteTimestamp(variable.createdAt, Date.now());
+    const updatedAt = toFiniteTimestamp(variable.updatedAt, createdAt);
+
+    if (variable.type === "folder") {
+      result.items[variableId] = {
+        id: variableId,
+        ...cloneOr(variable, {}),
+        type: "folder",
+        name: variable.name || `Folder ${variableId}`,
+        parentId,
+        createdAt,
+        updatedAt,
+      };
+      continue;
+    }
+
+    const inferredType =
+      variable.type ||
+      variable.variableType ||
+      (typeof variable.default === "number" ||
+      typeof variable.value === "number"
+        ? "number"
+        : typeof variable.default === "boolean" ||
+            typeof variable.value === "boolean"
+          ? "boolean"
+          : "string");
+    const inferredDefault =
+      variable.default !== undefined
+        ? cloneOr(variable.default, "")
+        : cloneOr(variable.value, "");
+
+    result.items[variableId] = {
       id: variableId,
-      name: variable.name || `Variable ${variableId}`,
-      variableType:
-        variable.variableType ||
-        (typeof variable.value === "number" ? "number" : "string"),
-      value: cloneOr(variable.value, ""),
-      createdAt: toFiniteTimestamp(variable.createdAt, Date.now()),
-      updatedAt: toFiniteTimestamp(
-        variable.updatedAt,
-        toFiniteTimestamp(variable.createdAt, Date.now()),
-      ),
+      ...cloneOr(variable, {}),
+      itemType: "variable",
+      type: inferredType,
+      default: inferredDefault,
+      parentId,
+      createdAt,
+      updatedAt,
     };
   }
+
   return result;
 };
 

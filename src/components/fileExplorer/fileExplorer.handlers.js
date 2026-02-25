@@ -4,6 +4,12 @@ import {
   getTypographyCount,
   getTypographyRemovalCount,
 } from "../../constants/typography.js";
+import {
+  nodeDelete,
+  nodeInsert,
+  nodeMove,
+  nodeUpdate,
+} from "../../deps/infra/domainStructure/actions.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
@@ -46,6 +52,70 @@ const isTextElementType = (type) =>
     "text-ref-dialogue-line-character-name",
     "text-ref-dialogue-line-content",
   ].includes(type);
+
+const TYPED_RESOURCE_TARGETS = new Set([
+  "images",
+  "tweens",
+  "videos",
+  "sounds",
+  "characters",
+  "fonts",
+  "transforms",
+  "colors",
+  "typography",
+  "components",
+]);
+
+const isTypedResourceTarget = (repositoryTarget) =>
+  TYPED_RESOURCE_TARGETS.has(repositoryTarget);
+
+const parseLayoutElementsTarget = (repositoryTarget) => {
+  const match = /^layouts\.items\.([^.]+)\.elements$/.exec(
+    String(repositoryTarget || ""),
+  );
+  if (!match) return null;
+  return { layoutId: match[1] };
+};
+
+const isLayoutsTarget = (repositoryTarget) => repositoryTarget === "layouts";
+const isScenesTarget = (repositoryTarget) => repositoryTarget === "scenes";
+const isVariablesTarget = (repositoryTarget) =>
+  repositoryTarget === "variables";
+
+const parseCharacterSpritesTarget = (repositoryTarget) => {
+  const match = /^characters\.items\.([^.]+)\.sprites$/.exec(
+    String(repositoryTarget || ""),
+  );
+  if (!match) return null;
+  return { characterId: match[1] };
+};
+
+const applyCharacterSpritesPatch = async ({
+  projectService,
+  characterId,
+  patchFactory,
+}) => {
+  const state = projectService.getState();
+  const character = state?.characters?.items?.[characterId];
+  if (!character) {
+    throw new Error(`Character '${characterId}' not found`);
+  }
+
+  const spritesState = structuredClone(
+    character.sprites || { items: {}, order: [] },
+  );
+  const nextSprites = patchFactory(spritesState);
+
+  await projectService.updateResourceItem({
+    resourceType: "characters",
+    resourceId: characterId,
+    patch: {
+      sprites: nextSprites,
+    },
+  });
+
+  return nextSprites;
+};
 
 // Forward click-item event from base component
 export const handleClickItem = async (deps, payload) => {
@@ -133,99 +203,202 @@ export const handleFileAction = async (deps, payload) => {
   }
 
   const state = projectService.getState();
+  const layoutElementsTarget = parseLayoutElementsTarget(repositoryTarget);
+  const characterSpritesTarget = parseCharacterSpritesTarget(repositoryTarget);
+  const targetData = lodashGet(state, repositoryTarget);
 
   // Extract the actual item from the detail (rtgl-dropdown-menu adds index)
   const item = detail.item || detail;
   const itemId = detail.itemId;
+  const currentItem =
+    targetData && targetData.items ? targetData.items[itemId] : null;
+  const isCurrentFolder = currentItem?.type === "folder";
 
   if (item.value === "new-item") {
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: repositoryTarget,
-        value: {
-          id: nanoid(),
+    if (isTypedResourceTarget(repositoryTarget)) {
+      await projectService.createResourceItem({
+        resourceType: repositoryTarget,
+        resourceId: nanoid(),
+        data: {
           type: "folder",
           name: "New Folder",
         },
-        options: {
-          parent: "_root",
-          position: "last",
+        parentId: null,
+        position: "last",
+      });
+    } else if (layoutElementsTarget) {
+      await projectService.createLayoutElement({
+        layoutId: layoutElementsTarget.layoutId,
+        elementId: nanoid(),
+        element: {
+          type: "folder",
+          name: "New Folder",
         },
-      },
-    });
+        parentId: null,
+        position: "last",
+      });
+    } else if (characterSpritesTarget) {
+      await applyCharacterSpritesPatch({
+        projectService,
+        characterId: characterSpritesTarget.characterId,
+        patchFactory: (spritesState) =>
+          nodeInsert({
+            state: spritesState,
+            payload: {
+              value: {
+                id: nanoid(),
+                type: "folder",
+                name: "New Folder",
+              },
+              options: {
+                parent: "_root",
+                position: "last",
+              },
+            },
+          }),
+      });
+    } else {
+      console.warn(
+        "[routevn.collab.migration] unsupported new-item target (legacy folder tree disabled)",
+        { repositoryTarget },
+      );
+      appService?.showToast?.(
+        "Folder creation is not supported for this target.",
+      );
+      return;
+    }
   } else if (item.value === "add-container") {
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: repositoryTarget,
-        value: {
-          id: nanoid(),
+    if (layoutElementsTarget) {
+      await projectService.createLayoutElement({
+        layoutId: layoutElementsTarget.layoutId,
+        elementId: nanoid(),
+        element: {
           type: "container",
           name: "Container",
         },
-        options: {
-          parent: "_root",
-          position: "last",
-        },
-      },
-    });
+        parentId: null,
+        position: "last",
+      });
+    } else {
+      console.warn(
+        "[routevn.collab.migration] unsupported add-container target",
+        { repositoryTarget },
+      );
+      return;
+    }
   } else if (item.value === "add-sprite") {
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: repositoryTarget,
-        value: {
-          id: nanoid(),
+    if (layoutElementsTarget) {
+      await projectService.createLayoutElement({
+        layoutId: layoutElementsTarget.layoutId,
+        elementId: nanoid(),
+        element: {
           type: "sprite",
           name: "Sprite",
         },
-        options: {
-          parent: "_root",
-          position: "last",
-        },
-      },
-    });
+        parentId: null,
+        position: "last",
+      });
+    } else {
+      console.warn("[routevn.collab.migration] unsupported add-sprite target", {
+        repositoryTarget,
+      });
+      return;
+    }
   } else if (item.value === "add-text") {
     const firstTypographyId = getFirstTypographyId(state.typography);
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: repositoryTarget,
-        value: {
-          id: nanoid(),
+    if (layoutElementsTarget) {
+      await projectService.createLayoutElement({
+        layoutId: layoutElementsTarget.layoutId,
+        elementId: nanoid(),
+        element: {
           type: "text",
           name: "Text",
           ...(firstTypographyId ? { typographyId: firstTypographyId } : {}),
         },
-        options: {
-          parent: "_root",
-          position: "last",
-        },
-      },
-    });
+        parentId: null,
+        position: "last",
+      });
+    } else {
+      console.warn("[routevn.collab.migration] unsupported add-text target", {
+        repositoryTarget,
+      });
+      return;
+    }
   } else if (item.value === "rename-item-confirmed") {
     // Handle rename confirmation from popover form
     if (itemId && detail.newName) {
-      await projectService.appendEvent({
-        type: "nodeUpdate",
-        payload: {
-          target: repositoryTarget,
-          value: {
+      if (isTypedResourceTarget(repositoryTarget)) {
+        await projectService.updateResourceItem({
+          resourceType: repositoryTarget,
+          resourceId: itemId,
+          patch: {
             name: detail.newName,
           },
-          options: {
-            id: itemId,
-            replace: false,
+        });
+      } else if (layoutElementsTarget) {
+        await projectService.updateLayoutElement({
+          layoutId: layoutElementsTarget.layoutId,
+          elementId: itemId,
+          patch: {
+            name: detail.newName,
           },
-        },
-      });
+          replace: false,
+        });
+      } else if (
+        isLayoutsTarget(repositoryTarget) &&
+        currentItem?.type === "layout"
+      ) {
+        await projectService.renameLayoutItem({
+          layoutId: itemId,
+          name: detail.newName,
+        });
+      } else if (
+        isScenesTarget(repositoryTarget) &&
+        currentItem?.type === "scene"
+      ) {
+        await projectService.renameSceneItem({
+          sceneId: itemId,
+          name: detail.newName,
+        });
+      } else if (
+        isVariablesTarget(repositoryTarget) &&
+        currentItem &&
+        !isCurrentFolder
+      ) {
+        await projectService.updateVariableItem({
+          variableId: itemId,
+          patch: {
+            name: detail.newName,
+          },
+        });
+      } else if (characterSpritesTarget) {
+        await applyCharacterSpritesPatch({
+          projectService,
+          characterId: characterSpritesTarget.characterId,
+          patchFactory: (spritesState) =>
+            nodeUpdate({
+              state: spritesState,
+              payload: {
+                value: {
+                  name: detail.newName,
+                },
+                options: {
+                  id: itemId,
+                  replace: false,
+                },
+              },
+            }),
+        });
+      } else {
+        console.warn(
+          "[routevn.collab.migration] unsupported rename target (legacy folder tree disabled)",
+          { repositoryTarget, itemId },
+        );
+        appService?.showToast?.("Rename is not supported for this target.");
+        return;
+      }
     }
   } else if (item.value === "delete-item") {
-    const targetData = lodashGet(state, repositoryTarget);
-    const currentItem =
-      targetData && targetData.items ? targetData.items[itemId] : null;
-
     if (currentItem) {
       const resourceType = currentItem.type;
 
@@ -287,36 +460,111 @@ export const handleFileAction = async (deps, payload) => {
         }
       }
 
-      await projectService.appendEvent({
-        type: "nodeDelete",
-        payload: {
-          target: repositoryTarget,
-          options: {
-            id: itemId,
-          },
-        },
-      });
+      if (isTypedResourceTarget(repositoryTarget)) {
+        await projectService.deleteResourceItem({
+          resourceType: repositoryTarget,
+          resourceId: itemId,
+        });
+      } else if (layoutElementsTarget) {
+        await projectService.deleteLayoutElement({
+          layoutId: layoutElementsTarget.layoutId,
+          elementId: itemId,
+        });
+      } else if (
+        isLayoutsTarget(repositoryTarget) &&
+        currentItem.type === "layout"
+      ) {
+        await projectService.deleteLayoutItem({
+          layoutId: itemId,
+        });
+      } else if (
+        isScenesTarget(repositoryTarget) &&
+        currentItem.type === "scene"
+      ) {
+        await projectService.deleteSceneItem({
+          sceneId: itemId,
+        });
+      } else if (isVariablesTarget(repositoryTarget) && !isCurrentFolder) {
+        await projectService.deleteVariableItem({
+          variableId: itemId,
+        });
+      } else if (characterSpritesTarget) {
+        await applyCharacterSpritesPatch({
+          projectService,
+          characterId: characterSpritesTarget.characterId,
+          patchFactory: (spritesState) =>
+            nodeDelete({
+              state: spritesState,
+              payload: {
+                options: {
+                  id: itemId,
+                },
+              },
+            }),
+        });
+      } else {
+        console.warn(
+          "[routevn.collab.migration] unsupported delete target (legacy folder tree disabled)",
+          { repositoryTarget, itemId },
+        );
+        appService?.showToast?.("Delete is not supported for this target.");
+        return;
+      }
     }
   } else if (item.value === "new-child-folder") {
-    const targetData = lodashGet(state, repositoryTarget);
-    const currentItem =
-      targetData && targetData.items ? targetData.items[itemId] : null;
     if (currentItem) {
-      await projectService.appendEvent({
-        type: "nodeInsert",
-        payload: {
-          target: repositoryTarget,
-          value: {
-            id: nanoid(),
+      if (isTypedResourceTarget(repositoryTarget)) {
+        await projectService.createResourceItem({
+          resourceType: repositoryTarget,
+          resourceId: nanoid(),
+          data: {
             type: "folder",
             name: "New Folder",
           },
-          options: {
-            parent: itemId,
-            position: "last",
+          parentId: itemId,
+          position: "last",
+        });
+      } else if (layoutElementsTarget) {
+        await projectService.createLayoutElement({
+          layoutId: layoutElementsTarget.layoutId,
+          elementId: nanoid(),
+          element: {
+            type: "folder",
+            name: "New Folder",
           },
-        },
-      });
+          parentId: itemId,
+          position: "last",
+        });
+      } else if (characterSpritesTarget) {
+        await applyCharacterSpritesPatch({
+          projectService,
+          characterId: characterSpritesTarget.characterId,
+          patchFactory: (spritesState) =>
+            nodeInsert({
+              state: spritesState,
+              payload: {
+                value: {
+                  id: nanoid(),
+                  type: "folder",
+                  name: "New Folder",
+                },
+                options: {
+                  parent: itemId,
+                  position: "last",
+                },
+              },
+            }),
+        });
+      } else {
+        console.warn(
+          "[routevn.collab.migration] unsupported new-child-folder target (legacy folder tree disabled)",
+          { repositoryTarget, itemId },
+        );
+        appService?.showToast?.(
+          "Child folder creation is not supported for this target.",
+        );
+        return;
+      }
     }
   } else if (item.value.action === "new-child-item") {
     const { ...restItem } = item.value;
@@ -332,22 +580,49 @@ export const handleFileAction = async (deps, payload) => {
       }
     }
 
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: repositoryTarget,
-        value,
-        options: {
-          parent: itemId || "_root",
-          position: "last",
+    if (isTypedResourceTarget(repositoryTarget)) {
+      await projectService.createResourceItem({
+        resourceType: repositoryTarget,
+        resourceId: value.id,
+        data: value,
+        parentId: itemId || null,
+        position: "last",
+      });
+    } else if (layoutElementsTarget) {
+      await projectService.createLayoutElement({
+        layoutId: layoutElementsTarget.layoutId,
+        elementId: value.id,
+        element: value,
+        parentId: itemId || null,
+        position: "last",
+      });
+    } else if (characterSpritesTarget) {
+      await applyCharacterSpritesPatch({
+        projectService,
+        characterId: characterSpritesTarget.characterId,
+        patchFactory: (spritesState) =>
+          nodeInsert({
+            state: spritesState,
+            payload: {
+              value,
+              options: {
+                parent: itemId || "_root",
+                position: "last",
+              },
+            },
+          }),
+      });
+    } else {
+      console.warn(
+        "[routevn.collab.migration] unsupported new-child-item target",
+        {
+          repositoryTarget,
+          itemId,
         },
-      },
-    });
+      );
+      return;
+    }
   } else if (item.value === "duplicate-item") {
-    const targetData = lodashGet(state, repositoryTarget);
-    const currentItem =
-      targetData && targetData.items ? targetData.items[itemId] : null;
-
     if (!currentItem) {
       return;
     }
@@ -360,21 +635,86 @@ export const handleFileAction = async (deps, payload) => {
         : "Copied Item";
 
     // Duplicate in the same parent and place it right after the original node
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: repositoryTarget,
-        value: {
-          ...currentItem,
-          id: duplicateId,
-          name: duplicateName,
-        },
-        options: {
-          parent: location?.parentId || "_root",
-          position: { after: itemId },
-        },
-      },
-    });
+    if (isTypedResourceTarget(repositoryTarget)) {
+      await projectService.duplicateResourceItem({
+        resourceType: repositoryTarget,
+        sourceId: itemId,
+        newId: duplicateId,
+        parentId: location?.parentId || null,
+        position: { after: itemId },
+        name: duplicateName,
+      });
+    } else if (layoutElementsTarget) {
+      const duplicateValue = structuredClone(currentItem);
+      delete duplicateValue.id;
+      duplicateValue.name = duplicateName;
+      await projectService.createLayoutElement({
+        layoutId: layoutElementsTarget.layoutId,
+        elementId: duplicateId,
+        element: duplicateValue,
+        parentId: location?.parentId || null,
+        position: { after: itemId },
+      });
+    } else if (
+      isLayoutsTarget(repositoryTarget) &&
+      currentItem.type === "layout"
+    ) {
+      const layoutValue = structuredClone(currentItem);
+      const {
+        id: _layoutId,
+        type: _layoutTypeNode,
+        name: _layoutName,
+        layoutType,
+        elements,
+        parentId: _layoutParentId,
+        ...layoutData
+      } = layoutValue;
+      await projectService.createLayoutItem({
+        layoutId: duplicateId,
+        name: duplicateName,
+        layoutType: layoutType || "normal",
+        elements: elements || { items: {}, order: [] },
+        parentId: location?.parentId || null,
+        position: { after: itemId },
+        data: layoutData,
+      });
+    } else if (isVariablesTarget(repositoryTarget) && !isCurrentFolder) {
+      await projectService.createVariableItem({
+        variableId: duplicateId,
+        name: duplicateName,
+        scope: currentItem.scope || "global",
+        type: currentItem.type || "string",
+        defaultValue: currentItem.default ?? "",
+        parentId: location?.parentId || null,
+        position: { after: itemId },
+      });
+    } else if (characterSpritesTarget) {
+      await applyCharacterSpritesPatch({
+        projectService,
+        characterId: characterSpritesTarget.characterId,
+        patchFactory: (spritesState) =>
+          nodeInsert({
+            state: spritesState,
+            payload: {
+              value: {
+                ...structuredClone(currentItem),
+                id: duplicateId,
+                name: duplicateName,
+              },
+              options: {
+                parent: location?.parentId || "_root",
+                position: { after: itemId },
+              },
+            },
+          }),
+      });
+    } else {
+      console.warn(
+        "[routevn.collab.migration] unsupported duplicate target (legacy folder tree disabled)",
+        { repositoryTarget, itemId },
+      );
+      return;
+    }
   }
 
   // Emit data-changed event after any repository action
@@ -391,6 +731,8 @@ export const handleTargetChanged = async (deps, payload) => {
   const { dispatchEvent, projectService, props } = deps;
   await projectService.ensureRepository();
   const repositoryTarget = props.repositoryTarget;
+  const layoutElementsTarget = parseLayoutElementsTarget(repositoryTarget);
+  const characterSpritesTarget = parseCharacterSpritesTarget(repositoryTarget);
 
   if (!repositoryTarget) {
     throw new Error(
@@ -437,17 +779,49 @@ export const handleTargetChanged = async (deps, payload) => {
     return;
   }
 
-  await projectService.appendEvent({
-    type: "nodeMove",
-    payload: {
-      target: repositoryTarget,
-      options: {
-        id: source.id,
-        parent: parent,
-        position: repositoryPosition,
-      },
-    },
-  });
+  if (isTypedResourceTarget(repositoryTarget)) {
+    await projectService.moveResourceItem({
+      resourceType: repositoryTarget,
+      resourceId: source.id,
+      parentId: parent,
+      position: repositoryPosition,
+    });
+  } else if (layoutElementsTarget) {
+    await projectService.moveLayoutElement({
+      layoutId: layoutElementsTarget.layoutId,
+      elementId: source.id,
+      parentId: parent,
+      position: repositoryPosition,
+    });
+  } else if (isScenesTarget(repositoryTarget) && source.type === "scene") {
+    await projectService.reorderSceneItem({
+      sceneId: source.id,
+      parentId: parent,
+      position: repositoryPosition,
+    });
+  } else if (characterSpritesTarget) {
+    await applyCharacterSpritesPatch({
+      projectService,
+      characterId: characterSpritesTarget.characterId,
+      patchFactory: (spritesState) =>
+        nodeMove({
+          state: spritesState,
+          payload: {
+            options: {
+              id: source.id,
+              parent: parent,
+              position: repositoryPosition,
+            },
+          },
+        }),
+    });
+  } else {
+    console.warn(
+      "[routevn.collab.migration] unsupported move target (legacy folder tree disabled)",
+      { repositoryTarget, sourceId: source.id },
+    );
+    return;
+  }
 
   // Emit data-changed event after repository action
   dispatchEvent(

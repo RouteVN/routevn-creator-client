@@ -2,7 +2,6 @@ import { createSyncServer, createSqliteSyncStore } from "insieme";
 import { processCommand } from "../../src/domain/v2/engine.js";
 import { createEmptyProjectState } from "../../src/domain/v2/model.js";
 import { validateCommand } from "../../src/domain/v2/validateCommand.js";
-import { validateEventPayload } from "../../src/deps/infra/domainStructure/validation.js";
 
 let Database;
 try {
@@ -100,17 +99,6 @@ const server = createSyncServer({
         const error = new Error("missing projectId");
         error.code = "validation_failed";
         throw error;
-      }
-
-      if (command.type === "legacy.event.apply") {
-        const legacyEvent = command?.payload?.event;
-        if (!legacyEvent || typeof legacyEvent !== "object") {
-          const error = new Error("legacy command missing event payload");
-          error.code = "validation_failed";
-          throw error;
-        }
-        validateEventPayload(legacyEvent.type, legacyEvent.payload);
-        return;
       }
 
       validateCommand(command);

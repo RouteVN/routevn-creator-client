@@ -23,7 +23,10 @@ export const RESOURCE_TYPES = [
 ];
 
 export const COMMAND_TYPES = {
+  PROJECT_UPDATE: "project.update",
+
   SCENE_CREATE: "scene.create",
+  SCENE_UPDATE: "scene.update",
   SCENE_RENAME: "scene.rename",
   SCENE_DELETE: "scene.delete",
   SCENE_SET_INITIAL: "scene.set_initial",
@@ -40,6 +43,7 @@ export const COMMAND_TYPES = {
   LINE_MOVE: "line.move",
 
   RESOURCE_CREATE: "resource.create",
+  RESOURCE_UPDATE: "resource.update",
   RESOURCE_RENAME: "resource.rename",
   RESOURCE_MOVE: "resource.move",
   RESOURCE_DELETE: "resource.delete",

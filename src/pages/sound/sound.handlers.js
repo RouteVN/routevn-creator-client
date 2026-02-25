@@ -146,25 +146,20 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   // Add all items to repository
   for (const result of successfulUploads) {
-    await projectService.appendEvent({
-      type: "nodeInsert",
-      payload: {
-        target: "sounds",
-        value: {
-          id: nanoid(),
-          type: "sound",
-          fileId: result.fileId,
-          name: result.displayName,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-          waveformDataFileId: result.waveformDataFileId,
-          duration: result.duration,
-        },
-        options: {
-          parent: id,
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "sounds",
+      resourceId: nanoid(),
+      data: {
+        type: "sound",
+        fileId: result.fileId,
+        name: result.displayName,
+        fileType: result.file.type,
+        fileSize: result.file.size,
+        waveformDataFileId: result.waveformDataFileId,
+        duration: result.duration,
       },
+      parentId: id,
+      position: "last",
     });
   }
 
@@ -211,21 +206,15 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "sounds",
-      value: {
-        fileId: uploadResult.fileId,
-        fileType: uploadResult.file.type,
-        fileSize: uploadResult.file.size,
-        waveformDataFileId: uploadResult.waveformDataFileId,
-        duration: uploadResult.duration,
-      },
-      options: {
-        id: selectedItem.id,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "sounds",
+    resourceId: selectedItem.id,
+    patch: {
+      fileId: uploadResult.fileId,
+      fileType: uploadResult.file.type,
+      fileSize: uploadResult.file.size,
+      waveformDataFileId: uploadResult.waveformDataFileId,
+      duration: uploadResult.duration,
     },
   });
 
@@ -246,17 +235,11 @@ export const handleFormExtraEvent = async (deps) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "sounds",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "sounds",
+    resourceId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -312,14 +295,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "nodeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)

@@ -547,16 +547,11 @@ async function handleDebouncedUpdate(deps, payload) {
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
   // Save to repository
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: `layouts.items.${layoutId}.elements`,
-      value: updatedItem,
-      options: {
-        id: selectedItemId,
-        replace: replace,
-      },
-    },
+  await projectService.updateLayoutElement({
+    layoutId,
+    elementId: selectedItemId,
+    patch: updatedItem,
+    replace: replace === true,
   });
 
   // For form/keyboard updates, sync store with repository

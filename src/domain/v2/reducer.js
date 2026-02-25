@@ -53,7 +53,115 @@ const cascadeDeleteScene = (state, sceneId) => {
   }
 };
 
+const collectVariableDescendantIds = (variables, rootId) => {
+  const descendants = [];
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    for (const [variableId, variable] of Object.entries(
+      variables.items || {},
+    )) {
+      if (variable?.parentId !== currentId) continue;
+      descendants.push(variableId);
+      queue.push(variableId);
+    }
+  }
+  return descendants;
+};
+
+const normalizeLayoutParentId = (parentId, elementId) => {
+  if (typeof parentId !== "string" || parentId.length === 0) return null;
+  if (parentId === elementId) return null;
+  return parentId;
+};
+
+const walkLayoutHierarchy = (nodes, parentId, visitor) => {
+  if (!Array.isArray(nodes)) return;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string" || node.id.length === 0) {
+      continue;
+    }
+    visitor(node, parentId);
+    walkLayoutHierarchy(node.children || [], node.id, visitor);
+  }
+};
+
+const toLayoutElementsFromLegacyCollection = (legacyElements) => {
+  const source = legacyElements || { items: {}, order: [] };
+  const sourceItems = source.items || {};
+  const parentById = new Map();
+  const orderedIds = [];
+
+  walkLayoutHierarchy(source.order || [], null, (node, parentId) => {
+    if (!parentById.has(node.id)) {
+      parentById.set(node.id, parentId);
+    }
+    orderedIds.push(node.id);
+  });
+
+  const allIds = [...new Set([...orderedIds, ...Object.keys(sourceItems)])];
+  const elements = {};
+
+  for (const id of allIds) {
+    const sourceElement = sourceItems[id];
+    const clone = structuredClone(sourceElement || {});
+    delete clone.children;
+    const parentId = normalizeLayoutParentId(
+      parentById.has(id) ? parentById.get(id) : sourceElement?.parentId,
+      id,
+    );
+    elements[id] = {
+      id,
+      ...clone,
+      parentId,
+      children: [],
+    };
+  }
+
+  for (const id of allIds) {
+    const element = elements[id];
+    if (!element) continue;
+    const parentId = element.parentId;
+    if (!parentId || !elements[parentId]) continue;
+    elements[parentId].children.push(id);
+  }
+
+  const rootElementOrder = [];
+  const seenRoots = new Set();
+  for (const id of orderedIds) {
+    const element = elements[id];
+    if (!element) continue;
+    const hasParent =
+      typeof element.parentId === "string" && !!elements[element.parentId];
+    if (hasParent || seenRoots.has(id)) continue;
+    seenRoots.add(id);
+    rootElementOrder.push(id);
+  }
+  for (const id of Object.keys(elements)) {
+    if (seenRoots.has(id)) continue;
+    const element = elements[id];
+    const hasParent =
+      typeof element.parentId === "string" && !!elements[element.parentId];
+    if (hasParent) continue;
+    seenRoots.add(id);
+    rootElementOrder.push(id);
+  }
+
+  return {
+    elements,
+    rootElementOrder,
+  };
+};
+
 const reducers = {
+  "project.updated": ({ state, payload }) => {
+    const patch = structuredClone(payload.patch || {});
+    delete patch.id;
+    delete patch.createdAt;
+    delete patch.updatedAt;
+    state.project = { ...state.project, ...patch };
+  },
+
   "scene.created": ({ state, payload, now }) => {
     state.scenes[payload.sceneId] = {
       id: payload.sceneId,
@@ -72,6 +180,18 @@ const reducers = {
     if (!state.story.initialSceneId) {
       state.story.initialSceneId = payload.sceneId;
     }
+  },
+
+  "scene.updated": ({ state, payload, now }) => {
+    const current = state.scenes[payload.sceneId];
+    const patch = structuredClone(payload.patch || {});
+    delete patch.id;
+    delete patch.sectionIds;
+    state.scenes[payload.sceneId] = {
+      ...current,
+      ...patch,
+      updatedAt: now,
+    };
   },
 
   "scene.renamed": ({ state, payload, now }) => {
@@ -208,6 +328,16 @@ const reducers = {
     });
   },
 
+  "resource.updated": ({ state, payload, now }) => {
+    const collection = state.resources[payload.resourceType];
+    const current = collection.items[payload.resourceId];
+    collection.items[payload.resourceId] = {
+      ...current,
+      ...structuredClone(payload.patch || {}),
+    };
+    collection.items[payload.resourceId].updatedAt = now;
+  },
+
   "resource.renamed": ({ state, payload, now }) => {
     const item =
       state.resources[payload.resourceType].items[payload.resourceId];
@@ -250,12 +380,25 @@ const reducers = {
   },
 
   "layout.created": ({ state, payload, now }) => {
+    const layoutData = structuredClone(payload.data || {});
+    delete layoutData.id;
+    delete layoutData.name;
+    delete layoutData.layoutType;
+    delete layoutData.elements;
+    delete layoutData.rootElementOrder;
+    delete layoutData.createdAt;
+    delete layoutData.updatedAt;
+
+    const initialElements = toLayoutElementsFromLegacyCollection(
+      payload.elements,
+    );
     state.layouts[payload.layoutId] = {
       id: payload.layoutId,
       name: payload.name,
       layoutType: payload.layoutType,
-      elements: {},
-      rootElementOrder: [],
+      ...layoutData,
+      elements: initialElements.elements,
+      rootElementOrder: initialElements.rootElementOrder,
       createdAt: now,
       updatedAt: now,
     };
@@ -345,27 +488,59 @@ const reducers = {
   },
 
   "variable.created": ({ state, payload, now }) => {
-    state.variables[payload.variableId] = {
+    const variables = state.variables || { items: {}, order: [] };
+    const variableData = structuredClone(payload.data || {});
+    variables.items[payload.variableId] = {
       id: payload.variableId,
       name: payload.name,
+      itemType: "variable",
+      type: payload.variableType,
       variableType: payload.variableType,
+      default: structuredClone(payload.initialValue),
       value: structuredClone(payload.initialValue),
+      parentId: payload.parentId || null,
+      ...variableData,
       createdAt: now,
       updatedAt: now,
     };
+    insertAtIndex(
+      variables.order,
+      payload.variableId,
+      normalizeIndex(payload.index),
+    );
+    state.variables = variables;
   },
 
   "variable.updated": ({ state, payload, now }) => {
-    const variable = state.variables[payload.variableId];
-    state.variables[payload.variableId] = {
+    const variables = state.variables || { items: {}, order: [] };
+    const variable = variables.items[payload.variableId];
+    const patch = structuredClone(payload.patch || {});
+    if (Object.prototype.hasOwnProperty.call(patch, "default")) {
+      patch.value = structuredClone(patch.default);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "type")) {
+      patch.variableType = patch.type;
+    }
+    variables.items[payload.variableId] = {
       ...variable,
-      ...structuredClone(payload.patch),
+      ...patch,
     };
-    state.variables[payload.variableId].updatedAt = now;
+    variables.items[payload.variableId].updatedAt = now;
+    state.variables = variables;
   },
 
   "variable.deleted": ({ state, payload }) => {
-    delete state.variables[payload.variableId];
+    const variables = state.variables || { items: {}, order: [] };
+    const idsToDelete = [
+      payload.variableId,
+      ...collectVariableDescendantIds(variables, payload.variableId),
+    ];
+
+    for (const variableId of idsToDelete) {
+      removeFromArray(variables.order, variableId);
+      delete variables.items[variableId];
+    }
+    state.variables = variables;
   },
 };
 

@@ -5,6 +5,11 @@ const createResourceCollection = () => ({
   order: [],
 });
 
+const createVariableCollection = () => ({
+  items: {},
+  order: [],
+});
+
 export const createEmptyProjectState = ({
   projectId,
   name = "",
@@ -32,7 +37,7 @@ export const createEmptyProjectState = ({
     lines: {},
     resources,
     layouts: {},
-    variables: {},
+    variables: createVariableCollection(),
   };
 };
 

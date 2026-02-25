@@ -60,23 +60,18 @@ export const handleAnimationCreated = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { groupId, name, properties } = payload._event.detail;
 
-  await projectService.appendEvent({
-    type: "nodeInsert",
-    payload: {
-      target: "tweens",
-      value: {
-        id: nanoid(),
-        type: "tween",
-        name: name,
-        duration: "4s",
-        keyframes: 3,
-        properties,
-      },
-      options: {
-        parent: groupId,
-        position: "last",
-      },
+  await projectService.createResourceItem({
+    resourceType: "tweens",
+    resourceId: nanoid(),
+    data: {
+      type: "tween",
+      name,
+      duration: "4s",
+      keyframes: 3,
+      properties,
     },
+    parentId: groupId,
+    position: "last",
   });
 
   const { tweens } = projectService.getState();
@@ -88,18 +83,12 @@ export const handleAnimationUpdated = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { itemId, name, properties } = payload._event.detail;
 
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "tweens",
-      value: {
-        name: name,
-        properties,
-      },
-      options: {
-        id: itemId,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "tweens",
+    resourceId: itemId,
+    patch: {
+      name,
+      properties,
     },
   });
 
@@ -110,17 +99,11 @@ export const handleAnimationUpdated = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "nodeUpdate",
-    payload: {
-      target: "tweens",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "tweens",
+    resourceId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -524,14 +507,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "nodeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
