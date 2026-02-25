@@ -12,7 +12,7 @@ const hexToRgb = (hex) => {
 
 const form = {
   fields: [
-    { name: "colorImage", type: "image", src: "${colorImage.src}" },
+    { name: "colorImage", type: "image" },
     { name: "name", type: "popover-input", label: "Name" },
     {
       name: "hex",
@@ -134,6 +134,7 @@ export const selectViewData = ({ state }) => {
     const hex = selectedItem.hex ?? "";
     const rgb = hexToRgb(hex);
     defaultValues = {
+      colorImage: state.context?.colorImage?.src || null,
       name: selectedItem.name,
       hex,
       rgb,

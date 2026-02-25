@@ -47,6 +47,12 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectSelectedItem = ({ state }) => {
+  if (!state.selectedItemId) return null;
+  const flatItems = toFlatItems(state.variablesData);
+  return flatItems.find((item) => item.id === state.selectedItemId) || null;
+};
+
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.variablesData);
   const flatGroups = toFlatGroups(state.variablesData);

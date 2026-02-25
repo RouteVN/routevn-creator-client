@@ -15,6 +15,69 @@ const syncRepositoryToStore = (store, projectService) => {
   store.setFontsData({ fontsData: fonts });
 };
 
+const callFormMethod = ({ formRef, methodName, payload } = {}) => {
+  if (!formRef || !methodName) return false;
+
+  if (typeof formRef[methodName] === "function") {
+    formRef[methodName](payload);
+    return true;
+  }
+
+  if (typeof formRef.transformedMethods?.[methodName] === "function") {
+    formRef.transformedMethods[methodName](payload);
+    return true;
+  }
+
+  return false;
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (selectedItemId && selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
@@ -36,8 +99,10 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   if (isFolder) {
     store.setSelectedItemId({ itemId: null });
     store.setContext({
-      typographyPreview: {
-        src: null,
+      context: {
+        typographyPreview: {
+          src: null,
+        },
       },
     });
     render();
@@ -45,34 +110,28 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: id });
-
-  if (item) {
-    try {
-      const colorsData = store.selectColorsData();
-      const fontsData = store.selectFontsData();
-
-      const previewImage = generateTypographyPreview(
-        item,
-        colorsData,
-        fontsData,
-      );
-
-      store.setContext({
-        typographyPreview: {
-          src: previewImage,
-        },
-      });
-    } catch (error) {
-      console.error("Failed to generate typography preview:", error);
-      store.setContext({
-        typographyPreview: {
-          src: null,
-        },
-      });
-    }
-  }
+  const selectedItem = item || store.selectSelectedItem();
+  const colorsData = store.selectColorsData();
+  const fontsData = store.selectFontsData();
+  const detailValues = createDetailFormValues({
+    item: selectedItem,
+    colorsData,
+    fontsData,
+  });
+  store.setContext({
+    context: {
+      typographyPreview: {
+        src: detailValues.typographyPreview,
+      },
+    },
+  });
 
   render();
+  syncDetailFormValues({
+    deps,
+    values: detailValues,
+    selectedItemId: id,
+  });
 };
 
 // Helper function to generate typography preview image
@@ -177,6 +236,57 @@ const generateTypographyPreview = (item, colorsData, fontsData) => {
   return canvas.toDataURL("image/png");
 };
 
+const getColorName = (colorsData, colorId) => {
+  if (!colorId || !colorsData) return "";
+  const colorItems = toFlatItems(colorsData);
+  const color = colorItems.find(
+    (entry) => entry.type === "color" && entry.id === colorId,
+  );
+  return color?.name || "";
+};
+
+const getFontName = (fontsData, fontId) => {
+  if (!fontId || !fontsData) return "";
+  const fontItems = toFlatItems(fontsData);
+  const font = fontItems.find(
+    (entry) => entry.type === "font" && entry.id === fontId,
+  );
+  return font?.fontFamily || "";
+};
+
+const createDetailFormValues = ({ item, colorsData, fontsData } = {}) => {
+  if (!item) {
+    return {
+      typographyPreview: null,
+      name: "",
+      fontSize: "",
+      lineHeight: "",
+      colorName: "",
+      fontName: "",
+      fontWeight: "",
+      previewText: "",
+    };
+  }
+
+  let typographyPreview = null;
+  try {
+    typographyPreview = generateTypographyPreview(item, colorsData, fontsData);
+  } catch (_error) {
+    typographyPreview = null;
+  }
+
+  return {
+    typographyPreview,
+    name: item.name || "",
+    fontSize: item.fontSize ?? "",
+    lineHeight: item.lineHeight ?? "",
+    colorName: getColorName(colorsData, item.colorId),
+    fontName: getFontName(fontsData, item.fontId),
+    fontWeight: item.fontWeight ?? "",
+    previewText: item.previewText ?? "",
+  };
+};
+
 export const handleTypographyItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
   const { itemId } = payload._event.detail;
@@ -188,34 +298,27 @@ export const handleTypographyItemClick = (deps, payload) => {
   });
 
   const selectedItem = store.selectSelectedItem();
-  if (selectedItem) {
-    try {
-      // Use selectors instead of getState
-      const colorsData = store.selectColorsData();
-      const fontsData = store.selectFontsData();
-
-      const previewImage = generateTypographyPreview(
-        selectedItem,
-        colorsData,
-        fontsData,
-      );
-
-      store.setContext({
-        typographyPreview: {
-          src: previewImage,
-        },
-      });
-    } catch (error) {
-      console.error("Failed to generate typography preview:", error);
-      store.setContext({
-        typographyPreview: {
-          src: null,
-        },
-      });
-    }
-  }
+  const colorsData = store.selectColorsData();
+  const fontsData = store.selectFontsData();
+  const detailValues = createDetailFormValues({
+    item: selectedItem,
+    colorsData,
+    fontsData,
+  });
+  store.setContext({
+    context: {
+      typographyPreview: {
+        src: detailValues.typographyPreview,
+      },
+    },
+  });
 
   render();
+  syncDetailFormValues({
+    deps,
+    values: detailValues,
+    selectedItemId: itemId,
+  });
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
@@ -366,15 +469,19 @@ export const handleFormChange = async (deps, payload) => {
       );
 
       store.setContext({
-        typographyPreview: {
-          src: previewImage,
+        context: {
+          typographyPreview: {
+            src: previewImage,
+          },
         },
       });
     } catch (error) {
       console.error("Failed to update typography preview:", error);
       store.setContext({
-        typographyPreview: {
-          src: null,
+        context: {
+          typographyPreview: {
+            src: null,
+          },
         },
       });
     }

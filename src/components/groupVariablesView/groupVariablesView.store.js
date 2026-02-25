@@ -121,7 +121,7 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   }
 };
 
-export const updateFormValues = ({ state }, { payload } = {}) => {
+export const updateFormValues = ({ state }, payload = {}) => {
   state.defaultValues = {
     ...state.defaultValues,
     ...payload,

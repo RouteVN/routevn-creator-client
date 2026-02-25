@@ -91,7 +91,7 @@ template:
                           - rtgl-text s=xs: ${barItem.label}
                           - rtgl-view w=1fg: null
                           - $if barItem.imageId:
-                              - rvn-file-image bw=xs bc=bo imageId=${barItem.imageId} h=32: null
+                              - rvn-file-image imageId=${barItem.imageId} h=32: null
                             $else:
                               - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
                                   - rtgl-text s=xs c=mu: Not set
@@ -99,7 +99,7 @@ template:
                   - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
-  - rvn-system-actions#systemActions :actions=actionsData :actionType="'system'": null
+  - rvn-system-actions#systemActions :actions=actionsData actionType=system: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:
           - rtgl-form#form autofocus key=${popover.key} slot=content :form=popover.form :defaultValues=popover.defaultValues :context=popover.context: null

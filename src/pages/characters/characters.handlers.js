@@ -9,6 +9,10 @@ const getCharacterItemById = ({ store, itemId } = {}) => {
   return item;
 };
 
+const resolveDetailItemId = (detail = {}) => {
+  return detail.itemId || detail.id || detail.item?.id || "";
+};
+
 const callFormMethod = ({ formRef, methodName, payload } = {}) => {
   if (!formRef || !methodName) return false;
 
@@ -52,6 +56,67 @@ const syncEditFormValues = ({ deps, values, attempt = 0 } = {}) => {
   }
 };
 
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      name: "",
+      description: "",
+    };
+  }
+
+  return {
+    name: item.name || "",
+    description: item.description || "No description provided",
+  };
+};
+
+const syncDetailFormValues = ({
+  deps,
+  values,
+  selectedItemId,
+  attempt = 0,
+} = {}) => {
+  const formRef = deps?.refs?.detailForm;
+  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
+
+  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
+    return;
+  }
+
+  if (!formRef) {
+    if (attempt < 6) {
+      setTimeout(() => {
+        syncDetailFormValues({
+          deps,
+          values,
+          selectedItemId,
+          attempt: attempt + 1,
+        });
+      }, 0);
+    }
+    return;
+  }
+
+  callFormMethod({ formRef, methodName: "reset" });
+
+  const didSet = callFormMethod({
+    formRef,
+    methodName: "setValues",
+    payload: { values },
+  });
+
+  if (!didSet && attempt < 6) {
+    setTimeout(() => {
+      syncDetailFormValues({
+        deps,
+        values,
+        selectedItemId,
+        attempt: attempt + 1,
+      });
+    }, 0);
+  }
+};
+
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) return;
 
@@ -84,12 +149,25 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { characters } = projectService.getState();
   store.setItems({ charactersData: characters });
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render } = deps;
-  const { id, isFolder } = payload._event.detail;
+  const detail = payload?._event?.detail || {};
+  const id = resolveDetailItemId(detail);
+  const { isFolder } = detail;
 
   // If this is a folder, clear selection
   if (isFolder) {
@@ -98,20 +176,49 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     return;
   }
 
+  if (!id) {
+    return;
+  }
+
   store.setSelectedItemId({ itemId: id });
+  const selectedItem = detail.item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: id,
+    });
+  }
 };
 
 export const handleCharacterItemClick = async (deps, payload) => {
   const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const detail = payload?._event?.detail || {};
+  const itemId = resolveDetailItemId(detail);
+  if (!itemId) {
+    return;
+  }
+
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
   fileExplorer.transformedHandlers.handlePageItemClick({
     _event: { detail: { itemId } },
   });
+  const selectedItem = detail.item || store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId: itemId,
+    });
+  }
 };
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {
@@ -267,7 +374,18 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       // Update the store with the new repository state and get new file URL
       const { characters } = projectService.getState();
       store.setItems({ charactersData: characters });
+      const selectedItemId = store.selectSelectedItemId();
+      const updatedSelectedItem = store.selectSelectedItem();
+      const detailValues = createDetailFormValues(updatedSelectedItem);
       render();
+
+      if (updatedSelectedItem) {
+        syncDetailFormValues({
+          deps,
+          values: detailValues,
+          selectedItemId,
+        });
+      }
     } else {
       console.error("Avatar upload failed:", file.name);
     }
@@ -278,6 +396,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
   await projectService.appendEvent({
     type: "treeUpdate",
     payload: {
@@ -286,7 +405,7 @@ export const handleFormChange = async (deps, payload) => {
         [payload._event.detail.name]: payload._event.detail.value,
       },
       options: {
-        id: store.selectSelectedItemId(),
+        id: selectedItemId,
         replace: false,
       },
     },
@@ -294,7 +413,17 @@ export const handleFormChange = async (deps, payload) => {
 
   const { characters } = projectService.getState();
   store.setItems({ charactersData: characters });
+  const selectedItem = store.selectSelectedItem();
+  const detailValues = createDetailFormValues(selectedItem);
   render();
+
+  if (selectedItem) {
+    syncDetailFormValues({
+      deps,
+      values: detailValues,
+      selectedItemId,
+    });
+  }
 };
 
 export const handleSearchInput = (deps, payload) => {
@@ -506,7 +635,18 @@ export const handleEditFormAction = async (deps, payload) => {
 
     const { characters } = projectService.getState();
     store.setItems({ charactersData: characters });
+    const selectedItemId = store.selectSelectedItemId();
+    const selectedItem = store.selectSelectedItem();
+    const detailValues = createDetailFormValues(selectedItem);
     store.closeEditDialog();
     render();
+
+    if (selectedItem) {
+      syncDetailFormValues({
+        deps,
+        values: detailValues,
+        selectedItemId,
+      });
+    }
   }
 };

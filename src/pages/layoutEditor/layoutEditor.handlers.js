@@ -388,7 +388,11 @@ export const handleRenderOnly = (deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render } = deps;
-  const itemId = payload._event.detail.id;
+  const detail = payload._event.detail || {};
+  const itemId = detail.id || detail.itemId || detail.item?.id;
+  if (!itemId) {
+    return;
+  }
   store.setSelectedItemId({ itemId: itemId });
   render();
   await renderLayoutPreview(deps);
@@ -404,7 +408,8 @@ export const handleDataChanged = async (deps) => {
   const repository = await projectService.getRepository();
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
+  const layoutData = layout?.elements || { items: {}, tree: [] };
+  store.setItems({ layoutData });
   render();
   await renderLayoutPreview(deps);
 };

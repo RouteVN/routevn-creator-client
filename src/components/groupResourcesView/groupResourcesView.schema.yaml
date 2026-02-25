@@ -50,3 +50,9 @@ propsSchema:
     backUrl:
       type: string
       description: URL to navigate back to when back button is clicked
+    itemProperties:
+      type: object
+      description: Optional field/resource properties map for item rendering
+    items:
+      type: object
+      description: Optional repository items map keyed by resource id

@@ -5,7 +5,6 @@ const form = {
     {
       name: "fileId",
       type: "image",
-      src: "${fileId.src}",
       width: 240,
       clickable: true,
       extraEvent: true,
@@ -105,6 +104,7 @@ export const selectViewData = ({ state }) => {
 
   if (selectedItem) {
     defaultValues = {
+      fileId: state.context?.fileId?.src || null,
       name: selectedItem.name,
       description: selectedItem.description || "No description provided",
     };

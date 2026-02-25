@@ -78,7 +78,6 @@ const form = {
     {
       name: "typographyPreview",
       type: "image",
-      src: "${typographyPreview.src}",
     },
     { name: "name", type: "popover-input", label: "Name" },
     {
@@ -638,6 +637,7 @@ export const selectViewData = ({ state }) => {
   if (selectedItem) {
     try {
       detailFormDefaultValues = {
+        typographyPreview: state.context?.typographyPreview?.src || null,
         name: selectedItem.name,
         fontSize: selectedItem.fontSize ?? "",
         lineHeight: selectedItem.lineHeight ?? "",
@@ -651,6 +651,7 @@ export const selectViewData = ({ state }) => {
     } catch (error) {
       console.error("Failed to get detail form values:", error);
       detailFormDefaultValues = {
+        typographyPreview: state.context?.typographyPreview?.src || null,
         name: selectedItem.name || "",
         fontSize: selectedItem.fontSize ?? "",
         lineHeight: selectedItem.lineHeight ?? "",
