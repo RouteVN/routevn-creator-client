@@ -70,9 +70,7 @@ export const toFlatItems = (data) => {
 
     if (children.length > 0) {
       const newParentChain = [...parentChain, node.id];
-      children.forEach((child) =>
-        traverse(child, level + 1, newParentChain),
-      );
+      children.forEach((child) => traverse(child, level + 1, newParentChain));
     }
   };
 
