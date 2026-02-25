@@ -16,14 +16,47 @@ const tabs = [
 ];
 
 // Form structure will be created dynamically in selectViewData
+const createEmptyCollection = () => ({
+  items: {},
+  order: [],
+});
+
+const normalizeResourceCollection = (collection) => {
+  const sourceItems =
+    collection && typeof collection.items === "object" && collection.items
+      ? collection.items
+      : {};
+  const items = { ...sourceItems };
+  const itemIds = Object.keys(items);
+  const seen = new Set();
+  const order = [];
+
+  for (const entry of Array.isArray(collection?.order)
+    ? collection.order
+    : []) {
+    if (typeof entry !== "string" || entry.length === 0) continue;
+    if (!Object.prototype.hasOwnProperty.call(items, entry)) continue;
+    if (seen.has(entry)) continue;
+    seen.add(entry);
+    order.push(entry);
+  }
+
+  for (const id of itemIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    order.push(id);
+  }
+
+  return { items, order };
+};
 
 export const createInitialState = () => ({
   mode: "current",
   tab: "image", // "image", "layout", or "video"
-  imageItems: { items: {}, order: [] },
-  layoutItems: { items: {}, order: [] },
-  videoItems: { items: {}, order: [] },
-  tweenItems: { items: {}, order: [] },
+  imageItems: createEmptyCollection(),
+  layoutItems: createEmptyCollection(),
+  videoItems: createEmptyCollection(),
+  tweenItems: createEmptyCollection(),
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
@@ -44,10 +77,10 @@ export const setRepositoryState = (
   { state },
   { images, layouts, videos, tweens } = {},
 ) => {
-  state.imageItems = images;
-  state.layoutItems = layouts;
-  state.videoItems = videos;
-  state.tweenItems = tweens || [];
+  state.imageItems = normalizeResourceCollection(images);
+  state.layoutItems = normalizeResourceCollection(layouts);
+  state.videoItems = normalizeResourceCollection(videos);
+  state.tweenItems = normalizeResourceCollection(tweens);
 };
 
 export const setTab = ({ state }, { tab } = {}) => {
@@ -175,7 +208,7 @@ export const selectViewData = ({ state }) => {
     layout: state.layoutItems,
     video: state.videoItems,
   };
-  const items = itemsMap[state.tab] || { item: {}, order: [] };
+  const items = itemsMap[state.tab] || createEmptyCollection();
   const flatItems = toFlatItems(items).filter((item) => item.type === "folder");
   const flatGroups = toFlatGroups(items).map((group) => {
     return {

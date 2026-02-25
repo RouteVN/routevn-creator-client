@@ -1,5 +1,31 @@
 import { toFlatItems } from "#domain-structure";
 
+const createEmptyCollection = () => ({
+  items: {},
+  order: [],
+});
+
+const getResourceCollectionsFromDomainState = (domainState) => ({
+  images: domainState?.resources?.images || createEmptyCollection(),
+  layouts: domainState?.resources?.layouts || createEmptyCollection(),
+  videos: domainState?.resources?.videos || createEmptyCollection(),
+  tweens: domainState?.resources?.tweens || createEmptyCollection(),
+});
+
+const getDomainStateFromProjectService = (projectService) => {
+  if (typeof projectService.getDomainState === "function") {
+    return projectService.getDomainState();
+  }
+  return projectService.getState();
+};
+
+const getDomainStateFromRepository = (repository) => {
+  if (typeof repository?.getDomainState === "function") {
+    return repository.getDomainState();
+  }
+  return repository.getState();
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
 
@@ -38,7 +64,9 @@ export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
 
   await projectService.ensureRepository();
-  const { images, layouts, videos, tweens } = projectService.getState();
+  const domainState = getDomainStateFromProjectService(projectService);
+  const { images, layouts, videos, tweens } =
+    getResourceCollectionsFromDomainState(domainState);
 
   store.setRepositoryState({
     images,
@@ -125,7 +153,8 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
 export const handleImageSelected = async (deps, payload) => {
   const { store, render, projectService } = deps;
   await projectService.ensureRepository();
-  const { images } = projectService.getState();
+  const domainState = getDomainStateFromProjectService(projectService);
+  const { images } = getResourceCollectionsFromDomainState(domainState);
 
   const { imageId } = payload._event.detail;
 
@@ -284,6 +313,9 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
 export const handleButtonSelectClick = async (deps) => {
   const { store, render, projectService } = deps;
   const repository = await projectService.getRepository();
+  const domainState = getDomainStateFromRepository(repository);
+  const { images, layouts, videos } =
+    getResourceCollectionsFromDomainState(domainState);
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
   const tempSelectedResourceType = store.selectTab();
 
@@ -292,29 +324,22 @@ export const handleButtonSelectClick = async (deps) => {
   }
 
   let fileId;
-  // if (tempSelectedResourceType === "image") {
-  const { images } = repository.getState();
   const tempSelectedImage = toFlatItems(images).find(
     (image) => image.id === tempSelectedResourceId,
   );
   fileId = tempSelectedImage?.fileId;
-  // } else if (tempSelectedResourceType === "layout") {
   if (!fileId) {
-    const { layouts } = repository.getState();
     const tempSelectedLayout = toFlatItems(layouts).find(
       (layout) => layout.id === tempSelectedResourceId,
     );
     fileId = tempSelectedLayout?.thumbnailFileId;
   }
-  // } else if (tempSelectedResourceType === "video") {
   if (!fileId) {
-    const { videos } = repository.getState();
     const tempSelectedVideo = toFlatItems(videos).find(
       (video) => video.id === tempSelectedResourceId,
     );
     fileId = tempSelectedVideo?.fileId;
   }
-  // }
 
   store.setSelectedResource({
     resourceId: tempSelectedResourceId,

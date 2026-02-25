@@ -4,6 +4,8 @@
  * @property {HelperHierarchyNode[]} [children]
  */
 
+const ROOT_PARENT_KEY = "__root__";
+
 /**
  * @typedef {Record<string, unknown>} HelperItemMetadata
  */
@@ -26,6 +28,93 @@
  * @typedef {HelperItemMetadata & { id: string, _level: number, fullLabel: string, parentId: string|null, hasChildren: boolean, children: HierarchyItemNode[] }} HierarchyItemNode
  */
 
+const isHierarchyNode = (value) =>
+  value && typeof value === "object" && typeof value.id === "string";
+
+const toOrderIds = (order) => {
+  const list = Array.isArray(order) ? order : [];
+  const ids = [];
+  const seen = new Set();
+  for (const entry of list) {
+    const id =
+      typeof entry === "string"
+        ? entry
+        : isHierarchyNode(entry)
+          ? entry.id
+          : null;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+};
+
+const normalizeOrder = (data) => {
+  const items = data?.items || {};
+  const itemIds = Object.keys(items);
+  const order = Array.isArray(data?.order) ? data.order : [];
+  if (order.length === 0) return [];
+
+  const hasStringEntries = order.some((entry) => typeof entry === "string");
+  if (!hasStringEntries) {
+    return order.filter((entry) => isHierarchyNode(entry));
+  }
+
+  const orderedIds = toOrderIds(order);
+  const seen = new Set(orderedIds);
+  for (const id of itemIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    orderedIds.push(id);
+  }
+
+  const itemIdSet = new Set(itemIds);
+  const childrenByParent = new Map([[ROOT_PARENT_KEY, []]]);
+  for (const id of orderedIds) {
+    const parentId = items[id]?.parentId;
+    const validParentId =
+      typeof parentId === "string" &&
+      parentId.length > 0 &&
+      parentId !== id &&
+      itemIdSet.has(parentId)
+        ? parentId
+        : ROOT_PARENT_KEY;
+    if (!childrenByParent.has(validParentId)) {
+      childrenByParent.set(validParentId, []);
+    }
+    childrenByParent.get(validParentId).push(id);
+  }
+
+  const visited = new Set();
+  const buildNode = (id, stack = new Set()) => {
+    if (visited.has(id)) return null;
+    if (stack.has(id)) {
+      return { id };
+    }
+    visited.add(id);
+    stack.add(id);
+    const childIds = childrenByParent.get(id) || [];
+    const children = [];
+    for (const childId of childIds) {
+      const childNode = buildNode(childId, stack);
+      if (childNode) children.push(childNode);
+    }
+    stack.delete(id);
+    if (children.length > 0) {
+      return { id, children };
+    }
+    return { id };
+  };
+
+  const rootIds = childrenByParent.get(ROOT_PARENT_KEY) || [];
+  const hierarchy = rootIds.map((id) => buildNode(id)).filter(Boolean);
+  for (const id of orderedIds) {
+    if (visited.has(id)) continue;
+    hierarchy.push({ id });
+  }
+  return hierarchy;
+};
+
 /**
  * Flattens a order structure into an array of items with metadata.
  * Includes level, parent information, and full labels for each item.
@@ -39,7 +128,7 @@
  */
 export const toFlatItems = (data) => {
   const items = data?.items || {};
-  const order = Array.isArray(data?.order) ? data.order : [];
+  const order = normalizeOrder(data);
   const flatItems = [];
   const visited = new Set();
 
@@ -91,7 +180,7 @@ export const toFlatItems = (data) => {
  */
 export const toFlatGroups = (data) => {
   const items = data?.items || {};
-  const order = Array.isArray(data?.order) ? data.order : [];
+  const order = normalizeOrder(data);
   const flatGroups = [];
   const visited = new Set();
 
@@ -163,7 +252,7 @@ export const toFlatGroups = (data) => {
  */
 export const toHierarchyStructure = (data) => {
   const items = data?.items || {};
-  const order = Array.isArray(data?.order) ? data.order : [];
+  const order = normalizeOrder(data);
 
   const traverse = (node, level = 0, parentChain = []) => {
     if (!node || typeof node.id !== "string") {
