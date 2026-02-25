@@ -109,7 +109,7 @@ export const createInitialState = () => ({
   },
 });
 
-export const setDefaultValues = ({ state }, { payload } = {}) => {
+export const setDefaultValues = ({ state }, payload = {}) => {
   state.defaultValues = {
     ...state.defaultValues,
     ...payload,

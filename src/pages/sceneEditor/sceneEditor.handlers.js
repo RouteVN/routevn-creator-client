@@ -1642,9 +1642,8 @@ export const handleFormActionClick = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const detail = payload._event.detail;
 
-  // Extract action and values from detail
-  const action = detail.action || detail.actionId;
-  const values = detail.values || detail;
+  const action = detail.actionId;
+  const values = detail.values;
 
   if (action === "cancel") {
     store.hidePopover();
@@ -1661,7 +1660,7 @@ export const handleFormActionClick = async (deps, payload) => {
     store.hidePopover();
 
     // Update section name in repository
-    if (sectionId && values.name && sceneId) {
+    if (sectionId && values?.name && sceneId) {
       await projectService.appendEvent({
         type: "treeUpdate",
         payload: {
@@ -1696,7 +1695,7 @@ export const handlePreviewClick = (deps) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  store.showPreviewSceneId({ payload: { sceneId, sectionId, lineId } });
+  store.showPreviewSceneId({ sceneId, sectionId, lineId });
   render();
 };
 

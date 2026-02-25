@@ -37,8 +37,8 @@ export const setLayouts = ({ state }, { layouts } = {}) => {
   state.layouts = layouts;
 };
 
-export const setFormValues = ({ state }, { payload, ...rest } = {}) => {
-  state.formValues = payload ?? rest;
+export const setFormValues = ({ state }, payload = {}) => {
+  state.formValues = payload;
 };
 
 export const selectViewData = ({ state }) => {

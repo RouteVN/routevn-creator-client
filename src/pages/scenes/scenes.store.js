@@ -61,8 +61,7 @@ export const setLayouts = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData || { tree: [], items: {} };
 };
 
-export const showPreviewSceneId = ({ state }, { payload } = {}) => {
-  const { sceneId } = payload;
+export const showPreviewSceneId = ({ state }, { sceneId } = {}) => {
   state.previewVisible = true;
   state.previewSceneId = sceneId;
 };
@@ -239,6 +238,9 @@ export const selectViewData = ({ state }, payload) => {
   const menuSceneId = repositoryState?.story?.initialSceneId;
 
   let defaultValues = {};
+  let context = {
+    sectionCount: "",
+  };
   let selectedSceneSections = [];
   if (selectedItem?.type === "scene") {
     selectedSceneSections = toFlatItems(
@@ -263,6 +265,9 @@ export const selectViewData = ({ state }, payload) => {
 
     defaultValues = {
       name: selectedItem.name,
+      sectionCount: selectedSceneSections.length,
+    };
+    context = {
       sectionCount: selectedSceneSections.length,
     };
   }
@@ -324,6 +329,7 @@ export const selectViewData = ({ state }, payload) => {
     addSceneButtonVariant: state.isWaitingForTransform ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
     form,
+    context,
     defaultValues,
     isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,

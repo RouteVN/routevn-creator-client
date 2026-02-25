@@ -684,9 +684,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
 export const handleClickShowScenePreview = (deps, payload) => {
   const { store, render } = deps;
-  store.showPreviewSceneId({
-    payload: { sceneId: payload._event.target.dataset.sceneId },
-  });
+  store.showPreviewSceneId({ sceneId: payload._event.target.dataset.sceneId });
   render();
 };
 

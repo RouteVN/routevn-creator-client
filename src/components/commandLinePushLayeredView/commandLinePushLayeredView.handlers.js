@@ -22,7 +22,7 @@ export const handleAfterMount = async (deps) => {
     resourceId: pushLayeredView.resourceId,
   };
 
-  store.setFormValues({ payload: formValues });
+  store.setFormValues(formValues);
   store.setInitiated();
   render();
 };
@@ -62,6 +62,6 @@ export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
   const { values: formValues } = payload._event.detail;
 
-  store.setFormValues({ payload: formValues });
+  store.setFormValues(formValues);
   render();
 };

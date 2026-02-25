@@ -18,7 +18,7 @@ export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
   const { values: formValues } = payload._event.detail;
 
-  store.setDefaultValues({ payload: formValues });
+  store.setDefaultValues(formValues);
   render();
 };
 

@@ -77,11 +77,9 @@ export const handleDialogFormChange = (deps, payload) => {
 
   // Update form values for preview
   store.updateFormValues({
-    payload: {
-      ...prevValues,
-      ...newValues,
-      default: defaultValue,
-    },
+    ...prevValues,
+    ...newValues,
+    default: defaultValue,
   });
   render();
 };
