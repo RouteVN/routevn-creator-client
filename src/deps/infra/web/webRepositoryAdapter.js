@@ -2,6 +2,8 @@ import {
   loadTemplate,
   getTemplateFiles,
 } from "../../../utils/templateLoader.js";
+import { createEmptyProjectState } from "../../../domain/v2/model.js";
+import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -34,6 +36,59 @@ async function copyTemplateFiles(templateId, adapter) {
   }
 }
 
+const buildInitialDomainState = ({
+  templateData,
+  projectId,
+  name,
+  description,
+}) => {
+  const resolvedProjectId =
+    typeof projectId === "string" && projectId.length > 0
+      ? projectId
+      : "unknown-project";
+  const baseline = createEmptyProjectState({
+    projectId: resolvedProjectId,
+    name,
+    description,
+  });
+  const rawDomainState =
+    templateData &&
+    typeof templateData === "object" &&
+    templateData.resources &&
+    typeof templateData.resources === "object"
+      ? structuredClone(templateData)
+      : projectLegacyStateToDomainState({
+          legacyState: templateData,
+          projectId: resolvedProjectId,
+        });
+  const now = Date.now();
+
+  return {
+    ...baseline,
+    ...rawDomainState,
+    model_version: 2,
+    story: {
+      ...baseline.story,
+      ...rawDomainState.story,
+    },
+    resources: {
+      ...baseline.resources,
+      ...rawDomainState.resources,
+    },
+    project: {
+      ...baseline.project,
+      ...rawDomainState.project,
+      id: resolvedProjectId,
+      name,
+      description,
+      createdAt: Number.isFinite(rawDomainState?.project?.createdAt)
+        ? rawDomainState.project.createdAt
+        : now,
+      updatedAt: now,
+    },
+  };
+};
+
 /**
  * Initialize a new project with IndexedDB.
  */
@@ -56,15 +111,12 @@ export const initializeProject = async ({
   // Copy template files to project's IndexedDB
   await copyTemplateFiles(template, adapter);
 
-  // Add project info to template data
-  const initData = {
-    ...templateData,
-    model_version: 2,
-    project: {
-      name,
-      description,
-    },
-  };
+  const initData = buildInitialDomainState({
+    templateData,
+    projectId,
+    name,
+    description,
+  });
 
   // Add the init action directly through adapter
   await adapter.appendEvent({
