@@ -67,6 +67,20 @@ const getVisibleItems = (allItems, collapsedIds) => {
   });
 };
 
+const resolveDropTargetItem = ({ visibleItems, targetIndex, dropPosition }) => {
+  if (dropPosition === "above" && targetIndex === -1) {
+    return visibleItems[0];
+  }
+
+  if (targetIndex < 0) {
+    return undefined;
+  }
+
+  return visibleItems[targetIndex];
+};
+
+const DRAG_ACTIVATION_DISTANCE = 4;
+
 /**
  *  we need to find the item that is under the mouse
  *  if mouse is above 1st item, return -1
@@ -201,7 +215,7 @@ export const getSelectedItemIndex = (
 };
 
 export const handleItemMouseDown = (deps, payload) => {
-  const { store, refs, render, props, props: attrs } = deps;
+  const { store, refs, props, props: attrs } = deps;
 
   // Drag should start only on primary button.
   if (payload?._event?.button !== 0) {
@@ -254,41 +268,68 @@ export const handleItemMouseDown = (deps, payload) => {
     .map((id) => visibleItems.findIndex((item) => item.id === id))
     .filter((index) => index !== -1);
 
-  store.startDragging({
-    id: itemId,
-    itemRects,
-    containerTop: containerRect.top,
-    forbiddenIndices,
+  store.setPendingDrag({
+    pendingDrag: {
+      id: itemId,
+      itemRects,
+      containerTop: containerRect.top,
+      forbiddenIndices,
+      startX: payload._event.clientX,
+      startY: payload._event.clientY,
+    },
   });
-  render();
 };
 
 export const handleWindowMouseUp = (deps) => {
   const { store, dispatchEvent, render, props } = deps;
+  const isDragging = store.selectIsDragging();
 
-  if (!store.selectIsDragging()) {
+  if (!isDragging) {
+    if (store.selectPendingDrag()) {
+      store.clearPendingDrag();
+    }
     return;
   }
   const targetIndex = store.selectTargetDragIndex();
   const dropPosition = store.selectTargetDropPosition();
   const sourceId = store.selectSelectedItemId();
-  const targetItem = props.items?.[targetIndex];
-  const sourceItem = props.items?.find((item) => item.id === sourceId);
+  const allItems = props.items || [];
+  const visibleItems = getVisibleItems(allItems, store.selectCollapsedIds());
+  const sourceItem = allItems.find((item) => item.id === sourceId);
   const forbiddenIndices = store.selectForbiddenIndices();
-
-  if (forbiddenIndices.includes(targetIndex)) {
+  const finishDragging = () => {
     store.stopDragging();
     render();
+  };
+
+  if (forbiddenIndices.includes(targetIndex)) {
+    finishDragging();
     return;
   }
 
-  store.stopDragging();
-  render();
+  if (targetIndex === -2 || dropPosition === "none") {
+    finishDragging();
+    return;
+  }
+
+  const targetItem = resolveDropTargetItem({
+    visibleItems,
+    targetIndex,
+    dropPosition,
+  });
+
+  if (!sourceItem || !targetItem) {
+    finishDragging();
+    return;
+  }
 
   // Don't trigger event if source and target are the same item
-  if (sourceItem && targetItem && sourceItem.id === targetItem.id) {
+  if (sourceItem.id === targetItem.id) {
+    finishDragging();
     return;
   }
+
+  finishDragging();
 
   const detail = {
     target: targetItem,
@@ -307,15 +348,52 @@ export const handleWindowMouseUp = (deps) => {
 };
 
 export const handleWindowMouseMove = (deps, payload) => {
-  const isDragging = deps.store.selectIsDragging();
+  const { store, render, props } = deps;
+  let isDragging = store.selectIsDragging();
+  const isPrimaryButtonPressed = (payload?._event?.buttons & 1) === 1;
+
+  if (isDragging && !isPrimaryButtonPressed) {
+    deps.handlers.handleWindowMouseUp(deps);
+    return;
+  }
+
+  if (!isDragging) {
+    const pendingDrag = store.selectPendingDrag();
+    if (!pendingDrag) {
+      return;
+    }
+
+    if (!isPrimaryButtonPressed) {
+      store.clearPendingDrag();
+      return;
+    }
+
+    const deltaX = payload._event.clientX - pendingDrag.startX;
+    const deltaY = payload._event.clientY - pendingDrag.startY;
+    const dragDistance = Math.hypot(deltaX, deltaY);
+
+    if (dragDistance < DRAG_ACTIVATION_DISTANCE) {
+      return;
+    }
+
+    store.startDragging({
+      id: pendingDrag.id,
+      itemRects: pendingDrag.itemRects,
+      containerTop: pendingDrag.containerTop,
+      forbiddenIndices: pendingDrag.forbiddenIndices,
+    });
+
+    isDragging = true;
+  }
 
   if (!isDragging) {
     return;
   }
-  const { store, render, props } = deps;
+
   const itemRects = store.selectItemRects();
   const containerTop = store.selectContainerTop();
   const items = props.items || [];
+  const visibleItems = getVisibleItems(items, store.selectCollapsedIds());
   const sourceId = store.selectSelectedItemId();
   const forbiddenIndices = store.selectForbiddenIndices();
 
@@ -326,7 +404,6 @@ export const handleWindowMouseMove = (deps, payload) => {
     items,
   );
 
-  // Find the source item's index in the items array
   const isForbiddenDrop = forbiddenIndices.includes(result.index);
 
   if (isForbiddenDrop) {
@@ -337,14 +414,14 @@ export const handleWindowMouseMove = (deps, payload) => {
     return;
   }
 
-  const sourceIndex = items.findIndex((item) => item.id === sourceId);
+  const sourceIndex = visibleItems.findIndex((item) => item.id === sourceId);
 
   // Check if the drop position would result in no movement
   let isNoOpDrop = false;
 
   if (result.dropPosition === "inside") {
     // Dropping inside the source itself
-    isNoOpDrop = items[result.index]?.id === sourceId;
+    isNoOpDrop = visibleItems[result.index]?.id === sourceId;
   } else if (result.dropPosition === "above") {
     // Dropping above the source (which means index would be sourceIndex)
     isNoOpDrop = result.index === sourceIndex;
@@ -470,6 +547,7 @@ export const handleItemClick = (deps, payload) => {
   }
 
   // Update selected item
+  store.clearPendingDrag();
   store.setSelectedItemId({ itemId: itemId });
   render();
 

@@ -38,6 +38,7 @@ export const createInitialState = () => ({
   itemRects: {},
   containerTop: 0,
   forbiddenIndices: [],
+  pendingDrag: null,
 
   // Track collapsed folder IDs
   collapsedIds: [],
@@ -67,6 +68,7 @@ export const startDragging = (
   state.itemRects = itemRects;
   state.containerTop = containerTop;
   state.forbiddenIndices = forbiddenIndices || [];
+  state.pendingDrag = null;
 };
 
 export const stopDragging = ({ state }, _payload = {}) => {
@@ -78,6 +80,7 @@ export const stopDragging = ({ state }, _payload = {}) => {
   state.itemRects = {};
   state.containerTop = 0;
   state.forbiddenIndices = [];
+  state.pendingDrag = null;
 };
 
 export const setTargetDragIndex = ({ state }, { index } = {}) => {
@@ -94,6 +97,14 @@ export const setTargetDropPosition = ({ state }, { dropPosition } = {}) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+};
+
+export const setPendingDrag = ({ state }, { pendingDrag } = {}) => {
+  state.pendingDrag = pendingDrag || null;
+};
+
+export const clearPendingDrag = ({ state }, _payload = {}) => {
+  state.pendingDrag = null;
 };
 
 export const selectTargetDragIndex = ({ state }) => {
@@ -126,6 +137,10 @@ export const selectSelectedItemId = ({ state }) => {
 
 export const selectForbiddenIndices = ({ state }) => {
   return state.forbiddenIndices;
+};
+
+export const selectPendingDrag = ({ state }) => {
+  return state.pendingDrag;
 };
 
 export const selectCollapsedIds = ({ state }) => {
