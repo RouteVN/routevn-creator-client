@@ -92,6 +92,22 @@ const get = (state, path) => {
   }, state);
 };
 
+const ensureHierarchyCollection = (targetData) => {
+  if (!targetData || typeof targetData !== "object") {
+    return null;
+  }
+
+  if (!Array.isArray(targetData.order)) {
+    targetData.order = [];
+  }
+
+  if (!targetData.items || typeof targetData.items !== "object") {
+    targetData.items = {};
+  }
+
+  return targetData;
+};
+
 /**
  * Helper function to find a node in the order structure.
  * Returns node information including parent context.
@@ -116,7 +132,7 @@ const findNodeInHierarchy = (order, nodeId) => {
     if (node && node.id === nodeId) {
       return { node, parent: null, parentArray: order };
     }
-    if (node && node.children) {
+    if (node && Array.isArray(node.children)) {
       const result = findNodeInHierarchy(node.children, nodeId);
       if (result) {
         return { ...result, parent: node };
@@ -153,7 +169,7 @@ const removeNodeFromHierarchy = (order, nodeId) => {
     }
     if (
       order[i] &&
-      order[i].children &&
+      Array.isArray(order[i].children) &&
       removeNodeFromHierarchy(order[i].children, nodeId)
     ) {
       return true;
@@ -191,7 +207,7 @@ const collectDescendantIds = (order, nodeId) => {
       }
       if (
         node &&
-        node.children &&
+        Array.isArray(node.children) &&
         findNodeAndCollect(node.children, targetId)
       ) {
         return true;
@@ -201,7 +217,7 @@ const collectDescendantIds = (order, nodeId) => {
   };
 
   const collectAllChildren = (node, collection) => {
-    if (node && node.children) {
+    if (node && Array.isArray(node.children)) {
       for (const child of node.children) {
         if (child && child.id) {
           collection.push(child.id);
@@ -394,14 +410,9 @@ export const nodeInsert = (state, payload) => {
   const { target, value, options = {} } = payload;
   const { parent = "_root", position = "first" } = options;
   const newState = structuredClone(state);
-  const targetData = get(newState, target);
-
-  // Ensure order and items exist
-  if (!targetData.order) {
-    targetData.order = [];
-  }
-  if (!targetData.items) {
-    targetData.items = {};
+  const targetData = ensureHierarchyCollection(get(newState, target));
+  if (!targetData) {
+    return state;
   }
 
   // Add item to items object
@@ -449,7 +460,7 @@ export const nodeInsert = (state, payload) => {
     // Add to specific parent
     const parentInfo = findNodeInHierarchy(targetData.order, parent);
     if (parentInfo && parentInfo.node) {
-      if (!parentInfo.node.children) {
+      if (!Array.isArray(parentInfo.node.children)) {
         parentInfo.node.children = [];
       }
       insertAtPosition(parentInfo.node.children, newNode, position);
@@ -483,14 +494,9 @@ export const nodeDelete = (state, payload) => {
   const { target, options = {} } = payload;
   const { id } = options;
   const newState = structuredClone(state);
-  const targetData = get(newState, target);
-
-  // Ensure order and items exist
-  if (!targetData.order) {
-    targetData.order = [];
-  }
-  if (!targetData.items) {
-    targetData.items = {};
+  const targetData = ensureHierarchyCollection(get(newState, target));
+  if (!targetData) {
+    return state;
   }
 
   // Collect all descendant IDs before removing from order
@@ -546,7 +552,10 @@ export const nodeUpdate = (state, payload) => {
   const { target, value, options = {} } = payload;
   const { id, replace = false } = options;
   const newState = structuredClone(state);
-  const targetData = get(newState, target);
+  const targetData = ensureHierarchyCollection(get(newState, target));
+  if (!targetData) {
+    return state;
+  }
 
   if (replace) {
     // Full replace
@@ -642,7 +651,10 @@ export const nodeMove = (state, payload) => {
   const { target, options = {} } = payload;
   const { id, parent = "_root", position = "first" } = options;
   const newState = structuredClone(state);
-  const targetData = get(newState, target);
+  const targetData = ensureHierarchyCollection(get(newState, target));
+  if (!targetData) {
+    return state;
+  }
 
   // Find and remove node from current position
   const nodeInfo = findNodeInHierarchy(targetData.order, id);
@@ -685,7 +697,7 @@ export const nodeMove = (state, payload) => {
   } else {
     const parentInfo = findNodeInHierarchy(targetData.order, parent);
     if (parentInfo && parentInfo.node) {
-      if (!parentInfo.node.children) {
+      if (!Array.isArray(parentInfo.node.children)) {
         parentInfo.node.children = [];
       }
       insertAtPosition(parentInfo.node.children, nodeToMove, position);

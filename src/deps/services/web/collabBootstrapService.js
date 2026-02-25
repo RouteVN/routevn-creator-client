@@ -95,17 +95,18 @@ const createRemoteRefreshDispatcher = ({ subject, collabDebugLog }) => {
     return null;
   };
 
-  const isImagesPageActive = () => {
-    if (typeof window === "undefined") return false;
-    const path = window.location.pathname || "";
-    return (
-      path === "/project/resources/images" ||
-      path === "/project/resources/images/"
-    );
+  const shouldRefreshImagesForEvent = (event) => {
+    const eventType = event?.type || null;
+    if (eventType === "init") return true;
+    const target = event?.payload?.target;
+    if (typeof target !== "string" || target.length === 0) return false;
+    return target === "images" || target.startsWith("images.");
   };
 
   const refreshImagesPageOnRemoteEvent = async (payload) => {
-    if (!isImagesPageActive()) return false;
+    if (!shouldRefreshImagesForEvent(payload?.event)) {
+      return false;
+    }
     collabDebugLog("info", "images remote refresh trigger", {
       projectId: payload?.projectId || null,
       sourceType: payload?.sourceType || null,

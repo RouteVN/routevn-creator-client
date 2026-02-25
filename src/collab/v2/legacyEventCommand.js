@@ -133,7 +133,12 @@ const resolveEntityPartitionSuffix = (event) => {
   return null;
 };
 
-export const createLegacyEventCommand = ({ projectId, actor, event }) => {
+export const createLegacyEventCommand = ({
+  projectId,
+  actor,
+  event,
+  commandId,
+}) => {
   const scope = resolveScopeFromEvent(event);
   const basePartition = `project:${projectId}:${scope}`;
   const suffix = resolveEntityPartitionSuffix(event);
@@ -142,6 +147,7 @@ export const createLegacyEventCommand = ({ projectId, actor, event }) => {
     : [basePartition];
 
   return createCommandEnvelope({
+    id: commandId,
     projectId,
     scope,
     partition: basePartition,

@@ -38,11 +38,14 @@
  * // Returns: [{ id: 'folder1', name: 'Folder', _level: 0, fullLabel: 'Folder', ... }]
  */
 export const toFlatItems = (data) => {
-  const { items, order } = data;
+  const items = data?.items || {};
+  const order = Array.isArray(data?.order) ? data.order : [];
   const flatItems = [];
   const visited = new Set();
 
   const traverse = (node, level = 0, parentChain = []) => {
+    if (!node || typeof node.id !== "string") return;
+    const children = Array.isArray(node.children) ? node.children : [];
     if (visited.has(node.id)) return;
     visited.add(node.id);
 
@@ -60,14 +63,14 @@ export const toFlatItems = (data) => {
       id: node.id,
       _level: level,
       fullLabel,
-      hasChildren: node.children && node.children.length > 0,
+      hasChildren: children.length > 0,
       parentId: parentChain[parentChain.length - 1] || null,
     };
     flatItems.push(item);
 
-    if (node.children) {
+    if (children.length > 0) {
       const newParentChain = [...parentChain, node.id];
-      node.children.forEach((child) =>
+      children.forEach((child) =>
         traverse(child, level + 1, newParentChain),
       );
     }
@@ -89,16 +92,19 @@ export const toFlatItems = (data) => {
  * // Returns: [{ id: 'folder1', type: 'folder', children: [{ id: 'file1', ... }] }]
  */
 export const toFlatGroups = (data) => {
-  const { items, order } = data;
+  const items = data?.items || {};
+  const order = Array.isArray(data?.order) ? data.order : [];
   const flatGroups = [];
   const visited = new Set();
 
   const traverse = (node, level = 0, parentChain = []) => {
+    if (!node || typeof node.id !== "string") return;
+    const childrenNodes = Array.isArray(node.children) ? node.children : [];
     if (visited.has(node.id)) return;
     visited.add(node.id);
 
     // Create groups for nodes that are folders (including empty folders)
-    if (node.children !== undefined && items[node.id]?.type === "folder") {
+    if (items[node.id]?.type === "folder") {
       // Build full label from parent chain
       const parentLabels = parentChain
         .map((parentId) => items[parentId]?.name)
@@ -109,14 +115,15 @@ export const toFlatGroups = (data) => {
           : items[node.id]?.name || "";
 
       // Create children items with full data (only non-folder items)
-      const children = node.children
+      const children = childrenNodes
         .filter((child) => items[child.id]?.type !== "folder")
         .map((child) => ({
           ...items[child.id],
           id: child.id,
           _level: level + 1,
           parentId: node.id,
-          hasChildren: child.children && child.children.length > 0,
+          hasChildren:
+            Array.isArray(child.children) && child.children.length > 0,
         }));
 
       // Create the group
@@ -127,7 +134,7 @@ export const toFlatGroups = (data) => {
         type: "folder",
         _level: level,
         parentId: parentChain[parentChain.length - 1] || null,
-        hasChildren: node.children && node.children.length > 0,
+        hasChildren: childrenNodes.length > 0,
         children,
       };
 
@@ -135,7 +142,7 @@ export const toFlatGroups = (data) => {
 
       // Continue traversing children
       const newParentChain = [...parentChain, node.id];
-      node.children.forEach((child) =>
+      childrenNodes.forEach((child) =>
         traverse(child, level + 1, newParentChain),
       );
     }
@@ -157,9 +164,14 @@ export const toFlatGroups = (data) => {
  * // Output: [{ id: 'f1', name: 'Folder', children: [{ id: 'f2', name: 'File', children: [] }] }]
  */
 export const toHierarchyStructure = (data) => {
-  const { items, order } = data;
+  const items = data?.items || {};
+  const order = Array.isArray(data?.order) ? data.order : [];
 
   const traverse = (node, level = 0, parentChain = []) => {
+    if (!node || typeof node.id !== "string") {
+      return null;
+    }
+    const childrenNodes = Array.isArray(node.children) ? node.children : [];
     // Build full label from parent chain
     const parentLabels = parentChain
       .map((parentId) => items[parentId]?.name)
@@ -176,16 +188,14 @@ export const toHierarchyStructure = (data) => {
       _level: level,
       fullLabel,
       parentId: parentChain[parentChain.length - 1] || null,
-      hasChildren: node.children && node.children.length > 0,
-      children: node.children
-        ? node.children.map((child) =>
-            traverse(child, level + 1, [...parentChain, node.id]),
-          )
-        : [],
+      hasChildren: childrenNodes.length > 0,
+      children: childrenNodes
+        .map((child) => traverse(child, level + 1, [...parentChain, node.id]))
+        .filter(Boolean),
     };
 
     return result;
   };
 
-  return order.map((node) => traverse(node));
+  return order.map((node) => traverse(node)).filter(Boolean);
 };
