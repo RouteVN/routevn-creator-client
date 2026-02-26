@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "insieme";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({

@@ -1,8 +1,8 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
-import { toTreeStructure } from "insieme";
+import { toHierarchyStructure } from "#domain-structure";
 import {
   extractFileIdsFromRenderState,
-  layoutTreeStructureToRenderState,
+  layoutHierarchyStructureToRenderState,
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
@@ -172,9 +172,9 @@ const getRenderState = async (deps) => {
   const layoutId = store.selectLayoutId();
   const storeElements = store.selectItems();
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
-  const layoutTreeStructure = toTreeStructure(layoutElements);
-  const renderStateElements = layoutTreeStructureToRenderState(
-    layoutTreeStructure,
+  const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
+  const renderStateElements = layoutHierarchyStructureToRenderState(
+    layoutHierarchyStructure,
     imageItems,
     { items: typographyItems },
     { items: colorsItems },
@@ -182,7 +182,7 @@ const getRenderState = async (deps) => {
   );
   return {
     renderStateElements,
-    layoutTreeStructure,
+    layoutHierarchyStructure,
     fontsItems,
     imageItems,
     typographyItems,
@@ -408,8 +408,7 @@ export const handleDataChanged = async (deps) => {
   const repository = await projectService.getRepository();
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
-  const layoutData = layout?.elements || { items: {}, tree: [] };
-  store.setItems({ layoutData });
+  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   render();
   await renderLayoutPreview(deps);
 };
@@ -549,24 +548,18 @@ export const handleArrowKeyDown = async (deps, payload) => {
  */
 async function handleDebouncedUpdate(deps, payload) {
   const { projectService, store } = deps;
-  const repository = await projectService.getRepository();
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
   // Save to repository
-  await repository.addEvent({
-    type: "treeUpdate",
-    payload: {
-      target: `layouts.items.${layoutId}.elements`,
-      value: updatedItem,
-      options: {
-        id: selectedItemId,
-        replace: replace,
-      },
-    },
+  await projectService.updateLayoutElement({
+    layoutId,
+    elementId: selectedItemId,
+    patch: updatedItem,
+    replace: replace === true,
   });
 
   // For form/keyboard updates, sync store with repository
-  const { layouts, images } = repository.getState();
+  const { layouts, images } = projectService.getState();
   const layout = layouts.items[layoutId];
 
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });

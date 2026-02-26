@@ -1,4 +1,4 @@
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#domain-structure";
 
 const form = {
   fields: [

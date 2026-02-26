@@ -1,4 +1,4 @@
-import { toFlatGroups } from "insieme";
+import { toFlatGroups } from "#domain-structure";
 
 export const createInitialState = () => ({
   selectedImageId: undefined,

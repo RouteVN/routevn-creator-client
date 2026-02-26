@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "insieme";
 import {
   extractFileIdsForLayouts,
   extractSceneIdsFromValue,
@@ -144,15 +143,13 @@ const isMinimalAdvDialogue = (dialogue) => {
 };
 
 const shouldInheritNvlModeFromPreviousLine = ({
-  scenes,
-  sceneId,
+  domainState,
   sectionId,
   lineId,
   existingDialogue,
 }) => {
-  const linesData =
-    scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines;
-  if (!linesData) {
+  const section = domainState?.sections?.[sectionId];
+  if (!section) {
     return false;
   }
 
@@ -164,19 +161,19 @@ const shouldInheritNvlModeFromPreviousLine = ({
     return false;
   }
 
-  const currentIndex = (linesData.tree || []).findIndex(
-    (line) => line.id === lineId,
-  );
+  const lineOrder = section.lineIds || [];
+  const currentIndex = lineOrder.indexOf(lineId);
   if (currentIndex <= 0) {
     return false;
   }
 
-  const previousLineId = linesData.tree[currentIndex - 1]?.id;
+  const previousLineId = lineOrder[currentIndex - 1];
   if (!previousLineId) {
     return false;
   }
 
-  const previousDialogue = linesData.items?.[previousLineId]?.actions?.dialogue;
+  const previousDialogue =
+    domainState?.lines?.[previousLineId]?.actions?.dialogue;
   return previousDialogue?.mode === "nvl";
 };
 
@@ -195,6 +192,15 @@ const setSceneAssetLoading = (deps, isLoading) => {
   const { store, render } = deps;
   store.setSceneAssetLoading({ isLoading: isLoading });
   render();
+};
+
+const syncStoreProjectState = (store, projectService) => {
+  const repositoryState = projectService.getState();
+  store.setRepositoryState({ repository: repositoryState });
+  store.setDomainState({
+    domainState: projectService.getDomainState(),
+  });
+  return repositoryState;
 };
 
 async function loadAssetsForSceneIds(
@@ -416,38 +422,30 @@ function createProjectDataWithSelectedEntryPoint(projectData, selection) {
 }
 
 // Shared helper to write dialogue content to repository
-async function writeDialogueContent(
-  deps,
-  lineId,
-  { sceneId, sectionId, content },
-) {
+async function writeDialogueContent(deps, lineId, { sectionId, content }) {
   const { projectService } = deps;
 
   // Get existing dialogue to preserve other properties (layoutId, characterId, etc.)
-  const { scenes } = projectService.getState();
+  const domainState = projectService.getDomainState();
   const existingDialogue =
-    scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines?.items?.[
-      lineId
-    ]?.actions?.dialogue || {};
+    domainState?.lines?.[lineId]?.actions?.dialogue || {};
   const shouldInheritNvlMode = shouldInheritNvlModeFromPreviousLine({
-    scenes,
-    sceneId,
+    domainState,
     sectionId,
     lineId,
     existingDialogue,
   });
 
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-      value: {
+  await projectService.updateLineActions({
+    lineId,
+    patch: {
+      dialogue: {
         ...existingDialogue,
         ...(shouldInheritNvlMode ? { mode: "nvl" } : {}),
         content,
       },
-      options: { replace: true },
     },
+    replace: false,
   });
 }
 
@@ -502,7 +500,7 @@ export const handleAfterMount = async (deps) => {
     sectionId: payloadSectionId,
     lineId: payloadLineId,
   } = appService.getPayload();
-  const state = projectService.getState();
+  const state = syncStoreProjectState(store, projectService);
 
   if (state.fonts && state.fonts.items) {
     for (const font of Object.values(state.fonts.items)) {
@@ -516,7 +514,6 @@ export const handleAfterMount = async (deps) => {
   }
 
   store.setSceneId({ sceneId: sceneId });
-  store.setRepositoryState({ repository: state });
 
   // Get scene to set selected section and line
   const scene = store.selectScene();
@@ -613,6 +610,61 @@ const selectSection = async (deps, sectionId) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
+const reconcileSceneSelection = (store) => {
+  const scene = store.selectScene();
+  const previousSectionId = store.selectSelectedSectionId();
+  const previousLineId = store.selectSelectedLineId();
+
+  if (!scene || !Array.isArray(scene.sections) || scene.sections.length === 0) {
+    if (previousSectionId !== undefined) {
+      store.setSelectedSectionId({ selectedSectionId: undefined });
+    }
+    if (previousLineId !== undefined) {
+      store.setSelectedLineId({ selectedLineId: undefined });
+    }
+    return {
+      sectionId: undefined,
+      lineId: undefined,
+    };
+  }
+
+  const resolvedSection =
+    scene.sections.find((section) => section.id === previousSectionId) ||
+    scene.sections[0];
+  const resolvedSectionId = resolvedSection?.id;
+  const resolvedLine =
+    resolvedSection?.lines?.find((line) => line.id === previousLineId) ||
+    resolvedSection?.lines?.[0];
+  const resolvedLineId = resolvedLine?.id;
+
+  if (resolvedSectionId !== previousSectionId) {
+    store.setSelectedSectionId({ selectedSectionId: resolvedSectionId });
+  }
+
+  if (resolvedLineId !== previousLineId) {
+    store.setSelectedLineId({ selectedLineId: resolvedLineId });
+  }
+
+  return {
+    sectionId: resolvedSectionId,
+    lineId: resolvedLineId,
+  };
+};
+
+export const handleDataChanged = async (deps) => {
+  const { store, projectService, render, subject } = deps;
+  await projectService.ensureRepository();
+  syncStoreProjectState(store, projectService);
+
+  reconcileSceneSelection(store);
+
+  await updateSectionChanges(deps);
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipAnimations: true,
+  });
+};
+
 const isSectionsOverviewOpen = (store) => {
   return store.selectIsSectionsOverviewOpen();
 };
@@ -639,8 +691,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     graphicsService,
     appService,
   } = deps;
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
 
   // Handle section/scene transitions
@@ -663,19 +713,13 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: safeDetail,
-        options: {
-          replace: false,
-        },
-      },
+    await projectService.updateLineActions({
+      lineId,
+      patch: safeDetail,
+      replace: false,
     });
 
-    const state = projectService.getState();
-    store.setRepositoryState({ repository: state });
+    syncStoreProjectState(store, projectService);
     render();
 
     // Render the canvas with the latest data
@@ -705,19 +749,13 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: safeDetail,
-        options: {
-          replace: false,
-        },
-      },
+    await projectService.updateLineActions({
+      lineId,
+      patch: safeDetail,
+      replace: false,
     });
 
-    const state = projectService.getState();
-    store.setRepositoryState({ repository: state });
+    syncStoreProjectState(store, projectService);
     render();
 
     // Render the canvas with the latest data
@@ -747,19 +785,13 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-        value: safeDetail,
-        options: {
-          replace: false,
-        },
-      },
+    await projectService.updateLineActions({
+      lineId,
+      patch: safeDetail,
+      replace: false,
     });
 
-    const state = projectService.getState();
-    store.setRepositoryState({ repository: state });
+    syncStoreProjectState(store, projectService);
     render();
 
     // Render the canvas with the latest data
@@ -802,19 +834,13 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions`,
-      value: submissionData,
-      options: {
-        replace: false,
-      },
-    },
+  await projectService.updateLineActions({
+    lineId,
+    patch: submissionData,
+    replace: false,
   });
 
-  const state = projectService.getState();
-  store.setRepositoryState({ repository: state });
+  syncStoreProjectState(store, projectService);
   render();
 
   // Trigger debounced canvas render
@@ -834,9 +860,12 @@ export const handleEditorDataChanged = async (deps, payload) => {
   store.setLineTextContent({ lineId, content });
 
   // Queue the pending update and schedule debounced write
-  const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
-  dialogueQueueService.setAndSchedule(lineId, { sceneId, sectionId, content });
+  try {
+    dialogueQueueService.setAndSchedule(lineId, { sectionId, content });
+  } catch (error) {
+    console.error("[sceneEditor] Failed to queue dialogue update:", error);
+  }
 
   // Trigger debounced canvas render with skipRender flag.
   // skipRender prevents full UI re-render which would reset cursor position while typing.
@@ -912,36 +941,23 @@ export const handleSectionAddClick = async (deps) => {
     };
   }
 
-  await projectService.appendEvent({
-    type: "treePush",
-    payload: {
-      target: `scenes.items.${sceneId}.sections`,
-      value: {
-        id: newSectionId,
-        name: newSectionName,
-        lines: {
-          items: {
-            [newLineId]: {
-              actions: actions,
-            },
-          },
-          tree: [
-            {
-              id: newLineId,
-            },
-          ],
-        },
-      },
-      options: {
-        parent: "_root",
-        position: "last",
-      },
+  await projectService.createSectionItem({
+    sceneId,
+    sectionId: newSectionId,
+    name: newSectionName,
+    position: "last",
+  });
+  await projectService.createLineItem({
+    sectionId: newSectionId,
+    lineId: newLineId,
+    line: {
+      actions,
     },
+    position: "last",
   });
 
   // Update store with new repository state
-  const state = projectService.getState();
-  store.setRepositoryState({ repository: state });
+  syncStoreProjectState(store, projectService);
 
   store.setSelectedSectionId({ selectedSectionId: newSectionId });
   store.setSelectedLineId({ selectedLineId: newLineId });
@@ -1015,7 +1031,6 @@ export const handleSplitLine = async (deps, payload) => {
     return;
   }
 
-  const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const { lineId, leftContent, rightContent } = payload._event.detail;
 
@@ -1035,23 +1050,9 @@ export const handleSplitLine = async (deps, payload) => {
   await flushDialogueQueue(deps);
 
   // Get existing actions data to preserve everything except dialogue content
-  const { scenes } = projectService.getState();
-  const scene = toFlatItems(scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === sceneId);
-
-  let existingDialogue = {};
-  if (scene) {
-    const section = toFlatItems(scene.sections).find((s) => s.id === sectionId);
-    if (section) {
-      const line = toFlatItems(section.lines).find((l) => l.id === lineId);
-      if (line && line.actions) {
-        if (line.actions.dialogue) {
-          existingDialogue = line.actions.dialogue;
-        }
-      }
-    }
-  }
+  const domainState = projectService.getDomainState();
+  const existingDialogue =
+    domainState?.lines?.[lineId]?.actions?.dialogue || {};
 
   // First, update the current line with the left content
   // Only update the dialogue.content, preserve everything else
@@ -1060,27 +1061,25 @@ export const handleSplitLine = async (deps, payload) => {
     : [{ text: "" }];
 
   if (existingDialogue && Object.keys(existingDialogue).length > 0) {
-    // If dialogue exists, update only the content
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue.content`,
-        value: leftContentArray,
-        options: {
-          replace: true,
-        },
-      },
-    });
-  } else {
-    // If no dialogue exists but we have content, create minimal dialogue
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${lineId}.actions.dialogue`,
-        value: {
+    await projectService.updateLineActions({
+      lineId,
+      patch: {
+        dialogue: {
+          ...existingDialogue,
           content: leftContentArray,
         },
       },
+      replace: false,
+    });
+  } else {
+    await projectService.updateLineActions({
+      lineId,
+      patch: {
+        dialogue: {
+          content: leftContentArray,
+        },
+      },
+      replace: false,
     });
   }
 
@@ -1092,8 +1091,7 @@ export const handleSplitLine = async (deps, payload) => {
   const shouldInheritNvl =
     existingDialogue?.mode === "nvl" ||
     shouldInheritNvlModeFromPreviousLine({
-      scenes,
-      sceneId,
+      domainState,
       sectionId,
       lineId,
       existingDialogue,
@@ -1108,24 +1106,17 @@ export const handleSplitLine = async (deps, payload) => {
       }
     : {};
 
-  await projectService.appendEvent({
-    type: "treePush",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: {
-        id: newLineId,
-        actions: newLineActions,
-      },
-      options: {
-        parent: "_root",
-        position: { after: lineId },
-      },
+  await projectService.createLineItem({
+    sectionId,
+    lineId: newLineId,
+    line: {
+      actions: newLineActions,
     },
+    afterLineId: lineId,
   });
 
   // Update store with new repository state (pending updates were already flushed)
-  const state = projectService.getState();
-  store.setRepositoryState({ repository: state });
+  syncStoreProjectState(store, projectService);
 
   // Handle UI updates immediately for responsiveness
   // Pre-configure the linesEditor before rendering
@@ -1176,17 +1167,15 @@ export const handleNewLine = async (deps) => {
     return;
   }
 
-  const sceneId = store.selectSceneId();
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   const selectedLine = store.selectSelectedLine();
-  const scenes = projectService.getState().scenes;
+  const domainState = projectService.getDomainState();
   const existingDialogue = selectedLine?.actions?.dialogue || {};
   const shouldInheritNvl =
     existingDialogue?.mode === "nvl" ||
     shouldInheritNvlModeFromPreviousLine({
-      scenes,
-      sceneId,
+      domainState,
       sectionId,
       lineId: selectedLine?.id,
       existingDialogue,
@@ -1199,19 +1188,13 @@ export const handleNewLine = async (deps) => {
       }
     : {};
 
-  await projectService.appendEvent({
-    type: "treePush",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: {
-        id: newLineId,
-        actions: newLineActions,
-      },
-      options: {
-        parent: "_root",
-        position: "last",
-      },
+  await projectService.createLineItem({
+    sectionId,
+    lineId: newLineId,
+    line: {
+      actions: newLineActions,
     },
+    position: "last",
   });
 
   render();
@@ -1392,7 +1375,6 @@ export const handleMergeLines = async (deps, payload) => {
 
   const { prevLineId, currentLineId, contentToAppend } = payload._event.detail;
 
-  const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
 
   // Check if this line is already being processed (split/merge)
@@ -1432,34 +1414,21 @@ export const handleMergeLines = async (deps, payload) => {
 
   const finalContent = [{ text: mergedContent }];
   // Update previous line with merged content
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines.items.${prevLineId}.actions.dialogue`,
-      value: {
+  await projectService.updateLineActions({
+    lineId: prevLineId,
+    patch: {
+      dialogue: {
         ...existingDialogue,
         content: finalContent,
       },
-      options: {
-        replace: true,
-      },
     },
+    replace: false,
   });
 
-  // Delete current line
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      options: {
-        id: currentLineId,
-      },
-    },
-  });
+  await projectService.deleteLineItem({ lineId: currentLineId });
 
   // Update repository state in store to reflect the changes
-  const state = projectService.getState();
-  store.setRepositoryState({ repository: state });
+  syncStoreProjectState(store, projectService);
 
   // Update selected line to the previous one
   store.setSelectedLineId({ selectedLineId: prevLineId });
@@ -1553,20 +1522,13 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   if (action === "delete-section") {
-    // Delete section from repository
-    await projectService.appendEvent({
-      type: "treeDelete",
-      payload: {
-        target: `scenes.items.${sceneId}.sections`,
-        options: {
-          id: sectionId,
-        },
-      },
+    await projectService.deleteSectionItem({
+      sceneId,
+      sectionId,
     });
 
     // Update store with new repository state
-    const state = projectService.getState();
-    store.setRepositoryState({ repository: state });
+    syncStoreProjectState(store, projectService);
 
     // Update scene data and select first remaining section
     const newScene = store.selectScene();
@@ -1600,29 +1562,31 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
             content: currentActions.dialogue.content,
           };
 
-          await projectService.appendEvent({
-            type: "set",
-            payload: {
-              target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.dialogue`,
-              value: updatedDialogue,
-              options: {
-                replace: true,
-              },
+          await projectService.updateLineActions({
+            lineId: selectedLineId,
+            patch: {
+              dialogue: updatedDialogue,
             },
+            replace: false,
           });
         }
       } else {
-        // For all other actions types, use unset to remove completely
-        await projectService.appendEvent({
-          type: "unset",
-          payload: {
-            target: `scenes.items.${sceneId}.sections.items.${selectedSectionId}.lines.items.${selectedLineId}.actions.${actionsType}`,
-          },
+        const stateBefore = projectService.getState();
+        const currentActions =
+          stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
+            selectedSectionId
+          ]?.lines?.items?.[selectedLineId]?.actions || {};
+        const nextActions = structuredClone(currentActions);
+        delete nextActions[actionsType];
+
+        await projectService.updateLineActions({
+          lineId: selectedLineId,
+          patch: nextActions,
+          replace: true,
         });
       }
 
-      const state = projectService.getState();
-      store.setRepositoryState({ repository: state });
+      syncStoreProjectState(store, projectService);
 
       // Trigger re-render to update the view
       subject.dispatch("sceneEditor.renderCanvas", {});
@@ -1659,25 +1623,15 @@ export const handleFormActionClick = async (deps, payload) => {
     // Hide popover
     store.hidePopover();
 
-    // Update section name in repository
-    if (sectionId && values?.name && sceneId) {
-      await projectService.appendEvent({
-        type: "treeUpdate",
-        payload: {
-          target: `scenes.items.${sceneId}.sections`,
-          value: {
-            name: values.name,
-          },
-          options: {
-            id: sectionId,
-            replace: false,
-          },
-        },
+    if (sectionId && values.name && sceneId) {
+      await projectService.renameSectionItem({
+        sceneId,
+        sectionId,
+        name: values.name,
       });
 
       // Update store with new repository state
-      const state = projectService.getState();
-      store.setRepositoryState({ repository: state });
+      syncStoreProjectState(store, projectService);
     }
 
     render();
@@ -1718,30 +1672,13 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
       delete newActions[actionType];
     }
   }
-  // Create updated line object
-  const updatedLine = {
-    ...selectedLine,
-    actions: newActions,
-  };
-
-  // Save directly to repository - this will update the state
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
-
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: updatedLine,
-      options: {
-        id: selectedLine.id,
-        replace: true,
-      },
-    },
+  await projectService.updateLineActions({
+    lineId: selectedLine.id,
+    patch: newActions,
+    replace: true,
   });
   // Update store with new repository state
-  const state = projectService.getState();
-  store.setRepositoryState({ repository: state });
+  syncStoreProjectState(store, projectService);
   // Trigger re-render
   render();
   subject.dispatch("sceneEditor.renderCanvas", {});
@@ -1859,30 +1796,13 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
     // For non-inherited actions, delete as before
     delete newActions[actionType];
   }
-  // Create updated line object
-  const updatedLine = {
-    ...selectedLine,
-    actions: newActions,
-  };
-
-  // Save directly to repository - this will update the state
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
-
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: `scenes.items.${sceneId}.sections.items.${sectionId}.lines`,
-      value: updatedLine,
-      options: {
-        id: selectedLine.id,
-        replace: true,
-      },
-    },
+  await projectService.updateLineActions({
+    lineId: selectedLine.id,
+    patch: newActions,
+    replace: true,
   });
   // Update store with new repository state
-  const state = projectService.getState();
-  store.setRepositoryState({ repository: state });
+  syncStoreProjectState(store, projectService);
   // Trigger re-render
   render();
 

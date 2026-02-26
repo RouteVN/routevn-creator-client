@@ -1,4 +1,113 @@
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#domain-structure";
+
+const createEmptyCollection = () => ({
+  items: {},
+  tree: [],
+});
+
+const isHierarchyCollection = (value) =>
+  !!value &&
+  typeof value === "object" &&
+  !!value.items &&
+  typeof value.items === "object" &&
+  Array.isArray(value.tree);
+
+const normalizeLayoutCollection = (layoutsValue) => {
+  if (isHierarchyCollection(layoutsValue)) {
+    return layoutsValue;
+  }
+
+  const layoutMap =
+    layoutsValue && typeof layoutsValue === "object" ? layoutsValue : {};
+  const items = {};
+  const ids = [];
+
+  for (const [layoutId, layout] of Object.entries(layoutMap)) {
+    if (!layout || typeof layout !== "object") continue;
+    items[layoutId] = {
+      id: layoutId,
+      type: layout.type || "layout",
+      ...structuredClone(layout),
+    };
+    ids.push(layoutId);
+  }
+
+  const sortedIds = ids.sort((a, b) => {
+    const aTs = items[a]?.createdAt ?? 0;
+    const bTs = items[b]?.createdAt ?? 0;
+    if (aTs !== bTs) return aTs - bTs;
+    if (a === b) return 0;
+    return a < b ? -1 : 1;
+  });
+
+  const idSet = new Set(sortedIds);
+  const ROOT = "__root__";
+  const childrenByParent = new Map([[ROOT, []]]);
+  for (const id of sortedIds) {
+    const rawParentId = items[id]?.parentId;
+    const parentId =
+      typeof rawParentId === "string" &&
+      rawParentId.length > 0 &&
+      rawParentId !== id &&
+      idSet.has(rawParentId)
+        ? rawParentId
+        : null;
+    const key = parentId || ROOT;
+    if (!childrenByParent.has(key)) {
+      childrenByParent.set(key, []);
+    }
+    childrenByParent.get(key).push(id);
+  }
+
+  const visited = new Set();
+  const buildNodes = (parentKey) => {
+    const idsForParent = childrenByParent.get(parentKey) || [];
+    const nodes = [];
+    for (const id of idsForParent) {
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const children = buildNodes(id);
+      if (children.length > 0) {
+        nodes.push({ id, children });
+      } else {
+        nodes.push({ id });
+      }
+    }
+    return nodes;
+  };
+
+  const tree = buildNodes(ROOT);
+  for (const id of sortedIds) {
+    if (visited.has(id)) continue;
+    visited.add(id);
+    tree.push({ id });
+  }
+
+  return { items, tree };
+};
+
+const getResourceCollectionsFromDomainState = (domainState) => ({
+  images: domainState?.resources?.images || createEmptyCollection(),
+  layouts: normalizeLayoutCollection(
+    domainState?.layouts || domainState?.resources?.layouts,
+  ),
+  videos: domainState?.resources?.videos || createEmptyCollection(),
+  tweens: domainState?.resources?.tweens || createEmptyCollection(),
+});
+
+const getDomainStateFromProjectService = (projectService) => {
+  if (typeof projectService.getDomainState === "function") {
+    return projectService.getDomainState();
+  }
+  return projectService.getState();
+};
+
+const getDomainStateFromRepository = (repository) => {
+  if (typeof repository?.getDomainState === "function") {
+    return repository.getDomainState();
+  }
+  return repository.getState();
+};
 
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
@@ -38,7 +147,9 @@ export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
 
   await projectService.ensureRepository();
-  const { images, layouts, videos, tweens } = projectService.getState();
+  const domainState = getDomainStateFromProjectService(projectService);
+  const { images, layouts, videos, tweens } =
+    getResourceCollectionsFromDomainState(domainState);
 
   store.setRepositoryState({
     images,
@@ -125,7 +236,8 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
 export const handleImageSelected = async (deps, payload) => {
   const { store, render, projectService } = deps;
   await projectService.ensureRepository();
-  const { images } = projectService.getState();
+  const domainState = getDomainStateFromProjectService(projectService);
+  const { images } = getResourceCollectionsFromDomainState(domainState);
 
   const { imageId } = payload._event.detail;
 
@@ -284,6 +396,9 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
 export const handleButtonSelectClick = async (deps) => {
   const { store, render, projectService } = deps;
   const repository = await projectService.getRepository();
+  const domainState = getDomainStateFromRepository(repository);
+  const { images, layouts, videos } =
+    getResourceCollectionsFromDomainState(domainState);
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
   const tempSelectedResourceType = store.selectTab();
 
@@ -292,29 +407,22 @@ export const handleButtonSelectClick = async (deps) => {
   }
 
   let fileId;
-  // if (tempSelectedResourceType === "image") {
-  const { images } = repository.getState();
   const tempSelectedImage = toFlatItems(images).find(
     (image) => image.id === tempSelectedResourceId,
   );
   fileId = tempSelectedImage?.fileId;
-  // } else if (tempSelectedResourceType === "layout") {
   if (!fileId) {
-    const { layouts } = repository.getState();
     const tempSelectedLayout = toFlatItems(layouts).find(
       (layout) => layout.id === tempSelectedResourceId,
     );
     fileId = tempSelectedLayout?.thumbnailFileId;
   }
-  // } else if (tempSelectedResourceType === "video") {
   if (!fileId) {
-    const { videos } = repository.getState();
     const tempSelectedVideo = toFlatItems(videos).find(
       (video) => video.id === tempSelectedResourceId,
     );
     fileId = tempSelectedVideo?.fileId;
   }
-  // }
 
   store.setSelectedResource({
     resourceId: tempSelectedResourceId,

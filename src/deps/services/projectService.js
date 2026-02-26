@@ -3,10 +3,14 @@ import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
-import { createRepository } from "insieme";
+import { createRepository } from "#domain-structure";
 import { createInsiemeTauriStoreAdapter } from "../infra/tauri/tauriRepositoryAdapter";
 import { loadTemplate, getTemplateFiles } from "../../utils/templateLoader";
 import { createBundle } from "../../utils/bundleUtils";
+import {
+  createProjectCollabService,
+  createWebSocketTransport,
+} from "../../collab/v2/index.js";
 import {
   getImageDimensions,
   getVideoDimensions,
@@ -14,6 +18,7 @@ import {
   extractVideoThumbnail,
   detectFileType,
 } from "../../utils/fileProcessors";
+import { projectRepositoryStateToDomainState } from "../../domain/v2/stateProjection.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -30,10 +35,18 @@ const loadFont = async (fontName, fontUrl) => {
   return fontFace;
 };
 
+const createTreeCollection = () => {
+  return {
+    items: {},
+    tree: [],
+  };
+};
+
 /**
  * Default empty project data structure
  */
 export const initialProjectData = {
+  model_version: 2,
   project: {
     name: "",
     description: "",
@@ -41,58 +54,27 @@ export const initialProjectData = {
   story: {
     initialSceneId: "",
   },
-  images: {
-    items: {},
-    tree: [],
-  },
-  tweens: {
-    items: {},
-    tree: [],
-  },
-  sounds: {
-    items: {},
-    tree: [],
-  },
-  videos: {
-    items: {},
-    tree: [],
-  },
-  characters: {
-    items: {},
-    tree: [],
-  },
-  fonts: {
-    items: {},
-    tree: [],
-  },
-  transforms: {
-    items: {},
-    tree: [],
-  },
-  colors: {
-    items: {},
-    tree: [],
-  },
-  typography: {
-    items: {},
-    tree: [],
-  },
-  variables: {
-    items: {},
-    tree: [],
-  },
-  components: {
-    items: {},
-    tree: [],
-  },
-  layouts: {
-    items: {},
-    tree: [],
-  },
-  scenes: {
-    items: {},
-    tree: [],
-  },
+  images: createTreeCollection(),
+  tweens: createTreeCollection(),
+  sounds: createTreeCollection(),
+  videos: createTreeCollection(),
+  characters: createTreeCollection(),
+  fonts: createTreeCollection(),
+  transforms: createTreeCollection(),
+  colors: createTreeCollection(),
+  typography: createTreeCollection(),
+  variables: createTreeCollection(),
+  components: createTreeCollection(),
+  layouts: createTreeCollection(),
+  scenes: createTreeCollection(),
+};
+
+const assertV2State = (state) => {
+  if (!state || state.model_version !== 2) {
+    throw new Error(
+      "Unsupported project model version. RouteVN V2 only supports model_version=2 projects.",
+    );
+  }
 };
 
 /**
@@ -105,11 +87,23 @@ export const initialProjectData = {
  * @param {Object} params.filePicker - File picker instance
  */
 export const createProjectService = ({ router, db, filePicker }) => {
+  const collabLog = (level, message, meta = {}) => {
+    const fn =
+      level === "error"
+        ? console.error.bind(console)
+        : level === "warn"
+          ? console.warn.bind(console)
+          : console.log.bind(console);
+    fn(`[routevn.collab.tauri] ${message}`, meta);
+  };
+
   // Repository cache
   const repositoriesByProject = new Map();
   const repositoriesByPath = new Map();
   const adaptersByProject = new Map();
   const adaptersByPath = new Map();
+  const collabSessionsByProject = new Map();
+  const collabSessionModeByProject = new Map();
 
   // Initialization locks - prevents duplicate initialization
   const initLocksByProject = new Map(); // projectId -> Promise<Repository>
@@ -123,6 +117,107 @@ export const createProjectService = ({ router, db, filePicker }) => {
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
     return p;
+  };
+
+  const getBasePartitions = (projectId, partitions) =>
+    partitions || [
+      `project:${projectId}:story`,
+      `project:${projectId}:resources`,
+      `project:${projectId}:layouts`,
+      `project:${projectId}:settings`,
+    ];
+
+  const toParentId = (parentId) =>
+    typeof parentId === "string" && parentId.length > 0 && parentId !== "_root"
+      ? parentId
+      : "_root";
+
+  const findSectionLocationInRepositoryState = (state, sectionId) => {
+    const sceneItems = state?.scenes?.items || {};
+    for (const [sceneId, scene] of Object.entries(sceneItems)) {
+      const section = scene?.sections?.items?.[sectionId];
+      if (!section) continue;
+      return { sceneId, section };
+    }
+    return null;
+  };
+
+  const findLineLocationInRepositoryState = (state, lineId) => {
+    const sceneItems = state?.scenes?.items || {};
+    for (const [sceneId, scene] of Object.entries(sceneItems)) {
+      const sectionItems = scene?.sections?.items || {};
+      for (const [sectionId, section] of Object.entries(sectionItems)) {
+        const line = section?.lines?.items?.[lineId];
+        if (!line) continue;
+        return { sceneId, sectionId, line };
+      }
+    }
+    return null;
+  };
+
+  const createSessionForProject = async ({
+    projectId,
+    token,
+    userId,
+    clientId,
+    endpointUrl,
+    partitions,
+    mode,
+  }) => {
+    collabLog("info", "create session requested", {
+      projectId,
+      endpointUrl: endpointUrl || null,
+      mode,
+      hasToken: Boolean(token),
+      userId,
+      clientId,
+    });
+
+    const repository = await getRepositoryByProject(projectId);
+    const state = repository.getState();
+    assertV2State(state);
+
+    const resolvedProjectId = state.project?.id || projectId;
+    const resolvedPartitions = getBasePartitions(resolvedProjectId, partitions);
+    const collabSession = createProjectCollabService({
+      projectId: resolvedProjectId,
+      projectName: state.project?.name || "",
+      projectDescription: state.project?.description || "",
+      token,
+      actor: {
+        userId,
+        clientId,
+      },
+      partitions: resolvedPartitions,
+      logger: (entry) => {
+        collabLog("debug", "sync-client", entry);
+      },
+    });
+
+    await collabSession.start();
+    collabLog("info", "session started", {
+      projectId: resolvedProjectId,
+      mode,
+      partitions: resolvedPartitions,
+      online: Boolean(endpointUrl),
+    });
+    if (endpointUrl) {
+      collabLog("info", "attaching websocket transport", {
+        endpointUrl,
+      });
+      const transport = createWebSocketTransport({
+        url: endpointUrl,
+        label: "routevn.collab.tauri.transport",
+      });
+      await collabSession.setOnlineTransport(transport);
+      collabLog("info", "websocket transport attached", {
+        endpointUrl,
+      });
+    }
+
+    collabSessionsByProject.set(projectId, collabSession);
+    collabSessionModeByProject.set(projectId, mode);
+    return collabSession;
   };
 
   // Get or create repository by path
@@ -146,6 +241,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
           snapshotInterval: 500, // Auto-save snapshot every 500 events
         });
         await repository.init({ initialState: initialProjectData });
+        assertV2State(repository.getState());
         repositoriesByPath.set(projectPath, repository);
         adaptersByPath.set(projectPath, store);
         return repository;
@@ -416,6 +512,560 @@ export const createProjectService = ({ router, db, filePicker }) => {
       return getCurrentRepository();
     },
 
+    async updateProjectFields({ patch }) {
+      const entries = Object.entries(patch || {}).filter(
+        ([key]) =>
+          key && key !== "id" && key !== "createdAt" && key !== "updatedAt",
+      );
+      for (const [key, value] of entries) {
+        await this.appendEvent({
+          type: "set",
+          payload: {
+            target: `project.${key}`,
+            value: structuredClone(value),
+          },
+        });
+      }
+    },
+
+    async createSceneItem({
+      sceneId,
+      name,
+      parentId = null,
+      position = "last",
+      data = {},
+    }) {
+      const nextSceneId = sceneId || nanoid();
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: "scenes",
+          value: {
+            id: nextSceneId,
+            type: "scene",
+            name,
+            sections: createTreeCollection(),
+            ...structuredClone(data || {}),
+          },
+          options: {
+            parent: toParentId(parentId),
+            position,
+          },
+        },
+      });
+      return nextSceneId;
+    },
+
+    async updateSceneItem({ sceneId, patch }) {
+      await this.appendEvent({
+        type: "nodeUpdate",
+        payload: {
+          target: "scenes",
+          value: structuredClone(patch || {}),
+          options: {
+            id: sceneId,
+            replace: false,
+          },
+        },
+      });
+    },
+
+    async renameSceneItem({ sceneId, name }) {
+      await this.updateSceneItem({
+        sceneId,
+        patch: { name },
+      });
+    },
+
+    async deleteSceneItem({ sceneId }) {
+      await this.appendEvent({
+        type: "nodeDelete",
+        payload: {
+          target: "scenes",
+          options: {
+            id: sceneId,
+          },
+        },
+      });
+    },
+
+    async setInitialScene({ sceneId }) {
+      await this.appendEvent({
+        type: "set",
+        payload: {
+          target: "story.initialSceneId",
+          value: sceneId,
+        },
+      });
+    },
+
+    async reorderSceneItem({ sceneId, parentId = null, position = "last" }) {
+      await this.appendEvent({
+        type: "nodeMove",
+        payload: {
+          target: "scenes",
+          options: {
+            id: sceneId,
+            parent: toParentId(parentId),
+            position,
+          },
+        },
+      });
+    },
+
+    async createSectionItem({
+      sceneId,
+      sectionId,
+      name,
+      parentId = null,
+      position = "last",
+      data = {},
+    }) {
+      const nextSectionId = sectionId || nanoid();
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: `scenes.items.${sceneId}.sections`,
+          value: {
+            id: nextSectionId,
+            type: "section",
+            name,
+            lines: createTreeCollection(),
+            ...structuredClone(data || {}),
+          },
+          options: {
+            parent: toParentId(parentId),
+            position,
+          },
+        },
+      });
+      return nextSectionId;
+    },
+
+    async renameSectionItem({ sceneId, sectionId, name }) {
+      const resolvedSceneId =
+        sceneId ||
+        findSectionLocationInRepositoryState(this.getState(), sectionId)
+          ?.sceneId;
+      if (!resolvedSceneId) return;
+
+      await this.appendEvent({
+        type: "nodeUpdate",
+        payload: {
+          target: `scenes.items.${resolvedSceneId}.sections`,
+          value: {
+            name,
+          },
+          options: {
+            id: sectionId,
+            replace: false,
+          },
+        },
+      });
+    },
+
+    async deleteSectionItem({ sceneId, sectionId }) {
+      const resolvedSceneId =
+        sceneId ||
+        findSectionLocationInRepositoryState(this.getState(), sectionId)
+          ?.sceneId;
+      if (!resolvedSceneId) return;
+
+      await this.appendEvent({
+        type: "nodeDelete",
+        payload: {
+          target: `scenes.items.${resolvedSceneId}.sections`,
+          options: {
+            id: sectionId,
+          },
+        },
+      });
+    },
+
+    async createLineItem({
+      sectionId,
+      lineId,
+      line = {},
+      afterLineId,
+      parentId = null,
+      position = "last",
+    }) {
+      const nextLineId = lineId || nanoid();
+      const location = findSectionLocationInRepositoryState(
+        this.getState(),
+        sectionId,
+      );
+      if (!location) return nextLineId;
+
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: `scenes.items.${location.sceneId}.sections.items.${sectionId}.lines`,
+          value: {
+            id: nextLineId,
+            ...structuredClone(line || {}),
+          },
+          options: {
+            parent: toParentId(parentId),
+            position: afterLineId ? { after: afterLineId } : position,
+          },
+        },
+      });
+
+      return nextLineId;
+    },
+
+    async updateLineActions({ lineId, patch, replace = false }) {
+      const location = findLineLocationInRepositoryState(
+        this.getState(),
+        lineId,
+      );
+      if (!location) return;
+
+      await this.appendEvent({
+        type: "set",
+        payload: {
+          target: `scenes.items.${location.sceneId}.sections.items.${location.sectionId}.lines.items.${lineId}.actions`,
+          value: structuredClone(patch || {}),
+          options: {
+            replace: replace === true,
+          },
+        },
+      });
+    },
+
+    async deleteLineItem({ lineId }) {
+      const location = findLineLocationInRepositoryState(
+        this.getState(),
+        lineId,
+      );
+      if (!location) return;
+
+      await this.appendEvent({
+        type: "nodeDelete",
+        payload: {
+          target: `scenes.items.${location.sceneId}.sections.items.${location.sectionId}.lines`,
+          options: {
+            id: lineId,
+          },
+        },
+      });
+    },
+
+    async moveLineItem({
+      lineId,
+      toSectionId,
+      parentId = null,
+      position = "last",
+    }) {
+      const sectionLocation = findSectionLocationInRepositoryState(
+        this.getState(),
+        toSectionId,
+      );
+      if (!sectionLocation) return;
+
+      await this.appendEvent({
+        type: "nodeMove",
+        payload: {
+          target: `scenes.items.${sectionLocation.sceneId}.sections.items.${toSectionId}.lines`,
+          options: {
+            id: lineId,
+            parent: toParentId(parentId),
+            position,
+          },
+        },
+      });
+    },
+
+    async createResourceItem({
+      resourceType,
+      resourceId,
+      data,
+      parentId = null,
+      position = "last",
+    }) {
+      const nextResourceId = resourceId || nanoid();
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: resourceType,
+          value: {
+            id: nextResourceId,
+            ...structuredClone(data || {}),
+          },
+          options: {
+            parent: parentId || "_root",
+            position,
+          },
+        },
+      });
+      return nextResourceId;
+    },
+
+    async updateResourceItem({ resourceType, resourceId, patch }) {
+      await this.appendEvent({
+        type: "nodeUpdate",
+        payload: {
+          target: resourceType,
+          value: structuredClone(patch || {}),
+          options: {
+            id: resourceId,
+            replace: false,
+          },
+        },
+      });
+    },
+
+    async moveResourceItem({
+      resourceType,
+      resourceId,
+      parentId = null,
+      position = "last",
+    }) {
+      await this.appendEvent({
+        type: "nodeMove",
+        payload: {
+          target: resourceType,
+          options: {
+            id: resourceId,
+            parent: parentId || "_root",
+            position,
+          },
+        },
+      });
+    },
+
+    async deleteResourceItem({ resourceType, resourceId }) {
+      await this.appendEvent({
+        type: "nodeDelete",
+        payload: {
+          target: resourceType,
+          options: {
+            id: resourceId,
+          },
+        },
+      });
+    },
+
+    async duplicateResourceItem({
+      resourceType,
+      sourceId,
+      newId,
+      parentId,
+      position,
+      name,
+    }) {
+      const state = this.getState();
+      const sourceItem = state?.[resourceType]?.items?.[sourceId];
+      if (!sourceItem) {
+        throw new Error(
+          `Cannot duplicate missing resource '${sourceId}' in '${resourceType}'`,
+        );
+      }
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: resourceType,
+          value: {
+            ...structuredClone(sourceItem),
+            id: newId,
+            name:
+              typeof name === "string" && name.length > 0
+                ? name
+                : `${sourceItem.name || "Resource"} Copy`,
+          },
+          options: {
+            parent: parentId || sourceItem.parentId || "_root",
+            position: position || { after: sourceId },
+          },
+        },
+      });
+    },
+
+    async createLayoutItem({
+      layoutId,
+      name,
+      layoutType = "normal",
+      elements = createTreeCollection(),
+      parentId = null,
+      position = "last",
+      data = {},
+    }) {
+      const nextLayoutId = layoutId || nanoid();
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: "layouts",
+          value: {
+            id: nextLayoutId,
+            type: "layout",
+            name,
+            layoutType,
+            elements: structuredClone(elements || createTreeCollection()),
+            ...structuredClone(data || {}),
+          },
+          options: {
+            parent: parentId || "_root",
+            position,
+          },
+        },
+      });
+      return nextLayoutId;
+    },
+
+    async renameLayoutItem({ layoutId, name }) {
+      await this.appendEvent({
+        type: "nodeUpdate",
+        payload: {
+          target: "layouts",
+          value: { name },
+          options: {
+            id: layoutId,
+            replace: false,
+          },
+        },
+      });
+    },
+
+    async deleteLayoutItem({ layoutId }) {
+      await this.appendEvent({
+        type: "nodeDelete",
+        payload: {
+          target: "layouts",
+          options: {
+            id: layoutId,
+          },
+        },
+      });
+    },
+
+    async updateLayoutElement({ layoutId, elementId, patch, replace = true }) {
+      await this.appendEvent({
+        type: "nodeUpdate",
+        payload: {
+          target: `layouts.items.${layoutId}.elements`,
+          value: structuredClone(patch || {}),
+          options: {
+            id: elementId,
+            replace: replace === true,
+          },
+        },
+      });
+    },
+
+    async createLayoutElement({
+      layoutId,
+      elementId,
+      element,
+      parentId = null,
+      position = "last",
+    }) {
+      const nextElementId = elementId || nanoid();
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: `layouts.items.${layoutId}.elements`,
+          value: {
+            id: nextElementId,
+            ...structuredClone(element || {}),
+          },
+          options: {
+            parent: toParentId(parentId),
+            position,
+          },
+        },
+      });
+      return nextElementId;
+    },
+
+    async moveLayoutElement({
+      layoutId,
+      elementId,
+      parentId = null,
+      position = "last",
+    }) {
+      await this.appendEvent({
+        type: "nodeMove",
+        payload: {
+          target: `layouts.items.${layoutId}.elements`,
+          options: {
+            id: elementId,
+            parent: toParentId(parentId),
+            position,
+          },
+        },
+      });
+    },
+
+    async deleteLayoutElement({ layoutId, elementId }) {
+      await this.appendEvent({
+        type: "nodeDelete",
+        payload: {
+          target: `layouts.items.${layoutId}.elements`,
+          options: {
+            id: elementId,
+          },
+        },
+      });
+    },
+
+    async createVariableItem({
+      variableId,
+      name,
+      scope = "global",
+      type = "string",
+      defaultValue = "",
+      parentId = null,
+      position = "last",
+    }) {
+      const nextVariableId = variableId || nanoid();
+      await this.appendEvent({
+        type: "nodeInsert",
+        payload: {
+          target: "variables",
+          value: {
+            id: nextVariableId,
+            itemType: "variable",
+            name,
+            scope,
+            type,
+            default: defaultValue,
+          },
+          options: {
+            parent: parentId || "_root",
+            position,
+          },
+        },
+      });
+      return nextVariableId;
+    },
+
+    async updateVariableItem({ variableId, patch }) {
+      await this.appendEvent({
+        type: "nodeUpdate",
+        payload: {
+          target: "variables",
+          value: structuredClone(patch || {}),
+          options: {
+            id: variableId,
+            replace: false,
+          },
+        },
+      });
+    },
+
+    async deleteVariableItem({ variableId }) {
+      await this.appendEvent({
+        type: "nodeDelete",
+        payload: {
+          target: "variables",
+          options: {
+            id: variableId,
+          },
+        },
+      });
+    },
+
     // Event sourcing - automatically uses current project
     async appendEvent(event) {
       const repository = await getCurrentRepository();
@@ -425,7 +1075,20 @@ export const createProjectService = ({ router, db, filePicker }) => {
     // Sync state access - requires ensureRepository() to be called first
     getState() {
       const repository = getCachedRepository();
-      return repository.getState();
+      const state = repository.getState();
+      assertV2State(state);
+      return state;
+    },
+    getDomainState() {
+      const repositoryState = this.getState();
+      const projectId =
+        repositoryState?.project?.id ||
+        getCurrentProjectId() ||
+        "unknown-project";
+      return projectRepositoryStateToDomainState({
+        repositoryState,
+        projectId,
+      });
     },
 
     async getEvents() {
@@ -473,6 +1136,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       const initData = {
         ...initialProjectData,
         ...templateData,
+        model_version: 2,
         project: { name, description },
       };
 
@@ -485,6 +1149,92 @@ export const createProjectService = ({ router, db, filePicker }) => {
       await repository.init({ initialState: initData });
 
       await store.app.set("creator_version", "1");
+    },
+
+    async createCollabSession({
+      token,
+      userId,
+      clientId = nanoid(),
+      endpointUrl,
+      partitions,
+    }) {
+      const currentProjectId = getCurrentProjectId();
+      if (!currentProjectId) {
+        throw new Error("No project selected (missing ?p= in URL)");
+      }
+      collabLog("info", "createCollabSession called", {
+        currentProjectId,
+        endpointUrl: endpointUrl || null,
+        hasToken: Boolean(token),
+        userId,
+        clientId,
+      });
+
+      const existing = collabSessionsByProject.get(currentProjectId);
+      const existingMode = collabSessionModeByProject.get(currentProjectId);
+      if (existing) {
+        collabLog("info", "existing session found", {
+          currentProjectId,
+          existingMode,
+        });
+        const hasExplicitIdentity = Boolean(token && userId);
+        if (hasExplicitIdentity && existingMode === "local") {
+          await existing.stop();
+          collabSessionsByProject.delete(currentProjectId);
+          collabSessionModeByProject.delete(currentProjectId);
+          collabLog("info", "replaced local session with explicit identity", {
+            currentProjectId,
+          });
+        } else {
+          if (endpointUrl) {
+            const transport = createWebSocketTransport({ url: endpointUrl });
+            await existing.setOnlineTransport(transport);
+            collabLog("info", "updated existing session transport", {
+              currentProjectId,
+              endpointUrl,
+            });
+          }
+          return existing;
+        }
+      }
+      return createSessionForProject({
+        projectId: currentProjectId,
+        token,
+        userId,
+        clientId,
+        endpointUrl,
+        partitions,
+        mode: "explicit",
+      });
+    },
+
+    getCollabSession() {
+      const currentProjectId = getCurrentProjectId();
+      if (!currentProjectId) return null;
+      return collabSessionsByProject.get(currentProjectId) || null;
+    },
+
+    async stopCollabSession(projectId) {
+      const targetProjectId = projectId || getCurrentProjectId();
+      if (!targetProjectId) return;
+      const session = collabSessionsByProject.get(targetProjectId);
+      if (!session) return;
+      await session.stop();
+      collabSessionsByProject.delete(targetProjectId);
+      collabSessionModeByProject.delete(targetProjectId);
+      collabLog("info", "session stopped", {
+        projectId: targetProjectId,
+      });
+    },
+
+    async submitCommand(command) {
+      const session = this.getCollabSession();
+      if (!session) {
+        throw new Error(
+          "Collaboration session not initialized. Call createCollabSession() first.",
+        );
+      }
+      return session.submitCommand(command);
     },
 
     // File operations - uses current project

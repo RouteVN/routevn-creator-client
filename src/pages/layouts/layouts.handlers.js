@@ -68,26 +68,20 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const successfulUploads = await projectService.uploadFiles(files);
 
   for (const result of successfulUploads) {
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "layouts",
-        value: {
-          id: nanoid(),
-          type: "layout",
-          fileId: result.fileId,
-          name: result.displayName,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-          elements: {
-            items: {},
-            tree: [],
-          },
-        },
-        options: {
-          parent: id,
-          position: "last",
-        },
+    await projectService.createLayoutItem({
+      layoutId: nanoid(),
+      name: result.displayName,
+      layoutType: "normal",
+      elements: {
+        items: {},
+        tree: [],
+      },
+      parentId: id,
+      position: "last",
+      data: {
+        fileId: result.fileId,
+        fileType: result.file.type,
+        fileSize: result.file.size,
       },
     });
   }
@@ -102,18 +96,13 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "layouts",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
-    },
+  const fieldName = payload._event.detail.name;
+  if (fieldName !== "name") {
+    return;
+  }
+  await projectService.renameLayoutItem({
+    layoutId: store.selectSelectedItemId(),
+    name: payload._event.detail.value,
   });
 
   const { layouts } = projectService.getState();
@@ -439,22 +428,13 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   }
 
   // Create the layout directly in the repository (like colors page does)
-  await projectService.appendEvent({
-    type: "treePush",
-    payload: {
-      target: "layouts",
-      value: {
-        id: nanoid(),
-        type: "layout",
-        name: formData.name,
-        layoutType: formData.layoutType,
-        elements: createLayoutTemplate(formData.layoutType),
-      },
-      options: {
-        parent: targetGroupId,
-        position: "last",
-      },
-    },
+  await projectService.createLayoutItem({
+    layoutId: nanoid(),
+    name: formData.name,
+    layoutType: formData.layoutType,
+    elements: createLayoutTemplate(formData.layoutType),
+    parentId: targetGroupId,
+    position: "last",
   });
 
   const { layouts } = projectService.getState();
@@ -481,15 +461,7 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
-  });
+  await projectService.deleteLayoutItem({ layoutId: itemId });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)
   const data = projectService.getState()[resourceType];

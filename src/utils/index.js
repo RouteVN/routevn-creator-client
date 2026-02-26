@@ -538,7 +538,7 @@ const normalizeSliderChange = (change, sliderId) => {
   };
 };
 
-export const layoutTreeStructureToRenderState = (
+export const layoutHierarchyStructureToRenderState = (
   layout,
   imageItems,
   typographyData,

@@ -1,5 +1,5 @@
-import { toTreeStructure } from "insieme";
-import { layoutTreeStructureToRenderState } from "./index.js";
+import { toHierarchyStructure } from "#domain-structure";
+import { layoutHierarchyStructureToRenderState } from "./index.js";
 
 export function constructProjectData(state, options = {}) {
   // Helper functions
@@ -103,8 +103,8 @@ export function constructProjectData(state, options = {}) {
           id: layoutId,
           name: layout.name,
           layoutType: layout.layoutType,
-          elements: layoutTreeStructureToRenderState(
-            toTreeStructure(layout.elements),
+          elements: layoutHierarchyStructureToRenderState(
+            toHierarchyStructure(layout.elements),
             images,
             typography,
             colors,
@@ -210,7 +210,7 @@ export function constructProjectData(state, options = {}) {
 
           // Convert lines from tree structure to flat array
           if (section.lines?.tree && section.lines?.items) {
-            // Use tree order to maintain line sequence
+            // Use tree sequence to maintain line flow
             section.lines.tree.forEach((lineNode) => {
               const lineId =
                 typeof lineNode === "string" ? lineNode : lineNode.id;

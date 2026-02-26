@@ -93,21 +93,16 @@ const syncDetailFormValues = ({
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, appService, render } = deps;
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
-  const { variables } = repository.getState();
+  const { store, projectService, render } = deps;
+  await projectService.ensureRepository();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables || { tree: [], items: {} } });
   render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
-
-  const repositoryState = repository.getState();
-  const { variables } = repositoryState;
+  const { store, render, projectService } = deps;
+  const { variables } = projectService.getState();
 
   const variableData = variables || { tree: [], items: {} };
 
@@ -155,9 +150,7 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
+  const { store, render, projectService } = deps;
   const {
     groupId,
     name,
@@ -166,36 +159,23 @@ export const handleVariableCreated = async (deps, payload) => {
     default: defaultValue,
   } = payload._event.detail;
 
-  // Add new variable to repository
-  await repository.addEvent({
-    type: "treePush",
-    payload: {
-      target: "variables",
-      value: {
-        id: nanoid(),
-        itemType: "variable",
-        name: name,
-        scope: scope,
-        type: type,
-        default: defaultValue,
-      },
-      options: {
-        parent: groupId,
-        position: "last",
-      },
-    },
+  await projectService.createVariableItem({
+    variableId: nanoid(),
+    name,
+    scope,
+    type,
+    defaultValue,
+    parentId: groupId,
+    position: "last",
   });
 
-  // Update store with new variables data
-  const { variables } = repository.getState();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables });
   render();
 };
 
 export const handleVariableUpdated = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
+  const { store, render, projectService } = deps;
   const {
     itemId,
     name,
@@ -208,26 +188,19 @@ export const handleVariableUpdated = async (deps, payload) => {
     return;
   }
 
-  await repository.addEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "variables",
-      value: {
-        name,
-        scope,
-        type,
-        default: defaultValue,
-      },
-      options: {
-        id: itemId,
-        replace: false,
-      },
+  await projectService.updateVariableItem({
+    variableId: itemId,
+    patch: {
+      name,
+      scope,
+      type,
+      default: defaultValue,
     },
   });
 
   store.setSelectedItemId({ itemId });
 
-  const { variables } = repository.getState();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables });
   const shouldReseedDetail = store.selectSelectedItemId() === itemId;
   const selectedItem = shouldReseedDetail ? store.selectSelectedItem() : null;
@@ -244,19 +217,11 @@ export const handleVariableUpdated = async (deps, payload) => {
 };
 
 export const handleVariableDelete = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
+  const { store, render, projectService } = deps;
   const { itemId } = payload._event.detail;
 
-  await repository.addEvent({
-    type: "treeDelete",
-    payload: {
-      target: "variables",
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteVariableItem({
+    variableId: itemId,
   });
 
   // Clear selection if deleted item was selected
@@ -264,7 +229,7 @@ export const handleVariableDelete = async (deps, payload) => {
     store.setSelectedItemId({ itemId: null });
   }
 
-  const { variables } = repository.getState();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables });
   const currentSelectedItemId = store.selectSelectedItemId();
   const selectedItem = store.selectSelectedItem();
@@ -281,36 +246,31 @@ export const handleVariableDelete = async (deps, payload) => {
 };
 
 export const handleFormChange = async (deps, payload) => {
-  const { projectService, appService, render, store } = deps;
-  const fieldName = payload._event.detail.name;
-  if (fieldName !== "name") {
-    return;
-  }
-
+  const { projectService, render, store } = deps;
   const selectedItemId = store.selectSelectedItemId();
-  if (!selectedItemId) {
-    return;
-  }
-
-  const { p } = appService.getPayload();
-  const repository = await projectService.getRepositoryById(p);
+  const fieldName = payload._event.detail.name;
   const fieldValue = payload._event.detail.value;
 
-  await repository.addEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "variables",
-      value: {
-        name: fieldValue,
-      },
-      options: {
-        id: selectedItemId,
-        replace: false,
-      },
-    },
+  const updateValue = {
+    [fieldName]: fieldValue,
+  };
+
+  // Set predefined default when type changes
+  if (fieldName === "type") {
+    const typeDefaults = {
+      string: "",
+      number: 0,
+      boolean: false,
+    };
+    updateValue.default = typeDefaults[fieldValue] ?? "";
+  }
+
+  await projectService.updateVariableItem({
+    variableId: selectedItemId,
+    patch: updateValue,
   });
 
-  const { variables } = repository.getState();
+  const { variables } = projectService.getState();
   store.setItems({ variablesData: variables });
   const selectedItem = store.selectSelectedItem();
   const detailValues = createDetailFormValues(selectedItem);

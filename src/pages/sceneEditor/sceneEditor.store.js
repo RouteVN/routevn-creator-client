@@ -1,7 +1,38 @@
-import { toFlatItems, toTreeStructure } from "insieme";
-import { layoutTreeStructureToRenderState } from "../../utils/index.js";
+import { toHierarchyStructure } from "#domain-structure";
+import { layoutHierarchyStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";
+
+const appendMissingIds = (orderedIds, allIds) => {
+  const seen = new Set();
+  const result = [];
+
+  for (const id of orderedIds || []) {
+    if (!allIds.includes(id) || seen.has(id)) continue;
+    seen.add(id);
+    result.push(id);
+  }
+
+  for (const id of allIds || []) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    result.push(id);
+  }
+
+  return result;
+};
+
+const getOrderedIdsFromHierarchy = (tree, fallbackIds) => {
+  const orderedFromHierarchy = Array.isArray(tree)
+    ? tree
+        .map((node) =>
+          typeof node?.id === "string" && node.id.length > 0 ? node.id : null,
+        )
+        .filter((id) => id !== null)
+    : [];
+
+  return appendMissingIds(orderedFromHierarchy, fallbackIds);
+};
 
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -30,6 +61,7 @@ export const createInitialState = () => ({
     sectionId: null,
   },
   repositoryState: {},
+  domainState: {},
   previewVisible: false,
   previewSceneId: undefined,
   previewSectionId: undefined,
@@ -53,6 +85,10 @@ export const setSceneId = ({ state }, { sceneId } = {}) => {
 
 export const setRepositoryState = ({ state }, { repository } = {}) => {
   state.repositoryState = repository;
+};
+
+export const setDomainState = ({ state }, { domainState } = {}) => {
+  state.domainState = domainState || {};
 };
 
 export const showPreviewSceneId = (
@@ -101,6 +137,10 @@ export const selectPreviewScene = ({ state }) => {
 // Repository selectors
 export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
+};
+
+export const selectDomainState = ({ state }) => {
+  return state.domainState;
 };
 
 export const selectCharacters = ({ state }) => {
@@ -153,8 +193,8 @@ export const selectLayouts = ({ state }) => {
         id: layoutId,
         name: layout.name,
         layoutType: layout.layoutType,
-        elements: layoutTreeStructureToRenderState(
-          toTreeStructure(layout.elements),
+        elements: layoutHierarchyStructureToRenderState(
+          toHierarchyStructure(layout.elements),
           images,
           typography,
           colors,
@@ -167,29 +207,95 @@ export const selectLayouts = ({ state }) => {
   return processedLayouts;
 };
 
-export const selectScene = ({ state }) => {
-  if (!state.sceneId || !state.repositoryState.scenes) {
+const buildSceneFromDomainState = ({ state }) => {
+  if (!state.sceneId) {
     return null;
   }
 
-  const scene = toFlatItems(state.repositoryState.scenes)
-    .filter((item) => item.type === "scene")
-    .find((item) => item.id === state.sceneId);
-
+  const domainState = selectDomainState({ state });
+  const scene = domainState?.scenes?.[state.sceneId];
   if (!scene) {
     return null;
   }
 
-  // Process sections and lines to flat structure
-  const processedScene = {
-    ...scene,
-    sections: toFlatItems(scene.sections).map((section) => ({
-      ...section,
-      lines: toFlatItems(section.lines),
-    })),
-  };
+  const sectionsById = domainState?.sections || {};
+  const linesById = domainState?.lines || {};
 
-  return processedScene;
+  const sections = (scene.sectionIds || [])
+    .map((sectionId) => sectionsById[sectionId])
+    .filter((section) => !!section)
+    .map((section) => ({
+      ...section,
+      lines: (section.lineIds || [])
+        .map((lineId) => linesById[lineId])
+        .filter((line) => !!line),
+    }));
+
+  const legacyInitialSectionId =
+    state.repositoryState?.scenes?.items?.[state.sceneId]?.initialSectionId;
+
+  return {
+    ...scene,
+    initialSectionId:
+      scene.initialSectionId || legacyInitialSectionId || sections[0]?.id,
+    sections,
+  };
+};
+
+const buildSceneFromLegacyState = ({ state }) => {
+  if (!state.sceneId) {
+    return null;
+  }
+
+  const legacyScene = state.repositoryState?.scenes?.items?.[state.sceneId];
+  if (!legacyScene || legacyScene.type !== "scene") {
+    return null;
+  }
+
+  const sectionItems = legacyScene.sections?.items || {};
+  const orderedSectionIds = getOrderedIdsFromHierarchy(
+    legacyScene.sections?.tree,
+    Object.keys(sectionItems),
+  );
+
+  const sections = orderedSectionIds
+    .map((sectionId) => ({
+      id: sectionId,
+      ...sectionItems[sectionId],
+    }))
+    .filter((section) => !!section?.id && section.type !== "folder")
+    .map((section) => {
+      const lineItems = section.lines?.items || {};
+      const orderedLineIds = getOrderedIdsFromHierarchy(
+        section.lines?.tree,
+        Object.keys(lineItems),
+      );
+
+      return {
+        ...section,
+        lines: orderedLineIds
+          .map((lineId) => ({
+            id: lineId,
+            ...lineItems[lineId],
+          }))
+          .filter((line) => !!line?.id),
+      };
+    });
+
+  return {
+    id: state.sceneId,
+    ...legacyScene,
+    sections,
+  };
+};
+
+export const selectScene = ({ state }) => {
+  const domainScene = buildSceneFromDomainState({ state });
+  if (domainScene) {
+    return domainScene;
+  }
+
+  return buildSceneFromLegacyState({ state });
 };
 
 export const selectSceneId = ({ state }) => {
@@ -322,30 +428,40 @@ export const hidePopover = ({ state }, _payload = {}) => {
 };
 
 export const setLineTextContent = ({ state }, { lineId, content } = {}) => {
-  const scene = selectScene({ state });
-  if (!scene) return;
-
-  const currentSection = scene.sections.find(
-    (section) => section.id === state.selectedSectionId,
-  );
-  if (!currentSection) {
+  const sceneId = state.sceneId;
+  const sectionId = state.selectedSectionId;
+  if (!sceneId || !sectionId || !lineId) {
     return;
   }
 
-  const line = currentSection.lines.find((line) => line.id === lineId);
-  if (!line) {
-    return;
+  const domainLine = state.domainState?.lines?.[lineId];
+  if (
+    domainLine &&
+    state.domainState?.sections?.[domainLine.sectionId]?.sceneId === sceneId &&
+    domainLine.sectionId === sectionId
+  ) {
+    if (!domainLine.actions) {
+      domainLine.actions = {};
+    }
+    if (!domainLine.actions.dialogue) {
+      domainLine.actions.dialogue = {};
+    }
+    domainLine.actions.dialogue.content = content;
   }
 
-  if (!line.actions) {
-    line.actions = {};
+  const legacyLine =
+    state.repositoryState?.scenes?.items?.[sceneId]?.sections?.items?.[
+      sectionId
+    ]?.lines?.items?.[lineId];
+  if (legacyLine) {
+    if (!legacyLine.actions) {
+      legacyLine.actions = {};
+    }
+    if (!legacyLine.actions.dialogue) {
+      legacyLine.actions.dialogue = {};
+    }
+    legacyLine.actions.dialogue.content = content;
   }
-
-  if (!line.actions.dialogue) {
-    line.actions.dialogue = {};
-  }
-
-  line.actions.dialogue.content = content;
 };
 
 export const selectProjectData = ({ state }) => {
@@ -356,7 +472,7 @@ export const selectViewData = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) {
     return {
-      scene: null,
+      scene: { id: "", name: "Scene", sections: [] },
       sections: [],
       sectionsOverviewOpen: false,
       sectionsOverviewItems: [],

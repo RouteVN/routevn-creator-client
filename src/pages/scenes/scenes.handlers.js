@@ -119,6 +119,8 @@ const getTransitionsForScene = (sections, layouts) => {
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const toFiniteNumberOr = (value, fallback) =>
+  Number.isFinite(value) ? value : fallback;
 
 const parseNumericConfig = (value, fallback) => {
   const numericValue = Number(value);
@@ -171,6 +173,62 @@ const resolveInitialWhiteboardViewport = ({ appService, items }) => {
   return { zoomLevel, panX, panY, didReset: false };
 };
 
+const getOrderedSceneIds = (domainState) => {
+  const domainScenes = domainState?.scenes || {};
+  const fromDomainOrder = Array.isArray(domainState?.story?.sceneOrder)
+    ? domainState.story.sceneOrder
+    : [];
+  const allSceneIds = Object.keys(domainScenes);
+  const ordered = [...fromDomainOrder];
+  for (const sceneId of allSceneIds) {
+    if (!ordered.includes(sceneId)) {
+      ordered.push(sceneId);
+    }
+  }
+  return ordered.filter((sceneId) => !!domainScenes[sceneId]);
+};
+
+const buildSceneWhiteboardItems = ({
+  domainState,
+  legacyState,
+  currentWhiteboardItems = [],
+}) => {
+  const domainScenes = domainState?.scenes || {};
+  const initialSceneId = domainState?.story?.initialSceneId || null;
+  const legacyScenesById = legacyState?.scenes?.items || {};
+  const orderedSceneIds = getOrderedSceneIds(domainState);
+  const layouts = legacyState?.layouts;
+
+  return orderedSceneIds.map((sceneId) => {
+    const scene = domainScenes[sceneId] || {};
+    const legacyScene = legacyScenesById[sceneId];
+    const existingWhiteboardItem = currentWhiteboardItems.find(
+      (wb) => wb.id === sceneId,
+    );
+
+    return {
+      id: sceneId,
+      name: scene.name || legacyScene?.name || `Scene ${sceneId}`,
+      x: toFiniteNumberOr(
+        scene.position?.x,
+        toFiniteNumberOr(
+          legacyScene?.position?.x,
+          existingWhiteboardItem?.x ?? 200,
+        ),
+      ),
+      y: toFiniteNumberOr(
+        scene.position?.y,
+        toFiniteNumberOr(
+          legacyScene?.position?.y,
+          existingWhiteboardItem?.y ?? 200,
+        ),
+      ),
+      isInit: sceneId === initialSceneId,
+      transitions: getTransitionsForScene(legacyScene?.sections, layouts),
+    };
+  });
+};
+
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId || detail.id || detail.item?.id || "";
 };
@@ -178,25 +236,19 @@ const resolveDetailItemId = (detail = {}) => {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
-  const { scenes, story, layouts } = projectService.getState();
+  const legacyState = projectService.getState();
+  const domainState = projectService.getDomainState();
+  const { scenes, layouts } = legacyState;
   const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
   store.setItems({ scenesData: scenesData });
   store.setLayouts({ layoutsData: layouts });
 
-  // Transform only scene items (not folders) into whiteboard items
-  const initialSceneId = story?.initialSceneId;
-  const sceneItems = Object.entries(scenesData.items || {})
-    .filter(([, item]) => item.type === "scene")
-    .map(([sceneId, scene]) => ({
-      id: sceneId,
-      name: scene.name || `Scene ${sceneId}`,
-      x: scene.position?.x || 200,
-      y: scene.position?.y || 200,
-      isInit: sceneId === initialSceneId,
-      transitions: getTransitionsForScene(scene.sections, layouts),
-    }));
+  const sceneItems = buildSceneWhiteboardItems({
+    domainState,
+    legacyState,
+  });
 
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems({ items: sceneItems });
@@ -225,45 +277,24 @@ export const handleAfterMount = async (deps) => {
 
 export const handleSetInitialScene = async (sceneId, deps) => {
   const { projectService } = deps;
-
-  // Set the initialSceneId in the story object
-  await projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: "story.initialSceneId",
-      value: sceneId,
-    },
-  });
+  await projectService.setInitialScene({ sceneId });
 };
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const { scenes, story, layouts } = projectService.getState();
+  const legacyState = projectService.getState();
+  const domainState = projectService.getDomainState();
+  const { scenes, layouts } = legacyState;
   const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
   const currentWhiteboardItems = store.selectWhiteboardItems() || [];
 
-  // Transform only scene items (not folders) into whiteboard items, preserving current positions
-  const initialSceneId = story?.initialSceneId;
-  const sceneItems = Object.entries(sceneData.items || {})
-    .filter(([, item]) => item.type === "scene")
-    .map(([sceneId, scene]) => {
-      // Check if this scene already exists in whiteboard with a different position
-      const existingWhiteboardItem = currentWhiteboardItems.find(
-        (wb) => wb.id === sceneId,
-      );
-
-      return {
-        id: sceneId,
-        name: scene.name || `Scene ${sceneId}`,
-        // Use repository position if available, otherwise use existing whiteboard position, finally default to 200,200
-        x: scene.position?.x ?? existingWhiteboardItem?.x ?? 200,
-        y: scene.position?.y ?? existingWhiteboardItem?.y ?? 200,
-        isInit: sceneId === initialSceneId,
-        transitions: getTransitionsForScene(scene.sections, layouts),
-      };
-    });
+  const sceneItems = buildSceneWhiteboardItems({
+    domainState,
+    legacyState,
+    currentWhiteboardItems,
+  });
 
   // Update both scenes data and whiteboard items
   store.setItems({ scenesData: sceneData });
@@ -315,18 +346,27 @@ export const handleWhiteboardItemPositionUpdating = async (deps, payload) => {
 export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { itemId, x, y } = payload._event.detail;
+  const nextX = Number(x);
+  const nextY = Number(y);
 
-  // Update position in repository using 'set' action
-  projectService.appendEvent({
-    type: "set",
-    payload: {
-      target: `scenes.items.${itemId}.position`,
-      value: { x, y },
+  if (!itemId || !Number.isFinite(nextX) || !Number.isFinite(nextY)) {
+    console.error("[scenes] invalid position payload from whiteboard", {
+      itemId,
+      x,
+      y,
+    });
+    return;
+  }
+
+  await projectService.updateSceneItem({
+    sceneId: itemId,
+    patch: {
+      position: { x: nextX, y: nextY },
     },
   });
 
   // Update local whiteboard state (already updated by position-updating, but keeping for consistency)
-  store.updateItemPosition({ itemId, x, y });
+  store.updateItemPosition({ itemId, x: nextX, y: nextY });
   render();
 };
 
@@ -366,17 +406,10 @@ export const handleAddSceneClick = (deps) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "scenes",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateSceneItem({
+    sceneId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -506,59 +539,36 @@ export const handleSceneFormAction = async (deps, payload) => {
       };
     });
 
-    // Create tree array with all line IDs in order
-    const lineTree = [
-      { id: stepId },
-      ...additionalLineIds.map((id) => ({ id })),
-    ];
-
-    // Add new scene to repository
-    const repositoryAction = {
-      type: "treePush",
-      target: "scenes",
-      value: {
-        parent: formData.folderId || "_root",
-        position: "last",
-        item: {
-          id: newSceneId,
-          type: "scene",
-          name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
-          createdAt: new Date().toISOString(),
-          position: {
-            x: sceneWhiteboardPosition.x,
-            y: sceneWhiteboardPosition.y,
-          },
-          sections: {
-            items: {
-              [sectionId]: {
-                name: "Section New",
-                lines: {
-                  items: lineItems,
-                  tree: lineTree,
-                },
-              },
-            },
-            tree: [
-              {
-                id: sectionId,
-              },
-            ],
-          },
-        },
-      },
-    };
-
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "scenes",
-        value: repositoryAction.value.item,
-        options: {
-          parent: repositoryAction.value.parent,
-          position: repositoryAction.value.position,
+    await projectService.createSceneItem({
+      sceneId: newSceneId,
+      name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+      parentId: formData.folderId || null,
+      position: "last",
+      data: {
+        position: {
+          x: sceneWhiteboardPosition.x,
+          y: sceneWhiteboardPosition.y,
         },
       },
     });
+    await projectService.createSectionItem({
+      sceneId: newSceneId,
+      sectionId,
+      name: "Section New",
+      position: "last",
+    });
+
+    const allLineIds = [stepId, ...additionalLineIds];
+    let previousLineId = null;
+    for (const currentLineId of allLineIds) {
+      await projectService.createLineItem({
+        sectionId,
+        lineId: currentLineId,
+        line: lineItems[currentLineId] || { actions: {} },
+        afterLineId: previousLineId,
+      });
+      previousLineId = currentLineId;
+    }
 
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
@@ -583,16 +593,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { itemId } = payload._event.detail;
 
-  // Remove from repository
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: "scenes",
-      options: {
-        id: itemId,
-      },
-    },
-  });
+  await projectService.deleteSceneItem({ sceneId: itemId });
 
   // Update store with new scenes data
   const { scenes: updatedScenes } = projectService.getState();
@@ -647,14 +648,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle set initial scene action
   if (item.value === "set-initial" && itemId) {
-    // Set the initialSceneId in the story object
-    await projectService.appendEvent({
-      type: "set",
-      payload: {
-        target: "story.initialSceneId",
-        value: itemId,
-      },
-    });
+    await projectService.setInitialScene({ sceneId: itemId });
 
     // Get updated scenes data
     const { scenes: updatedScenes, story } = projectService.getState();
@@ -674,16 +668,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
-    // Remove from repository
-    projectService.appendEvent({
-      type: "treeDelete",
-      payload: {
-        target: "scenes",
-        options: {
-          id: itemId,
-        },
-      },
-    });
+    await projectService.deleteSceneItem({ sceneId: itemId });
 
     // Update store with new scenes data
     const { scenes: updatedScenes } = projectService.getState();

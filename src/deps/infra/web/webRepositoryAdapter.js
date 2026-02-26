@@ -2,6 +2,7 @@ import {
   loadTemplate,
   getTemplateFiles,
 } from "../../../utils/templateLoader.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -59,22 +60,30 @@ export const initializeProject = async ({
   // Add project info to template data
   const initData = {
     ...templateData,
+    model_version: 2,
     project: {
+      id: projectId,
       name,
       description,
     },
   };
 
-  // Add the init action directly through adapter
+  const domainState = projectRepositoryStateToDomainState({
+    repositoryState: initData,
+    projectId,
+  });
+
+  // Persist typed canonical bootstrap state.
   await adapter.appendEvent({
-    type: "init",
+    type: "typedSnapshot",
     payload: {
-      value: initData,
+      projectId,
+      state: domainState,
     },
   });
 
-  // Set creator_version to 1 in app table
-  await adapter.app.set("creator_version", "1");
+  // Set creator_version to 2 in app table
+  await adapter.app.set("creator_version", "2");
 };
 
 /**

@@ -252,21 +252,16 @@ export const handleColorCreated = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const { groupId, name, hex } = payload._event.detail;
 
-  await projectService.appendEvent({
-    type: "treePush",
-    payload: {
-      target: "colors",
-      value: {
-        id: nanoid(),
-        type: "color",
-        name: name,
-        hex: hex,
-      },
-      options: {
-        parent: groupId,
-        position: "last",
-      },
+  await projectService.createResourceItem({
+    resourceType: "colors",
+    resourceId: nanoid(),
+    data: {
+      type: "color",
+      name,
+      hex,
     },
+    parentId: groupId,
+    position: "last",
   });
 
   const { colors } = projectService.getState();
@@ -290,17 +285,11 @@ export const handleColorEdited = (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "colors",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "colors",
+    resourceId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -362,18 +351,12 @@ export const handleEditFormAction = async (deps, payload) => {
       return;
     }
     // Update the color in the repository
-    await projectService.appendEvent({
-      type: "treeUpdate",
-      payload: {
-        target: "colors",
-        value: {
-          name: formData.name,
-          hex: formData.hex,
-        },
-        options: {
-          id: editItemId,
-          replace: false,
-        },
+    await projectService.updateResourceItem({
+      resourceType: "colors",
+      resourceId: editItemId,
+      patch: {
+        name: formData.name,
+        hex: formData.hex,
       },
     });
 
@@ -428,21 +411,16 @@ export const handleAddFormAction = async (deps, payload) => {
     const newColorId = nanoid();
 
     // Create the color in the repository
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "colors",
-        value: {
-          id: newColorId,
-          type: "color",
-          name: formData.name,
-          hex: formData.hex,
-        },
-        options: {
-          parent: targetGroupId,
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "colors",
+      resourceId: newColorId,
+      data: {
+        type: "color",
+        name: formData.name,
+        hex: formData.hex,
       },
+      parentId: targetGroupId,
+      position: "last",
     });
 
     const { colors } = projectService.getState();
@@ -484,14 +462,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)

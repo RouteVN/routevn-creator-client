@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { filter, tap } from "rxjs";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { formatFileSize } from "../../utils/index.js";
 
@@ -87,6 +88,16 @@ const createDetailFormValues = (item) => {
   };
 };
 
+const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
+
+const mountLegacySubscriptions = (deps) => {
+  const streams = subscriptions(deps) || [];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+export const handleBeforeMount = (deps) => mountLegacySubscriptions(deps);
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
@@ -174,6 +185,18 @@ export const handleFileExplorerDataChanged = async (deps) => {
   }
 };
 
+const subscriptions = (deps) => {
+  const { subject } = deps;
+  return [
+    subject.pipe(
+      filter(({ action }) => action === COLLAB_IMAGES_REFRESH_ACTION),
+      tap(() => {
+        void deps.handlers.handleFileExplorerDataChanged(deps);
+      }),
+    ),
+  ];
+};
+
 export const handleFormExtraEvent = async (deps) => {
   const { appService, projectService, store, render } = deps;
 
@@ -203,22 +226,16 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "images",
-      value: {
-        fileId: uploadResult.fileId,
-        name: uploadResult.displayName,
-        fileType: uploadResult.file.type,
-        fileSize: uploadResult.file.size,
-        width: uploadResult.dimensions.width,
-        height: uploadResult.dimensions.height,
-      },
-      options: {
-        id: selectedItem.id,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "images",
+    resourceId: selectedItem.id,
+    patch: {
+      fileId: uploadResult.fileId,
+      name: uploadResult.displayName,
+      fileType: uploadResult.file.type,
+      fileSize: uploadResult.file.size,
+      width: uploadResult.dimensions.width,
+      height: uploadResult.dimensions.height,
     },
   });
 
@@ -309,25 +326,20 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   const successfulUploads = await projectService.uploadFiles(files);
   for (const result of successfulUploads) {
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "images",
-        value: {
-          id: nanoid(),
-          type: "image",
-          fileId: result.fileId,
-          name: result.displayName,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-          width: result.dimensions.width,
-          height: result.dimensions.height,
-        },
-        options: {
-          parent: id,
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "images",
+      resourceId: nanoid(),
+      data: {
+        type: "image",
+        fileId: result.fileId,
+        name: result.displayName,
+        fileType: result.file.type,
+        fileSize: result.file.size,
+        width: result.dimensions.width,
+        height: result.dimensions.height,
       },
+      parentId: id,
+      position: "last",
     });
   }
 
@@ -342,18 +354,11 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   const selectedItemId = store.selectSelectedItemId();
-
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "images",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: selectedItemId,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "images",
+    resourceId: selectedItemId,
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -391,14 +396,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)

@@ -10,7 +10,7 @@ const getNodeId = (node) => {
   return node.id;
 };
 
-const collectSubtreeIds = (node, accumulator) => {
+const collectSubhierarchyIds = (node, accumulator) => {
   const nodeId = getNodeId(node);
   if (!nodeId) {
     return;
@@ -23,11 +23,11 @@ const collectSubtreeIds = (node, accumulator) => {
   }
 
   for (const child of node.children) {
-    collectSubtreeIds(child, accumulator);
+    collectSubhierarchyIds(child, accumulator);
   }
 };
 
-const findSubtreeIds = (nodes, targetId) => {
+const findSubhierarchyIds = (nodes, targetId) => {
   for (const node of nodes || []) {
     const nodeId = getNodeId(node);
     if (!nodeId) {
@@ -36,12 +36,12 @@ const findSubtreeIds = (nodes, targetId) => {
 
     if (nodeId === targetId) {
       const ids = [];
-      collectSubtreeIds(node, ids);
+      collectSubhierarchyIds(node, ids);
       return ids;
     }
 
     if (typeof node !== "string" && Array.isArray(node.children)) {
-      const childResult = findSubtreeIds(node.children, targetId);
+      const childResult = findSubhierarchyIds(node.children, targetId);
       if (childResult.length > 0) {
         return childResult;
       }
@@ -53,17 +53,17 @@ const findSubtreeIds = (nodes, targetId) => {
 
 export const getFirstTypographyId = (typography = {}) => {
   const items = typography.items || {};
-  const orderedSubtreeIds = [];
+  const orderedSubhierarchyIds = [];
 
   for (const node of typography.tree || []) {
-    collectSubtreeIds(node, orderedSubtreeIds);
+    collectSubhierarchyIds(node, orderedSubhierarchyIds);
   }
 
-  const firstIdFromTree = orderedSubtreeIds.find(
+  const firstIdFromHierarchy = orderedSubhierarchyIds.find(
     (id) => items[id]?.type === "typography",
   );
-  if (firstIdFromTree) {
-    return firstIdFromTree;
+  if (firstIdFromHierarchy) {
+    return firstIdFromHierarchy;
   }
 
   const firstFallback = Object.entries(items).find(
@@ -97,10 +97,11 @@ export const getTypographyRemovalCount = (typography = {}, itemId) => {
     return 0;
   }
 
-  const subtreeIds = findSubtreeIds(typography.tree || [], itemId);
-  if (subtreeIds.length === 0) {
+  const subhierarchyIds = findSubhierarchyIds(typography.tree || [], itemId);
+  if (subhierarchyIds.length === 0) {
     return 0;
   }
 
-  return subtreeIds.filter((id) => items[id]?.type === "typography").length;
+  return subhierarchyIds.filter((id) => items[id]?.type === "typography")
+    .length;
 };

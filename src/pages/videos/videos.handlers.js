@@ -240,26 +240,21 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const successfulUploads = await projectService.uploadFiles(files);
 
   for (const result of successfulUploads) {
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "videos",
-        value: {
-          id: nanoid(),
-          type: "video",
-          fileId: result.fileId,
-          thumbnailFileId: result.thumbnailFileId,
-          name: result.displayName,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-          width: result.dimensions?.width,
-          height: result.dimensions?.height,
-        },
-        options: {
-          parent: id,
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "videos",
+      resourceId: nanoid(),
+      data: {
+        type: "video",
+        fileId: result.fileId,
+        thumbnailFileId: result.thumbnailFileId,
+        name: result.displayName,
+        fileType: result.file.type,
+        fileSize: result.file.size,
+        width: result.dimensions?.width,
+        height: result.dimensions?.height,
       },
+      parentId: id,
+      position: "last",
     });
   }
 
@@ -300,23 +295,17 @@ export const handleFormExtraEvent = async (deps) => {
 
   const uploadResult = uploadedFiles[0];
   const selectedItemId = store.selectSelectedItemId();
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "videos",
-      value: {
-        fileId: uploadResult.fileId,
-        thumbnailFileId: uploadResult.thumbnailFileId,
-        name: uploadResult.displayName,
-        fileType: uploadResult.file.type,
-        fileSize: uploadResult.file.size,
-        width: uploadResult.dimensions?.width,
-        height: uploadResult.dimensions?.height,
-      },
-      options: {
-        id: selectedItem.id,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "videos",
+    resourceId: selectedItem.id,
+    patch: {
+      fileId: uploadResult.fileId,
+      thumbnailFileId: uploadResult.thumbnailFileId,
+      name: uploadResult.displayName,
+      fileType: uploadResult.file.type,
+      fileSize: uploadResult.file.size,
+      width: uploadResult.dimensions?.width,
+      height: uploadResult.dimensions?.height,
     },
   });
 
@@ -346,17 +335,11 @@ export const handleFormExtraEvent = async (deps) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   const selectedItemId = store.selectSelectedItemId();
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "videos",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: selectedItemId,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "videos",
+    resourceId: selectedItemId,
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -437,14 +420,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store

@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from "insieme";
+import { toFlatItems, toFlatGroups } from "#domain-structure";
 import { parseAndRender } from "jempl";
 
 const contextMenuItems = [

@@ -1,6 +1,7 @@
 import { fromEvent, tap } from "rxjs";
 
 let dragOffset = { x: 0, y: 0 };
+let lastDraggedPosition = null;
 
 const mountLegacySubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -196,6 +197,11 @@ export const handleItemMouseDown = (deps, payload) => {
   dragOffset.y = mouseInCanvasY - itemY;
 
   store.startDragging({ itemId });
+  lastDraggedPosition = {
+    itemId,
+    x: itemX,
+    y: itemY,
+  };
 
   // Dispatch selection event
   deps.dispatchEvent(
@@ -320,6 +326,11 @@ export const handleWindowMouseMove = (deps, payload) => {
 
     const snappedX = Math.round(constrainedX / 5) * 5;
     const snappedY = Math.round(constrainedY / 5) * 5;
+    lastDraggedPosition = {
+      itemId: dragItemId,
+      x: snappedX,
+      y: snappedY,
+    };
 
     // Dispatch real-time position update to parent (scenes page)
     dispatchEvent(
@@ -341,13 +352,20 @@ export const handleWindowMouseUp = (deps) => {
     store.stopPanning();
   } else if (store.selectIsDragging()) {
     const dragItemId = store.selectDragItemId();
-    const itemElement = refs[`item-${dragItemId}`];
+    const itemElement = Object.values(refs || {}).find(
+      (candidate) => candidate?.dataset?.itemId === dragItemId,
+    );
 
-    if (itemElement) {
-      const finalX = parseInt(itemElement.style.left, 10);
-      const finalY = parseInt(itemElement.style.top, 10);
+    let finalX = lastDraggedPosition?.x;
+    let finalY = lastDraggedPosition?.y;
 
-      // Dispatch the final position to update the data
+    if (!Number.isFinite(finalX) || !Number.isFinite(finalY)) {
+      finalX = parseInt(itemElement?.style?.left || "", 10);
+      finalY = parseInt(itemElement?.style?.top || "", 10);
+    }
+
+    if (Number.isFinite(finalX) && Number.isFinite(finalY)) {
+      // Dispatch the final position to update persistent data.
       dispatchEvent(
         new CustomEvent("item-position-changed", {
           detail: {
@@ -357,9 +375,16 @@ export const handleWindowMouseUp = (deps) => {
           },
         }),
       );
+    } else {
+      console.error("[whiteboard] failed to resolve final dragged position", {
+        itemId: dragItemId,
+        finalX,
+        finalY,
+      });
     }
 
     store.stopDragging();
+    lastDraggedPosition = null;
   }
 };
 

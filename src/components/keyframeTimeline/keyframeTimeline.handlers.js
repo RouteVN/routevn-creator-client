@@ -7,7 +7,7 @@ export const handleMouseMove = (deps, payload) => {
   render();
 };
 
-export const handleMouseLeave = (deps, payload) => {
+export const handleMouseLeave = (deps, _payload) => {
   const { store, render } = deps;
   store.hideTimelineLine({});
   render();

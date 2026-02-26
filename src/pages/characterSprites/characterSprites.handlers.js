@@ -1,5 +1,34 @@
 import { nanoid } from "nanoid";
+import {
+  nodeDelete,
+  nodeInsert,
+  nodeUpdate,
+} from "../../deps/infra/domainStructure/actions.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+
+const applyCharacterSpritesPatch = async ({
+  projectService,
+  characterId,
+  operation,
+}) => {
+  const { characters } = projectService.getState();
+  const character = characters.items?.[characterId];
+  if (!character) return;
+
+  const working = {
+    sprites: structuredClone(character.sprites || { items: {}, tree: [] }),
+  };
+  const next = operation(working) || working;
+  const nextSprites = structuredClone(next.sprites || working.sprites);
+
+  await projectService.updateResourceItem({
+    resourceType: "characters",
+    resourceId: characterId,
+    patch: {
+      sprites: nextSprites,
+    },
+  });
+};
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId || detail.id || detail.item?.id || "";
@@ -261,7 +290,6 @@ export const handleImageItemClick = async (deps, payload) => {
 
 export const handleDragDropFileSelected = async (deps, payload) => {
   const { store, render, projectService, globalUI } = deps;
-  const repository = await projectService.getRepository();
   const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
   const id = targetGroupId;
 
@@ -282,25 +310,27 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
   if (successfulUploads.length > 0) {
     for (const result of successfulUploads) {
-      await repository.addEvent({
-        type: "treePush",
-        payload: {
-          target: `characters.items.${characterId}.sprites`,
-          value: {
-            id: nanoid(),
-            type: "image",
-            fileId: result.fileId,
-            name: result.displayName,
-            fileType: result.file.type,
-            fileSize: result.file.size,
-            width: result.dimensions.width,
-            height: result.dimensions.height,
-          },
-          options: {
-            parent: id,
-            position: "last",
-          },
-        },
+      await applyCharacterSpritesPatch({
+        projectService,
+        characterId,
+        operation: (state) =>
+          nodeInsert(state, {
+            target: "sprites",
+            value: {
+              id: nanoid(),
+              type: "image",
+              fileId: result.fileId,
+              name: result.displayName,
+              fileType: result.file.type,
+              fileSize: result.file.size,
+              width: result.dimensions.width,
+              height: result.dimensions.height,
+            },
+            options: {
+              parent: id,
+              position: "last",
+            },
+          }),
       });
     }
 
@@ -315,23 +345,24 @@ export const handleDragDropFileSelected = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  const repository = await projectService.getRepository();
 
   const characterId = store.selectCharacterId();
   const selectedItemId = store.selectSelectedItemId();
 
-  await repository.addEvent({
-    type: "treeUpdate",
-    payload: {
-      target: `characters.items.${characterId}.sprites`,
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: selectedItemId,
-        replace: false,
-      },
-    },
+  await applyCharacterSpritesPatch({
+    projectService,
+    characterId,
+    operation: (state) =>
+      nodeUpdate(state, {
+        target: "sprites",
+        value: {
+          [payload._event.detail.name]: payload._event.detail.value,
+        },
+        options: {
+          id: selectedItemId,
+          replace: false,
+        },
+      }),
   });
 
   const { characters } = projectService.getState();
@@ -357,7 +388,6 @@ export const handleFormChange = async (deps, payload) => {
 
 export const handleFormExtraEvent = async (deps) => {
   const { projectService, appService, store, render } = deps;
-  const repository = await projectService.getRepository();
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -386,23 +416,25 @@ export const handleFormExtraEvent = async (deps) => {
   const characterId = store.selectCharacterId();
   const selectedItemId = store.selectSelectedItemId();
 
-  await repository.addEvent({
-    type: "treeUpdate",
-    payload: {
-      target: `characters.items.${characterId}.sprites`,
-      value: {
-        fileId: uploadResult.fileId,
-        name: uploadResult.file.name,
-        fileType: uploadResult.file.type,
-        fileSize: uploadResult.file.size,
-        width: uploadResult.dimensions.width,
-        height: uploadResult.dimensions.height,
-      },
-      options: {
-        id: selectedItem.id,
-        replace: false,
-      },
-    },
+  await applyCharacterSpritesPatch({
+    projectService,
+    characterId,
+    operation: (state) =>
+      nodeUpdate(state, {
+        target: "sprites",
+        value: {
+          fileId: uploadResult.fileId,
+          name: uploadResult.file.name,
+          fileType: uploadResult.file.type,
+          fileSize: uploadResult.file.size,
+          width: uploadResult.dimensions.width,
+          height: uploadResult.dimensions.height,
+        },
+        options: {
+          id: selectedItem.id,
+          replace: false,
+        },
+      }),
   });
 
   // Update the store with the new repository state
@@ -443,7 +475,6 @@ export const handleSearchInput = (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, store, render } = deps;
-  const repository = await projectService.getRepository();
   const { itemId } = payload._event.detail;
 
   const characterId = store.selectCharacterId();
@@ -462,14 +493,16 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await repository.addEvent({
-    type: "treeDelete",
-    payload: {
-      target: `characters.items.${characterId}.sprites`,
-      options: {
-        id: itemId,
-      },
-    },
+  await applyCharacterSpritesPatch({
+    projectService,
+    characterId,
+    operation: (state) =>
+      nodeDelete(state, {
+        target: "sprites",
+        options: {
+          id: itemId,
+        },
+      }),
   });
 
   // Refresh data and update store

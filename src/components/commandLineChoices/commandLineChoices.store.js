@@ -1,4 +1,4 @@
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#domain-structure";
 
 const CHOICE_FORM_TEMPLATE = Object.freeze({
   title: "Edit Choice",

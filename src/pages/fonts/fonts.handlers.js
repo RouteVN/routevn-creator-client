@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#domain-structure";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { formatFileSize } from "../../utils/index.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
@@ -246,21 +246,15 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = uploadedFiles[0];
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "fonts",
-      value: {
-        fileId: uploadResult.fileId,
-        name: uploadResult.file.name,
-        fontFamily: uploadResult.fontName,
-        fileType: getFileType(uploadResult),
-        fileSize: uploadResult.file.size,
-      },
-      options: {
-        id: selectedItem.id,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "fonts",
+    resourceId: selectedItem.id,
+    patch: {
+      fileId: uploadResult.fileId,
+      name: uploadResult.file.name,
+      fontFamily: uploadResult.fontName,
+      fileType: getFileType(uploadResult),
+      fileSize: uploadResult.file.size,
     },
   });
 
@@ -310,16 +304,12 @@ export const handleDragDropFileSelected = async (deps, payload) => {
       fileSize: result.file.size,
     };
 
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "fonts",
-        value: fontItem,
-        options: {
-          parent: id,
-          position: "last",
-        },
-      },
+    await projectService.createResourceItem({
+      resourceType: "fonts",
+      resourceId: fontItem.id,
+      data: fontItem,
+      parentId: id,
+      position: "last",
     });
 
     newFontItems.push(fontItem);
@@ -380,17 +370,11 @@ export const handleCloseModal = (deps) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "fonts",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "fonts",
+    resourceId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -433,14 +417,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)

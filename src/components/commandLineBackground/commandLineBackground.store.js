@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "insieme";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 const tabs = [
   {
@@ -16,14 +16,29 @@ const tabs = [
 ];
 
 // Form structure will be created dynamically in selectViewData
+const createEmptyCollection = () => ({
+  items: {},
+  tree: [],
+});
+
+const normalizeResourceCollection = (collection) => {
+  const sourceItems =
+    collection && typeof collection.items === "object" && collection.items
+      ? collection.items
+      : {};
+  const items = { ...sourceItems };
+  const tree = Array.isArray(collection?.tree) ? collection.tree : [];
+
+  return { items, tree };
+};
 
 export const createInitialState = () => ({
   mode: "current",
   tab: "image", // "image", "layout", or "video"
-  imageItems: { items: {}, tree: [] },
-  layoutItems: { items: {}, tree: [] },
-  videoItems: { items: {}, tree: [] },
-  tweenItems: { items: {}, tree: [] },
+  imageItems: createEmptyCollection(),
+  layoutItems: createEmptyCollection(),
+  videoItems: createEmptyCollection(),
+  tweenItems: createEmptyCollection(),
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
@@ -44,10 +59,10 @@ export const setRepositoryState = (
   { state },
   { images, layouts, videos, tweens } = {},
 ) => {
-  state.imageItems = images;
-  state.layoutItems = layouts;
-  state.videoItems = videos;
-  state.tweenItems = tweens || [];
+  state.imageItems = normalizeResourceCollection(images);
+  state.layoutItems = normalizeResourceCollection(layouts);
+  state.videoItems = normalizeResourceCollection(videos);
+  state.tweenItems = normalizeResourceCollection(tweens);
 };
 
 export const setTab = ({ state }, { tab } = {}) => {
@@ -175,7 +190,7 @@ export const selectViewData = ({ state }) => {
     layout: state.layoutItems,
     video: state.videoItems,
   };
-  const items = itemsMap[state.tab] || { item: {}, tree: [] };
+  const items = itemsMap[state.tab] || createEmptyCollection();
   const flatItems = toFlatItems(items).filter((item) => item.type === "folder");
   const flatGroups = toFlatGroups(items).map((group) => {
     return {

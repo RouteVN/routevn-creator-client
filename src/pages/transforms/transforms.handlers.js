@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#domain-structure";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)
@@ -326,27 +326,22 @@ export const handleTransformCreated = async (deps, payload) => {
   const { groupId, name, x, y, scaleX, scaleY, anchorX, anchorY, rotation } =
     payload._event.detail;
 
-  await projectService.appendEvent({
-    type: "treePush",
-    payload: {
-      target: "transforms",
-      value: {
-        id: nanoid(),
-        type: "transform",
-        name: name,
-        x,
-        y,
-        scaleX: scaleX,
-        scaleY: scaleY,
-        anchorX: anchorX,
-        anchorY: anchorY,
-        rotation: rotation,
-      },
-      options: {
-        parent: groupId,
-        position: "last",
-      },
+  await projectService.createResourceItem({
+    resourceType: "transforms",
+    resourceId: nanoid(),
+    data: {
+      type: "transform",
+      name,
+      x,
+      y,
+      scaleX,
+      scaleY,
+      anchorX,
+      anchorY,
+      rotation,
     },
+    parentId: groupId,
+    position: "last",
   });
 
   const { transforms } = projectService.getState();
@@ -357,17 +352,11 @@ export const handleTransformCreated = async (deps, payload) => {
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
   const selectedItemId = store.selectSelectedItemId();
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "transforms",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: selectedItemId,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "transforms",
+    resourceId: selectedItemId,
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -392,24 +381,18 @@ export const handleTransformEdited = async (deps, payload) => {
     payload._event.detail;
 
   // Update repository directly
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "transforms",
-      value: {
-        name,
-        x,
-        y,
-        scaleX,
-        scaleY,
-        anchorX,
-        anchorY,
-        rotation,
-      },
-      options: {
-        id: itemId,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "transforms",
+    resourceId: itemId,
+    patch: {
+      name,
+      x,
+      y,
+      scaleX,
+      scaleY,
+      anchorX,
+      anchorY,
+      rotation,
     },
   });
 
@@ -567,14 +550,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)

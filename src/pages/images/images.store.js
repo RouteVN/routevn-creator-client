@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "insieme";
+import { toFlatGroups, toFlatItems } from "#domain-structure";
 import { formatFileSize } from "../../utils/index.js";
 
 const form = {

@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "insieme";
+import { toFlatItems } from "#domain-structure";
 import {
   getTypographyCount,
   getTypographyRemovalCount,
@@ -271,7 +271,7 @@ const createDetailFormValues = ({ item, colorsData, fontsData } = {}) => {
   let typographyPreview = null;
   try {
     typographyPreview = generateTypographyPreview(item, colorsData, fontsData);
-  } catch (_error) {
+  } catch {
     typographyPreview = null;
   }
 
@@ -333,23 +333,18 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   const successfulUploads = uploadResults;
 
   for (const result of successfulUploads) {
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "typography",
-        value: {
-          id: nanoid(),
-          type: "typography",
-          fileId: result.fileId,
-          name: result.displayName,
-          fileType: result.file.type,
-          fileSize: result.file.size,
-        },
-        options: {
-          parent: id,
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "typography",
+      resourceId: nanoid(),
+      data: {
+        type: "typography",
+        fileId: result.fileId,
+        name: result.displayName,
+        fileType: result.file.type,
+        fileSize: result.file.size,
       },
+      parentId: id,
+      position: "last",
     });
   }
 
@@ -373,26 +368,21 @@ const handleTypographyCreated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await projectService.appendEvent({
-    type: "treePush",
-    payload: {
-      target: "typography",
-      value: {
-        id: nanoid(),
-        type: "typography",
-        name: name,
-        fontSize: fontSize,
-        lineHeight: lineHeight,
-        colorId: fontColor, // Store color ID
-        fontId: fontStyle, // Store font ID
-        fontWeight: fontWeight,
-        previewText: previewText,
-      },
-      options: {
-        parent: groupId,
-        position: "last",
-      },
+  await projectService.createResourceItem({
+    resourceType: "typography",
+    resourceId: nanoid(),
+    data: {
+      type: "typography",
+      name: name,
+      fontSize: fontSize,
+      lineHeight: lineHeight,
+      colorId: fontColor,
+      fontId: fontStyle,
+      fontWeight: fontWeight,
+      previewText: previewText,
     },
+    parentId: groupId,
+    position: "last",
   });
 
   syncRepositoryToStore(store, projectService);
@@ -412,23 +402,17 @@ const handleTypographyUpdated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "typography",
-      value: {
-        name: name,
-        fontSize: fontSize,
-        lineHeight: lineHeight,
-        colorId: fontColor, // Store color ID
-        fontId: fontStyle, // Store font ID
-        fontWeight: fontWeight,
-        previewText: previewText,
-      },
-      options: {
-        id: itemId,
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "typography",
+    resourceId: itemId,
+    patch: {
+      name: name,
+      fontSize: fontSize,
+      lineHeight: lineHeight,
+      colorId: fontColor,
+      fontId: fontStyle,
+      fontWeight: fontWeight,
+      previewText: previewText,
     },
   });
 
@@ -438,17 +422,11 @@ const handleTypographyUpdated = async (deps, payload) => {
 
 export const handleFormChange = async (deps, payload) => {
   const { projectService, render, store } = deps;
-  await projectService.appendEvent({
-    type: "treeUpdate",
-    payload: {
-      target: "typography",
-      value: {
-        [payload._event.detail.name]: payload._event.detail.value,
-      },
-      options: {
-        id: store.selectSelectedItemId(),
-        replace: false,
-      },
+  await projectService.updateResourceItem({
+    resourceType: "typography",
+    resourceId: store.selectSelectedItemId(),
+    patch: {
+      [payload._event.detail.name]: payload._event.detail.value,
     },
   });
 
@@ -672,21 +650,16 @@ export const handleAddColorFormAction = async (deps, payload) => {
     const newColorId = nanoid();
 
     // Create the color in the repository
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "colors",
-        value: {
-          id: newColorId,
-          type: "color",
-          name: formData.name,
-          hex: formData.hex,
-        },
-        options: {
-          parent: formData.folderId || "_root",
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "colors",
+      resourceId: newColorId,
+      data: {
+        type: "color",
+        name: formData.name,
+        hex: formData.hex,
       },
+      parentId: formData.folderId || null,
+      position: "last",
     });
 
     // Sync repository to store to ensure all data is updated
@@ -757,25 +730,20 @@ export const handleAddFontFormAction = async (deps, payload) => {
     const newFontId = nanoid();
 
     // Create the font in the repository using the already uploaded file
-    await projectService.appendEvent({
-      type: "treePush",
-      payload: {
-        target: "fonts",
-        value: {
-          id: newFontId,
-          type: "font",
-          name: fontName,
-          fontFamily: fontName,
-          fileId: fontData.uploadResult.fileId,
-          fileName: fontData.file.name,
-          fileType: getFileType(fontData.uploadResult),
-          fileSize: fontData.file.size,
-        },
-        options: {
-          parent: formData.folderId || "_root",
-          position: "last",
-        },
+    await projectService.createResourceItem({
+      resourceType: "fonts",
+      resourceId: newFontId,
+      data: {
+        type: "font",
+        name: fontName,
+        fontFamily: fontName,
+        fileId: fontData.uploadResult.fileId,
+        fileName: fontData.file.name,
+        fileType: getFileType(fontData.uploadResult),
+        fileSize: fontData.file.size,
       },
+      parentId: formData.folderId || null,
+      position: "last",
     });
 
     // Sync repository to store to ensure all data is updated
@@ -823,14 +791,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.appendEvent({
-    type: "treeDelete",
-    payload: {
-      target: resourceType,
-      options: {
-        id: itemId,
-      },
-    },
+  await projectService.deleteResourceItem({
+    resourceType,
+    resourceId: itemId,
   });
 
   // Refresh data and update store (reuse existing logic from handleDataChanged)

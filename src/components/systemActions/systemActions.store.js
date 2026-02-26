@@ -147,8 +147,8 @@ export const selectActionsData = ({ props, state }) => {
   const sounds = repositoryStateData.sounds?.items || {};
   const scenes = repositoryStateData.scenes || {};
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
-  const layoutsTree = repositoryStateData.layouts || {};
-  const layoutsItems = layoutsTree.items || {};
+  const layoutsHierarchy = repositoryStateData.layouts || {};
+  const layoutsItems = layoutsHierarchy.items || {};
   const sceneItems = scenes.items || {};
 
   const actionsObject = {};
