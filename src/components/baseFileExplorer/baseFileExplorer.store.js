@@ -314,6 +314,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
   // Get current item for rename form
   const currentItem = selectPopoverItem({ state, props });
+  const hasRenameTarget = state.popover.isOpen && !!currentItem;
 
   // Form configuration for renaming
   const renameForm = currentItem
@@ -333,6 +334,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
               id: "submit",
               variant: "pr",
               label: "Rename",
+              validate: true,
             },
           ],
         },
@@ -354,6 +356,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     isDragging: state.isDragging,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
+    hasRenameTarget,
     form: renameForm,
     attrs,
     noEmptyMessage: getBooleanAttr(attrs, "noEmptyMessage", "no-empty-message"),
