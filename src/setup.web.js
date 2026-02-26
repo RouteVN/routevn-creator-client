@@ -29,7 +29,6 @@ const audioService = createAudioService();
 // Use app version from config (Tauri version comes from API)
 const appVersion = "web";
 
-// todo : will remove this later
 const updater = {
   checkForUpdates: async () => null,
   startAutomaticChecks: () => {},

@@ -15,7 +15,6 @@ import { createAudioService } from "./deps/services/audioService";
 import { createProjectService } from "./deps/services/projectService";
 import { createPendingQueueService } from "./deps/services/pendingQueueService";
 
-// Legacy deps (to be migrated)
 import Subject from "./deps/subject";
 import Router from "./deps/infra/router";
 import { createGraphicsService } from "./deps/services/graphicsService";

@@ -300,16 +300,6 @@ const projectDomainResourceCollectionToLegacy = (domainCollection) => {
   };
 };
 
-const flattenHierarchyIds = (nodes, output = []) => {
-  if (!Array.isArray(nodes)) return output;
-  for (const node of nodes) {
-    if (!node || typeof node.id !== "string") continue;
-    output.push(node.id);
-    flattenHierarchyIds(node.children || [], output);
-  }
-  return output;
-};
-
 const projectDomainLayoutElementsToLegacy = ({
   layout,
   existingLegacyElements = {},
@@ -373,7 +363,7 @@ const projectDomainLayoutElementsToLegacy = ({
 
 const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
   const legacyLayouts = legacyState?.layouts || createTreeCollection();
-  const legacyOrderIds = flattenHierarchyIds(getHierarchyNodes(legacyLayouts));
+  const legacyOrderIds = flattenTreeIds(getHierarchyNodes(legacyLayouts));
   const layoutIds = Object.keys(domainState?.layouts || {});
   const orderedLayoutIds = uniqueIdsInOrder(legacyOrderIds, layoutIds);
   const projectedItems = {};

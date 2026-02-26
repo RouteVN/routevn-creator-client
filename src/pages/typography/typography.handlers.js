@@ -271,7 +271,7 @@ const createDetailFormValues = ({ item, colorsData, fontsData } = {}) => {
   let typographyPreview = null;
   try {
     typographyPreview = generateTypographyPreview(item, colorsData, fontsData);
-  } catch (_error) {
+  } catch {
     typographyPreview = null;
   }
 
