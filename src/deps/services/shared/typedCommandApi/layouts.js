@@ -64,6 +64,35 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
+  async reorderLayoutItem({
+    layoutId,
+    parentId = null,
+    position = "last",
+    index,
+  }) {
+    const context = await shared.ensureTypedCommandContext();
+    const resolvedIndex = shared.resolveLayoutIndex({
+      state: context.state,
+      parentId,
+      position,
+      index,
+      movingId: layoutId,
+    });
+
+    await shared.submitTypedCommandWithContext({
+      context,
+      scope: "layouts",
+      type: "layout.reorder",
+      payload: {
+        layoutId,
+        parentId: normalizeParentId(parentId),
+        index: resolvedIndex,
+        position,
+      },
+      partitions: [],
+    });
+  },
+
   async updateLayoutElement({ layoutId, elementId, patch, replace = true }) {
     const context = await shared.ensureTypedCommandContext();
 

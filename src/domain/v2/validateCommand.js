@@ -165,6 +165,9 @@ const commandPayloadValidators = {
   [COMMAND_TYPES.LAYOUT_DELETE]: (payload, errors) => {
     requireFields(payload, ["layoutId"], errors);
   },
+  [COMMAND_TYPES.LAYOUT_REORDER]: (payload, errors) => {
+    requireFields(payload, ["layoutId", "index"], errors);
+  },
   [COMMAND_TYPES.LAYOUT_ELEMENT_CREATE]: (payload, errors) => {
     requireFields(payload, ["layoutId", "elementId", "element"], errors);
   },

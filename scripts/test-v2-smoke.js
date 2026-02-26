@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { createProjectCollabService } from "../src/collab/v2/createProjectCollabService.js";
+import {
+  applyTypedCommandToRepository,
+  createInsiemeProjectRepositoryRuntime,
+  initialProjectData,
+} from "../src/deps/services/shared/typedProjectRepository.js";
 import { COMMAND_VERSION } from "../src/domain/v2/constants.js";
 import { processCommand } from "../src/domain/v2/engine.js";
 import { DomainPreconditionError } from "../src/domain/v2/errors.js";
 import { assertDomainInvariants } from "../src/domain/v2/invariants.js";
 import { createEmptyProjectState } from "../src/domain/v2/model.js";
+import { projectRepositoryStateToDomainState } from "../src/domain/v2/stateProjection.js";
 
 const projectId = "proj-test-001";
 const actor = { userId: "user-1", clientId: "client-1" };
@@ -33,6 +39,29 @@ const flattenTreeIds = (nodes, output = []) => {
     flattenTreeIds(node.children || [], output);
   }
   return output;
+};
+
+const findTreeNodeById = (nodes, targetId) => {
+  if (!Array.isArray(nodes)) return null;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    if (node.id === targetId) return node;
+    const child = findTreeNodeById(node.children || [], targetId);
+    if (child) return child;
+  }
+  return null;
+};
+
+const createInMemoryTypedEventStore = () => {
+  const events = [];
+  return {
+    async appendTypedEvent(event) {
+      events.push(structuredClone(event));
+    },
+    async getEvents() {
+      return events.map((event) => structuredClone(event));
+    },
+  };
 };
 
 let state = createEmptyProjectState({
@@ -229,14 +258,30 @@ apply(
     ts: 2300,
     partition: `project:${projectId}:layouts`,
     payload: {
-      layoutId: "layout-2",
-      name: "L2",
+      layoutId: "layout-folder",
+      name: "Layout Folder",
       layoutType: "scene",
-      parentId: "layout-1",
+      data: {
+        type: "folder",
+      },
     },
   }),
 );
-assert.equal(state.layouts["layout-2"].parentId, "layout-1");
+
+apply(
+  makeCommand({
+    type: "layout.create",
+    ts: 2350,
+    partition: `project:${projectId}:layouts`,
+    payload: {
+      layoutId: "layout-2",
+      name: "L2",
+      layoutType: "scene",
+      parentId: "layout-folder",
+    },
+  }),
+);
+assert.equal(state.layouts["layout-2"].parentId, "layout-folder");
 
 const collab = createProjectCollabService({
   projectId,
@@ -259,5 +304,125 @@ for (const key of [
 ]) {
   assert.equal(typeof syncRuntime[key], "function");
 }
+
+const projectionProjectId = "proj-layout-tree-001";
+const repositoryStateWithLayoutTree = structuredClone(initialProjectData);
+repositoryStateWithLayoutTree.project = {
+  ...repositoryStateWithLayoutTree.project,
+  id: projectionProjectId,
+  name: "Projection",
+  description: "layout tree parent projection",
+};
+repositoryStateWithLayoutTree.layouts = {
+  items: {
+    "default-folder": {
+      type: "folder",
+      name: "Default",
+    },
+    "wrong-parent": {
+      type: "folder",
+      name: "Wrong Parent",
+    },
+    "layout-a": {
+      type: "layout",
+      name: "Layout A",
+      layoutType: "normal",
+      elements: { items: {}, tree: [] },
+    },
+    "layout-b": {
+      type: "layout",
+      name: "Layout B",
+      layoutType: "normal",
+      elements: { items: {}, tree: [] },
+    },
+    "layout-c": {
+      type: "layout",
+      name: "Layout C",
+      layoutType: "normal",
+      parentId: "wrong-parent",
+      elements: { items: {}, tree: [] },
+    },
+    "layout-fallback": {
+      type: "layout",
+      name: "Layout Fallback",
+      layoutType: "normal",
+      parentId: "default-folder",
+      elements: { items: {}, tree: [] },
+    },
+  },
+  tree: [
+    {
+      id: "default-folder",
+      children: [{ id: "layout-a" }, { id: "layout-b" }, { id: "layout-c" }],
+    },
+    {
+      id: "wrong-parent",
+    },
+  ],
+};
+
+const projectedDomainState = projectRepositoryStateToDomainState({
+  repositoryState: repositoryStateWithLayoutTree,
+  projectId: projectionProjectId,
+});
+assert.equal(projectedDomainState.layouts["layout-a"].parentId, "default-folder");
+assert.equal(projectedDomainState.layouts["layout-b"].parentId, "default-folder");
+assert.equal(projectedDomainState.layouts["layout-c"].parentId, "default-folder");
+assert.equal(
+  projectedDomainState.layouts["layout-fallback"].parentId,
+  "default-folder",
+);
+
+const projectionStore = createInMemoryTypedEventStore();
+const projectionRepository = await createInsiemeProjectRepositoryRuntime({
+  projectId: projectionProjectId,
+  store: projectionStore,
+  events: [
+    {
+      type: "typedSnapshot",
+      payload: {
+        projectId: projectionProjectId,
+        state: projectedDomainState,
+      },
+    },
+  ],
+});
+
+const assertLayoutsNestedUnderDefault = (repositoryState) => {
+  const defaultFolderNode = findTreeNodeById(
+    repositoryState.layouts.tree,
+    "default-folder",
+  );
+  assert.ok(defaultFolderNode);
+  const childIds = new Set((defaultFolderNode.children || []).map((n) => n.id));
+  assert.equal(childIds.has("layout-a"), true);
+  assert.equal(childIds.has("layout-b"), true);
+  assert.equal(childIds.has("layout-c"), true);
+  assert.equal(childIds.has("layout-fallback"), true);
+};
+
+assertLayoutsNestedUnderDefault(projectionRepository.getState());
+
+await applyTypedCommandToRepository({
+  repository: projectionRepository,
+  projectId: projectionProjectId,
+  command: {
+    id: "project-update-layout-projection",
+    projectId: projectionProjectId,
+    partition: `project:${projectionProjectId}:settings`,
+    partitions: [`project:${projectionProjectId}:settings`],
+    type: "project.update",
+    commandVersion: COMMAND_VERSION,
+    actor,
+    clientTs: 2400,
+    payload: {
+      patch: {
+        description: "projection round-trip",
+      },
+    },
+  },
+});
+
+assertLayoutsNestedUnderDefault(projectionRepository.getState());
 
 console.log("V2 smoke tests: PASS");

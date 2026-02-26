@@ -126,6 +126,30 @@ export const assertCommandPreconditions = (state, command) => {
         layoutId: p.layoutId,
       });
       return;
+    case COMMAND_TYPES.LAYOUT_REORDER:
+      assert(!!state.layouts[p.layoutId], "layout not found", {
+        layoutId: p.layoutId,
+      });
+      if (p.parentId !== undefined && p.parentId !== null) {
+        assert(p.parentId !== p.layoutId, "layout cannot parent itself", {
+          layoutId: p.layoutId,
+          parentId: p.parentId,
+        });
+        assert(!!state.layouts[p.parentId], "layout parent not found", {
+          layoutId: p.layoutId,
+          parentId: p.parentId,
+        });
+        assert(
+          state.layouts[p.parentId].type === "folder",
+          "layout parent must be folder",
+          {
+            layoutId: p.layoutId,
+            parentId: p.parentId,
+            parentType: state.layouts[p.parentId].type,
+          },
+        );
+      }
+      return;
     case COMMAND_TYPES.LAYOUT_ELEMENT_CREATE:
       assert(!!state.layouts[p.layoutId], "layout not found", {
         layoutId: p.layoutId,

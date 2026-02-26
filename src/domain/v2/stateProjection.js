@@ -104,12 +104,43 @@ const buildTreeFromParentMap = ({
   return tree;
 };
 
-const projectRepositoryLayouts = ({ repositoryLayouts = {} }) => {
+const projectRepositoryLayouts = ({ repositoryLayoutsCollection = {} }) => {
+  const repositoryLayouts = repositoryLayoutsCollection.items || {};
+  const { parentById: treeParentById } = buildHierarchyParentMap(
+    getHierarchyNodes(repositoryLayoutsCollection),
+  );
+  const fallbackParentById = new Map(
+    Object.entries(repositoryLayouts).map(([layoutId, layout]) => [
+      layoutId,
+      layout?.parentId ?? null,
+    ]),
+  );
   const result = {};
   for (const [layoutId, repositoryLayout] of Object.entries(
     repositoryLayouts,
   )) {
     if (!repositoryLayout || typeof repositoryLayout !== "object") continue;
+    const clonedLayout = cloneOr(repositoryLayout, {});
+    const entryType = clonedLayout.type || "layout";
+    const createdAt = toFiniteTimestamp(repositoryLayout.createdAt, Date.now());
+    const updatedAt = toFiniteTimestamp(repositoryLayout.updatedAt, createdAt);
+    const parentId = treeParentById.has(layoutId)
+      ? treeParentById.get(layoutId)
+      : (fallbackParentById.get(layoutId) ?? null);
+
+    if (entryType === "folder") {
+      result[layoutId] = {
+        ...clonedLayout,
+        id: layoutId,
+        type: "folder",
+        name: repositoryLayout.name || `Folder ${layoutId}`,
+        parentId,
+        createdAt,
+        updatedAt,
+      };
+      continue;
+    }
+
     const repositoryElements = repositoryLayout.elements || {
       items: {},
       tree: [],
@@ -149,16 +180,16 @@ const projectRepositoryLayouts = ({ repositoryLayouts = {} }) => {
     );
 
     result[layoutId] = {
+      ...clonedLayout,
       id: layoutId,
+      type: entryType,
       name: repositoryLayout.name || `Layout ${layoutId}`,
       layoutType: repositoryLayout.layoutType || "base",
+      parentId,
       elements,
       rootElementOrder,
-      createdAt: toFiniteTimestamp(repositoryLayout.createdAt, Date.now()),
-      updatedAt: toFiniteTimestamp(
-        repositoryLayout.updatedAt,
-        toFiniteTimestamp(repositoryLayout.createdAt, Date.now()),
-      ),
+      createdAt,
+      updatedAt,
     };
   }
 
@@ -396,8 +427,11 @@ export const projectRepositoryStateToDomainState = ({
     null;
 
   state.resources = projectRepositoryResources({ repositoryState });
+  state.layoutTree = structuredClone(
+    getHierarchyNodes(repositoryState?.layouts),
+  );
   state.layouts = projectRepositoryLayouts({
-    repositoryLayouts: repositoryState?.layouts?.items || {},
+    repositoryLayoutsCollection: repositoryState?.layouts || {},
   });
   state.variables = projectRepositoryVariables({
     repositoryVariables: repositoryState?.variables,
