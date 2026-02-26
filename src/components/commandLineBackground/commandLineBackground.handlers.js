@@ -5,9 +5,92 @@ const createEmptyCollection = () => ({
   tree: [],
 });
 
+const isHierarchyCollection = (value) =>
+  !!value &&
+  typeof value === "object" &&
+  !!value.items &&
+  typeof value.items === "object" &&
+  Array.isArray(value.tree);
+
+const normalizeLayoutCollection = (layoutsValue) => {
+  if (isHierarchyCollection(layoutsValue)) {
+    return layoutsValue;
+  }
+
+  const layoutMap =
+    layoutsValue && typeof layoutsValue === "object" ? layoutsValue : {};
+  const items = {};
+  const ids = [];
+
+  for (const [layoutId, layout] of Object.entries(layoutMap)) {
+    if (!layout || typeof layout !== "object") continue;
+    items[layoutId] = {
+      id: layoutId,
+      type: layout.type || "layout",
+      ...structuredClone(layout),
+    };
+    ids.push(layoutId);
+  }
+
+  const sortedIds = ids.sort((a, b) => {
+    const aTs = items[a]?.createdAt ?? 0;
+    const bTs = items[b]?.createdAt ?? 0;
+    if (aTs !== bTs) return aTs - bTs;
+    if (a === b) return 0;
+    return a < b ? -1 : 1;
+  });
+
+  const idSet = new Set(sortedIds);
+  const ROOT = "__root__";
+  const childrenByParent = new Map([[ROOT, []]]);
+  for (const id of sortedIds) {
+    const rawParentId = items[id]?.parentId;
+    const parentId =
+      typeof rawParentId === "string" &&
+      rawParentId.length > 0 &&
+      rawParentId !== id &&
+      idSet.has(rawParentId)
+        ? rawParentId
+        : null;
+    const key = parentId || ROOT;
+    if (!childrenByParent.has(key)) {
+      childrenByParent.set(key, []);
+    }
+    childrenByParent.get(key).push(id);
+  }
+
+  const visited = new Set();
+  const buildNodes = (parentKey) => {
+    const idsForParent = childrenByParent.get(parentKey) || [];
+    const nodes = [];
+    for (const id of idsForParent) {
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const children = buildNodes(id);
+      if (children.length > 0) {
+        nodes.push({ id, children });
+      } else {
+        nodes.push({ id });
+      }
+    }
+    return nodes;
+  };
+
+  const tree = buildNodes(ROOT);
+  for (const id of sortedIds) {
+    if (visited.has(id)) continue;
+    visited.add(id);
+    tree.push({ id });
+  }
+
+  return { items, tree };
+};
+
 const getResourceCollectionsFromDomainState = (domainState) => ({
   images: domainState?.resources?.images || createEmptyCollection(),
-  layouts: domainState?.resources?.layouts || createEmptyCollection(),
+  layouts: normalizeLayoutCollection(
+    domainState?.layouts || domainState?.resources?.layouts,
+  ),
   videos: domainState?.resources?.videos || createEmptyCollection(),
   tweens: domainState?.resources?.tweens || createEmptyCollection(),
 });

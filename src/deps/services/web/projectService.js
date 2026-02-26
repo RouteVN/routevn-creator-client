@@ -388,7 +388,10 @@ const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
     };
   }
 
-  const tree = buildLegacyNodeOrder(orderedLayoutIds);
+  const tree = buildHierarchyOrderFromFlatCollection({
+    items: projectedItems,
+    tree: getHierarchyNodes(legacyLayouts),
+  });
   return {
     items: projectedItems,
     tree,

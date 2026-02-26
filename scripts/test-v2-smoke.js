@@ -25,6 +25,16 @@ const makeCommand = ({
   payload,
 });
 
+const flattenTreeIds = (nodes, output = []) => {
+  if (!Array.isArray(nodes)) return output;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    output.push(node.id);
+    flattenTreeIds(node.children || [], output);
+  }
+  return output;
+};
+
 let state = createEmptyProjectState({
   projectId,
   name: "Smoke",
@@ -164,6 +174,69 @@ try {
   invariantFailed = true;
 }
 assert.equal(invariantFailed, true);
+
+apply(
+  makeCommand({
+    type: "variable.create",
+    ts: 2000,
+    partition: `project:${projectId}:settings`,
+    payload: {
+      variableId: "var-a",
+      name: "A",
+      variableType: "string",
+      initialValue: "",
+      position: "last",
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "variable.create",
+    ts: 2100,
+    partition: `project:${projectId}:settings`,
+    payload: {
+      variableId: "var-b",
+      name: "B",
+      variableType: "string",
+      initialValue: "",
+      position: { after: "var-a" },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "variable.create",
+    ts: 2200,
+    partition: `project:${projectId}:settings`,
+    payload: {
+      variableId: "var-c",
+      name: "C",
+      variableType: "string",
+      initialValue: "",
+      position: { before: "var-b" },
+    },
+  }),
+);
+assert.deepEqual(flattenTreeIds(state.variables.tree), [
+  "var-a",
+  "var-c",
+  "var-b",
+]);
+
+apply(
+  makeCommand({
+    type: "layout.create",
+    ts: 2300,
+    partition: `project:${projectId}:layouts`,
+    payload: {
+      layoutId: "layout-2",
+      name: "L2",
+      layoutType: "scene",
+      parentId: "layout-1",
+    },
+  }),
+);
+assert.equal(state.layouts["layout-2"].parentId, "layout-1");
 
 const collab = createProjectCollabService({
   projectId,

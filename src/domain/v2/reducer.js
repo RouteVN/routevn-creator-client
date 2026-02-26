@@ -123,6 +123,53 @@ const resolveCollectionParentId = ({ items, itemId, parentId }) => {
   return items?.[parentId] ? parentId : null;
 };
 
+const getCollectionSiblingNodes = ({ collection, parentId }) => {
+  const tree = ensureCollectionTree(collection);
+  if (!parentId) return tree;
+
+  const parentNode = findHierarchyNodeById(tree, parentId);
+  if (!parentNode) return tree;
+  if (!Array.isArray(parentNode.children)) {
+    parentNode.children = [];
+  }
+  return parentNode.children;
+};
+
+const resolveInsertionIndexFromPosition = ({
+  collection,
+  parentId,
+  position,
+  movingId = null,
+}) => {
+  if (position === "first") return 0;
+  if (position === "last" || position === undefined || position === null) {
+    return undefined;
+  }
+
+  const siblings = getCollectionSiblingNodes({ collection, parentId });
+  const filteredSiblings = Array.isArray(siblings)
+    ? siblings.filter((node) => node?.id && node.id !== movingId)
+    : [];
+
+  if (position && typeof position === "object") {
+    if (typeof position.before === "string") {
+      const beforeIndex = filteredSiblings.findIndex(
+        (node) => node.id === position.before,
+      );
+      return beforeIndex >= 0 ? beforeIndex : filteredSiblings.length;
+    }
+
+    if (typeof position.after === "string") {
+      const afterIndex = filteredSiblings.findIndex(
+        (node) => node.id === position.after,
+      );
+      return afterIndex >= 0 ? afterIndex + 1 : filteredSiblings.length;
+    }
+  }
+
+  return undefined;
+};
+
 const buildCanonicalCollectionTree = ({ items, tree }) => {
   const ROOT = "__root__";
   const allIds = Object.keys(items || {});
@@ -274,6 +321,12 @@ const normalizeLayoutParentId = (parentId, elementId) => {
   if (typeof parentId !== "string" || parentId.length === 0) return null;
   if (parentId === elementId) return null;
   return parentId;
+};
+
+const resolveLayoutParentId = ({ state, layoutId, parentId }) => {
+  if (typeof parentId !== "string" || parentId.length === 0) return null;
+  if (parentId === layoutId) return null;
+  return state.layouts?.[parentId] ? parentId : null;
 };
 
 const walkLayoutHierarchy = (nodes, parentId, visitor) => {
@@ -612,8 +665,15 @@ const reducers = {
     delete layoutData.layoutType;
     delete layoutData.elements;
     delete layoutData.rootElementOrder;
+    delete layoutData.parentId;
+    delete layoutData.position;
     delete layoutData.createdAt;
     delete layoutData.updatedAt;
+    const parentId = resolveLayoutParentId({
+      state,
+      layoutId: payload.layoutId,
+      parentId: payload.parentId,
+    });
 
     const initialElements = toLayoutElementsFromLegacyCollection(
       payload.elements,
@@ -623,6 +683,7 @@ const reducers = {
       name: payload.name,
       layoutType: payload.layoutType,
       ...layoutData,
+      parentId,
       elements: initialElements.elements,
       rootElementOrder: initialElements.rootElementOrder,
       createdAt: now,
@@ -729,15 +790,23 @@ const reducers = {
       createdAt: now,
       updatedAt: now,
     };
+    const requestedParentId = resolveCollectionParentId({
+      items: variables.items || {},
+      itemId: payload.variableId,
+      parentId: payload.parentId,
+    });
     const index = Number.isInteger(payload.index)
       ? payload.index
-      : payload.position === "first"
-        ? 0
-        : undefined;
+      : resolveInsertionIndexFromPosition({
+          collection: variables,
+          parentId: requestedParentId,
+          position: payload.position,
+          movingId: payload.variableId,
+        });
     placeCollectionNode({
       collection: variables,
       itemId: payload.variableId,
-      parentId: payload.parentId,
+      parentId: requestedParentId,
       index,
     });
     state.variables = variables;
