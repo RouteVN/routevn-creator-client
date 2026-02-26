@@ -1,4 +1,4 @@
-import { toFlatItems } from "#domain-structure";
+import { toFlatItems } from "#v2-tree-helpers";
 
 const getFileIdFromProps = (attrs, projectService) => {
   // Validate that both fileId and imageId are not passed

@@ -5,11 +5,12 @@ import {
   getTypographyRemovalCount,
 } from "../../constants/typography.js";
 import {
-  nodeDelete,
-  nodeInsert,
-  nodeMove,
-  nodeUpdate,
-} from "../../deps/infra/domainStructure/actions.js";
+  ROOT_TREE_PARENT_ID,
+  deleteTreeItem,
+  insertTreeItem,
+  moveTreeItem,
+  updateTreeItem,
+} from "../../domain/v2/treeMutations.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {
@@ -252,19 +253,15 @@ export const handleFileAction = async (deps, payload) => {
         projectService,
         characterId: characterSpritesTarget.characterId,
         patchFactory: (spritesState) =>
-          nodeInsert({
-            state: spritesState,
-            payload: {
-              value: {
-                id: nanoid(),
-                type: "folder",
-                name: "New Folder",
-              },
-              options: {
-                parent: "_root",
-                position: "last",
-              },
+          insertTreeItem({
+            treeCollection: spritesState,
+            value: {
+              id: nanoid(),
+              type: "folder",
+              name: "New Folder",
             },
+            parentId: ROOT_TREE_PARENT_ID,
+            position: "last",
           }),
       });
     } else {
@@ -386,17 +383,13 @@ export const handleFileAction = async (deps, payload) => {
           projectService,
           characterId: characterSpritesTarget.characterId,
           patchFactory: (spritesState) =>
-            nodeUpdate({
-              state: spritesState,
-              payload: {
-                value: {
-                  name: detail.newName,
-                },
-                options: {
-                  id: itemId,
-                  replace: false,
-                },
+            updateTreeItem({
+              treeCollection: spritesState,
+              id: itemId,
+              value: {
+                name: detail.newName,
               },
+              replace: false,
             }),
         });
       } else {
@@ -503,13 +496,9 @@ export const handleFileAction = async (deps, payload) => {
           projectService,
           characterId: characterSpritesTarget.characterId,
           patchFactory: (spritesState) =>
-            nodeDelete({
-              state: spritesState,
-              payload: {
-                options: {
-                  id: itemId,
-                },
-              },
+            deleteTreeItem({
+              treeCollection: spritesState,
+              id: itemId,
             }),
         });
       } else {
@@ -550,19 +539,15 @@ export const handleFileAction = async (deps, payload) => {
           projectService,
           characterId: characterSpritesTarget.characterId,
           patchFactory: (spritesState) =>
-            nodeInsert({
-              state: spritesState,
-              payload: {
-                value: {
-                  id: nanoid(),
-                  type: "folder",
-                  name: "New Folder",
-                },
-                options: {
-                  parent: itemId,
-                  position: "last",
-                },
+            insertTreeItem({
+              treeCollection: spritesState,
+              value: {
+                id: nanoid(),
+                type: "folder",
+                name: "New Folder",
               },
+              parentId: itemId,
+              position: "last",
             }),
         });
       } else {
@@ -611,15 +596,11 @@ export const handleFileAction = async (deps, payload) => {
         projectService,
         characterId: characterSpritesTarget.characterId,
         patchFactory: (spritesState) =>
-          nodeInsert({
-            state: spritesState,
-            payload: {
-              value,
-              options: {
-                parent: itemId || "_root",
-                position: "last",
-              },
-            },
+          insertTreeItem({
+            treeCollection: spritesState,
+            value,
+            parentId: itemId || ROOT_TREE_PARENT_ID,
+            position: "last",
           }),
       });
     } else {
@@ -703,19 +684,15 @@ export const handleFileAction = async (deps, payload) => {
         projectService,
         characterId: characterSpritesTarget.characterId,
         patchFactory: (spritesState) =>
-          nodeInsert({
-            state: spritesState,
-            payload: {
-              value: {
-                ...structuredClone(currentItem),
-                id: duplicateId,
-                name: duplicateName,
-              },
-              options: {
-                parent: location?.parentId || "_root",
-                position: { after: itemId },
-              },
+          insertTreeItem({
+            treeCollection: spritesState,
+            value: {
+              ...structuredClone(currentItem),
+              id: duplicateId,
+              name: duplicateName,
             },
+            parentId: location?.parentId || ROOT_TREE_PARENT_ID,
+            position: { after: itemId },
           }),
       });
     } else {
@@ -814,15 +791,11 @@ export const handleTargetChanged = async (deps, payload) => {
       projectService,
       characterId: characterSpritesTarget.characterId,
       patchFactory: (spritesState) =>
-        nodeMove({
-          state: spritesState,
-          payload: {
-            options: {
-              id: source.id,
-              parent: parent,
-              position: repositoryPosition,
-            },
-          },
+        moveTreeItem({
+          treeCollection: spritesState,
+          id: source.id,
+          parentId: parent,
+          position: repositoryPosition,
         }),
     });
   } else {

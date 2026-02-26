@@ -12,8 +12,16 @@ RETTANGOLI_URL="https://cdn.jsdelivr.net/npm/@rettangoli/ui@${RETTANGOLI_VERSION
 RETTANGOLI_DIR="static/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist"
 RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
 LOCAL_RETTANGOLI_FILE="node_modules/@rettangoli/ui/dist/rettangoli-iife-ui.min.js"
+LOCK_FILE="/tmp/routevn-creator-client-build.lock"
 
 echo "Building for ${BUILD_TYPE}..."
+
+# Builds for web/tauri share the same _site output path.
+# Serialize concurrent invocations so parallel scripts don't race on _site.
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"${LOCK_FILE}"
+  flock 9
+fi
 
 echo "Generating bundle file..."
 bunx esbuild scripts/main.js --bundle --format=esm --minify --outfile=static/bundle/main.js

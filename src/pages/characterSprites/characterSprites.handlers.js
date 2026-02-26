@@ -1,25 +1,25 @@
 import { nanoid } from "nanoid";
 import {
-  nodeDelete,
-  nodeInsert,
-  nodeUpdate,
-} from "../../deps/infra/domainStructure/actions.js";
+  ROOT_TREE_PARENT_ID,
+  deleteTreeItem,
+  insertTreeItem,
+  updateTreeItem,
+} from "../../domain/v2/treeMutations.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const applyCharacterSpritesPatch = async ({
   projectService,
   characterId,
-  operation,
+  patchFactory,
 }) => {
   const { characters } = projectService.getState();
   const character = characters.items?.[characterId];
   if (!character) return;
 
-  const working = {
-    sprites: structuredClone(character.sprites || { items: {}, tree: [] }),
-  };
-  const next = operation(working) || working;
-  const nextSprites = structuredClone(next.sprites || working.sprites);
+  const spritesState = structuredClone(
+    character.sprites || { items: {}, tree: [] },
+  );
+  const nextSprites = patchFactory(spritesState);
 
   await projectService.updateResourceItem({
     resourceType: "characters",
@@ -313,9 +313,9 @@ export const handleDragDropFileSelected = async (deps, payload) => {
       await applyCharacterSpritesPatch({
         projectService,
         characterId,
-        operation: (state) =>
-          nodeInsert(state, {
-            target: "sprites",
+        patchFactory: (spritesState) =>
+          insertTreeItem({
+            treeCollection: spritesState,
             value: {
               id: nanoid(),
               type: "image",
@@ -326,10 +326,8 @@ export const handleDragDropFileSelected = async (deps, payload) => {
               width: result.dimensions.width,
               height: result.dimensions.height,
             },
-            options: {
-              parent: id,
-              position: "last",
-            },
+            parentId: id || ROOT_TREE_PARENT_ID,
+            position: "last",
           }),
       });
     }
@@ -352,16 +350,14 @@ export const handleFormChange = async (deps, payload) => {
   await applyCharacterSpritesPatch({
     projectService,
     characterId,
-    operation: (state) =>
-      nodeUpdate(state, {
-        target: "sprites",
+    patchFactory: (spritesState) =>
+      updateTreeItem({
+        treeCollection: spritesState,
+        id: selectedItemId,
         value: {
           [payload._event.detail.name]: payload._event.detail.value,
         },
-        options: {
-          id: selectedItemId,
-          replace: false,
-        },
+        replace: false,
       }),
   });
 
@@ -419,9 +415,10 @@ export const handleFormExtraEvent = async (deps) => {
   await applyCharacterSpritesPatch({
     projectService,
     characterId,
-    operation: (state) =>
-      nodeUpdate(state, {
-        target: "sprites",
+    patchFactory: (spritesState) =>
+      updateTreeItem({
+        treeCollection: spritesState,
+        id: selectedItem.id,
         value: {
           fileId: uploadResult.fileId,
           name: uploadResult.file.name,
@@ -430,10 +427,7 @@ export const handleFormExtraEvent = async (deps) => {
           width: uploadResult.dimensions.width,
           height: uploadResult.dimensions.height,
         },
-        options: {
-          id: selectedItem.id,
-          replace: false,
-        },
+        replace: false,
       }),
   });
 
@@ -496,12 +490,10 @@ export const handleItemDelete = async (deps, payload) => {
   await applyCharacterSpritesPatch({
     projectService,
     characterId,
-    operation: (state) =>
-      nodeDelete(state, {
-        target: "sprites",
-        options: {
-          id: itemId,
-        },
+    patchFactory: (spritesState) =>
+      deleteTreeItem({
+        treeCollection: spritesState,
+        id: itemId,
       }),
   });
 

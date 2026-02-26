@@ -1,4 +1,4 @@
-import { toFlatItems } from "#domain-structure";
+import { toFlatItems } from "#v2-tree-helpers";
 
 export const createInitialState = () => ({
   ready: false,

@@ -15,7 +15,7 @@
     "visual-novel-creator"
   ],
   "imports": {
-    "#domain-structure": "./src/deps/infra/domainStructure/index.js"
+    "#v2-tree-helpers": "./src/domain/v2/treeHelpers.js"
   },
   "type": "module",
   "dependencies": {

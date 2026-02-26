@@ -1,4 +1,4 @@
-import { toFlatItems } from "#domain-structure";
+import { toFlatItems } from "#v2-tree-helpers";
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {

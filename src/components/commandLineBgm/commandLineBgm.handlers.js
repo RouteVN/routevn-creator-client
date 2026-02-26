@@ -1,4 +1,4 @@
-import { toFlatItems } from "#domain-structure";
+import { toFlatItems } from "#v2-tree-helpers";
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;

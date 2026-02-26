@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from "#domain-structure";
+import { toFlatItems, toFlatGroups } from "#v2-tree-helpers";
 import { parseAndRender } from "jempl";
 
 const contextMenuItems = [

@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#domain-structure";
+import { toFlatGroups, toFlatItems } from "#v2-tree-helpers";
 
 export const createInitialState = () => ({
   mode: "current",
