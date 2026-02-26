@@ -725,8 +725,9 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
       } else {
         // Remove change binding when no variable selected
         delete updatedItem.change;
-        // Reset initialValue to a static value
-        updatedItem.initialValue = updatedItem.min || 0;
+        // Reset initialValue to a static numeric value
+        const parsedMin = Number(updatedItem.min);
+        updatedItem.initialValue = Number.isFinite(parsedMin) ? parsedMin : 0;
       }
     }
   }
