@@ -82,28 +82,5 @@ export const createInsiemeTauriStoreAdapter = async (projectPath) => {
         await db.execute("DELETE FROM app WHERE key = $1", [key]);
       },
     },
-
-    // Snapshot support for fast initialization
-    async getSnapshot() {
-      const result = await db.select("SELECT value FROM app WHERE key = $1", [
-        "_eventsSnapshot",
-      ]);
-      if (result && result.length > 0) {
-        try {
-          return JSON.parse(result[0].value);
-        } catch {
-          return null;
-        }
-      }
-      return null;
-    },
-
-    async setSnapshot(snapshot) {
-      const jsonValue = JSON.stringify(snapshot);
-      await db.execute(
-        "INSERT OR REPLACE INTO app (key, value) VALUES ($1, $2)",
-        ["_eventsSnapshot", jsonValue],
-      );
-    },
   };
 };
