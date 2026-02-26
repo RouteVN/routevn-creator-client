@@ -2,68 +2,6 @@ import { mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 import { loadTemplate, getTemplateFiles } from "../../../utils/templateLoader";
-import { createEmptyProjectState } from "../../../domain/v2/model.js";
-
-const buildInitialDomainState = ({
-  templateData,
-  projectId,
-  name,
-  description,
-}) => {
-  const resolvedProjectId =
-    typeof projectId === "string" && projectId.length > 0
-      ? projectId
-      : "unknown-project";
-  const baseline = createEmptyProjectState({
-    projectId: resolvedProjectId,
-    name,
-    description,
-  });
-  const isCanonicalDomainTemplate = Boolean(
-    templateData &&
-      typeof templateData === "object" &&
-      templateData.model_version === 2 &&
-      templateData.resources &&
-      templateData.story &&
-      templateData.scenes &&
-      templateData.sections &&
-      templateData.lines &&
-      templateData.layouts &&
-      templateData.variables,
-  );
-  if (!isCanonicalDomainTemplate) {
-    throw new Error(
-      "Template repository.json must be canonical v2 domain state.",
-    );
-  }
-  const rawDomainState = structuredClone(templateData);
-  const now = Date.now();
-
-  return {
-    ...baseline,
-    ...rawDomainState,
-    model_version: 2,
-    story: {
-      ...baseline.story,
-      ...rawDomainState.story,
-    },
-    resources: {
-      ...baseline.resources,
-      ...rawDomainState.resources,
-    },
-    project: {
-      ...baseline.project,
-      ...rawDomainState.project,
-      id: resolvedProjectId,
-      name,
-      description,
-      createdAt: Number.isFinite(rawDomainState?.project?.createdAt)
-        ? rawDomainState.project.createdAt
-        : now,
-      updatedAt: now,
-    },
-  };
-};
 
 /**
  * Initialize a new project with folder structure and database
@@ -72,7 +10,6 @@ export const initializeProject = async ({
   name,
   description,
   projectPath,
-  projectId,
   template,
 }) => {
   if (!template) {
@@ -92,12 +29,15 @@ export const initializeProject = async ({
   // Copy template files to project directory with random file IDs
   await copyTemplateFiles(template, filesPath);
 
-  const initData = buildInitialDomainState({
-    templateData,
-    projectId,
-    name,
-    description,
-  });
+  // Add project info to template data
+  const initData = {
+    ...templateData,
+    model_version: 2,
+    project: {
+      name,
+      description,
+    },
+  };
 
   // Add the init action directly through adapter (temporary - will be replaced with insieme)
   await adapter.appendEvent({

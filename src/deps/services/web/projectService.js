@@ -19,8 +19,7 @@ import {
   detectFileType,
 } from "../../../utils/fileProcessors.js";
 import { processCommand } from "../../../domain/v2/engine.js";
-import { createEmptyProjectState } from "../../../domain/v2/model.js";
-import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
+import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -37,14 +36,71 @@ const loadFont = async (fontName, fontUrl) => {
   return fontFace;
 };
 
-const createInitialProjectData = (projectId = "") =>
-  createEmptyProjectState({
-    projectId,
+/**
+ * Default empty project data structure
+ */
+export const initialProjectData = {
+  model_version: 2,
+  project: {
     name: "",
     description: "",
-  });
-
-export const initialProjectData = createInitialProjectData();
+  },
+  story: {
+    initialSceneId: "",
+  },
+  images: {
+    items: {},
+    order: [],
+  },
+  tweens: {
+    items: {},
+    order: [],
+  },
+  sounds: {
+    items: {},
+    order: [],
+  },
+  videos: {
+    items: {},
+    order: [],
+  },
+  characters: {
+    items: {},
+    order: [],
+  },
+  fonts: {
+    items: {},
+    order: [],
+  },
+  transforms: {
+    items: {},
+    order: [],
+  },
+  colors: {
+    items: {},
+    order: [],
+  },
+  typography: {
+    items: {},
+    order: [],
+  },
+  variables: {
+    items: {},
+    order: [],
+  },
+  components: {
+    items: {},
+    order: [],
+  },
+  layouts: {
+    items: {},
+    order: [],
+  },
+  scenes: {
+    items: {},
+    order: [],
+  },
+};
 
 const assertV2State = (state) => {
   if (!state || state.model_version !== 2) {
@@ -52,36 +108,6 @@ const assertV2State = (state) => {
       "Unsupported project model version. RouteVN V2 only supports model_version=2 projects.",
     );
   }
-};
-
-const isDomainState = (state) =>
-  Boolean(
-    state &&
-      typeof state === "object" &&
-      state.model_version === 2 &&
-      state.resources &&
-      state.story &&
-      state.scenes &&
-      state.sections &&
-      state.lines &&
-      state.layouts &&
-      state.variables,
-  );
-
-const toDomainState = ({ state, projectId }) => {
-  if (isDomainState(state)) {
-    return structuredClone(state);
-  }
-
-  throw new Error(
-    `Unsupported project state format for '${projectId}'. Canonical v2 domain state is required.`,
-  );
-};
-
-const toLegacyStateForUi = ({ state, projectId }) => {
-  assertV2State(state);
-  const domainState = toDomainState({ state, projectId });
-  return projectDomainStateToLegacyState({ domainState });
 };
 
 /**
@@ -92,12 +118,10 @@ const toLegacyStateForUi = ({ state, projectId }) => {
  * @param {Object} params.router - Router instance to get current projectId from URL
  * @param {Object} params.filePicker - Web file picker instance
  */
-const countImageEntries = (state, projectId = "unknown-project") => {
-  const domainState = toDomainState({ state, projectId });
-  const imageItems = domainState?.resources?.images?.items || {};
-  return Object.values(imageItems).filter((item) => item?.type === "image")
-    .length;
-};
+const countImageEntries = (imagesData) =>
+  Object.values(imagesData?.items || {}).filter(
+    (item) => item?.type === "image",
+  ).length;
 
 const normalizeParentId = (parentId) => {
   if (typeof parentId !== "string" || parentId.length === 0) return null;
@@ -540,48 +564,6 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
   };
 };
 
-const projectDomainStateToLegacyState = ({ domainState }) => {
-  const nextState = {
-    model_version: 2,
-    project: structuredClone(domainState?.project || {}),
-    story: {
-      initialSceneId: null,
-    },
-    scenes: {
-      items: {},
-      order: [],
-    },
-    layouts: {
-      items: {},
-      order: [],
-    },
-    variables: {
-      items: {},
-      order: [],
-    },
-  };
-
-  for (const resourceType of RESOURCE_TYPES) {
-    nextState[resourceType] = projectDomainResourceCollectionToLegacy(
-      domainState?.resources?.[resourceType] || { items: {}, order: [] },
-    );
-  }
-
-  const projectedStory = projectDomainStoryToLegacy({
-    domainState,
-    legacyState: nextState,
-  });
-  nextState.story = projectedStory.story;
-  nextState.scenes = projectedStory.scenes;
-  nextState.layouts = projectDomainLayoutsToLegacy({
-    domainState,
-    legacyState: nextState,
-  });
-  nextState.variables = projectDomainVariablesToLegacy({ domainState });
-
-  return nextState;
-};
-
 const toStableJsonString = (value) => {
   try {
     return JSON.stringify(value);
@@ -590,27 +572,25 @@ const toStableJsonString = (value) => {
   }
 };
 
-const projectTypedCommandToDomainSetEvents = ({
-  domainStateBefore,
-  domainStateAfter,
+const projectTypedCommandToLegacySetEvents = ({
+  legacyState,
+  domainState,
   command,
 }) => {
   const targets = new Set();
 
-  if (
-    command.type === "project.update" ||
-    hasCommandTypePrefix(command.type, "resource.") ||
-    hasCommandTypePrefix(command.type, "scene.") ||
-    hasCommandTypePrefix(command.type, "section.") ||
-    hasCommandTypePrefix(command.type, "line.") ||
-    hasCommandTypePrefix(command.type, "layout.") ||
-    hasCommandTypePrefix(command.type, "variable.")
-  ) {
+  if (command.type === "project.update") {
     targets.add("project");
   }
 
   if (hasCommandTypePrefix(command.type, "resource.")) {
-    targets.add("resources");
+    targets.add("project");
+    if (
+      typeof command?.payload?.resourceType === "string" &&
+      command.payload.resourceType.length > 0
+    ) {
+      targets.add(command.payload.resourceType);
+    }
   }
 
   if (
@@ -618,17 +598,18 @@ const projectTypedCommandToDomainSetEvents = ({
     hasCommandTypePrefix(command.type, "section.") ||
     hasCommandTypePrefix(command.type, "line.")
   ) {
+    targets.add("project");
     targets.add("story");
     targets.add("scenes");
-    targets.add("sections");
-    targets.add("lines");
   }
 
   if (hasCommandTypePrefix(command.type, "layout.")) {
+    targets.add("project");
     targets.add("layouts");
   }
 
   if (hasCommandTypePrefix(command.type, "variable.")) {
+    targets.add("project");
     targets.add("variables");
   }
 
@@ -636,10 +617,60 @@ const projectTypedCommandToDomainSetEvents = ({
     return [];
   }
 
+  const nextState = structuredClone(legacyState || {});
+  if (targets.has("project")) {
+    nextState.project = {
+      ...legacyState?.project,
+      ...structuredClone(domainState?.project),
+    };
+  }
+
+  for (const target of targets) {
+    if (
+      target === "project" ||
+      target === "story" ||
+      target === "scenes" ||
+      target === "layouts" ||
+      target === "variables"
+    ) {
+      continue;
+    }
+    const domainCollection = domainState?.resources?.[target];
+    if (!domainCollection) continue;
+    nextState[target] =
+      projectDomainResourceCollectionToLegacy(domainCollection);
+  }
+
+  if (targets.has("story") || targets.has("scenes")) {
+    const projectedStory = projectDomainStoryToLegacy({
+      domainState,
+      legacyState,
+    });
+    if (targets.has("story")) {
+      nextState.story = projectedStory.story;
+    }
+    if (targets.has("scenes")) {
+      nextState.scenes = projectedStory.scenes;
+    }
+  }
+
+  if (targets.has("layouts")) {
+    nextState.layouts = projectDomainLayoutsToLegacy({
+      domainState,
+      legacyState,
+    });
+  }
+
+  if (targets.has("variables")) {
+    nextState.variables = projectDomainVariablesToLegacy({
+      domainState,
+    });
+  }
+
   const events = [];
   for (const target of targets) {
-    const prevValue = domainStateBefore?.[target];
-    const nextValue = domainStateAfter?.[target];
+    const prevValue = legacyState?.[target];
+    const nextValue = nextState?.[target];
     if (toStableJsonString(prevValue) === toStableJsonString(nextValue)) {
       continue;
     }
@@ -670,17 +701,17 @@ const applyTypedCommandToRepository = async ({
     );
   }
 
-  const domainStateBefore = toDomainState({
-    state: stateBeforeApply,
+  const domainStateBefore = projectLegacyStateToDomainState({
+    legacyState: stateBeforeApply,
     projectId,
   });
   const { state: domainStateAfter } = processCommand({
     state: domainStateBefore,
     command,
   });
-  const projectedEvents = projectTypedCommandToDomainSetEvents({
-    domainStateBefore,
-    domainStateAfter,
+  const projectedEvents = projectTypedCommandToLegacySetEvents({
+    legacyState: stateBeforeApply,
+    domainState: domainStateAfter,
     command,
   });
   for (const event of projectedEvents) {
@@ -722,7 +753,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   let currentRepository = null;
   let currentProjectId = null;
   let currentAdapter = null;
-  const uiRepositoryViewsByProject = new Map();
 
   // Get current projectId from URL query params
   const getCurrentProjectId = () => {
@@ -810,14 +840,10 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     });
 
     const repository = await getRepositoryByProject(projectId);
-    const rawState = repository.getState();
-    assertV2State(rawState);
-    const domainState = toDomainState({
-      state: rawState,
-      projectId,
-    });
+    const state = repository.getState();
+    assertV2State(state);
 
-    const resolvedProjectId = domainState.project?.id || projectId;
+    const resolvedProjectId = state.project?.id || projectId;
     const resolvedPartitions = getBasePartitions(resolvedProjectId, partitions);
     updateCollabDiagnostics(projectId, {
       mode,
@@ -835,9 +861,12 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     };
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
-      projectName: domainState.project?.name || "",
-      projectDescription: domainState.project?.description || "",
-      initialState: domainState,
+      projectName: state.project?.name || "",
+      projectDescription: state.project?.description || "",
+      initialState: projectLegacyStateToDomainState({
+        legacyState: state,
+        projectId: resolvedProjectId,
+      }),
       token,
       actor,
       partitions: resolvedPartitions,
@@ -894,10 +923,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
             }
 
             const beforeState = repository.getState();
-            const beforeImagesCount = countImageEntries(
-              beforeState,
-              resolvedProjectId,
-            );
+            const beforeImagesCount = countImageEntries(beforeState?.images);
             const applyResult = await applyTypedCommandToRepository({
               repository,
               command,
@@ -922,10 +948,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
             }
 
             const afterState = repository.getState();
-            const afterImagesCount = countImageEntries(
-              afterState,
-              resolvedProjectId,
-            );
+            const afterImagesCount = countImageEntries(afterState?.images);
             collabLog("info", "remote typed command applied to repository", {
               projectId,
               commandType: command?.type || null,
@@ -1080,9 +1103,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           originStore: store,
           snapshotInterval: 500, // Auto-save snapshot every 500 events
         });
-        await repository.init({
-          initialState: createInitialProjectData(projectId),
-        });
+        await repository.init({ initialState: initialProjectData });
         assertV2State(repository.getState());
         repositoriesByProject.set(projectId, repository);
         adaptersByProject.set(projectId, store);
@@ -1130,54 +1151,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       );
     }
     return currentAdapter;
-  };
-
-  const createUiRepositoryView = (repository, projectIdHint) =>
-    new Proxy(repository, {
-      get(target, prop) {
-        if (prop === "getState") {
-          return (untilEventIndex) => {
-            const rawState = target.getState(untilEventIndex);
-            const resolvedProjectId =
-              rawState?.project?.id ||
-              projectIdHint ||
-              getCurrentProjectId() ||
-              "unknown-project";
-            return toLegacyStateForUi({
-              state: rawState,
-              projectId: resolvedProjectId,
-            });
-          };
-        }
-        if (prop === "getDomainState") {
-          return (untilEventIndex) => {
-            const rawState = target.getState(untilEventIndex);
-            assertV2State(rawState);
-            const resolvedProjectId =
-              rawState?.project?.id ||
-              projectIdHint ||
-              getCurrentProjectId() ||
-              "unknown-project";
-            return toDomainState({
-              state: rawState,
-              projectId: resolvedProjectId,
-            });
-          };
-        }
-
-        const value = Reflect.get(target, prop);
-        return typeof value === "function" ? value.bind(target) : value;
-      },
-    });
-
-  const getUiRepositoryByProject = async (projectId) => {
-    if (uiRepositoryViewsByProject.has(projectId)) {
-      return uiRepositoryViewsByProject.get(projectId);
-    }
-    const repository = await getRepositoryByProject(projectId);
-    const view = createUiRepositoryView(repository, projectId);
-    uiRepositoryViewsByProject.set(projectId, view);
-    return view;
   };
 
   // File operations helpers
@@ -1324,17 +1297,10 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     if (!currentProjectId) {
       throw new Error("No project selected (missing ?p= in URL)");
     }
-    const rawState = repository.getState();
-    assertV2State(rawState);
-    const domainState = toDomainState({
-      state: rawState,
-      projectId: currentProjectId,
-    });
-    const state = projectDomainStateToLegacyState({
-      domainState,
-    });
+    const state = repository.getState();
+    assertV2State(state);
 
-    const projectId = domainState.project?.id || currentProjectId;
+    const projectId = state.project?.id || currentProjectId;
     const session = await ensureCommandSessionForProject(currentProjectId);
     const actor =
       typeof session.getActor === "function"
@@ -1344,7 +1310,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     return {
       repository,
       state,
-      domainState,
       session,
       actor,
       projectId,
@@ -1470,25 +1435,16 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   return {
     // Repository access - uses current project from URL
     async getRepository() {
-      const projectId = getCurrentProjectId();
-      if (!projectId) {
-        throw new Error("No project selected (missing ?p= in URL)");
-      }
-      return getUiRepositoryByProject(projectId);
+      return getCurrentRepository();
     },
     async getRepositoryById(projectId) {
-      return getUiRepositoryByProject(projectId);
+      return getRepositoryByProject(projectId);
     },
     getAdapterById(projectId) {
       return adaptersByProject.get(projectId);
     },
     async ensureRepository() {
-      const projectId = getCurrentProjectId();
-      if (!projectId) {
-        throw new Error("No project selected (missing ?p= in URL)");
-      }
-      await getCurrentRepository();
-      return getUiRepositoryByProject(projectId);
+      return getCurrentRepository();
     },
     async updateProjectFields({ patch }) {
       const context = await ensureTypedCommandContext();
@@ -2235,24 +2191,16 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     },
     getState() {
       const repository = getCachedRepository();
-      const rawState = repository.getState();
-      assertV2State(rawState);
-      const projectId = getCurrentProjectId() || "unknown-project";
-      const domainState = toDomainState({
-        state: rawState,
-        projectId,
-      });
-      return projectDomainStateToLegacyState({
-        domainState,
-      });
+      const state = repository.getState();
+      assertV2State(state);
+      return state;
     },
     getDomainState() {
-      const repository = getCachedRepository();
-      const rawState = repository.getState();
-      assertV2State(rawState);
-      const projectId = getCurrentProjectId() || "unknown-project";
-      return toDomainState({
-        state: rawState,
+      const legacyState = this.getState();
+      const projectId =
+        legacyState?.project?.id || getCurrentProjectId() || "unknown-project";
+      return projectLegacyStateToDomainState({
+        legacyState,
         projectId,
       });
     },
