@@ -10,8 +10,7 @@ import {
   createProjectCollabService,
   createWebSocketTransport,
 } from "../../collab/v2/index.js";
-import { createTypedCommandApi } from "./shared/typedCommandApi.js";
-import { RESOURCE_TYPES } from "../../domain/v2/constants.js";
+import { createProjectServiceCore } from "./shared/projectServiceCore.js";
 import {
   getImageDimensions,
   getVideoDimensions,
@@ -58,9 +57,6 @@ export const createProjectService = ({ router, db, filePicker }) => {
   const repositoriesByPath = new Map();
   const adaptersByProject = new Map();
   const adaptersByPath = new Map();
-  const collabSessionsByProject = new Map();
-  const collabSessionModeByProject = new Map();
-  const localCollabActorsByProject = new Map();
 
   // Initialization locks - prevents duplicate initialization
   const initLocksByProject = new Map(); // projectId -> Promise<Repository>
@@ -76,33 +72,6 @@ export const createProjectService = ({ router, db, filePicker }) => {
     return p;
   };
 
-  const storyBasePartitionFor = (projectId) => `project:${projectId}:story`;
-  const storyScenePartitionFor = (projectId, sceneId) =>
-    `project:${projectId}:story:scene:${sceneId}`;
-  const resourceTypePartitionFor = (projectId, resourceType) =>
-    `project:${projectId}:resources:${resourceType}`;
-
-  const getBasePartitions = (projectId, partitions) =>
-    partitions || [
-      storyBasePartitionFor(projectId),
-      ...RESOURCE_TYPES.map((resourceType) =>
-        resourceTypePartitionFor(projectId, resourceType),
-      ),
-      `project:${projectId}:layouts`,
-      `project:${projectId}:settings`,
-    ];
-
-  const getOrCreateLocalActor = (projectId) => {
-    const existing = localCollabActorsByProject.get(projectId);
-    if (existing) return existing;
-    const actor = {
-      userId: `local-${projectId}`,
-      clientId: `local-${nanoid()}`,
-    };
-    localCollabActorsByProject.set(projectId, actor);
-    return actor;
-  };
-
   const createSessionForProject = async ({
     projectId,
     token,
@@ -111,6 +80,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     endpointUrl,
     partitions,
     mode,
+    partitioning,
   }) => {
     collabLog("info", "create session requested", {
       projectId,
@@ -126,7 +96,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
     assertV2State(state);
 
     const resolvedProjectId = state.project?.id || projectId;
-    const resolvedPartitions = getBasePartitions(resolvedProjectId, partitions);
+    const resolvedPartitions = partitioning.getBasePartitions(
+      resolvedProjectId,
+      partitions,
+    );
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
@@ -175,23 +148,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       });
     }
 
-    collabSessionsByProject.set(projectId, collabSession);
-    collabSessionModeByProject.set(projectId, mode);
     return collabSession;
-  };
-
-  const ensureCommandSessionForProject = async (projectId) => {
-    const existing = collabSessionsByProject.get(projectId);
-    if (existing) return existing;
-
-    const actor = getOrCreateLocalActor(projectId);
-    return createSessionForProject({
-      projectId,
-      token: `user:${actor.userId}:client:${actor.clientId}`,
-      userId: actor.userId,
-      clientId: actor.clientId,
-      mode: "local",
-    });
   };
 
   // Get or create repository by path
@@ -479,16 +436,20 @@ export const createProjectService = ({ router, db, filePicker }) => {
     const processor = processors[fileType] || processors.generic;
     return processor(file);
   };
-  const typedCommandApi = createTypedCommandApi({
+  const serviceCore = createProjectServiceCore({
+    router,
     idGenerator: nanoid,
-    getCurrentProjectId,
+    collabLog,
     getCurrentRepository,
     getCachedRepository,
-    ensureCommandSessionForProject,
-    getOrCreateLocalActor,
-    storyBasePartitionFor,
-    storyScenePartitionFor,
-    resourceTypePartitionFor,
+    getRepositoryByProject,
+    getAdapterByProject: (projectId) => adaptersByProject.get(projectId),
+    createSessionForProject,
+    createTransport: ({ endpointUrl }) =>
+      createWebSocketTransport({
+        url: endpointUrl,
+        label: "routevn.collab.tauri.transport",
+      }),
   });
 
   return {
@@ -513,30 +474,12 @@ export const createProjectService = ({ router, db, filePicker }) => {
     async ensureRepository() {
       return getCurrentRepository();
     },
-    ...typedCommandApi,
+    ...serviceCore.typedCommandApi,
 
     // Version management
-    async addVersionToProject(projectId, version) {
-      let adapter = adaptersByProject.get(projectId);
-      if (!adapter) {
-        await getRepositoryByProject(projectId);
-        adapter = adaptersByProject.get(projectId);
-      }
-      const versions = (await adapter.app.get("versions")) || [];
-      versions.unshift(version);
-      await adapter.app.set("versions", versions);
-    },
+    addVersionToProject: serviceCore.addVersionToProject,
 
-    async deleteVersionFromProject(projectId, versionId) {
-      let adapter = adaptersByProject.get(projectId);
-      if (!adapter) {
-        await getRepositoryByProject(projectId);
-        adapter = adaptersByProject.get(projectId);
-      }
-      const versions = (await adapter.app.get("versions")) || [];
-      const newVersions = versions.filter((v) => v.id !== versionId);
-      await adapter.app.set("versions", newVersions);
-    },
+    deleteVersionFromProject: serviceCore.deleteVersionFromProject,
 
     // Initialize a new project at a given path
     async initializeProject({ name, description, projectPath, template }) {
@@ -577,91 +520,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
       await store.app.set("creator_version", "2");
     },
 
-    async createCollabSession({
-      token,
-      userId,
-      clientId = nanoid(),
-      endpointUrl,
-      partitions,
-    }) {
-      const currentProjectId = getCurrentProjectId();
-      if (!currentProjectId) {
-        throw new Error("No project selected (missing ?p= in URL)");
-      }
-      collabLog("info", "createCollabSession called", {
-        currentProjectId,
-        endpointUrl: endpointUrl || null,
-        hasToken: Boolean(token),
-        userId,
-        clientId,
-      });
-
-      const existing = collabSessionsByProject.get(currentProjectId);
-      const existingMode = collabSessionModeByProject.get(currentProjectId);
-      if (existing) {
-        collabLog("info", "existing session found", {
-          currentProjectId,
-          existingMode,
-        });
-        const hasExplicitIdentity = Boolean(token && userId);
-        if (hasExplicitIdentity && existingMode === "local") {
-          await existing.stop();
-          collabSessionsByProject.delete(currentProjectId);
-          collabSessionModeByProject.delete(currentProjectId);
-          collabLog("info", "replaced local session with explicit identity", {
-            currentProjectId,
-          });
-        } else {
-          if (endpointUrl) {
-            const transport = createWebSocketTransport({ url: endpointUrl });
-            await existing.setOnlineTransport(transport);
-            collabLog("info", "updated existing session transport", {
-              currentProjectId,
-              endpointUrl,
-            });
-          }
-          return existing;
-        }
-      }
-      return createSessionForProject({
-        projectId: currentProjectId,
-        token,
-        userId,
-        clientId,
-        endpointUrl,
-        partitions,
-        mode: "explicit",
-      });
-    },
-
-    getCollabSession() {
-      const currentProjectId = getCurrentProjectId();
-      if (!currentProjectId) return null;
-      return collabSessionsByProject.get(currentProjectId) || null;
-    },
-
-    async stopCollabSession(projectId) {
-      const targetProjectId = projectId || getCurrentProjectId();
-      if (!targetProjectId) return;
-      const session = collabSessionsByProject.get(targetProjectId);
-      if (!session) return;
-      await session.stop();
-      collabSessionsByProject.delete(targetProjectId);
-      collabSessionModeByProject.delete(targetProjectId);
-      collabLog("info", "session stopped", {
-        projectId: targetProjectId,
-      });
-    },
-
-    async submitCommand(command) {
-      const session = this.getCollabSession();
-      if (!session) {
-        throw new Error(
-          "Collaboration session not initialized. Call createCollabSession() first.",
-        );
-      }
-      return session.submitCommand(command);
-    },
+    createCollabSession: serviceCore.createCollabSession,
+    getCollabSession: serviceCore.getCollabSession,
+    stopCollabSession: serviceCore.stopCollabSession,
+    submitCommand: serviceCore.submitCommand,
 
     // File operations - uses current project
     async uploadFiles(files) {

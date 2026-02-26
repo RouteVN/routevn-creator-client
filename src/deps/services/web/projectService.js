@@ -16,14 +16,13 @@ import {
   extractVideoThumbnail,
   detectFileType,
 } from "../../../utils/fileProcessors.js";
-import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
 import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
 import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
 import {
   loadCommittedCursor,
   saveCommittedCursor,
 } from "./collabCommittedCursorStore.js";
-import { createTypedCommandApi } from "../shared/typedCommandApi.js";
+import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import {
   applyTypedCommandToRepository,
   assertV2State,
@@ -65,9 +64,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   // Repository cache
   const repositoriesByProject = new Map();
   const adaptersByProject = new Map();
-  const collabSessionsByProject = new Map();
-  const collabSessionModeByProject = new Map();
-  const localCollabActorsByProject = new Map();
   const collabDiagnosticsByProject = new Map();
   const collabApplyQueueByProject = new Map();
   const collabLastCommittedIdByProject = new Map();
@@ -85,33 +81,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
     return p;
-  };
-
-  const storyBasePartitionFor = (projectId) => `project:${projectId}:story`;
-  const storyScenePartitionFor = (projectId, sceneId) =>
-    `project:${projectId}:story:scene:${sceneId}`;
-  const resourceTypePartitionFor = (projectId, resourceType) =>
-    `project:${projectId}:resources:${resourceType}`;
-
-  const getBasePartitions = (projectId, partitions) =>
-    partitions || [
-      storyBasePartitionFor(projectId),
-      ...RESOURCE_TYPES.map((resourceType) =>
-        resourceTypePartitionFor(projectId, resourceType),
-      ),
-      `project:${projectId}:layouts`,
-      `project:${projectId}:settings`,
-    ];
-
-  const getOrCreateLocalActor = (projectId) => {
-    const existing = localCollabActorsByProject.get(projectId);
-    if (existing) return existing;
-    const actor = {
-      userId: `local-${projectId}`,
-      clientId: `local-${nanoid()}`,
-    };
-    localCollabActorsByProject.set(projectId, actor);
-    return actor;
   };
 
   const updateCollabDiagnostics = (projectId, patch = {}) => {
@@ -208,6 +177,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     endpointUrl,
     partitions,
     mode,
+    partitioning,
   }) => {
     collabLog("info", "create session requested", {
       projectId,
@@ -227,7 +197,10 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     }
 
     const resolvedProjectId = state.project?.id || projectId;
-    const resolvedPartitions = getBasePartitions(resolvedProjectId, partitions);
+    const resolvedPartitions = partitioning.getBasePartitions(
+      resolvedProjectId,
+      partitions,
+    );
     const clientStore = await createPersistedInMemoryClientStore({
       projectId,
       adapter,
@@ -440,37 +413,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       });
     }
 
-    collabSessionsByProject.set(projectId, collabSession);
-    collabSessionModeByProject.set(projectId, mode);
     return collabSession;
-  };
-
-  const ensureCommandSessionForProject = async (projectId) => {
-    const existing = collabSessionsByProject.get(projectId);
-    if (existing) return existing;
-
-    collabLog(
-      "warn",
-      "creating local-only session (backend transport not attached)",
-      {
-        projectId,
-        hint: "Set collabEndpoint or use default ws://localhost:8787/sync auto-connect.",
-      },
-    );
-    updateCollabDiagnostics(projectId, {
-      mode: "local",
-      endpointUrl: null,
-      status: "local_only",
-    });
-
-    const actor = getOrCreateLocalActor(projectId);
-    return createSessionForProject({
-      projectId,
-      token: `user:${actor.userId}:client:${actor.clientId}`,
-      userId: actor.userId,
-      clientId: actor.clientId,
-      mode: "local",
-    });
   };
 
   // Get or create repository by projectId
@@ -704,16 +647,55 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     const processor = processors[fileType] || processors.generic;
     return processor(file);
   };
-  const typedCommandApi = createTypedCommandApi({
+  const serviceCore = createProjectServiceCore({
+    router,
     idGenerator: nanoid,
-    getCurrentProjectId,
+    collabLog,
     getCurrentRepository,
     getCachedRepository,
-    ensureCommandSessionForProject,
-    getOrCreateLocalActor,
-    storyBasePartitionFor,
-    storyScenePartitionFor,
-    resourceTypePartitionFor,
+    getRepositoryByProject,
+    getAdapterByProject: (projectId) => adaptersByProject.get(projectId),
+    createSessionForProject,
+    createTransport: ({ endpointUrl }) =>
+      createWebSocketTransport({
+        url: endpointUrl,
+        label: "routevn.collab.web.transport",
+      }),
+    onEnsureLocalSession: ({ projectId }) => {
+      collabLog(
+        "warn",
+        "creating local-only session (backend transport not attached)",
+        {
+          projectId,
+          hint: "Set collabEndpoint or use default ws://localhost:8787/sync auto-connect.",
+        },
+      );
+      updateCollabDiagnostics(projectId, {
+        mode: "local",
+        endpointUrl: null,
+        status: "local_only",
+      });
+    },
+    onSessionCleared: ({ projectId, reason }) => {
+      collabApplyQueueByProject.delete(projectId);
+      collabAppliedCommittedIdsByProject.delete(projectId);
+      if (reason === "replaced_local") {
+        updateCollabDiagnostics(projectId, {
+          status: "replaced_local_session",
+        });
+      }
+      if (reason === "stopped") {
+        updateCollabDiagnostics(projectId, {
+          status: "stopped",
+        });
+      }
+    },
+    onSessionTransportUpdated: ({ projectId, endpointUrl }) => {
+      updateCollabDiagnostics(projectId, {
+        endpointUrl,
+        status: "online_transport_updated",
+      });
+    },
   });
 
   return {
@@ -730,27 +712,9 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     async ensureRepository() {
       return getCurrentRepository();
     },
-    ...typedCommandApi,
-    async addVersionToProject(projectId, version) {
-      let adapter = adaptersByProject.get(projectId);
-      if (!adapter) {
-        await getRepositoryByProject(projectId);
-        adapter = adaptersByProject.get(projectId);
-      }
-      const versions = (await adapter.app.get("versions")) || [];
-      versions.unshift(version);
-      await adapter.app.set("versions", versions);
-    },
-    async deleteVersionFromProject(projectId, versionId) {
-      let adapter = adaptersByProject.get(projectId);
-      if (!adapter) {
-        await getRepositoryByProject(projectId);
-        adapter = adaptersByProject.get(projectId);
-      }
-      const versions = (await adapter.app.get("versions")) || [];
-      const newVersions = versions.filter((v) => v.id !== versionId);
-      await adapter.app.set("versions", newVersions);
-    },
+    ...serviceCore.typedCommandApi,
+    addVersionToProject: serviceCore.addVersionToProject,
+    deleteVersionFromProject: serviceCore.deleteVersionFromProject,
     async initializeProject({ name, description, projectId, template }) {
       return initializeWebProject({
         name,
@@ -759,115 +723,23 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         template,
       });
     },
-    async createCollabSession({
-      token,
-      userId,
-      clientId = nanoid(),
-      endpointUrl,
-      partitions,
-    }) {
-      const currentProjectId = getCurrentProjectId();
-      if (!currentProjectId) {
-        throw new Error("No project selected (missing ?p= in URL)");
-      }
-      collabLog("info", "createCollabSession called", {
-        currentProjectId,
-        endpointUrl: endpointUrl || null,
-        hasToken: Boolean(token),
-        userId,
-        clientId,
-      });
-
-      const existing = collabSessionsByProject.get(currentProjectId);
-      const existingMode = collabSessionModeByProject.get(currentProjectId);
-      if (existing) {
-        collabLog("info", "existing session found", {
-          currentProjectId,
-          existingMode,
-        });
-        const hasExplicitIdentity = Boolean(token && userId);
-        if (hasExplicitIdentity && existingMode === "local") {
-          await existing.stop();
-          collabSessionsByProject.delete(currentProjectId);
-          collabSessionModeByProject.delete(currentProjectId);
-          collabApplyQueueByProject.delete(currentProjectId);
-          collabAppliedCommittedIdsByProject.delete(currentProjectId);
-          collabLog("info", "replaced local session with explicit identity", {
-            currentProjectId,
-          });
-          updateCollabDiagnostics(currentProjectId, {
-            status: "replaced_local_session",
-          });
-        } else {
-          if (endpointUrl) {
-            const transport = createWebSocketTransport({ url: endpointUrl });
-            await existing.setOnlineTransport(transport);
-            updateCollabDiagnostics(currentProjectId, {
-              endpointUrl,
-              status: "online_transport_updated",
-            });
-            collabLog("info", "updated existing session transport", {
-              currentProjectId,
-              endpointUrl,
-            });
-          }
-          return existing;
-        }
-      }
-      return createSessionForProject({
-        projectId: currentProjectId,
-        token,
-        userId,
-        clientId,
-        endpointUrl,
-        partitions,
-        mode: "explicit",
-      });
-    },
-    getCollabSession() {
-      const currentProjectId = getCurrentProjectId();
-      if (!currentProjectId) return null;
-      return collabSessionsByProject.get(currentProjectId) || null;
-    },
+    createCollabSession: serviceCore.createCollabSession,
+    getCollabSession: serviceCore.getCollabSession,
     getCollabDiagnostics(projectId) {
-      const targetProjectId = projectId || getCurrentProjectId();
+      const targetProjectId = projectId || serviceCore.getCurrentProjectId();
       if (!targetProjectId) return null;
-      const session = collabSessionsByProject.get(targetProjectId) || null;
+      const session = serviceCore.getCollabSession(targetProjectId) || null;
       const diagnostics =
         collabDiagnosticsByProject.get(targetProjectId) || null;
       return {
         ...diagnostics,
         hasSession: Boolean(session),
-        sessionMode: collabSessionModeByProject.get(targetProjectId) || null,
+        sessionMode: serviceCore.getCollabSessionMode(targetProjectId) || null,
         sessionError: session?.getLastError?.() || null,
       };
     },
-    async stopCollabSession(projectId) {
-      const targetProjectId = projectId || getCurrentProjectId();
-      if (!targetProjectId) return;
-      const session = collabSessionsByProject.get(targetProjectId);
-      if (!session) return;
-      await session.stop();
-      collabSessionsByProject.delete(targetProjectId);
-      collabSessionModeByProject.delete(targetProjectId);
-      collabApplyQueueByProject.delete(targetProjectId);
-      collabAppliedCommittedIdsByProject.delete(targetProjectId);
-      updateCollabDiagnostics(targetProjectId, {
-        status: "stopped",
-      });
-      collabLog("info", "session stopped", {
-        projectId: targetProjectId,
-      });
-    },
-    async submitCommand(command) {
-      const session = this.getCollabSession();
-      if (!session) {
-        throw new Error(
-          "Collaboration session not initialized. Call createCollabSession() first.",
-        );
-      }
-      return session.submitCommand(command);
-    },
+    stopCollabSession: serviceCore.stopCollabSession,
+    submitCommand: serviceCore.submitCommand,
     async uploadFiles(files) {
       const fileArray = Array.isArray(files) ? files : Array.from(files);
       const uploadPromises = fileArray.map(async (file) => {
