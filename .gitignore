@@ -16,6 +16,7 @@ static/bundle/main.js
 /test-update-server
 /src-tauri/*.bak
 .env
+/.rettangoli/
 
 # Generated setup file
 src/setup.js
