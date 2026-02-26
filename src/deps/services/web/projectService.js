@@ -917,10 +917,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
               return;
             }
 
-            for (const event of applyResult.events) {
-              await repository.addEvent(event);
-            }
-
             const afterState = repository.getState();
             const afterImagesCount = countImageEntries(afterState?.images);
             collabLog("info", "remote typed command applied to repository", {
