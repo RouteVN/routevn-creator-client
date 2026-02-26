@@ -386,7 +386,9 @@ const projectDomainLayoutElementsToRepository = ({
 
 const projectDomainLayoutsToRepository = ({ domainState, repositoryState }) => {
   const repositoryLayouts = repositoryState?.layouts || createTreeCollection();
-  const repositoryOrderIds = flattenTreeIds(getHierarchyNodes(repositoryLayouts));
+  const repositoryOrderIds = flattenTreeIds(
+    getHierarchyNodes(repositoryLayouts),
+  );
   const layoutIds = Object.keys(domainState?.layouts || {});
   const orderedLayoutIds = uniqueIdsInOrder(repositoryOrderIds, layoutIds);
   const projectedItems = {};
@@ -564,7 +566,10 @@ const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
   };
 };
 
-const projectDomainStateToRepositoryState = ({ domainState, repositoryState }) => {
+const projectDomainStateToRepositoryState = ({
+  domainState,
+  repositoryState,
+}) => {
   const nextState = structuredClone(repositoryState || {});
   nextState.model_version = 2;
   nextState.project = {
@@ -597,7 +602,11 @@ const projectDomainStateToRepositoryState = ({ domainState, repositoryState }) =
   return nextState;
 };
 
-const applyTypedEventToRepositoryState = ({ repositoryState, event, projectId }) => {
+const applyTypedEventToRepositoryState = ({
+  repositoryState,
+  event,
+  projectId,
+}) => {
   if (event?.type === "typedSnapshot") {
     const snapshotState = event?.payload?.state;
     if (!snapshotState || typeof snapshotState !== "object") {
@@ -2257,7 +2266,9 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     getDomainState() {
       const repositoryState = this.getState();
       const projectId =
-        repositoryState?.project?.id || getCurrentProjectId() || "unknown-project";
+        repositoryState?.project?.id ||
+        getCurrentProjectId() ||
+        "unknown-project";
       return projectRepositoryStateToDomainState({
         repositoryState,
         projectId,

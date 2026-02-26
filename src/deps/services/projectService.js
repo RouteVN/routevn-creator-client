@@ -645,7 +645,8 @@ export const createProjectService = ({ router, db, filePicker }) => {
     async renameSectionItem({ sceneId, sectionId, name }) {
       const resolvedSceneId =
         sceneId ||
-        findSectionLocationInRepositoryState(this.getState(), sectionId)?.sceneId;
+        findSectionLocationInRepositoryState(this.getState(), sectionId)
+          ?.sceneId;
       if (!resolvedSceneId) return;
 
       await this.appendEvent({
@@ -666,7 +667,8 @@ export const createProjectService = ({ router, db, filePicker }) => {
     async deleteSectionItem({ sceneId, sectionId }) {
       const resolvedSceneId =
         sceneId ||
-        findSectionLocationInRepositoryState(this.getState(), sectionId)?.sceneId;
+        findSectionLocationInRepositoryState(this.getState(), sectionId)
+          ?.sceneId;
       if (!resolvedSceneId) return;
 
       await this.appendEvent({
@@ -714,7 +716,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
     },
 
     async updateLineActions({ lineId, patch, replace = false }) {
-      const location = findLineLocationInRepositoryState(this.getState(), lineId);
+      const location = findLineLocationInRepositoryState(
+        this.getState(),
+        lineId,
+      );
       if (!location) return;
 
       await this.appendEvent({
@@ -730,7 +735,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
     },
 
     async deleteLineItem({ lineId }) {
-      const location = findLineLocationInRepositoryState(this.getState(), lineId);
+      const location = findLineLocationInRepositoryState(
+        this.getState(),
+        lineId,
+      );
       if (!location) return;
 
       await this.appendEvent({
@@ -1074,7 +1082,9 @@ export const createProjectService = ({ router, db, filePicker }) => {
     getDomainState() {
       const repositoryState = this.getState();
       const projectId =
-        repositoryState?.project?.id || getCurrentProjectId() || "unknown-project";
+        repositoryState?.project?.id ||
+        getCurrentProjectId() ||
+        "unknown-project";
       return projectRepositoryStateToDomainState({
         repositoryState,
         projectId,

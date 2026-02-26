@@ -106,9 +106,14 @@ const buildTreeFromParentMap = ({
 
 const projectRepositoryLayouts = ({ repositoryLayouts = {} }) => {
   const result = {};
-  for (const [layoutId, repositoryLayout] of Object.entries(repositoryLayouts)) {
+  for (const [layoutId, repositoryLayout] of Object.entries(
+    repositoryLayouts,
+  )) {
     if (!repositoryLayout || typeof repositoryLayout !== "object") continue;
-    const repositoryElements = repositoryLayout.elements || { items: {}, tree: [] };
+    const repositoryElements = repositoryLayout.elements || {
+      items: {},
+      tree: [],
+    };
     const elementItems = repositoryElements.items || {};
     const { parentById, orderedIds } = buildHierarchyParentMap(
       getHierarchyNodes(repositoryElements),
