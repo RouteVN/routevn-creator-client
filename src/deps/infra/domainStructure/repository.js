@@ -69,6 +69,7 @@ export const createRepository = ({
   originStore,
   usingCachedEvents = true,
   snapshotInterval = 1000,
+  customEventReducer,
 }) => {
   /** @type {RepositoryStore} */
   const store = originStore;
@@ -146,6 +147,13 @@ export const createRepository = ({
    * @returns {RepositoryState}
    */
   const applyEventToState = (state, event) => {
+    if (typeof customEventReducer === "function") {
+      const reduced = customEventReducer(state, event);
+      if (reduced !== undefined) {
+        return reduced;
+      }
+    }
+
     const { type, payload } = event;
     if (type === "set") {
       return set(state, payload);

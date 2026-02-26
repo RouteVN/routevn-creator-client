@@ -2,6 +2,7 @@ import {
   loadTemplate,
   getTemplateFiles,
 } from "../../../utils/templateLoader.js";
+import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -61,21 +62,28 @@ export const initializeProject = async ({
     ...templateData,
     model_version: 2,
     project: {
+      id: projectId,
       name,
       description,
     },
   };
 
-  // Add the init action directly through adapter
+  const domainState = projectLegacyStateToDomainState({
+    legacyState: initData,
+    projectId,
+  });
+
+  // Persist typed canonical bootstrap state.
   await adapter.appendEvent({
-    type: "init",
+    type: "typedSnapshot",
     payload: {
-      value: initData,
+      projectId,
+      state: domainState,
     },
   });
 
-  // Set creator_version to 1 in app table
-  await adapter.app.set("creator_version", "1");
+  // Set creator_version to 2 in app table
+  await adapter.app.set("creator_version", "2");
 };
 
 /**

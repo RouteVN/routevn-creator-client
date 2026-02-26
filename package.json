@@ -28,6 +28,7 @@
     "@tauri-apps/plugin-process": "^2.3.0",
     "@tauri-apps/plugin-sql": "~2",
     "@tauri-apps/plugin-updater": "^2.9.0",
+    "ajv": "^8.17.1",
     "esbuild": "^0.25.11",
     "file-type": "^21.0.0",
     "immer": "^10.1.1",

@@ -18,8 +18,14 @@ import {
   extractVideoThumbnail,
   detectFileType,
 } from "../../../utils/fileProcessors.js";
+import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
 import { processCommand } from "../../../domain/v2/engine.js";
 import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
+import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
+import {
+  loadCommittedCursor,
+  saveCommittedCursor,
+} from "./collabCommittedCursorStore.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -177,6 +183,23 @@ const findSectionLocation = (state, sectionId) => {
       section,
       sectionCollection: sections,
     };
+  }
+  return null;
+};
+
+const findLineLocation = (state, lineId) => {
+  const sceneItems = state?.scenes?.items || {};
+  for (const [sceneId, scene] of Object.entries(sceneItems)) {
+    const sections = scene?.sections?.items || {};
+    for (const [sectionId, section] of Object.entries(sections)) {
+      const line = section?.lines?.items?.[lineId];
+      if (!line) continue;
+      return {
+        sceneId,
+        sectionId,
+        line,
+      };
+    }
   }
   return null;
 };
@@ -541,129 +564,79 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
   };
 };
 
-const toStableJsonString = (value) => {
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return `__non_serializable__:${String(value)}`;
-  }
-};
-
-const projectTypedCommandToLegacySetEvents = ({
-  legacyState,
-  domainState,
-  command,
-}) => {
-  const targets = new Set();
-
-  if (command.type === "project.update") {
-    targets.add("project");
-  }
-
-  if (hasCommandTypePrefix(command.type, "resource.")) {
-    targets.add("project");
-    if (
-      typeof command?.payload?.resourceType === "string" &&
-      command.payload.resourceType.length > 0
-    ) {
-      targets.add(command.payload.resourceType);
-    }
-  }
-
-  if (
-    hasCommandTypePrefix(command.type, "scene.") ||
-    hasCommandTypePrefix(command.type, "section.") ||
-    hasCommandTypePrefix(command.type, "line.")
-  ) {
-    targets.add("project");
-    targets.add("story");
-    targets.add("scenes");
-  }
-
-  if (hasCommandTypePrefix(command.type, "layout.")) {
-    targets.add("project");
-    targets.add("layouts");
-  }
-
-  if (hasCommandTypePrefix(command.type, "variable.")) {
-    targets.add("project");
-    targets.add("variables");
-  }
-
-  if (targets.size === 0) {
-    return [];
-  }
-
+const projectDomainStateToLegacyState = ({ domainState, legacyState }) => {
   const nextState = structuredClone(legacyState || {});
-  if (targets.has("project")) {
-    nextState.project = {
-      ...legacyState?.project,
-      ...structuredClone(domainState?.project),
-    };
-  }
+  nextState.model_version = 2;
+  nextState.project = {
+    ...legacyState?.project,
+    ...structuredClone(domainState?.project || {}),
+  };
 
-  for (const target of targets) {
-    if (
-      target === "project" ||
-      target === "story" ||
-      target === "scenes" ||
-      target === "layouts" ||
-      target === "variables"
-    ) {
-      continue;
-    }
-    const domainCollection = domainState?.resources?.[target];
-    if (!domainCollection) continue;
-    nextState[target] =
+  for (const [resourceType, domainCollection] of Object.entries(
+    domainState?.resources || {},
+  )) {
+    nextState[resourceType] =
       projectDomainResourceCollectionToLegacy(domainCollection);
   }
 
-  if (targets.has("story") || targets.has("scenes")) {
-    const projectedStory = projectDomainStoryToLegacy({
-      domainState,
+  const projectedStory = projectDomainStoryToLegacy({
+    domainState,
+    legacyState,
+  });
+  nextState.story = projectedStory.story;
+  nextState.scenes = projectedStory.scenes;
+
+  nextState.layouts = projectDomainLayoutsToLegacy({
+    domainState,
+    legacyState,
+  });
+  nextState.variables = projectDomainVariablesToLegacy({
+    domainState,
+  });
+
+  return nextState;
+};
+
+const applyTypedEventToLegacyState = ({ legacyState, event, projectId }) => {
+  if (event?.type === "typedSnapshot") {
+    const snapshotState = event?.payload?.state;
+    if (!snapshotState || typeof snapshotState !== "object") {
+      throw new Error("typedSnapshot event payload.state is required");
+    }
+    return projectDomainStateToLegacyState({
+      domainState: snapshotState,
       legacyState,
     });
-    if (targets.has("story")) {
-      nextState.story = projectedStory.story;
-    }
-    if (targets.has("scenes")) {
-      nextState.scenes = projectedStory.scenes;
-    }
   }
 
-  if (targets.has("layouts")) {
-    nextState.layouts = projectDomainLayoutsToLegacy({
-      domainState,
+  if (event?.type === "typedCommand") {
+    const command = event?.payload?.command;
+    if (!isDirectDomainProjectionCommand(command)) {
+      throw new Error(
+        `No typed projection handler for command type '${command?.type || "unknown"}'`,
+      );
+    }
+
+    const resolvedProjectId =
+      event?.payload?.projectId ||
+      projectId ||
+      legacyState?.project?.id ||
+      "unknown-project";
+    const domainStateBefore = projectLegacyStateToDomainState({
+      legacyState,
+      projectId: resolvedProjectId,
+    });
+    const { state: domainStateAfter } = processCommand({
+      state: domainStateBefore,
+      command,
+    });
+    return projectDomainStateToLegacyState({
+      domainState: domainStateAfter,
       legacyState,
     });
   }
 
-  if (targets.has("variables")) {
-    nextState.variables = projectDomainVariablesToLegacy({
-      domainState,
-    });
-  }
-
-  const events = [];
-  for (const target of targets) {
-    const prevValue = legacyState?.[target];
-    const nextValue = nextState?.[target];
-    if (toStableJsonString(prevValue) === toStableJsonString(nextValue)) {
-      continue;
-    }
-    events.push({
-      type: "set",
-      payload: {
-        target,
-        value: structuredClone(nextValue),
-        options: {
-          replace: true,
-        },
-      },
-    });
-  }
-
-  return events;
+  return undefined;
 };
 
 const applyTypedCommandToRepository = async ({
@@ -671,33 +644,28 @@ const applyTypedCommandToRepository = async ({
   command,
   projectId,
 }) => {
-  const stateBeforeApply = repository.getState();
   if (!isDirectDomainProjectionCommand(command)) {
     throw new Error(
       `No typed projection handler for command type '${command?.type || "unknown"}'`,
     );
   }
 
-  const domainStateBefore = projectLegacyStateToDomainState({
-    legacyState: stateBeforeApply,
-    projectId,
+  await repository.addEvent({
+    type: "typedCommand",
+    payload: {
+      projectId,
+      command: structuredClone(command),
+    },
   });
-  const { state: domainStateAfter } = processCommand({
-    state: domainStateBefore,
-    command,
-  });
-  const projectedEvents = projectTypedCommandToLegacySetEvents({
-    legacyState: stateBeforeApply,
-    domainState: domainStateAfter,
-    command,
-  });
-  for (const event of projectedEvents) {
-    await repository.addEvent(event);
-  }
 
   return {
-    mode: "typed_domain_projection",
-    events: projectedEvents,
+    mode: "typed_command_event",
+    events: [
+      {
+        type: command.type,
+        payload: structuredClone(command.payload || {}),
+      },
+    ],
   };
 };
 
@@ -737,10 +705,18 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     return p;
   };
 
+  const storyBasePartitionFor = (projectId) => `project:${projectId}:story`;
+  const storyScenePartitionFor = (projectId, sceneId) =>
+    `project:${projectId}:story:scene:${sceneId}`;
+  const resourceTypePartitionFor = (projectId, resourceType) =>
+    `project:${projectId}:resources:${resourceType}`;
+
   const getBasePartitions = (projectId, partitions) =>
     partitions || [
-      `project:${projectId}:story`,
-      `project:${projectId}:resources`,
+      storyBasePartitionFor(projectId),
+      ...RESOURCE_TYPES.map((resourceType) =>
+        resourceTypePartitionFor(projectId, resourceType),
+      ),
       `project:${projectId}:layouts`,
       `project:${projectId}:settings`,
     ];
@@ -770,8 +746,52 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     if (collabLastCommittedIdByProject.has(projectId)) {
       return collabLastCommittedIdByProject.get(projectId);
     }
-    collabLastCommittedIdByProject.set(projectId, 0);
-    return 0;
+    const adapter = adaptersByProject.get(projectId) || null;
+    if (!adapter) {
+      collabLastCommittedIdByProject.set(projectId, 0);
+      return 0;
+    }
+
+    let loaded = 0;
+    try {
+      loaded = await loadCommittedCursor({ adapter, projectId });
+    } catch (error) {
+      collabLog("warn", "failed to load committed cursor", {
+        projectId,
+        error: error?.message || "unknown",
+      });
+    }
+
+    collabLastCommittedIdByProject.set(projectId, loaded);
+    return loaded;
+  };
+
+  const persistCommittedCursor = async (projectId, cursor) => {
+    const normalized = Number.isFinite(Number(cursor))
+      ? Math.max(0, Math.floor(Number(cursor)))
+      : 0;
+    const current = await ensureCommittedIdLoaded(projectId);
+    if (normalized <= current) return current;
+
+    collabLastCommittedIdByProject.set(projectId, normalized);
+    const adapter = adaptersByProject.get(projectId) || null;
+    if (!adapter) return normalized;
+
+    try {
+      await saveCommittedCursor({
+        adapter,
+        projectId,
+        cursor: normalized,
+      });
+    } catch (error) {
+      collabLog("warn", "failed to persist committed cursor", {
+        projectId,
+        cursor: normalized,
+        error: error?.message || "unknown",
+      });
+    }
+
+    return normalized;
   };
   const getAppliedCommittedSet = (projectId) => {
     let committedIds = collabAppliedCommittedIdsByProject.get(projectId);
@@ -819,9 +839,23 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     const repository = await getRepositoryByProject(projectId);
     const state = repository.getState();
     assertV2State(state);
+    const adapter = adaptersByProject.get(projectId);
+    if (!adapter) {
+      throw new Error(`Store adapter not found for project '${projectId}'`);
+    }
 
     const resolvedProjectId = state.project?.id || projectId;
     const resolvedPartitions = getBasePartitions(resolvedProjectId, partitions);
+    const clientStore = await createPersistedInMemoryClientStore({
+      projectId,
+      adapter,
+      logger: (entry) => {
+        if (entry?.level === "warn") {
+          collabLog("warn", "client store warning", entry);
+        }
+      },
+    });
+    await ensureCommittedIdLoaded(projectId);
     updateCollabDiagnostics(projectId, {
       mode,
       endpointUrl: endpointUrl || null,
@@ -847,6 +881,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       token,
       actor,
       partitions: resolvedPartitions,
+      clientStore,
       logger: (entry) => {
         const diagnosticPatch = {
           lastSyncEntry: entry,
@@ -985,7 +1020,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
 
           if (hasCommittedId) {
             const nextWatermark = Math.max(lastCommittedId, committedId);
-            collabLastCommittedIdByProject.set(projectId, nextWatermark);
+            await persistCommittedCursor(projectId, nextWatermark);
             updateCollabDiagnostics(projectId, {
               status: "committed_event_applied",
               lastSeenCommittedId: committedId,
@@ -1072,11 +1107,37 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     const initPromise = (async () => {
       try {
         const store = await createInsiemeWebStoreAdapter(projectId);
+        const existingEvents = (await store.getEvents()) || [];
+        if (existingEvents.length === 0) {
+          const bootstrapDomainState = projectLegacyStateToDomainState({
+            legacyState: {
+              ...initialProjectData,
+              project: {
+                ...initialProjectData.project,
+                id: projectId,
+              },
+            },
+            projectId,
+          });
+          await store.appendEvent({
+            type: "typedSnapshot",
+            payload: {
+              projectId,
+              state: bootstrapDomainState,
+            },
+          });
+        }
         const repository = createRepository({
           originStore: store,
           snapshotInterval: 500, // Auto-save snapshot every 500 events
+          customEventReducer: (state, event) =>
+            applyTypedEventToLegacyState({
+              legacyState: state,
+              event,
+              projectId,
+            }),
         });
-        await repository.init({ initialState: initialProjectData });
+        await repository.init();
         assertV2State(repository.getState());
         repositoriesByProject.set(projectId, repository);
         adaptersByProject.set(projectId, store);
@@ -1296,13 +1357,15 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     type,
     payload,
     partitions = [],
+    basePartition,
   }) => {
-    const basePartition = `project:${context.projectId}:${scope}`;
+    const resolvedBasePartition =
+      basePartition || `project:${context.projectId}:${scope}`;
     const command = createCommandEnvelope({
       projectId: context.projectId,
       scope,
-      partition: basePartition,
-      partitions: uniquePartitions(basePartition, ...partitions),
+      partition: resolvedBasePartition,
+      partitions: uniquePartitions(resolvedBasePartition, ...partitions),
       type,
       payload,
       actor: context.actor,
@@ -1427,12 +1490,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       );
       if (keys.length === 0) return;
 
-      const basePartition = `project:${context.projectId}:settings`;
-      const partitions = uniquePartitions(
-        basePartition,
-        ...keys.map((key) => `${basePartition}:project_field:${key}`),
-      );
-
       await submitTypedCommandWithContext({
         context,
         scope: "settings",
@@ -1440,7 +1497,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         payload: {
           patch: structuredClone(patch),
         },
-        partitions,
+        partitions: [],
       });
     },
     async createSceneItem({
@@ -1459,8 +1516,11 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         position,
         index,
       });
-      const basePartition = `project:${context.projectId}:story`;
-      const scenePartition = `${basePartition}:scene:${nextSceneId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(
+        context.projectId,
+        nextSceneId,
+      );
 
       await submitTypedCommandWithContext({
         context,
@@ -1480,8 +1540,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     },
     async updateSceneItem({ sceneId, patch }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const scenePartition = `${basePartition}:scene:${sceneId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
 
       await submitTypedCommandWithContext({
         context,
@@ -1496,8 +1556,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     },
     async renameSceneItem({ sceneId, name }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const scenePartition = `${basePartition}:scene:${sceneId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
 
       await submitTypedCommandWithContext({
         context,
@@ -1512,8 +1572,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     },
     async deleteSceneItem({ sceneId }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const scenePartition = `${basePartition}:scene:${sceneId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
 
       await submitTypedCommandWithContext({
         context,
@@ -1527,8 +1587,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     },
     async setInitialScene({ sceneId }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const scenePartition = `${basePartition}:scene:${sceneId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
 
       await submitTypedCommandWithContext({
         context,
@@ -1554,8 +1614,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         index,
         movingId: sceneId,
       });
-      const basePartition = `project:${context.projectId}:story`;
-      const scenePartition = `${basePartition}:scene:${sceneId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
 
       await submitTypedCommandWithContext({
         context,
@@ -1588,9 +1648,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         position,
         index,
       });
-      const basePartition = `project:${context.projectId}:story`;
-      const scenePartition = `${basePartition}:scene:${sceneId}`;
-      const sectionPartition = `${basePartition}:section:${nextSectionId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
 
       await submitTypedCommandWithContext({
         context,
@@ -1605,15 +1664,18 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           position,
           data: structuredClone(data || {}),
         },
-        partitions: [basePartition, scenePartition, sectionPartition],
+        partitions: [basePartition, scenePartition],
       });
 
       return nextSectionId;
     },
     async renameSectionItem({ sectionId, name }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const sectionPartition = `${basePartition}:section:${sectionId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const sectionLocation = findSectionLocation(context.state, sectionId);
+      const scenePartition = sectionLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, sectionLocation.sceneId)
+        : null;
 
       await submitTypedCommandWithContext({
         context,
@@ -1623,13 +1685,18 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           sectionId,
           name,
         },
-        partitions: [basePartition, sectionPartition],
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
     async deleteSectionItem({ sectionId }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const sectionPartition = `${basePartition}:section:${sectionId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const sectionLocation = findSectionLocation(context.state, sectionId);
+      const scenePartition = sectionLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, sectionLocation.sceneId)
+        : null;
 
       await submitTypedCommandWithContext({
         context,
@@ -1638,7 +1705,9 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         payload: {
           sectionId,
         },
-        partitions: [basePartition, sectionPartition],
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
     async reorderSectionItem({
@@ -1656,8 +1725,10 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         index,
         movingId: sectionId,
       });
-      const basePartition = `project:${context.projectId}:story`;
-      const sectionPartition = `${basePartition}:section:${sectionId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = sectionLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, sectionLocation.sceneId)
+        : null;
 
       await submitTypedCommandWithContext({
         context,
@@ -1669,7 +1740,9 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           index: resolvedIndex,
           position,
         },
-        partitions: [basePartition, sectionPartition],
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
     async createLineItem({
@@ -1692,9 +1765,10 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         position: resolvedPosition || "last",
         index,
       });
-      const basePartition = `project:${context.projectId}:story`;
-      const sectionPartition = `${basePartition}:section:${sectionId}`;
-      const linePartition = `${basePartition}:line:${nextLineId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = sectionLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, sectionLocation.sceneId)
+        : null;
 
       await submitTypedCommandWithContext({
         context,
@@ -1709,15 +1783,20 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           index: resolvedIndex,
           position: resolvedPosition || "last",
         },
-        partitions: [basePartition, sectionPartition, linePartition],
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
 
       return nextLineId;
     },
     async updateLineActions({ lineId, patch, replace = false }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const linePartition = `${basePartition}:line:${lineId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const lineLocation = findLineLocation(context.state, lineId);
+      const scenePartition = lineLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, lineLocation.sceneId)
+        : null;
 
       await submitTypedCommandWithContext({
         context,
@@ -1728,13 +1807,18 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           patch: structuredClone(patch || {}),
           replace: replace === true,
         },
-        partitions: [basePartition, linePartition],
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
     async deleteLineItem({ lineId }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:story`;
-      const linePartition = `${basePartition}:line:${lineId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const lineLocation = findLineLocation(context.state, lineId);
+      const scenePartition = lineLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, lineLocation.sceneId)
+        : null;
 
       await submitTypedCommandWithContext({
         context,
@@ -1743,7 +1827,9 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         payload: {
           lineId,
         },
-        partitions: [basePartition, linePartition],
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
     async moveLineItem({
@@ -1762,9 +1848,14 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         index,
         movingId: lineId,
       });
-      const basePartition = `project:${context.projectId}:story`;
-      const sectionPartition = `${basePartition}:section:${toSectionId}`;
-      const linePartition = `${basePartition}:line:${lineId}`;
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const sourceLine = findLineLocation(context.state, lineId);
+      const sourceScenePartition = sourceLine?.sceneId
+        ? storyScenePartitionFor(context.projectId, sourceLine.sceneId)
+        : null;
+      const targetScenePartition = targetSection?.sceneId
+        ? storyScenePartitionFor(context.projectId, targetSection.sceneId)
+        : null;
 
       await submitTypedCommandWithContext({
         context,
@@ -1777,7 +1868,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           index: resolvedIndex,
           position,
         },
-        partitions: [basePartition, sectionPartition, linePartition],
+        partitions: [basePartition, sourceScenePartition, targetScenePartition],
       });
     },
     async createResourceItem({
@@ -1797,11 +1888,15 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         position,
         index,
       });
-      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${nextResourceId}`;
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
 
       await submitTypedCommandWithContext({
         context,
         scope: "resources",
+        basePartition: resourcePartition,
         type: "resource.create",
         payload: {
           resourceType,
@@ -1811,24 +1906,28 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           index: resolvedIndex,
           position,
         },
-        partitions: [entityPartition],
+        partitions: [],
       });
       return nextResourceId;
     },
     async updateResourceItem({ resourceType, resourceId, patch }) {
       const context = await ensureTypedCommandContext();
-      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${resourceId}`;
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
 
       await submitTypedCommandWithContext({
         context,
         scope: "resources",
+        basePartition: resourcePartition,
         type: "resource.update",
         payload: {
           resourceType,
           resourceId,
           patch: structuredClone(patch),
         },
-        partitions: [entityPartition],
+        partitions: [],
       });
     },
     async moveResourceItem({
@@ -1847,11 +1946,15 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         index,
         movingId: resourceId,
       });
-      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${resourceId}`;
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
 
       await submitTypedCommandWithContext({
         context,
         scope: "resources",
+        basePartition: resourcePartition,
         type: "resource.move",
         payload: {
           resourceType,
@@ -1860,22 +1963,26 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           index: resolvedIndex,
           position,
         },
-        partitions: [entityPartition],
+        partitions: [],
       });
     },
     async deleteResourceItem({ resourceType, resourceId }) {
       const context = await ensureTypedCommandContext();
-      const entityPartition = `project:${context.projectId}:resources:${resourceType}:${resourceId}`;
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
 
       await submitTypedCommandWithContext({
         context,
         scope: "resources",
+        basePartition: resourcePartition,
         type: "resource.delete",
         payload: {
           resourceType,
           resourceId,
         },
-        partitions: [entityPartition],
+        partitions: [],
       });
     },
     async duplicateResourceItem({
@@ -1901,12 +2008,15 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         position: resolvedPosition,
         index,
       });
-      const sourcePartition = `project:${context.projectId}:resources:${resourceType}:${sourceId}`;
-      const newPartition = `project:${context.projectId}:resources:${resourceType}:${newId}`;
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
 
       await submitTypedCommandWithContext({
         context,
         scope: "resources",
+        basePartition: resourcePartition,
         type: "resource.duplicate",
         payload: {
           resourceType,
@@ -1917,7 +2027,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           position: resolvedPosition,
           name: typeof name === "string" && name.length > 0 ? name : undefined,
         },
-        partitions: [sourcePartition, newPartition],
+        partitions: [],
       });
     },
     async createLayoutItem({
@@ -1931,8 +2041,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     }) {
       const context = await ensureTypedCommandContext();
       const nextLayoutId = layoutId || nanoid();
-      const basePartition = `project:${context.projectId}:layouts`;
-      const layoutPartition = `${basePartition}:layout:${nextLayoutId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -1947,15 +2055,13 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           position,
           data: structuredClone(data || {}),
         },
-        partitions: [basePartition, layoutPartition],
+        partitions: [],
       });
 
       return nextLayoutId;
     },
     async renameLayoutItem({ layoutId, name }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:layouts`;
-      const layoutPartition = `${basePartition}:layout:${layoutId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -1965,13 +2071,11 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           layoutId,
           name,
         },
-        partitions: [basePartition, layoutPartition],
+        partitions: [],
       });
     },
     async deleteLayoutItem({ layoutId }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:layouts`;
-      const layoutPartition = `${basePartition}:layout:${layoutId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -1980,14 +2084,11 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         payload: {
           layoutId,
         },
-        partitions: [basePartition, layoutPartition],
+        partitions: [],
       });
     },
     async updateLayoutElement({ layoutId, elementId, patch, replace = true }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:layouts`;
-      const layoutPartition = `${basePartition}:layout:${layoutId}`;
-      const elementPartition = `${layoutPartition}:element:${elementId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -1999,7 +2100,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           patch: structuredClone(patch || {}),
           replace: replace === true,
         },
-        partitions: [basePartition, layoutPartition, elementPartition],
+        partitions: [],
       });
     },
     async createLayoutElement({
@@ -2019,9 +2120,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         position,
         index,
       });
-      const basePartition = `project:${context.projectId}:layouts`;
-      const layoutPartition = `${basePartition}:layout:${layoutId}`;
-      const elementPartition = `${layoutPartition}:element:${nextElementId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -2035,7 +2133,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           index: resolvedIndex,
           position,
         },
-        partitions: [basePartition, layoutPartition, elementPartition],
+        partitions: [],
       });
 
       return nextElementId;
@@ -2056,9 +2154,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         index,
         movingId: elementId,
       });
-      const basePartition = `project:${context.projectId}:layouts`;
-      const layoutPartition = `${basePartition}:layout:${layoutId}`;
-      const elementPartition = `${layoutPartition}:element:${elementId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -2071,14 +2166,11 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           index: resolvedIndex,
           position,
         },
-        partitions: [basePartition, layoutPartition, elementPartition],
+        partitions: [],
       });
     },
     async deleteLayoutElement({ layoutId, elementId }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:layouts`;
-      const layoutPartition = `${basePartition}:layout:${layoutId}`;
-      const elementPartition = `${layoutPartition}:element:${elementId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -2088,7 +2180,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           layoutId,
           elementId,
         },
-        partitions: [basePartition, layoutPartition, elementPartition],
+        partitions: [],
       });
     },
     async createVariableItem({
@@ -2102,8 +2194,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     }) {
       const context = await ensureTypedCommandContext();
       const nextVariableId = variableId || nanoid();
-      const basePartition = `project:${context.projectId}:settings`;
-      const variablePartition = `${basePartition}:variable:${nextVariableId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -2120,15 +2210,13 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
             scope,
           },
         },
-        partitions: [basePartition, variablePartition],
+        partitions: [],
       });
 
       return nextVariableId;
     },
     async updateVariableItem({ variableId, patch }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:settings`;
-      const variablePartition = `${basePartition}:variable:${variableId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -2138,13 +2226,11 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           variableId,
           patch: structuredClone(patch || {}),
         },
-        partitions: [basePartition, variablePartition],
+        partitions: [],
       });
     },
     async deleteVariableItem({ variableId }) {
       const context = await ensureTypedCommandContext();
-      const basePartition = `project:${context.projectId}:settings`;
-      const variablePartition = `${basePartition}:variable:${variableId}`;
 
       await submitTypedCommandWithContext({
         context,
@@ -2153,7 +2239,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         payload: {
           variableId,
         },
-        partitions: [basePartition, variablePartition],
+        partitions: [],
       });
     },
     async appendEvent(event) {

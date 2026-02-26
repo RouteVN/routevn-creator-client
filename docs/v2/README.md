@@ -26,6 +26,7 @@ Date baseline: February 24, 2026.
 6. `06-acceptance-gates.md`
 7. `07-implementation-path.md`
 8. `08-write-path-backlog.md`
+9. `09-partitioning-and-write-contract.md`
 
 ## Implementation Mapping
 

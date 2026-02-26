@@ -861,7 +861,11 @@ export const handleEditorDataChanged = async (deps, payload) => {
 
   // Queue the pending update and schedule debounced write
   const sectionId = store.selectSelectedSectionId();
-  dialogueQueueService.setAndSchedule(lineId, { sceneId, sectionId, content });
+  try {
+    dialogueQueueService.setAndSchedule(lineId, { sectionId, content });
+  } catch (error) {
+    console.error("[sceneEditor] Failed to queue dialogue update:", error);
+  }
 
   // Trigger debounced canvas render with skipRender flag.
   // skipRender prevents full UI re-render which would reset cursor position while typing.
