@@ -347,40 +347,6 @@ const config = {
           ],
         },
         {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              label: "Initial",
-              name: "initialValue",
-              value: "${values.initialValue}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "slider"',
-      label: "Variable Binding",
-      items: [
-        {
           type: "select",
           label: "Update Variable",
           name: "variableId",
