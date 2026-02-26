@@ -74,7 +74,7 @@ export const initializeProject = async ({
   });
 
   // Persist typed canonical bootstrap state.
-  await adapter.appendEvent({
+  await adapter.appendTypedEvent({
     type: "typedSnapshot",
     payload: {
       projectId,
@@ -137,7 +137,7 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
       });
     },
 
-    async appendEvent(event) {
+    async appendTypedEvent(event) {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction("events", "readwrite");
         const store = transaction.objectStore("events");

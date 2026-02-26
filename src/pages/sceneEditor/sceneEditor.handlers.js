@@ -14,7 +14,7 @@ import { filter, tap, debounceTime } from "rxjs";
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
 
-const mountLegacySubscriptions = (deps) => {
+const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
@@ -460,7 +460,7 @@ async function flushDialogueQueue(deps) {
 
 export const handleBeforeMount = (deps) => {
   const { graphicsService, store } = deps;
-  const cleanupSubscriptions = mountLegacySubscriptions(deps);
+  const cleanupSubscriptions = mountSubscriptions(deps);
 
   return async () => {
     cleanupSubscriptions();
