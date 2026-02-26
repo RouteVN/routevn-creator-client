@@ -2,12 +2,12 @@ import { MODEL_VERSION, RESOURCE_TYPES } from "./constants.js";
 
 const createResourceCollection = () => ({
   items: {},
-  order: [],
+  tree: [],
 });
 
 const createVariableCollection = () => ({
   items: {},
-  order: [],
+  tree: [],
 });
 
 export const createEmptyProjectState = ({

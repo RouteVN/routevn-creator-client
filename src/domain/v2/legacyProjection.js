@@ -21,10 +21,10 @@ const walkHierarchy = (nodes, parentId, callback) => {
   }
 };
 
-const buildHierarchyParentMap = (order) => {
+const buildHierarchyParentMap = (tree) => {
   const parentById = new Map();
   const orderedIds = [];
-  walkHierarchy(order, null, (node, parentId) => {
+  walkHierarchy(tree, null, (node, parentId) => {
     parentById.set(node.id, parentId);
     orderedIds.push(node.id);
   });
@@ -48,6 +48,60 @@ const appendMissingIds = (orderedIds, allIds) => {
   }
 
   return result;
+};
+
+const buildTreeFromParentMap = ({
+  orderedIds,
+  allIds,
+  parentById,
+  fallbackParentById,
+}) => {
+  const ROOT = "__root__";
+  const ids = appendMissingIds(orderedIds, allIds);
+  const idSet = new Set(ids);
+  const childrenByParent = new Map([[ROOT, []]]);
+
+  for (const id of ids) {
+    const rawParentId =
+      parentById.get(id) ?? fallbackParentById?.get(id) ?? null;
+    const parentId =
+      typeof rawParentId === "string" &&
+      rawParentId.length > 0 &&
+      rawParentId !== id &&
+      idSet.has(rawParentId)
+        ? rawParentId
+        : null;
+    const key = parentId || ROOT;
+    if (!childrenByParent.has(key)) {
+      childrenByParent.set(key, []);
+    }
+    childrenByParent.get(key).push(id);
+  }
+
+  const visited = new Set();
+  const buildNodes = (parentKey) => {
+    const idsForParent = childrenByParent.get(parentKey) || [];
+    const nodes = [];
+    for (const id of idsForParent) {
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const children = buildNodes(id);
+      if (children.length > 0) {
+        nodes.push({ id, children });
+      } else {
+        nodes.push({ id });
+      }
+    }
+    return nodes;
+  };
+
+  const tree = buildNodes(ROOT);
+  for (const id of ids) {
+    if (visited.has(id)) continue;
+    visited.add(id);
+    tree.push({ id });
+  }
+  return tree;
 };
 
 const projectLegacyLayouts = ({ legacyLayouts = {} }) => {
@@ -118,8 +172,19 @@ const projectLegacyResources = ({ legacyState }) => {
       getHierarchyNodes(legacyCollection),
     );
     const allIds = Object.keys(legacyItems);
+    const fallbackParentById = new Map(
+      Object.entries(legacyItems).map(([resourceId, item]) => [
+        resourceId,
+        item?.parentId ?? null,
+      ]),
+    );
 
-    resources[resourceType].order = appendMissingIds(orderedIds, allIds);
+    resources[resourceType].tree = buildTreeFromParentMap({
+      orderedIds,
+      allIds,
+      parentById,
+      fallbackParentById,
+    });
 
     for (const [resourceId, item] of Object.entries(legacyItems)) {
       const parentId = parentById.has(resourceId)
@@ -151,7 +216,18 @@ const projectLegacyVariables = ({ legacyVariables = {} }) => {
     getHierarchyNodes(legacyVariables),
   );
   const allIds = Object.keys(items);
-  result.order = appendMissingIds(orderedIds, allIds);
+  const fallbackParentById = new Map(
+    Object.entries(items).map(([variableId, variable]) => [
+      variableId,
+      variable?.parentId ?? null,
+    ]),
+  );
+  result.tree = buildTreeFromParentMap({
+    orderedIds,
+    allIds,
+    parentById,
+    fallbackParentById,
+  });
 
   for (const [variableId, variable] of Object.entries(items)) {
     if (!variable || typeof variable !== "object") continue;

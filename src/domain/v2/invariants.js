@@ -13,6 +13,80 @@ const ensureUnique = (array, label) => {
   }
 };
 
+const walkHierarchy = (nodes, parentId, visitor) => {
+  if (!Array.isArray(nodes)) return;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string" || node.id.length === 0) {
+      fail("Invalid hierarchy node", { node, parentId });
+    }
+    visitor(node, parentId);
+    walkHierarchy(node.children || [], node.id, visitor);
+  }
+};
+
+const validateHierarchicalCollection = ({
+  collection,
+  collectionLabel,
+  itemLabel,
+}) => {
+  if (
+    !collection ||
+    typeof collection !== "object" ||
+    !collection.items ||
+    typeof collection.items !== "object" ||
+    !Array.isArray(collection.tree)
+  ) {
+    fail("Collection shape is invalid", { collectionLabel });
+  }
+
+  const parentById = new Map();
+  walkHierarchy(collection.tree, null, (node, parentId) => {
+    if (parentById.has(node.id)) {
+      fail("Duplicate node id in tree", {
+        collectionLabel,
+        itemLabel,
+        id: node.id,
+      });
+    }
+    parentById.set(node.id, parentId);
+  });
+
+  for (const [id, parentId] of parentById.entries()) {
+    if (!collection.items[id]) {
+      fail("Tree references missing item", {
+        collectionLabel,
+        itemLabel,
+        id,
+        parentId,
+      });
+    }
+  }
+
+  for (const [id, item] of Object.entries(collection.items || {})) {
+    if (!parentById.has(id)) {
+      fail("Item missing from tree", {
+        collectionLabel,
+        itemLabel,
+        id,
+      });
+    }
+    const expectedParentId = parentById.get(id) ?? null;
+    const actualParentId =
+      typeof item?.parentId === "string" && item.parentId.length > 0
+        ? item.parentId
+        : null;
+    if (actualParentId !== expectedParentId) {
+      fail("Item parent mismatch with tree", {
+        collectionLabel,
+        itemLabel,
+        id,
+        expectedParentId,
+        actualParentId,
+      });
+    }
+  }
+};
+
 const validateLineActionReferences = (state) => {
   for (const line of Object.values(state.lines)) {
     const actions = line.actions || {};
@@ -307,50 +381,21 @@ export const assertDomainInvariants = (state) => {
   for (const [resourceType, collection] of Object.entries(
     state.resources || {},
   )) {
-    ensureUnique(collection.order || [], `resources.${resourceType}.order`);
-    for (const resourceId of collection.order || []) {
-      if (!collection.items[resourceId]) {
-        fail("Resource order references missing item", {
-          resourceType,
-          resourceId,
-        });
-      }
-    }
-
-    for (const resourceId of Object.keys(collection.items || {})) {
-      if (!(collection.order || []).includes(resourceId)) {
-        fail("Resource item missing from order", {
-          resourceType,
-          resourceId,
-        });
-      }
-    }
+    validateHierarchicalCollection({
+      collection,
+      collectionLabel: `resources.${resourceType}`,
+      itemLabel: "resource",
+    });
   }
 
   const variables = state.variables;
-  if (
-    !variables ||
-    typeof variables !== "object" ||
-    !variables.items ||
-    typeof variables.items !== "object" ||
-    !Array.isArray(variables.order)
-  ) {
-    fail("Variables collection shape is invalid");
-  }
+  validateHierarchicalCollection({
+    collection: variables,
+    collectionLabel: "variables",
+    itemLabel: "variable",
+  });
 
-  ensureUnique(variables.order, "variables.order");
-
-  for (const variableId of variables.order) {
-    if (!variables.items[variableId]) {
-      fail("Variable order references missing item", { variableId });
-    }
-  }
-
-  for (const [variableId, variable] of Object.entries(variables.items || {})) {
-    if (!variables.order.includes(variableId)) {
-      fail("Variable item missing from order", { variableId });
-    }
-
+  for (const [variableId, variable] of Object.entries(variables?.items || {})) {
     const parentId = variable?.parentId;
     if (parentId === undefined || parentId === null || parentId === "") {
       continue;
@@ -360,26 +405,6 @@ export const assertDomainInvariants = (state) => {
     }
     if (!variables.items[parentId]) {
       fail("Variable parent reference missing", { variableId, parentId });
-    }
-  }
-
-  for (const variableId of Object.keys(variables.items || {})) {
-    const visited = new Set([variableId]);
-    let current = variables.items[variableId];
-    while (
-      current &&
-      typeof current.parentId === "string" &&
-      current.parentId.length > 0
-    ) {
-      const parentId = current.parentId;
-      if (visited.has(parentId)) {
-        fail("Variable hierarchy cycle detected", {
-          variableId,
-          parentId,
-        });
-      }
-      visited.add(parentId);
-      current = variables.items[parentId];
     }
   }
 

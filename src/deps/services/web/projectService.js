@@ -193,6 +193,16 @@ const isDirectDomainProjectionCommand = (command) =>
   hasCommandTypePrefix(command?.type, "layout.") ||
   hasCommandTypePrefix(command?.type, "variable.");
 
+const flattenTreeIds = (nodes, output = []) => {
+  if (!Array.isArray(nodes)) return output;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    output.push(node.id);
+    flattenTreeIds(node.children || [], output);
+  }
+  return output;
+};
+
 const uniqueIdsInOrder = (orderIds, existingIds) => {
   const existingSet = new Set(existingIds);
   const seen = new Set();
@@ -218,7 +228,7 @@ const uniqueIdsInOrder = (orderIds, existingIds) => {
 const buildHierarchyOrderFromFlatCollection = (collection) => {
   const items = collection?.items || {};
   const ids = Object.keys(items);
-  const orderedIds = uniqueIdsInOrder(collection?.order, ids);
+  const orderedIds = uniqueIdsInOrder(flattenTreeIds(collection?.tree), ids);
   const idSet = new Set(ids);
   const ROOT = "__root__";
   const childrenByParent = new Map();
@@ -282,7 +292,7 @@ const projectDomainResourceCollectionToLegacy = (domainCollection) => {
 
   const tree = buildHierarchyOrderFromFlatCollection({
     items,
-    order: domainCollection?.order || [],
+    tree: domainCollection?.tree || [],
   });
   return {
     items: projectedItems,
@@ -396,7 +406,7 @@ const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
 };
 
 const projectDomainVariablesToLegacy = ({ domainState }) => {
-  const domainVariables = domainState?.variables || { items: {}, order: [] };
+  const domainVariables = domainState?.variables || { items: {}, tree: [] };
   const items = domainVariables.items || {};
   const projectedItems = {};
 
@@ -434,7 +444,7 @@ const projectDomainVariablesToLegacy = ({ domainState }) => {
 
   const tree = buildHierarchyOrderFromFlatCollection({
     items,
-    order: domainVariables.order || [],
+    tree: domainVariables.tree || [],
   });
   return {
     items: projectedItems,

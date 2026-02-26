@@ -53,20 +53,221 @@ const cascadeDeleteScene = (state, sceneId) => {
   }
 };
 
-const collectVariableDescendantIds = (variables, rootId) => {
-  const descendants = [];
-  const queue = [rootId];
-  while (queue.length > 0) {
-    const currentId = queue.shift();
-    for (const [variableId, variable] of Object.entries(
-      variables.items || {},
-    )) {
-      if (variable?.parentId !== currentId) continue;
-      descendants.push(variableId);
-      queue.push(variableId);
+const ensureCollectionTree = (collection) => {
+  if (!collection || typeof collection !== "object") {
+    return [];
+  }
+  if (!Array.isArray(collection.tree)) {
+    collection.tree = [];
+  }
+  return collection.tree;
+};
+
+const walkHierarchy = (nodes, parentId, visitor) => {
+  if (!Array.isArray(nodes)) return;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string" || node.id.length === 0) {
+      continue;
+    }
+    visitor(node, parentId);
+    walkHierarchy(node.children || [], node.id, visitor);
+  }
+};
+
+const flattenHierarchyIds = (nodes) => {
+  const ids = [];
+  walkHierarchy(nodes, null, (node) => {
+    ids.push(node.id);
+  });
+  return ids;
+};
+
+const findHierarchyNodeById = (nodes, nodeId) => {
+  if (!Array.isArray(nodes)) return null;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    if (node.id === nodeId) return node;
+    const found = findHierarchyNodeById(node.children || [], nodeId);
+    if (found) return found;
+  }
+  return null;
+};
+
+const removeHierarchyNode = (nodes, nodeId) => {
+  if (!Array.isArray(nodes)) return null;
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index];
+    if (!node || typeof node.id !== "string") continue;
+    if (node.id === nodeId) {
+      nodes.splice(index, 1);
+      return node;
+    }
+    const removed = removeHierarchyNode(node.children || [], nodeId);
+    if (removed) return removed;
+  }
+  return null;
+};
+
+const collectHierarchyNodeIds = (node, out = new Set()) => {
+  if (!node || typeof node.id !== "string") return out;
+  out.add(node.id);
+  for (const child of node.children || []) {
+    collectHierarchyNodeIds(child, out);
+  }
+  return out;
+};
+
+const resolveCollectionParentId = ({ items, itemId, parentId }) => {
+  if (typeof parentId !== "string" || parentId.length === 0) return null;
+  if (parentId === itemId) return null;
+  return items?.[parentId] ? parentId : null;
+};
+
+const buildCanonicalCollectionTree = ({ items, tree }) => {
+  const ROOT = "__root__";
+  const allIds = Object.keys(items || {});
+  const idSet = new Set(allIds);
+  const orderedIds = [];
+  const seen = new Set();
+
+  for (const id of flattenHierarchyIds(tree)) {
+    if (!idSet.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    orderedIds.push(id);
+  }
+  for (const id of allIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    orderedIds.push(id);
+  }
+
+  const rawParentById = new Map();
+  for (const id of allIds) {
+    const rawParentId = items[id]?.parentId;
+    rawParentById.set(
+      id,
+      resolveCollectionParentId({ items, itemId: id, parentId: rawParentId }),
+    );
+  }
+
+  const resolvedParentById = new Map();
+  const resolveParentId = (id, path = new Set()) => {
+    if (resolvedParentById.has(id)) return resolvedParentById.get(id);
+    const parentId = rawParentById.get(id) || null;
+    if (!parentId) {
+      resolvedParentById.set(id, null);
+      return null;
+    }
+    if (path.has(parentId)) {
+      resolvedParentById.set(id, null);
+      return null;
+    }
+    const nextPath = new Set(path);
+    nextPath.add(id);
+    resolveParentId(parentId, nextPath);
+    resolvedParentById.set(id, parentId);
+    return parentId;
+  };
+
+  for (const id of allIds) {
+    resolveParentId(id);
+  }
+
+  const childrenByParent = new Map();
+  childrenByParent.set(ROOT, []);
+  for (const id of orderedIds) {
+    const parentId = resolvedParentById.get(id) ?? null;
+    if (items[id]) {
+      items[id].parentId = parentId;
+    }
+    const key = parentId || ROOT;
+    if (!childrenByParent.has(key)) {
+      childrenByParent.set(key, []);
+    }
+    childrenByParent.get(key).push(id);
+  }
+
+  const buildNodes = (parentKey) => {
+    const ids = childrenByParent.get(parentKey) || [];
+    return ids.map((id) => {
+      const children = buildNodes(id);
+      if (children.length > 0) {
+        return { id, children };
+      }
+      return { id };
+    });
+  };
+
+  return buildNodes(ROOT);
+};
+
+const placeCollectionNode = ({
+  collection,
+  itemId,
+  parentId,
+  index,
+  node = null,
+}) => {
+  const tree = ensureCollectionTree(collection);
+  const items = collection.items || {};
+  const extractedNode =
+    removeHierarchyNode(tree, itemId) || node || { id: itemId };
+  const targetParentId = resolveCollectionParentId({
+    items,
+    itemId,
+    parentId,
+  });
+
+  let siblings = tree;
+  let appliedParentId = null;
+  if (targetParentId) {
+    const parentNode = findHierarchyNodeById(tree, targetParentId);
+    if (parentNode) {
+      if (!Array.isArray(parentNode.children)) {
+        parentNode.children = [];
+      }
+      siblings = parentNode.children;
+      appliedParentId = targetParentId;
     }
   }
-  return descendants;
+
+  insertAtIndex(siblings, extractedNode, normalizeIndex(index));
+  if (items[itemId]) {
+    items[itemId].parentId = appliedParentId;
+  }
+  collection.tree = buildCanonicalCollectionTree({ items, tree });
+};
+
+const collectCollectionDescendantIds = ({
+  collection,
+  rootId,
+  includeRoot = true,
+}) => {
+  const ids = new Set();
+  if (includeRoot) {
+    ids.add(rootId);
+  }
+
+  const removedNode = removeHierarchyNode(
+    ensureCollectionTree(collection),
+    rootId,
+  );
+  if (removedNode) {
+    collectHierarchyNodeIds(removedNode, ids);
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [itemId, item] of Object.entries(collection.items || {})) {
+      if (ids.has(itemId)) continue;
+      const parentId = item?.parentId;
+      if (!parentId || !ids.has(parentId)) continue;
+      ids.add(itemId);
+      changed = true;
+    }
+  }
+  return ids;
 };
 
 const normalizeLayoutParentId = (parentId, elementId) => {
@@ -87,12 +288,12 @@ const walkLayoutHierarchy = (nodes, parentId, visitor) => {
 };
 
 const toLayoutElementsFromLegacyCollection = (legacyElements) => {
-  const source = legacyElements || { items: {}, order: [] };
+  const source = legacyElements || { items: {}, tree: [] };
   const sourceItems = source.items || {};
   const parentById = new Map();
   const orderedIds = [];
 
-  walkLayoutHierarchy(source.order || [], null, (node, parentId) => {
+  walkLayoutHierarchy(source.tree || [], null, (node, parentId) => {
     if (!parentById.has(node.id)) {
       parentById.set(node.id, parentId);
     }
@@ -313,29 +514,36 @@ const reducers = {
 
   "resource.created": ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
+    ensureCollectionTree(collection);
     collection.items[payload.resourceId] = {
       id: payload.resourceId,
       ...structuredClone(payload.data),
-      parentId: payload.parentId || null,
+      parentId: null,
       createdAt: now,
       updatedAt: now,
     };
-    insertStableByCreatedAt({
-      order: collection.order,
-      id: payload.resourceId,
+    placeCollectionNode({
+      collection,
+      itemId: payload.resourceId,
+      parentId: payload.parentId,
       index: payload.index,
-      items: collection.items,
     });
   },
 
   "resource.updated": ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     const current = collection.items[payload.resourceId];
+    const patch = structuredClone(payload.patch || {});
+    delete patch.parentId;
     collection.items[payload.resourceId] = {
       ...current,
-      ...structuredClone(payload.patch || {}),
+      ...patch,
     };
     collection.items[payload.resourceId].updatedAt = now;
+    collection.tree = buildCanonicalCollectionTree({
+      items: collection.items || {},
+      tree: ensureCollectionTree(collection),
+    });
   },
 
   "resource.renamed": ({ state, payload, now }) => {
@@ -348,19 +556,36 @@ const reducers = {
   "resource.moved": ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     const item = collection.items[payload.resourceId];
-    item.parentId = payload.parentId || null;
-    upsertNoDuplicate(
-      collection.order,
-      payload.resourceId,
-      normalizeIndex(payload.index),
-    );
+    ensureCollectionTree(collection);
+    item.parentId = resolveCollectionParentId({
+      items: collection.items || {},
+      itemId: payload.resourceId,
+      parentId: payload.parentId,
+    });
+    placeCollectionNode({
+      collection,
+      itemId: payload.resourceId,
+      parentId: item.parentId,
+      index: payload.index,
+    });
     item.updatedAt = now;
   },
 
   "resource.deleted": ({ state, payload }) => {
     const collection = state.resources[payload.resourceType];
-    removeFromArray(collection.order, payload.resourceId);
-    delete collection.items[payload.resourceId];
+    ensureCollectionTree(collection);
+    const idsToDelete = collectCollectionDescendantIds({
+      collection,
+      rootId: payload.resourceId,
+      includeRoot: true,
+    });
+    for (const id of idsToDelete) {
+      delete collection.items[id];
+    }
+    collection.tree = buildCanonicalCollectionTree({
+      items: collection.items || {},
+      tree: collection.tree,
+    });
   },
 
   "resource.duplicated": ({ state, payload, now }) => {
@@ -372,11 +597,12 @@ const reducers = {
     clone.createdAt = now;
     clone.updatedAt = now;
     collection.items[payload.newId] = clone;
-    insertAtIndex(
-      collection.order,
-      payload.newId,
-      normalizeIndex(payload.index),
-    );
+    placeCollectionNode({
+      collection,
+      itemId: payload.newId,
+      parentId: clone.parentId,
+      index: payload.index,
+    });
   },
 
   "layout.created": ({ state, payload, now }) => {
@@ -488,7 +714,7 @@ const reducers = {
   },
 
   "variable.created": ({ state, payload, now }) => {
-    const variables = state.variables || { items: {}, order: [] };
+    const variables = state.variables || { items: {}, tree: [] };
     const variableData = structuredClone(payload.data || {});
     variables.items[payload.variableId] = {
       id: payload.variableId,
@@ -498,23 +724,38 @@ const reducers = {
       variableType: payload.variableType,
       default: structuredClone(payload.initialValue),
       value: structuredClone(payload.initialValue),
-      parentId: payload.parentId || null,
+      parentId: null,
       ...variableData,
       createdAt: now,
       updatedAt: now,
     };
-    insertAtIndex(
-      variables.order,
-      payload.variableId,
-      normalizeIndex(payload.index),
-    );
+    const index =
+      Number.isInteger(payload.index)
+        ? payload.index
+        : payload.position === "first"
+          ? 0
+          : undefined;
+    placeCollectionNode({
+      collection: variables,
+      itemId: payload.variableId,
+      parentId: payload.parentId,
+      index,
+    });
     state.variables = variables;
   },
 
   "variable.updated": ({ state, payload, now }) => {
-    const variables = state.variables || { items: {}, order: [] };
+    const variables = state.variables || { items: {}, tree: [] };
     const variable = variables.items[payload.variableId];
     const patch = structuredClone(payload.patch || {});
+    const hasParentChange = Object.prototype.hasOwnProperty.call(
+      patch,
+      "parentId",
+    );
+    const requestedParentId = hasParentChange
+      ? patch.parentId
+      : variable?.parentId;
+    delete patch.parentId;
     if (Object.prototype.hasOwnProperty.call(patch, "default")) {
       patch.value = structuredClone(patch.default);
     }
@@ -526,20 +767,38 @@ const reducers = {
       ...patch,
     };
     variables.items[payload.variableId].updatedAt = now;
+    if (hasParentChange) {
+      placeCollectionNode({
+        collection: variables,
+        itemId: payload.variableId,
+        parentId: requestedParentId,
+        index: payload.index,
+      });
+    } else {
+      variables.tree = buildCanonicalCollectionTree({
+        items: variables.items || {},
+        tree: ensureCollectionTree(variables),
+      });
+    }
     state.variables = variables;
   },
 
   "variable.deleted": ({ state, payload }) => {
-    const variables = state.variables || { items: {}, order: [] };
-    const idsToDelete = [
-      payload.variableId,
-      ...collectVariableDescendantIds(variables, payload.variableId),
-    ];
+    const variables = state.variables || { items: {}, tree: [] };
+    ensureCollectionTree(variables);
+    const idsToDelete = collectCollectionDescendantIds({
+      collection: variables,
+      rootId: payload.variableId,
+      includeRoot: true,
+    });
 
     for (const variableId of idsToDelete) {
-      removeFromArray(variables.order, variableId);
       delete variables.items[variableId];
     }
+    variables.tree = buildCanonicalCollectionTree({
+      items: variables.items || {},
+      tree: variables.tree,
+    });
     state.variables = variables;
   },
 };
