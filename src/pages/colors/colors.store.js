@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#domain-structure";
+import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 
 const hexToRgb = (hex) => {
   if (!hex) return "";

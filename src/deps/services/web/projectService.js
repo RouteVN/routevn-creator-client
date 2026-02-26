@@ -1,10 +1,10 @@
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
-import { createInMemoryClientStore } from "insieme";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
 } from "../../infra/web/webRepositoryAdapter.js";
+import { createProjectRepositoryRuntime } from "../shared/projectRepositoryRuntime.js";
 import { createBundle } from "../../../utils/bundleUtils.js";
 import {
   createCommandEnvelope,
@@ -648,11 +648,6 @@ const applyTypedEventToRepositoryState = ({
   return undefined;
 };
 
-const PROJECT_STATE_VIEW_NAME = "project_repository_state";
-const PROJECT_STATE_VIEW_VERSION = "1";
-const projectStatePartitionFor = (projectId) =>
-  `project:${projectId}:repository_state`;
-
 const createInitialRepositoryStateForProject = (projectId) => ({
   ...structuredClone(initialProjectData),
   project: {
@@ -661,134 +656,24 @@ const createInitialRepositoryStateForProject = (projectId) => ({
   },
 });
 
-const toCommittedProjectStateEvent = ({ event, committedId, projectId }) => ({
-  committed_id: committedId,
-  id: `repository-${projectId}-${committedId}`,
-  client_id: "repository",
-  partitions: [projectStatePartitionFor(projectId)],
-  event: structuredClone(event),
-  status_updated_at: committedId,
-});
-
-const replayTypedEventsToRepositoryState = ({
-  events,
-  projectId,
-  untilEventIndex,
-}) => {
-  const parsedIndex = Number(untilEventIndex);
-  const targetIndex = Number.isFinite(parsedIndex)
-    ? Math.max(0, Math.min(Math.floor(parsedIndex), events.length))
-    : events.length;
-  let state = createInitialRepositoryStateForProject(projectId);
-
-  for (let index = 0; index < targetIndex; index += 1) {
-    const event = events[index];
-    const nextState = applyTypedEventToRepositoryState({
-      repositoryState: state,
-      event,
-      projectId,
-    });
-    if (nextState !== undefined) {
-      state = nextState;
-    }
-  }
-
-  return state;
-};
-
 const createInsiemeProjectRepositoryRuntime = async ({
   projectId,
   store,
   events: sourceEvents = [],
-}) => {
-  const events = Array.isArray(sourceEvents)
-    ? sourceEvents.map((event) => structuredClone(event))
-    : [];
-  const projectPartition = projectStatePartitionFor(projectId);
-
-  const projectStateStore = createInMemoryClientStore({
-    materializedViews: [
-      {
-        name: PROJECT_STATE_VIEW_NAME,
-        version: PROJECT_STATE_VIEW_VERSION,
-        initialState: () => createInitialRepositoryStateForProject(projectId),
-        reduce: ({ state, event, partition }) => {
-          if (partition !== projectPartition) return state;
-          const repositoryEvent = event?.event;
-          if (!repositoryEvent || typeof repositoryEvent.type !== "string") {
-            return state;
-          }
-          const nextState = applyTypedEventToRepositoryState({
-            repositoryState: state,
-            event: repositoryEvent,
-            projectId,
-          });
-          return nextState === undefined ? state : nextState;
-        },
-      },
-    ],
-  });
-
-  await projectStateStore.init();
-
-  if (events.length > 0) {
-    await projectStateStore.applyCommittedBatch({
-      events: events.map((event, index) =>
-        toCommittedProjectStateEvent({
-          event,
-          committedId: index + 1,
-          projectId,
-        }),
-      ),
-      nextCursor: events.length,
-    });
-  }
-
-  let currentState = await projectStateStore.loadMaterializedView({
-    viewName: PROJECT_STATE_VIEW_NAME,
-    partition: projectPartition,
-  });
-  if (!currentState || typeof currentState !== "object") {
-    currentState = createInitialRepositoryStateForProject(projectId);
-  }
-
-  return {
-    getState(untilEventIndex) {
-      if (untilEventIndex === undefined || untilEventIndex === null) {
-        return structuredClone(currentState);
-      }
-      const replayedState = replayTypedEventsToRepositoryState({
-        events,
+}) =>
+  createProjectRepositoryRuntime({
+    projectId,
+    store,
+    events: sourceEvents,
+    createInitialState: () => createInitialRepositoryStateForProject(projectId),
+    reduceEventToState: ({ repositoryState, event }) =>
+      applyTypedEventToRepositoryState({
+        repositoryState,
+        event,
         projectId,
-        untilEventIndex,
-      });
-      return structuredClone(replayedState);
-    },
-    getEvents() {
-      return events.map((event) => structuredClone(event));
-    },
-    async addEvent(event) {
-      await store.appendTypedEvent(event);
-      events.push(structuredClone(event));
-      const committedId = events.length;
-      await projectStateStore.applyCommittedBatch({
-        events: [
-          toCommittedProjectStateEvent({
-            event,
-            committedId,
-            projectId,
-          }),
-        ],
-        nextCursor: committedId,
-      });
-      currentState = await projectStateStore.loadMaterializedView({
-        viewName: PROJECT_STATE_VIEW_NAME,
-        partition: projectPartition,
-      });
-      assertV2State(currentState);
-    },
-  };
-};
+      }),
+    assertState: assertV2State,
+  });
 
 const applyTypedCommandToRepository = async ({
   repository,

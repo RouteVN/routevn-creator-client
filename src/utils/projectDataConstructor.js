@@ -1,4 +1,4 @@
-import { toHierarchyStructure } from "#domain-structure";
+import { toHierarchyStructure } from "../domain/v2/treeHelpers.js";
 import { layoutHierarchyStructureToRenderState } from "./index.js";
 
 export function constructProjectData(state, options = {}) {

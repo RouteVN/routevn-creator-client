@@ -50,32 +50,28 @@ const toOrderIds = (order) => {
   return ids;
 };
 
-const normalizeOrder = (data) => {
-  const items = data?.items || {};
-  const itemIds = Object.keys(items);
-  const order = Array.isArray(data?.tree)
-    ? data.tree
-    : Array.isArray(data?.order)
-      ? data.order
-      : [];
-  if (order.length === 0) return [];
+const buildHierarchyFromOrderedIds = ({ items, orderedIds }) => {
+  const itemIds = Object.keys(items || {});
+  const seen = new Set();
+  const normalizedIds = [];
 
-  const hasStringEntries = order.some((entry) => typeof entry === "string");
-  if (!hasStringEntries) {
-    return order.filter((entry) => isHierarchyNode(entry));
+  for (const id of orderedIds || []) {
+    if (typeof id !== "string" || id.length === 0) continue;
+    if (!Object.prototype.hasOwnProperty.call(items, id)) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    normalizedIds.push(id);
   }
 
-  const orderedIds = toOrderIds(order);
-  const seen = new Set(orderedIds);
   for (const id of itemIds) {
     if (seen.has(id)) continue;
     seen.add(id);
-    orderedIds.push(id);
+    normalizedIds.push(id);
   }
 
-  const itemIdSet = new Set(itemIds);
+  const itemIdSet = new Set(normalizedIds);
   const childrenByParent = new Map([[ROOT_PARENT_KEY, []]]);
-  for (const id of orderedIds) {
+  for (const id of normalizedIds) {
     const parentId = items[id]?.parentId;
     const validParentId =
       typeof parentId === "string" &&
@@ -93,9 +89,7 @@ const normalizeOrder = (data) => {
   const visited = new Set();
   const buildNode = (id, stack = new Set()) => {
     if (visited.has(id)) return null;
-    if (stack.has(id)) {
-      return { id };
-    }
+    if (stack.has(id)) return { id };
     visited.add(id);
     stack.add(id);
     const childIds = childrenByParent.get(id) || [];
@@ -105,19 +99,40 @@ const normalizeOrder = (data) => {
       if (childNode) children.push(childNode);
     }
     stack.delete(id);
-    if (children.length > 0) {
-      return { id, children };
-    }
-    return { id };
+    return children.length > 0 ? { id, children } : { id };
   };
 
   const rootIds = childrenByParent.get(ROOT_PARENT_KEY) || [];
   const hierarchy = rootIds.map((id) => buildNode(id)).filter(Boolean);
-  for (const id of orderedIds) {
+  for (const id of normalizedIds) {
     if (visited.has(id)) continue;
     hierarchy.push({ id });
   }
   return hierarchy;
+};
+
+const normalizeOrder = (data) => {
+  const items = data?.items || {};
+  const itemIds = Object.keys(items);
+  const order = Array.isArray(data?.tree)
+    ? data.tree
+    : Array.isArray(data?.order)
+      ? data.order
+      : [];
+  if (order.length === 0) {
+    if (itemIds.length === 0) return [];
+    return buildHierarchyFromOrderedIds({ items, orderedIds: itemIds });
+  }
+
+  const hasStringEntries = order.some((entry) => typeof entry === "string");
+  if (!hasStringEntries) {
+    return order.filter((entry) => isHierarchyNode(entry));
+  }
+
+  return buildHierarchyFromOrderedIds({
+    items,
+    orderedIds: toOrderIds(order),
+  });
 };
 
 /**

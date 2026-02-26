@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#domain-structure";
+import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 
 const layoutForm = {
   title: "Add Layout",

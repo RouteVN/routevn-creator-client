@@ -14,9 +14,6 @@
     "visual-novel-tools",
     "visual-novel-creator"
   ],
-  "imports": {
-    "#domain-structure": "./src/deps/infra/domainStructure/index.js"
-  },
   "type": "module",
   "dependencies": {
     "@rettangoli/fe": "1.0.0-rc3",

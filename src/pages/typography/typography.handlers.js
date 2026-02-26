@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "#domain-structure";
+import { toFlatItems } from "../../domain/v2/treeHelpers.js";
 import {
   getTypographyCount,
   getTypographyRemovalCount,
