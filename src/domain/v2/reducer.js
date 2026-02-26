@@ -210,8 +210,8 @@ const placeCollectionNode = ({
 }) => {
   const tree = ensureCollectionTree(collection);
   const items = collection.items || {};
-  const extractedNode =
-    removeHierarchyNode(tree, itemId) || node || { id: itemId };
+  const extractedNode = removeHierarchyNode(tree, itemId) ||
+    node || { id: itemId };
   const targetParentId = resolveCollectionParentId({
     items,
     itemId,
@@ -729,12 +729,11 @@ const reducers = {
       createdAt: now,
       updatedAt: now,
     };
-    const index =
-      Number.isInteger(payload.index)
-        ? payload.index
-        : payload.position === "first"
-          ? 0
-          : undefined;
+    const index = Number.isInteger(payload.index)
+      ? payload.index
+      : payload.position === "first"
+        ? 0
+        : undefined;
     placeCollectionNode({
       collection: variables,
       itemId: payload.variableId,
