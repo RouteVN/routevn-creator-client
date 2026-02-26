@@ -463,7 +463,7 @@ export const handleFormExtraEvent = async (deps) => {
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value || "";
-  store.setSearchQuery(searchQuery);
+  store.setSearchQuery({ query: searchQuery });
   render();
 };
 

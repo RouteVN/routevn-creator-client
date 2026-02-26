@@ -18,7 +18,7 @@ refs:
       search-input:
         action: setSearchQuery
         payload:
-          value: ${event.detail.value}
+          value: ${_event.detail.value}
       item-delete:
         handler: handleItemDelete
   previewOverlay:
