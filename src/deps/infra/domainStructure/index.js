@@ -7,8 +7,5 @@
  * - Helper functions for order data structure operations
  */
 
-// Repository factories
-export { createRepository } from "./repository.js";
-
 // Helper functions for order operations
 export { toFlatItems, toFlatGroups, toHierarchyStructure } from "./helpers.js";

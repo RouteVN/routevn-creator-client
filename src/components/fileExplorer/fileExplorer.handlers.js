@@ -269,7 +269,7 @@ export const handleFileAction = async (deps, payload) => {
       });
     } else {
       console.warn(
-        "[routevn.collab.migration] unsupported new-item target (legacy folder tree disabled)",
+        "[routevn.collab.migration] unsupported new-item target (folder tree disabled)",
         { repositoryTarget },
       );
       appService?.showToast?.(
@@ -401,7 +401,7 @@ export const handleFileAction = async (deps, payload) => {
         });
       } else {
         console.warn(
-          "[routevn.collab.migration] unsupported rename target (legacy folder tree disabled)",
+          "[routevn.collab.migration] unsupported rename target (folder tree disabled)",
           { repositoryTarget, itemId },
         );
         appService?.showToast?.("Rename is not supported for this target.");
@@ -514,7 +514,7 @@ export const handleFileAction = async (deps, payload) => {
         });
       } else {
         console.warn(
-          "[routevn.collab.migration] unsupported delete target (legacy folder tree disabled)",
+          "[routevn.collab.migration] unsupported delete target (folder tree disabled)",
           { repositoryTarget, itemId },
         );
         appService?.showToast?.("Delete is not supported for this target.");
@@ -567,7 +567,7 @@ export const handleFileAction = async (deps, payload) => {
         });
       } else {
         console.warn(
-          "[routevn.collab.migration] unsupported new-child-folder target (legacy folder tree disabled)",
+          "[routevn.collab.migration] unsupported new-child-folder target (folder tree disabled)",
           { repositoryTarget, itemId },
         );
         appService?.showToast?.(
@@ -720,7 +720,7 @@ export const handleFileAction = async (deps, payload) => {
       });
     } else {
       console.warn(
-        "[routevn.collab.migration] unsupported duplicate target (legacy folder tree disabled)",
+        "[routevn.collab.migration] unsupported duplicate target (folder tree disabled)",
         { repositoryTarget, itemId },
       );
       return;
@@ -827,7 +827,7 @@ export const handleTargetChanged = async (deps, payload) => {
     });
   } else {
     console.warn(
-      "[routevn.collab.migration] unsupported move target (legacy folder tree disabled)",
+      "[routevn.collab.migration] unsupported move target (folder tree disabled)",
       { repositoryTarget, sourceId: source.id },
     );
     return;

@@ -90,13 +90,13 @@ const createDetailFormValues = (item) => {
 
 const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
 
-const mountLegacySubscriptions = (deps) => {
+const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
-export const handleBeforeMount = (deps) => mountLegacySubscriptions(deps);
+export const handleBeforeMount = (deps) => mountSubscriptions(deps);
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;

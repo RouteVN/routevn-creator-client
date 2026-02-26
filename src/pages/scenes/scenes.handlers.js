@@ -190,41 +190,41 @@ const getOrderedSceneIds = (domainState) => {
 
 const buildSceneWhiteboardItems = ({
   domainState,
-  legacyState,
+  repositoryState,
   currentWhiteboardItems = [],
 }) => {
   const domainScenes = domainState?.scenes || {};
   const initialSceneId = domainState?.story?.initialSceneId || null;
-  const legacyScenesById = legacyState?.scenes?.items || {};
+  const repositoryScenesById = repositoryState?.scenes?.items || {};
   const orderedSceneIds = getOrderedSceneIds(domainState);
-  const layouts = legacyState?.layouts;
+  const layouts = repositoryState?.layouts;
 
   return orderedSceneIds.map((sceneId) => {
     const scene = domainScenes[sceneId] || {};
-    const legacyScene = legacyScenesById[sceneId];
+    const repositoryScene = repositoryScenesById[sceneId];
     const existingWhiteboardItem = currentWhiteboardItems.find(
       (wb) => wb.id === sceneId,
     );
 
     return {
       id: sceneId,
-      name: scene.name || legacyScene?.name || `Scene ${sceneId}`,
+      name: scene.name || repositoryScene?.name || `Scene ${sceneId}`,
       x: toFiniteNumberOr(
         scene.position?.x,
         toFiniteNumberOr(
-          legacyScene?.position?.x,
+          repositoryScene?.position?.x,
           existingWhiteboardItem?.x ?? 200,
         ),
       ),
       y: toFiniteNumberOr(
         scene.position?.y,
         toFiniteNumberOr(
-          legacyScene?.position?.y,
+          repositoryScene?.position?.y,
           existingWhiteboardItem?.y ?? 200,
         ),
       ),
       isInit: sceneId === initialSceneId,
-      transitions: getTransitionsForScene(legacyScene?.sections, layouts),
+      transitions: getTransitionsForScene(repositoryScene?.sections, layouts),
     };
   });
 };
@@ -236,9 +236,9 @@ const resolveDetailItemId = (detail = {}) => {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
-  const legacyState = projectService.getState();
+  const repositoryState = projectService.getState();
   const domainState = projectService.getDomainState();
-  const { scenes, layouts } = legacyState;
+  const { scenes, layouts } = repositoryState;
   const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
@@ -247,7 +247,7 @@ export const handleAfterMount = async (deps) => {
 
   const sceneItems = buildSceneWhiteboardItems({
     domainState,
-    legacyState,
+    repositoryState,
   });
 
   // Initialize whiteboard with scene items only
@@ -282,9 +282,9 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const legacyState = projectService.getState();
+  const repositoryState = projectService.getState();
   const domainState = projectService.getDomainState();
-  const { scenes, layouts } = legacyState;
+  const { scenes, layouts } = repositoryState;
   const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
@@ -292,7 +292,7 @@ export const handleDataChanged = async (deps) => {
 
   const sceneItems = buildSceneWhiteboardItems({
     domainState,
-    legacyState,
+    repositoryState,
     currentWhiteboardItems,
   });
 

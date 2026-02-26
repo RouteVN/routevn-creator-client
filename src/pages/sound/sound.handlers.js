@@ -98,14 +98,14 @@ const syncDetailFormValues = ({
   }
 };
 
-const mountLegacySubscriptions = (deps) => {
+const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
 export const handleBeforeMount = (deps) => {
-  return mountLegacySubscriptions(deps);
+  return mountSubscriptions(deps);
 };
 
 export const handleAfterMount = async (deps) => {

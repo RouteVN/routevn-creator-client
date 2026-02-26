@@ -6,7 +6,7 @@ import {
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
 
-const mountLegacySubscriptions = (deps) => {
+const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
@@ -36,7 +36,7 @@ const fileContentCache = new Map();
 let keyboardNavigationTimeout = null;
 
 export const handleBeforeMount = (deps) => {
-  return mountLegacySubscriptions(deps);
+  return mountSubscriptions(deps);
 };
 
 /**

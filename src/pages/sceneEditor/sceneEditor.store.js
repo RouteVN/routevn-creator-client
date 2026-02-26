@@ -231,30 +231,30 @@ const buildSceneFromDomainState = ({ state }) => {
         .filter((line) => !!line),
     }));
 
-  const legacyInitialSectionId =
+  const repositoryInitialSectionId =
     state.repositoryState?.scenes?.items?.[state.sceneId]?.initialSectionId;
 
   return {
     ...scene,
     initialSectionId:
-      scene.initialSectionId || legacyInitialSectionId || sections[0]?.id,
+      scene.initialSectionId || repositoryInitialSectionId || sections[0]?.id,
     sections,
   };
 };
 
-const buildSceneFromLegacyState = ({ state }) => {
+const buildSceneFromRepositoryState = ({ state }) => {
   if (!state.sceneId) {
     return null;
   }
 
-  const legacyScene = state.repositoryState?.scenes?.items?.[state.sceneId];
-  if (!legacyScene || legacyScene.type !== "scene") {
+  const repositoryScene = state.repositoryState?.scenes?.items?.[state.sceneId];
+  if (!repositoryScene || repositoryScene.type !== "scene") {
     return null;
   }
 
-  const sectionItems = legacyScene.sections?.items || {};
+  const sectionItems = repositoryScene.sections?.items || {};
   const orderedSectionIds = getOrderedIdsFromHierarchy(
-    legacyScene.sections?.tree,
+    repositoryScene.sections?.tree,
     Object.keys(sectionItems),
   );
 
@@ -284,7 +284,7 @@ const buildSceneFromLegacyState = ({ state }) => {
 
   return {
     id: state.sceneId,
-    ...legacyScene,
+    ...repositoryScene,
     sections,
   };
 };
@@ -295,7 +295,7 @@ export const selectScene = ({ state }) => {
     return domainScene;
   }
 
-  return buildSceneFromLegacyState({ state });
+  return buildSceneFromRepositoryState({ state });
 };
 
 export const selectSceneId = ({ state }) => {
@@ -449,18 +449,18 @@ export const setLineTextContent = ({ state }, { lineId, content } = {}) => {
     domainLine.actions.dialogue.content = content;
   }
 
-  const legacyLine =
+  const repositoryLine =
     state.repositoryState?.scenes?.items?.[sceneId]?.sections?.items?.[
       sectionId
     ]?.lines?.items?.[lineId];
-  if (legacyLine) {
-    if (!legacyLine.actions) {
-      legacyLine.actions = {};
+  if (repositoryLine) {
+    if (!repositoryLine.actions) {
+      repositoryLine.actions = {};
     }
-    if (!legacyLine.actions.dialogue) {
-      legacyLine.actions.dialogue = {};
+    if (!repositoryLine.actions.dialogue) {
+      repositoryLine.actions.dialogue = {};
     }
-    legacyLine.actions.dialogue.content = content;
+    repositoryLine.actions.dialogue.content = content;
   }
 };
 

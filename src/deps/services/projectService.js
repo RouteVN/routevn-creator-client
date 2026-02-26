@@ -3,14 +3,17 @@ import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
 import JSZip from "jszip";
-import { createRepository } from "#domain-structure";
+import { createInMemoryClientStore } from "insieme";
 import { createInsiemeTauriStoreAdapter } from "../infra/tauri/tauriRepositoryAdapter";
 import { loadTemplate, getTemplateFiles } from "../../utils/templateLoader";
 import { createBundle } from "../../utils/bundleUtils";
 import {
+  createCommandEnvelope,
   createProjectCollabService,
   createWebSocketTransport,
 } from "../../collab/v2/index.js";
+import { RESOURCE_TYPES } from "../../domain/v2/constants.js";
+import { processCommand } from "../../domain/v2/engine.js";
 import {
   getImageDimensions,
   getVideoDimensions,
@@ -77,6 +80,685 @@ const assertV2State = (state) => {
   }
 };
 
+const getHierarchyNodes = (collection) =>
+  Array.isArray(collection?.tree) ? collection.tree : [];
+
+const normalizeParentId = (parentId) => {
+  if (typeof parentId !== "string" || parentId.length === 0) return null;
+  return parentId === "_root" ? null : parentId;
+};
+
+const findOrderNodeById = (nodes = [], id) => {
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    if (node.id === id) return node;
+    const found = findOrderNodeById(node.children || [], id);
+    if (found) return found;
+  }
+  return null;
+};
+
+const getSiblingOrderNodes = (collection, parentId) => {
+  const normalizedParentId = normalizeParentId(parentId);
+  if (!normalizedParentId) {
+    return getHierarchyNodes(collection);
+  }
+  const parentNode = findOrderNodeById(
+    getHierarchyNodes(collection),
+    normalizedParentId,
+  );
+  return Array.isArray(parentNode?.children) ? parentNode.children : [];
+};
+
+const resolveIndexFromPosition = ({
+  siblings = [],
+  position,
+  movingId = null,
+}) => {
+  const filtered = Array.isArray(siblings)
+    ? siblings.filter((node) => node?.id && node.id !== movingId)
+    : [];
+
+  if (position === "first") return 0;
+  if (position === "last" || position === undefined || position === null) {
+    return filtered.length;
+  }
+
+  if (position && typeof position === "object") {
+    if (typeof position.before === "string") {
+      const beforeIndex = filtered.findIndex(
+        (node) => node.id === position.before,
+      );
+      return beforeIndex >= 0 ? beforeIndex : filtered.length;
+    }
+    if (typeof position.after === "string") {
+      const afterIndex = filtered.findIndex(
+        (node) => node.id === position.after,
+      );
+      return afterIndex >= 0 ? afterIndex + 1 : filtered.length;
+    }
+  }
+
+  return filtered.length;
+};
+
+const uniquePartitions = (...partitions) => {
+  const seen = new Set();
+  const output = [];
+  for (const partition of partitions) {
+    if (typeof partition !== "string" || partition.length === 0) continue;
+    if (seen.has(partition)) continue;
+    seen.add(partition);
+    output.push(partition);
+  }
+  return output;
+};
+
+const hasCommandTypePrefix = (commandType, prefix) =>
+  typeof commandType === "string" && commandType.startsWith(prefix);
+
+const isDirectDomainProjectionCommand = (command) =>
+  command?.type === "project.update" ||
+  hasCommandTypePrefix(command?.type, "resource.") ||
+  hasCommandTypePrefix(command?.type, "scene.") ||
+  hasCommandTypePrefix(command?.type, "section.") ||
+  hasCommandTypePrefix(command?.type, "line.") ||
+  hasCommandTypePrefix(command?.type, "layout.") ||
+  hasCommandTypePrefix(command?.type, "variable.");
+
+const flattenTreeIds = (nodes, output = []) => {
+  if (!Array.isArray(nodes)) return output;
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string") continue;
+    output.push(node.id);
+    flattenTreeIds(node.children || [], output);
+  }
+  return output;
+};
+
+const uniqueIdsInOrder = (orderIds, existingIds) => {
+  const existingSet = new Set(existingIds);
+  const seen = new Set();
+  const output = [];
+
+  for (const id of Array.isArray(orderIds) ? orderIds : []) {
+    if (typeof id !== "string" || id.length === 0) continue;
+    if (!existingSet.has(id)) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    output.push(id);
+  }
+
+  for (const id of existingIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    output.push(id);
+  }
+
+  return output;
+};
+
+const buildHierarchyOrderFromFlatCollection = (collection) => {
+  const items = collection?.items || {};
+  const ids = Object.keys(items);
+  const orderedIds = uniqueIdsInOrder(flattenTreeIds(collection?.tree), ids);
+  const idSet = new Set(ids);
+  const ROOT = "__root__";
+  const childrenByParent = new Map();
+  childrenByParent.set(ROOT, []);
+
+  for (const id of orderedIds) {
+    const item = items[id];
+    const rawParentId = item?.parentId;
+    const parentId =
+      typeof rawParentId === "string" &&
+      rawParentId.length > 0 &&
+      rawParentId !== id &&
+      idSet.has(rawParentId)
+        ? rawParentId
+        : null;
+    const key = parentId || ROOT;
+    if (!childrenByParent.has(key)) {
+      childrenByParent.set(key, []);
+    }
+    childrenByParent.get(key).push(id);
+  }
+
+  const visited = new Set();
+  const buildNodes = (parentKey) => {
+    const idsForParent = childrenByParent.get(parentKey) || [];
+    const nodes = [];
+    for (const id of idsForParent) {
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const children = buildNodes(id);
+      if (children.length > 0) {
+        nodes.push({
+          id,
+          children,
+        });
+      } else {
+        nodes.push({ id });
+      }
+    }
+    return nodes;
+  };
+
+  const rootNodes = buildNodes(ROOT);
+  for (const id of orderedIds) {
+    if (visited.has(id)) continue;
+    visited.add(id);
+    rootNodes.push({ id });
+  }
+  return rootNodes;
+};
+
+const projectDomainResourceCollectionToRepository = (domainCollection) => {
+  const items = domainCollection?.items || {};
+  const projectedItems = {};
+  for (const [resourceId, resource] of Object.entries(items)) {
+    projectedItems[resourceId] = {
+      id: resourceId,
+      ...structuredClone(resource || {}),
+    };
+  }
+
+  const tree = buildHierarchyOrderFromFlatCollection({
+    items,
+    tree: domainCollection?.tree || [],
+  });
+  return {
+    items: projectedItems,
+    tree,
+  };
+};
+
+const projectDomainLayoutElementsToRepository = ({
+  layout,
+  existingRepositoryElements = {},
+}) => {
+  const existingItems = existingRepositoryElements?.items || {};
+  const projectedItems = {};
+
+  for (const [elementId, element] of Object.entries(layout?.elements || {})) {
+    const existingElement = existingItems?.[elementId] || {};
+    const elementClone = structuredClone(element || {});
+    delete elementClone.children;
+    delete elementClone.parentId;
+    projectedItems[elementId] = {
+      ...structuredClone(existingElement),
+      ...elementClone,
+      id: elementId,
+    };
+  }
+
+  const visited = new Set();
+  const makeNode = (elementId) => {
+    if (visited.has(elementId)) return null;
+    const element = layout?.elements?.[elementId];
+    if (!element) return null;
+    visited.add(elementId);
+
+    const children = [];
+    for (const childId of element.children || []) {
+      if (layout?.elements?.[childId]?.parentId !== elementId) continue;
+      const childNode = makeNode(childId);
+      if (childNode) children.push(childNode);
+    }
+
+    if (children.length > 0) {
+      return {
+        id: elementId,
+        children,
+      };
+    }
+
+    return { id: elementId };
+  };
+
+  const order = [];
+  for (const rootId of layout?.rootElementOrder || []) {
+    const node = makeNode(rootId);
+    if (node) order.push(node);
+  }
+
+  for (const elementId of Object.keys(layout?.elements || {})) {
+    if (visited.has(elementId)) continue;
+    const node = makeNode(elementId);
+    if (node) order.push(node);
+  }
+
+  return {
+    items: projectedItems,
+    tree: order,
+  };
+};
+
+const projectDomainLayoutsToRepository = ({ domainState, repositoryState }) => {
+  const repositoryLayouts = repositoryState?.layouts || createTreeCollection();
+  const repositoryOrderIds = flattenTreeIds(
+    getHierarchyNodes(repositoryLayouts),
+  );
+  const layoutIds = Object.keys(domainState?.layouts || {});
+  const orderedLayoutIds = uniqueIdsInOrder(repositoryOrderIds, layoutIds);
+  const projectedItems = {};
+
+  for (const layoutId of orderedLayoutIds) {
+    const layout = domainState?.layouts?.[layoutId];
+    if (!layout) continue;
+    const existingLayout = repositoryLayouts?.items?.[layoutId] || {};
+    const layoutClone = structuredClone(layout || {});
+    delete layoutClone.elements;
+    delete layoutClone.rootElementOrder;
+
+    projectedItems[layoutId] = {
+      ...structuredClone(existingLayout),
+      ...layoutClone,
+      id: layoutId,
+      type: "layout",
+      elements: projectDomainLayoutElementsToRepository({
+        layout,
+        existingRepositoryElements: existingLayout?.elements,
+      }),
+    };
+  }
+
+  const tree = buildHierarchyOrderFromFlatCollection({
+    items: projectedItems,
+    tree: getHierarchyNodes(repositoryLayouts),
+  });
+  return {
+    items: projectedItems,
+    tree,
+  };
+};
+
+const projectDomainVariablesToRepository = ({ domainState }) => {
+  const domainVariables = domainState?.variables || { items: {}, tree: [] };
+  const items = domainVariables.items || {};
+  const projectedItems = {};
+
+  for (const [variableId, variable] of Object.entries(items)) {
+    const clone = structuredClone(variable || {});
+    delete clone.parentId;
+
+    if (clone.type === "folder") {
+      projectedItems[variableId] = {
+        ...clone,
+        id: variableId,
+        type: "folder",
+      };
+      continue;
+    }
+
+    const valueType =
+      typeof clone.type === "string" && clone.type.length > 0
+        ? clone.type
+        : clone.variableType || "string";
+    const defaultValue = Object.prototype.hasOwnProperty.call(clone, "default")
+      ? structuredClone(clone.default)
+      : structuredClone(clone.value ?? "");
+
+    projectedItems[variableId] = {
+      ...clone,
+      id: variableId,
+      itemType: "variable",
+      type: valueType,
+      variableType: valueType,
+      default: defaultValue,
+      value: structuredClone(defaultValue),
+    };
+  }
+
+  const tree = buildHierarchyOrderFromFlatCollection({
+    items,
+    tree: domainVariables.tree || [],
+  });
+  return {
+    items: projectedItems,
+    tree,
+  };
+};
+
+const buildTreeNodesFromOrderedIds = (orderedIds) =>
+  orderedIds.map((id) => ({
+    id,
+  }));
+
+const resolveStorySceneOrder = (domainState) => {
+  const sceneIds = Object.keys(domainState?.scenes || {});
+  return uniqueIdsInOrder(domainState?.story?.sceneOrder || [], sceneIds);
+};
+
+const resolveSceneSectionOrder = (domainState, sceneId) => {
+  const scene = domainState?.scenes?.[sceneId] || {};
+  const sectionIds = Object.keys(domainState?.sections || {}).filter(
+    (id) => domainState.sections[id]?.sceneId === sceneId,
+  );
+  return uniqueIdsInOrder(scene.sectionIds || [], sectionIds);
+};
+
+const resolveSectionLineOrder = (domainState, sectionId) => {
+  const section = domainState?.sections?.[sectionId] || {};
+  const lineIds = Object.keys(domainState?.lines || {}).filter(
+    (id) => domainState.lines[id]?.sectionId === sectionId,
+  );
+  return uniqueIdsInOrder(section.lineIds || [], lineIds);
+};
+
+const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
+  const repositoryScenesItems = repositoryState?.scenes?.items || {};
+  const sceneOrder = resolveStorySceneOrder(domainState);
+  const scenesItems = {};
+
+  for (const sceneId of sceneOrder) {
+    const scene = domainState?.scenes?.[sceneId];
+    if (!scene) continue;
+    const existingScene = repositoryScenesItems?.[sceneId] || {};
+    const existingSections = existingScene?.sections || {};
+    const existingSectionItems = existingSections?.items || {};
+    const sectionOrder = resolveSceneSectionOrder(domainState, sceneId);
+    const sectionItems = {};
+
+    for (const sectionId of sectionOrder) {
+      const section = domainState?.sections?.[sectionId];
+      if (!section) continue;
+      const existingSection = existingSectionItems?.[sectionId] || {};
+      const existingLines = existingSection?.lines || {};
+      const existingLineItems = existingLines?.items || {};
+      const lineOrder = resolveSectionLineOrder(domainState, sectionId);
+      const lineItems = {};
+
+      for (const lineId of lineOrder) {
+        const line = domainState?.lines?.[lineId];
+        if (!line) continue;
+        const existingLine = existingLineItems?.[lineId] || {};
+        lineItems[lineId] = {
+          ...structuredClone(existingLine),
+          ...structuredClone(line),
+          id: lineId,
+        };
+      }
+
+      sectionItems[sectionId] = {
+        ...structuredClone(existingSection),
+        ...structuredClone(section),
+        id: sectionId,
+        type: "section",
+        lines: {
+          items: lineItems,
+          tree: buildTreeNodesFromOrderedIds(lineOrder),
+        },
+      };
+    }
+
+    scenesItems[sceneId] = {
+      ...structuredClone(existingScene),
+      ...structuredClone(scene),
+      id: sceneId,
+      type: "scene",
+      sections: {
+        items: sectionItems,
+        tree: buildTreeNodesFromOrderedIds(sectionOrder),
+      },
+    };
+  }
+
+  return {
+    story: {
+      ...repositoryState?.story,
+      initialSceneId: domainState?.story?.initialSceneId || null,
+    },
+    scenes: {
+      items: scenesItems,
+      tree: buildTreeNodesFromOrderedIds(sceneOrder),
+    },
+  };
+};
+
+const projectDomainStateToRepositoryState = ({
+  domainState,
+  repositoryState,
+}) => {
+  const nextState = structuredClone(repositoryState || {});
+  nextState.model_version = 2;
+  nextState.project = {
+    ...repositoryState?.project,
+    ...structuredClone(domainState?.project || {}),
+  };
+
+  for (const [resourceType, domainCollection] of Object.entries(
+    domainState?.resources || {},
+  )) {
+    nextState[resourceType] =
+      projectDomainResourceCollectionToRepository(domainCollection);
+  }
+
+  const projectedStory = projectDomainStoryToRepository({
+    domainState,
+    repositoryState,
+  });
+  nextState.story = projectedStory.story;
+  nextState.scenes = projectedStory.scenes;
+
+  nextState.layouts = projectDomainLayoutsToRepository({
+    domainState,
+    repositoryState,
+  });
+  nextState.variables = projectDomainVariablesToRepository({
+    domainState,
+  });
+
+  return nextState;
+};
+
+const PROJECT_STATE_VIEW_NAME = "project_repository_state";
+const PROJECT_STATE_VIEW_VERSION = "1";
+const projectStatePartitionFor = (projectKey) =>
+  `project:${projectKey}:repository_state`;
+
+const applyRepositoryEventToState = ({ repositoryState, event }) => {
+  if (!event || typeof event.type !== "string") {
+    return repositoryState;
+  }
+
+  if (event.type === "typedSnapshot") {
+    const snapshotState = event?.payload?.state;
+    if (!snapshotState || typeof snapshotState !== "object") {
+      throw new Error("typedSnapshot event payload.state is required");
+    }
+    return projectDomainStateToRepositoryState({
+      domainState: snapshotState,
+      repositoryState,
+    });
+  }
+
+  if (event.type === "typedCommand") {
+    const command = event?.payload?.command;
+    if (!isDirectDomainProjectionCommand(command)) {
+      throw new Error(
+        `No typed projection handler for command type '${command?.type || "unknown"}'`,
+      );
+    }
+
+    const resolvedProjectId =
+      event?.payload?.projectId ||
+      repositoryState?.project?.id ||
+      "unknown-project";
+    const domainStateBefore = projectRepositoryStateToDomainState({
+      repositoryState,
+      projectId: resolvedProjectId,
+    });
+    const { state: domainStateAfter } = processCommand({
+      state: domainStateBefore,
+      command,
+    });
+
+    return projectDomainStateToRepositoryState({
+      domainState: domainStateAfter,
+      repositoryState,
+    });
+  }
+
+  throw new Error(
+    `Unsupported repository event type '${event.type}' in typed-collab mode.`,
+  );
+};
+
+const toCommittedRepositoryEvent = ({ event, committedId, projectKey }) => ({
+  committed_id: committedId,
+  id: `repository-${projectKey}-${committedId}`,
+  client_id: "repository",
+  partitions: [projectStatePartitionFor(projectKey)],
+  event: structuredClone(event),
+  status_updated_at: committedId,
+});
+
+const replayRepositoryEventsToState = ({
+  events,
+  initialState,
+  untilEventIndex,
+}) => {
+  const parsedIndex = Number(untilEventIndex);
+  const targetIndex = Number.isFinite(parsedIndex)
+    ? Math.max(0, Math.min(Math.floor(parsedIndex), events.length))
+    : events.length;
+  let state = structuredClone(initialState);
+
+  for (let index = 0; index < targetIndex; index += 1) {
+    state = applyRepositoryEventToState({
+      repositoryState: state,
+      event: events[index],
+    });
+  }
+
+  return state;
+};
+
+const createInsiemeProjectRepositoryRuntime = async ({
+  projectKey,
+  store,
+  events: sourceEvents = [],
+  initialState,
+}) => {
+  const events = Array.isArray(sourceEvents)
+    ? sourceEvents.map((event) => structuredClone(event))
+    : [];
+  const projectPartition = projectStatePartitionFor(projectKey);
+  const initialRepositoryState = structuredClone(initialState);
+
+  const projectStateStore = createInMemoryClientStore({
+    materializedViews: [
+      {
+        name: PROJECT_STATE_VIEW_NAME,
+        version: PROJECT_STATE_VIEW_VERSION,
+        initialState: () => structuredClone(initialRepositoryState),
+        reduce: ({ state, event, partition }) => {
+          if (partition !== projectPartition) return state;
+          const repositoryEvent = event?.event;
+          if (!repositoryEvent || typeof repositoryEvent.type !== "string") {
+            return state;
+          }
+          return applyRepositoryEventToState({
+            repositoryState: state,
+            event: repositoryEvent,
+          });
+        },
+      },
+    ],
+  });
+
+  await projectStateStore.init();
+
+  if (events.length > 0) {
+    await projectStateStore.applyCommittedBatch({
+      events: events.map((event, index) =>
+        toCommittedRepositoryEvent({
+          event,
+          committedId: index + 1,
+          projectKey,
+        }),
+      ),
+      nextCursor: events.length,
+    });
+  }
+
+  let currentState = await projectStateStore.loadMaterializedView({
+    viewName: PROJECT_STATE_VIEW_NAME,
+    partition: projectPartition,
+  });
+  if (!currentState || typeof currentState !== "object") {
+    currentState = structuredClone(initialRepositoryState);
+  }
+
+  return {
+    getState(untilEventIndex) {
+      if (untilEventIndex === undefined || untilEventIndex === null) {
+        return structuredClone(currentState);
+      }
+      const replayedState = replayRepositoryEventsToState({
+        events,
+        initialState: initialRepositoryState,
+        untilEventIndex,
+      });
+      return structuredClone(replayedState);
+    },
+    getEvents() {
+      return events.map((event) => structuredClone(event));
+    },
+    async addEvent(event) {
+      await store.appendTypedEvent(event);
+      events.push(structuredClone(event));
+      const committedId = events.length;
+      await projectStateStore.applyCommittedBatch({
+        events: [
+          toCommittedRepositoryEvent({
+            event,
+            committedId,
+            projectKey,
+          }),
+        ],
+        nextCursor: committedId,
+      });
+      currentState = await projectStateStore.loadMaterializedView({
+        viewName: PROJECT_STATE_VIEW_NAME,
+        partition: projectPartition,
+      });
+      assertV2State(currentState);
+    },
+  };
+};
+
+const applyTypedCommandToRepository = async ({
+  repository,
+  command,
+  projectId,
+}) => {
+  if (!isDirectDomainProjectionCommand(command)) {
+    throw new Error(
+      `No typed projection handler for command type '${command?.type || "unknown"}'`,
+    );
+  }
+
+  await repository.addEvent({
+    type: "typedCommand",
+    payload: {
+      projectId,
+      command: structuredClone(command),
+    },
+  });
+
+  return {
+    mode: "typed_command_event",
+    events: [
+      {
+        type: command.type,
+        payload: structuredClone(command.payload || {}),
+      },
+    ],
+  };
+};
+
 /**
  * Create a project service that manages repositories and operations for projects.
  * Gets current projectId from router query params automatically.
@@ -104,6 +786,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
   const adaptersByPath = new Map();
   const collabSessionsByProject = new Map();
   const collabSessionModeByProject = new Map();
+  const localCollabActorsByProject = new Map();
 
   // Initialization locks - prevents duplicate initialization
   const initLocksByProject = new Map(); // projectId -> Promise<Repository>
@@ -119,18 +802,32 @@ export const createProjectService = ({ router, db, filePicker }) => {
     return p;
   };
 
+  const storyBasePartitionFor = (projectId) => `project:${projectId}:story`;
+  const storyScenePartitionFor = (projectId, sceneId) =>
+    `project:${projectId}:story:scene:${sceneId}`;
+  const resourceTypePartitionFor = (projectId, resourceType) =>
+    `project:${projectId}:resources:${resourceType}`;
+
   const getBasePartitions = (projectId, partitions) =>
     partitions || [
-      `project:${projectId}:story`,
-      `project:${projectId}:resources`,
+      storyBasePartitionFor(projectId),
+      ...RESOURCE_TYPES.map((resourceType) =>
+        resourceTypePartitionFor(projectId, resourceType),
+      ),
       `project:${projectId}:layouts`,
       `project:${projectId}:settings`,
     ];
 
-  const toParentId = (parentId) =>
-    typeof parentId === "string" && parentId.length > 0 && parentId !== "_root"
-      ? parentId
-      : "_root";
+  const getOrCreateLocalActor = (projectId) => {
+    const existing = localCollabActorsByProject.get(projectId);
+    if (existing) return existing;
+    const actor = {
+      userId: `local-${projectId}`,
+      clientId: `local-${nanoid()}`,
+    };
+    localCollabActorsByProject.set(projectId, actor);
+    return actor;
+  };
 
   const findSectionLocationInRepositoryState = (state, sectionId) => {
     const sceneItems = state?.scenes?.items || {};
@@ -183,6 +880,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
       projectDescription: state.project?.description || "",
+      initialState: projectRepositoryStateToDomainState({
+        repositoryState: state,
+        projectId: resolvedProjectId,
+      }),
       token,
       actor: {
         userId,
@@ -191,6 +892,14 @@ export const createProjectService = ({ router, db, filePicker }) => {
       partitions: resolvedPartitions,
       logger: (entry) => {
         collabLog("debug", "sync-client", entry);
+      },
+      onCommittedCommand: async ({ command, isFromCurrentActor }) => {
+        if (isFromCurrentActor) return;
+        await applyTypedCommandToRepository({
+          repository,
+          command,
+          projectId: resolvedProjectId,
+        });
       },
     });
 
@@ -220,6 +929,20 @@ export const createProjectService = ({ router, db, filePicker }) => {
     return collabSession;
   };
 
+  const ensureCommandSessionForProject = async (projectId) => {
+    const existing = collabSessionsByProject.get(projectId);
+    if (existing) return existing;
+
+    const actor = getOrCreateLocalActor(projectId);
+    return createSessionForProject({
+      projectId,
+      token: `user:${actor.userId}:client:${actor.clientId}`,
+      userId: actor.userId,
+      clientId: actor.clientId,
+      mode: "local",
+    });
+  };
+
   // Get or create repository by path
   const getRepositoryByPath = async (projectPath) => {
     // Check cache first
@@ -236,11 +959,29 @@ export const createProjectService = ({ router, db, filePicker }) => {
     const initPromise = (async () => {
       try {
         const store = await createInsiemeTauriStoreAdapter(projectPath);
-        const repository = createRepository({
-          originStore: store,
-          snapshotInterval: 500, // Auto-save snapshot every 500 events
+        let existingEvents = (await store.getEvents()) || [];
+        if (existingEvents.length === 0) {
+          const bootstrapDomainState = projectRepositoryStateToDomainState({
+            repositoryState: initialProjectData,
+            projectId: projectPath,
+          });
+          const bootstrapEvent = {
+            type: "typedSnapshot",
+            payload: {
+              projectId: projectPath,
+              state: bootstrapDomainState,
+            },
+          };
+          await store.appendTypedEvent(bootstrapEvent);
+          existingEvents = [bootstrapEvent];
+        }
+
+        const repository = await createInsiemeProjectRepositoryRuntime({
+          projectKey: projectPath,
+          store,
+          events: existingEvents,
+          initialState: initialProjectData,
         });
-        await repository.init({ initialState: initialProjectData });
         assertV2State(repository.getState());
         repositoriesByPath.set(projectPath, repository);
         adaptersByPath.set(projectPath, store);
@@ -489,6 +1230,149 @@ export const createProjectService = ({ router, db, filePicker }) => {
     return processor(file);
   };
 
+  const ensureTypedCommandContext = async () => {
+    const repository = await getCurrentRepository();
+    const currentProjectId = getCurrentProjectId();
+    if (!currentProjectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+    const state = repository.getState();
+    assertV2State(state);
+
+    const projectId = state.project?.id || currentProjectId;
+    const session = await ensureCommandSessionForProject(currentProjectId);
+    const actor =
+      typeof session.getActor === "function"
+        ? session.getActor()
+        : getOrCreateLocalActor(currentProjectId);
+
+    return {
+      repository,
+      state,
+      session,
+      actor,
+      projectId,
+      currentProjectId,
+    };
+  };
+
+  const submitTypedCommandWithContext = async ({
+    context,
+    scope,
+    type,
+    payload,
+    partitions = [],
+    basePartition,
+  }) => {
+    const resolvedBasePartition =
+      basePartition || `project:${context.projectId}:${scope}`;
+    const command = createCommandEnvelope({
+      projectId: context.projectId,
+      scope,
+      partition: resolvedBasePartition,
+      partitions: uniquePartitions(resolvedBasePartition, ...partitions),
+      type,
+      payload,
+      actor: context.actor,
+    });
+
+    await context.session.submitCommand(command);
+
+    const applyResult = await applyTypedCommandToRepository({
+      repository: context.repository,
+      command,
+      projectId: context.projectId,
+    });
+
+    return {
+      commandId: command.id,
+      eventCount: applyResult.events.length,
+      applyMode: applyResult.mode,
+    };
+  };
+
+  const resolveResourceIndex = ({
+    state,
+    resourceType,
+    parentId,
+    position,
+    index,
+    movingId = null,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const collection = state?.[resourceType];
+    const siblings = getSiblingOrderNodes(collection, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveSceneIndex = ({
+    state,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(state?.scenes, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveSectionIndex = ({
+    scene,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(scene?.sections, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveLineIndex = ({
+    section,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(section?.lines, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
+  const resolveLayoutElementIndex = ({
+    layout,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(layout?.elements, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
   return {
     // Repository access - uses current project from URL
     async getRepository() {
@@ -513,19 +1397,22 @@ export const createProjectService = ({ router, db, filePicker }) => {
     },
 
     async updateProjectFields({ patch }) {
-      const entries = Object.entries(patch || {}).filter(
-        ([key]) =>
+      const context = await ensureTypedCommandContext();
+      const keys = Object.keys(patch || {}).filter(
+        (key) =>
           key && key !== "id" && key !== "createdAt" && key !== "updatedAt",
       );
-      for (const [key, value] of entries) {
-        await this.appendEvent({
-          type: "set",
-          payload: {
-            target: `project.${key}`,
-            value: structuredClone(value),
-          },
-        });
-      }
+      if (keys.length === 0) return;
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "project.update",
+        payload: {
+          patch: structuredClone(patch),
+        },
+        partitions: [],
+      });
     },
 
     async createSceneItem({
@@ -533,83 +1420,134 @@ export const createProjectService = ({ router, db, filePicker }) => {
       name,
       parentId = null,
       position = "last",
+      index,
       data = {},
     }) {
+      const context = await ensureTypedCommandContext();
       const nextSceneId = sceneId || nanoid();
-      await this.appendEvent({
-        type: "nodeInsert",
+      const resolvedIndex = resolveSceneIndex({
+        state: context.state,
+        parentId,
+        position,
+        index,
+      });
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(
+        context.projectId,
+        nextSceneId,
+      );
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.create",
         payload: {
-          target: "scenes",
-          value: {
-            id: nextSceneId,
-            type: "scene",
-            name,
-            sections: createTreeCollection(),
-            ...structuredClone(data || {}),
-          },
-          options: {
-            parent: toParentId(parentId),
-            position,
-          },
+          sceneId: nextSceneId,
+          name,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+          data: structuredClone(data || {}),
         },
+        partitions: [basePartition, scenePartition],
       });
       return nextSceneId;
     },
 
     async updateSceneItem({ sceneId, patch }) {
-      await this.appendEvent({
-        type: "nodeUpdate",
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.update",
         payload: {
-          target: "scenes",
-          value: structuredClone(patch || {}),
-          options: {
-            id: sceneId,
-            replace: false,
-          },
+          sceneId,
+          patch: structuredClone(patch || {}),
         },
+        partitions: [basePartition, scenePartition],
       });
     },
 
     async renameSceneItem({ sceneId, name }) {
-      await this.updateSceneItem({
-        sceneId,
-        patch: { name },
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.rename",
+        payload: {
+          sceneId,
+          name,
+        },
+        partitions: [basePartition, scenePartition],
       });
     },
 
     async deleteSceneItem({ sceneId }) {
-      await this.appendEvent({
-        type: "nodeDelete",
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.delete",
         payload: {
-          target: "scenes",
-          options: {
-            id: sceneId,
-          },
+          sceneId,
         },
+        partitions: [basePartition, scenePartition],
       });
     },
 
     async setInitialScene({ sceneId }) {
-      await this.appendEvent({
-        type: "set",
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.set_initial",
         payload: {
-          target: "story.initialSceneId",
-          value: sceneId,
+          sceneId,
         },
+        partitions: [basePartition, scenePartition],
       });
     },
 
-    async reorderSceneItem({ sceneId, parentId = null, position = "last" }) {
-      await this.appendEvent({
-        type: "nodeMove",
+    async reorderSceneItem({
+      sceneId,
+      parentId = null,
+      position = "last",
+      index,
+    }) {
+      const context = await ensureTypedCommandContext();
+      const resolvedIndex = resolveSceneIndex({
+        state: context.state,
+        parentId,
+        position,
+        index,
+        movingId: sceneId,
+      });
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "scene.reorder",
         payload: {
-          target: "scenes",
-          options: {
-            id: sceneId,
-            parent: toParentId(parentId),
-            position,
-          },
+          sceneId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
         },
+        partitions: [basePartition, scenePartition],
       });
     },
 
@@ -619,66 +1557,88 @@ export const createProjectService = ({ router, db, filePicker }) => {
       name,
       parentId = null,
       position = "last",
+      index,
       data = {},
     }) {
+      const context = await ensureTypedCommandContext();
       const nextSectionId = sectionId || nanoid();
-      await this.appendEvent({
-        type: "nodeInsert",
-        payload: {
-          target: `scenes.items.${sceneId}.sections`,
-          value: {
-            id: nextSectionId,
-            type: "section",
-            name,
-            lines: createTreeCollection(),
-            ...structuredClone(data || {}),
-          },
-          options: {
-            parent: toParentId(parentId),
-            position,
-          },
-        },
+      const scene = context.state?.scenes?.items?.[sceneId];
+      const resolvedIndex = resolveSectionIndex({
+        scene,
+        parentId,
+        position,
+        index,
       });
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = storyScenePartitionFor(context.projectId, sceneId);
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "section.create",
+        payload: {
+          sceneId,
+          sectionId: nextSectionId,
+          name,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+          data: structuredClone(data || {}),
+        },
+        partitions: [basePartition, scenePartition],
+      });
+
       return nextSectionId;
     },
 
     async renameSectionItem({ sceneId, sectionId, name }) {
-      const resolvedSceneId =
-        sceneId ||
-        findSectionLocationInRepositoryState(this.getState(), sectionId)
-          ?.sceneId;
-      if (!resolvedSceneId) return;
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const sectionLocation = findSectionLocationInRepositoryState(
+        context.state,
+        sectionId,
+      );
+      const sceneIdForPartition = sceneId || sectionLocation?.sceneId;
+      const scenePartition = sceneIdForPartition
+        ? storyScenePartitionFor(context.projectId, sceneIdForPartition)
+        : null;
 
-      await this.appendEvent({
-        type: "nodeUpdate",
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "section.rename",
         payload: {
-          target: `scenes.items.${resolvedSceneId}.sections`,
-          value: {
-            name,
-          },
-          options: {
-            id: sectionId,
-            replace: false,
-          },
+          sectionId,
+          name,
         },
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
 
     async deleteSectionItem({ sceneId, sectionId }) {
-      const resolvedSceneId =
-        sceneId ||
-        findSectionLocationInRepositoryState(this.getState(), sectionId)
-          ?.sceneId;
-      if (!resolvedSceneId) return;
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const sectionLocation = findSectionLocationInRepositoryState(
+        context.state,
+        sectionId,
+      );
+      const sceneIdForPartition = sceneId || sectionLocation?.sceneId;
+      const scenePartition = sceneIdForPartition
+        ? storyScenePartitionFor(context.projectId, sceneIdForPartition)
+        : null;
 
-      await this.appendEvent({
-        type: "nodeDelete",
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "section.delete",
         payload: {
-          target: `scenes.items.${resolvedSceneId}.sections`,
-          options: {
-            id: sectionId,
-          },
+          sectionId,
         },
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
 
@@ -688,67 +1648,96 @@ export const createProjectService = ({ router, db, filePicker }) => {
       line = {},
       afterLineId,
       parentId = null,
-      position = "last",
+      position,
+      index,
     }) {
+      const context = await ensureTypedCommandContext();
       const nextLineId = lineId || nanoid();
-      const location = findSectionLocationInRepositoryState(
-        this.getState(),
+      const sectionLocation = findSectionLocationInRepositoryState(
+        context.state,
         sectionId,
       );
-      if (!location) return nextLineId;
+      const resolvedPosition =
+        position || (afterLineId ? { after: afterLineId } : undefined);
+      const resolvedIndex = resolveLineIndex({
+        section: sectionLocation?.section,
+        parentId,
+        position: resolvedPosition || "last",
+        index,
+      });
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const scenePartition = sectionLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, sectionLocation.sceneId)
+        : null;
 
-      await this.appendEvent({
-        type: "nodeInsert",
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.insert_after",
         payload: {
-          target: `scenes.items.${location.sceneId}.sections.items.${sectionId}.lines`,
-          value: {
-            id: nextLineId,
-            ...structuredClone(line || {}),
-          },
-          options: {
-            parent: toParentId(parentId),
-            position: afterLineId ? { after: afterLineId } : position,
-          },
+          sectionId,
+          lineId: nextLineId,
+          line: structuredClone(line || {}),
+          afterLineId: afterLineId || null,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position: resolvedPosition || "last",
         },
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
 
       return nextLineId;
     },
 
     async updateLineActions({ lineId, patch, replace = false }) {
-      const location = findLineLocationInRepositoryState(
-        this.getState(),
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const lineLocation = findLineLocationInRepositoryState(
+        context.state,
         lineId,
       );
-      if (!location) return;
+      const scenePartition = lineLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, lineLocation.sceneId)
+        : null;
 
-      await this.appendEvent({
-        type: "set",
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.update_actions",
         payload: {
-          target: `scenes.items.${location.sceneId}.sections.items.${location.sectionId}.lines.items.${lineId}.actions`,
-          value: structuredClone(patch || {}),
-          options: {
-            replace: replace === true,
-          },
+          lineId,
+          patch: structuredClone(patch || {}),
+          replace: replace === true,
         },
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
 
     async deleteLineItem({ lineId }) {
-      const location = findLineLocationInRepositoryState(
-        this.getState(),
+      const context = await ensureTypedCommandContext();
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const lineLocation = findLineLocationInRepositoryState(
+        context.state,
         lineId,
       );
-      if (!location) return;
+      const scenePartition = lineLocation?.sceneId
+        ? storyScenePartitionFor(context.projectId, lineLocation.sceneId)
+        : null;
 
-      await this.appendEvent({
-        type: "nodeDelete",
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.delete",
         payload: {
-          target: `scenes.items.${location.sceneId}.sections.items.${location.sectionId}.lines`,
-          options: {
-            id: lineId,
-          },
+          lineId,
         },
+        partitions: scenePartition
+          ? [basePartition, scenePartition]
+          : [basePartition],
       });
     },
 
@@ -757,23 +1746,44 @@ export const createProjectService = ({ router, db, filePicker }) => {
       toSectionId,
       parentId = null,
       position = "last",
+      index,
     }) {
-      const sectionLocation = findSectionLocationInRepositoryState(
-        this.getState(),
+      const context = await ensureTypedCommandContext();
+      const targetSection = findSectionLocationInRepositoryState(
+        context.state,
         toSectionId,
       );
-      if (!sectionLocation) return;
+      const resolvedIndex = resolveLineIndex({
+        section: targetSection?.section,
+        parentId,
+        position,
+        index,
+        movingId: lineId,
+      });
+      const basePartition = storyBasePartitionFor(context.projectId);
+      const sourceLine = findLineLocationInRepositoryState(
+        context.state,
+        lineId,
+      );
+      const sourceScenePartition = sourceLine?.sceneId
+        ? storyScenePartitionFor(context.projectId, sourceLine.sceneId)
+        : null;
+      const targetScenePartition = targetSection?.sceneId
+        ? storyScenePartitionFor(context.projectId, targetSection.sceneId)
+        : null;
 
-      await this.appendEvent({
-        type: "nodeMove",
+      await submitTypedCommandWithContext({
+        context,
+        scope: "story",
+        type: "line.move",
         payload: {
-          target: `scenes.items.${sectionLocation.sceneId}.sections.items.${toSectionId}.lines`,
-          options: {
-            id: lineId,
-            parent: toParentId(parentId),
-            position,
-          },
+          lineId,
+          toSectionId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
         },
+        partitions: [basePartition, sourceScenePartition, targetScenePartition],
       });
     },
 
@@ -783,36 +1793,58 @@ export const createProjectService = ({ router, db, filePicker }) => {
       data,
       parentId = null,
       position = "last",
+      index,
     }) {
+      const context = await ensureTypedCommandContext();
       const nextResourceId = resourceId || nanoid();
-      await this.appendEvent({
-        type: "nodeInsert",
+      const resolvedIndex = resolveResourceIndex({
+        state: context.state,
+        resourceType,
+        parentId,
+        position,
+        index,
+      });
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        basePartition: resourcePartition,
+        type: "resource.create",
         payload: {
-          target: resourceType,
-          value: {
-            id: nextResourceId,
-            ...structuredClone(data || {}),
-          },
-          options: {
-            parent: parentId || "_root",
-            position,
-          },
+          resourceType,
+          resourceId: nextResourceId,
+          data: structuredClone(data),
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
         },
+        partitions: [],
       });
       return nextResourceId;
     },
 
     async updateResourceItem({ resourceType, resourceId, patch }) {
-      await this.appendEvent({
-        type: "nodeUpdate",
+      const context = await ensureTypedCommandContext();
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        basePartition: resourcePartition,
+        type: "resource.update",
         payload: {
-          target: resourceType,
-          value: structuredClone(patch || {}),
-          options: {
-            id: resourceId,
-            replace: false,
-          },
+          resourceType,
+          resourceId,
+          patch: structuredClone(patch),
         },
+        partitions: [],
       });
     },
 
@@ -821,29 +1853,55 @@ export const createProjectService = ({ router, db, filePicker }) => {
       resourceId,
       parentId = null,
       position = "last",
+      index,
     }) {
-      await this.appendEvent({
-        type: "nodeMove",
+      const context = await ensureTypedCommandContext();
+      const resolvedIndex = resolveResourceIndex({
+        state: context.state,
+        resourceType,
+        parentId,
+        position,
+        index,
+        movingId: resourceId,
+      });
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        basePartition: resourcePartition,
+        type: "resource.move",
         payload: {
-          target: resourceType,
-          options: {
-            id: resourceId,
-            parent: parentId || "_root",
-            position,
-          },
+          resourceType,
+          resourceId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
         },
+        partitions: [],
       });
     },
 
     async deleteResourceItem({ resourceType, resourceId }) {
-      await this.appendEvent({
-        type: "nodeDelete",
+      const context = await ensureTypedCommandContext();
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        basePartition: resourcePartition,
+        type: "resource.delete",
         payload: {
-          target: resourceType,
-          options: {
-            id: resourceId,
-          },
+          resourceType,
+          resourceId,
         },
+        partitions: [],
       });
     },
 
@@ -853,32 +1911,43 @@ export const createProjectService = ({ router, db, filePicker }) => {
       newId,
       parentId,
       position,
+      index,
       name,
     }) {
-      const state = this.getState();
-      const sourceItem = state?.[resourceType]?.items?.[sourceId];
-      if (!sourceItem) {
-        throw new Error(
-          `Cannot duplicate missing resource '${sourceId}' in '${resourceType}'`,
-        );
-      }
-      await this.appendEvent({
-        type: "nodeInsert",
+      const context = await ensureTypedCommandContext();
+      const collection = context.state?.[resourceType];
+      const sourceItem = collection?.items?.[sourceId];
+      const resolvedParentId = normalizeParentId(
+        parentId ?? sourceItem?.parentId ?? null,
+      );
+      const resolvedPosition = position || { after: sourceId };
+      const resolvedIndex = resolveResourceIndex({
+        state: context.state,
+        resourceType,
+        parentId: resolvedParentId,
+        position: resolvedPosition,
+        index,
+      });
+      const resourcePartition = resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      );
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "resources",
+        basePartition: resourcePartition,
+        type: "resource.duplicate",
         payload: {
-          target: resourceType,
-          value: {
-            ...structuredClone(sourceItem),
-            id: newId,
-            name:
-              typeof name === "string" && name.length > 0
-                ? name
-                : `${sourceItem.name || "Resource"} Copy`,
-          },
-          options: {
-            parent: parentId || sourceItem.parentId || "_root",
-            position: position || { after: sourceId },
-          },
+          resourceType,
+          sourceId,
+          newId,
+          parentId: resolvedParentId,
+          index: resolvedIndex,
+          position: resolvedPosition,
+          name: typeof name === "string" && name.length > 0 ? name : undefined,
         },
+        partitions: [],
       });
     },
 
@@ -891,65 +1960,71 @@ export const createProjectService = ({ router, db, filePicker }) => {
       position = "last",
       data = {},
     }) {
+      const context = await ensureTypedCommandContext();
       const nextLayoutId = layoutId || nanoid();
-      await this.appendEvent({
-        type: "nodeInsert",
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.create",
         payload: {
-          target: "layouts",
-          value: {
-            id: nextLayoutId,
-            type: "layout",
-            name,
-            layoutType,
-            elements: structuredClone(elements || createTreeCollection()),
-            ...structuredClone(data || {}),
-          },
-          options: {
-            parent: parentId || "_root",
-            position,
-          },
+          layoutId: nextLayoutId,
+          name,
+          layoutType,
+          elements: structuredClone(elements || createTreeCollection()),
+          parentId: normalizeParentId(parentId),
+          position,
+          data: structuredClone(data || {}),
         },
+        partitions: [],
       });
+
       return nextLayoutId;
     },
 
     async renameLayoutItem({ layoutId, name }) {
-      await this.appendEvent({
-        type: "nodeUpdate",
+      const context = await ensureTypedCommandContext();
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.rename",
         payload: {
-          target: "layouts",
-          value: { name },
-          options: {
-            id: layoutId,
-            replace: false,
-          },
+          layoutId,
+          name,
         },
+        partitions: [],
       });
     },
 
     async deleteLayoutItem({ layoutId }) {
-      await this.appendEvent({
-        type: "nodeDelete",
+      const context = await ensureTypedCommandContext();
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.delete",
         payload: {
-          target: "layouts",
-          options: {
-            id: layoutId,
-          },
+          layoutId,
         },
+        partitions: [],
       });
     },
 
     async updateLayoutElement({ layoutId, elementId, patch, replace = true }) {
-      await this.appendEvent({
-        type: "nodeUpdate",
+      const context = await ensureTypedCommandContext();
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.update",
         payload: {
-          target: `layouts.items.${layoutId}.elements`,
-          value: structuredClone(patch || {}),
-          options: {
-            id: elementId,
-            replace: replace === true,
-          },
+          layoutId,
+          elementId,
+          patch: structuredClone(patch || {}),
+          replace: replace === true,
         },
+        partitions: [],
       });
     },
 
@@ -959,22 +2034,33 @@ export const createProjectService = ({ router, db, filePicker }) => {
       element,
       parentId = null,
       position = "last",
+      index,
     }) {
+      const context = await ensureTypedCommandContext();
       const nextElementId = elementId || nanoid();
-      await this.appendEvent({
-        type: "nodeInsert",
-        payload: {
-          target: `layouts.items.${layoutId}.elements`,
-          value: {
-            id: nextElementId,
-            ...structuredClone(element || {}),
-          },
-          options: {
-            parent: toParentId(parentId),
-            position,
-          },
-        },
+      const layout = context.state?.layouts?.items?.[layoutId];
+      const resolvedIndex = resolveLayoutElementIndex({
+        layout,
+        parentId,
+        position,
+        index,
       });
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.create",
+        payload: {
+          layoutId,
+          elementId: nextElementId,
+          element: structuredClone(element || {}),
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
+        },
+        partitions: [],
+      });
+
       return nextElementId;
     },
 
@@ -983,29 +2069,45 @@ export const createProjectService = ({ router, db, filePicker }) => {
       elementId,
       parentId = null,
       position = "last",
+      index,
     }) {
-      await this.appendEvent({
-        type: "nodeMove",
+      const context = await ensureTypedCommandContext();
+      const layout = context.state?.layouts?.items?.[layoutId];
+      const resolvedIndex = resolveLayoutElementIndex({
+        layout,
+        parentId,
+        position,
+        index,
+        movingId: elementId,
+      });
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.move",
         payload: {
-          target: `layouts.items.${layoutId}.elements`,
-          options: {
-            id: elementId,
-            parent: toParentId(parentId),
-            position,
-          },
+          layoutId,
+          elementId,
+          parentId: normalizeParentId(parentId),
+          index: resolvedIndex,
+          position,
         },
+        partitions: [],
       });
     },
 
     async deleteLayoutElement({ layoutId, elementId }) {
-      await this.appendEvent({
-        type: "nodeDelete",
+      const context = await ensureTypedCommandContext();
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "layouts",
+        type: "layout.element.delete",
         payload: {
-          target: `layouts.items.${layoutId}.elements`,
-          options: {
-            id: elementId,
-          },
+          layoutId,
+          elementId,
         },
+        partitions: [],
       });
     },
 
@@ -1018,58 +2120,57 @@ export const createProjectService = ({ router, db, filePicker }) => {
       parentId = null,
       position = "last",
     }) {
+      const context = await ensureTypedCommandContext();
       const nextVariableId = variableId || nanoid();
-      await this.appendEvent({
-        type: "nodeInsert",
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "variable.create",
         payload: {
-          target: "variables",
-          value: {
-            id: nextVariableId,
-            itemType: "variable",
-            name,
+          variableId: nextVariableId,
+          name,
+          variableType: type,
+          initialValue: defaultValue,
+          parentId: normalizeParentId(parentId),
+          position,
+          data: {
             scope,
-            type,
-            default: defaultValue,
-          },
-          options: {
-            parent: parentId || "_root",
-            position,
           },
         },
+        partitions: [],
       });
+
       return nextVariableId;
     },
 
     async updateVariableItem({ variableId, patch }) {
-      await this.appendEvent({
-        type: "nodeUpdate",
+      const context = await ensureTypedCommandContext();
+
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "variable.update",
         payload: {
-          target: "variables",
-          value: structuredClone(patch || {}),
-          options: {
-            id: variableId,
-            replace: false,
-          },
+          variableId,
+          patch: structuredClone(patch || {}),
         },
+        partitions: [],
       });
     },
 
     async deleteVariableItem({ variableId }) {
-      await this.appendEvent({
-        type: "nodeDelete",
-        payload: {
-          target: "variables",
-          options: {
-            id: variableId,
-          },
-        },
-      });
-    },
+      const context = await ensureTypedCommandContext();
 
-    // Event sourcing - automatically uses current project
-    async appendEvent(event) {
-      const repository = await getCurrentRepository();
-      await repository.addEvent(event);
+      await submitTypedCommandWithContext({
+        context,
+        scope: "settings",
+        type: "variable.delete",
+        payload: {
+          variableId,
+        },
+        partitions: [],
+      });
     },
 
     // Sync state access - requires ensureRepository() to be called first
@@ -1140,15 +2241,22 @@ export const createProjectService = ({ router, db, filePicker }) => {
         project: { name, description },
       };
 
-      // Create store and initialize repository with the full data
-      const store = await createInsiemeTauriStoreAdapter(projectPath);
-      const repository = createRepository({
-        originStore: store,
-        snapshotInterval: 500, // Auto-save snapshot every 500 events
+      const bootstrapDomainState = projectRepositoryStateToDomainState({
+        repositoryState: initData,
+        projectId: projectPath,
       });
-      await repository.init({ initialState: initData });
 
-      await store.app.set("creator_version", "1");
+      // Create store and initialize typed bootstrap state
+      const store = await createInsiemeTauriStoreAdapter(projectPath);
+      await store.appendTypedEvent({
+        type: "typedSnapshot",
+        payload: {
+          projectId: projectPath,
+          state: bootstrapDomainState,
+        },
+      });
+
+      await store.app.set("creator_version", "2");
     },
 
     async createCollabSession({
