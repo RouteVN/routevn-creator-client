@@ -112,7 +112,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render, appService } = deps;
   await projectService.ensureRepository();
   const { sounds } = projectService.getState();
-  store.setItems({ soundData: sounds || { order: [], items: {} } });
+  store.setItems({ soundData: sounds || { tree: [], items: {} } });
 
   // Initialize audio player positions from userConfig
   const defaultLeft = parseInt(
@@ -130,7 +130,7 @@ export const handleAfterMount = async (deps) => {
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { sounds } = projectService.getState();
-  const soundData = sounds || { order: [], items: {} };
+  const soundData = sounds || { tree: [], items: {} };
 
   store.setItems({ soundData: soundData });
   const selectedItemId = store.selectSelectedItemId();

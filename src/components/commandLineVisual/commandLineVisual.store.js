@@ -2,10 +2,10 @@ import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 export const createInitialState = () => ({
   mode: "current",
-  images: { items: {}, order: [] },
-  videos: { items: {}, order: [] },
-  layouts: { items: {}, order: [] },
-  transforms: { order: [], items: {} },
+  images: { items: {}, tree: [] },
+  videos: { items: {}, tree: [] },
+  layouts: { items: {}, tree: [] },
+  transforms: { tree: [], items: {} },
   /**
    * Array of raw visual objects with the following structure:
    * {

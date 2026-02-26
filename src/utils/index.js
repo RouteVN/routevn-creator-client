@@ -848,7 +848,7 @@ export const layoutHierarchyStructureToRenderState = (
 /**
  * Gets variable options from variablesData for use in dropdowns.
  *
- * @param {Object} variablesData - Variables data from repository { items: {}, order: [] }
+ * @param {Object} variablesData - Variables data from repository { items: {}, tree: [] }
  * @param {Object} options - Filter options
  * @param {string} options.type - Filter by variable type ('number', 'boolean', 'string', 'object')
  * @param {boolean} options.showType - Show type in label (e.g., "volume (number)")

@@ -5,7 +5,7 @@ export const handleBeforeMount = (deps) => {
     values,
   });
   store.setVariablesData({
-    variablesData: props.variablesData || { items: {}, order: [] },
+    variablesData: props.variablesData || { items: {}, tree: [] },
   });
 };
 
@@ -16,7 +16,7 @@ export const handleAfterMount = async (deps) => {
 
   // Store raw typography data
   store.setTypographyData({
-    typographyData: typography || { items: {}, order: [] },
+    typographyData: typography || { items: {}, tree: [] },
   });
   render();
 };
@@ -30,7 +30,7 @@ export const handleOnUpdate = (deps, payload) => {
       values,
     });
     store.setVariablesData({
-      variablesData: newProps.variablesData || { items: {}, order: [] },
+      variablesData: newProps.variablesData || { items: {}, tree: [] },
     });
     render();
   }

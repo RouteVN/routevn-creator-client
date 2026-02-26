@@ -96,7 +96,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { variables } = projectService.getState();
-  store.setItems({ variablesData: variables || { order: [], items: {} } });
+  store.setItems({ variablesData: variables || { tree: [], items: {} } });
   render();
 };
 
@@ -104,7 +104,7 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { variables } = projectService.getState();
 
-  const variableData = variables || { order: [], items: {} };
+  const variableData = variables || { tree: [], items: {} };
 
   store.setItems({ variablesData: variableData });
   const selectedItemId = store.selectSelectedItemId();

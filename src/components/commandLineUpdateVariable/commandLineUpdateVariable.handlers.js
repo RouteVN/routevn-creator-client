@@ -5,7 +5,7 @@ export const handleAfterMount = async (deps) => {
   const repository = await projectService.getRepository();
   const { variables } = repository.getState();
 
-  store.setVariablesData({ variables: variables || { items: {}, order: [] } });
+  store.setVariablesData({ variables: variables || { items: {}, tree: [] } });
 
   const updateVariable = props?.updateVariable;
 

@@ -18,7 +18,7 @@ const tabs = [
 // Form structure will be created dynamically in selectViewData
 const createEmptyCollection = () => ({
   items: {},
-  order: [],
+  tree: [],
 });
 
 const normalizeResourceCollection = (collection) => {
@@ -27,27 +27,9 @@ const normalizeResourceCollection = (collection) => {
       ? collection.items
       : {};
   const items = { ...sourceItems };
-  const itemIds = Object.keys(items);
-  const seen = new Set();
-  const order = [];
+  const tree = Array.isArray(collection?.tree) ? collection.tree : [];
 
-  for (const entry of Array.isArray(collection?.order)
-    ? collection.order
-    : []) {
-    if (typeof entry !== "string" || entry.length === 0) continue;
-    if (!Object.prototype.hasOwnProperty.call(items, entry)) continue;
-    if (seen.has(entry)) continue;
-    seen.add(entry);
-    order.push(entry);
-  }
-
-  for (const id of itemIds) {
-    if (seen.has(id)) continue;
-    seen.add(id);
-    order.push(id);
-  }
-
-  return { items, order };
+  return { items, tree };
 };
 
 export const createInitialState = () => ({

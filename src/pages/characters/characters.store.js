@@ -17,7 +17,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  charactersData: { order: [], items: {} },
+  charactersData: { tree: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
   collapsedIds: [],
@@ -128,7 +128,7 @@ export const selectAvatarFileId = ({ state }) => state.avatarFileId;
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
-  // state.charactersData contains the full structure with order and items
+  // state.charactersData contains the full structure with tree and items
   const flatItems = toFlatItems(state.charactersData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };

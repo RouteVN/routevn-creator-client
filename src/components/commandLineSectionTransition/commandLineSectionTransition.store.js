@@ -45,7 +45,7 @@ const form = {
 export const createInitialState = () => ({
   mode: "current",
   initiated: false,
-  scenes: { items: {}, order: [] },
+  scenes: { items: {}, tree: [] },
   formValues: {},
 });
 

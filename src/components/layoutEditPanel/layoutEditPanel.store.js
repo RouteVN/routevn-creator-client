@@ -550,8 +550,8 @@ export const createInitialState = () => {
       form: undefined,
       context: {},
     },
-    typographyData: { order: [], items: {} },
-    variablesData: { order: [], items: {} },
+    typographyData: { tree: [], items: {} },
+    variablesData: { tree: [], items: {} },
     values: {
       x: 0,
       y: 0,

@@ -55,7 +55,7 @@ export const getFirstTypographyId = (typography = {}) => {
   const items = typography.items || {};
   const orderedSubhierarchyIds = [];
 
-  for (const node of typography.order || []) {
+  for (const node of typography.tree || []) {
     collectSubhierarchyIds(node, orderedSubhierarchyIds);
   }
 
@@ -97,7 +97,7 @@ export const getTypographyRemovalCount = (typography = {}, itemId) => {
     return 0;
   }
 
-  const subhierarchyIds = findSubhierarchyIds(typography.order || [], itemId);
+  const subhierarchyIds = findSubhierarchyIds(typography.tree || [], itemId);
   if (subhierarchyIds.length === 0) {
     return 0;
   }

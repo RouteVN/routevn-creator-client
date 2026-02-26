@@ -5,10 +5,10 @@ export const handleAfterMount = async (deps) => {
   await projectService.ensureRepository();
   const { characters, transforms } = projectService.getState();
   store.setItems({
-    items: characters || { order: [], items: {} },
+    items: characters || { tree: [], items: {} },
   });
   store.setTransforms({
-    transforms: transforms || { order: [], items: {} },
+    transforms: transforms || { tree: [], items: {} },
   });
 
   // Use presentationState if available, otherwise fall back to character prop

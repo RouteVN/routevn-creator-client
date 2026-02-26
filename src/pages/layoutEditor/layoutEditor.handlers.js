@@ -358,15 +358,15 @@ export const handleAfterMount = async (deps) => {
     repository.getState();
   const layout = layoutId ? layouts.items?.[layoutId] : null;
   store.setLayout({ id: layoutId, layout });
-  store.setItems({ layoutData: layout?.elements || { items: {}, order: [] } });
+  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images });
   store.setTypographyData({
-    typographyData: typography || { items: {}, order: [] },
+    typographyData: typography || { items: {}, tree: [] },
   });
-  store.setColorsData({ colorsData: colors || { items: {}, order: [] } });
-  store.setFontsData({ fontsData: fonts || { items: {}, order: [] } });
+  store.setColorsData({ colorsData: colors || { items: {}, tree: [] } });
+  store.setFontsData({ fontsData: fonts || { items: {}, tree: [] } });
   store.setVariablesData({
-    variablesData: variables || { items: {}, order: [] },
+    variablesData: variables || { items: {}, tree: [] },
   });
 
   const { canvas } = refs;
@@ -408,7 +408,7 @@ export const handleDataChanged = async (deps) => {
   const repository = await projectService.getRepository();
   const { layouts } = repository.getState();
   const layout = layouts.items[layoutId];
-  store.setItems({ layoutData: layout?.elements || { items: {}, order: [] } });
+  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   render();
   await renderLayoutPreview(deps);
 };
@@ -562,7 +562,7 @@ async function handleDebouncedUpdate(deps, payload) {
   const { layouts, images } = projectService.getState();
   const layout = layouts.items[layoutId];
 
-  store.setItems({ layoutData: layout?.elements || { items: {}, order: [] } });
+  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images });
 }
 

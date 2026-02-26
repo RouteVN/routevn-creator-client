@@ -2,7 +2,7 @@ import { toFlatItems } from "#domain-structure";
 
 const createEmptyCollection = () => ({
   items: {},
-  order: [],
+  tree: [],
 });
 
 const getResourceCollectionsFromDomainState = (domainState) => ({

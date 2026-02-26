@@ -74,7 +74,7 @@ export const handleDragDropFileSelected = async (deps, payload) => {
       layoutType: "normal",
       elements: {
         items: {},
-        order: [],
+        tree: [],
       },
       parentId: id,
       position: "last",
@@ -180,7 +180,7 @@ const createLayoutTemplate = (layoutType) => {
           },
         },
       },
-      order: [
+      tree: [
         {
           id: containerId,
           children: [
@@ -295,7 +295,7 @@ const createLayoutTemplate = (layoutType) => {
           },
         },
       },
-      order: [
+      tree: [
         {
           id: nvlContainerId,
           children: [
@@ -361,7 +361,7 @@ const createLayoutTemplate = (layoutType) => {
           },
         },
       },
-      order: [
+      tree: [
         {
           id: rootId,
           children: [
@@ -397,7 +397,7 @@ const createLayoutTemplate = (layoutType) => {
           y: 0,
         },
       },
-      order: [
+      tree: [
         {
           id: spriteId,
         },
@@ -407,7 +407,7 @@ const createLayoutTemplate = (layoutType) => {
 
   return {
     items: {},
-    order: [],
+    tree: [],
   };
 };
 

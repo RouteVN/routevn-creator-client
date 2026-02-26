@@ -21,7 +21,7 @@ const form = {
 export const createInitialState = () => ({
   mode: "current",
   initiated: false,
-  layouts: { items: {}, order: [] },
+  layouts: { items: {}, tree: [] },
   formValues: {},
 });
 

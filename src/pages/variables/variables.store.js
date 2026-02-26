@@ -25,7 +25,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  variablesData: { order: [], items: {} },
+  variablesData: { tree: [], items: {} },
   selectedItemId: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },

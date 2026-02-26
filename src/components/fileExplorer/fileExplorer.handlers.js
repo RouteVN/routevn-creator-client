@@ -102,7 +102,7 @@ const applyCharacterSpritesPatch = async ({
   }
 
   const spritesState = structuredClone(
-    character.sprites || { items: {}, order: [] },
+    character.sprites || { items: {}, tree: [] },
   );
   const nextSprites = patchFactory(spritesState);
 
@@ -638,7 +638,7 @@ export const handleFileAction = async (deps, payload) => {
     }
 
     const duplicateId = nanoid();
-    const location = findNodeLocation(targetData?.order || [], itemId);
+    const location = findNodeLocation(targetData?.tree || [], itemId);
     const duplicateName =
       typeof currentItem.name === "string" && currentItem.name.length > 0
         ? `${currentItem.name} Copy`
@@ -683,7 +683,7 @@ export const handleFileAction = async (deps, payload) => {
         layoutId: duplicateId,
         name: duplicateName,
         layoutType: layoutType || "normal",
-        elements: elements || { items: {}, order: [] },
+        elements: elements || { items: {}, tree: [] },
         parentId: location?.parentId || null,
         position: { after: itemId },
         data: layoutData,

@@ -37,20 +37,14 @@ const loadFont = async (fontName, fontUrl) => {
 };
 
 const createTreeCollection = () => {
-  const tree = [];
   return {
     items: {},
-    tree,
-    order: tree,
+    tree: [],
   };
 };
 
 const getHierarchyNodes = (collection) =>
-  Array.isArray(collection?.tree)
-    ? collection.tree
-    : Array.isArray(collection?.order)
-      ? collection.order
-      : [];
+  Array.isArray(collection?.tree) ? collection.tree : [];
 
 /**
  * Default empty project data structure
@@ -293,7 +287,6 @@ const projectDomainResourceCollectionToLegacy = (domainCollection) => {
   return {
     items: projectedItems,
     tree,
-    order: tree,
   };
 };
 
@@ -365,7 +358,6 @@ const projectDomainLayoutElementsToLegacy = ({
   return {
     items: projectedItems,
     tree: order,
-    order,
   };
 };
 
@@ -400,7 +392,6 @@ const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
   return {
     items: projectedItems,
     tree,
-    order: tree,
   };
 };
 
@@ -448,7 +439,6 @@ const projectDomainVariablesToLegacy = ({ domainState }) => {
   return {
     items: projectedItems,
     tree,
-    order: tree,
   };
 };
 
@@ -522,7 +512,6 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
           tree: buildLegacyNodeOrder(lineOrder),
         },
       };
-      sectionItems[sectionId].lines.order = sectionItems[sectionId].lines.tree;
     }
 
     scenesItems[sceneId] = {
@@ -535,7 +524,6 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
         tree: buildLegacyNodeOrder(sectionOrder),
       },
     };
-    scenesItems[sceneId].sections.order = scenesItems[sceneId].sections.tree;
   }
 
   return {

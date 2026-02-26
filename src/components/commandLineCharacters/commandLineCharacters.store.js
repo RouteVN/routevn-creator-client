@@ -2,8 +2,8 @@ import { toFlatGroups, toFlatItems } from "#domain-structure";
 
 export const createInitialState = () => ({
   mode: "current",
-  items: { items: {}, order: [] },
-  transforms: { order: [], items: {} },
+  items: { items: {}, tree: [] },
+  transforms: { tree: [], items: {} },
   /**
    * Array of raw character objects with the following structure (same as props):
    * {

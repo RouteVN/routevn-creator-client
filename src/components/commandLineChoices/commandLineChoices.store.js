@@ -60,7 +60,7 @@ export const createInitialState = () => ({
   },
   scenes: {
     items: {},
-    order: [],
+    tree: [],
   },
 });
 

@@ -104,7 +104,9 @@ const ensureHierarchyCollection = (targetData) => {
       ? targetData.order
       : [];
   targetData.tree = hierarchyNodes;
-  targetData.order = hierarchyNodes;
+  if ("order" in targetData) {
+    delete targetData.order;
+  }
 
   if (!targetData.items || typeof targetData.items !== "object") {
     targetData.items = {};
@@ -460,10 +462,10 @@ export const nodeInsert = (state, payload) => {
 
   if (parent === "_root") {
     // Add to root level
-    insertAtPosition(targetData.order, newNode, position);
+    insertAtPosition(targetData.tree, newNode, position);
   } else {
     // Add to specific parent
-    const parentInfo = findNodeInHierarchy(targetData.order, parent);
+    const parentInfo = findNodeInHierarchy(targetData.tree, parent);
     if (parentInfo && parentInfo.node) {
       if (!Array.isArray(parentInfo.node.children)) {
         parentInfo.node.children = [];
@@ -505,10 +507,10 @@ export const nodeDelete = (state, payload) => {
   }
 
   // Collect all descendant IDs before removing from order
-  const descendantIds = collectDescendantIds(targetData.order, id);
+  const descendantIds = collectDescendantIds(targetData.tree, id);
 
   // Remove from order
-  removeNodeFromHierarchy(targetData.order, id);
+  removeNodeFromHierarchy(targetData.tree, id);
 
   // Remove the target node and all its descendants from items
   delete targetData.items[id];
@@ -662,11 +664,11 @@ export const nodeMove = (state, payload) => {
   }
 
   // Find and remove node from current position
-  const nodeInfo = findNodeInHierarchy(targetData.order, id);
+  const nodeInfo = findNodeInHierarchy(targetData.tree, id);
   if (!nodeInfo) return state;
 
   const nodeToMove = structuredClone(nodeInfo.node);
-  removeNodeFromHierarchy(targetData.order, id);
+  removeNodeFromHierarchy(targetData.tree, id);
 
   // Helper function to insert node at the specified position
   const insertAtPosition = (array, node, position) => {
@@ -698,9 +700,9 @@ export const nodeMove = (state, payload) => {
 
   // Insert at new position
   if (parent === "_root") {
-    insertAtPosition(targetData.order, nodeToMove, position);
+    insertAtPosition(targetData.tree, nodeToMove, position);
   } else {
-    const parentInfo = findNodeInHierarchy(targetData.order, parent);
+    const parentInfo = findNodeInHierarchy(targetData.tree, parent);
     if (parentInfo && parentInfo.node) {
       if (!Array.isArray(parentInfo.node.children)) {
         parentInfo.node.children = [];

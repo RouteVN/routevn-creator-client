@@ -151,7 +151,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { transforms } = projectService.getState();
-  store.setItems({ transformData: transforms || { order: [], items: {} } });
+  store.setItems({ transformData: transforms || { tree: [], items: {} } });
   render();
 };
 
@@ -159,7 +159,7 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { transforms } = projectService.getState();
 
-  const transformData = transforms || { order: [], items: {} };
+  const transformData = transforms || { tree: [], items: {} };
 
   store.setItems({ transformData: transformData });
   const selectedItemId = store.selectSelectedItemId();

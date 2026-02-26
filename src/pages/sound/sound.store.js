@@ -33,7 +33,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  soundData: { order: [], items: {} },
+  soundData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
     fileId: {

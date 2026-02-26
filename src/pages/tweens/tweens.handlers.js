@@ -87,7 +87,7 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, refs } = deps;
   await projectService.ensureRepository();
   const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens || { order: [], items: {} } });
+  store.setItems({ tweensData: tweens || { tree: [], items: {} } });
 
   // Initialize graphicsService if canvas is present
   const { canvas } = refs;
@@ -110,7 +110,7 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { tweens } = projectService.getState();
 
-  const tweenData = tweens || { order: [], items: {} };
+  const tweenData = tweens || { tree: [], items: {} };
 
   store.setItems({ tweensData: tweenData });
   const selectedItemId = store.selectSelectedItemId();

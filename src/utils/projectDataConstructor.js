@@ -90,9 +90,9 @@ export function constructProjectData(state, options = {}) {
   function constructLayouts(
     repositoryLayouts = {},
     images = {},
-    typography = { items: {}, order: [] },
-    colors = { items: {}, order: [] },
-    fonts = { items: {}, order: [] },
+    typography = { items: {}, tree: [] },
+    colors = { items: {}, tree: [] },
+    fonts = { items: {}, tree: [] },
   ) {
     const processedLayouts = {};
 
@@ -145,9 +145,9 @@ export function constructProjectData(state, options = {}) {
     const characters = repositoryState.characters?.items || {};
     const transforms = repositoryState.transforms?.items || {};
     const layouts = repositoryState.layouts?.items || {};
-    const typography = repositoryState.typography || { items: {}, order: [] };
-    const colors = repositoryState.colors || { items: {}, order: [] };
-    const fonts = repositoryState.fonts || { items: {}, order: [] };
+    const typography = repositoryState.typography || { items: {}, tree: [] };
+    const colors = repositoryState.colors || { items: {}, tree: [] };
+    const fonts = repositoryState.fonts || { items: {}, tree: [] };
     // Filter out folder items - only include actual variables
     const variables = Object.fromEntries(
       Object.entries(repositoryState.variables?.items || {}).filter(
@@ -187,8 +187,8 @@ export function constructProjectData(state, options = {}) {
 
       // Get first section ID from the sections
       let firstSectionId = null;
-      if (scene.sections?.order && scene.sections.order.length > 0) {
-        const firstSection = scene.sections.order[0];
+      if (scene.sections?.tree && scene.sections.tree.length > 0) {
+        const firstSection = scene.sections.tree[0];
         firstSectionId =
           typeof firstSection === "string" ? firstSection : firstSection.id;
       }
@@ -208,10 +208,10 @@ export function constructProjectData(state, options = {}) {
             lines: [],
           };
 
-          // Convert lines from order structure to flat array
-          if (section.lines?.order && section.lines?.items) {
-            // Use order order to maintain line sequence
-            section.lines.order.forEach((lineNode) => {
+          // Convert lines from tree structure to flat array
+          if (section.lines?.tree && section.lines?.items) {
+            // Use tree sequence to maintain line flow
+            section.lines.tree.forEach((lineNode) => {
               const lineId =
                 typeof lineNode === "string" ? lineNode : lineNode.id;
               const line = section.lines.items[lineId];

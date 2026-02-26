@@ -255,7 +255,7 @@ export const handleCharacterCreated = async (deps, payload) => {
       name: name,
       description: description,
       sprites: {
-        order: [
+        tree: [
           {
             id: defaultSpritesFolderId,
             children: [],

@@ -29,7 +29,7 @@ const form = {
 
 export const createInitialState = () => ({
   mode: "current",
-  items: { items: {}, order: [] },
+  items: { items: {}, tree: [] },
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
   bgm: {

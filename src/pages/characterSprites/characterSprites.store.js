@@ -19,7 +19,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  spritesData: { order: [], items: {} },
+  spritesData: { tree: [], items: {} },
   selectedItemId: undefined,
   characterId: undefined,
   characterName: undefined,

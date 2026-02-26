@@ -31,7 +31,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  imagesData: { order: [], items: {} },
+  imagesData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
     fileId: {
@@ -60,7 +60,7 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
-  // state.imagesData contains the full structure with order and items
+  // state.imagesData contains the full structure with tree and items
   const flatItems = toFlatItems(state.imagesData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };

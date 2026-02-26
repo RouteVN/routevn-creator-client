@@ -146,7 +146,7 @@ export const selectActionsData = ({ props, state }) => {
   const videos = repositoryStateData.videos?.items || {};
   const sounds = repositoryStateData.sounds?.items || {};
   const scenes = repositoryStateData.scenes || {};
-  // Layouts: need full order structure for toFlatItems() to search through nested folders
+  // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsHierarchy = repositoryStateData.layouts || {};
   const layoutsItems = layoutsHierarchy.items || {};
   const sceneItems = scenes.items || {};

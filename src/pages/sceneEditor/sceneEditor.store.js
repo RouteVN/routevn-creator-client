@@ -22,9 +22,9 @@ const appendMissingIds = (orderedIds, allIds) => {
   return result;
 };
 
-const getOrderedIdsFromHierarchy = (order, fallbackIds) => {
-  const orderedFromHierarchy = Array.isArray(order)
-    ? order
+const getOrderedIdsFromHierarchy = (tree, fallbackIds) => {
+  const orderedFromHierarchy = Array.isArray(tree)
+    ? tree
         .map((node) =>
           typeof node?.id === "string" && node.id.length > 0 ? node.id : null,
         )
@@ -180,10 +180,10 @@ export const selectLayouts = ({ state }) => {
   const images = state.repositoryState.images?.items || {};
   const typography = state.repositoryState.typography || {
     items: {},
-    order: [],
+    tree: [],
   };
-  const colors = state.repositoryState.colors || { items: {}, order: [] };
-  const fonts = state.repositoryState.fonts || { items: {}, order: [] };
+  const colors = state.repositoryState.colors || { items: {}, tree: [] };
+  const fonts = state.repositoryState.fonts || { items: {}, tree: [] };
   const processedLayouts = {};
 
   Object.keys(layouts).forEach((layoutId) => {
@@ -254,7 +254,7 @@ const buildSceneFromLegacyState = ({ state }) => {
 
   const sectionItems = legacyScene.sections?.items || {};
   const orderedSectionIds = getOrderedIdsFromHierarchy(
-    legacyScene.sections?.order,
+    legacyScene.sections?.tree,
     Object.keys(sectionItems),
   );
 
@@ -267,7 +267,7 @@ const buildSceneFromLegacyState = ({ state }) => {
     .map((section) => {
       const lineItems = section.lines?.items || {};
       const orderedLineIds = getOrderedIdsFromHierarchy(
-        section.lines?.order,
+        section.lines?.tree,
         Object.keys(lineItems),
       );
 

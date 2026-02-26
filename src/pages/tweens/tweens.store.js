@@ -361,7 +361,7 @@ const editTweenForm = {
 };
 
 export const createInitialState = () => ({
-  tweensData: { order: [], items: {} },
+  tweensData: { tree: [], items: {} },
   selectedItemId: null,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },

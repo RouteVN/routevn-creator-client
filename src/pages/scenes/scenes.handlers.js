@@ -45,7 +45,7 @@ const getTransitionsFromLayout = (layout) => {
  *             }
  *           },
  *         },
- *         "order": []
+ *         "tree": []
  *       }
  *     }
  *   }
@@ -239,7 +239,7 @@ export const handleAfterMount = async (deps) => {
   const legacyState = projectService.getState();
   const domainState = projectService.getDomainState();
   const { scenes, layouts } = legacyState;
-  const scenesData = scenes || { order: [], items: {} };
+  const scenesData = scenes || { tree: [], items: {} };
 
   // Set the scenes data
   store.setItems({ scenesData: scenesData });
@@ -285,7 +285,7 @@ export const handleDataChanged = async (deps) => {
   const legacyState = projectService.getState();
   const domainState = projectService.getDomainState();
   const { scenes, layouts } = legacyState;
-  const sceneData = scenes || { order: [], items: {} };
+  const sceneData = scenes || { tree: [], items: {} };
 
   // Get current whiteboard items to preserve positions during updates
   const currentWhiteboardItems = store.selectWhiteboardItems() || [];

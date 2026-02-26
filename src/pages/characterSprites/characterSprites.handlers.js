@@ -16,7 +16,7 @@ const applyCharacterSpritesPatch = async ({
   if (!character) return;
 
   const working = {
-    sprites: structuredClone(character.sprites || { items: {}, order: [] }),
+    sprites: structuredClone(character.sprites || { items: {}, tree: [] }),
   };
   const next = operation(working) || working;
   const nextSprites = structuredClone(next.sprites || working.sprites);
@@ -368,7 +368,7 @@ export const handleFormChange = async (deps, payload) => {
   const { characters } = projectService.getState();
   const character = characters.items[characterId];
   store.setItems({
-    spritesData: character?.sprites || { items: {}, order: [] },
+    spritesData: character?.sprites || { items: {}, tree: [] },
   });
   const selectedItem = store.selectSelectedItem();
   const detailValues = createDetailFormValues(
@@ -448,7 +448,7 @@ export const handleFormExtraEvent = async (deps) => {
     },
   });
   store.setItems({
-    spritesData: character?.sprites || { items: {}, order: [] },
+    spritesData: character?.sprites || { items: {}, tree: [] },
   });
   const updatedSelectedItem = store.selectSelectedItem();
   const detailValues = createDetailFormValues(
@@ -509,7 +509,7 @@ export const handleItemDelete = async (deps, payload) => {
   const { characters } = projectService.getState();
   const character = characters.items[characterId];
   store.setItems({
-    spritesData: character?.sprites || { items: {}, order: [] },
+    spritesData: character?.sprites || { items: {}, tree: [] },
   });
   render();
 };

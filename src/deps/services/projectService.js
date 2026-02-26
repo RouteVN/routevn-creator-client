@@ -36,11 +36,9 @@ const loadFont = async (fontName, fontUrl) => {
 };
 
 const createTreeCollection = () => {
-  const tree = [];
   return {
     items: {},
-    tree,
-    order: tree,
+    tree: [],
   };
 };
 

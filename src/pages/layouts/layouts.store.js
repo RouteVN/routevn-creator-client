@@ -52,7 +52,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  layoutsData: { order: [], items: {} },
+  layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
   fieldResources: {},

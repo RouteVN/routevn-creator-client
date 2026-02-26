@@ -120,9 +120,9 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  typographyData: { order: [], items: {} },
-  colorsData: { order: [], items: {} },
-  fontsData: { order: [], items: {} },
+  typographyData: { tree: [], items: {} },
+  colorsData: { tree: [], items: {} },
+  fontsData: { tree: [], items: {} },
   selectedItemId: undefined,
   searchQuery: "",
   context: {

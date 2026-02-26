@@ -28,8 +28,8 @@ const toFiniteNumberOr = (value, fallback) =>
   Number.isFinite(value) ? value : fallback;
 
 export const createInitialState = () => ({
-  scenesData: { order: [], items: {} },
-  layoutsData: { order: [], items: {} },
+  scenesData: { tree: [], items: {} },
+  layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   whiteboardItems: [],
   isWaitingForTransform: false,
@@ -60,7 +60,7 @@ export const setItems = ({ state }, { scenesData } = {}) => {
 };
 
 export const setLayouts = ({ state }, { layoutsData } = {}) => {
-  state.layoutsData = layoutsData || { order: [], items: {} };
+  state.layoutsData = layoutsData || { tree: [], items: {} };
 };
 
 export const showPreviewSceneId = ({ state }, { sceneId } = {}) => {
@@ -206,7 +206,7 @@ export const selectViewData = ({ state }, payload) => {
     if (scenes && Object.keys(scenes.items || {}).length > 0) {
       // Initialize the scenes data
       state.scenesData = scenes;
-      state.layoutsData = repositoryLayouts || { order: [], items: {} };
+      state.layoutsData = repositoryLayouts || { tree: [], items: {} };
 
       // Transform only scene items (not folders) into whiteboard items
       const initialSceneId = story?.initialSceneId;
@@ -234,7 +234,7 @@ export const selectViewData = ({ state }, payload) => {
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
-  const selectedSceneFirstSectionId = selectedItem?.sections?.order?.[0]?.id;
+  const selectedSceneFirstSectionId = selectedItem?.sections?.tree?.[0]?.id;
   const selectedSceneInitialSectionId =
     selectedItem?.initialSectionId || selectedSceneFirstSectionId;
   const menuSceneId = repositoryState?.story?.initialSceneId;
@@ -247,7 +247,7 @@ export const selectViewData = ({ state }, payload) => {
   if (selectedItem?.type === "scene") {
     selectedSceneSections = toFlatItems(
       selectedItem.sections || {
-        order: [],
+        tree: [],
         items: {},
       },
     ).map((section, index) => {

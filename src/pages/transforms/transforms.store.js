@@ -44,7 +44,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  transformData: { order: [], items: {} },
+  transformData: { tree: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
   collapsedIds: [],

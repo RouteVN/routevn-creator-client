@@ -30,7 +30,7 @@ const form = {
 };
 
 export const createInitialState = () => ({
-  colorsData: { order: [], items: {} },
+  colorsData: { tree: [], items: {} },
   selectedItemId: null,
   isEditDialogOpen: false,
   editItemId: null,

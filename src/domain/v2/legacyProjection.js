@@ -10,11 +10,7 @@ const cloneOr = (value, fallback) => {
 };
 
 const getHierarchyNodes = (collection) =>
-  Array.isArray(collection?.tree)
-    ? collection.tree
-    : Array.isArray(collection?.order)
-      ? collection.order
-      : [];
+  Array.isArray(collection?.tree) ? collection.tree : [];
 
 const walkHierarchy = (nodes, parentId, callback) => {
   if (!Array.isArray(nodes)) return;

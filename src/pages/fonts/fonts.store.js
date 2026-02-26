@@ -123,7 +123,7 @@ const fontInfoForm = {
 };
 
 export const createInitialState = () => ({
-  fontsData: { order: [], items: {} },
+  fontsData: { tree: [], items: {} },
   selectedItemId: null,
   context: {
     fileId: {
