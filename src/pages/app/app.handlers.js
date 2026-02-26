@@ -1,13 +1,13 @@
 import { filter, fromEvent, tap } from "rxjs";
 
-const mountLegacySubscriptions = (deps) => {
+const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
 export const handleBeforeMount = (deps) => {
-  const cleanupSubscriptions = mountLegacySubscriptions(deps);
+  const cleanupSubscriptions = mountSubscriptions(deps);
   const { appService } = deps;
   const currentPath = appService.getPath();
 

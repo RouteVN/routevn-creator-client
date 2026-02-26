@@ -74,7 +74,7 @@ export const initializeProject = async ({
   });
 
   // Persist typed canonical bootstrap state.
-  await adapter.appendEvent({
+  await adapter.appendTypedEvent({
     type: "typedSnapshot",
     payload: {
       projectId,
@@ -137,7 +137,7 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
       });
     },
 
-    async appendEvent(event) {
+    async appendTypedEvent(event) {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction("events", "readwrite");
         const store = transaction.objectStore("events");
@@ -211,39 +211,6 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
         const transaction = db.transaction("files", "readwrite");
         const store = transaction.objectStore("files");
         const request = store.put({ id, data });
-        request.onsuccess = () => resolve();
-        request.onerror = (event) => reject(event.target.error);
-      });
-    },
-
-    // Snapshot support for fast initialization
-    async getSnapshot() {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("app", "readonly");
-        const store = transaction.objectStore("app");
-        const request = store.get("_eventsSnapshot");
-        request.onsuccess = (event) => {
-          const result = event.target.result;
-          if (result && result.value) {
-            try {
-              resolve(JSON.parse(result.value));
-            } catch {
-              resolve(null);
-            }
-          } else {
-            resolve(null);
-          }
-        };
-        request.onerror = (event) => reject(event.target.error);
-      });
-    },
-
-    async setSnapshot(snapshot) {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("app", "readwrite");
-        const store = transaction.objectStore("app");
-        const jsonValue = JSON.stringify(snapshot);
-        const request = store.put({ key: "_eventsSnapshot", value: jsonValue });
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.error);
       });

@@ -3,14 +3,14 @@ import { fromEvent, tap } from "rxjs";
 let dragOffset = { x: 0, y: 0 };
 let lastDraggedPosition = null;
 
-const mountLegacySubscriptions = (deps) => {
+const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
 export const handleBeforeMount = (deps) => {
-  return mountLegacySubscriptions(deps);
+  return mountSubscriptions(deps);
 };
 
 export const handleContainerContextMenu = (deps, payload) => {

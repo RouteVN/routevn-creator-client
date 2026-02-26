@@ -1,85 +1,5 @@
-import { mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
-import { loadTemplate, getTemplateFiles } from "../../../utils/templateLoader";
-
-/**
- * Initialize a new project with folder structure and database
- */
-export const initializeProject = async ({
-  name,
-  description,
-  projectPath,
-  template,
-}) => {
-  if (!template) {
-    throw new Error("Template is required for project initialization");
-  }
-
-  // Create project folders
-  const filesPath = await join(projectPath, "files");
-  await mkdir(filesPath, { recursive: true });
-
-  // Initialize database
-  const adapter = await createInsiemeTauriStoreAdapter(projectPath);
-
-  // Load template data from static files
-  const templateData = await loadTemplate(template);
-
-  // Copy template files to project directory with random file IDs
-  await copyTemplateFiles(template, filesPath);
-
-  // Add project info to template data
-  const initData = {
-    ...templateData,
-    model_version: 2,
-    project: {
-      name,
-      description,
-    },
-  };
-
-  // Add the init action directly through adapter (temporary - will be replaced with insieme)
-  await adapter.appendEvent({
-    type: "init",
-    payload: {
-      value: initData,
-    },
-  });
-
-  // Set creator_version to 1 in app table
-  await adapter.app.set("creator_version", "1");
-};
-
-async function copyTemplateFiles(templateId, targetPath) {
-  // Get the path to template files
-  const templateFilesPath = `/templates/${templateId}/files/`;
-
-  // List of files to copy (hardcoded for now, could be made dynamic)
-  const filesToCopy = await getTemplateFiles(templateId);
-
-  for (const fileName of filesToCopy) {
-    try {
-      const sourcePath = templateFilesPath + fileName;
-
-      const targetFilePath = await join(targetPath, fileName);
-
-      // Fetch from the web server and save locally
-      // Add a query parameter to bypass Vite's JS parsing
-      const response = await fetch(sourcePath + "?raw");
-      if (response.ok) {
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-
-        // Write file using Tauri's file system API
-        await writeFile(targetFilePath, uint8Array);
-      }
-    } catch (error) {
-      console.error(`Failed to copy template file ${fileName}:`, error);
-    }
-  }
-}
 
 /**
  * Insieme-compatible Tauri SQLite Store Adapter
@@ -129,7 +49,7 @@ export const createInsiemeTauriStoreAdapter = async (projectPath) => {
       }));
     },
 
-    async appendEvent(event) {
+    async appendTypedEvent(event) {
       await db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
         event.type,
         JSON.stringify(event.payload),
@@ -161,29 +81,6 @@ export const createInsiemeTauriStoreAdapter = async (projectPath) => {
       remove: async (key) => {
         await db.execute("DELETE FROM app WHERE key = $1", [key]);
       },
-    },
-
-    // Snapshot support for fast initialization
-    async getSnapshot() {
-      const result = await db.select("SELECT value FROM app WHERE key = $1", [
-        "_eventsSnapshot",
-      ]);
-      if (result && result.length > 0) {
-        try {
-          return JSON.parse(result[0].value);
-        } catch {
-          return null;
-        }
-      }
-      return null;
-    },
-
-    async setSnapshot(snapshot) {
-      const jsonValue = JSON.stringify(snapshot);
-      await db.execute(
-        "INSERT OR REPLACE INTO app (key, value) VALUES ($1, $2)",
-        ["_eventsSnapshot", jsonValue],
-      );
     },
   };
 };

@@ -340,13 +340,13 @@ const walkLayoutHierarchy = (nodes, parentId, visitor) => {
   }
 };
 
-const toLayoutElementsFromLegacyCollection = (legacyElements) => {
-  const source = legacyElements || { items: {}, tree: [] };
-  const sourceItems = source.items || {};
+const toLayoutElementsFromRepositoryCollection = (repositoryElements) => {
+  const sourceCollection = repositoryElements || { items: {}, tree: [] };
+  const sourceItems = sourceCollection.items || {};
   const parentById = new Map();
   const orderedIds = [];
 
-  walkLayoutHierarchy(source.tree || [], null, (node, parentId) => {
+  walkLayoutHierarchy(sourceCollection.tree || [], null, (node, parentId) => {
     if (!parentById.has(node.id)) {
       parentById.set(node.id, parentId);
     }
@@ -357,11 +357,11 @@ const toLayoutElementsFromLegacyCollection = (legacyElements) => {
   const elements = {};
 
   for (const id of allIds) {
-    const sourceElement = sourceItems[id];
-    const clone = structuredClone(sourceElement || {});
+    const repositoryElement = sourceItems[id];
+    const clone = structuredClone(repositoryElement || {});
     delete clone.children;
     const parentId = normalizeLayoutParentId(
-      parentById.has(id) ? parentById.get(id) : sourceElement?.parentId,
+      parentById.has(id) ? parentById.get(id) : repositoryElement?.parentId,
       id,
     );
     elements[id] = {
@@ -675,7 +675,7 @@ const reducers = {
       parentId: payload.parentId,
     });
 
-    const initialElements = toLayoutElementsFromLegacyCollection(
+    const initialElements = toLayoutElementsFromRepositoryCollection(
       payload.elements,
     );
     state.layouts[payload.layoutId] = {
