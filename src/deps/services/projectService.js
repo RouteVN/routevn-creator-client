@@ -18,7 +18,7 @@ import {
   extractVideoThumbnail,
   detectFileType,
 } from "../../utils/fileProcessors";
-import { projectLegacyStateToDomainState } from "../../domain/v2/legacyProjection.js";
+import { projectRepositoryStateToDomainState } from "../../domain/v2/stateProjection.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -132,7 +132,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       ? parentId
       : "_root";
 
-  const findSectionLocationInLegacyState = (state, sectionId) => {
+  const findSectionLocationInRepositoryState = (state, sectionId) => {
     const sceneItems = state?.scenes?.items || {};
     for (const [sceneId, scene] of Object.entries(sceneItems)) {
       const section = scene?.sections?.items?.[sectionId];
@@ -142,7 +142,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     return null;
   };
 
-  const findLineLocationInLegacyState = (state, lineId) => {
+  const findLineLocationInRepositoryState = (state, lineId) => {
     const sceneItems = state?.scenes?.items || {};
     for (const [sceneId, scene] of Object.entries(sceneItems)) {
       const sectionItems = scene?.sections?.items || {};
@@ -645,7 +645,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     async renameSectionItem({ sceneId, sectionId, name }) {
       const resolvedSceneId =
         sceneId ||
-        findSectionLocationInLegacyState(this.getState(), sectionId)?.sceneId;
+        findSectionLocationInRepositoryState(this.getState(), sectionId)?.sceneId;
       if (!resolvedSceneId) return;
 
       await this.appendEvent({
@@ -666,7 +666,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     async deleteSectionItem({ sceneId, sectionId }) {
       const resolvedSceneId =
         sceneId ||
-        findSectionLocationInLegacyState(this.getState(), sectionId)?.sceneId;
+        findSectionLocationInRepositoryState(this.getState(), sectionId)?.sceneId;
       if (!resolvedSceneId) return;
 
       await this.appendEvent({
@@ -689,7 +689,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       position = "last",
     }) {
       const nextLineId = lineId || nanoid();
-      const location = findSectionLocationInLegacyState(
+      const location = findSectionLocationInRepositoryState(
         this.getState(),
         sectionId,
       );
@@ -714,7 +714,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     },
 
     async updateLineActions({ lineId, patch, replace = false }) {
-      const location = findLineLocationInLegacyState(this.getState(), lineId);
+      const location = findLineLocationInRepositoryState(this.getState(), lineId);
       if (!location) return;
 
       await this.appendEvent({
@@ -730,7 +730,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     },
 
     async deleteLineItem({ lineId }) {
-      const location = findLineLocationInLegacyState(this.getState(), lineId);
+      const location = findLineLocationInRepositoryState(this.getState(), lineId);
       if (!location) return;
 
       await this.appendEvent({
@@ -750,7 +750,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       parentId = null,
       position = "last",
     }) {
-      const sectionLocation = findSectionLocationInLegacyState(
+      const sectionLocation = findSectionLocationInRepositoryState(
         this.getState(),
         toSectionId,
       );
@@ -1072,11 +1072,11 @@ export const createProjectService = ({ router, db, filePicker }) => {
       return state;
     },
     getDomainState() {
-      const legacyState = this.getState();
+      const repositoryState = this.getState();
       const projectId =
-        legacyState?.project?.id || getCurrentProjectId() || "unknown-project";
-      return projectLegacyStateToDomainState({
-        legacyState,
+        repositoryState?.project?.id || getCurrentProjectId() || "unknown-project";
+      return projectRepositoryStateToDomainState({
+        repositoryState,
         projectId,
       });
     },

@@ -2,7 +2,7 @@ import {
   loadTemplate,
   getTemplateFiles,
 } from "../../../utils/templateLoader.js";
-import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -68,8 +68,8 @@ export const initializeProject = async ({
     },
   };
 
-  const domainState = projectLegacyStateToDomainState({
-    legacyState: initData,
+  const domainState = projectRepositoryStateToDomainState({
+    repositoryState: initData,
     projectId,
   });
 

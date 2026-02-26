@@ -20,7 +20,7 @@ import {
 } from "../../../utils/fileProcessors.js";
 import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
 import { processCommand } from "../../../domain/v2/engine.js";
-import { projectLegacyStateToDomainState } from "../../../domain/v2/legacyProjection.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
 import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
 import {
   loadCommittedCursor,
@@ -127,7 +127,7 @@ const getSiblingOrderNodes = (collection, parentId) => {
   return Array.isArray(parentNode?.children) ? parentNode.children : [];
 };
 
-const resolveIndexFromLegacyPosition = ({
+const resolveIndexFromPosition = ({
   siblings = [],
   position,
   movingId = null,
@@ -303,7 +303,7 @@ const buildHierarchyOrderFromFlatCollection = (collection) => {
   return rootNodes;
 };
 
-const projectDomainResourceCollectionToLegacy = (domainCollection) => {
+const projectDomainResourceCollectionToRepository = (domainCollection) => {
   const items = domainCollection?.items || {};
   const projectedItems = {};
   for (const [resourceId, resource] of Object.entries(items)) {
@@ -323,11 +323,11 @@ const projectDomainResourceCollectionToLegacy = (domainCollection) => {
   };
 };
 
-const projectDomainLayoutElementsToLegacy = ({
+const projectDomainLayoutElementsToRepository = ({
   layout,
-  existingLegacyElements = {},
+  existingRepositoryElements = {},
 }) => {
-  const existingItems = existingLegacyElements?.items || {};
+  const existingItems = existingRepositoryElements?.items || {};
   const projectedItems = {};
 
   for (const [elementId, element] of Object.entries(layout?.elements || {})) {
@@ -384,17 +384,17 @@ const projectDomainLayoutElementsToLegacy = ({
   };
 };
 
-const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
-  const legacyLayouts = legacyState?.layouts || createTreeCollection();
-  const legacyOrderIds = flattenTreeIds(getHierarchyNodes(legacyLayouts));
+const projectDomainLayoutsToRepository = ({ domainState, repositoryState }) => {
+  const repositoryLayouts = repositoryState?.layouts || createTreeCollection();
+  const repositoryOrderIds = flattenTreeIds(getHierarchyNodes(repositoryLayouts));
   const layoutIds = Object.keys(domainState?.layouts || {});
-  const orderedLayoutIds = uniqueIdsInOrder(legacyOrderIds, layoutIds);
+  const orderedLayoutIds = uniqueIdsInOrder(repositoryOrderIds, layoutIds);
   const projectedItems = {};
 
   for (const layoutId of orderedLayoutIds) {
     const layout = domainState?.layouts?.[layoutId];
     if (!layout) continue;
-    const existingLayout = legacyLayouts?.items?.[layoutId] || {};
+    const existingLayout = repositoryLayouts?.items?.[layoutId] || {};
     const layoutClone = structuredClone(layout || {});
     delete layoutClone.elements;
     delete layoutClone.rootElementOrder;
@@ -404,16 +404,16 @@ const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
       ...layoutClone,
       id: layoutId,
       type: "layout",
-      elements: projectDomainLayoutElementsToLegacy({
+      elements: projectDomainLayoutElementsToRepository({
         layout,
-        existingLegacyElements: existingLayout?.elements,
+        existingRepositoryElements: existingLayout?.elements,
       }),
     };
   }
 
   const tree = buildHierarchyOrderFromFlatCollection({
     items: projectedItems,
-    tree: getHierarchyNodes(legacyLayouts),
+    tree: getHierarchyNodes(repositoryLayouts),
   });
   return {
     items: projectedItems,
@@ -421,7 +421,7 @@ const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
   };
 };
 
-const projectDomainVariablesToLegacy = ({ domainState }) => {
+const projectDomainVariablesToRepository = ({ domainState }) => {
   const domainVariables = domainState?.variables || { items: {}, tree: [] };
   const items = domainVariables.items || {};
   const projectedItems = {};
@@ -468,7 +468,7 @@ const projectDomainVariablesToLegacy = ({ domainState }) => {
   };
 };
 
-const buildLegacyNodeOrder = (orderedIds) =>
+const buildTreeNodesFromOrderedIds = (orderedIds) =>
   orderedIds.map((id) => ({
     id,
   }));
@@ -494,15 +494,15 @@ const resolveSectionLineOrder = (domainState, sectionId) => {
   return uniqueIdsInOrder(section.lineIds || [], lineIds);
 };
 
-const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
-  const legacyScenesItems = legacyState?.scenes?.items || {};
+const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
+  const repositoryScenesItems = repositoryState?.scenes?.items || {};
   const sceneOrder = resolveStorySceneOrder(domainState);
   const scenesItems = {};
 
   for (const sceneId of sceneOrder) {
     const scene = domainState?.scenes?.[sceneId];
     if (!scene) continue;
-    const existingScene = legacyScenesItems?.[sceneId] || {};
+    const existingScene = repositoryScenesItems?.[sceneId] || {};
     const existingSections = existingScene?.sections || {};
     const existingSectionItems = existingSections?.items || {};
     const sectionOrder = resolveSceneSectionOrder(domainState, sceneId);
@@ -535,7 +535,7 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
         type: "section",
         lines: {
           items: lineItems,
-          tree: buildLegacyNodeOrder(lineOrder),
+          tree: buildTreeNodesFromOrderedIds(lineOrder),
         },
       };
     }
@@ -547,28 +547,28 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
       type: "scene",
       sections: {
         items: sectionItems,
-        tree: buildLegacyNodeOrder(sectionOrder),
+        tree: buildTreeNodesFromOrderedIds(sectionOrder),
       },
     };
   }
 
   return {
     story: {
-      ...legacyState?.story,
+      ...repositoryState?.story,
       initialSceneId: domainState?.story?.initialSceneId || null,
     },
     scenes: {
       items: scenesItems,
-      tree: buildLegacyNodeOrder(sceneOrder),
+      tree: buildTreeNodesFromOrderedIds(sceneOrder),
     },
   };
 };
 
-const projectDomainStateToLegacyState = ({ domainState, legacyState }) => {
-  const nextState = structuredClone(legacyState || {});
+const projectDomainStateToRepositoryState = ({ domainState, repositoryState }) => {
+  const nextState = structuredClone(repositoryState || {});
   nextState.model_version = 2;
   nextState.project = {
-    ...legacyState?.project,
+    ...repositoryState?.project,
     ...structuredClone(domainState?.project || {}),
   };
 
@@ -576,36 +576,36 @@ const projectDomainStateToLegacyState = ({ domainState, legacyState }) => {
     domainState?.resources || {},
   )) {
     nextState[resourceType] =
-      projectDomainResourceCollectionToLegacy(domainCollection);
+      projectDomainResourceCollectionToRepository(domainCollection);
   }
 
-  const projectedStory = projectDomainStoryToLegacy({
+  const projectedStory = projectDomainStoryToRepository({
     domainState,
-    legacyState,
+    repositoryState,
   });
   nextState.story = projectedStory.story;
   nextState.scenes = projectedStory.scenes;
 
-  nextState.layouts = projectDomainLayoutsToLegacy({
+  nextState.layouts = projectDomainLayoutsToRepository({
     domainState,
-    legacyState,
+    repositoryState,
   });
-  nextState.variables = projectDomainVariablesToLegacy({
+  nextState.variables = projectDomainVariablesToRepository({
     domainState,
   });
 
   return nextState;
 };
 
-const applyTypedEventToLegacyState = ({ legacyState, event, projectId }) => {
+const applyTypedEventToRepositoryState = ({ repositoryState, event, projectId }) => {
   if (event?.type === "typedSnapshot") {
     const snapshotState = event?.payload?.state;
     if (!snapshotState || typeof snapshotState !== "object") {
       throw new Error("typedSnapshot event payload.state is required");
     }
-    return projectDomainStateToLegacyState({
+    return projectDomainStateToRepositoryState({
       domainState: snapshotState,
-      legacyState,
+      repositoryState,
     });
   }
 
@@ -620,19 +620,19 @@ const applyTypedEventToLegacyState = ({ legacyState, event, projectId }) => {
     const resolvedProjectId =
       event?.payload?.projectId ||
       projectId ||
-      legacyState?.project?.id ||
+      repositoryState?.project?.id ||
       "unknown-project";
-    const domainStateBefore = projectLegacyStateToDomainState({
-      legacyState,
+    const domainStateBefore = projectRepositoryStateToDomainState({
+      repositoryState,
       projectId: resolvedProjectId,
     });
     const { state: domainStateAfter } = processCommand({
       state: domainStateBefore,
       command,
     });
-    return projectDomainStateToLegacyState({
+    return projectDomainStateToRepositoryState({
       domainState: domainStateAfter,
-      legacyState,
+      repositoryState,
     });
   }
 
@@ -874,8 +874,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
       projectDescription: state.project?.description || "",
-      initialState: projectLegacyStateToDomainState({
-        legacyState: state,
+      initialState: projectRepositoryStateToDomainState({
+        repositoryState: state,
         projectId: resolvedProjectId,
       }),
       token,
@@ -1109,8 +1109,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         const store = await createInsiemeWebStoreAdapter(projectId);
         const existingEvents = (await store.getEvents()) || [];
         if (existingEvents.length === 0) {
-          const bootstrapDomainState = projectLegacyStateToDomainState({
-            legacyState: {
+          const bootstrapDomainState = projectRepositoryStateToDomainState({
+            repositoryState: {
               ...initialProjectData,
               project: {
                 ...initialProjectData.project,
@@ -1131,8 +1131,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           originStore: store,
           snapshotInterval: 500, // Auto-save snapshot every 500 events
           customEventReducer: (state, event) =>
-            applyTypedEventToLegacyState({
-              legacyState: state,
+            applyTypedEventToRepositoryState({
+              repositoryState: state,
               event,
               projectId,
             }),
@@ -1381,7 +1381,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
 
     return {
       commandId: command.id,
-      legacyEventCount: applyResult.events.length,
+      eventCount: applyResult.events.length,
       applyMode: applyResult.mode,
     };
   };
@@ -1397,7 +1397,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     if (Number.isInteger(index)) return index;
     const collection = state?.[resourceType];
     const siblings = getSiblingOrderNodes(collection, parentId);
-    return resolveIndexFromLegacyPosition({
+    return resolveIndexFromPosition({
       siblings,
       position,
       movingId,
@@ -1413,7 +1413,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   }) => {
     if (Number.isInteger(index)) return index;
     const siblings = getSiblingOrderNodes(state?.scenes, parentId);
-    return resolveIndexFromLegacyPosition({
+    return resolveIndexFromPosition({
       siblings,
       position,
       movingId,
@@ -1429,7 +1429,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   }) => {
     if (Number.isInteger(index)) return index;
     const siblings = getSiblingOrderNodes(scene?.sections, parentId);
-    return resolveIndexFromLegacyPosition({
+    return resolveIndexFromPosition({
       siblings,
       position,
       movingId,
@@ -1445,7 +1445,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   }) => {
     if (Number.isInteger(index)) return index;
     const siblings = getSiblingOrderNodes(section?.lines, parentId);
-    return resolveIndexFromLegacyPosition({
+    return resolveIndexFromPosition({
       siblings,
       position,
       movingId,
@@ -1461,7 +1461,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   }) => {
     if (Number.isInteger(index)) return index;
     const siblings = getSiblingOrderNodes(layout?.elements, parentId);
-    return resolveIndexFromLegacyPosition({
+    return resolveIndexFromPosition({
       siblings,
       position,
       movingId,
@@ -2255,11 +2255,11 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       return state;
     },
     getDomainState() {
-      const legacyState = this.getState();
+      const repositoryState = this.getState();
       const projectId =
-        legacyState?.project?.id || getCurrentProjectId() || "unknown-project";
-      return projectLegacyStateToDomainState({
-        legacyState,
+        repositoryState?.project?.id || getCurrentProjectId() || "unknown-project";
+      return projectRepositoryStateToDomainState({
+        repositoryState,
         projectId,
       });
     },

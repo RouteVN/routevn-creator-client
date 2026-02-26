@@ -104,14 +104,14 @@ const buildTreeFromParentMap = ({
   return tree;
 };
 
-const projectLegacyLayouts = ({ legacyLayouts = {} }) => {
+const projectRepositoryLayouts = ({ repositoryLayouts = {} }) => {
   const result = {};
-  for (const [layoutId, legacyLayout] of Object.entries(legacyLayouts)) {
-    if (!legacyLayout || typeof legacyLayout !== "object") continue;
-    const legacyElements = legacyLayout.elements || { items: {}, tree: [] };
-    const elementItems = legacyElements.items || {};
+  for (const [layoutId, repositoryLayout] of Object.entries(repositoryLayouts)) {
+    if (!repositoryLayout || typeof repositoryLayout !== "object") continue;
+    const repositoryElements = repositoryLayout.elements || { items: {}, tree: [] };
+    const elementItems = repositoryElements.items || {};
     const { parentById, orderedIds } = buildHierarchyParentMap(
-      getHierarchyNodes(legacyElements),
+      getHierarchyNodes(repositoryElements),
     );
 
     const elements = {};
@@ -145,14 +145,14 @@ const projectLegacyLayouts = ({ legacyLayouts = {} }) => {
 
     result[layoutId] = {
       id: layoutId,
-      name: legacyLayout.name || `Layout ${layoutId}`,
-      layoutType: legacyLayout.layoutType || "base",
+      name: repositoryLayout.name || `Layout ${layoutId}`,
+      layoutType: repositoryLayout.layoutType || "base",
       elements,
       rootElementOrder,
-      createdAt: toFiniteTimestamp(legacyLayout.createdAt, Date.now()),
+      createdAt: toFiniteTimestamp(repositoryLayout.createdAt, Date.now()),
       updatedAt: toFiniteTimestamp(
-        legacyLayout.updatedAt,
-        toFiniteTimestamp(legacyLayout.createdAt, Date.now()),
+        repositoryLayout.updatedAt,
+        toFiniteTimestamp(repositoryLayout.createdAt, Date.now()),
       ),
     };
   }
@@ -160,20 +160,20 @@ const projectLegacyLayouts = ({ legacyLayouts = {} }) => {
   return result;
 };
 
-const projectLegacyResources = ({ legacyState }) => {
+const projectRepositoryResources = ({ repositoryState }) => {
   const resources = Object.fromEntries(
     RESOURCE_TYPES.map((type) => [type, { items: {}, tree: [] }]),
   );
 
   for (const resourceType of RESOURCE_TYPES) {
-    const legacyCollection = legacyState?.[resourceType] || {};
-    const legacyItems = legacyCollection.items || {};
+    const repositoryCollection = repositoryState?.[resourceType] || {};
+    const repositoryItems = repositoryCollection.items || {};
     const { parentById, orderedIds } = buildHierarchyParentMap(
-      getHierarchyNodes(legacyCollection),
+      getHierarchyNodes(repositoryCollection),
     );
-    const allIds = Object.keys(legacyItems);
+    const allIds = Object.keys(repositoryItems);
     const fallbackParentById = new Map(
-      Object.entries(legacyItems).map(([resourceId, item]) => [
+      Object.entries(repositoryItems).map(([resourceId, item]) => [
         resourceId,
         item?.parentId ?? null,
       ]),
@@ -186,7 +186,7 @@ const projectLegacyResources = ({ legacyState }) => {
       fallbackParentById,
     });
 
-    for (const [resourceId, item] of Object.entries(legacyItems)) {
+    for (const [resourceId, item] of Object.entries(repositoryItems)) {
       const parentId = parentById.has(resourceId)
         ? parentById.get(resourceId)
         : (item?.parentId ?? null);
@@ -206,14 +206,14 @@ const projectLegacyResources = ({ legacyState }) => {
   return resources;
 };
 
-const projectLegacyVariables = ({ legacyVariables = {} }) => {
+const projectRepositoryVariables = ({ repositoryVariables = {} }) => {
   const result = {
     items: {},
     tree: [],
   };
-  const items = legacyVariables.items || {};
+  const items = repositoryVariables.items || {};
   const { parentById, orderedIds } = buildHierarchyParentMap(
-    getHierarchyNodes(legacyVariables),
+    getHierarchyNodes(repositoryVariables),
   );
   const allIds = Object.keys(items);
   const fallbackParentById = new Map(
@@ -280,23 +280,23 @@ const projectLegacyVariables = ({ legacyVariables = {} }) => {
   return result;
 };
 
-export const projectLegacyStateToDomainState = ({
-  legacyState,
+export const projectRepositoryStateToDomainState = ({
+  repositoryState,
   projectId = "unknown-project",
 }) => {
   const now = Date.now();
   const state = createEmptyProjectState({
     projectId,
-    name: legacyState?.project?.name || "",
-    description: legacyState?.project?.description || "",
+    name: repositoryState?.project?.name || "",
+    description: repositoryState?.project?.description || "",
   });
 
-  if (!legacyState || typeof legacyState !== "object") {
+  if (!repositoryState || typeof repositoryState !== "object") {
     return state;
   }
 
-  const sceneItems = legacyState?.scenes?.items || {};
-  const sceneHierarchy = getHierarchyNodes(legacyState?.scenes);
+  const sceneItems = repositoryState?.scenes?.items || {};
+  const sceneHierarchy = getHierarchyNodes(repositoryState?.scenes);
   const { orderedIds: sceneHierarchyOrder } =
     buildHierarchyParentMap(sceneHierarchy);
 
@@ -384,26 +384,26 @@ export const projectLegacyStateToDomainState = ({
   );
   state.story.sceneOrder = sceneOrder;
 
-  const initialSceneId = legacyState?.story?.initialSceneId;
+  const initialSceneId = repositoryState?.story?.initialSceneId;
   state.story.initialSceneId =
     (initialSceneId && state.scenes[initialSceneId] && initialSceneId) ||
     sceneOrder[0] ||
     null;
 
-  state.resources = projectLegacyResources({ legacyState });
-  state.layouts = projectLegacyLayouts({
-    legacyLayouts: legacyState?.layouts?.items || {},
+  state.resources = projectRepositoryResources({ repositoryState });
+  state.layouts = projectRepositoryLayouts({
+    repositoryLayouts: repositoryState?.layouts?.items || {},
   });
-  state.variables = projectLegacyVariables({
-    legacyVariables: legacyState?.variables,
+  state.variables = projectRepositoryVariables({
+    repositoryVariables: repositoryState?.variables,
   });
 
   state.project.createdAt = toFiniteTimestamp(
-    legacyState?.project?.createdAt,
+    repositoryState?.project?.createdAt,
     now,
   );
   state.project.updatedAt = toFiniteTimestamp(
-    legacyState?.project?.updatedAt,
+    repositoryState?.project?.updatedAt,
     state.project.createdAt,
   );
 
