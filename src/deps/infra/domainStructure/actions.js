@@ -29,7 +29,8 @@
 /**
  * @typedef {Object} HierarchyData
  * @property {Record<string, HierarchyItemMetadata>} items
- * @property {HierarchyNode[]} order
+ * @property {HierarchyNode[]} [tree]
+ * @property {HierarchyNode[]} [order]
  */
 
 /**
@@ -97,9 +98,13 @@ const ensureHierarchyCollection = (targetData) => {
     return null;
   }
 
-  if (!Array.isArray(targetData.order)) {
-    targetData.order = [];
-  }
+  const hierarchyNodes = Array.isArray(targetData.tree)
+    ? targetData.tree
+    : Array.isArray(targetData.order)
+      ? targetData.order
+      : [];
+  targetData.tree = hierarchyNodes;
+  targetData.order = hierarchyNodes;
 
   if (!targetData.items || typeof targetData.items !== "object") {
     targetData.items = {};

@@ -36,6 +36,22 @@ const loadFont = async (fontName, fontUrl) => {
   return fontFace;
 };
 
+const createTreeCollection = () => {
+  const tree = [];
+  return {
+    items: {},
+    tree,
+    order: tree,
+  };
+};
+
+const getHierarchyNodes = (collection) =>
+  Array.isArray(collection?.tree)
+    ? collection.tree
+    : Array.isArray(collection?.order)
+      ? collection.order
+      : [];
+
 /**
  * Default empty project data structure
  */
@@ -48,58 +64,19 @@ export const initialProjectData = {
   story: {
     initialSceneId: "",
   },
-  images: {
-    items: {},
-    order: [],
-  },
-  tweens: {
-    items: {},
-    order: [],
-  },
-  sounds: {
-    items: {},
-    order: [],
-  },
-  videos: {
-    items: {},
-    order: [],
-  },
-  characters: {
-    items: {},
-    order: [],
-  },
-  fonts: {
-    items: {},
-    order: [],
-  },
-  transforms: {
-    items: {},
-    order: [],
-  },
-  colors: {
-    items: {},
-    order: [],
-  },
-  typography: {
-    items: {},
-    order: [],
-  },
-  variables: {
-    items: {},
-    order: [],
-  },
-  components: {
-    items: {},
-    order: [],
-  },
-  layouts: {
-    items: {},
-    order: [],
-  },
-  scenes: {
-    items: {},
-    order: [],
-  },
+  images: createTreeCollection(),
+  tweens: createTreeCollection(),
+  sounds: createTreeCollection(),
+  videos: createTreeCollection(),
+  characters: createTreeCollection(),
+  fonts: createTreeCollection(),
+  transforms: createTreeCollection(),
+  colors: createTreeCollection(),
+  typography: createTreeCollection(),
+  variables: createTreeCollection(),
+  components: createTreeCollection(),
+  layouts: createTreeCollection(),
+  scenes: createTreeCollection(),
 };
 
 const assertV2State = (state) => {
@@ -141,10 +118,10 @@ const findOrderNodeById = (nodes = [], id) => {
 const getSiblingOrderNodes = (collection, parentId) => {
   const normalizedParentId = normalizeParentId(parentId);
   if (!normalizedParentId) {
-    return Array.isArray(collection?.order) ? collection.order : [];
+    return getHierarchyNodes(collection);
   }
   const parentNode = findOrderNodeById(
-    collection?.order || [],
+    getHierarchyNodes(collection),
     normalizedParentId,
   );
   return Array.isArray(parentNode?.children) ? parentNode.children : [];
@@ -197,7 +174,7 @@ const uniquePartitions = (...partitions) => {
 const findSectionLocation = (state, sectionId) => {
   const sceneItems = state?.scenes?.items || {};
   for (const [sceneId, scene] of Object.entries(sceneItems)) {
-    const sections = scene?.sections || { items: {}, order: [] };
+    const sections = scene?.sections || createTreeCollection();
     const section = sections.items?.[sectionId];
     if (!section) continue;
     return {
@@ -309,12 +286,14 @@ const projectDomainResourceCollectionToLegacy = (domainCollection) => {
     };
   }
 
+  const tree = buildHierarchyOrderFromFlatCollection({
+    items,
+    order: domainCollection?.order || [],
+  });
   return {
     items: projectedItems,
-    order: buildHierarchyOrderFromFlatCollection({
-      items,
-      order: domainCollection?.order || [],
-    }),
+    tree,
+    order: tree,
   };
 };
 
@@ -385,13 +364,14 @@ const projectDomainLayoutElementsToLegacy = ({
 
   return {
     items: projectedItems,
+    tree: order,
     order,
   };
 };
 
 const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
-  const legacyLayouts = legacyState?.layouts || { items: {}, order: [] };
-  const legacyOrderIds = flattenHierarchyIds(legacyLayouts?.order || []);
+  const legacyLayouts = legacyState?.layouts || createTreeCollection();
+  const legacyOrderIds = flattenHierarchyIds(getHierarchyNodes(legacyLayouts));
   const layoutIds = Object.keys(domainState?.layouts || {});
   const orderedLayoutIds = uniqueIdsInOrder(legacyOrderIds, layoutIds);
   const projectedItems = {};
@@ -416,9 +396,11 @@ const projectDomainLayoutsToLegacy = ({ domainState, legacyState }) => {
     };
   }
 
+  const tree = buildLegacyNodeOrder(orderedLayoutIds);
   return {
     items: projectedItems,
-    order: buildLegacyNodeOrder(orderedLayoutIds),
+    tree,
+    order: tree,
   };
 };
 
@@ -459,12 +441,14 @@ const projectDomainVariablesToLegacy = ({ domainState }) => {
     };
   }
 
+  const tree = buildHierarchyOrderFromFlatCollection({
+    items,
+    order: domainVariables.order || [],
+  });
   return {
     items: projectedItems,
-    order: buildHierarchyOrderFromFlatCollection({
-      items,
-      order: domainVariables.order || [],
-    }),
+    tree,
+    order: tree,
   };
 };
 
@@ -535,9 +519,10 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
         type: "section",
         lines: {
           items: lineItems,
-          order: buildLegacyNodeOrder(lineOrder),
+          tree: buildLegacyNodeOrder(lineOrder),
         },
       };
+      sectionItems[sectionId].lines.order = sectionItems[sectionId].lines.tree;
     }
 
     scenesItems[sceneId] = {
@@ -547,9 +532,10 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
       type: "scene",
       sections: {
         items: sectionItems,
-        order: buildLegacyNodeOrder(sectionOrder),
+        tree: buildLegacyNodeOrder(sectionOrder),
       },
     };
+    scenesItems[sceneId].sections.order = scenesItems[sceneId].sections.tree;
   }
 
   return {
@@ -559,7 +545,7 @@ const projectDomainStoryToLegacy = ({ domainState, legacyState }) => {
     },
     scenes: {
       items: scenesItems,
-      order: buildLegacyNodeOrder(sceneOrder),
+      tree: buildLegacyNodeOrder(sceneOrder),
     },
   };
 };
@@ -1951,7 +1937,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       layoutId,
       name,
       layoutType = "normal",
-      elements = { items: {}, order: [] },
+      elements = createTreeCollection(),
       parentId = null,
       position = "last",
       data = {},
@@ -1969,7 +1955,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           layoutId: nextLayoutId,
           name,
           layoutType,
-          elements: structuredClone(elements || { items: {}, order: [] }),
+          elements: structuredClone(elements || createTreeCollection()),
           parentId: normalizeParentId(parentId),
           position,
           data: structuredClone(data || {}),

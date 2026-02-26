@@ -13,7 +13,8 @@ const ROOT_PARENT_KEY = "__root__";
 /**
  * @typedef {Object} HierarchyDataInput
  * @property {Record<string, HelperItemMetadata>} items
- * @property {HelperHierarchyNode[]} order
+ * @property {HelperHierarchyNode[]} [tree]
+ * @property {HelperHierarchyNode[]} [order]
  */
 
 /**
@@ -52,7 +53,11 @@ const toOrderIds = (order) => {
 const normalizeOrder = (data) => {
   const items = data?.items || {};
   const itemIds = Object.keys(items);
-  const order = Array.isArray(data?.order) ? data.order : [];
+  const order = Array.isArray(data?.tree)
+    ? data.tree
+    : Array.isArray(data?.order)
+      ? data.order
+      : [];
   if (order.length === 0) return [];
 
   const hasStringEntries = order.some((entry) => typeof entry === "string");

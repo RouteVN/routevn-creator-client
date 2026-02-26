@@ -9,6 +9,13 @@ const cloneOr = (value, fallback) => {
   return structuredClone(value);
 };
 
+const getHierarchyNodes = (collection) =>
+  Array.isArray(collection?.tree)
+    ? collection.tree
+    : Array.isArray(collection?.order)
+      ? collection.order
+      : [];
+
 const walkHierarchy = (nodes, parentId, callback) => {
   if (!Array.isArray(nodes)) return;
   for (const node of nodes) {
@@ -51,10 +58,10 @@ const projectLegacyLayouts = ({ legacyLayouts = {} }) => {
   const result = {};
   for (const [layoutId, legacyLayout] of Object.entries(legacyLayouts)) {
     if (!legacyLayout || typeof legacyLayout !== "object") continue;
-    const legacyElements = legacyLayout.elements || { items: {}, order: [] };
+    const legacyElements = legacyLayout.elements || { items: {}, tree: [] };
     const elementItems = legacyElements.items || {};
     const { parentById, orderedIds } = buildHierarchyParentMap(
-      legacyElements.order,
+      getHierarchyNodes(legacyElements),
     );
 
     const elements = {};
@@ -105,14 +112,14 @@ const projectLegacyLayouts = ({ legacyLayouts = {} }) => {
 
 const projectLegacyResources = ({ legacyState }) => {
   const resources = Object.fromEntries(
-    RESOURCE_TYPES.map((type) => [type, { items: {}, order: [] }]),
+    RESOURCE_TYPES.map((type) => [type, { items: {}, tree: [] }]),
   );
 
   for (const resourceType of RESOURCE_TYPES) {
     const legacyCollection = legacyState?.[resourceType] || {};
     const legacyItems = legacyCollection.items || {};
     const { parentById, orderedIds } = buildHierarchyParentMap(
-      legacyCollection.order,
+      getHierarchyNodes(legacyCollection),
     );
     const allIds = Object.keys(legacyItems);
 
@@ -141,11 +148,11 @@ const projectLegacyResources = ({ legacyState }) => {
 const projectLegacyVariables = ({ legacyVariables = {} }) => {
   const result = {
     items: {},
-    order: [],
+    tree: [],
   };
   const items = legacyVariables.items || {};
   const { parentById, orderedIds } = buildHierarchyParentMap(
-    legacyVariables.order,
+    getHierarchyNodes(legacyVariables),
   );
   const allIds = Object.keys(items);
   result.order = appendMissingIds(orderedIds, allIds);
@@ -217,15 +224,15 @@ export const projectLegacyStateToDomainState = ({
   }
 
   const sceneItems = legacyState?.scenes?.items || {};
-  const sceneHierarchy = legacyState?.scenes?.order || [];
+  const sceneHierarchy = getHierarchyNodes(legacyState?.scenes);
   const { orderedIds: sceneHierarchyOrder } =
     buildHierarchyParentMap(sceneHierarchy);
 
   for (const [sceneId, scene] of Object.entries(sceneItems)) {
     if (!scene || scene.type !== "scene") continue;
-    const sections = scene.sections || { items: {}, order: [] };
+    const sections = scene.sections || { items: {}, tree: [] };
     const sectionItems = sections.items || {};
-    const sectionHierarchy = sections.order || [];
+    const sectionHierarchy = getHierarchyNodes(sections);
     const { orderedIds: sectionHierarchyOrder } =
       buildHierarchyParentMap(sectionHierarchy);
     const allSectionIds = Object.keys(sectionItems).filter(
@@ -257,9 +264,9 @@ export const projectLegacyStateToDomainState = ({
 
     for (const [sectionId, section] of Object.entries(sectionItems)) {
       if (!section || section.type === "folder") continue;
-      const lines = section.lines || { items: {}, order: [] };
+      const lines = section.lines || { items: {}, tree: [] };
       const lineItems = lines.items || {};
-      const lineHierarchy = lines.order || [];
+      const lineHierarchy = getHierarchyNodes(lines);
       const { orderedIds: lineHierarchyOrder } =
         buildHierarchyParentMap(lineHierarchy);
       const lineIds = appendMissingIds(

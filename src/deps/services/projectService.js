@@ -35,6 +35,15 @@ const loadFont = async (fontName, fontUrl) => {
   return fontFace;
 };
 
+const createTreeCollection = () => {
+  const tree = [];
+  return {
+    items: {},
+    tree,
+    order: tree,
+  };
+};
+
 /**
  * Default empty project data structure
  */
@@ -47,58 +56,19 @@ export const initialProjectData = {
   story: {
     initialSceneId: "",
   },
-  images: {
-    items: {},
-    order: [],
-  },
-  tweens: {
-    items: {},
-    order: [],
-  },
-  sounds: {
-    items: {},
-    order: [],
-  },
-  videos: {
-    items: {},
-    order: [],
-  },
-  characters: {
-    items: {},
-    order: [],
-  },
-  fonts: {
-    items: {},
-    order: [],
-  },
-  transforms: {
-    items: {},
-    order: [],
-  },
-  colors: {
-    items: {},
-    order: [],
-  },
-  typography: {
-    items: {},
-    order: [],
-  },
-  variables: {
-    items: {},
-    order: [],
-  },
-  components: {
-    items: {},
-    order: [],
-  },
-  layouts: {
-    items: {},
-    order: [],
-  },
-  scenes: {
-    items: {},
-    order: [],
-  },
+  images: createTreeCollection(),
+  tweens: createTreeCollection(),
+  sounds: createTreeCollection(),
+  videos: createTreeCollection(),
+  characters: createTreeCollection(),
+  fonts: createTreeCollection(),
+  transforms: createTreeCollection(),
+  colors: createTreeCollection(),
+  typography: createTreeCollection(),
+  variables: createTreeCollection(),
+  components: createTreeCollection(),
+  layouts: createTreeCollection(),
+  scenes: createTreeCollection(),
 };
 
 const assertV2State = (state) => {
@@ -576,7 +546,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
             id: nextSceneId,
             type: "scene",
             name,
-            sections: { items: {}, order: [] },
+            sections: createTreeCollection(),
             ...structuredClone(data || {}),
           },
           options: {
@@ -662,7 +632,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
             id: nextSectionId,
             type: "section",
             name,
-            lines: { items: {}, order: [] },
+            lines: createTreeCollection(),
             ...structuredClone(data || {}),
           },
           options: {
@@ -910,7 +880,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       layoutId,
       name,
       layoutType = "normal",
-      elements = { items: {}, order: [] },
+      elements = createTreeCollection(),
       parentId = null,
       position = "last",
       data = {},
@@ -925,7 +895,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
             type: "layout",
             name,
             layoutType,
-            elements: structuredClone(elements || { items: {}, order: [] }),
+            elements: structuredClone(elements || createTreeCollection()),
             ...structuredClone(data || {}),
           },
           options: {
