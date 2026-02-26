@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "#v2-tree-helpers";
+import { toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)

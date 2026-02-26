@@ -1,4 +1,4 @@
-import { toFlatItems } from "#v2-tree-helpers";
+import { toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { nanoid } from "nanoid";
 
 export const handleAfterMount = async (deps) => {

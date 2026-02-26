@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
-import { toFlatItems } from "#v2-tree-helpers";
+import { toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { formatFileSize } from "../../utils/index.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";

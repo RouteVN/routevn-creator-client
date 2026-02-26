@@ -1,5 +1,5 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
-import { toHierarchyStructure } from "#v2-tree-helpers";
+import { toHierarchyStructure } from "../../domain/v2/treeHelpers.js";
 import {
   extractFileIdsFromRenderState,
   layoutHierarchyStructureToRenderState,

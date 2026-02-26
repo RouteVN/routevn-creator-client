@@ -671,6 +671,15 @@ export const createWebProjectServiceWithCollab = async ({
     collabRuntimeBootstrap.startCollabHeartbeatLogs();
   }
 
-  await collabRuntimeBootstrap.bootCollabFromQuery();
+  // Do not block app startup on websocket connect/sync.
+  // The editor should render from local repository immediately, while collab
+  // bootstraps in the background.
+  Promise.resolve()
+    .then(() => collabRuntimeBootstrap.bootCollabFromQuery())
+    .catch((error) => {
+      collabDebugLog("warn", "background collab boot failed", {
+        error: error?.message || "unknown",
+      });
+    });
   return projectService;
 };

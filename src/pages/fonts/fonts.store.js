@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#v2-tree-helpers";
+import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { formatFileSize } from "../../utils/index.js";
 
 const fontToBase64Image = (fontFamily, text = "Aa") => {

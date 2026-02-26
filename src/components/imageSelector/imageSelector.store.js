@@ -1,4 +1,4 @@
-import { toFlatGroups } from "#v2-tree-helpers";
+import { toFlatGroups } from "../../domain/v2/treeHelpers.js";
 
 export const createInitialState = () => ({
   selectedImageId: undefined,

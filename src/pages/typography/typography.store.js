@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#v2-tree-helpers";
+import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({

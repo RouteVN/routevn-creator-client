@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "#v2-tree-helpers";
+import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 
 export const createInitialState = () => ({
   mode: "current",

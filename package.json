@@ -14,9 +14,6 @@
     "visual-novel-tools",
     "visual-novel-creator"
   ],
-  "imports": {
-    "#v2-tree-helpers": "./src/domain/v2/treeHelpers.js"
-  },
   "type": "module",
   "dependencies": {
     "@rettangoli/fe": "1.0.0-rc3",
