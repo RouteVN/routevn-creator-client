@@ -6,11 +6,22 @@ export const handleAfterMount = async (deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { projectService, store, render } = deps;
+  console.log("[routevn.project.page] handleDataChanged start");
   await projectService.ensureRepository();
   const state = projectService.getState();
   const { project } = state;
+  console.log("[routevn.project.page] repository state summary", {
+    projectId: project?.id || null,
+    projectName: project?.name || "",
+    projectDescription: project?.description || "",
+    imagesCount: Object.keys(state?.images?.items || {}).length,
+    scenesCount: Object.keys(state?.scenes?.items || {}).length,
+    layoutsCount: Object.keys(state?.layouts?.items || {}).length,
+    variablesCount: Object.keys(state?.variables?.items || {}).length,
+  });
   store.setProject({ project: project });
   render();
+  console.log("[routevn.project.page] render complete");
 };
 
 export const handleFormChange = async (deps, payload) => {

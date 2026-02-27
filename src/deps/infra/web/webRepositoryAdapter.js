@@ -44,6 +44,12 @@ export const initializeProject = async ({
   projectId,
   template,
 }) => {
+  console.log("[routevn.project.init.web] initializeProject start", {
+    projectId,
+    name: name || "",
+    description: description || "",
+    template: template || null,
+  });
   if (!template) {
     throw new Error("Template is required for project initialization");
   }
@@ -53,9 +59,18 @@ export const initializeProject = async ({
 
   // Load template data from static files
   const templateData = await loadTemplate(template);
+  console.log("[routevn.project.init.web] template loaded", {
+    projectId,
+    template,
+    hasProjectData: Boolean(templateData?.project),
+  });
 
   // Copy template files to project's IndexedDB
   await copyTemplateFiles(template, adapter);
+  console.log("[routevn.project.init.web] template files copied", {
+    projectId,
+    template,
+  });
 
   // Add project info to template data
   const initData = {
@@ -80,6 +95,17 @@ export const initializeProject = async ({
       projectId,
       state: domainState,
     },
+  });
+  const persistedEvents = await adapter.getEvents().catch(() => []);
+  console.log("[routevn.project.init.web] bootstrap snapshot persisted", {
+    projectId,
+    persistedEventCount: Array.isArray(persistedEvents)
+      ? persistedEvents.length
+      : null,
+    firstEventType:
+      Array.isArray(persistedEvents) && persistedEvents[0]
+        ? persistedEvents[0].type
+        : null,
   });
 
   // Set creator_version to 2 in app table
@@ -146,8 +172,55 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
           payload: JSON.stringify(event.payload),
         };
         const request = store.add(eventToStore);
-        request.onsuccess = () => resolve();
+        request.onsuccess = () => {
+          console.log("[routevn.project.init.web] appendTypedEvent", {
+            projectId,
+            eventType: event?.type || null,
+            eventId: request.result || null,
+          });
+          resolve();
+        };
         request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async replaceTypedEvents(events) {
+      const normalizedEvents = Array.isArray(events) ? events : [];
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("events", "readwrite");
+        const store = transaction.objectStore("events");
+        let finished = false;
+
+        const fail = (error) => {
+          if (finished) return;
+          finished = true;
+          reject(error || new Error("replaceTypedEvents failed"));
+          try {
+            transaction.abort();
+          } catch {
+            // no-op
+          }
+        };
+
+        transaction.oncomplete = () => {
+          if (finished) return;
+          finished = true;
+          resolve();
+        };
+        transaction.onerror = (event) => fail(event?.target?.error);
+        transaction.onabort = (event) => fail(event?.target?.error);
+
+        const clearRequest = store.clear();
+        clearRequest.onerror = (event) => fail(event?.target?.error);
+        clearRequest.onsuccess = () => {
+          for (const event of normalizedEvents) {
+            const request = store.add({
+              type: event?.type,
+              payload: JSON.stringify(event?.payload ?? null),
+            });
+            request.onerror = (errorEvent) => fail(errorEvent?.target?.error);
+          }
+        };
       });
     },
 

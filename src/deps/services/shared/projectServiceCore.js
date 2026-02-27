@@ -154,7 +154,31 @@ export const createProjectServiceCore = ({
       } else {
         if (endpointUrl) {
           const transport = resolveTransport({ endpointUrl });
-          await existing.setOnlineTransport(transport);
+          try {
+            await existing.setOnlineTransport(transport);
+            if (typeof existing.syncNow === "function") {
+              try {
+                await existing.syncNow({ timeoutMs: 5000 });
+              } catch (error) {
+                collabLog("warn", "sync after transport update failed", {
+                  currentProjectId,
+                  endpointUrl,
+                  error: error?.message || "unknown",
+                });
+              }
+            }
+          } catch (error) {
+            collabLog(
+              "warn",
+              "failed to update existing session transport; keeping offline session",
+              {
+                currentProjectId,
+                endpointUrl,
+                error: error?.message || "unknown",
+              },
+            );
+            return existing;
+          }
           if (typeof onSessionTransportUpdated === "function") {
             onSessionTransportUpdated({
               projectId: currentProjectId,

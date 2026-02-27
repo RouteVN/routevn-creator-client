@@ -98,9 +98,9 @@ const createRemoteRefreshDispatcher = ({ subject, collabDebugLog }) => {
   const shouldRefreshImagesForEvent = (event) => {
     const eventType = event?.type || null;
     if (eventType === "typedSnapshot") return true;
-    const target = event?.payload?.target;
-    if (typeof target !== "string" || target.length === 0) return false;
-    return target === "images" || target.startsWith("images.");
+    if (typeof eventType !== "string") return false;
+    if (!eventType.startsWith("resource.")) return false;
+    return event?.payload?.resourceType === "images";
   };
 
   const refreshImagesPageOnRemoteEvent = async (payload) => {
@@ -111,7 +111,7 @@ const createRemoteRefreshDispatcher = ({ subject, collabDebugLog }) => {
       projectId: payload?.projectId || null,
       sourceType: payload?.sourceType || null,
       eventType: payload?.event?.type || null,
-      eventTarget: payload?.event?.payload?.target || null,
+      resourceType: payload?.event?.payload?.resourceType || null,
     });
     subject.dispatch(COLLAB_IMAGES_REFRESH_ACTION, {
       source: "collab.remote.images",
@@ -631,11 +631,34 @@ export const createWebProjectServiceWithCollab = async ({
   router,
   filePicker,
   subject,
+  appDb,
 }) => {
   const collabDebugEnabled = resolveCollabDebugEnabled();
   const collabDebugLog = createCollabDebugLogger({
     enabled: collabDebugEnabled,
   });
+
+  const ensureProjectEntryForCollab = async ({ projectId }) => {
+    if (!appDb || !projectId) return;
+    const now = Date.now();
+    const entries = (await appDb.get("projectEntries")) || [];
+    const existingIndex = entries.findIndex((entry) => entry?.id === projectId);
+
+    if (existingIndex >= 0) {
+      entries[existingIndex] = {
+        ...entries[existingIndex],
+        lastOpenedAt: now,
+      };
+    } else {
+      entries.push({
+        id: projectId,
+        createdAt: now,
+        lastOpenedAt: now,
+      });
+    }
+
+    await appDb.set("projectEntries", entries);
+  };
 
   const onRemoteEvent = createRemoteRefreshDispatcher({
     subject,
@@ -646,6 +669,12 @@ export const createWebProjectServiceWithCollab = async ({
     router,
     filePicker,
     onRemoteEvent,
+    onInitialSyncCompleted: async ({ projectId }) => {
+      await ensureProjectEntryForCollab({ projectId });
+      collabDebugLog("info", "project entry ensured from collab bootstrap", {
+        projectId,
+      });
+    },
   });
 
   const collabRuntimeBootstrap = createCollabRuntimeBootstrap({

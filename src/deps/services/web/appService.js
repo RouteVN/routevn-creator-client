@@ -92,7 +92,33 @@ export const createAppService = ({
   return {
     // Project entries management
     async getProjectEntries() {
-      return (await db.get("projectEntries")) || [];
+      const rawEntries = (await db.get("projectEntries")) || [];
+      if (!Array.isArray(rawEntries)) return [];
+
+      const normalizedEntries = [];
+      for (const entry of rawEntries) {
+        if (!entry || typeof entry !== "object") continue;
+        const entryId =
+          typeof entry.id === "string" && entry.id.length > 0
+            ? entry.id
+            : typeof entry.projectId === "string" && entry.projectId.length > 0
+              ? entry.projectId
+              : null;
+        if (!entryId) {
+          console.warn(
+            "[routevn.project.init.web] skipping invalid project entry",
+            {
+              entry,
+            },
+          );
+          continue;
+        }
+        normalizedEntries.push({
+          ...entry,
+          id: entryId,
+        });
+      }
+      return normalizedEntries;
     },
     async addProjectEntry(entry) {
       const entries = await this.getProjectEntries();
@@ -145,8 +171,12 @@ export const createAppService = ({
             );
             return {
               id: entry.id,
-              name: "Error loading project",
-              description: "Unable to read project data",
+              name:
+                (typeof entry.name === "string" && entry.name) ||
+                "Untitled Project",
+              description:
+                (typeof entry.description === "string" && entry.description) ||
+                "",
               createdAt: entry.createdAt,
               lastOpenedAt: entry.lastOpenedAt,
             };
@@ -166,6 +196,12 @@ export const createAppService = ({
     },
     async createNewProject({ name, description, template }) {
       const projectId = nanoid();
+      console.log("[routevn.project.init.web] createNewProject start", {
+        projectId,
+        name: name || "",
+        description: description || "",
+        template: template || null,
+      });
       const projectEntry = {
         id: projectId,
         createdAt: Date.now(),
@@ -177,7 +213,14 @@ export const createAppService = ({
         projectId,
         template,
       });
+      console.log("[routevn.project.init.web] initializeProject complete", {
+        projectId,
+      });
       await this.addProjectEntry(projectEntry);
+      console.log("[routevn.project.init.web] project entry persisted", {
+        projectId,
+        createdAt: projectEntry.createdAt,
+      });
       return { ...projectEntry, name, description, iconFileId: null };
     },
     async getSetting(key) {

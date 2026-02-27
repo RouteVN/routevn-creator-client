@@ -1,4 +1,5 @@
 import { processCommand } from "../../../domain/v2/engine.js";
+import { applyDomainEvent } from "../../../domain/v2/reducer.js";
 import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
 
@@ -589,6 +590,35 @@ const applyTypedEventToRepositoryState = ({
     });
   }
 
+  if (event?.type === "typedDomainEvent") {
+    const domainEvent = event?.payload?.event;
+    if (
+      !domainEvent ||
+      typeof domainEvent !== "object" ||
+      typeof domainEvent.type !== "string" ||
+      domainEvent.type.length === 0
+    ) {
+      throw new Error("typedDomainEvent payload.event is required");
+    }
+
+    const resolvedProjectId =
+      event?.payload?.projectId ||
+      domainEvent?.meta?.projectId ||
+      projectId ||
+      repositoryState?.project?.id ||
+      "unknown-project";
+    const domainStateBefore = projectRepositoryStateToDomainState({
+      repositoryState,
+      projectId: resolvedProjectId,
+    });
+    const domainStateAfter = structuredClone(domainStateBefore);
+    applyDomainEvent(domainStateAfter, domainEvent);
+    return projectDomainStateToRepositoryState({
+      domainState: domainStateAfter,
+      repositoryState,
+    });
+  }
+
   return undefined;
 };
 
@@ -646,5 +676,31 @@ export const applyTypedCommandToRepository = async ({
         payload: structuredClone(command.payload || {}),
       },
     ],
+  };
+};
+
+export const applyTypedDomainEventToRepository = async ({
+  repository,
+  event,
+  projectId,
+}) => {
+  if (!event || typeof event !== "object") {
+    throw new Error("Domain event is required");
+  }
+  if (typeof event.type !== "string" || event.type.length === 0) {
+    throw new Error("Domain event type is required");
+  }
+
+  await repository.addEvent({
+    type: "typedDomainEvent",
+    payload: {
+      projectId,
+      event: structuredClone(event),
+    },
+  });
+
+  return {
+    mode: "typed_domain_event",
+    events: [structuredClone(event)],
   };
 };

@@ -1,8 +1,9 @@
 import { processCommand } from "../../domain/v2/engine.js";
+import { applyDomainEvent } from "../../domain/v2/reducer.js";
 import { assertDomainInvariants } from "../../domain/v2/invariants.js";
 import { createEmptyProjectState } from "../../domain/v2/model.js";
 import { validateCommand } from "../../domain/v2/validateCommand.js";
-import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
+import { commandToSyncEvent, committedEventToDomainEvent } from "./mappers.js";
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 const nonEmptyString = (value) =>
@@ -17,6 +18,15 @@ const commandPartitions = (command) => {
   if (normalized.length > 0) return [...new Set(normalized)];
   const fallback = nonEmptyString(command?.partition);
   return fallback ? [fallback] : [];
+};
+const isTransportDisconnectedError = (error) => {
+  const code = error?.code;
+  if (code === "transport_disconnected") return true;
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("websocket is not connected") ||
+    message.includes("transport_disconnected")
+  );
 };
 
 const loadSyncRuntime = async () => {
@@ -55,7 +65,7 @@ export const createProjectCollabService = ({
   partitions,
   clientStore,
   logger = () => {},
-  onCommittedCommand,
+  onCommittedEvent,
 }) => {
   const appliedEventIds = new Set();
   let lastError = null;
@@ -72,16 +82,16 @@ export const createProjectCollabService = ({
           description: projectDescription,
         });
 
-  const emitCommittedCommand = ({
-    command,
+  const emitCommittedEvent = ({
+    domainEvent,
     committedEvent,
     sourceType,
     isFromCurrentActor,
   }) => {
-    if (typeof onCommittedCommand !== "function") return;
+    if (typeof onCommittedEvent !== "function") return;
     try {
-      const result = onCommittedCommand({
-        command: structuredClone(command),
+      const result = onCommittedEvent({
+        domainEvent: structuredClone(domainEvent),
         committedEvent: structuredClone(committedEvent),
         sourceType,
         isFromCurrentActor,
@@ -89,14 +99,14 @@ export const createProjectCollabService = ({
       if (result && typeof result.catch === "function") {
         result.catch((error) => {
           lastError = {
-            code: "on_committed_command_failed",
+            code: "on_committed_event_failed",
             message: error?.message || "unknown",
           };
         });
       }
     } catch (error) {
       lastError = {
-        code: "on_committed_command_failed",
+        code: "on_committed_event_failed",
         message: error?.message || "unknown",
       };
     }
@@ -104,27 +114,86 @@ export const createProjectCollabService = ({
 
   const applyCommittedEvents = (events, sourceType = "unknown") => {
     let typedStateMutated = false;
+    let receivedCount = 0;
+    let parsedCount = 0;
+    let appliedCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
     for (const committedEvent of events) {
-      const command = committedEventToCommand(committedEvent);
-      if (!command) continue;
-      const dedupeId = command.id || committedEvent?.id;
-      if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
+      receivedCount += 1;
+      const domainEvent = committedEventToDomainEvent(committedEvent);
+      if (!domainEvent) {
+        skippedCount += 1;
+        logger({
+          component: "sync_client",
+          event: "committed_event_ignored_unparseable",
+          source_type: sourceType,
+          committed_id: Number.isFinite(Number(committedEvent?.committed_id))
+            ? Number(committedEvent.committed_id)
+            : null,
+          raw_event_type: committedEvent?.event?.type || null,
+        });
+        continue;
+      }
+      parsedCount += 1;
+      const commandId =
+        typeof domainEvent?.meta?.commandId === "string" &&
+        domainEvent.meta.commandId.length > 0
+          ? domainEvent.meta.commandId
+          : null;
+      const dedupeId = commandId || committedEvent?.id || null;
+      if (dedupeId && appliedEventIds.has(dedupeId)) continue;
 
       const isFromCurrentActor =
-        command?.actor?.clientId === actor?.clientId &&
-        command?.actor?.userId === actor?.userId;
+        domainEvent?.meta?.actor?.clientId === actor?.clientId &&
+        domainEvent?.meta?.actor?.userId === actor?.userId;
 
-      const result = processCommand({ state: projectedState, command });
-      projectedState = result.state;
+      try {
+        projectedState = applyDomainEvent(projectedState, domainEvent);
+      } catch (error) {
+        failedCount += 1;
+        lastError = {
+          code: "projection_apply_failed",
+          message: error?.message || "unknown",
+          sourceType,
+          committedId: Number.isFinite(Number(committedEvent?.committed_id))
+            ? Number(committedEvent.committed_id)
+            : null,
+          eventType: domainEvent?.type || null,
+        };
+        logger({
+          component: "sync_client",
+          event: "domain_event_apply_failed",
+          source_type: sourceType,
+          committed_id: Number.isFinite(Number(committedEvent?.committed_id))
+            ? Number(committedEvent.committed_id)
+            : null,
+          domain_event_type: domainEvent?.type || null,
+          command_id: domainEvent?.meta?.commandId || null,
+          error: error?.message || "unknown",
+          payload_preview: {
+            resourceType: domainEvent?.payload?.resourceType || null,
+            resourceId: domainEvent?.payload?.resourceId || null,
+            sceneId: domainEvent?.payload?.sceneId || null,
+          },
+        });
+        continue;
+      }
       typedStateMutated = true;
+      appliedCount += 1;
 
-      appliedEventIds.add(dedupeId);
+      if (dedupeId) {
+        appliedEventIds.add(dedupeId);
+      }
+      if (commandId) {
+        appliedEventIds.add(commandId);
+      }
       if (committedEvent?.id) {
         appliedEventIds.add(committedEvent.id);
       }
 
-      emitCommittedCommand({
-        command,
+      emitCommittedEvent({
+        domainEvent,
         committedEvent,
         sourceType,
         isFromCurrentActor,
@@ -134,6 +203,17 @@ export const createProjectCollabService = ({
     if (typedStateMutated) {
       assertDomainInvariants(projectedState);
     }
+
+    logger({
+      component: "sync_client",
+      event: "committed_events_processed",
+      source_type: sourceType,
+      received_count: receivedCount,
+      parsed_count: parsedCount,
+      applied_count: appliedCount,
+      failed_count: failedCount,
+      skipped_count: skippedCount,
+    });
   };
 
   const ensureSyncClient = async () => {
@@ -169,8 +249,21 @@ export const createProjectCollabService = ({
               message: "Server rejected command",
               payload,
             };
+            logger({
+              component: "sync_client",
+              event: "submit_rejected_detail",
+              reason: payload?.reason || "validation_failed",
+              rejected_id: payload?.id || null,
+              msg_id: payload?.msg_id || null,
+              payload,
+            });
           } else if (type === "error") {
             lastError = payload;
+            logger({
+              component: "sync_client",
+              event: "sync_client_error_detail",
+              payload,
+            });
           }
         } catch (error) {
           lastError = {
@@ -218,12 +311,59 @@ export const createProjectCollabService = ({
       }
 
       const client = await ensureSyncClient();
-      await client.submitEvent({
-        partitions,
-        event: commandToSyncEvent(command),
-      });
+      try {
+        await client.submitEvent({
+          partitions,
+          event: commandToSyncEvent(command),
+        });
+      } catch (error) {
+        if (!isTransportDisconnectedError(error)) {
+          throw error;
+        }
+        // Keep optimistic state and rely on persisted drafts for retry after reconnect.
+        lastError = {
+          code: "transport_disconnected",
+          message: error?.message || "websocket is not connected",
+        };
+        logger({
+          component: "sync_client",
+          event: "submit_deferred_transport_disconnected",
+          command_id: command.id,
+        });
+      }
 
       return command.id;
+    },
+
+    async submitSyncEvent({ partitions: targetPartitions, event }) {
+      const normalizedPartitions = Array.isArray(targetPartitions)
+        ? targetPartitions.filter(
+            (partition) =>
+              typeof partition === "string" && partition.length > 0,
+          )
+        : [];
+      if (normalizedPartitions.length === 0) {
+        throw new Error("Sync event must include at least one partition");
+      }
+      if (!event || typeof event !== "object") {
+        throw new Error("Sync event payload is required");
+      }
+
+      const client = await ensureSyncClient();
+      logger({
+        component: "sync_client",
+        event: "submit_sync_event_request",
+        partitions: normalizedPartitions,
+        event_type: event?.type || null,
+        command_id:
+          event?.type === "event" ? event?.payload?.commandId || null : null,
+        command_schema:
+          event?.type === "event" ? event?.payload?.schema || null : null,
+      });
+      await client.submitEvent({
+        partitions: normalizedPartitions,
+        event: structuredClone(event),
+      });
     },
 
     async syncNow(options = {}) {
