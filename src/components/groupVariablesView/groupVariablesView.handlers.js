@@ -68,10 +68,14 @@ export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
   const prevValues = store.selectDefaultValues();
   const newValues = payload._event.detail.values;
+  const storeState = store.getState
+    ? store.getState()
+    : store._state || store.state;
+  const isEditMode = storeState?.dialogMode === "edit";
 
   // When type changes, set appropriate default value
   let defaultValue = newValues.default;
-  if (newValues.type !== prevValues.type) {
+  if (!isEditMode && newValues.type !== prevValues.type) {
     defaultValue = getDefaultValueByType(newValues.type);
   }
 
@@ -273,7 +277,6 @@ export const handleFormActionClick = (deps, payload) => {
             itemId: editingItemId,
             name,
             scope,
-            type,
             default: defaultValue,
           },
           bubbles: true,

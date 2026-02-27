@@ -225,6 +225,64 @@ assert.deepEqual(flattenTreeIds(state.variables.tree), [
 
 apply(
   makeCommand({
+    type: "variable.update",
+    ts: 2250,
+    partition: `project:${projectId}:settings`,
+    payload: {
+      variableId: "var-a",
+      patch: {
+        name: "A Renamed",
+        type: "string",
+      },
+    },
+  }),
+);
+assert.equal(state.variables.items["var-a"].name, "A Renamed");
+assert.equal(state.variables.items["var-a"].type, "string");
+
+let variableTypeChangeBlocked = false;
+try {
+  apply(
+    makeCommand({
+      type: "variable.update",
+      ts: 2260,
+      partition: `project:${projectId}:settings`,
+      payload: {
+        variableId: "var-a",
+        patch: {
+          type: "number",
+        },
+      },
+    }),
+  );
+} catch (error) {
+  variableTypeChangeBlocked = error instanceof DomainPreconditionError;
+}
+assert.equal(variableTypeChangeBlocked, true);
+
+let variableVariableTypeChangeBlocked = false;
+try {
+  apply(
+    makeCommand({
+      type: "variable.update",
+      ts: 2270,
+      partition: `project:${projectId}:settings`,
+      payload: {
+        variableId: "var-a",
+        patch: {
+          variableType: "boolean",
+        },
+      },
+    }),
+  );
+} catch (error) {
+  variableVariableTypeChangeBlocked = error instanceof DomainPreconditionError;
+}
+assert.equal(variableVariableTypeChangeBlocked, true);
+assert.equal(state.variables.items["var-a"].type, "string");
+
+apply(
+  makeCommand({
     type: "layout.create",
     ts: 2300,
     partition: `project:${projectId}:layouts`,
