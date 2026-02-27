@@ -251,6 +251,18 @@ export const selectViewData = ({ state, props }) => {
   if (state.dialogMode === "edit") {
     form.title = "Edit Variable";
     form.description = "Update variable";
+    form.fields = (form.fields || []).map((field) => {
+      if (field?.name !== "type") {
+        return field;
+      }
+      const { options: _options, ...restField } = field;
+      return {
+        ...restField,
+        type: "read-only-text",
+        required: false,
+        content: "${values.type}",
+      };
+    });
     if (submitButton) {
       submitButton.label = "Update Variable";
     }

@@ -901,11 +901,10 @@ const reducers = {
       ? patch.parentId
       : variable?.parentId;
     delete patch.parentId;
+    delete patch.type;
+    delete patch.variableType;
     if (Object.prototype.hasOwnProperty.call(patch, "default")) {
       patch.value = structuredClone(patch.default);
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, "type")) {
-      patch.variableType = patch.type;
     }
     variables.items[payload.variableId] = {
       ...variable,

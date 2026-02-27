@@ -201,25 +201,44 @@ export const assertCommandPreconditions = (state, command) => {
       assert(!!state.variables?.items?.[p.variableId], "variable not found", {
         variableId: p.variableId,
       });
-      if (
-        command.type === COMMAND_TYPES.VARIABLE_UPDATE &&
-        p.patch &&
-        Object.prototype.hasOwnProperty.call(p.patch, "parentId")
-      ) {
-        const parentId = p.patch.parentId;
-        if (parentId !== undefined && parentId !== null) {
-          assert(parentId !== p.variableId, "variable cannot parent itself", {
+      if (command.type === COMMAND_TYPES.VARIABLE_UPDATE && p.patch) {
+        const currentVariable = state.variables?.items?.[p.variableId];
+        const currentType =
+          currentVariable?.type ?? currentVariable?.variableType ?? null;
+        if (Object.prototype.hasOwnProperty.call(p.patch, "type")) {
+          assert(p.patch.type === currentType, "variable type is immutable", {
             variableId: p.variableId,
-            parentId,
+            currentType,
+            nextType: p.patch.type,
           });
+        }
+        if (Object.prototype.hasOwnProperty.call(p.patch, "variableType")) {
           assert(
-            !!state.variables?.items?.[parentId],
-            "variable parent not found",
+            p.patch.variableType === currentType,
+            "variable type is immutable",
             {
               variableId: p.variableId,
-              parentId,
+              currentType,
+              nextType: p.patch.variableType,
             },
           );
+        }
+        if (Object.prototype.hasOwnProperty.call(p.patch, "parentId")) {
+          const parentId = p.patch.parentId;
+          if (parentId !== undefined && parentId !== null) {
+            assert(parentId !== p.variableId, "variable cannot parent itself", {
+              variableId: p.variableId,
+              parentId,
+            });
+            assert(
+              !!state.variables?.items?.[parentId],
+              "variable parent not found",
+              {
+                variableId: p.variableId,
+                parentId,
+              },
+            );
+          }
         }
       }
       return;
