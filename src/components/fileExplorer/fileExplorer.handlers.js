@@ -237,6 +237,16 @@ export const handleFileAction = async (deps, payload) => {
         parentId: null,
         position: "last",
       });
+    } else if (isLayoutsTarget(repositoryTarget)) {
+      await projectService.createLayoutItem({
+        layoutId: nanoid(),
+        name: "New Folder",
+        parentId: null,
+        position: "last",
+        data: {
+          type: "folder",
+        },
+      });
     } else if (layoutElementsTarget) {
       await projectService.createLayoutElement({
         layoutId: layoutElementsTarget.layoutId,
@@ -353,7 +363,7 @@ export const handleFileAction = async (deps, payload) => {
         });
       } else if (
         isLayoutsTarget(repositoryTarget) &&
-        currentItem?.type === "layout"
+        (currentItem?.type === "layout" || currentItem?.type === "folder")
       ) {
         await projectService.renameLayoutItem({
           layoutId: itemId,
@@ -475,7 +485,7 @@ export const handleFileAction = async (deps, payload) => {
         });
       } else if (
         isLayoutsTarget(repositoryTarget) &&
-        currentItem.type === "layout"
+        (currentItem.type === "layout" || currentItem.type === "folder")
       ) {
         await projectService.deleteLayoutItem({
           layoutId: itemId,
@@ -522,6 +532,16 @@ export const handleFileAction = async (deps, payload) => {
           },
           parentId: itemId,
           position: "last",
+        });
+      } else if (isLayoutsTarget(repositoryTarget)) {
+        await projectService.createLayoutItem({
+          layoutId: nanoid(),
+          name: "New Folder",
+          parentId: itemId,
+          position: "last",
+          data: {
+            type: "folder",
+          },
         });
       } else if (layoutElementsTarget) {
         await projectService.createLayoutElement({
@@ -783,6 +803,12 @@ export const handleTargetChanged = async (deps, payload) => {
   } else if (isScenesTarget(repositoryTarget) && source.type === "scene") {
     await projectService.reorderSceneItem({
       sceneId: source.id,
+      parentId: parent,
+      position: repositoryPosition,
+    });
+  } else if (isLayoutsTarget(repositoryTarget)) {
+    await projectService.reorderLayoutItem({
+      layoutId: source.id,
       parentId: parent,
       position: repositoryPosition,
     });
