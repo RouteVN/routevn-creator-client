@@ -240,6 +240,7 @@ const createLayoutTemplate = (layoutType) => {
           width: 1640,
           height: 860,
           direction: "vertical",
+          anchorToBottom: true,
           anchorX: 0,
           anchorY: 0,
           scaleX: 1,
