@@ -25,7 +25,7 @@ import {
 } from "./collabCommittedCursorStore.js";
 import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import {
-  applyTypedDomainEventToRepository,
+  applyTypedCommandToRepository,
   assertV2State,
   createInsiemeProjectRepositoryRuntime,
   initialProjectData,
@@ -269,7 +269,6 @@ export const createProjectService = ({
     let latestConnectedServerLastCommittedId = null;
     let captureInitialSyncWindow = false;
     let initialSyncPageEventCount = 0;
-    const pendingSeedCommandIds = new Set();
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
@@ -312,81 +311,64 @@ export const createProjectService = ({
         updateCollabDiagnostics(projectId, diagnosticPatch);
         collabLog("debug", "sync-client", entry);
       },
-      onCommittedEvent: ({
-        domainEvent,
+      onCommittedCommand: ({
+        command,
         committedEvent,
         sourceType,
         isFromCurrentActor,
       }) =>
         queueCollabApply(projectId, async () => {
-          const applyCommittedEventToRepository = async ({
-            domainEvent,
+          const applyCommittedCommandToRepository = async ({
+            command,
             committedEvent,
             sourceType,
             isFromCurrentActor,
           }) => {
-            const commandId = domainEvent?.meta?.commandId || null;
-            const shouldApplyPendingSeedEcho =
-              isFromCurrentActor &&
-              typeof commandId === "string" &&
-              pendingSeedCommandIds.has(commandId);
             if (isFromCurrentActor) {
-              if (shouldApplyPendingSeedEcho) {
-                pendingSeedCommandIds.delete(commandId);
-                collabLog("info", "applying committed seed echo event", {
+              collabLog(
+                "debug",
+                "typed command skipped (current actor source)",
+                {
                   projectId,
                   sourceType,
-                  eventType: domainEvent?.type || null,
-                  commandId,
+                  commandId: command?.id || null,
+                  commandType: command?.type || null,
                   committedId: Number.isFinite(
                     Number(committedEvent?.committed_id),
                   )
                     ? Number(committedEvent.committed_id)
                     : null,
-                });
-              } else {
-                collabLog(
-                  "debug",
-                  "domain event skipped (current actor source)",
-                  {
-                    projectId,
-                    sourceType,
-                    eventType: domainEvent?.type || null,
-                    commandId,
-                    committedId: Number.isFinite(
-                      Number(committedEvent?.committed_id),
-                    )
-                      ? Number(committedEvent.committed_id)
-                      : null,
-                  },
-                );
-                return;
-              }
+                },
+              );
+              return;
             }
 
             const beforeState = repository.getState();
             const beforeImagesCount = countImageEntries(beforeState?.images);
-            const applyResult = await applyTypedDomainEventToRepository({
+            const applyResult = await applyTypedCommandToRepository({
               repository,
-              event: domainEvent,
+              command,
               projectId: resolvedProjectId,
             });
             if (applyResult.events.length === 0) {
-              collabLog("warn", "domain event ignored (no projection events)", {
-                projectId,
-                sourceType,
-                eventType: domainEvent?.type || null,
-                commandId: domainEvent?.meta?.commandId || null,
-              });
+              collabLog(
+                "warn",
+                "typed command ignored (no projection events)",
+                {
+                  projectId,
+                  sourceType,
+                  commandType: command?.type || null,
+                  commandId: command?.id || null,
+                },
+              );
               return;
             }
 
             const afterState = repository.getState();
             const afterImagesCount = countImageEntries(afterState?.images);
-            collabLog("info", "remote domain event applied to repository", {
+            collabLog("info", "remote typed command applied to repository", {
               projectId,
-              eventType: domainEvent?.type || null,
-              commandId: domainEvent?.meta?.commandId || null,
+              commandType: command?.type || null,
               applyMode: applyResult.mode,
               eventCount: applyResult.events.length,
               beforeImagesCount,
@@ -394,15 +376,16 @@ export const createProjectService = ({
               sourceType,
             });
             updateCollabDiagnostics(projectId, {
-              status: "remote_domain_event_applied",
+              status: "remote_typed_command_applied",
               sourceType,
-              lastRemoteEventType: domainEvent?.type || null,
+              lastRemoteCommandType: command?.type || null,
             });
             if (typeof onRemoteEvent === "function") {
               for (const event of applyResult.events) {
                 onRemoteEvent({
                   projectId,
                   sourceType,
+                  command,
                   committedEvent,
                   event,
                 });
@@ -437,8 +420,8 @@ export const createProjectService = ({
             }
           }
 
-          await applyCommittedEventToRepository({
-            domainEvent,
+          await applyCommittedCommandToRepository({
+            command,
             committedEvent,
             sourceType,
             isFromCurrentActor,
@@ -573,12 +556,6 @@ export const createProjectService = ({
                   partitions: seedEvent.partitions,
                   event: seedEvent.event,
                 });
-                if (
-                  typeof seedEvent.commandId === "string" &&
-                  seedEvent.commandId.length > 0
-                ) {
-                  pendingSeedCommandIds.add(seedEvent.commandId);
-                }
               }
               await collabSession.flushDrafts();
               if (typeof collabSession.syncNow === "function") {

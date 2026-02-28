@@ -609,9 +609,6 @@ const reducers = {
   "resource.moved": ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     const item = collection.items[payload.resourceId];
-    if (!item) {
-      return;
-    }
     ensureCollectionTree(collection);
     item.parentId = resolveCollectionParentId({
       items: collection.items || {},

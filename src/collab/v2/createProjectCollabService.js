@@ -1,9 +1,8 @@
 import { processCommand } from "../../domain/v2/engine.js";
-import { applyDomainEvent } from "../../domain/v2/reducer.js";
 import { assertDomainInvariants } from "../../domain/v2/invariants.js";
 import { createEmptyProjectState } from "../../domain/v2/model.js";
 import { validateCommand } from "../../domain/v2/validateCommand.js";
-import { commandToSyncEvent, committedEventToDomainEvent } from "./mappers.js";
+import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 const nonEmptyString = (value) =>
@@ -65,7 +64,7 @@ export const createProjectCollabService = ({
   partitions,
   clientStore,
   logger = () => {},
-  onCommittedEvent,
+  onCommittedCommand,
 }) => {
   const appliedEventIds = new Set();
   let lastError = null;
@@ -82,16 +81,16 @@ export const createProjectCollabService = ({
           description: projectDescription,
         });
 
-  const emitCommittedEvent = ({
-    domainEvent,
+  const emitCommittedCommand = ({
+    command,
     committedEvent,
     sourceType,
     isFromCurrentActor,
   }) => {
-    if (typeof onCommittedEvent !== "function") return;
+    if (typeof onCommittedCommand !== "function") return;
     try {
-      const result = onCommittedEvent({
-        domainEvent: structuredClone(domainEvent),
+      const result = onCommittedCommand({
+        command: structuredClone(command),
         committedEvent: structuredClone(committedEvent),
         sourceType,
         isFromCurrentActor,
@@ -99,14 +98,14 @@ export const createProjectCollabService = ({
       if (result && typeof result.catch === "function") {
         result.catch((error) => {
           lastError = {
-            code: "on_committed_event_failed",
+            code: "on_committed_command_failed",
             message: error?.message || "unknown",
           };
         });
       }
     } catch (error) {
       lastError = {
-        code: "on_committed_event_failed",
+        code: "on_committed_command_failed",
         message: error?.message || "unknown",
       };
     }
@@ -114,86 +113,27 @@ export const createProjectCollabService = ({
 
   const applyCommittedEvents = (events, sourceType = "unknown") => {
     let typedStateMutated = false;
-    let receivedCount = 0;
-    let parsedCount = 0;
-    let appliedCount = 0;
-    let failedCount = 0;
-    let skippedCount = 0;
     for (const committedEvent of events) {
-      receivedCount += 1;
-      const domainEvent = committedEventToDomainEvent(committedEvent);
-      if (!domainEvent) {
-        skippedCount += 1;
-        logger({
-          component: "sync_client",
-          event: "committed_event_ignored_unparseable",
-          source_type: sourceType,
-          committed_id: Number.isFinite(Number(committedEvent?.committed_id))
-            ? Number(committedEvent.committed_id)
-            : null,
-          raw_event_type: committedEvent?.event?.type || null,
-        });
-        continue;
-      }
-      parsedCount += 1;
-      const commandId =
-        typeof domainEvent?.meta?.commandId === "string" &&
-        domainEvent.meta.commandId.length > 0
-          ? domainEvent.meta.commandId
-          : null;
-      const dedupeId = commandId || committedEvent?.id || null;
-      if (dedupeId && appliedEventIds.has(dedupeId)) continue;
+      const command = committedEventToCommand(committedEvent);
+      if (!command) continue;
+      const dedupeId = command.id || committedEvent?.id;
+      if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
 
       const isFromCurrentActor =
-        domainEvent?.meta?.actor?.clientId === actor?.clientId &&
-        domainEvent?.meta?.actor?.userId === actor?.userId;
+        command?.actor?.clientId === actor?.clientId &&
+        command?.actor?.userId === actor?.userId;
 
-      try {
-        projectedState = applyDomainEvent(projectedState, domainEvent);
-      } catch (error) {
-        failedCount += 1;
-        lastError = {
-          code: "projection_apply_failed",
-          message: error?.message || "unknown",
-          sourceType,
-          committedId: Number.isFinite(Number(committedEvent?.committed_id))
-            ? Number(committedEvent.committed_id)
-            : null,
-          eventType: domainEvent?.type || null,
-        };
-        logger({
-          component: "sync_client",
-          event: "domain_event_apply_failed",
-          source_type: sourceType,
-          committed_id: Number.isFinite(Number(committedEvent?.committed_id))
-            ? Number(committedEvent.committed_id)
-            : null,
-          domain_event_type: domainEvent?.type || null,
-          command_id: domainEvent?.meta?.commandId || null,
-          error: error?.message || "unknown",
-          payload_preview: {
-            resourceType: domainEvent?.payload?.resourceType || null,
-            resourceId: domainEvent?.payload?.resourceId || null,
-            sceneId: domainEvent?.payload?.sceneId || null,
-          },
-        });
-        continue;
-      }
+      const result = processCommand({ state: projectedState, command });
+      projectedState = result.state;
       typedStateMutated = true;
-      appliedCount += 1;
 
-      if (dedupeId) {
-        appliedEventIds.add(dedupeId);
-      }
-      if (commandId) {
-        appliedEventIds.add(commandId);
-      }
+      appliedEventIds.add(dedupeId);
       if (committedEvent?.id) {
         appliedEventIds.add(committedEvent.id);
       }
 
-      emitCommittedEvent({
-        domainEvent,
+      emitCommittedCommand({
+        command,
         committedEvent,
         sourceType,
         isFromCurrentActor,
@@ -203,17 +143,6 @@ export const createProjectCollabService = ({
     if (typedStateMutated) {
       assertDomainInvariants(projectedState);
     }
-
-    logger({
-      component: "sync_client",
-      event: "committed_events_processed",
-      source_type: sourceType,
-      received_count: receivedCount,
-      parsed_count: parsedCount,
-      applied_count: appliedCount,
-      failed_count: failedCount,
-      skipped_count: skippedCount,
-    });
   };
 
   const ensureSyncClient = async () => {
@@ -249,21 +178,8 @@ export const createProjectCollabService = ({
               message: "Server rejected command",
               payload,
             };
-            logger({
-              component: "sync_client",
-              event: "submit_rejected_detail",
-              reason: payload?.reason || "validation_failed",
-              rejected_id: payload?.id || null,
-              msg_id: payload?.msg_id || null,
-              payload,
-            });
           } else if (type === "error") {
             lastError = payload;
-            logger({
-              component: "sync_client",
-              event: "sync_client_error_detail",
-              payload,
-            });
           }
         } catch (error) {
           lastError = {
@@ -320,16 +236,11 @@ export const createProjectCollabService = ({
         if (!isTransportDisconnectedError(error)) {
           throw error;
         }
-        // Keep optimistic state and rely on persisted drafts for retry after reconnect.
+        // Keep optimistic state and rely on draft persistence for retry.
         lastError = {
           code: "transport_disconnected",
           message: error?.message || "websocket is not connected",
         };
-        logger({
-          component: "sync_client",
-          event: "submit_deferred_transport_disconnected",
-          command_id: command.id,
-        });
       }
 
       return command.id;
@@ -350,16 +261,6 @@ export const createProjectCollabService = ({
       }
 
       const client = await ensureSyncClient();
-      logger({
-        component: "sync_client",
-        event: "submit_sync_event_request",
-        partitions: normalizedPartitions,
-        event_type: event?.type || null,
-        command_id:
-          event?.type === "event" ? event?.payload?.commandId || null : null,
-        command_schema:
-          event?.type === "event" ? event?.payload?.schema || null : null,
-      });
       await client.submitEvent({
         partitions: normalizedPartitions,
         event: structuredClone(event),
