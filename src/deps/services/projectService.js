@@ -20,7 +20,7 @@ import {
 } from "../../utils/fileProcessors";
 import { projectRepositoryStateToDomainState } from "../../domain/v2/stateProjection.js";
 import {
-  applyTypedDomainEventToRepository,
+  applyTypedCommandToRepository,
   assertV2State,
   createInsiemeProjectRepositoryRuntime,
   initialProjectData,
@@ -117,11 +117,11 @@ export const createProjectService = ({ router, db, filePicker }) => {
       logger: (entry) => {
         collabLog("debug", "sync-client", entry);
       },
-      onCommittedEvent: async ({ domainEvent, isFromCurrentActor }) => {
+      onCommittedCommand: async ({ command, isFromCurrentActor }) => {
         if (isFromCurrentActor) return;
-        await applyTypedDomainEventToRepository({
+        await applyTypedCommandToRepository({
           repository,
-          event: domainEvent,
+          command,
           projectId: resolvedProjectId,
         });
       },
@@ -142,21 +142,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
         url: endpointUrl,
         label: "routevn.collab.tauri.transport",
       });
-      try {
-        await collabSession.setOnlineTransport(transport);
-        collabLog("info", "websocket transport attached", {
-          endpointUrl,
-        });
-      } catch (error) {
-        collabLog(
-          "warn",
-          "failed to attach websocket transport; continuing in offline mode",
-          {
-            endpointUrl,
-            error: error?.message || "unknown",
-          },
-        );
-      }
+      await collabSession.setOnlineTransport(transport);
+      collabLog("info", "websocket transport attached", {
+        endpointUrl,
+      });
     }
 
     return collabSession;

@@ -26,9 +26,7 @@ export const createWebSocketTransport = ({
 
   const ensureOpen = () => {
     if (!socket || socket.readyState !== WebSocketImpl.OPEN) {
-      const error = new Error("websocket is not connected");
-      error.code = "transport_disconnected";
-      throw error;
+      throw new Error("websocket is not connected");
     }
   };
 
