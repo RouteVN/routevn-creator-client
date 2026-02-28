@@ -151,46 +151,6 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
       });
     },
 
-    async replaceTypedEvents(events) {
-      const normalizedEvents = Array.isArray(events) ? events : [];
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("events", "readwrite");
-        const store = transaction.objectStore("events");
-        let finished = false;
-
-        const fail = (error) => {
-          if (finished) return;
-          finished = true;
-          reject(error || new Error("replaceTypedEvents failed"));
-          try {
-            transaction.abort();
-          } catch {
-            // no-op
-          }
-        };
-
-        transaction.oncomplete = () => {
-          if (finished) return;
-          finished = true;
-          resolve();
-        };
-        transaction.onerror = (event) => fail(event?.target?.error);
-        transaction.onabort = (event) => fail(event?.target?.error);
-
-        const clearRequest = store.clear();
-        clearRequest.onerror = (event) => fail(event?.target?.error);
-        clearRequest.onsuccess = () => {
-          for (const event of normalizedEvents) {
-            const request = store.add({
-              type: event?.type,
-              payload: JSON.stringify(event?.payload ?? null),
-            });
-            request.onerror = (errorEvent) => fail(errorEvent?.target?.error);
-          }
-        };
-      });
-    },
-
     // App-specific key-value store for project metadata
     app: {
       get: async (key) => {

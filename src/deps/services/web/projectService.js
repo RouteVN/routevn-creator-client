@@ -30,10 +30,7 @@ import {
   createInsiemeProjectRepositoryRuntime,
   initialProjectData,
 } from "../shared/typedProjectRepository.js";
-import {
-  buildSeedSyncEventsFromTypedEvents,
-  sanitizeLocalTypedEventsForReplay,
-} from "./collabSeedSync.js";
+import { buildSeedSyncEventsFromTypedEvents } from "./collabSeedSync.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -703,27 +700,6 @@ export const createProjectService = ({
       try {
         const store = await createInsiemeWebStoreAdapter(projectId);
         let existingEvents = (await store.getEvents()) || [];
-        const sanitizedEventsResult = sanitizeLocalTypedEventsForReplay({
-          events: existingEvents,
-        });
-        if (sanitizedEventsResult.removedEventCount > 0) {
-          existingEvents = sanitizedEventsResult.events;
-          if (typeof store.replaceTypedEvents === "function") {
-            await store.replaceTypedEvents(existingEvents);
-          }
-          collabLog(
-            "warn",
-            "repository init: removed stale seed replay events",
-            {
-              projectId,
-              removedSeedCommandEvents:
-                sanitizedEventsResult.removedSeedCommandEvents,
-              removedSeedDomainEvents:
-                sanitizedEventsResult.removedSeedDomainEvents,
-              localEventCount: existingEvents.length,
-            },
-          );
-        }
         collabLog("info", "repository init: loaded local typed events", {
           projectId,
           localEventCount: existingEvents.length,

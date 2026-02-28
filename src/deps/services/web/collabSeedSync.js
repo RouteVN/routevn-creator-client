@@ -5,9 +5,6 @@ import {
 } from "../../../domain/v2/constants.js";
 import { validateCommand } from "../../../domain/v2/validateCommand.js";
 
-const isSeedCommandId = (value) =>
-  typeof value === "string" && value.startsWith("seed-");
-
 const normalizePartitions = (partitions, fallbackPartitions = []) => {
   const output = [];
   const seen = new Set();
@@ -635,43 +632,4 @@ export const buildSeedSyncEventsFromTypedEvents = ({
   }
 
   return { seedEvents, summary };
-};
-
-export const sanitizeLocalTypedEventsForReplay = ({ events }) => {
-  const sourceEvents = Array.isArray(events) ? events : [];
-  const sanitizedEvents = [];
-  let removedSeedCommandEvents = 0;
-  let removedSeedDomainEvents = 0;
-
-  for (const event of sourceEvents) {
-    if (!event || typeof event !== "object") {
-      sanitizedEvents.push(event);
-      continue;
-    }
-
-    if (
-      event.type === "typedCommand" &&
-      isSeedCommandId(event?.payload?.command?.id)
-    ) {
-      removedSeedCommandEvents += 1;
-      continue;
-    }
-
-    if (
-      event.type === "typedDomainEvent" &&
-      isSeedCommandId(event?.payload?.event?.meta?.commandId)
-    ) {
-      removedSeedDomainEvents += 1;
-      continue;
-    }
-
-    sanitizedEvents.push(event);
-  }
-
-  return {
-    events: sanitizedEvents,
-    removedSeedCommandEvents,
-    removedSeedDomainEvents,
-    removedEventCount: removedSeedCommandEvents + removedSeedDomainEvents,
-  };
 };
