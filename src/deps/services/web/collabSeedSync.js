@@ -1,9 +1,5 @@
-import {
-  commandToSyncEvent,
-  snapshotToBootstrapSyncEvent,
-} from "../../../collab/v2/mappers.js";
+import { snapshotToBootstrapSyncEvent } from "../../../collab/v2/mappers.js";
 import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
-import { validateCommand } from "../../../domain/v2/validateCommand.js";
 
 const normalizePartitions = (partitions, fallbackPartitions = []) => {
   const output = [];
@@ -27,15 +23,6 @@ const normalizePartitions = (partitions, fallbackPartitions = []) => {
   }
   return output;
 };
-
-const getCommandPartitions = (command, fallbackPartitions = []) =>
-  normalizePartitions(
-    [
-      ...(Array.isArray(command?.partitions) ? command.partitions : []),
-      command?.partition,
-    ],
-    fallbackPartitions,
-  );
 
 const hasSeedableSnapshotContent = (snapshotState) => {
   if (!snapshotState || typeof snapshotState !== "object") return false;
@@ -145,100 +132,51 @@ export const buildSeedSyncEventsFromTypedEvents = ({
   partitioning,
 }) => {
   const sourceEvents = Array.isArray(typedEvents) ? typedEvents : [];
-  const normalizedFallbackPartitions = normalizePartitions(fallbackPartitions);
-  const seedEvents = [];
-  const hasTypedCommandHistory = sourceEvents.some(
-    (typedEvent) => typedEvent?.type === "typedCommand",
-  );
+  const snapshotState = findLatestTypedSnapshotState(sourceEvents);
 
   const summary = {
     sourceTypedEvents: sourceEvents.length,
     bootstrapEvents: 0,
-    commandEvents: 0,
-    invalidCommandEvents: 0,
-    skippedDomainEvents: 0,
-    skippedTypedEvents: 0,
-    skippedSnapshotsWithCommandHistory: 0,
-    skippedBootstrapOnlySnapshot: 0,
+    skippedMissingSnapshot: snapshotState ? 0 : 1,
+    skippedBootstrapOnlySnapshot:
+      snapshotState && !hasSeedableSnapshotContent(snapshotState) ? 1 : 0,
   };
 
-  if (!hasTypedCommandHistory) {
-    const snapshotState = findLatestTypedSnapshotState(sourceEvents);
-    if (snapshotState && hasSeedableSnapshotContent(snapshotState)) {
-      const partitions = resolveBootstrapPartitions({
-        projectId,
-        fallbackPartitions: normalizedFallbackPartitions,
-        partitioning,
-      });
-      if (partitions.length > 0) {
-        const bootstrapId = buildBootstrapId({
+  if (!snapshotState || !hasSeedableSnapshotContent(snapshotState)) {
+    return { seedEvents: [], summary };
+  }
+
+  const partitions = resolveBootstrapPartitions({
+    projectId,
+    fallbackPartitions,
+    partitioning,
+  });
+  if (partitions.length === 0) {
+    return { seedEvents: [], summary };
+  }
+
+  const bootstrapId = buildBootstrapId({
+    projectId,
+    state: snapshotState,
+  });
+
+  return {
+    seedEvents: [
+      {
+        commandId: bootstrapId,
+        partitions,
+        event: snapshotToBootstrapSyncEvent({
           projectId,
           state: snapshotState,
-        });
-        seedEvents.push({
-          commandId: bootstrapId,
-          partitions,
-          event: snapshotToBootstrapSyncEvent({
-            projectId,
-            state: snapshotState,
-            actor,
-            bootstrapId,
-            clientTs: Date.now(),
-          }),
-        });
-        summary.bootstrapEvents += 1;
-      }
-    } else if (snapshotState) {
-      summary.skippedBootstrapOnlySnapshot += 1;
-    }
-  } else {
-    summary.skippedSnapshotsWithCommandHistory += sourceEvents.filter(
-      (typedEvent) => typedEvent?.type === "typedSnapshot",
-    ).length;
-  }
-
-  for (const typedEvent of sourceEvents) {
-    if (!typedEvent || typeof typedEvent !== "object") {
-      summary.skippedTypedEvents += 1;
-      continue;
-    }
-
-    if (typedEvent.type === "typedCommand") {
-      const command = typedEvent?.payload?.command;
-      if (
-        !command ||
-        typeof command !== "object" ||
-        typeof command.type !== "string" ||
-        command.type.length === 0
-      ) {
-        summary.skippedTypedEvents += 1;
-        continue;
-      }
-      try {
-        validateCommand(command);
-      } catch {
-        summary.invalidCommandEvents += 1;
-        continue;
-      }
-      seedEvents.push({
-        commandId: command.id,
-        command,
-        partitions: getCommandPartitions(command, normalizedFallbackPartitions),
-        event: commandToSyncEvent(command),
-      });
-      summary.commandEvents += 1;
-      continue;
-    }
-
-    if (typedEvent.type === "typedDomainEvent") {
-      summary.skippedDomainEvents += 1;
-      continue;
-    }
-
-    if (typedEvent.type !== "typedSnapshot") {
-      summary.skippedTypedEvents += 1;
-    }
-  }
-
-  return { seedEvents, summary };
+          actor,
+          bootstrapId,
+          clientTs: Date.now(),
+        }),
+      },
+    ],
+    summary: {
+      ...summary,
+      bootstrapEvents: 1,
+    },
+  };
 };
