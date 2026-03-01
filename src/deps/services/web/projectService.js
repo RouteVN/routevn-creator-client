@@ -359,10 +359,6 @@ export const createProjectService = ({
                     : null,
                 },
               );
-              updateCollabDiagnostics(projectId, {
-                status: "remote_bootstrap_applied",
-                sourceType,
-              });
               if (typeof onRemoteEvent === "function") {
                 for (const event of applyResult.events) {
                   onRemoteEvent({
