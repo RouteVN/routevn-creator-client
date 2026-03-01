@@ -1,5 +1,6 @@
 import { snapshotToBootstrapSyncEvent } from "../../../collab/v2/mappers.js";
 import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
+import { nanoid } from "nanoid";
 
 const normalizePartitions = (partitions, fallbackPartitions = []) => {
   const output = [];
@@ -56,43 +57,7 @@ const hasSeedableSnapshotContent = (snapshotState) => {
   );
 };
 
-const stableStringify = (value) => {
-  if (value === null || value === undefined) return JSON.stringify(value);
-  if (typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
-  }
-  const keys = Object.keys(value).sort();
-  return `{${keys
-    .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
-    .join(",")}}`;
-};
-
-const hashSeedKey = (value) => {
-  const input = String(value || "");
-  let h1 = 0xdeadbeef ^ input.length;
-  let h2 = 0x41c6ce57 ^ input.length;
-  for (let index = 0; index < input.length; index += 1) {
-    const code = input.charCodeAt(index);
-    h1 = Math.imul(h1 ^ code, 2654435761);
-    h2 = Math.imul(h2 ^ code, 1597334677);
-  }
-  h1 =
-    Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^
-    Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 =
-    Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^
-    Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return `${(h2 >>> 0).toString(36)}${(h1 >>> 0).toString(36)}`;
-};
-
-const buildBootstrapId = ({ projectId, state }) => {
-  const key = stableStringify({
-    projectId,
-    state,
-  });
-  return `bootstrap-${hashSeedKey(key)}`;
-};
+const buildBootstrapId = () => `bootstrap-${nanoid()}`;
 
 const findLatestTypedSnapshotState = (typedEvents = []) => {
   for (let index = typedEvents.length - 1; index >= 0; index -= 1) {
@@ -155,10 +120,7 @@ export const buildSeedSyncEventsFromTypedEvents = ({
     return { seedEvents: [], summary };
   }
 
-  const bootstrapId = buildBootstrapId({
-    projectId,
-    state: snapshotState,
-  });
+  const bootstrapId = buildBootstrapId();
 
   return {
     seedEvents: [
