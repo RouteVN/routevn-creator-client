@@ -441,12 +441,11 @@ const createCollabRuntimeBootstrap = ({
     const projectId = getCollabProjectId();
     if (!projectId) return false;
 
-    const diagnostics =
-      typeof projectService.getCollabDiagnostics === "function"
-        ? projectService.getCollabDiagnostics(projectId)
-        : null;
     const hasSession = Boolean(projectService.getCollabSession());
-    const sessionMode = diagnostics?.sessionMode || null;
+    const sessionMode =
+      typeof projectService.getCollabSessionMode === "function"
+        ? projectService.getCollabSessionMode(projectId)
+        : null;
     return !hasSession || sessionMode === "local";
   };
 
@@ -527,10 +526,6 @@ const createCollabRuntimeBootstrap = ({
     collabHeartbeatTimer = setInterval(() => {
       const { hasSession, session } = getCollabDebugStatus();
       const sessionError = session?.getLastError?.() || null;
-      const collabDiagnostics =
-        typeof projectService.getCollabDiagnostics === "function"
-          ? projectService.getCollabDiagnostics()
-          : null;
 
       collabDebugLog("info", "heartbeat", {
         mode: collabRuntime.autoConnectMode,
@@ -538,7 +533,6 @@ const createCollabRuntimeBootstrap = ({
         hasSession,
         sessionError,
         lastConnectError: collabRuntime.lastConnectError,
-        collabDiagnostics,
       });
     }, COLLAB_HEARTBEAT_INTERVAL_MS);
 

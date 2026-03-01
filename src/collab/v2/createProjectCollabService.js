@@ -2,7 +2,11 @@ import { processCommand } from "../../domain/v2/engine.js";
 import { assertDomainInvariants } from "../../domain/v2/invariants.js";
 import { createEmptyProjectState } from "../../domain/v2/model.js";
 import { validateCommand } from "../../domain/v2/validateCommand.js";
-import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
+import {
+  commandToSyncEvent,
+  committedEventToBootstrapSnapshot,
+  committedEventToCommand,
+} from "./mappers.js";
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 const nonEmptyString = (value) =>
@@ -17,6 +21,15 @@ const commandPartitions = (command) => {
   if (normalized.length > 0) return [...new Set(normalized)];
   const fallback = nonEmptyString(command?.partition);
   return fallback ? [fallback] : [];
+};
+const isTransportDisconnectedError = (error) => {
+  const code = error?.code;
+  if (code === "transport_disconnected") return true;
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("websocket is not connected") ||
+    message.includes("transport_disconnected")
+  );
 };
 
 const loadSyncRuntime = async () => {
@@ -106,25 +119,60 @@ export const createProjectCollabService = ({
     let typedStateMutated = false;
     for (const committedEvent of events) {
       const command = committedEventToCommand(committedEvent);
-      if (!command) continue;
-      const dedupeId = command.id || committedEvent?.id;
+      if (command) {
+        const dedupeId = command.id || committedEvent?.id;
+        if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
+
+        const isFromCurrentActor =
+          command?.actor?.clientId === actor?.clientId &&
+          command?.actor?.userId === actor?.userId;
+
+        const result = processCommand({ state: projectedState, command });
+        projectedState = result.state;
+        typedStateMutated = true;
+
+        appliedEventIds.add(dedupeId);
+        if (committedEvent?.id) {
+          appliedEventIds.add(committedEvent.id);
+        }
+
+        emitCommittedCommand({
+          command,
+          committedEvent,
+          sourceType,
+          isFromCurrentActor,
+        });
+        continue;
+      }
+
+      const bootstrap = committedEventToBootstrapSnapshot(committedEvent);
+      if (!bootstrap) continue;
+      const dedupeId = bootstrap.id || committedEvent?.id;
       if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
 
       const isFromCurrentActor =
-        command?.actor?.clientId === actor?.clientId &&
-        command?.actor?.userId === actor?.userId;
-
-      const result = processCommand({ state: projectedState, command });
-      projectedState = result.state;
+        bootstrap?.actor?.clientId === actor?.clientId &&
+        bootstrap?.actor?.userId === actor?.userId;
+      projectedState = structuredClone(bootstrap.state);
       typedStateMutated = true;
-
       appliedEventIds.add(dedupeId);
       if (committedEvent?.id) {
         appliedEventIds.add(committedEvent.id);
       }
 
       emitCommittedCommand({
-        command,
+        command: {
+          id: bootstrap.id || committedEvent?.id,
+          projectId: bootstrap.projectId || projectId,
+          partition: bootstrap.partition,
+          partitions: bootstrap.partitions,
+          type: "project.bootstrap",
+          payload: {
+            state: structuredClone(bootstrap.state),
+          },
+          actor: structuredClone(bootstrap.actor || {}),
+          clientTs: bootstrap.clientTs || committedEvent?.status_updated_at,
+        },
         committedEvent,
         sourceType,
         isFromCurrentActor,
@@ -218,12 +266,44 @@ export const createProjectCollabService = ({
       }
 
       const client = await ensureSyncClient();
-      await client.submitEvent({
-        partitions,
-        event: commandToSyncEvent(command),
-      });
+      try {
+        await client.submitEvent({
+          partitions,
+          event: commandToSyncEvent(command),
+        });
+      } catch (error) {
+        if (!isTransportDisconnectedError(error)) {
+          throw error;
+        }
+        // Keep optimistic state and rely on draft persistence for retry.
+        lastError = {
+          code: "transport_disconnected",
+          message: error?.message || "websocket is not connected",
+        };
+      }
 
       return command.id;
+    },
+
+    async submitSyncEvent({ partitions: targetPartitions, event }) {
+      const normalizedPartitions = Array.isArray(targetPartitions)
+        ? targetPartitions.filter(
+            (partition) =>
+              typeof partition === "string" && partition.length > 0,
+          )
+        : [];
+      if (normalizedPartitions.length === 0) {
+        throw new Error("Sync event must include at least one partition");
+      }
+      if (!event || typeof event !== "object") {
+        throw new Error("Sync event payload is required");
+      }
+
+      const client = await ensureSyncClient();
+      await client.submitEvent({
+        partitions: normalizedPartitions,
+        event: structuredClone(event),
+      });
     },
 
     async syncNow(options = {}) {
