@@ -16,7 +16,7 @@
         "esbuild": "^0.25.11",
         "file-type": "^21.0.0",
         "immer": "^10.1.1",
-        "insieme": "1.0.1",
+        "insieme": "1.1.1",
         "jempl": "1.0.0",
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
@@ -500,7 +500,7 @@
 
     "inherits": ["inherits@2.0.4", "", {}, "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="],
 
-    "insieme": ["insieme@1.0.1", "", { "dependencies": { "immer": "^11.1.4" } }, "sha512-lJdfxgjdt6oQP9lt+7Jns6Nx/MziVd/gkOQbj95Jrn0qVQfGU5Pgy+QddwJXUXxbaMfc11FUOB8zT0vSJKnbuw=="],
+    "insieme": ["insieme@1.1.1", "", { "dependencies": { "immer": "^11.1.4" } }, "sha512-abZ4han4/C+j4/y+JgBf3Uelh+24PzWJUkBIvnBg2dRsJtME1r3Zzb0ZCgrExCWZsHB1jRly5b1Rskopz1g/GQ=="],
 
     "is-extendable": ["is-extendable@0.1.1", "", {}, "sha512-5BMULNob1vgFX6EjQw5izWDxrecWK9AM72rugNr0TFldMOi0fj6Jk+zeKIt0xGj4cEfQIJth4w3OKWOJ4f+AFw=="],
 
