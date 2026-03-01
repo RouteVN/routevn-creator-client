@@ -1,4 +1,4 @@
-import { createSyncServer, createSqliteSyncStore } from "insieme";
+import { createSyncServer, createSqliteSyncStore } from "insieme/server";
 import { processCommand } from "../../src/domain/v2/engine.js";
 import { createEmptyProjectState } from "../../src/domain/v2/model.js";
 import { validateCommand } from "../../src/domain/v2/validateCommand.js";

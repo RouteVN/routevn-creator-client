@@ -1,15 +1,26 @@
 import { COMMAND_VERSION } from "../../domain/v2/constants.js";
+import { buildScopePartition } from "insieme/client";
 
 const defaultUuid = () =>
   typeof crypto?.randomUUID === "function"
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
-export const partitionFor = ({ projectId, scope }) =>
-  `project:${projectId}:${scope}`;
-
 const toNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0 ? value : null;
+
+export const partitionFor = ({ projectId, scope }) => {
+  const normalizedProjectId = toNonEmptyString(projectId);
+  const normalizedScope = toNonEmptyString(scope);
+  if (!normalizedProjectId || !normalizedScope) {
+    return `project:${projectId}:${scope}`;
+  }
+  return buildScopePartition({
+    scope: "project",
+    scopeId: normalizedProjectId,
+    path: [normalizedScope],
+  });
+};
 
 const toUniquePartitions = ({ basePartition, partitions = [] }) => {
   const seen = new Set();

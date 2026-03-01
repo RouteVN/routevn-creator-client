@@ -9,6 +9,7 @@ import {
   createProjectCollabService,
   createWebSocketTransport,
 } from "../../../collab/v2/index.js";
+import { commandToSyncEvent, initializeStreamIfEmpty } from "insieme/client";
 import {
   getImageDimensions,
   getVideoDimensions,
@@ -49,6 +50,31 @@ const countImageEntries = (imagesData) =>
   Object.values(imagesData?.items || {}).filter(
     (item) => item?.type === "image",
   ).length;
+
+const toSeedSyncEvents = (commands = []) =>
+  commands
+    .map((command) => {
+      const partitions = Array.isArray(command?.partitions)
+        ? command.partitions.filter(
+            (partition) =>
+              typeof partition === "string" && partition.length > 0,
+          )
+        : [];
+      if (
+        partitions.length === 0 &&
+        typeof command?.partition === "string" &&
+        command.partition.length > 0
+      ) {
+        partitions.push(command.partition);
+      }
+      if (partitions.length === 0) return null;
+      return {
+        partitions,
+        event: commandToSyncEvent(command),
+      };
+    })
+    .filter(Boolean);
+
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
 export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
@@ -379,12 +405,32 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         const repositoryEventCount = Array.isArray(repository.getEvents?.())
           ? repository.getEvents().length
           : null;
+
+        const seedEvents = toSeedSyncEvents(
+          Array.isArray(repository.getEvents?.()) ? repository.getEvents() : [],
+        );
+        const initResult = await initializeStreamIfEmpty({
+          syncClient: collabSession,
+          seedEvents,
+          logger: (entry) => {
+            collabLog("info", "stream initializer", {
+              projectId: resolvedProjectId,
+              ...entry,
+            });
+          },
+        });
+
+        if (initResult.initialized) {
+          await queueCollabApply(projectId, async () => {});
+        }
+
         const syncDurationMs = Date.now() - syncStartedAt;
         collabLog("info", "initial remote sync completed", {
           projectId: resolvedProjectId,
           endpointUrl,
           syncDurationMs,
           repositoryEventCount,
+          initializer: initResult,
         });
       } catch (error) {
         collabLog("warn", "initial remote sync failed", {

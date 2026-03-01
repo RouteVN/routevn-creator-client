@@ -1,117 +1,107 @@
+import { createBrowserWebSocketTransport } from "insieme/browser";
+
+const resolveLogFn = (logger, level) => {
+  if (level === "error" && typeof logger?.error === "function") {
+    return logger.error.bind(logger);
+  }
+  if (level === "warn" && typeof logger?.warn === "function") {
+    return logger.warn.bind(logger);
+  }
+  if (typeof logger?.log === "function") {
+    return logger.log.bind(logger);
+  }
+  return null;
+};
+
+const mapTransportEvent = (entry = {}) => {
+  const event = entry?.event;
+  switch (event) {
+    case "connect_attempt":
+      return { level: "info", message: "connect attempt", meta: {} };
+    case "connected":
+      return { level: "info", message: "connected", meta: {} };
+    case "connect_failed":
+      return { level: "error", message: "connect failed", meta: {} };
+    case "connect_skipped_already_open":
+      return {
+        level: "debug",
+        message: "connect skipped; socket already open",
+        meta: {},
+      };
+    case "connect_wait_existing_connecting_socket":
+      return {
+        level: "debug",
+        message: "connect waiting on existing socket",
+        meta: {},
+      };
+    case "message_received":
+      return {
+        level: "debug",
+        message: "message received",
+        meta: { eventType: entry?.message_type },
+      };
+    case "message_sent":
+      return {
+        level: "debug",
+        message: "message sent",
+        meta: { eventType: entry?.message_type },
+      };
+    case "message_parse_failed":
+      return {
+        level: "warn",
+        message: "message parse failed",
+        meta: { error: entry?.message || "unknown" },
+      };
+    case "disconnected":
+      return {
+        level: "info",
+        message: "disconnected",
+        meta: {
+          code: entry?.code,
+          reason: entry?.reason,
+          wasClean: entry?.wasClean,
+        },
+      };
+    case "socket_closed": {
+      const isAbnormalClose = entry?.code === 1006 || entry?.wasClean === false;
+      return {
+        level: isAbnormalClose ? "error" : "warn",
+        message: "socket closed",
+        meta: {
+          code: entry?.code,
+          reason: entry?.reason,
+          wasClean: entry?.wasClean,
+        },
+      };
+    }
+    default:
+      return {
+        level: "debug",
+        message: String(event || "transport_event"),
+        meta: {},
+      };
+  }
+};
+
 export const createWebSocketTransport = ({
   url,
   protocols,
   WebSocketImpl = WebSocket,
   logger = console,
   label = "routevn.collab.ws",
-}) => {
-  let socket = null;
-  let messageHandler = null;
-
-  const log = (level, message, meta = {}) => {
-    const fn =
-      level === "error" && typeof logger?.error === "function"
-        ? logger.error.bind(logger)
-        : level === "warn" && typeof logger?.warn === "function"
-          ? logger.warn.bind(logger)
-          : typeof logger?.log === "function"
-            ? logger.log.bind(logger)
-            : null;
-    if (!fn) return;
-    fn(`[${label}] ${message}`, {
-      url,
-      ...meta,
-    });
-  };
-
-  const ensureOpen = () => {
-    if (!socket || socket.readyState !== WebSocketImpl.OPEN) {
-      throw new Error("websocket is not connected");
-    }
-  };
-
-  return {
-    async connect() {
-      if (socket && socket.readyState === WebSocketImpl.OPEN) {
-        log("debug", "connect skipped; socket already open");
-        return;
-      }
-
-      log("info", "connect attempt");
-      await new Promise((resolve, reject) => {
-        socket = new WebSocketImpl(url, protocols);
-        socket.onopen = () => {
-          log("info", "connected");
-          resolve();
-        };
-        socket.onerror = (event) => {
-          log("error", "connect failed", { eventType: event?.type || "error" });
-          reject(new Error("websocket connect failed"));
-        };
-        socket.onmessage = (event) => {
-          if (!messageHandler) return;
-          try {
-            const parsed = JSON.parse(event.data);
-            log("debug", "message received", {
-              eventType: parsed?.type,
-            });
-            messageHandler(parsed);
-          } catch (error) {
-            log("warn", "message parse failed", {
-              error: error?.message || "unknown",
-            });
-          }
-        };
-        socket.onclose = (event) => {
-          const isAbnormalClose =
-            event?.code === 1006 || event?.wasClean === false;
-          const closeLevel = isAbnormalClose ? "error" : "warn";
-          log(closeLevel, "socket closed", {
-            code: event?.code,
-            reason: event?.reason,
-            wasClean: event?.wasClean,
-          });
-        };
+}) =>
+  createBrowserWebSocketTransport({
+    url,
+    protocols,
+    WebSocketImpl,
+    logger: (entry) => {
+      const mapped = mapTransportEvent(entry);
+      const fn = resolveLogFn(logger, mapped.level);
+      if (!fn) return;
+      fn(`[${label}] ${mapped.message}`, {
+        url,
+        ...mapped.meta,
       });
     },
-
-    async disconnect() {
-      if (!socket) return;
-      log("info", "disconnect requested");
-      await new Promise((resolve) => {
-        const current = socket;
-        current.onclose = (event) => {
-          log("info", "disconnected", {
-            code: event?.code,
-            reason: event?.reason,
-          });
-          resolve();
-        };
-        current.close();
-        if (current.readyState === WebSocketImpl.CLOSED) {
-          resolve();
-        }
-      });
-      socket = null;
-    },
-
-    async send(message) {
-      ensureOpen();
-      log("debug", "message sent", {
-        eventType: message?.type,
-      });
-      socket.send(JSON.stringify(message));
-    },
-
-    onMessage(handler) {
-      log("debug", "message handler attached");
-      messageHandler = handler;
-      return () => {
-        if (messageHandler === handler) {
-          messageHandler = null;
-          log("debug", "message handler detached");
-        }
-      };
-    },
-  };
-};
+    label,
+  });

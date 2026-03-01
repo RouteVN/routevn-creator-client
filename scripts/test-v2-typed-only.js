@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { createInMemorySyncStore, createSyncServer } from "insieme";
+import { createInMemorySyncStore, createSyncServer } from "insieme/server";
 import {
   createCommandEnvelope,
   createProjectCollabService,
