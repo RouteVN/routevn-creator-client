@@ -88,16 +88,13 @@ export const committedEventToBootstrapSnapshot = (committedEvent) => {
     return null;
   }
 
-  const isNewBootstrapEnvelope =
+  const isBootstrapEnvelope =
     sourceEvent?.type === "event" && payload.schema === "project.bootstrap";
-  const isLegacyBootstrapEnvelope = sourceEvent?.type === "project.bootstrap";
-  if (!isNewBootstrapEnvelope && !isLegacyBootstrapEnvelope) {
+  if (!isBootstrapEnvelope) {
     return null;
   }
 
-  const snapshotState = isNewBootstrapEnvelope
-    ? payload?.data?.state
-    : payload?.state;
+  const snapshotState = payload?.data?.state;
   if (!isObject(snapshotState)) {
     return null;
   }
