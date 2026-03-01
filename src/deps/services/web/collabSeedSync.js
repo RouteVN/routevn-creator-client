@@ -56,7 +56,7 @@ const resolveBootstrapPartitions = ({
   return [];
 };
 
-export const buildSeedSyncEventsFromTypedEvents = ({
+export const buildBootstrapSeedEvent = ({
   typedEvents,
   projectId,
   actor,
@@ -66,15 +66,8 @@ export const buildSeedSyncEventsFromTypedEvents = ({
   const sourceEvents = Array.isArray(typedEvents) ? typedEvents : [];
   const snapshotState = findLatestTypedSnapshotState(sourceEvents);
 
-  const summary = {
-    sourceTypedEvents: sourceEvents.length,
-    bootstrapEvents: 0,
-    skippedMissingSnapshot: snapshotState ? 0 : 1,
-    skippedBootstrapOnlySnapshot: 0,
-  };
-
   if (!snapshotState) {
-    return { seedEvents: [], summary };
+    return null;
   }
 
   const partitions = resolveBootstrapPartitions({
@@ -83,28 +76,20 @@ export const buildSeedSyncEventsFromTypedEvents = ({
     partitioning,
   });
   if (partitions.length === 0) {
-    return { seedEvents: [], summary };
+    return null;
   }
 
   const bootstrapId = buildBootstrapId();
 
   return {
-    seedEvents: [
-      {
-        commandId: bootstrapId,
-        partitions,
-        event: snapshotToBootstrapSyncEvent({
-          projectId,
-          state: snapshotState,
-          actor,
-          bootstrapId,
-          clientTs: Date.now(),
-        }),
-      },
-    ],
-    summary: {
-      ...summary,
-      bootstrapEvents: 1,
-    },
+    bootstrapId,
+    partitions,
+    event: snapshotToBootstrapSyncEvent({
+      projectId,
+      state: snapshotState,
+      actor,
+      bootstrapId,
+      clientTs: Date.now(),
+    }),
   };
 };

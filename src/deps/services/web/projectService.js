@@ -31,7 +31,7 @@ import {
   createInsiemeProjectRepositoryRuntime,
   initialProjectData,
 } from "../shared/typedProjectRepository.js";
-import { buildSeedSyncEventsFromTypedEvents } from "./collabSeedSync.js";
+import { buildBootstrapSeedEvent } from "./collabSeedSync.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -265,8 +265,6 @@ export const createProjectService = ({
       clientId,
     };
     let latestConnectedServerLastCommittedId = null;
-    let captureInitialSyncWindow = false;
-    let initialSyncPageEventCount = 0;
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
@@ -294,9 +292,6 @@ export const createProjectService = ({
           const eventCount = Number(entry?.event_count);
           if (Number.isFinite(eventCount)) {
             diagnosticPatch.lastSyncPageEventCount = eventCount;
-            if (captureInitialSyncWindow) {
-              initialSyncPageEventCount += eventCount;
-            }
           }
         }
         if (entry?.event === "connected") {
@@ -562,17 +557,11 @@ export const createProjectService = ({
 
       try {
         const syncStartedAt = Date.now();
-        captureInitialSyncWindow = true;
-        initialSyncPageEventCount = 0;
-        try {
-          await collabSession.syncNow({
-            timeoutMs: INITIAL_REMOTE_SYNC_TIMEOUT_MS,
-          });
-          // Wait until repository projection has finished applying synced events.
-          await queueCollabApply(projectId, async () => {});
-        } finally {
-          captureInitialSyncWindow = false;
-        }
+        await collabSession.syncNow({
+          timeoutMs: INITIAL_REMOTE_SYNC_TIMEOUT_MS,
+        });
+        // Wait until repository projection has finished applying synced events.
+        await queueCollabApply(projectId, async () => {});
         const stateAfterSync = repository.getState();
         const repositoryEventCount = Array.isArray(repository.getEvents?.())
           ? repository.getEvents().length
@@ -602,38 +591,34 @@ export const createProjectService = ({
           localEventCount > 0 &&
           !collabInitialSeedAttemptedByProject.has(projectId);
         if (shouldAttemptInitialSeed) {
-          const { seedEvents, summary } = buildSeedSyncEventsFromTypedEvents({
+          const bootstrapSeedEvent = buildBootstrapSeedEvent({
             typedEvents: localTypedEvents,
             projectId: resolvedProjectId,
             actor,
             fallbackPartitions: resolvedPartitions,
             partitioning,
           });
-          if (seedEvents.length > 0) {
+          if (bootstrapSeedEvent) {
             collabInitialSeedAttemptedByProject.add(projectId);
             collabLog(
               "warn",
-              "remote stream appears empty; publishing local seed events",
+              "remote stream appears empty; publishing local bootstrap event",
               {
                 projectId: resolvedProjectId,
                 endpointUrl,
-                seedEventCount: seedEvents.length,
-                summary,
+                bootstrapId: bootstrapSeedEvent.bootstrapId,
                 serverLastCommittedId: latestConnectedServerLastCommittedId,
               },
             );
             updateCollabDiagnostics(projectId, {
               status: "initial_seed_publishing",
-              initialSeedEventCount: seedEvents.length,
-              initialSeedSummary: summary,
+              initialSeedEventCount: 1,
             });
             try {
-              for (const seedEvent of seedEvents) {
-                await collabSession.submitSyncEvent({
-                  partitions: seedEvent.partitions,
-                  event: seedEvent.event,
-                });
-              }
+              await collabSession.submitSyncEvent({
+                partitions: bootstrapSeedEvent.partitions,
+                event: bootstrapSeedEvent.event,
+              });
               await collabSession.flushDrafts();
               if (typeof collabSession.syncNow === "function") {
                 try {
@@ -660,18 +645,18 @@ export const createProjectService = ({
               }
               collabLog("info", "local seed events published", {
                 projectId: resolvedProjectId,
-                seedEventCount: seedEvents.length,
+                seedEventCount: 1,
               });
               updateCollabDiagnostics(projectId, {
                 status: "initial_seed_published",
                 initialSeedPublishedAt: Date.now(),
-                initialSeedEventCount: seedEvents.length,
+                initialSeedEventCount: 1,
               });
             } catch (error) {
               collabInitialSeedAttemptedByProject.delete(projectId);
               collabLog("error", "failed to publish local seed events", {
                 projectId: resolvedProjectId,
-                seedEventCount: seedEvents.length,
+                seedEventCount: 1,
                 error: error?.message || "unknown",
               });
               updateCollabDiagnostics(projectId, {
@@ -683,11 +668,10 @@ export const createProjectService = ({
             collabInitialSeedAttemptedByProject.delete(projectId);
             collabLog(
               "warn",
-              "remote stream appears empty but no local seed events were available",
+              "remote stream appears empty but no local bootstrap seed was available",
               {
                 projectId: resolvedProjectId,
                 endpointUrl,
-                summary,
               },
             );
           }
@@ -728,24 +712,12 @@ export const createProjectService = ({
           countCollectionItems(stateAfterSync?.layouts) === 0 &&
           countCollectionItems(stateAfterSync?.variables) === 0;
         if (stillBootstrapOnly) {
-          const isExpectedEmptyBaseline =
-            appearsBootstrapOnly &&
-            localEventCount <= 1 &&
-            initialSyncPageEventCount === 0;
-          if (isExpectedEmptyBaseline) {
-            collabLog("info", "sync completed with empty project baseline", {
-              projectId: resolvedProjectId,
-              endpointUrl,
-              repositoryEventCount,
-            });
-          } else {
-            collabLog("warn", "sync completed but repository is still empty", {
-              projectId: resolvedProjectId,
-              endpointUrl,
-              hint: "remote event stream may be missing initial create/snapshot events",
-              repositoryEventCount,
-            });
-          }
+          collabLog("warn", "sync completed but repository is still empty", {
+            projectId: resolvedProjectId,
+            endpointUrl,
+            hint: "remote event stream may be missing initial create/snapshot events",
+            repositoryEventCount,
+          });
         }
       } catch (error) {
         updateCollabDiagnostics(projectId, {
