@@ -69,7 +69,6 @@ export const createProjectCollabService = ({
   clientStore,
   logger = () => {},
   onCommittedCommand,
-  onCommittedBootstrap,
 }) => {
   const appliedEventIds = new Set();
   let lastError = null;
@@ -116,35 +115,12 @@ export const createProjectCollabService = ({
     }
   };
 
-  const emitCommittedBootstrap = ({
-    bootstrap,
-    committedEvent,
-    sourceType,
-    isFromCurrentActor,
-  }) => {
-    if (typeof onCommittedBootstrap !== "function") return;
-    try {
-      const result = onCommittedBootstrap({
-        bootstrap: structuredClone(bootstrap),
-        committedEvent: structuredClone(committedEvent),
-        sourceType,
-        isFromCurrentActor,
-      });
-      if (result && typeof result.catch === "function") {
-        result.catch((error) => {
-          lastError = {
-            code: "on_committed_bootstrap_failed",
-            message: error?.message || "unknown",
-          };
-        });
-      }
-    } catch (error) {
-      lastError = {
-        code: "on_committed_bootstrap_failed",
-        message: error?.message || "unknown",
-      };
-    }
-  };
+  const committedEventPartitions = (committedEvent) =>
+    Array.isArray(committedEvent?.partitions)
+      ? committedEvent.partitions.filter(
+          (partition) => typeof partition === "string" && partition.length > 0,
+        )
+      : [];
 
   const applyCommittedEvents = (events, sourceType = "unknown") => {
     let typedStateMutated = false;
@@ -191,8 +167,20 @@ export const createProjectCollabService = ({
         appliedEventIds.add(committedEvent.id);
       }
 
-      emitCommittedBootstrap({
-        bootstrap,
+      const partitions = committedEventPartitions(committedEvent);
+      emitCommittedCommand({
+        command: {
+          id: bootstrap.id || committedEvent?.id,
+          projectId: bootstrap.projectId || projectId,
+          partition: partitions[0],
+          partitions,
+          type: "project.bootstrap",
+          payload: {
+            state: structuredClone(bootstrap.state),
+          },
+          actor: structuredClone(bootstrap.actor || {}),
+          clientTs: bootstrap.clientTs || committedEvent?.status_updated_at,
+        },
         committedEvent,
         sourceType,
         isFromCurrentActor,

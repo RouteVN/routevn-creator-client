@@ -311,16 +311,19 @@ export const createProjectService = ({
         isFromCurrentActor,
       }) =>
         queueCollabApply(projectId, async () => {
-          const applyCommittedCommandToRepository = async ({
+          const applyCommittedEventToRepository = async ({
             command,
             committedEvent,
             sourceType,
             isFromCurrentActor,
           }) => {
             if (isFromCurrentActor) {
+              const isBootstrapCommand = command?.type === "project.bootstrap";
               collabLog(
                 "debug",
-                "typed command skipped (current actor source)",
+                isBootstrapCommand
+                  ? "typed bootstrap skipped (current actor source)"
+                  : "typed command skipped (current actor source)",
                 {
                   projectId,
                   sourceType,
@@ -333,6 +336,44 @@ export const createProjectService = ({
                     : null,
                 },
               );
+              return;
+            }
+
+            if (command?.type === "project.bootstrap") {
+              const bootstrapState = command?.payload?.state;
+              const applyResult = await applyTypedSnapshotToRepository({
+                repository,
+                state: bootstrapState,
+                projectId: resolvedProjectId,
+              });
+              collabLog(
+                "info",
+                "remote bootstrap command applied to repository",
+                {
+                  projectId,
+                  sourceType,
+                  committedId: Number.isFinite(
+                    Number(committedEvent?.committed_id),
+                  )
+                    ? Number(committedEvent.committed_id)
+                    : null,
+                },
+              );
+              updateCollabDiagnostics(projectId, {
+                status: "remote_bootstrap_applied",
+                sourceType,
+              });
+              if (typeof onRemoteEvent === "function") {
+                for (const event of applyResult.events) {
+                  onRemoteEvent({
+                    projectId,
+                    sourceType,
+                    command,
+                    committedEvent,
+                    event,
+                  });
+                }
+              }
               return;
             }
 
@@ -413,7 +454,7 @@ export const createProjectService = ({
             }
           }
 
-          await applyCommittedCommandToRepository({
+          await applyCommittedEventToRepository({
             command,
             committedEvent,
             sourceType,
@@ -425,85 +466,6 @@ export const createProjectService = ({
             await persistCommittedCursor(projectId, nextWatermark);
             updateCollabDiagnostics(projectId, {
               status: "committed_event_applied",
-              lastSeenCommittedId: committedId,
-              lastAppliedCommittedId: nextWatermark,
-            });
-          }
-        }),
-      onCommittedBootstrap: ({
-        bootstrap,
-        committedEvent,
-        sourceType,
-        isFromCurrentActor,
-      }) =>
-        queueCollabApply(projectId, async () => {
-          const committedId = Number(committedEvent?.committed_id);
-          const hasCommittedId = Number.isFinite(committedId);
-          const lastCommittedId = await ensureCommittedIdLoaded(projectId);
-
-          if (hasCommittedId) {
-            const appliedCommittedIds = getAppliedCommittedSet(projectId);
-            if (appliedCommittedIds.has(committedId)) {
-              collabLog(
-                "debug",
-                "committed bootstrap skipped (already applied)",
-                {
-                  projectId,
-                  committedId,
-                  sourceType,
-                },
-              );
-              return;
-            }
-            appliedCommittedIds.add(committedId);
-            if (appliedCommittedIds.size > 5000) {
-              const oldest = appliedCommittedIds.values().next().value;
-              appliedCommittedIds.delete(oldest);
-            }
-          }
-
-          if (isFromCurrentActor) {
-            collabLog(
-              "debug",
-              "typed bootstrap skipped (current actor source)",
-              {
-                projectId,
-                sourceType,
-                committedId: hasCommittedId ? committedId : null,
-              },
-            );
-          } else {
-            const applyResult = await applyTypedSnapshotToRepository({
-              repository,
-              state: bootstrap.state,
-              projectId: resolvedProjectId,
-            });
-            collabLog("info", "remote bootstrap applied to repository", {
-              projectId,
-              sourceType,
-              committedId: hasCommittedId ? committedId : null,
-            });
-            updateCollabDiagnostics(projectId, {
-              status: "remote_bootstrap_applied",
-              sourceType,
-            });
-            if (typeof onRemoteEvent === "function") {
-              for (const event of applyResult.events) {
-                onRemoteEvent({
-                  projectId,
-                  sourceType,
-                  committedEvent,
-                  event,
-                });
-              }
-            }
-          }
-
-          if (hasCommittedId) {
-            const nextWatermark = Math.max(lastCommittedId, committedId);
-            await persistCommittedCursor(projectId, nextWatermark);
-            updateCollabDiagnostics(projectId, {
-              status: "committed_bootstrap_applied",
               lastSeenCommittedId: committedId,
               lastAppliedCommittedId: nextWatermark,
             });

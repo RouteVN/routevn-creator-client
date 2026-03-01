@@ -21,6 +21,7 @@ import {
 import { projectRepositoryStateToDomainState } from "../../domain/v2/stateProjection.js";
 import {
   applyTypedCommandToRepository,
+  applyTypedSnapshotToRepository,
   assertV2State,
   createInsiemeProjectRepositoryRuntime,
   initialProjectData,
@@ -119,6 +120,14 @@ export const createProjectService = ({ router, db, filePicker }) => {
       },
       onCommittedCommand: async ({ command, isFromCurrentActor }) => {
         if (isFromCurrentActor) return;
+        if (command?.type === "project.bootstrap") {
+          await applyTypedSnapshotToRepository({
+            repository,
+            state: command?.payload?.state,
+            projectId: resolvedProjectId,
+          });
+          return;
+        }
         await applyTypedCommandToRepository({
           repository,
           command,
