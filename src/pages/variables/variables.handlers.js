@@ -176,13 +176,7 @@ export const handleVariableCreated = async (deps, payload) => {
 
 export const handleVariableUpdated = async (deps, payload) => {
   const { store, render, projectService } = deps;
-  const {
-    itemId,
-    name,
-    scope,
-    type,
-    default: defaultValue,
-  } = payload._event.detail;
+  const { itemId, name, scope, default: defaultValue } = payload._event.detail;
 
   if (!itemId) {
     return;
@@ -193,7 +187,6 @@ export const handleVariableUpdated = async (deps, payload) => {
     patch: {
       name,
       scope,
-      type,
       default: defaultValue,
     },
   });
@@ -251,19 +244,13 @@ export const handleFormChange = async (deps, payload) => {
   const fieldName = payload._event.detail.name;
   const fieldValue = payload._event.detail.value;
 
+  if (fieldName === "type" || fieldName === "variableType") {
+    return;
+  }
+
   const updateValue = {
     [fieldName]: fieldValue,
   };
-
-  // Set predefined default when type changes
-  if (fieldName === "type") {
-    const typeDefaults = {
-      string: "",
-      number: 0,
-      boolean: false,
-    };
-    updateValue.default = typeDefaults[fieldValue] ?? "";
-  }
 
   await projectService.updateVariableItem({
     variableId: selectedItemId,

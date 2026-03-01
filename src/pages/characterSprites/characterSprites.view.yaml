@@ -14,7 +14,7 @@ refs:
       item-dblclick:
         action: showFullImagePreview
         payload:
-          itemId: ${event.detail.itemId}
+          itemId: ${_event.detail.itemId}
       files-uploaded:
         handler: handleDragDropFileSelected
       search-input:

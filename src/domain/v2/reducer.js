@@ -326,7 +326,9 @@ const normalizeLayoutParentId = (parentId, elementId) => {
 const resolveLayoutParentId = ({ state, layoutId, parentId }) => {
   if (typeof parentId !== "string" || parentId.length === 0) return null;
   if (parentId === layoutId) return null;
-  return state.layouts?.[parentId] ? parentId : null;
+  const parent = state.layouts?.[parentId];
+  if (!parent || parent.type !== "folder") return null;
+  return parentId;
 };
 
 const walkLayoutHierarchy = (nodes, parentId, visitor) => {
@@ -674,21 +676,55 @@ const reducers = {
       layoutId: payload.layoutId,
       parentId: payload.parentId,
     });
+    const isFolder = layoutData.type === "folder";
 
-    const initialElements = toLayoutElementsFromRepositoryCollection(
-      payload.elements,
-    );
-    state.layouts[payload.layoutId] = {
-      id: payload.layoutId,
-      name: payload.name,
-      layoutType: payload.layoutType,
-      ...layoutData,
-      parentId,
-      elements: initialElements.elements,
-      rootElementOrder: initialElements.rootElementOrder,
-      createdAt: now,
-      updatedAt: now,
+    if (isFolder) {
+      state.layouts[payload.layoutId] = {
+        id: payload.layoutId,
+        name: payload.name,
+        ...layoutData,
+        type: "folder",
+        parentId,
+        createdAt: now,
+        updatedAt: now,
+      };
+    } else {
+      const initialElements = toLayoutElementsFromRepositoryCollection(
+        payload.elements,
+      );
+      state.layouts[payload.layoutId] = {
+        id: payload.layoutId,
+        name: payload.name,
+        layoutType: payload.layoutType,
+        ...layoutData,
+        type: "layout",
+        parentId,
+        elements: initialElements.elements,
+        rootElementOrder: initialElements.rootElementOrder,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    const layoutsCollection = {
+      items: state.layouts,
+      tree: Array.isArray(state.layoutTree) ? state.layoutTree : [],
     };
+    const insertionIndex = Number.isInteger(payload.index)
+      ? payload.index
+      : resolveInsertionIndexFromPosition({
+          collection: layoutsCollection,
+          parentId,
+          position: payload.position,
+          movingId: payload.layoutId,
+        });
+    placeCollectionNode({
+      collection: layoutsCollection,
+      itemId: payload.layoutId,
+      parentId,
+      index: insertionIndex,
+    });
+    state.layoutTree = layoutsCollection.tree;
   },
 
   "layout.renamed": ({ state, payload, now }) => {
@@ -697,7 +733,48 @@ const reducers = {
   },
 
   "layout.deleted": ({ state, payload }) => {
-    delete state.layouts[payload.layoutId];
+    const layoutsCollection = {
+      items: state.layouts,
+      tree: Array.isArray(state.layoutTree) ? state.layoutTree : [],
+    };
+    ensureCollectionTree(layoutsCollection);
+    const idsToDelete = collectCollectionDescendantIds({
+      collection: layoutsCollection,
+      rootId: payload.layoutId,
+      includeRoot: true,
+    });
+    for (const id of idsToDelete) {
+      delete state.layouts[id];
+    }
+    layoutsCollection.tree = buildCanonicalCollectionTree({
+      items: state.layouts,
+      tree: layoutsCollection.tree,
+    });
+    state.layoutTree = layoutsCollection.tree;
+  },
+
+  "layout.reordered": ({ state, payload, now }) => {
+    const layout = state.layouts[payload.layoutId];
+    if (!layout) return;
+
+    const parentId = resolveLayoutParentId({
+      state,
+      layoutId: payload.layoutId,
+      parentId: payload.parentId,
+    });
+
+    const layoutsCollection = {
+      items: state.layouts,
+      tree: Array.isArray(state.layoutTree) ? state.layoutTree : [],
+    };
+    placeCollectionNode({
+      collection: layoutsCollection,
+      itemId: payload.layoutId,
+      parentId,
+      index: normalizeIndex(payload.index),
+    });
+    state.layoutTree = layoutsCollection.tree;
+    layout.updatedAt = now;
   },
 
   "layout.element.created": ({ state, payload, now }) => {
@@ -824,11 +901,10 @@ const reducers = {
       ? patch.parentId
       : variable?.parentId;
     delete patch.parentId;
+    delete patch.type;
+    delete patch.variableType;
     if (Object.prototype.hasOwnProperty.call(patch, "default")) {
       patch.value = structuredClone(patch.default);
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, "type")) {
-      patch.variableType = patch.type;
     }
     variables.items[payload.variableId] = {
       ...variable,

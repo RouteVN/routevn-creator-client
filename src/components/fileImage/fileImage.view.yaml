@@ -1,2 +1,2 @@
 template:
-  - rtgl-image src=${src} bc=fg of=con ${containerAttrString}: null
+  - rtgl-image src=${src} bc=fg of=con ${containerAttrString} ondragstart="event.preventDefault()": null

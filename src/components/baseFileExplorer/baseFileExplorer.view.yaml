@@ -64,4 +64,5 @@ template:
       - rtgl-view#container w=f h=f: null
   - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
-      - rtgl-form#form key=${popover.isOpen} slot=content :form=form :defaultValues=renameFormDefaultValues: null
+      - $if hasRenameTarget:
+          - rtgl-form#form key=${popover.itemId} slot=content :form=form :defaultValues=renameFormDefaultValues: null

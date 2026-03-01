@@ -37,6 +37,7 @@ export const createEmptyProjectState = ({
     lines: {},
     resources,
     layouts: {},
+    layoutTree: [],
     variables: createVariableCollection(),
   };
 };

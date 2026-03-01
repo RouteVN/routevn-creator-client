@@ -52,6 +52,7 @@ export const COMMAND_TYPES = {
   LAYOUT_CREATE: "layout.create",
   LAYOUT_RENAME: "layout.rename",
   LAYOUT_DELETE: "layout.delete",
+  LAYOUT_REORDER: "layout.reorder",
   LAYOUT_ELEMENT_CREATE: "layout.element.create",
   LAYOUT_ELEMENT_UPDATE: "layout.element.update",
   LAYOUT_ELEMENT_MOVE: "layout.element.move",

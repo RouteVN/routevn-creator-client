@@ -561,6 +561,16 @@ export const layoutHierarchyStructureToRenderState = (
     });
   };
 
+  const isNvlLinesContainer = (node) => {
+    if (node.type !== "container" || !Array.isArray(node.children)) {
+      return false;
+    }
+
+    return node.children.some(
+      (child) => child.type === "container-ref-dialogue-line",
+    );
+  };
+
   const mapNode = (node) => {
     let element = {
       id: node.id,
@@ -809,6 +819,12 @@ export const layoutHierarchyStructureToRenderState = (
       element.direction = node.direction;
       element.gap = node.gap;
       element.containerType = node.containerType;
+      if (typeof node.scroll === "boolean") {
+        element.scroll = node.scroll;
+      }
+      if (node.anchorToBottom || isNvlLinesContainer(node)) {
+        element.anchorToBottom = true;
+      }
 
       if (node.type === "container-ref-choice-item") {
         element.type = "container";

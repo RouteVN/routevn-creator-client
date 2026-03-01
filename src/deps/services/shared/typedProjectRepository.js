@@ -330,9 +330,10 @@ const projectDomainLayoutElementsToRepository = ({
 
 const projectDomainLayoutsToRepository = ({ domainState, repositoryState }) => {
   const repositoryLayouts = repositoryState?.layouts || createTreeCollection();
-  const repositoryOrderIds = flattenTreeIds(
-    getHierarchyNodes(repositoryLayouts),
-  );
+  const domainLayoutTree = Array.isArray(domainState?.layoutTree)
+    ? domainState.layoutTree
+    : getHierarchyNodes(repositoryLayouts);
+  const repositoryOrderIds = flattenTreeIds(domainLayoutTree);
   const layoutIds = Object.keys(domainState?.layouts || {});
   const orderedLayoutIds = uniqueIdsInOrder(repositoryOrderIds, layoutIds);
   const projectedItems = {};
@@ -342,24 +343,34 @@ const projectDomainLayoutsToRepository = ({ domainState, repositoryState }) => {
     if (!layout) continue;
     const existingLayout = repositoryLayouts?.items?.[layoutId] || {};
     const layoutClone = structuredClone(layout || {});
+    const entryType = layoutClone.type || existingLayout.type || "layout";
     delete layoutClone.elements;
     delete layoutClone.rootElementOrder;
 
-    projectedItems[layoutId] = {
+    const projectedLayout = {
       ...structuredClone(existingLayout),
       ...layoutClone,
       id: layoutId,
-      type: "layout",
-      elements: projectDomainLayoutElementsToRepository({
+      type: entryType,
+    };
+
+    if (entryType === "folder") {
+      delete projectedLayout.layoutType;
+      delete projectedLayout.elements;
+      delete projectedLayout.rootElementOrder;
+    } else {
+      projectedLayout.elements = projectDomainLayoutElementsToRepository({
         layout,
         existingRepositoryElements: existingLayout?.elements,
-      }),
-    };
+      });
+    }
+
+    projectedItems[layoutId] = projectedLayout;
   }
 
   const tree = buildHierarchyOrderFromFlatCollection({
     items: projectedItems,
-    tree: getHierarchyNodes(repositoryLayouts),
+    tree: domainLayoutTree,
   });
   return {
     items: projectedItems,
