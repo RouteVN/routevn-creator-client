@@ -1,5 +1,10 @@
 import { COMMAND_VERSION } from "../../domain/v2/constants.js";
 
+const isObject = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const nonEmptyString = (value) =>
+  typeof value === "string" && value.length > 0 ? value : null;
+
 export const commandToSyncEvent = (command) => ({
   type: "event",
   payload: {
@@ -20,12 +25,16 @@ export const snapshotToBootstrapSyncEvent = ({
   bootstrapId,
   clientTs,
 }) => ({
-  type: "project.bootstrap",
+  type: "event",
   payload: {
-    projectId,
-    state: structuredClone(state),
+    commandId: bootstrapId,
+    schema: "project.bootstrap",
+    data: {
+      state: structuredClone(state),
+    },
+    commandVersion: COMMAND_VERSION,
     actor: structuredClone(actor || {}),
-    bootstrapId,
+    projectId,
     clientTs,
   },
 });
@@ -39,6 +48,11 @@ export const committedEventToCommand = (committedEvent) => {
   const schema = payload.schema;
   const data = payload.data;
   if (typeof schema !== "string" || !data || typeof data !== "object") {
+    return null;
+  }
+  // Bootstrap snapshots are represented as events for transport, but
+  // they should be handled by committedEventToBootstrapSnapshot.
+  if (schema === "project.bootstrap") {
     return null;
   }
 
@@ -70,23 +84,30 @@ export const committedEventToCommand = (committedEvent) => {
 export const committedEventToBootstrapSnapshot = (committedEvent) => {
   const sourceEvent = committedEvent?.event;
   const payload = sourceEvent?.payload;
-  if (sourceEvent?.type !== "project.bootstrap") {
+  if (!payload || !isObject(payload)) {
     return null;
   }
-  if (!payload || typeof payload !== "object") {
+
+  const isNewBootstrapEnvelope =
+    sourceEvent?.type === "event" && payload.schema === "project.bootstrap";
+  const isLegacyBootstrapEnvelope = sourceEvent?.type === "project.bootstrap";
+  if (!isNewBootstrapEnvelope && !isLegacyBootstrapEnvelope) {
     return null;
   }
-  if (!payload.state || typeof payload.state !== "object") {
+
+  const snapshotState = isNewBootstrapEnvelope
+    ? payload?.data?.state
+    : payload?.state;
+  if (!isObject(snapshotState)) {
     return null;
   }
 
   return {
     id:
-      typeof payload.bootstrapId === "string" && payload.bootstrapId.length > 0
-        ? payload.bootstrapId
-        : committedEvent?.id,
+      nonEmptyString(payload.commandId || payload.bootstrapId) ||
+      committedEvent?.id,
     projectId: payload.projectId || committedEvent?.project_id || null,
-    state: structuredClone(payload.state),
+    state: structuredClone(snapshotState),
     actor: payload.actor || {
       userId: "unknown",
       clientId: committedEvent?.client_id,
