@@ -1,4 +1,5 @@
 import { processCommand } from "../../../domain/v2/engine.js";
+import { COMMAND_VERSION } from "../../../domain/v2/constants.js";
 import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
 
@@ -151,7 +152,100 @@ export const findLineLocation = (state, lineId) => {
 const hasCommandTypePrefix = (commandType, prefix) =>
   typeof commandType === "string" && commandType.startsWith(prefix);
 
+const generateCommandId = () =>
+  typeof crypto?.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+const defaultInitializationActor = (projectId) => ({
+  userId: "system",
+  clientId: `system-${projectId}`,
+});
+
+const defaultInitializationPartition = (projectId) =>
+  `project:${projectId}:settings`;
+
+export const createProjectCreatedCommand = ({
+  projectId,
+  state,
+  actor,
+  commandId,
+  clientTs,
+  partition,
+  partitions,
+}) => {
+  const resolvedProjectId =
+    typeof projectId === "string" && projectId.length > 0
+      ? projectId
+      : state?.project?.id;
+  if (!resolvedProjectId) {
+    throw new Error("projectId is required for project.created command");
+  }
+  if (!state || typeof state !== "object" || Array.isArray(state)) {
+    throw new Error("state is required for project.created command");
+  }
+
+  const basePartition =
+    typeof partition === "string" && partition.length > 0
+      ? partition
+      : defaultInitializationPartition(resolvedProjectId);
+  const resolvedPartitions = Array.from(
+    new Set(
+      [basePartition]
+        .concat(Array.isArray(partitions) ? partitions : [])
+        .filter((value) => typeof value === "string" && value.length > 0),
+    ),
+  );
+
+  return {
+    id:
+      typeof commandId === "string" && commandId.length > 0
+        ? commandId
+        : generateCommandId(),
+    projectId: resolvedProjectId,
+    partition: basePartition,
+    partitions: resolvedPartitions,
+    type: "project.created",
+    payload: {
+      state: structuredClone(state),
+    },
+    actor: structuredClone(
+      actor || defaultInitializationActor(resolvedProjectId),
+    ),
+    clientTs: Number.isFinite(Number(clientTs)) ? Number(clientTs) : Date.now(),
+    commandVersion: COMMAND_VERSION,
+  };
+};
+
+export const createProjectCreatedTypedEvent = ({
+  projectId,
+  state,
+  actor,
+  commandId,
+  clientTs,
+  partition,
+  partitions,
+}) => ({
+  type: "typedCommand",
+  payload: {
+    projectId:
+      typeof projectId === "string" && projectId.length > 0
+        ? projectId
+        : state?.project?.id,
+    command: createProjectCreatedCommand({
+      projectId,
+      state,
+      actor,
+      commandId,
+      clientTs,
+      partition,
+      partitions,
+    }),
+  },
+});
+
 export const isDirectDomainProjectionCommand = (command) =>
+  command?.type === "project.created" ||
   command?.type === "project.update" ||
   hasCommandTypePrefix(command?.type, "resource.") ||
   hasCommandTypePrefix(command?.type, "scene.") ||
@@ -562,17 +656,6 @@ const applyTypedEventToRepositoryState = ({
   event,
   projectId,
 }) => {
-  if (event?.type === "typedSnapshot") {
-    const snapshotState = event?.payload?.state;
-    if (!snapshotState || typeof snapshotState !== "object") {
-      throw new Error("typedSnapshot event payload.state is required");
-    }
-    return projectDomainStateToRepositoryState({
-      domainState: snapshotState,
-      repositoryState,
-    });
-  }
-
   if (event?.type === "typedCommand") {
     const command = event?.payload?.command;
     if (!isDirectDomainProjectionCommand(command)) {
@@ -655,36 +738,6 @@ export const applyTypedCommandToRepository = async ({
       {
         type: command.type,
         payload: structuredClone(command.payload || {}),
-      },
-    ],
-  };
-};
-
-export const applyTypedSnapshotToRepository = async ({
-  repository,
-  state,
-  projectId,
-}) => {
-  if (!state || typeof state !== "object") {
-    throw new Error("Snapshot state is required");
-  }
-
-  await repository.addEvent({
-    type: "typedSnapshot",
-    payload: {
-      projectId,
-      state: structuredClone(state),
-    },
-  });
-
-  return {
-    mode: "typed_snapshot_event",
-    events: [
-      {
-        type: "typedSnapshot",
-        payload: {
-          projectId,
-        },
       },
     ],
   };

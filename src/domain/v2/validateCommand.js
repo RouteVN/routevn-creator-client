@@ -76,6 +76,16 @@ const validatePatchObject = (payload, errors, field = "patch") => {
 };
 
 const commandPayloadValidators = {
+  [COMMAND_TYPES.PROJECT_CREATED]: (payload, errors) => {
+    requireFields(payload, ["state"], errors);
+    if (
+      !payload?.state ||
+      typeof payload.state !== "object" ||
+      Array.isArray(payload.state)
+    ) {
+      errors.push("payload.state must be an object");
+    }
+  },
   [COMMAND_TYPES.PROJECT_UPDATE]: (payload, errors) => {
     requireFields(payload, ["patch"], errors);
     validatePatchObject(payload, errors);

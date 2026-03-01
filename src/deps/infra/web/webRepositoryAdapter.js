@@ -3,6 +3,7 @@ import {
   getTemplateFiles,
 } from "../../../utils/templateLoader.js";
 import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
+import { createProjectCreatedTypedEvent } from "../../services/shared/typedProjectRepository.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -73,14 +74,12 @@ export const initializeProject = async ({
     projectId,
   });
 
-  // Persist typed canonical bootstrap state.
-  await adapter.appendTypedEvent({
-    type: "typedSnapshot",
-    payload: {
+  await adapter.appendTypedEvent(
+    createProjectCreatedTypedEvent({
       projectId,
       state: domainState,
-    },
-  });
+    }),
+  );
 
   // Set creator_version to 2 in app table
   await adapter.app.set("creator_version", "2");

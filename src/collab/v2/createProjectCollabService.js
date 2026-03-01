@@ -2,11 +2,7 @@ import { processCommand } from "../../domain/v2/engine.js";
 import { assertDomainInvariants } from "../../domain/v2/invariants.js";
 import { createEmptyProjectState } from "../../domain/v2/model.js";
 import { validateCommand } from "../../domain/v2/validateCommand.js";
-import {
-  commandToSyncEvent,
-  committedEventToBootstrapSnapshot,
-  committedEventToCommand,
-} from "./mappers.js";
+import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 const nonEmptyString = (value) =>
@@ -119,42 +115,18 @@ export const createProjectCollabService = ({
     let typedStateMutated = false;
     for (const committedEvent of events) {
       const command = committedEventToCommand(committedEvent);
-      if (command) {
-        const dedupeId = command.id || committedEvent?.id;
-        if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
-
-        const isFromCurrentActor =
-          command?.actor?.clientId === actor?.clientId &&
-          command?.actor?.userId === actor?.userId;
-
-        const result = processCommand({ state: projectedState, command });
-        projectedState = result.state;
-        typedStateMutated = true;
-
-        appliedEventIds.add(dedupeId);
-        if (committedEvent?.id) {
-          appliedEventIds.add(committedEvent.id);
-        }
-
-        emitCommittedCommand({
-          command,
-          committedEvent,
-          sourceType,
-          isFromCurrentActor,
-        });
-        continue;
-      }
-
-      const bootstrap = committedEventToBootstrapSnapshot(committedEvent);
-      if (!bootstrap) continue;
-      const dedupeId = bootstrap.id || committedEvent?.id;
+      if (!command) continue;
+      const dedupeId = command.id || committedEvent?.id;
       if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
 
       const isFromCurrentActor =
-        bootstrap?.actor?.clientId === actor?.clientId &&
-        bootstrap?.actor?.userId === actor?.userId;
-      projectedState = structuredClone(bootstrap.state);
+        command?.actor?.clientId === actor?.clientId &&
+        command?.actor?.userId === actor?.userId;
+
+      const result = processCommand({ state: projectedState, command });
+      projectedState = result.state;
       typedStateMutated = true;
+
       appliedEventIds.add(dedupeId);
       if (committedEvent?.id) {
         appliedEventIds.add(committedEvent.id);
@@ -162,16 +134,7 @@ export const createProjectCollabService = ({
 
       emitCommittedCommand({
         command: {
-          id: bootstrap.id || committedEvent?.id,
-          projectId: bootstrap.projectId || projectId,
-          partition: bootstrap.partition,
-          partitions: bootstrap.partitions,
-          type: "project.bootstrap",
-          payload: {
-            state: structuredClone(bootstrap.state),
-          },
-          actor: structuredClone(bootstrap.actor || {}),
-          clientTs: bootstrap.clientTs || committedEvent?.status_updated_at,
+          ...structuredClone(command),
         },
         committedEvent,
         sourceType,
@@ -283,27 +246,6 @@ export const createProjectCollabService = ({
       }
 
       return command.id;
-    },
-
-    async submitSyncEvent({ partitions: targetPartitions, event }) {
-      const normalizedPartitions = Array.isArray(targetPartitions)
-        ? targetPartitions.filter(
-            (partition) =>
-              typeof partition === "string" && partition.length > 0,
-          )
-        : [];
-      if (normalizedPartitions.length === 0) {
-        throw new Error("Sync event must include at least one partition");
-      }
-      if (!event || typeof event !== "object") {
-        throw new Error("Sync event payload is required");
-      }
-
-      const client = await ensureSyncClient();
-      await client.submitEvent({
-        partitions: normalizedPartitions,
-        event: structuredClone(event),
-      });
     },
 
     async syncNow(options = {}) {

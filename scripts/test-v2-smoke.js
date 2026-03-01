@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createProjectCollabService } from "../src/collab/v2/createProjectCollabService.js";
 import {
   applyTypedCommandToRepository,
+  createProjectCreatedTypedEvent,
   createInsiemeProjectRepositoryRuntime,
   initialProjectData,
 } from "../src/deps/services/shared/typedProjectRepository.js";
@@ -436,13 +437,13 @@ const projectionRepository = await createInsiemeProjectRepositoryRuntime({
   projectId: projectionProjectId,
   store: projectionStore,
   events: [
-    {
-      type: "typedSnapshot",
-      payload: {
-        projectId: projectionProjectId,
-        state: projectedDomainState,
-      },
-    },
+    createProjectCreatedTypedEvent({
+      projectId: projectionProjectId,
+      state: projectedDomainState,
+      actor,
+      commandId: "projection-stream-init",
+      clientTs: 2300,
+    }),
   ],
 });
 

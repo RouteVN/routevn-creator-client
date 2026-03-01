@@ -23,6 +23,7 @@ export const RESOURCE_TYPES = [
 ];
 
 export const COMMAND_TYPES = {
+  PROJECT_CREATED: "project.created",
   PROJECT_UPDATE: "project.update",
 
   SCENE_CREATE: "scene.create",
