@@ -2,7 +2,11 @@ import { processCommand } from "../../domain/v2/engine.js";
 import { assertDomainInvariants } from "../../domain/v2/invariants.js";
 import { createEmptyProjectState } from "../../domain/v2/model.js";
 import { validateCommand } from "../../domain/v2/validateCommand.js";
-import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
+import {
+  commandToSyncEvent,
+  committedEventToBootstrapSnapshot,
+  committedEventToCommand,
+} from "./mappers.js";
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 const nonEmptyString = (value) =>
@@ -65,6 +69,7 @@ export const createProjectCollabService = ({
   clientStore,
   logger = () => {},
   onCommittedCommand,
+  onCommittedBootstrap,
 }) => {
   const appliedEventIds = new Set();
   let lastError = null;
@@ -111,29 +116,83 @@ export const createProjectCollabService = ({
     }
   };
 
+  const emitCommittedBootstrap = ({
+    bootstrap,
+    committedEvent,
+    sourceType,
+    isFromCurrentActor,
+  }) => {
+    if (typeof onCommittedBootstrap !== "function") return;
+    try {
+      const result = onCommittedBootstrap({
+        bootstrap: structuredClone(bootstrap),
+        committedEvent: structuredClone(committedEvent),
+        sourceType,
+        isFromCurrentActor,
+      });
+      if (result && typeof result.catch === "function") {
+        result.catch((error) => {
+          lastError = {
+            code: "on_committed_bootstrap_failed",
+            message: error?.message || "unknown",
+          };
+        });
+      }
+    } catch (error) {
+      lastError = {
+        code: "on_committed_bootstrap_failed",
+        message: error?.message || "unknown",
+      };
+    }
+  };
+
   const applyCommittedEvents = (events, sourceType = "unknown") => {
     let typedStateMutated = false;
     for (const committedEvent of events) {
       const command = committedEventToCommand(committedEvent);
-      if (!command) continue;
-      const dedupeId = command.id || committedEvent?.id;
+      if (command) {
+        const dedupeId = command.id || committedEvent?.id;
+        if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
+
+        const isFromCurrentActor =
+          command?.actor?.clientId === actor?.clientId &&
+          command?.actor?.userId === actor?.userId;
+
+        const result = processCommand({ state: projectedState, command });
+        projectedState = result.state;
+        typedStateMutated = true;
+
+        appliedEventIds.add(dedupeId);
+        if (committedEvent?.id) {
+          appliedEventIds.add(committedEvent.id);
+        }
+
+        emitCommittedCommand({
+          command,
+          committedEvent,
+          sourceType,
+          isFromCurrentActor,
+        });
+        continue;
+      }
+
+      const bootstrap = committedEventToBootstrapSnapshot(committedEvent);
+      if (!bootstrap) continue;
+      const dedupeId = bootstrap.id || committedEvent?.id;
       if (!dedupeId || appliedEventIds.has(dedupeId)) continue;
 
       const isFromCurrentActor =
-        command?.actor?.clientId === actor?.clientId &&
-        command?.actor?.userId === actor?.userId;
-
-      const result = processCommand({ state: projectedState, command });
-      projectedState = result.state;
+        bootstrap?.actor?.clientId === actor?.clientId &&
+        bootstrap?.actor?.userId === actor?.userId;
+      projectedState = structuredClone(bootstrap.state);
       typedStateMutated = true;
-
       appliedEventIds.add(dedupeId);
       if (committedEvent?.id) {
         appliedEventIds.add(committedEvent.id);
       }
 
-      emitCommittedCommand({
-        command,
+      emitCommittedBootstrap({
+        bootstrap,
         committedEvent,
         sourceType,
         isFromCurrentActor,

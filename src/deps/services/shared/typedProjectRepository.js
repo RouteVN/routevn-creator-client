@@ -648,3 +648,33 @@ export const applyTypedCommandToRepository = async ({
     ],
   };
 };
+
+export const applyTypedSnapshotToRepository = async ({
+  repository,
+  state,
+  projectId,
+}) => {
+  if (!state || typeof state !== "object") {
+    throw new Error("Snapshot state is required");
+  }
+
+  await repository.addEvent({
+    type: "typedSnapshot",
+    payload: {
+      projectId,
+      state: structuredClone(state),
+    },
+  });
+
+  return {
+    mode: "typed_snapshot_event",
+    events: [
+      {
+        type: "typedSnapshot",
+        payload: {
+          projectId,
+        },
+      },
+    ],
+  };
+};

@@ -13,6 +13,23 @@ export const commandToSyncEvent = (command) => ({
   },
 });
 
+export const snapshotToBootstrapSyncEvent = ({
+  projectId,
+  state,
+  actor,
+  bootstrapId,
+  clientTs,
+}) => ({
+  type: "project.bootstrap",
+  payload: {
+    projectId,
+    state: structuredClone(state),
+    actor: structuredClone(actor || {}),
+    bootstrapId,
+    clientTs,
+  },
+});
+
 export const committedEventToCommand = (committedEvent) => {
   const payload = committedEvent?.event?.payload;
   if (!payload || committedEvent?.event?.type !== "event") {
@@ -47,5 +64,33 @@ export const committedEventToCommand = (committedEvent) => {
       clientId: committedEvent.client_id,
     },
     clientTs: payload.clientTs || committedEvent.status_updated_at,
+  };
+};
+
+export const committedEventToBootstrapSnapshot = (committedEvent) => {
+  const sourceEvent = committedEvent?.event;
+  const payload = sourceEvent?.payload;
+  if (sourceEvent?.type !== "project.bootstrap") {
+    return null;
+  }
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  if (!payload.state || typeof payload.state !== "object") {
+    return null;
+  }
+
+  return {
+    id:
+      typeof payload.bootstrapId === "string" && payload.bootstrapId.length > 0
+        ? payload.bootstrapId
+        : committedEvent?.id,
+    projectId: payload.projectId || committedEvent?.project_id || null,
+    state: structuredClone(payload.state),
+    actor: payload.actor || {
+      userId: "unknown",
+      clientId: committedEvent?.client_id,
+    },
+    clientTs: payload.clientTs || committedEvent?.status_updated_at,
   };
 };
