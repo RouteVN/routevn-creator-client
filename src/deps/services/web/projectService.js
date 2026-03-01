@@ -232,6 +232,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       userId,
       clientId,
     };
+    let latestConnectedServerLastCommittedId = null;
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
@@ -245,6 +246,12 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       partitions: resolvedPartitions,
       clientStore,
       logger: (entry) => {
+        if (entry?.event === "connected") {
+          const serverLastCommittedId = Number(entry?.server_last_committed_id);
+          if (Number.isFinite(serverLastCommittedId)) {
+            latestConnectedServerLastCommittedId = serverLastCommittedId;
+          }
+        }
         collabLog("debug", "sync-client", entry);
       },
       onCommittedCommand: ({
@@ -445,9 +452,15 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           syncDurationMs,
           repositoryEventCount,
         });
+        const remoteStreamIsExplicitlyEmpty =
+          latestConnectedServerLastCommittedId === 0;
+        const noRemoteEventsAppliedDuringSync =
+          repositoryEventCount === localEventCount;
         const shouldAttemptInitialSeed =
           initialPersistedCommittedCursor === 0 &&
           localEventCount > 0 &&
+          remoteStreamIsExplicitlyEmpty &&
+          noRemoteEventsAppliedDuringSync &&
           !collabInitialSeedAttemptedByProject.has(projectId);
         if (shouldAttemptInitialSeed) {
           const bootstrapSeedEvent = buildBootstrapSeedEvent({
@@ -508,6 +521,17 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
               },
             );
           }
+        } else if (
+          initialPersistedCommittedCursor === 0 &&
+          localEventCount > 0
+        ) {
+          collabLog("info", "skipping local bootstrap seed publish", {
+            projectId: resolvedProjectId,
+            endpointUrl,
+            serverLastCommittedId: latestConnectedServerLastCommittedId,
+            repositoryEventCount,
+            localEventCount,
+          });
         }
       } catch (error) {
         collabLog("warn", "initial remote sync failed", {
