@@ -353,7 +353,7 @@ const collab = createProjectCollabService({
 await collab.start();
 await collab.stop();
 
-const syncRuntime = await import("insieme");
+const syncRuntime = await import("insieme/server");
 for (const key of [
   "createSyncClient",
   "createOfflineTransport",

@@ -1,4 +1,4 @@
-import { createInMemoryClientStore } from "insieme";
+import { createInMemoryClientStore } from "insieme/client";
 
 const PROJECT_STATE_VIEW_NAME = "project_repository_state";
 const PROJECT_STATE_VIEW_VERSION = "1";
