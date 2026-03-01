@@ -75,7 +75,6 @@ export const createProjectService = ({
   // Repository cache
   const repositoriesByProject = new Map();
   const adaptersByProject = new Map();
-  const collabDiagnosticsByProject = new Map();
   const collabApplyQueueByProject = new Map();
   const collabLastCommittedIdByProject = new Map();
   const collabAppliedCommittedIdsByProject = new Map();
@@ -93,16 +92,6 @@ export const createProjectService = ({
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
     return p;
-  };
-
-  const updateCollabDiagnostics = (projectId, patch = {}) => {
-    const existing = collabDiagnosticsByProject.get(projectId) || {};
-    collabDiagnosticsByProject.set(projectId, {
-      ...existing,
-      projectId,
-      lastUpdatedAt: Date.now(),
-      ...patch,
-    });
   };
 
   const ensureCommittedIdLoaded = async (projectId) => {
@@ -228,10 +217,6 @@ export const createProjectService = ({
         projectId,
         localEventCount,
       });
-      updateCollabDiagnostics(projectId, {
-        status: "forcing_full_sync",
-        localEventCount,
-      });
     }
 
     const resolvedProjectId = state.project?.id || projectId;
@@ -250,16 +235,6 @@ export const createProjectService = ({
     });
     const initialPersistedCommittedCursor =
       await ensureCommittedIdLoaded(projectId);
-    updateCollabDiagnostics(projectId, {
-      mode,
-      endpointUrl: endpointUrl || null,
-      actor: {
-        userId,
-        clientId,
-      },
-      partitions: resolvedPartitions,
-      status: "starting",
-    });
     const actor = {
       userId,
       clientId,
@@ -278,30 +253,12 @@ export const createProjectService = ({
       partitions: resolvedPartitions,
       clientStore,
       logger: (entry) => {
-        const diagnosticPatch = {
-          lastSyncEntry: entry,
-          lastSyncEventAt: Date.now(),
-        };
-        if (entry?.event === "synced") {
-          const cursor = Number(entry?.cursor);
-          if (Number.isFinite(cursor)) {
-            diagnosticPatch.lastSyncedCursor = cursor;
-          }
-        }
-        if (entry?.event === "sync_page_applied") {
-          const eventCount = Number(entry?.event_count);
-          if (Number.isFinite(eventCount)) {
-            diagnosticPatch.lastSyncPageEventCount = eventCount;
-          }
-        }
         if (entry?.event === "connected") {
           const serverLastCommittedId = Number(entry?.server_last_committed_id);
           if (Number.isFinite(serverLastCommittedId)) {
             latestConnectedServerLastCommittedId = serverLastCommittedId;
-            diagnosticPatch.serverLastCommittedId = serverLastCommittedId;
           }
         }
-        updateCollabDiagnostics(projectId, diagnosticPatch);
         collabLog("debug", "sync-client", entry);
       },
       onCommittedCommand: ({
@@ -405,11 +362,6 @@ export const createProjectService = ({
               afterImagesCount,
               sourceType,
             });
-            updateCollabDiagnostics(projectId, {
-              status: "remote_typed_command_applied",
-              sourceType,
-              lastRemoteCommandType: command?.type || null,
-            });
             if (typeof onRemoteEvent === "function") {
               for (const event of applyResult.events) {
                 onRemoteEvent({
@@ -435,12 +387,6 @@ export const createProjectService = ({
                 committedId,
                 sourceType,
               });
-              updateCollabDiagnostics(projectId, {
-                status: "committed_event_skipped",
-                lastSeenCommittedId: committedId,
-                lastAppliedCommittedId: lastCommittedId,
-                sourceType,
-              });
               return;
             }
             appliedCommittedIds.add(committedId);
@@ -460,19 +406,11 @@ export const createProjectService = ({
           if (hasCommittedId) {
             const nextWatermark = Math.max(lastCommittedId, committedId);
             await persistCommittedCursor(projectId, nextWatermark);
-            updateCollabDiagnostics(projectId, {
-              status: "committed_event_applied",
-              lastSeenCommittedId: committedId,
-              lastAppliedCommittedId: nextWatermark,
-            });
           }
         }),
     });
 
     await collabSession.start();
-    updateCollabDiagnostics(projectId, {
-      status: "started",
-    });
     collabLog("info", "session started", {
       projectId: resolvedProjectId,
       mode,
@@ -489,19 +427,10 @@ export const createProjectService = ({
       });
       try {
         await collabSession.setOnlineTransport(transport);
-        updateCollabDiagnostics(projectId, {
-          endpointUrl,
-          status: "online_transport_attached",
-        });
         collabLog("info", "websocket transport attached", {
           endpointUrl,
         });
       } catch (error) {
-        updateCollabDiagnostics(projectId, {
-          endpointUrl,
-          status: "online_transport_attach_failed",
-          lastTransportError: error?.message || "unknown",
-        });
         collabLog(
           "warn",
           "failed to attach websocket transport; continuing in offline mode",
@@ -525,11 +454,6 @@ export const createProjectService = ({
           ? repository.getEvents().length
           : null;
         const syncDurationMs = Date.now() - syncStartedAt;
-        updateCollabDiagnostics(projectId, {
-          status: "initial_sync_completed",
-          lastInitialSyncAt: Date.now(),
-          initialSyncDurationMs: syncDurationMs,
-        });
         collabLog("info", "initial remote sync completed", {
           projectId: resolvedProjectId,
           endpointUrl,
@@ -568,10 +492,6 @@ export const createProjectService = ({
                 serverLastCommittedId: latestConnectedServerLastCommittedId,
               },
             );
-            updateCollabDiagnostics(projectId, {
-              status: "initial_seed_publishing",
-              initialSeedEventCount: 1,
-            });
             try {
               await collabSession.submitSyncEvent({
                 partitions: bootstrapSeedEvent.partitions,
@@ -605,21 +525,12 @@ export const createProjectService = ({
                 projectId: resolvedProjectId,
                 seedEventCount: 1,
               });
-              updateCollabDiagnostics(projectId, {
-                status: "initial_seed_published",
-                initialSeedPublishedAt: Date.now(),
-                initialSeedEventCount: 1,
-              });
             } catch (error) {
               collabInitialSeedAttemptedByProject.delete(projectId);
               collabLog("error", "failed to publish local seed events", {
                 projectId: resolvedProjectId,
                 seedEventCount: 1,
                 error: error?.message || "unknown",
-              });
-              updateCollabDiagnostics(projectId, {
-                status: "initial_seed_failed",
-                initialSeedError: error?.message || "unknown",
               });
             }
           } else {
@@ -678,10 +589,6 @@ export const createProjectService = ({
           });
         }
       } catch (error) {
-        updateCollabDiagnostics(projectId, {
-          status: "initial_sync_failed",
-          lastInitialSyncError: error?.message || "unknown",
-        });
         collabLog("warn", "initial remote sync failed", {
           projectId: resolvedProjectId,
           endpointUrl,
@@ -981,32 +888,13 @@ export const createProjectService = ({
           hint: "Set collabEndpoint or use default ws://localhost:8787/sync auto-connect.",
         },
       );
-      updateCollabDiagnostics(projectId, {
-        mode: "local",
-        endpointUrl: null,
-        status: "local_only",
-      });
     },
     onSessionCleared: ({ projectId, reason }) => {
       collabApplyQueueByProject.delete(projectId);
       collabAppliedCommittedIdsByProject.delete(projectId);
-      if (reason === "replaced_local") {
-        updateCollabDiagnostics(projectId, {
-          status: "replaced_local_session",
-        });
-      }
-      if (reason === "stopped") {
-        updateCollabDiagnostics(projectId, {
-          status: "stopped",
-        });
-      }
+      void reason;
     },
-    onSessionTransportUpdated: ({ projectId, endpointUrl }) => {
-      updateCollabDiagnostics(projectId, {
-        endpointUrl,
-        status: "online_transport_updated",
-      });
-    },
+    onSessionTransportUpdated: () => {},
   });
 
   return {
@@ -1036,19 +924,7 @@ export const createProjectService = ({
     },
     createCollabSession: serviceCore.createCollabSession,
     getCollabSession: serviceCore.getCollabSession,
-    getCollabDiagnostics(projectId) {
-      const targetProjectId = projectId || serviceCore.getCurrentProjectId();
-      if (!targetProjectId) return null;
-      const session = serviceCore.getCollabSession(targetProjectId) || null;
-      const diagnostics =
-        collabDiagnosticsByProject.get(targetProjectId) || null;
-      return {
-        ...diagnostics,
-        hasSession: Boolean(session),
-        sessionMode: serviceCore.getCollabSessionMode(targetProjectId) || null,
-        sessionError: session?.getLastError?.() || null,
-      };
-    },
+    getCollabSessionMode: serviceCore.getCollabSessionMode,
     stopCollabSession: serviceCore.stopCollabSession,
     submitCommand: serviceCore.submitCommand,
     async uploadFiles(files) {
