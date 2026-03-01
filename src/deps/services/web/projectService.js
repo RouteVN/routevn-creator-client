@@ -52,16 +52,9 @@ const countImageEntries = (imagesData) =>
   Object.values(imagesData?.items || {}).filter(
     (item) => item?.type === "image",
   ).length;
-const countCollectionItems = (collection) =>
-  Object.keys(collection?.items || {}).length;
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
-export const createProjectService = ({
-  router,
-  filePicker,
-  onRemoteEvent,
-  onInitialSyncCompleted,
-}) => {
+export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   const collabLog = (level, message, meta = {}) => {
     const fn =
       level === "error"
@@ -239,7 +232,6 @@ export const createProjectService = ({
       userId,
       clientId,
     };
-    let latestConnectedServerLastCommittedId = null;
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
@@ -253,12 +245,6 @@ export const createProjectService = ({
       partitions: resolvedPartitions,
       clientStore,
       logger: (entry) => {
-        if (entry?.event === "connected") {
-          const serverLastCommittedId = Number(entry?.server_last_committed_id);
-          if (Number.isFinite(serverLastCommittedId)) {
-            latestConnectedServerLastCommittedId = serverLastCommittedId;
-          }
-        }
         collabLog("debug", "sync-client", entry);
       },
       onCommittedCommand: ({
@@ -449,7 +435,6 @@ export const createProjectService = ({
         });
         // Wait until repository projection has finished applying synced events.
         await queueCollabApply(projectId, async () => {});
-        const stateAfterSync = repository.getState();
         const repositoryEventCount = Array.isArray(repository.getEvents?.())
           ? repository.getEvents().length
           : null;
@@ -459,14 +444,6 @@ export const createProjectService = ({
           endpointUrl,
           syncDurationMs,
           repositoryEventCount,
-          stateSummary: {
-            projectName: stateAfterSync?.project?.name || "",
-            projectDescription: stateAfterSync?.project?.description || "",
-            imagesCount: countCollectionItems(stateAfterSync?.images),
-            scenesCount: countCollectionItems(stateAfterSync?.scenes),
-            layoutsCount: countCollectionItems(stateAfterSync?.layouts),
-            variablesCount: countCollectionItems(stateAfterSync?.variables),
-          },
         });
         const shouldAttemptInitialSeed =
           initialPersistedCommittedCursor === 0 &&
@@ -477,8 +454,7 @@ export const createProjectService = ({
             typedEvents: localTypedEvents,
             projectId: resolvedProjectId,
             actor,
-            fallbackPartitions: resolvedPartitions,
-            partitioning,
+            partitions: resolvedPartitions,
           });
           if (bootstrapSeedEvent) {
             collabInitialSeedAttemptedByProject.add(projectId);
@@ -489,7 +465,6 @@ export const createProjectService = ({
                 projectId: resolvedProjectId,
                 endpointUrl,
                 bootstrapId: bootstrapSeedEvent.bootstrapId,
-                serverLastCommittedId: latestConnectedServerLastCommittedId,
               },
             );
             try {
@@ -509,17 +484,6 @@ export const createProjectService = ({
                     error: error?.message || "unknown",
                   });
                 }
-              }
-              const lastSeedError =
-                typeof collabSession.getLastError === "function"
-                  ? collabSession.getLastError()
-                  : null;
-              if (lastSeedError) {
-                collabLog("warn", "seed publish reported sync client error", {
-                  projectId: resolvedProjectId,
-                  errorCode: lastSeedError?.code || null,
-                  errorMessage: lastSeedError?.message || "unknown",
-                });
               }
               collabLog("info", "local seed events published", {
                 projectId: resolvedProjectId,
@@ -544,49 +508,6 @@ export const createProjectService = ({
               },
             );
           }
-        }
-        if (typeof onInitialSyncCompleted === "function") {
-          try {
-            await onInitialSyncCompleted({
-              projectId: resolvedProjectId,
-              state: stateAfterSync,
-              repositoryEventCount,
-            });
-          } catch (error) {
-            collabLog("warn", "initial sync completion hook failed", {
-              projectId: resolvedProjectId,
-              error: error?.message || "unknown",
-            });
-          }
-        }
-        if (typeof onRemoteEvent === "function") {
-          onRemoteEvent({
-            projectId: resolvedProjectId,
-            sourceType: "initial_sync_complete",
-            committedEvent: null,
-            event: {
-              type: "project.sync_completed",
-              payload: {
-                syncDurationMs,
-                repositoryEventCount,
-              },
-            },
-          });
-        }
-        const stillBootstrapOnly =
-          (stateAfterSync?.project?.name || "") === "" &&
-          (stateAfterSync?.project?.description || "") === "" &&
-          countCollectionItems(stateAfterSync?.images) === 0 &&
-          countCollectionItems(stateAfterSync?.scenes) === 0 &&
-          countCollectionItems(stateAfterSync?.layouts) === 0 &&
-          countCollectionItems(stateAfterSync?.variables) === 0;
-        if (stillBootstrapOnly) {
-          collabLog("warn", "sync completed but repository is still empty", {
-            projectId: resolvedProjectId,
-            endpointUrl,
-            hint: "remote event stream may be missing initial create/snapshot events",
-            repositoryEventCount,
-          });
         }
       } catch (error) {
         collabLog("warn", "initial remote sync failed", {
@@ -617,13 +538,6 @@ export const createProjectService = ({
       try {
         const store = await createInsiemeWebStoreAdapter(projectId);
         let existingEvents = (await store.getEvents()) || [];
-        collabLog("info", "repository init: loaded local typed events", {
-          projectId,
-          localEventCount: existingEvents.length,
-          localEventTypes: existingEvents
-            .slice(0, 5)
-            .map((event) => event?.type || "unknown"),
-        });
 
         // Recover from stale sync cursor state: a project can have a persisted
         // cursor while local typed events are empty/minimal (e.g. cleared IDB events).
@@ -667,10 +581,6 @@ export const createProjectService = ({
           };
           await store.appendTypedEvent(bootstrapEvent);
           existingEvents = [bootstrapEvent];
-          collabLog("info", "repository init: wrote bootstrap typed snapshot", {
-            projectId,
-            localEventCount: existingEvents.length,
-          });
         }
 
         const repository = await createInsiemeProjectRepositoryRuntime({

@@ -4,6 +4,12 @@ const isObject = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const nonEmptyString = (value) =>
   typeof value === "string" && value.length > 0 ? value : null;
+const committedEventPartitions = (committedEvent) =>
+  Array.isArray(committedEvent?.partitions)
+    ? committedEvent.partitions.filter(
+        (partition) => typeof partition === "string" && partition.length > 0,
+      )
+    : [];
 
 export const commandToSyncEvent = (command) => ({
   type: "event",
@@ -56,11 +62,7 @@ export const committedEventToCommand = (committedEvent) => {
     return null;
   }
 
-  const partitions = Array.isArray(committedEvent.partitions)
-    ? committedEvent.partitions.filter(
-        (partition) => typeof partition === "string" && partition.length > 0,
-      )
-    : [];
+  const partitions = committedEventPartitions(committedEvent);
 
   return {
     id:
@@ -99,11 +101,15 @@ export const committedEventToBootstrapSnapshot = (committedEvent) => {
     return null;
   }
 
+  const partitions = committedEventPartitions(committedEvent);
+
   return {
     id:
       nonEmptyString(payload.commandId || payload.bootstrapId) ||
       committedEvent?.id,
     projectId: payload.projectId || committedEvent?.project_id || null,
+    partition: partitions[0],
+    partitions,
     state: structuredClone(snapshotState),
     actor: payload.actor || {
       userId: "unknown",

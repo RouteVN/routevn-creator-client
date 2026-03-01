@@ -115,13 +115,6 @@ export const createProjectCollabService = ({
     }
   };
 
-  const committedEventPartitions = (committedEvent) =>
-    Array.isArray(committedEvent?.partitions)
-      ? committedEvent.partitions.filter(
-          (partition) => typeof partition === "string" && partition.length > 0,
-        )
-      : [];
-
   const applyCommittedEvents = (events, sourceType = "unknown") => {
     let typedStateMutated = false;
     for (const committedEvent of events) {
@@ -167,13 +160,12 @@ export const createProjectCollabService = ({
         appliedEventIds.add(committedEvent.id);
       }
 
-      const partitions = committedEventPartitions(committedEvent);
       emitCommittedCommand({
         command: {
           id: bootstrap.id || committedEvent?.id,
           projectId: bootstrap.projectId || projectId,
-          partition: partitions[0],
-          partitions,
+          partition: bootstrap.partition,
+          partitions: bootstrap.partitions,
           type: "project.bootstrap",
           payload: {
             state: structuredClone(bootstrap.state),
