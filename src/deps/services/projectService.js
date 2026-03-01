@@ -21,8 +21,8 @@ import {
 import { projectRepositoryStateToDomainState } from "../../domain/v2/stateProjection.js";
 import {
   applyTypedCommandToRepository,
-  applyTypedSnapshotToRepository,
   assertV2State,
+  createProjectCreatedTypedEvent,
   createInsiemeProjectRepositoryRuntime,
   initialProjectData,
 } from "./shared/typedProjectRepository.js";
@@ -120,14 +120,6 @@ export const createProjectService = ({ router, db, filePicker }) => {
       },
       onCommittedCommand: async ({ command, isFromCurrentActor }) => {
         if (isFromCurrentActor) return;
-        if (command?.type === "project.bootstrap") {
-          await applyTypedSnapshotToRepository({
-            repository,
-            state: command?.payload?.state,
-            projectId: resolvedProjectId,
-          });
-          return;
-        }
         await applyTypedCommandToRepository({
           repository,
           command,
@@ -177,21 +169,6 @@ export const createProjectService = ({ router, db, filePicker }) => {
       try {
         const store = await createInsiemeTauriStoreAdapter(projectPath);
         let existingEvents = (await store.getEvents()) || [];
-        if (existingEvents.length === 0) {
-          const bootstrapDomainState = projectRepositoryStateToDomainState({
-            repositoryState: initialProjectData,
-            projectId: projectPath,
-          });
-          const bootstrapEvent = {
-            type: "typedSnapshot",
-            payload: {
-              projectId: projectPath,
-              state: bootstrapDomainState,
-            },
-          };
-          await store.appendTypedEvent(bootstrapEvent);
-          existingEvents = [bootstrapEvent];
-        }
 
         const repository = await createInsiemeProjectRepositoryRuntime({
           projectId: projectPath,
@@ -518,13 +495,12 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
       // Create store and initialize typed bootstrap state
       const store = await createInsiemeTauriStoreAdapter(projectPath);
-      await store.appendTypedEvent({
-        type: "typedSnapshot",
-        payload: {
+      await store.appendTypedEvent(
+        createProjectCreatedTypedEvent({
           projectId: projectPath,
           state: bootstrapDomainState,
-        },
-      });
+        }),
+      );
 
       await store.app.set("creator_version", "2");
     },

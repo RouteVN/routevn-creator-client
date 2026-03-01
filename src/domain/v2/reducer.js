@@ -410,6 +410,14 @@ const toLayoutElementsFromRepositoryCollection = (repositoryElements) => {
 };
 
 const reducers = {
+  "project.created": ({ state, payload }) => {
+    const nextState = structuredClone(payload?.state || {});
+    for (const key of Object.keys(state)) {
+      delete state[key];
+    }
+    Object.assign(state, nextState);
+  },
+
   "project.updated": ({ state, payload }) => {
     const patch = structuredClone(payload.patch || {});
     delete patch.id;

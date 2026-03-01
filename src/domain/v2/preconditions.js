@@ -18,6 +18,8 @@ export const assertCommandPreconditions = (state, command) => {
   }
 
   switch (command.type) {
+    case COMMAND_TYPES.PROJECT_CREATED:
+      return;
     case COMMAND_TYPES.PROJECT_UPDATE:
       return;
 

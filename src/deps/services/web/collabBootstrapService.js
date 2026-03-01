@@ -97,7 +97,7 @@ const createRemoteRefreshDispatcher = ({ subject, collabDebugLog }) => {
 
   const shouldRefreshImagesForEvent = (event) => {
     const eventType = event?.type || null;
-    if (eventType === "typedSnapshot") return true;
+    if (eventType === "project.created") return true;
     const target = event?.payload?.target;
     if (typeof target !== "string" || target.length === 0) return false;
     return target === "images" || target.startsWith("images.");

@@ -25,13 +25,10 @@ import {
 } from "./collabCommittedCursorStore.js";
 import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import {
-  applyTypedSnapshotToRepository,
   applyTypedCommandToRepository,
   assertV2State,
   createInsiemeProjectRepositoryRuntime,
-  initialProjectData,
 } from "../shared/typedProjectRepository.js";
-import { buildBootstrapSeedEvent } from "./collabSeedSync.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -71,7 +68,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   const collabApplyQueueByProject = new Map();
   const collabLastCommittedIdByProject = new Map();
   const collabAppliedCommittedIdsByProject = new Map();
-  const collabInitialSeedAttemptedByProject = new Set();
 
   // Initialization locks - prevents duplicate initialization
   const initLocksByProject = new Map(); // projectId -> Promise<Repository>
@@ -190,28 +186,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       throw new Error(`Store adapter not found for project '${projectId}'`);
     }
 
-    const localTypedEvents = Array.isArray(repository.getEvents?.())
-      ? repository.getEvents()
-      : [];
-    const localEventCount = localTypedEvents.length;
-    const appearsBootstrapOnly =
-      localEventCount <= 1 &&
-      (state?.project?.name || "") === "" &&
-      (state?.project?.description || "") === "";
-
-    if (endpointUrl && appearsBootstrapOnly) {
-      await clearCommittedCursor({
-        adapter,
-        projectId,
-      }).catch(() => {});
-      collabLastCommittedIdByProject.delete(projectId);
-      collabAppliedCommittedIdsByProject.delete(projectId);
-      collabLog("warn", "forcing full sync for bootstrap-only local project", {
-        projectId,
-        localEventCount,
-      });
-    }
-
     const resolvedProjectId = state.project?.id || projectId;
     const resolvedPartitions = partitioning.getBasePartitions(
       resolvedProjectId,
@@ -226,13 +200,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         }
       },
     });
-    const initialPersistedCommittedCursor =
-      await ensureCommittedIdLoaded(projectId);
-    const actor = {
-      userId,
-      clientId,
-    };
-    let latestConnectedServerLastCommittedId = null;
+    await ensureCommittedIdLoaded(projectId);
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
       projectName: state.project?.name || "",
@@ -247,9 +215,12 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       clientStore,
       logger: (entry) => {
         if (entry?.event === "connected") {
-          const serverLastCommittedId = Number(entry?.server_last_committed_id);
-          if (Number.isFinite(serverLastCommittedId)) {
-            latestConnectedServerLastCommittedId = serverLastCommittedId;
+          const globalLastCommittedId = Number(entry?.global_last_committed_id);
+          if (Number.isFinite(globalLastCommittedId)) {
+            collabLog("debug", "connected cursor", {
+              projectId: resolvedProjectId,
+              globalLastCommittedId,
+            });
           }
         }
         collabLog("debug", "sync-client", entry);
@@ -268,12 +239,9 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
             isFromCurrentActor,
           }) => {
             if (isFromCurrentActor) {
-              const isBootstrapCommand = command?.type === "project.bootstrap";
               collabLog(
                 "debug",
-                isBootstrapCommand
-                  ? "typed bootstrap skipped (current actor source)"
-                  : "typed command skipped (current actor source)",
+                "typed command skipped (current actor source)",
                 {
                   projectId,
                   sourceType,
@@ -286,40 +254,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
                     : null,
                 },
               );
-              return;
-            }
-
-            if (command?.type === "project.bootstrap") {
-              const bootstrapState = command?.payload?.state;
-              const applyResult = await applyTypedSnapshotToRepository({
-                repository,
-                state: bootstrapState,
-                projectId: resolvedProjectId,
-              });
-              collabLog(
-                "info",
-                "remote bootstrap command applied to repository",
-                {
-                  projectId,
-                  sourceType,
-                  committedId: Number.isFinite(
-                    Number(committedEvent?.committed_id),
-                  )
-                    ? Number(committedEvent.committed_id)
-                    : null,
-                },
-              );
-              if (typeof onRemoteEvent === "function") {
-                for (const event of applyResult.events) {
-                  onRemoteEvent({
-                    projectId,
-                    sourceType,
-                    command,
-                    committedEvent,
-                    event,
-                  });
-                }
-              }
               return;
             }
 
@@ -452,87 +386,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           syncDurationMs,
           repositoryEventCount,
         });
-        const remoteStreamIsExplicitlyEmpty =
-          latestConnectedServerLastCommittedId === 0;
-        const noRemoteEventsAppliedDuringSync =
-          repositoryEventCount === localEventCount;
-        const shouldAttemptInitialSeed =
-          initialPersistedCommittedCursor === 0 &&
-          localEventCount > 0 &&
-          remoteStreamIsExplicitlyEmpty &&
-          noRemoteEventsAppliedDuringSync &&
-          !collabInitialSeedAttemptedByProject.has(projectId);
-        if (shouldAttemptInitialSeed) {
-          const bootstrapSeedEvent = buildBootstrapSeedEvent({
-            typedEvents: localTypedEvents,
-            projectId: resolvedProjectId,
-            actor,
-            partitions: resolvedPartitions,
-          });
-          if (bootstrapSeedEvent) {
-            collabInitialSeedAttemptedByProject.add(projectId);
-            collabLog(
-              "warn",
-              "remote stream appears empty; publishing local bootstrap event",
-              {
-                projectId: resolvedProjectId,
-                endpointUrl,
-                bootstrapId: bootstrapSeedEvent.bootstrapId,
-              },
-            );
-            try {
-              await collabSession.submitSyncEvent({
-                partitions: bootstrapSeedEvent.partitions,
-                event: bootstrapSeedEvent.event,
-              });
-              await collabSession.flushDrafts();
-              if (typeof collabSession.syncNow === "function") {
-                try {
-                  await collabSession.syncNow({
-                    timeoutMs: INITIAL_REMOTE_SYNC_TIMEOUT_MS,
-                  });
-                } catch (error) {
-                  collabLog("warn", "post-seed sync failed", {
-                    projectId: resolvedProjectId,
-                    error: error?.message || "unknown",
-                  });
-                }
-              }
-              collabLog("info", "local seed events published", {
-                projectId: resolvedProjectId,
-                seedEventCount: 1,
-              });
-            } catch (error) {
-              collabInitialSeedAttemptedByProject.delete(projectId);
-              collabLog("error", "failed to publish local seed events", {
-                projectId: resolvedProjectId,
-                seedEventCount: 1,
-                error: error?.message || "unknown",
-              });
-            }
-          } else {
-            collabInitialSeedAttemptedByProject.delete(projectId);
-            collabLog(
-              "warn",
-              "remote stream appears empty but no local bootstrap seed was available",
-              {
-                projectId: resolvedProjectId,
-                endpointUrl,
-              },
-            );
-          }
-        } else if (
-          initialPersistedCommittedCursor === 0 &&
-          localEventCount > 0
-        ) {
-          collabLog("info", "skipping local bootstrap seed publish", {
-            projectId: resolvedProjectId,
-            endpointUrl,
-            serverLastCommittedId: latestConnectedServerLastCommittedId,
-            repositoryEventCount,
-            localEventCount,
-          });
-        }
       } catch (error) {
         collabLog("warn", "initial remote sync failed", {
           projectId: resolvedProjectId,
@@ -583,28 +436,6 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
             persistedCursor,
             localEventCount: existingEvents.length,
           });
-        }
-
-        if (existingEvents.length === 0) {
-          const bootstrapDomainState = projectRepositoryStateToDomainState({
-            repositoryState: {
-              ...initialProjectData,
-              project: {
-                ...initialProjectData.project,
-                id: projectId,
-              },
-            },
-            projectId,
-          });
-          const bootstrapEvent = {
-            type: "typedSnapshot",
-            payload: {
-              projectId,
-              state: bootstrapDomainState,
-            },
-          };
-          await store.appendTypedEvent(bootstrapEvent);
-          existingEvents = [bootstrapEvent];
         }
 
         const repository = await createInsiemeProjectRepositoryRuntime({
