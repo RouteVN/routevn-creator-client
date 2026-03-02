@@ -887,7 +887,9 @@ export const handleLinePaste = (deps, payload) => {
   event.preventDefault();
 
   // Split by newlines (handles both Unix \n and Windows \r\n) and filter out blank lines
-  const lines = pastedText.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  const lines = pastedText
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
 
   // If all lines were blank, do nothing
   if (lines.length === 0) {
