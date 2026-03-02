@@ -76,9 +76,7 @@ const toSyncSubmissionEvents = (repositoryEvents = []) =>
       if (partitions.length === 0) return null;
 
       const projectId =
-        command?.projectId ||
-        repositoryEvent?.payload?.projectId ||
-        undefined;
+        command?.projectId || repositoryEvent?.payload?.projectId || undefined;
       return {
         partitions,
         event: commandToSyncEvent({
@@ -93,7 +91,9 @@ const toUncommittedSyncSubmissionEvents = ({
   repositoryEvents = [],
   committedCursor = 0,
 }) => {
-  const normalizedEvents = Array.isArray(repositoryEvents) ? repositoryEvents : [];
+  const normalizedEvents = Array.isArray(repositoryEvents)
+    ? repositoryEvents
+    : [];
   const cursor = Number.isFinite(Number(committedCursor))
     ? Math.max(0, Math.floor(Number(committedCursor)))
     : 0;
