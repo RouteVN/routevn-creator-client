@@ -236,7 +236,10 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         projectId: resolvedProjectId,
       }),
       token,
-      actor,
+      actor: {
+        userId,
+        clientId,
+      },
       partitions: resolvedPartitions,
       clientStore,
       logger: (entry) => {
