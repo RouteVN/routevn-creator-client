@@ -1161,6 +1161,166 @@ export const handleSplitLine = async (deps, payload) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
+export const handlePasteLines = async (deps, payload) => {
+  const { projectService, store, render, refs, subject } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  const sectionId = store.selectSelectedSectionId();
+  const { lineId, leftContent, rightContent, lines } = payload._event.detail;
+
+  // Flush pending dialogue updates before modifying repository
+  await flushDialogueQueue(deps);
+
+  // Get existing dialogue data to determine mode inheritance
+  const domainState = projectService.getDomainState();
+  const existingDialogue =
+    domainState?.lines?.[lineId]?.actions?.dialogue || {};
+
+  const shouldInheritNvl =
+    existingDialogue?.mode === "nvl" ||
+    shouldInheritNvlModeFromPreviousLine({
+      domainState,
+      sectionId,
+      lineId,
+      existingDialogue,
+    });
+
+  // First line content: leftContent + first pasted line
+  const firstLineContent = leftContent + lines[0];
+
+  // Update the current line with the first line content
+  const firstContentArray = [{ text: firstLineContent }];
+  if (existingDialogue && Object.keys(existingDialogue).length > 0) {
+    await projectService.updateLineActions({
+      lineId,
+      patch: {
+        dialogue: {
+          ...existingDialogue,
+          content: firstContentArray,
+        },
+      },
+      replace: false,
+    });
+  } else {
+    await projectService.updateLineActions({
+      lineId,
+      patch: {
+        dialogue: {
+          content: firstContentArray,
+        },
+      },
+      replace: false,
+    });
+  }
+
+  // Create new lines for remaining pasted lines
+  let lastCreatedLineId = lineId;
+  let afterLineId = lineId;
+
+  for (let i = 1; i < lines.length; i++) {
+    const newLineId = nanoid();
+    const isLastLine = i === lines.length - 1;
+
+    // Last pasted line gets combined with rightContent
+    const lineContent = isLastLine ? lines[i] + rightContent : lines[i];
+
+    const newLineActions = {
+      dialogue: {
+        mode: shouldInheritNvl ? "nvl" : "adv",
+        content: [{ text: lineContent }],
+      },
+    };
+
+    await projectService.createLineItem({
+      sectionId,
+      lineId: newLineId,
+      line: {
+        actions: newLineActions,
+      },
+      afterLineId,
+    });
+
+    afterLineId = newLineId;
+    lastCreatedLineId = newLineId;
+  }
+
+  // If only one line was pasted, add rightContent to current line
+  if (lines.length === 1) {
+    const combinedContent = firstLineContent + rightContent;
+    const combinedContentArray = [{ text: combinedContent }];
+    if (existingDialogue && Object.keys(existingDialogue).length > 0) {
+      await projectService.updateLineActions({
+        lineId,
+        patch: {
+          dialogue: {
+            ...existingDialogue,
+            content: combinedContentArray,
+          },
+        },
+        replace: false,
+      });
+    } else {
+      await projectService.updateLineActions({
+        lineId,
+        patch: {
+          dialogue: {
+            content: combinedContentArray,
+          },
+        },
+        replace: false,
+      });
+    }
+    lastCreatedLineId = lineId;
+  }
+
+  // Update store with new repository state
+  syncStoreProjectState(store, projectService);
+
+  // Set cursor position at end of last line
+  const refIds = refs;
+  const linesEditorRef = refIds["linesEditor"];
+
+  if (linesEditorRef) {
+    // Calculate cursor position (end of last pasted content)
+    const lastLineContent =
+      lines.length === 1
+        ? firstLineContent + rightContent
+        : lines[lines.length - 1] + rightContent;
+    const cursorPosition = lastLineContent.length - rightContent.length;
+
+    linesEditorRef.store.setCursorPosition({ position: cursorPosition });
+    linesEditorRef.store.setGoalColumn({ goalColumn: cursorPosition });
+    linesEditorRef.store.setNavigationDirection({ direction: null });
+    linesEditorRef.store.setIsNavigating({ isNavigating: true });
+  }
+
+  // Update selectedLineId
+  store.setSelectedLineId({ selectedLineId: lastCreatedLineId });
+
+  // Render after setting the selected line ID
+  render();
+
+  // Focus the last created line
+  requestAnimationFrame(() => {
+    if (linesEditorRef) {
+      linesEditorRef.transformedHandlers.updateSelectedLine({
+        currentLineId: lastCreatedLineId,
+      });
+
+      linesEditorRef.transformedHandlers.forceSyncContentLine({
+        lineId,
+      });
+
+      linesEditorRef.render();
+    }
+  });
+
+  // Trigger debounced canvas render
+  subject.dispatch("sceneEditor.renderCanvas", {});
+};
+
 export const handleNewLine = async (deps) => {
   const { store, render, projectService } = deps;
   if (isSectionsOverviewOpen(store)) {
