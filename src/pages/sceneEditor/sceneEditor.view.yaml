@@ -13,6 +13,8 @@ refs:
         handler: handleMergeLines
       delete-action:
         handler: handleLineDeleteActionItem
+      pasteLines:
+        handler: handlePasteLines
   sectionTab*:
     eventListeners:
       click:

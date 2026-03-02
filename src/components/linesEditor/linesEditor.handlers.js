@@ -871,6 +871,53 @@ export const handleOnInput = (deps, payload) => {
   );
 };
 
+export const handleLinePaste = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const event = payload._event;
+
+  // Get plain text from clipboard (text only, no images)
+  const pastedText = event.clipboardData.getData("text/plain");
+
+  // If no newlines, let default behavior handle it
+  if (!pastedText.includes("\n")) {
+    return;
+  }
+
+  // Prevent default paste behavior since we're handling multi-line paste
+  event.preventDefault();
+
+  // Split by newlines and filter out blank lines (empty or whitespace-only)
+  const lines = pastedText
+    .split("\n")
+    .filter((line) => line.trim().length > 0);
+
+  // If all lines were blank, do nothing
+  if (lines.length === 0) {
+    return;
+  }
+
+  // Get current cursor position and line content
+  const lineId = getLineIdFromElement(event.currentTarget);
+  const cursorPos = getCursorPosition(event.currentTarget);
+  const currentContent = event.currentTarget.textContent;
+
+  // Split current content at cursor position
+  const leftContent = currentContent.substring(0, cursorPos);
+  const rightContent = currentContent.substring(cursorPos);
+
+  // Dispatch pasteLines event to parent (sceneEditor)
+  dispatchEvent(
+    new CustomEvent("pasteLines", {
+      detail: {
+        lineId,
+        leftContent,
+        rightContent,
+        lines,
+      },
+    }),
+  );
+};
+
 export const forceSyncContentLine = (deps, payload) => {
   const { store, refs } = deps;
   const refIds = refs;
