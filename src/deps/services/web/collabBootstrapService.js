@@ -30,7 +30,7 @@ const COLLAB_REFRESH_HANDLER_NAMES = [
   "handleFileExplorerDataChanged",
 ];
 const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
-const DEFAULT_COLLAB_ENDPOINT = "ws://127.0.0.1:8787/sync";
+const DEFAULT_COLLAB_ENDPOINT = "wss://api.routevn.com/sync";
 const COLLAB_HEARTBEAT_INTERVAL_MS = 10_000;
 const COLLAB_RECONNECT_INTERVAL_MS = 5_000;
 const COLLAB_CONNECTION_ERROR_THROTTLE_MS = 10_000;

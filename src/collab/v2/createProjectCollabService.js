@@ -28,6 +28,8 @@ export const createProjectCollabService = ({
   onCommittedCommand,
 }) => {
   let lastError = null;
+  let session = null;
+  let serverErrorStopInFlight = false;
 
   let projectedState =
     initialState && typeof initialState === "object"
@@ -38,7 +40,7 @@ export const createProjectCollabService = ({
           description: projectDescription,
         });
 
-  const session = createCommandSyncSession({
+  session = createCommandSyncSession({
     token,
     actor,
     partitions,
@@ -81,6 +83,18 @@ export const createProjectCollabService = ({
           code: "unknown_error",
           message: "unknown",
         };
+        // Prevent hot reconnect loops when backend persistently returns
+        // server_error for submit/sync operations.
+        if (
+          payload?.code === "server_error" &&
+          !serverErrorStopInFlight &&
+          session
+        ) {
+          serverErrorStopInFlight = true;
+          void session.stop().finally(() => {
+            serverErrorStopInFlight = false;
+          });
+        }
       } else if (type === "rejected") {
         lastError = {
           code: payload?.reason || "validation_failed",
