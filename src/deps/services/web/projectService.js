@@ -9,7 +9,7 @@ import {
   createProjectCollabService,
   createWebSocketTransport,
 } from "../../../collab/v2/index.js";
-import { commandToSyncEvent, initializeStreamIfEmpty } from "insieme/client";
+import { commandToSyncEvent } from "insieme/client";
 import {
   getImageDimensions,
   getVideoDimensions,
@@ -51,9 +51,15 @@ const countImageEntries = (imagesData) =>
     (item) => item?.type === "image",
   ).length;
 
-const toSeedSyncEvents = (commands = []) =>
-  commands
-    .map((command) => {
+const toSyncSubmissionEvents = (repositoryEvents = []) =>
+  repositoryEvents
+    .map((repositoryEvent) => {
+      const command =
+        repositoryEvent?.type === "typedCommand"
+          ? repositoryEvent?.payload?.command
+          : repositoryEvent;
+      if (!command || typeof command !== "object") return null;
+
       const partitions = Array.isArray(command?.partitions)
         ? command.partitions.filter(
             (partition) =>
@@ -68,12 +74,57 @@ const toSeedSyncEvents = (commands = []) =>
         partitions.push(command.partition);
       }
       if (partitions.length === 0) return null;
+
+      const projectId =
+        command?.projectId ||
+        repositoryEvent?.payload?.projectId ||
+        undefined;
       return {
         partitions,
-        event: commandToSyncEvent(command),
+        event: commandToSyncEvent({
+          ...command,
+          projectId,
+        }),
       };
     })
     .filter(Boolean);
+
+const toUncommittedSyncSubmissionEvents = ({
+  repositoryEvents = [],
+  committedCursor = 0,
+}) => {
+  const normalizedEvents = Array.isArray(repositoryEvents) ? repositoryEvents : [];
+  const cursor = Number.isFinite(Number(committedCursor))
+    ? Math.max(0, Math.floor(Number(committedCursor)))
+    : 0;
+  const startIndex = Math.min(cursor, normalizedEvents.length);
+  return toSyncSubmissionEvents(normalizedEvents.slice(startIndex));
+};
+
+const summarizeRepositoryEventsForSync = (events = []) => {
+  const normalizedEvents = Array.isArray(events) ? events : [];
+  const typedCommands = normalizedEvents
+    .map((event) => event?.payload?.command)
+    .filter((command) => command && typeof command === "object");
+  const firstTypedCommand = typedCommands[0] || null;
+  const commandTypes = typedCommands
+    .slice(0, 8)
+    .map((command) => command?.type || "unknown");
+  const hasProjectCreated = typedCommands.some(
+    (command) => command?.type === "project.created",
+  );
+
+  return {
+    repositoryEventCount: normalizedEvents.length,
+    typedCommandCount: typedCommands.length,
+    hasProjectCreated,
+    commandTypesSample: commandTypes,
+    firstTypedCommandType: firstTypedCommand?.type || null,
+    firstTypedCommandId: firstTypedCommand?.id || null,
+    firstTypedCommandProjectId: firstTypedCommand?.projectId || null,
+    firstTypedCommandPartition: firstTypedCommand?.partition || null,
+  };
+};
 
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
@@ -405,26 +456,48 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         });
         // Wait until repository projection has finished applying synced events.
         await queueCollabApply(projectId, async () => {});
-        const repositoryEventCount = Array.isArray(repository.getEvents?.())
-          ? repository.getEvents().length
-          : null;
-
-        const seedEvents = toSeedSyncEvents(
-          Array.isArray(repository.getEvents?.()) ? repository.getEvents() : [],
-        );
-        const initResult = await initializeStreamIfEmpty({
-          syncClient: collabSession,
-          seedEvents,
-          logger: (entry) => {
-            collabLog("info", "stream initializer", {
-              projectId: resolvedProjectId,
-              ...entry,
-            });
-          },
+        const repositoryEvents = Array.isArray(repository.getEvents?.())
+          ? repository.getEvents()
+          : [];
+        const repositoryEventSummary =
+          summarizeRepositoryEventsForSync(repositoryEvents);
+        collabLog("info", "repository event snapshot before replay", {
+          projectId: resolvedProjectId,
+          ...repositoryEventSummary,
         });
 
-        if (initResult.initialized) {
+        const localCommittedCursor = await ensureCommittedIdLoaded(projectId);
+        const uncommittedEvents = toUncommittedSyncSubmissionEvents({
+          repositoryEvents,
+          committedCursor: localCommittedCursor,
+        });
+        collabLog("info", "uncommitted local event snapshot", {
+          projectId: resolvedProjectId,
+          localCommittedCursor,
+          localRepositoryEventCount: repositoryEvents.length,
+          uncommittedEventCount: uncommittedEvents.length,
+          firstUncommittedSchema:
+            uncommittedEvents[0]?.event?.payload?.schema || null,
+          firstUncommittedProjectId:
+            uncommittedEvents[0]?.event?.payload?.projectId || null,
+        });
+
+        if (uncommittedEvents.length > 0) {
+          for (const entry of uncommittedEvents) {
+            await collabSession.submitEvent({
+              partitions: entry.partitions,
+              event: entry.event,
+            });
+          }
+          await collabSession.flushDrafts();
+          await collabSession.syncNow({
+            timeoutMs: INITIAL_REMOTE_SYNC_TIMEOUT_MS,
+          });
           await queueCollabApply(projectId, async () => {});
+          collabLog("info", "uncommitted local events submitted", {
+            projectId: resolvedProjectId,
+            submittedCount: uncommittedEvents.length,
+          });
         }
 
         const syncDurationMs = Date.now() - syncStartedAt;
@@ -432,8 +505,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
           projectId: resolvedProjectId,
           endpointUrl,
           syncDurationMs,
-          repositoryEventCount,
-          initializer: initResult,
+          repositoryEventCount: repositoryEvents.length,
+          replayedUncommittedEventCount: uncommittedEvents.length,
         });
       } catch (error) {
         collabLog("warn", "initial remote sync failed", {
