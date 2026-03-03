@@ -772,7 +772,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         "creating local-only session (backend transport not attached)",
         {
           projectId,
-          hint: "Set collabEndpoint or use default ws://localhost:8787/sync auto-connect.",
+          hint: "Set collabEndpoint or use default wss://api.routevn.com/sync auto-connect.",
         },
       );
     },

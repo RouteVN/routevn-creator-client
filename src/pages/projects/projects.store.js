@@ -1,7 +1,9 @@
 export const createInitialState = () => ({
-  title: "Local Projects",
+  localTitle: "Local Projects",
+  cloudTitle: "Cloud Projects",
   loginButtonText: "Login",
-  createButtonText: "Create Project",
+  createButtonText: "Create Local Project",
+  createCloudButtonText: "Create Cloud Project",
   openButtonText: "Open Project",
   isLoggedIn: false,
   userEmail: "",
@@ -10,6 +12,7 @@ export const createInitialState = () => ({
   userAvatar: "",
   avatarInitial: "U",
   projects: [],
+  cloudProjects: [],
   isOpen: false,
   platform: "tauri",
   projectPath: "",
@@ -44,6 +47,7 @@ export const createInitialState = () => ({
     isOpen: false,
     x: 0,
     y: 0,
+    targetScope: "local",
     targetProjectId: null,
     items: [],
   },
@@ -52,6 +56,25 @@ export const createInitialState = () => ({
     isOpen: false,
     projectId: null,
     projectName: "",
+  },
+
+  cloudCreateDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  },
+
+  addMemberDialog: {
+    isOpen: false,
+    projectId: null,
+    projectName: "",
+    formKey: 0,
+    defaultValues: {
+      email: "",
+    },
   },
 
   defaultValues: {
@@ -164,6 +187,17 @@ export const addProject = ({ state }, { project } = {}) => {
   state.projects.push(project);
 };
 
+export const setCloudProjects = ({ state }, { projects } = {}) => {
+  state.cloudProjects = Array.isArray(projects) ? projects : [];
+};
+
+export const addCloudProject = ({ state }, { project } = {}) => {
+  if (!project) {
+    return;
+  }
+  state.cloudProjects.unshift(project);
+};
+
 export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform;
 };
@@ -261,28 +295,58 @@ export const selectProjects = ({ state }) => {
   return state.projects;
 };
 
+export const selectCloudProjects = ({ state }) => {
+  return state.cloudProjects;
+};
+
+export const openCloudCreateDialog = ({ state }, _payload = {}) => {
+  state.cloudCreateDialog.isOpen = true;
+  state.cloudCreateDialog.formKey += 1;
+  state.cloudCreateDialog.defaultValues = {
+    name: "",
+    description: "",
+  };
+};
+
+export const closeCloudCreateDialog = ({ state }, _payload = {}) => {
+  state.cloudCreateDialog.isOpen = false;
+};
+
+export const selectIsCloudCreateDialogOpen = ({ state }) => {
+  return Boolean(state.cloudCreateDialog?.isOpen);
+};
+
 export const selectDropdownMenuTargetProjectId = ({ state }) => {
   return state.dropdownMenu.targetProjectId;
+};
+
+export const selectDropdownMenuTargetScope = ({ state }) => {
+  return state.dropdownMenu.targetScope || "local";
 };
 
 export const selectIsProjectDropdownMenuOpen = ({ state }) => {
   return Boolean(state.dropdownMenu?.isOpen);
 };
 
-export const openDropdownMenu = ({ state }, { x, y, projectId } = {}) => {
+export const openDropdownMenu = (
+  { state },
+  { x, y, scope = "local", projectId, items } = {},
+) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
+  state.dropdownMenu.targetScope = scope;
   state.dropdownMenu.targetProjectId = projectId;
-  state.dropdownMenu.items = [
-    { label: "Delete", type: "item", value: "delete" },
-  ];
+  state.dropdownMenu.items = Array.isArray(items)
+    ? items
+    : [{ label: "Delete", type: "item", value: "delete" }];
 };
 
 export const closeDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;
+  state.dropdownMenu.targetScope = "local";
   state.dropdownMenu.targetProjectId = null;
   state.dropdownMenu.items = [];
 };
@@ -308,6 +372,33 @@ export const selectDeleteDialogProjectId = ({ state }) => {
 
 export const selectIsDeleteDialogOpen = ({ state }) => {
   return Boolean(state.deleteDialog?.isOpen);
+};
+
+export const openAddMemberDialog = (
+  { state },
+  { projectId, projectName = "" } = {},
+) => {
+  state.addMemberDialog.isOpen = true;
+  state.addMemberDialog.projectId = projectId || null;
+  state.addMemberDialog.projectName = projectName;
+  state.addMemberDialog.formKey += 1;
+  state.addMemberDialog.defaultValues = {
+    email: "",
+  };
+};
+
+export const closeAddMemberDialog = ({ state }, _payload = {}) => {
+  state.addMemberDialog.isOpen = false;
+  state.addMemberDialog.projectId = null;
+  state.addMemberDialog.projectName = "";
+};
+
+export const selectAddMemberDialogProjectId = ({ state }) => {
+  return state.addMemberDialog.projectId;
+};
+
+export const selectIsAddMemberDialogOpen = ({ state }) => {
+  return Boolean(state.addMemberDialog?.isOpen);
 };
 
 export const selectViewData = ({ state }) => {
@@ -386,6 +477,89 @@ export const selectViewData = ({ state }) => {
       ],
     },
   };
+  const cloudCreateForm = {
+    title: "Create Cloud Project",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Project Name",
+        required: true,
+        validations: [
+          {
+            rule: /^.+$/,
+            message: "Project name is required",
+          },
+        ],
+      },
+      {
+        name: "description",
+        type: "input-text",
+        label: "Description",
+        description: "Optional",
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
+        {
+          id: "create-cloud",
+          variant: "pr",
+          label: "Create Project",
+          type: "submit",
+          validate: true,
+        },
+      ],
+    },
+  };
+  const addMemberDialogTitle = state.addMemberDialog.projectName
+    ? `Add Member - ${state.addMemberDialog.projectName}`
+    : "Add Member";
+  const addMemberForm = {
+    title: addMemberDialogTitle,
+    fields: [
+      {
+        name: "email",
+        type: "input-text",
+        label: "Email",
+        required: true,
+        validations: [
+          {
+            rule: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: "Please enter a valid email address",
+          },
+        ],
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
+        {
+          id: "submit-add-member",
+          variant: "pr",
+          label: "Submit",
+          type: "submit",
+          validate: true,
+        },
+      ],
+    },
+  };
+
+  const localProjects = Array.isArray(state.projects) ? state.projects : [];
+  const cloudProjects = Array.isArray(state.cloudProjects)
+    ? state.cloudProjects
+    : [];
+  const hasLocalProjects = localProjects.length > 0;
+  const hasCloudProjects = cloudProjects.length > 0;
+  const showCloudLoginHint = !state.isLoggedIn;
 
   return {
     ...state,
@@ -396,13 +570,25 @@ export const selectViewData = ({ state }) => {
     },
     deleteDialogTitle: "Delete Project",
     deleteDialogMessage: `Are you sure you want to delete ${deleteDialogProjectName}? This action cannot be undone.`,
-    hasProjects: state.projects && state.projects.length > 0,
-    emptyMessage:
-      state.projects && state.projects.length === 0 ? "No projects yet" : "",
-    emptySubMessage:
-      state.projects && state.projects.length === 0
-        ? "Create or open a project to get started"
-        : "",
+    hasLocalProjects,
+    localEmptyMessage: hasLocalProjects ? "" : "No local projects yet",
+    localEmptySubMessage: hasLocalProjects
+      ? ""
+      : "Create or open a local project to get started",
+    hasCloudProjects,
+    showCloudLoginHint,
+    cloudEmptyMessage: showCloudLoginHint
+      ? "Login to see your cloud projects"
+      : hasCloudProjects
+        ? ""
+        : "No cloud projects yet",
+    cloudEmptySubMessage: showCloudLoginHint
+      ? "Authenticate to load projects from your RouteVN account."
+      : hasCloudProjects
+        ? ""
+        : "Create your first cloud project.",
+    cloudCreateForm,
+    addMemberForm,
     profileDialogForm,
     settingsDialogForm,
   };

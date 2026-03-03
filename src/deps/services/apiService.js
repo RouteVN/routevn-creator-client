@@ -140,6 +140,19 @@ export const createApiService = ({ baseUrl } = {}) => {
     return body.result;
   };
 
+  const createAuthHeaders = (authToken) => {
+    if (typeof authToken !== "string") {
+      return {};
+    }
+    const normalized = authToken.trim();
+    if (!normalized) {
+      return {};
+    }
+    return {
+      authorization: `Bearer ${normalized}`,
+    };
+  };
+
   return {
     getBaseUrl() {
       return resolvedBaseUrl;
@@ -169,6 +182,49 @@ export const createApiService = ({ baseUrl } = {}) => {
       return rpcCall({
         method: "user.register",
         params: { email, registerCode },
+      });
+    },
+
+    async getProfile({ authToken } = {}) {
+      return rpcCall({
+        method: "user.getProfile",
+        params: {},
+        headers: createAuthHeaders(authToken),
+      });
+    },
+
+    async createProject({ authToken, name, description } = {}) {
+      const params = {
+        name,
+      };
+
+      const normalizedDescription =
+        typeof description === "string" ? description.trim() : "";
+      if (normalizedDescription) {
+        params.description = normalizedDescription;
+      }
+
+      return rpcCall({
+        method: "project.createProject",
+        params,
+        headers: createAuthHeaders(authToken),
+      });
+    },
+
+    async addMembers({ authToken, projectId, memberEmails, role } = {}) {
+      const params = {
+        projectId,
+        memberEmails: Array.isArray(memberEmails) ? memberEmails : [],
+      };
+
+      if (typeof role === "string" && role.trim()) {
+        params.role = role.trim();
+      }
+
+      return rpcCall({
+        method: "project.addMembers",
+        params,
+        headers: createAuthHeaders(authToken),
       });
     },
   };

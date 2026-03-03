@@ -1,9 +1,102 @@
+const getSessionAuthToken = (appService) => {
+  const authSession = appService.getUserConfig("auth.session");
+  const authToken =
+    typeof authSession?.authToken === "string"
+      ? authSession.authToken.trim()
+      : "";
+  return authToken;
+};
+
+const mapApiUserToAuthUser = (user) => {
+  const id = typeof user?.id === "string" ? user.id : "";
+  const email = typeof user?.email === "string" ? user.email : "";
+  const name =
+    typeof user?.creatorDisplayName === "string" ? user.creatorDisplayName : "";
+  const displayColor =
+    typeof user?.creatorDisplayColor === "string" && user.creatorDisplayColor
+      ? user.creatorDisplayColor
+      : "#E2E8F0";
+  const avatar =
+    typeof user?.creatorDisplayAvatar === "string"
+      ? user.creatorDisplayAvatar
+      : "";
+
+  return {
+    id,
+    email,
+    name,
+    displayColor,
+    avatar,
+    registered: true,
+  };
+};
+
+const mapCloudProject = (project) => {
+  const projectId = typeof project?.id === "string" ? project.id : "";
+  const name = typeof project?.name === "string" ? project.name : "Untitled";
+  const role = typeof project?.role === "string" ? project.role : "member";
+  const data = project?.data && typeof project.data === "object" ? project.data : {};
+  const description =
+    typeof data.description === "string" ? data.description : "";
+  const memberCount = Array.isArray(project?.members) ? project.members.length : 0;
+  const updated = Number.isFinite(project?.updated) ? project.updated : 0;
+  const created = Number.isFinite(project?.created) ? project.created : 0;
+
+  return {
+    id: projectId,
+    name,
+    role,
+    description,
+    memberCount,
+    updated,
+    created,
+  };
+};
+
+const loadCloudProjects = async ({ appService, apiService, store }) => {
+  const authToken = getSessionAuthToken(appService);
+  if (!authToken) {
+    store.setCloudProjects({ projects: [] });
+    return;
+  }
+
+  const profile = await apiService.getProfile({ authToken });
+  const profileUser = profile?.user;
+
+  if (!profileUser || typeof profileUser !== "object") {
+    store.setCloudProjects({ projects: [] });
+    return;
+  }
+
+  const mappedUser = mapApiUserToAuthUser(profileUser);
+  appService.setUserConfig("auth.user", mappedUser);
+  store.setAuthUser({ user: mappedUser });
+
+  const mappedCloudProjects = Array.isArray(profileUser.projects)
+    ? profileUser.projects.map(mapCloudProject)
+    : [];
+  store.setCloudProjects({ projects: mappedCloudProjects });
+};
+
 export const handleAfterMount = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, apiService, store, render } = deps;
   const platform = appService.getPlatform();
   store.setPlatform({ platform: platform });
   const authUser = appService.getUserConfig("auth.user");
   store.setAuthUser({ user: authUser });
+
+  const authToken = getSessionAuthToken(appService);
+  if (authToken) {
+    try {
+      await loadCloudProjects({ appService, apiService, store });
+    } catch (error) {
+      console.error("Failed to load cloud profile:", error);
+      store.setCloudProjects({ projects: [] });
+    }
+  } else {
+    store.setCloudProjects({ projects: [] });
+  }
+
   const projects = await appService.loadAllProjects();
   store.setProjects({ projects: projects });
   render();
@@ -21,6 +114,77 @@ export const handleCreateButtonClick = async (deps) => {
   const { render, store } = deps;
   store.toggleDialog();
   render();
+};
+
+export const handleCloudCreateButtonClick = (deps) => {
+  const { appService, store, render } = deps;
+  const authToken = getSessionAuthToken(appService);
+  if (!authToken) {
+    appService.showToast("Please login to create a cloud project.");
+    return;
+  }
+
+  store.openCloudCreateDialog();
+  render();
+};
+
+export const handleCloudCreateDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsCloudCreateDialogOpen()) {
+    return;
+  }
+  store.closeCloudCreateDialog();
+  render();
+};
+
+export const handleCloudCreateFormAction = async (deps, payload) => {
+  const { appService, apiService, store, render } = deps;
+  const detail = payload?._event?.detail || {};
+  const actionId = detail.actionId;
+
+  if (actionId === "cancel") {
+    store.closeCloudCreateDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "create-cloud") {
+    return;
+  }
+
+  const authToken = getSessionAuthToken(appService);
+  if (!authToken) {
+    appService.showToast("Please login to create a cloud project.");
+    return;
+  }
+
+  const name = detail?.values?.name?.trim?.() || "";
+  const description = detail?.values?.description?.trim?.() || "";
+  if (!name) {
+    appService.showToast("Project Name is required.");
+    return;
+  }
+
+  try {
+    const result = await apiService.createProject({
+      authToken,
+      name,
+      description,
+    });
+    const project = mapCloudProject(result?.project);
+    if (!project.id) {
+      throw new Error("Project was created but response is invalid.");
+    }
+
+    store.addCloudProject({ project });
+    store.closeCloudCreateDialog();
+    render();
+  } catch (error) {
+    console.error("Failed to create cloud project:", error);
+    appService.showToast(
+      error?.message || "Failed to create cloud project. Please try again.",
+    );
+  }
 };
 
 export const handleOpenButtonClick = async (deps) => {
@@ -193,8 +357,10 @@ export const handleProfileDropdownClickItem = async (deps, payload) => {
       return;
     }
 
+    appService.setUserConfig("auth.session", null);
     appService.setUserConfig("auth.user", null);
     store.setAuthUser({ user: null });
+    store.setCloudProjects({ projects: [] });
     render();
   }
 };
@@ -308,7 +474,33 @@ export const handleProjectContextMenu = (deps, payload) => {
   store.openDropdownMenu({
     x: payload._event.clientX,
     y: payload._event.clientY,
+    scope: "local",
     projectId: projectId,
+  });
+  render();
+};
+
+export const handleCloudProjectContextMenu = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.preventDefault();
+
+  const projectId = getProjectIdFromEvent(payload._event);
+  if (!projectId) {
+    return;
+  }
+
+  const projects = store.selectCloudProjects();
+  const project = projects.find((p) => p.id === projectId);
+  if (!project) {
+    return;
+  }
+
+  store.openDropdownMenu({
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+    scope: "cloud",
+    projectId,
+    items: [{ label: "Add Member", type: "item", value: "add-member" }],
   });
   render();
 };
@@ -340,6 +532,81 @@ export const handleDeleteDialogCancel = (deps) => {
   render();
 };
 
+export const handleAddMemberDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsAddMemberDialogOpen()) {
+    return;
+  }
+  store.closeAddMemberDialog();
+  render();
+};
+
+export const handleAddMemberFormAction = async (deps, payload) => {
+  const { appService, apiService, store, render } = deps;
+  const detail = payload?._event?.detail || {};
+  const actionId = detail.actionId;
+
+  if (actionId === "cancel") {
+    store.closeAddMemberDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "submit-add-member") {
+    return;
+  }
+
+  const authToken = getSessionAuthToken(appService);
+  if (!authToken) {
+    appService.showToast("Please login to add a member.");
+    return;
+  }
+
+  const projectId = store.selectAddMemberDialogProjectId();
+  if (!projectId) {
+    appService.showToast("Cloud project is missing.");
+    return;
+  }
+
+  const email = detail?.values?.email?.trim?.() || "";
+  if (!email) {
+    appService.showToast("Email is required.");
+    return;
+  }
+
+  try {
+    const result = await apiService.addMembers({
+      authToken,
+      projectId,
+      memberEmails: [email],
+    });
+
+    const added = Number(result?.summary?.added || 0);
+    const alreadyMember = Number(result?.summary?.alreadyMember || 0);
+    const userNotFound = Number(result?.summary?.userNotFound || 0);
+    const cannotAddOwner = Number(result?.summary?.cannotAddOwner || 0);
+
+    if (added > 0) {
+      appService.showToast("Member added.");
+    } else if (alreadyMember > 0) {
+      appService.showToast("User is already a member.");
+    } else if (userNotFound > 0) {
+      appService.showToast("User not found.");
+    } else if (cannotAddOwner > 0) {
+      appService.showToast("Project owner cannot be added as a member.");
+    } else {
+      appService.showToast("No member was added.");
+    }
+
+    await loadCloudProjects({ appService, apiService, store });
+    store.closeAddMemberDialog();
+    render();
+  } catch (error) {
+    console.error("Failed to add member:", error);
+    appService.showToast(error?.message || "Failed to add member.");
+  }
+};
+
 export const handleDeleteDialogConfirm = async (deps) => {
   const { appService, store, render } = deps;
   const projectId = store.selectDeleteDialogProjectId();
@@ -366,14 +633,38 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const detail = payload._event.detail;
 
   const item = detail.item || detail;
+  const targetScope = store.selectDropdownMenuTargetScope();
+  const projectId = store.selectDropdownMenuTargetProjectId();
+
+  if (item.value === "add-member" && targetScope === "cloud") {
+    if (!projectId) {
+      store.closeDropdownMenu();
+      render();
+      return;
+    }
+
+    const projects = store.selectCloudProjects();
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) {
+      store.closeDropdownMenu();
+      render();
+      return;
+    }
+
+    store.closeDropdownMenu();
+    store.openAddMemberDialog({
+      projectId,
+      projectName: project.name || "",
+    });
+    render();
+    return;
+  }
 
   if (item.value !== "delete") {
     store.closeDropdownMenu();
     render();
     return;
   }
-
-  const projectId = store.selectDropdownMenuTargetProjectId();
 
   if (!projectId) {
     console.warn("No projectId found for deletion");
