@@ -4,7 +4,7 @@ export const createInitialState = () => ({
 
 const SIDEBAR_WIDTH_PX = 64;
 
-const routesWithoutNavbar = ["/projects"];
+const routesWithoutNavbar = ["/projects", "/authenticate"];
 
 export const selectShowSidebar = ({ state }) => {
   const currentRoutePattern = selectCurrentRoutePattern({ state });
@@ -19,6 +19,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
   const routePatterms = [
     "/project",
     "/projects",
+    "/authenticate",
     "/project/resources",
     "/project/resources/images",
     "/project/resources/characters",

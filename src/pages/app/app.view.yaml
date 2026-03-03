@@ -9,6 +9,8 @@ template:
       - 'rtgl-view h=f style="width: ${contentWidth}; min-width: 0;"':
           - $if currentRoutePattern == "/projects":
               - rvn-projects: []
+            $elif currentRoutePattern == "/authenticate":
+              - rvn-authenticate: []
             $elif currentRoutePattern == "/project":
               - rvn-project: []
             $elif currentRoutePattern == "/project/resources":

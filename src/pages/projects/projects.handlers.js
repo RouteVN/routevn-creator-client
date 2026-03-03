@@ -2,6 +2,8 @@ export const handleAfterMount = async (deps) => {
   const { appService, store, render } = deps;
   const platform = appService.getPlatform();
   store.setPlatform({ platform: platform });
+  const authUser = appService.getUserConfig("auth.user");
+  store.setAuthUser({ user: authUser });
   const projects = await appService.loadAllProjects();
   store.setProjects({ projects: projects });
   render();
@@ -50,9 +52,159 @@ export const handleOpenButtonClick = async (deps) => {
   }
 };
 
+export const handleLoginButtonClick = (deps) => {
+  const { appService } = deps;
+  appService.navigate("/authenticate");
+};
+
+export const handleAvatarButtonClick = (deps, payload) => {
+  const { store, render } = deps;
+  store.openProfileMenu({
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
+  render();
+};
+
+export const handleProfileDropdownClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsProfileMenuOpen()) {
+    return;
+  }
+  store.closeProfileMenu();
+  render();
+};
+
+export const handleEditProfileDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsProfileDialogOpen()) {
+    return;
+  }
+  store.closeProfileDialog();
+  render();
+};
+
+export const handleSettingsDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsSettingsDialogOpen()) {
+    return;
+  }
+  store.closeSettingsDialog();
+  render();
+};
+
+export const handleProfileFormAction = (deps, payload) => {
+  const { store, render, appService } = deps;
+  const detail = payload?._event?.detail || {};
+  const actionId = detail.actionId;
+
+  if (actionId === "cancel") {
+    store.closeProfileDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "save") {
+    return;
+  }
+
+  const existingUser = appService.getUserConfig("auth.user") || {};
+  const email = existingUser?.email?.trim?.() || "";
+  if (!email) {
+    appService.showToast("You are not logged in.");
+    return;
+  }
+
+  const user = {
+    email,
+    name: detail?.values?.displayName?.trim?.() || "",
+    displayColor: detail?.values?.displayColor || "#E2E8F0",
+    avatar: detail?.values?.avatar?.trim?.() || "",
+  };
+
+  appService.setUserConfig("auth.user", user);
+  store.setAuthUser({ user });
+  store.closeProfileDialog();
+  render();
+};
+
+export const handleSettingsFormAction = (deps, payload) => {
+  const { store, render, appService } = deps;
+  const detail = payload?._event?.detail || {};
+  const actionId = detail.actionId;
+
+  if (actionId === "cancel") {
+    store.closeSettingsDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "save") {
+    return;
+  }
+
+  const email = detail?.values?.email?.trim?.() || "";
+  if (!email) {
+    appService.showToast("Email is required.");
+    return;
+  }
+
+  const existingUser = appService.getUserConfig("auth.user") || {};
+  const user = {
+    ...existingUser,
+    email,
+  };
+
+  appService.setUserConfig("auth.user", user);
+  store.setAuthUser({ user });
+  store.closeSettingsDialog();
+  render();
+};
+
+export const handleProfileDropdownClickItem = async (deps, payload) => {
+  const { store, render, appService } = deps;
+  const detail = payload._event.detail;
+  const item = detail.item || detail;
+
+  store.closeProfileMenu();
+  render();
+
+  if (item.value === "edit-profile") {
+    store.openProfileDialog();
+    render();
+    return;
+  }
+
+  if (item.value === "settings") {
+    store.openSettingsDialog();
+    render();
+    return;
+  }
+
+  if (item.value === "logout") {
+    const confirmed = await appService.showDialog({
+      title: "Logout",
+      message: "Are you sure you want to logout?",
+      confirmText: "Logout",
+      cancelText: "Cancel",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    appService.setUserConfig("auth.user", null);
+    store.setAuthUser({ user: null });
+    render();
+  }
+};
+
 export const handleCloseDialogue = (deps) => {
   const { render, store } = deps;
-  store.toggleDialog();
+  if (!store.selectIsCreateDialogOpen()) {
+    return;
+  }
+  store.closeDialog();
   render();
 };
 
@@ -130,7 +282,7 @@ export const handleFormSubmit = async (deps, payload) => {
     });
 
     store.addProject({ project: newProject });
-    store.toggleDialog();
+    store.closeDialog();
     render();
   } catch (error) {
     console.error("Error creating project:", error);
@@ -163,18 +315,27 @@ export const handleProjectContextMenu = (deps, payload) => {
 
 export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
+  if (!store.selectIsProjectDropdownMenuOpen()) {
+    return;
+  }
   store.closeDropdownMenu();
   render();
 };
 
 export const handleDeleteDialogClose = (deps) => {
   const { store, render } = deps;
+  if (!store.selectIsDeleteDialogOpen()) {
+    return;
+  }
   store.closeDeleteDialog();
   render();
 };
 
 export const handleDeleteDialogCancel = (deps) => {
   const { store, render } = deps;
+  if (!store.selectIsDeleteDialogOpen()) {
+    return;
+  }
   store.closeDeleteDialog();
   render();
 };
