@@ -35,10 +35,13 @@ const mapCloudProject = (project) => {
   const projectId = typeof project?.id === "string" ? project.id : "";
   const name = typeof project?.name === "string" ? project.name : "Untitled";
   const role = typeof project?.role === "string" ? project.role : "member";
-  const data = project?.data && typeof project.data === "object" ? project.data : {};
+  const data =
+    project?.data && typeof project.data === "object" ? project.data : {};
   const description =
     typeof data.description === "string" ? data.description : "";
-  const memberCount = Array.isArray(project?.members) ? project.members.length : 0;
+  const memberCount = Array.isArray(project?.members)
+    ? project.members.length
+    : 0;
   const updated = Number.isFinite(project?.updated) ? project.updated : 0;
   const created = Number.isFinite(project?.created) ? project.created : 0;
 
