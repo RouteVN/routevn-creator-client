@@ -73,7 +73,9 @@ const createRpcError = ({
 };
 
 export const createApiService = ({ baseUrl } = {}) => {
-  const resolvedBaseUrl = normalizeBaseUrl(baseUrl || resolveDefaultApiBaseUrl());
+  const resolvedBaseUrl = normalizeBaseUrl(
+    baseUrl || resolveDefaultApiBaseUrl(),
+  );
   const resolvedRpcUrl = resolvedBaseUrl.endsWith("/rpc")
     ? resolvedBaseUrl
     : `${resolvedBaseUrl}/rpc`;
@@ -115,9 +117,7 @@ export const createApiService = ({ baseUrl } = {}) => {
 
     if (body?.error) {
       const errorCode =
-        body.error?.data?.code ||
-        body.error?.code ||
-        "RPC_METHOD_ERROR";
+        body.error?.data?.code || body.error?.code || "RPC_METHOD_ERROR";
 
       throw createRpcError({
         code: errorCode,

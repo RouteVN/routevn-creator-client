@@ -124,7 +124,9 @@ export const handleFormAction = async (deps, payload) => {
             ? authResult.registerCode
             : "";
         if (!registerCode) {
-          appService.showToast("Registration failed. Please request OTP again.");
+          appService.showToast(
+            "Registration failed. Please request OTP again.",
+          );
           return;
         }
         store.setRegisterStep({ registerCode });
