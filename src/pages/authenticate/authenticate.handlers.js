@@ -3,8 +3,85 @@ export const handleBackButtonClick = (deps) => {
   appService.navigate("/projects");
 };
 
-export const handleFormAction = (deps, payload) => {
-  const { appService, store, render } = deps;
+const getErrorMessage = (error) => {
+  const code = error?.code || "";
+  if (code === "VALIDATION_ERROR") {
+    return "Please enter a valid email.";
+  }
+  return error?.message || "Failed to request OTP. Please try again.";
+};
+
+const getAuthenticateErrorMessage = (error) => {
+  const code = error?.code || "";
+  if (code === "VALIDATION_ERROR") {
+    return "Please enter a valid OTP.";
+  }
+  if (code === "OTP_NOT_FOUND") {
+    return "OTP not found. Please request a new OTP.";
+  }
+  if (code === "OTP_INVALID") {
+    return "Invalid OTP. Please try again.";
+  }
+  if (code === "OTP_EXPIRED") {
+    return "OTP expired. Please request a new OTP.";
+  }
+  return error?.message || "Failed to verify OTP. Please try again.";
+};
+
+const getRegisterErrorMessage = (error) => {
+  const code = error?.code || "";
+  if (code === "VALIDATION_ERROR") {
+    return "Invalid registration request.";
+  }
+  if (code === "REGISTER_CODE_NOT_FOUND") {
+    return "Registration session expired. Please login again.";
+  }
+  if (code === "REGISTER_CODE_INVALID") {
+    return "Registration session is invalid. Please login again.";
+  }
+  return error?.message || "Failed to register. Please try again.";
+};
+
+const mapApiUserToAuthUser = (user) => {
+  const email = typeof user?.email === "string" ? user.email : "";
+  const name =
+    typeof user?.creatorDisplayName === "string" ? user.creatorDisplayName : "";
+  const displayColor =
+    typeof user?.creatorDisplayColor === "string" && user.creatorDisplayColor
+      ? user.creatorDisplayColor
+      : "#E2E8F0";
+  const avatar =
+    typeof user?.creatorDisplayAvatar === "string"
+      ? user.creatorDisplayAvatar
+      : "";
+  const id = typeof user?.id === "string" ? user.id : "";
+
+  return {
+    id,
+    email,
+    name,
+    displayColor,
+    avatar,
+    registered: true,
+  };
+};
+
+const persistAuthenticatedSession = (appService, authResult) => {
+  const authToken =
+    typeof authResult?.authToken === "string" ? authResult.authToken : "";
+  const refreshToken =
+    typeof authResult?.refreshToken === "string" ? authResult.refreshToken : "";
+  const mappedUser = mapApiUserToAuthUser(authResult?.user);
+
+  appService.setUserConfig("auth.session", {
+    authToken,
+    refreshToken,
+  });
+  appService.setUserConfig("auth.user", mappedUser);
+};
+
+export const handleFormAction = async (deps, payload) => {
+  const { appService, apiService, store, render } = deps;
   const detail = payload?._event?.detail || {};
 
   if (detail.actionId === "request-otp") {
@@ -14,8 +91,13 @@ export const handleFormAction = (deps, payload) => {
       return;
     }
 
-    store.setOtpRequested({ email });
-    render();
+    try {
+      await apiService.requestAuthOtp({ email });
+      store.setOtpRequested({ email });
+      render();
+    } catch (error) {
+      appService.showToast(getErrorMessage(error));
+    }
     return;
   }
 
@@ -27,21 +109,35 @@ export const handleFormAction = (deps, payload) => {
     }
 
     const email = store.selectRequestedEmail();
-    const existingUser = appService.getUserConfig("auth.user");
-    const isReturningUser =
-      existingUser?.registered === true && existingUser?.email === email;
-
-    if (isReturningUser) {
-      appService.setUserConfig("auth.user", {
-        email,
-        registered: true,
-      });
-      appService.navigate("/projects");
+    if (!email) {
+      appService.showToast("Email is required.");
       return;
     }
 
-    store.setRegisterStep();
-    render();
+    try {
+      const authResult = await apiService.authenticate({ email, otp });
+      const isNewUser = authResult?.isNewUser === true;
+
+      if (isNewUser) {
+        const registerCode =
+          typeof authResult?.registerCode === "string"
+            ? authResult.registerCode
+            : "";
+        if (!registerCode) {
+          appService.showToast("Registration failed. Please request OTP again.");
+          return;
+        }
+        store.setRegisterStep({ registerCode });
+        render();
+        return;
+      }
+
+      persistAuthenticatedSession(appService, authResult);
+      appService.navigate("/projects");
+      return;
+    } catch (error) {
+      appService.showToast(getAuthenticateErrorMessage(error));
+    }
     return;
   }
 
@@ -55,11 +151,21 @@ export const handleFormAction = (deps, payload) => {
     }
 
     const email = store.selectRequestedEmail();
+    const registerCode = store.selectRegisterCode();
+    if (!email || !registerCode) {
+      appService.showToast("Registration session expired. Please login again.");
+      return;
+    }
 
-    appService.setUserConfig("auth.user", {
-      email,
-      registered: true,
-    });
-    appService.navigate("/projects");
+    try {
+      const registerResult = await apiService.register({
+        email,
+        registerCode,
+      });
+      persistAuthenticatedSession(appService, registerResult);
+      appService.navigate("/projects");
+    } catch (error) {
+      appService.showToast(getRegisterErrorMessage(error));
+    }
   }
 };

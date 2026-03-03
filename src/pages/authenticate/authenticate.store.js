@@ -93,19 +93,26 @@ const createRegisterForm = () => ({
 export const createInitialState = () => ({
   step: "request-otp",
   requestedEmail: "",
+  registerCode: "",
 });
 
 export const setOtpRequested = ({ state }, { email } = {}) => {
   state.step = "verify-otp";
   state.requestedEmail = email || "";
+  state.registerCode = "";
 };
 
 export const selectRequestedEmail = ({ state }) => {
   return state.requestedEmail || "";
 };
 
-export const setRegisterStep = ({ state }, _payload = {}) => {
+export const setRegisterStep = ({ state }, { registerCode } = {}) => {
   state.step = "register";
+  state.registerCode = registerCode || "";
+};
+
+export const selectRegisterCode = ({ state }) => {
+  return state.registerCode || "";
 };
 
 export const selectViewData = ({ state }) => {

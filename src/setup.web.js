@@ -8,6 +8,7 @@ import { createWebFilePicker } from "./deps/infra/web/filePicker.js";
 import { createAppService } from "./deps/services/web/appService.js";
 import { createWebProjectServiceWithCollab } from "./deps/services/web/collabBootstrapService.js";
 import { createPendingQueueService } from "./deps/services/pendingQueueService.js";
+import { createApiService } from "./deps/services/apiService.js";
 
 // Shared Services & Dependencies
 import { createAudioService } from "./deps/services/audioService.js";
@@ -61,6 +62,10 @@ const appService = createAppService({
   subject,
 });
 
+const apiService = createApiService({
+  baseUrl: "https://api.routevn.com/rpc",
+});
+
 // Initialize async resources first
 const graphicsService = await createGraphicsService({ subject });
 
@@ -71,6 +76,7 @@ const componentDependencies = {
   subject,
   graphicsService,
   appService,
+  apiService,
   projectService,
   audioService,
 };
@@ -79,6 +85,7 @@ const pageDependencies = {
   subject,
   graphicsService,
   appService,
+  apiService,
   projectService,
   updaterService: updater,
   dialogueQueueService,

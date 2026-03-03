@@ -14,6 +14,7 @@ import { createAppService } from "./deps/services/appService";
 import { createAudioService } from "./deps/services/audioService";
 import { createProjectService } from "./deps/services/projectService";
 import { createPendingQueueService } from "./deps/services/pendingQueueService";
+import { createApiService } from "./deps/services/apiService";
 
 import Subject from "./deps/subject";
 import Router from "./deps/infra/router";
@@ -61,6 +62,10 @@ const appService = createAppService({
   subject,
 });
 
+const apiService = createApiService({
+  baseUrl: "https://api.routevn.com/rpc",
+});
+
 // Initialize async resources first
 const graphicsService = await createGraphicsService({ subject });
 
@@ -73,6 +78,7 @@ const componentDependencies = {
   subject,
   graphicsService,
   appService,
+  apiService,
   projectService,
   audioService,
 };
@@ -81,6 +87,7 @@ const pageDependencies = {
   subject,
   graphicsService,
   appService,
+  apiService,
   projectService,
   updaterService: updater,
   dialogueQueueService,
