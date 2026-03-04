@@ -458,6 +458,26 @@ async function flushDialogueQueue(deps) {
   });
 }
 
+const findCharacterIdByShortcut = (repositoryState, shortcut) => {
+  const normalizedShortcut = String(shortcut || "").trim();
+  if (!normalizedShortcut) {
+    return null;
+  }
+
+  const characters = repositoryState?.characters?.items || {};
+  for (const [characterId, character] of Object.entries(characters)) {
+    if (character?.type !== "character") {
+      continue;
+    }
+
+    if (String(character?.shortcut || "").trim() === normalizedShortcut) {
+      return characterId;
+    }
+  }
+
+  return null;
+};
+
 export const handleBeforeMount = (deps) => {
   const { graphicsService, store } = deps;
   const cleanupSubscriptions = mountSubscriptions(deps);
@@ -874,6 +894,77 @@ export const handleEditorDataChanged = async (deps, payload) => {
     skipRender: true,
     skipAnimations: true,
   });
+};
+
+export const handleDialogueCharacterShortcut = async (deps, payload) => {
+  const { store, projectService, render, subject } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  const detail = payload?._event?.detail || {};
+  const lineId = detail.lineId || store.selectSelectedLineId();
+  const shortcut = detail.shortcut;
+  if (!lineId || !shortcut) {
+    return;
+  }
+
+  await flushDialogueQueue(deps);
+
+  const domainState = projectService.getDomainState();
+  const existingDialogue =
+    domainState?.lines?.[lineId]?.actions?.dialogue || {};
+
+  const isClearShortcut = String(shortcut) === "0";
+  if (isClearShortcut && !existingDialogue.characterId) {
+    return;
+  }
+
+  let characterId = null;
+  if (!isClearShortcut) {
+    const repositoryState = projectService.getState();
+    characterId = findCharacterIdByShortcut(repositoryState, shortcut);
+    if (!characterId) {
+      return;
+    }
+  }
+
+  if (!isClearShortcut && existingDialogue.characterId === characterId) {
+    return;
+  }
+
+  const selectedLine = store.selectSelectedLine();
+  const selectedLineContent =
+    selectedLine?.id === lineId
+      ? selectedLine?.actions?.dialogue?.content
+      : undefined;
+
+  const updatedDialogue = {
+    ...existingDialogue,
+    ...(existingDialogue.content
+      ? {}
+      : selectedLineContent
+        ? { content: selectedLineContent }
+        : {}),
+  };
+
+  if (isClearShortcut) {
+    delete updatedDialogue.characterId;
+  } else {
+    updatedDialogue.characterId = characterId;
+  }
+
+  await projectService.updateLineActions({
+    lineId,
+    patch: {
+      dialogue: updatedDialogue,
+    },
+    replace: false,
+  });
+
+  syncStoreProjectState(store, projectService);
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleAddActionsButtonClick = (deps) => {

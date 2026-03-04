@@ -150,6 +150,62 @@ const getLineElementById = (refs, lineId) => {
   );
 };
 
+const isShortcutDigit = (key) => {
+  return /^[0-9]$/.test(key);
+};
+
+const handleBlockModeCharacterShortcut = (deps, payload, { lineId } = {}) => {
+  const { store, dispatchEvent, props } = deps;
+  const event = payload._event;
+  const key = event.key;
+  const isAwaitingCharacterShortcut = store.selectAwaitingCharacterShortcut();
+
+  if (isAwaitingCharacterShortcut) {
+    store.setAwaitingCharacterShortcut({
+      awaitingCharacterShortcut: false,
+    });
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isShortcutDigit(key)) {
+      return true;
+    }
+
+    const targetLineId = lineId || props.selectedLineId;
+    if (!targetLineId) {
+      return true;
+    }
+
+    dispatchEvent(
+      new CustomEvent("dialogue-character-shortcut", {
+        detail: {
+          lineId: targetLineId,
+          shortcut: key,
+        },
+      }),
+    );
+    return true;
+  }
+
+  const isCharacterShortcutStartKey =
+    typeof key === "string" &&
+    key.toLowerCase() === "c" &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey;
+
+  if (!isCharacterShortcutStartKey) {
+    return false;
+  }
+
+  store.setAwaitingCharacterShortcut({
+    awaitingCharacterShortcut: true,
+  });
+  event.preventDefault();
+  event.stopPropagation();
+  return true;
+};
+
 // Helper function to check if cursor is on the first line of contenteditable
 const isCursorOnFirstLine = (element) => {
   const range = getSelectionRange(element);
@@ -323,7 +379,25 @@ export const handleContainerKeyDown = (deps, payload) => {
     const currentLineId = props.selectedLineId;
     const lines = props.lines || [];
 
-    switch (payload._event.key) {
+    const handledShortcut = handleBlockModeCharacterShortcut(deps, payload, {
+      lineId: currentLineId,
+    });
+    if (handledShortcut) {
+      return;
+    }
+
+    let navKey = payload._event.key;
+    const hasModifierKey =
+      payload._event.ctrlKey || payload._event.metaKey || payload._event.altKey;
+    if (!hasModifierKey) {
+      if (navKey === "j" || navKey === "J") {
+        navKey = "ArrowDown";
+      } else if (navKey === "k" || navKey === "K") {
+        navKey = "ArrowUp";
+      }
+    }
+
+    switch (navKey) {
       case "ArrowUp":
         payload._event.preventDefault();
         payload._event.stopPropagation();
@@ -516,6 +590,28 @@ export const handleLineKeyDown = (deps, payload) => {
   const id = getLineIdFromElement(payload._event.currentTarget);
   const mode = store.selectMode();
 
+  if (mode === "block") {
+    const handledShortcut = handleBlockModeCharacterShortcut(deps, payload, {
+      lineId: id,
+    });
+    if (handledShortcut) {
+      return;
+    }
+  }
+
+  let navKey = payload._event.key;
+  if (mode === "block") {
+    const hasModifierKey =
+      payload._event.ctrlKey || payload._event.metaKey || payload._event.altKey;
+    if (!hasModifierKey) {
+      if (navKey === "j" || navKey === "J") {
+        navKey = "ArrowDown";
+      } else if (navKey === "k" || navKey === "K") {
+        navKey = "ArrowUp";
+      }
+    }
+  }
+
   // Capture cursor position immediately before any key handling
   if (mode === "text-editor") {
     const cursorPos = getCursorPosition(payload._event.currentTarget);
@@ -541,7 +637,7 @@ export const handleLineKeyDown = (deps, payload) => {
     }
   }
 
-  switch (payload._event.key) {
+  switch (navKey) {
     case "Backspace":
       if (mode === "text-editor") {
         // Check if cursor is at position 0
