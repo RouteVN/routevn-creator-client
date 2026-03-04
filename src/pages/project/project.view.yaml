@@ -12,7 +12,9 @@ refs:
       click:
         handler: handleBackToProjects
 template:
-  - rtgl-button#backButton pre=chevronLeft v=gh mt=lg: Back to Projects
+  - rtgl-view d=h av=c g=sm mt=lg:
+      - rtgl-button#backButton pre=chevronLeft v=gh: Back to Projects
+      - rtgl-text s=xs c=mu-fg: ${projectSourceLabel} Project
   - rtgl-view w=f h=f ph=lg:
       - $if dataLoaded:
           - rtgl-form#form :form=form :context=context w=240 :defaultValues=defaultValues:

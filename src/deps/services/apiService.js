@@ -185,6 +185,13 @@ export const createApiService = ({ baseUrl } = {}) => {
       });
     },
 
+    async reissueRegisterToken({ email, registerCode } = {}) {
+      return rpcCall({
+        method: "user.reissueToken",
+        params: { email, registerCode },
+      });
+    },
+
     async getProfile({ authToken } = {}) {
       return rpcCall({
         method: "user.getProfile",

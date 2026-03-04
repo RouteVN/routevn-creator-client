@@ -113,6 +113,11 @@ const getProjectIdFromEvent = (event) => {
   );
 };
 
+const buildProjectPageUrl = (projectId) => {
+  const query = new URLSearchParams({ p: projectId }).toString();
+  return `/project?${query}`;
+};
+
 export const handleCreateButtonClick = async (deps) => {
   const { render, store } = deps;
   store.toggleDialog();
@@ -378,12 +383,11 @@ export const handleCloseDialogue = (deps) => {
 };
 
 export const handleProjectsClick = async (deps, payload) => {
-  const { appService } = deps;
   const id = getProjectIdFromEvent(payload._event);
   if (!id) {
     return;
   }
-  appService.navigate("/project", { p: id });
+  window.location.assign(buildProjectPageUrl(id));
 };
 
 export const handleBrowseFolder = async (deps) => {

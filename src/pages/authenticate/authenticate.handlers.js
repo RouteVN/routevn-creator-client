@@ -39,7 +39,34 @@ const getRegisterErrorMessage = (error) => {
   if (code === "REGISTER_CODE_INVALID") {
     return "Registration session is invalid. Please login again.";
   }
+  if (code === "REGISTER_CODE_EXPIRED") {
+    return "Registration session expired. Please login again.";
+  }
   return error?.message || "Failed to register. Please try again.";
+};
+
+const shouldReissueRegisterCode = (error) => {
+  const code = error?.code || "";
+  if (code === "REGISTER_CODE_NOT_FOUND") return true;
+  if (code === "REGISTER_CODE_INVALID") return true;
+  if (code === "REGISTER_CODE_EXPIRED") return true;
+  return false;
+};
+
+const extractRegisterCode = (result) => {
+  const registerCodeCandidate =
+    typeof result?.registerCode === "string" ? result.registerCode.trim() : "";
+  if (registerCodeCandidate) {
+    return registerCodeCandidate;
+  }
+
+  const tokenCandidate =
+    typeof result?.token === "string" ? result.token.trim() : "";
+  if (tokenCandidate) {
+    return tokenCandidate;
+  }
+
+  return "";
 };
 
 const mapApiUserToAuthUser = (user) => {
@@ -167,7 +194,35 @@ export const handleFormAction = async (deps, payload) => {
       persistAuthenticatedSession(appService, registerResult);
       appService.navigate("/projects");
     } catch (error) {
-      appService.showToast(getRegisterErrorMessage(error));
+      if (!shouldReissueRegisterCode(error)) {
+        appService.showToast(getRegisterErrorMessage(error));
+        return;
+      }
+
+      try {
+        const reissueResult = await apiService.reissueRegisterToken({
+          email,
+          registerCode,
+        });
+        const nextRegisterCode = extractRegisterCode(reissueResult);
+        if (!nextRegisterCode) {
+          appService.showToast(
+            "Registration session expired. Please login again.",
+          );
+          return;
+        }
+
+        store.setRegisterStep({ registerCode: nextRegisterCode });
+        const registerResult = await apiService.register({
+          email,
+          registerCode: nextRegisterCode,
+        });
+        persistAuthenticatedSession(appService, registerResult);
+        appService.navigate("/projects");
+      } catch (reissueError) {
+        appService.showToast(getRegisterErrorMessage(reissueError));
+      }
+      return;
     }
   }
 };

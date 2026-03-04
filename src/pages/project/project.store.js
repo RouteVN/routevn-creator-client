@@ -26,6 +26,7 @@ export const createInitialState = () => ({
     description: "",
     iconFileId: undefined,
   },
+  projectSource: "local",
   dataLoaded: false,
 });
 
@@ -38,10 +39,16 @@ export const setIconFileId = ({ state }, { iconFileId } = {}) => {
   state.project.iconFileId = iconFileId;
 };
 
+export const setProjectSource = ({ state }, { source } = {}) => {
+  state.projectSource = source === "cloud" ? "cloud" : "local";
+};
+
 export const selectViewData = ({ state }) => {
   return {
     defaultValues: state.project,
     form,
     dataLoaded: state.dataLoaded,
+    projectSource: state.projectSource,
+    projectSourceLabel: state.projectSource === "cloud" ? "Cloud" : "Local",
   };
 };
