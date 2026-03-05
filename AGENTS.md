@@ -31,3 +31,8 @@ Read the links from the following files to familiarize with the code before star
 
 - Prefer direct property access or nullish coalescing (`??`) for defaults.
 - Avoid defensive `typeof x === "string" ? x : ""` patterns unless runtime type narrowing is truly required.
+
+## Layering
+
+- Keep page/component handlers simple and orchestration-focused.
+- Push domain logic, validation, and async complexity into services.
