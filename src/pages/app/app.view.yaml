@@ -7,57 +7,61 @@ template:
       - $if showSidebar:
           - rvn-sidebar: []
       - 'rtgl-view h=f style="width: ${contentWidth}; min-width: 0;"':
-          - $if currentRoutePattern == "/projects":
-              - rvn-projects: []
-            $elif currentRoutePattern == "/authenticate":
-              - rvn-authenticate: []
-            $elif currentRoutePattern == "/project":
-              - rvn-project: []
-            $elif currentRoutePattern == "/project/resources":
-              - rvn-resources: []
-            $elif currentRoutePattern == "/project/cgs":
-              - rvn-cgs: []
-            $elif currentRoutePattern == "/project/resources/images":
-              - rvn-images: []
-            $elif currentRoutePattern == "/project/resources/backgrounds":
-              - rvn-backgrounds: []
-            $elif currentRoutePattern == "/project/resources/characters":
-              - rvn-characters: []
-            $elif currentRoutePattern == "/project/resources/character-sprites":
-              - rvn-character-sprites: []
-            $elif currentRoutePattern == "/project/resources/sounds":
-              - rvn-sound: []
-            $elif currentRoutePattern == "/project/resources/tweens":
-              - rvn-tweens: []
-            $elif currentRoutePattern == "/project/resources/transforms":
-              - rvn-transforms: []
-            $elif currentRoutePattern == "/project/resources/visuals":
-              - rvn-visuals: []
-            $elif currentRoutePattern == "/project/resources/videos":
-              - rvn-videos: []
-            $elif currentRoutePattern == "/project/resources/typography":
-              - rvn-typography: []
-            $elif currentRoutePattern == "/project/resources/choices":
-              - rvn-choices: []
-            $elif currentRoutePattern == "/project/resources/variables":
-              - rvn-variables: []
-            $elif currentRoutePattern == "/project/scenes":
-              - rvn-scenes: []
-            $elif currentRoutePattern == "/project/scene-editor":
-              - rvn-scene-editor: []
-            $elif currentRoutePattern == "/project/settings/about":
-              - rvn-about: []
-            $elif currentRoutePattern == "/project/settings/user":
-              - rvn-settings-user: []
-            $elif currentRoutePattern == "/project/resources/colors":
-              - rvn-colors: []
-            $elif currentRoutePattern == "/project/resources/fonts":
-              - rvn-fonts: []
-            $elif currentRoutePattern == "/project/resources/layouts":
-              - rvn-layouts: []
-            $elif currentRoutePattern == "/project/resources/layout-editor":
-              - rvn-layout-editor: []
-            $elif currentRoutePattern == "/project/releases":
-              - rvn-versions: []
-            $elif currentRoutePattern == "/project/releases/versions":
-              - rvn-versions: []
+          - $if isRepositoryLoading:
+              - rtgl-view w=f h=f d=v ah=c av=c g=sm:
+                  - rtgl-text s=sm c=mu-fg: Loading project...
+            $else:
+              - $if currentRoutePattern == "/projects":
+                  - rvn-projects: []
+                $elif currentRoutePattern == "/authenticate":
+                  - rvn-authenticate: []
+                $elif currentRoutePattern == "/project":
+                  - rvn-project: []
+                $elif currentRoutePattern == "/project/resources":
+                  - rvn-resources: []
+                $elif currentRoutePattern == "/project/cgs":
+                  - rvn-cgs: []
+                $elif currentRoutePattern == "/project/resources/images":
+                  - rvn-images: []
+                $elif currentRoutePattern == "/project/resources/backgrounds":
+                  - rvn-backgrounds: []
+                $elif currentRoutePattern == "/project/resources/characters":
+                  - rvn-characters: []
+                $elif currentRoutePattern == "/project/resources/character-sprites":
+                  - rvn-character-sprites: []
+                $elif currentRoutePattern == "/project/resources/sounds":
+                  - rvn-sound: []
+                $elif currentRoutePattern == "/project/resources/tweens":
+                  - rvn-tweens: []
+                $elif currentRoutePattern == "/project/resources/transforms":
+                  - rvn-transforms: []
+                $elif currentRoutePattern == "/project/resources/visuals":
+                  - rvn-visuals: []
+                $elif currentRoutePattern == "/project/resources/videos":
+                  - rvn-videos: []
+                $elif currentRoutePattern == "/project/resources/typography":
+                  - rvn-typography: []
+                $elif currentRoutePattern == "/project/resources/choices":
+                  - rvn-choices: []
+                $elif currentRoutePattern == "/project/resources/variables":
+                  - rvn-variables: []
+                $elif currentRoutePattern == "/project/scenes":
+                  - rvn-scenes: []
+                $elif currentRoutePattern == "/project/scene-editor":
+                  - rvn-scene-editor: []
+                $elif currentRoutePattern == "/project/settings/about":
+                  - rvn-about: []
+                $elif currentRoutePattern == "/project/settings/user":
+                  - rvn-settings-user: []
+                $elif currentRoutePattern == "/project/resources/colors":
+                  - rvn-colors: []
+                $elif currentRoutePattern == "/project/resources/fonts":
+                  - rvn-fonts: []
+                $elif currentRoutePattern == "/project/resources/layouts":
+                  - rvn-layouts: []
+                $elif currentRoutePattern == "/project/resources/layout-editor":
+                  - rvn-layout-editor: []
+                $elif currentRoutePattern == "/project/releases":
+                  - rvn-versions: []
+                $elif currentRoutePattern == "/project/releases/versions":
+                  - rvn-versions: []

@@ -332,16 +332,14 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const files = await appService.pickFiles({
+  const file = await appService.pickFiles({
     accept: "audio/*",
     multiple: false,
   });
 
-  if (files.length === 0) {
+  if (!file) {
     return; // User cancelled
   }
-
-  const file = files[0];
 
   let uploadedFiles;
   try {

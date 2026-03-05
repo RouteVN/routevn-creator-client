@@ -392,16 +392,16 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const files = await appService.pickFiles({
+  const file = await appService.pickFiles({
     accept: "image/*",
     multiple: false,
   });
 
-  if (files.length === 0) {
+  if (!file) {
     return; // User cancelled
   }
 
-  const uploadedFiles = await projectService.uploadFiles(files);
+  const uploadedFiles = await projectService.uploadFiles([file]);
 
   if (uploadedFiles.length === 0) {
     console.error("File upload failed, no files uploaded");

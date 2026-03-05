@@ -685,6 +685,7 @@ export const createWebProjectServiceWithCollab = async ({
   router,
   filePicker,
   subject,
+  db,
 }) => {
   const collabDebugEnabled = resolveCollabDebugEnabled();
   const collabDebugLog = createCollabDebugLogger({
@@ -700,6 +701,7 @@ export const createWebProjectServiceWithCollab = async ({
     router,
     filePicker,
     onRemoteEvent,
+    db,
   });
 
   const collabRuntimeBootstrap = createCollabRuntimeBootstrap({

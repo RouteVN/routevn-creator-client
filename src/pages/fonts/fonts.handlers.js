@@ -218,16 +218,14 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const files = await appService.pickFiles({
+  const file = await appService.pickFiles({
     accept: ".ttf,.otf,.woff,.woff2,.ttc",
     multiple: false,
   });
 
-  if (files.length === 0) {
+  if (!file) {
     return; // User cancelled
   }
-
-  const file = files[0];
 
   // Validate file format
   if (!file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i)) {

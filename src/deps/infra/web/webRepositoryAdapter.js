@@ -39,12 +39,7 @@ async function copyTemplateFiles(templateId, adapter) {
 /**
  * Initialize a new project with IndexedDB.
  */
-export const initializeProject = async ({
-  name,
-  description,
-  projectId,
-  template,
-}) => {
+export const initializeProject = async ({ projectId, template }) => {
   if (!template) {
     throw new Error("Template is required for project initialization");
   }
@@ -64,8 +59,6 @@ export const initializeProject = async ({
     model_version: 2,
     project: {
       id: projectId,
-      name,
-      description,
     },
   };
 

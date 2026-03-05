@@ -130,7 +130,21 @@ export const handleDownloadZipClick = async (deps, payload) => {
     projectData: constructedProjectData,
   };
   const fileIds = usage.fileIds;
-  const zipName = `${projectData.project.name}_${version.name}`;
+  const currentPayload = appService.getPayload?.() || {};
+  const projectId =
+    typeof currentPayload?.p === "string" ? currentPayload.p : "";
+  let projectName = "project";
+  if (projectId && typeof appService.getProjectEntries === "function") {
+    const entries = await appService.getProjectEntries();
+    const projectEntry = Array.isArray(entries)
+      ? entries.find((entry) => entry?.id === projectId)
+      : null;
+    const entryName = projectEntry?.name?.trim?.();
+    if (entryName) {
+      projectName = entryName;
+    }
+  }
+  const zipName = `${projectName}_${version.name}`;
 
   // Create and download ZIP with streamed bundle creation
   try {

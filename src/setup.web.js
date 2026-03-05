@@ -46,6 +46,7 @@ const projectService = await createWebProjectServiceWithCollab({
   router,
   filePicker,
   subject,
+  db: appDb,
 });
 
 // Create app service (web version)

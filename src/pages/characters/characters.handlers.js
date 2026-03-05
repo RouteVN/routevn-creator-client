@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-import { validateIconDimensions } from "../../utils/fileProcessors";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const getCharacterItemById = ({ store, itemId } = {}) => {
@@ -324,21 +323,14 @@ export const handleDetailPanelAvatarClick = async (deps) => {
     return;
   }
 
-  const files = await appService.pickFiles({
+  const file = await appService.pickFiles({
     accept: "image/*",
     multiple: false,
+    validations: [{ type: "square" }],
   });
 
-  if (files.length === 0) {
+  if (!file) {
     return; // User cancelled
-  }
-
-  const file = files[0];
-
-  const { isValid, message } = await validateIconDimensions(file);
-  if (!isValid) {
-    appService.showToast(message, { title: "Error" });
-    return;
   }
 
   try {
@@ -480,19 +472,13 @@ export const handleDialogAvatarClick = async (deps) => {
   const { store, render, appService, projectService } = deps;
 
   try {
-    const files = await appService.pickFiles({
+    const file = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
+      validations: [{ type: "square" }],
     });
 
-    if (files.length > 0) {
-      const file = files[0];
-      const { isValid, message } = await validateIconDimensions(file);
-      if (!isValid) {
-        appService.showToast(message, { title: "Error" });
-        return;
-      }
-
+    if (file) {
       const uploadResults = await projectService.uploadFiles([file]);
 
       if (!uploadResults || uploadResults.length === 0) {
@@ -559,19 +545,13 @@ export const handleEditDialogAvatarClick = async (deps) => {
   const { store, render, appService, projectService } = deps;
 
   try {
-    const files = await appService.pickFiles({
+    const file = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
+      validations: [{ type: "square" }],
     });
 
-    if (files.length > 0) {
-      const file = files[0];
-      const { isValid, message } = await validateIconDimensions(file);
-      if (!isValid) {
-        appService.showToast(message, { title: "Error" });
-        return;
-      }
-
+    if (file) {
       const uploadResults = await projectService.uploadFiles([file]);
 
       if (!uploadResults || uploadResults.length === 0) {
