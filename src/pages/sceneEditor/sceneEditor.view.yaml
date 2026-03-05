@@ -11,12 +11,16 @@ refs:
         handler: handleLineNavigation
       mergeLines:
         handler: handleMergeLines
+      swapLine:
+        handler: handleSwapLine
       delete-action:
         handler: handleLineDeleteActionItem
       pasteLines:
         handler: handlePasteLines
       dialogue-character-shortcut:
         handler: handleDialogueCharacterShortcut
+      delete-line-shortcut:
+        handler: handleDeleteLineShortcut
   sectionTab*:
     eventListeners:
       click:
@@ -59,6 +63,14 @@ refs:
     eventListeners:
       form-action:
         handler: handleFormActionClick
+  sectionCreateDialog:
+    eventListeners:
+      close:
+        handler: handleSectionCreateDialogClose
+  sectionCreateForm:
+    eventListeners:
+      form-action:
+        handler: handleSectionCreateFormActionClick
   addActionsButton:
     eventListeners:
       click:
@@ -158,6 +170,11 @@ template:
   - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content :form=form: null
+  - rtgl-dialog#sectionCreateDialog ?open=${sectionCreateDialog.isOpen} s=f:
+      - rtgl-view slot=content w=f h=f p=xl:
+          - rtgl-view w=f h=f ah=c av=s:
+              - rtgl-view w=560 sm-w=f:
+                  - rtgl-form#sectionCreateForm key=${sectionCreateDialog.formKey} :form=sectionCreateForm :defaultValues=sectionCreateDialog.defaultValues w=f: null
   - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
   - $if previewVisible:
       - rvn-vn-preview#vnPreview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}": null

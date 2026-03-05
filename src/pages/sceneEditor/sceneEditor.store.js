@@ -59,6 +59,15 @@ export const createInitialState = () => ({
     isOpen: false,
     position: { x: 0, y: 0 },
     sectionId: null,
+    mode: null,
+    defaultName: "",
+  },
+  sectionCreateDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {
+      name: "",
+    },
   },
   repositoryState: {},
   domainState: {},
@@ -411,11 +420,16 @@ export const hideDropdownMenu = ({ state }, _payload = {}) => {
   };
 };
 
-export const showPopover = ({ state }, { position, sectionId } = {}) => {
+export const showPopover = (
+  { state },
+  { position, sectionId, mode, defaultName } = {},
+) => {
   state.popover = {
     isOpen: true,
     position,
     sectionId,
+    mode: mode || "rename-section",
+    defaultName: defaultName || "",
   };
 };
 
@@ -424,6 +438,25 @@ export const hidePopover = ({ state }, _payload = {}) => {
     isOpen: false,
     position: { x: 0, y: 0 },
     sectionId: null,
+    mode: null,
+    defaultName: "",
+  };
+};
+
+export const showSectionCreateDialog = ({ state }, { defaultName } = {}) => {
+  state.sectionCreateDialog = {
+    isOpen: true,
+    formKey: (state.sectionCreateDialog?.formKey || 0) + 1,
+    defaultValues: {
+      name: defaultName || "",
+    },
+  };
+};
+
+export const hideSectionCreateDialog = ({ state }, _payload = {}) => {
+  state.sectionCreateDialog = {
+    ...state.sectionCreateDialog,
+    isOpen: false,
   };
 };
 
@@ -536,39 +569,69 @@ export const selectViewData = ({ state }) => {
 
   // const currentLines = state.sections.find(section => section.id === state.selectedSectionId).lines;
 
-  // Get current section for rename form
+  const popoverMode = state.popover.mode;
+  const isCreateSectionPopover = popoverMode === "create-section";
+  const popoverSectionId = state.popover.sectionId || state.selectedSectionId;
+  const formTargetSection = scene.sections.find(
+    (section) => section.id === popoverSectionId,
+  );
+
+  const sectionForm =
+    isCreateSectionPopover || formTargetSection
+      ? {
+          fields: [
+            {
+              name: "name",
+              type: "input-text",
+              label: "Section Name",
+              value: isCreateSectionPopover
+                ? state.popover.defaultName || ""
+                : formTargetSection?.name || "",
+              required: true,
+            },
+          ],
+          actions: {
+            layout: "",
+            buttons: [
+              {
+                id: "submit",
+                variant: "pr",
+                label: isCreateSectionPopover ? "Create" : "Rename",
+              },
+            ],
+          },
+        }
+      : null;
+
+  // Get current section for lines/actions panel
   const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
 
-  // Form configuration for renaming
-  const renameForm = currentSection
-    ? {
-        fields: [
-          {
-            name: "name",
-            type: "input-text",
-            label: "Section Name",
-            value: currentSection.name || "",
-            required: true,
-          },
-        ],
-        actions: {
-          layout: "",
-          buttons: [
-            {
-              id: "submit",
-              variant: "pr",
-              label: "Rename",
-            },
-          ],
-        },
-      }
-    : null;
-
   const selectedLine = currentSection?.lines?.find(
     (line) => line.id === state.selectedLineId,
   );
+
+  const sectionCreateForm = {
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Section Name",
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Create",
+        },
+      ],
+    },
+  };
 
   return {
     scene: scene,
@@ -580,7 +643,7 @@ export const selectViewData = ({ state }) => {
       : [],
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
-    form: renameForm,
+    form: sectionForm,
     selectedLineId: state.selectedLineId,
     selectedLine,
     selectedLineActions: toPlainObject(selectedLine?.actions),
@@ -603,6 +666,8 @@ export const selectViewData = ({ state }) => {
     previewLineId: state.previewLineId,
     presentationState: state.presentationState,
     sectionLineChanges: state.sectionLineChanges,
+    sectionCreateDialog: state.sectionCreateDialog,
+    sectionCreateForm,
     isMuted: state.isMuted,
     muteIcon: state.isMuted ? "mute" : "unmute",
     isSceneAssetLoading: state.isSceneAssetLoading,

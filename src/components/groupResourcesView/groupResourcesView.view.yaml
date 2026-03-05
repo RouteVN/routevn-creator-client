@@ -35,7 +35,7 @@ refs:
     eventListeners:
       file-selected:
         handler: handleDragDropFileSelected
-  group*:
+  groupToggle*:
     eventListeners:
       click:
         handler: handleGroupClick
@@ -100,25 +100,25 @@ template:
                           - 'rtgl-view#overlay d=h av=c pos=abs w=f h=f bw=md bc=pr bgc=se op="0.5" style="top: 0; bottom: 0; left: 0; right: 0;"':
                               - rtgl-view#overlayText w=f f=h av=c ah=c:
                                   - rtgl-text s=lg: Drag file to this area to upload
-                      - 'rtgl-view#groupRef${gIndex} data-group-id=${group.id} d=h w=f av=c cur=pointer style="position: sticky; top: 0px;"':
-                          - rtgl-view w=f d=h av=c:
+                      - 'rtgl-view d=h w=f av=c style="position: sticky; top: 0px;"':
+                          - rtgl-view#groupToggleRef${gIndex} data-group-id=${group.id} d=h av=c g=md cur=pointer:
                               - $if group.isCollapsed:
                                   - rtgl-svg wh=16 svg=folderArrowRight: null
                                 $else:
                                   - rtgl-svg wh=16 svg=folderArrowDown: null
-                              - rtgl-view d=h av=c g=md:
-                                  - rtgl-svg wh=16 svg=folder: null
-                                  - rtgl-text: ${group.fullLabel}
+                              - rtgl-svg wh=16 svg=folder: null
+                              - rtgl-text: ${group.fullLabel}
+                          - rtgl-view w=1fg: null
                           - $if canUpload:
                               - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=upload: Upload
                             $else:
                               - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
                       - $if !group.isCollapsed:
-                          - 'rtgl-view w=f d=h p=sm wrap g=md style="min-width: 0;"':
+                          - 'rtgl-view w=f d=h ph=sm pt=md pb=sm mb=lg wrap g=md style="min-width: 0;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
                                       - $if resourceType == 'characters':
-                                          - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} br=lg d=h g=xl wrap mt=lg p=lg:
+                                          - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=lg d=h g=xl wrap mt=lg p=lg:
                                               - rvn-file-image w=96 h=96 br=f fileId=${item.fileId}: null
                                               - rtgl-view w=1fg g=md:
                                                   - rtgl-text s=h2: ${item.name}
@@ -126,7 +126,7 @@ template:
                                               - rtgl-view h=f av=c:
                                                   - rtgl-button#spritesButtonRef${gIndex}x${itemIndex} data-item-id=${item.id} v=se: Sprites
                                         $else:
-                                          - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} br=md:
+                                          - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                               - $if resourceType == 'fonts':
                                                   - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v bw=xs br=md:
                                                       - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c: null
@@ -143,7 +143,7 @@ template:
                                                     $else:
                                                       - rtgl-image bc=${item.borderColor} p=md g=md bw=xs br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png: null
                                                 $elif resourceType == 'images':
-                                                  - 'rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md w=${maxWidth} style="max-width: 100%;"':
+                                                  - 'rtgl-view p=md g=md br=md w=${maxWidth} style="max-width: 100%;"':
                                                       - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $elif resourceType == 'characterSprites':

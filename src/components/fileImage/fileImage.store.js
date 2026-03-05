@@ -46,10 +46,11 @@ export const selectIsLoading = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props: attrs }) => {
-  const { style: _style, ...restAttrs } = attrs;
+  const { style: _style, bc = "fg", ...restAttrs } = attrs;
   return {
     src: state.src,
     isLoading: state.isLoading,
+    borderColor: bc,
     containerAttrString: stringifyAttrs(restAttrs),
     key: attrs.key,
     bw: attrs.bw,

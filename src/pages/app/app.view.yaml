@@ -57,5 +57,7 @@ template:
               - rvn-layouts: []
             $elif currentRoutePattern == "/project/resources/layout-editor":
               - rvn-layout-editor: []
+            $elif currentRoutePattern == "/project/releases":
+              - rvn-versions: []
             $elif currentRoutePattern == "/project/releases/versions":
               - rvn-versions: []

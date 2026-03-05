@@ -237,6 +237,15 @@ export const handleFileAction = async (deps, payload) => {
         parentId: null,
         position: "last",
       });
+    } else if (isVariablesTarget(repositoryTarget)) {
+      await projectService.createVariableItem({
+        variableId: nanoid(),
+        name: "New Folder",
+        type: "folder",
+        defaultValue: "",
+        parentId: null,
+        position: "last",
+      });
     } else if (isLayoutsTarget(repositoryTarget)) {
       await projectService.createLayoutItem({
         layoutId: nanoid(),
@@ -377,11 +386,7 @@ export const handleFileAction = async (deps, payload) => {
           sceneId: itemId,
           name: detail.newName,
         });
-      } else if (
-        isVariablesTarget(repositoryTarget) &&
-        currentItem &&
-        !isCurrentFolder
-      ) {
+      } else if (isVariablesTarget(repositoryTarget) && currentItem) {
         await projectService.updateVariableItem({
           variableId: itemId,
           patch: {
@@ -497,7 +502,7 @@ export const handleFileAction = async (deps, payload) => {
         await projectService.deleteSceneItem({
           sceneId: itemId,
         });
-      } else if (isVariablesTarget(repositoryTarget) && !isCurrentFolder) {
+      } else if (isVariablesTarget(repositoryTarget) && currentItem) {
         await projectService.deleteVariableItem({
           variableId: itemId,
         });
@@ -551,6 +556,15 @@ export const handleFileAction = async (deps, payload) => {
             type: "folder",
             name: "New Folder",
           },
+          parentId: itemId,
+          position: "last",
+        });
+      } else if (isVariablesTarget(repositoryTarget) && isCurrentFolder) {
+        await projectService.createVariableItem({
+          variableId: nanoid(),
+          name: "New Folder",
+          type: "folder",
+          defaultValue: "",
           parentId: itemId,
           position: "last",
         });
@@ -689,13 +703,14 @@ export const handleFileAction = async (deps, payload) => {
         position: { after: itemId },
         data: layoutData,
       });
-    } else if (isVariablesTarget(repositoryTarget) && !isCurrentFolder) {
+    } else if (isVariablesTarget(repositoryTarget) && currentItem) {
       await projectService.createVariableItem({
         variableId: duplicateId,
         name: duplicateName,
         scope: currentItem.scope || "global",
         type: currentItem.type || "string",
-        defaultValue: currentItem.default ?? "",
+        defaultValue:
+          currentItem.type === "folder" ? "" : (currentItem.default ?? ""),
         parentId: location?.parentId || null,
         position: { after: itemId },
       });

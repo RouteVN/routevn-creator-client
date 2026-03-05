@@ -129,7 +129,6 @@ template:
                                   - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
                                   - $if platform != 'web':
                                       - rtgl-button#openButton variant=se: ${openButtonText}
-                          - rtgl-text s=sm c=mu-fg mb=xl: Local projects are the projects that are stored locally in your file system.
                           - rtgl-view w=f g=md:
                               - $if localEmptyMessage:
                                   - rtgl-view w=f h=120 ah=c av=c:

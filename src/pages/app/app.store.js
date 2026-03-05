@@ -39,6 +39,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project/resources/fonts",
     "/project/resources/layouts",
     "/project/resources/layout-editor",
+    "/project/releases",
     "/project/releases/versions",
   ];
   const currentRoute = state.currentRoute;

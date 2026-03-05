@@ -97,16 +97,24 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     return items.map((item) => {
       const isSelected = item.id === props.selectedItemId;
       const isCharacterResource = props.resourceType === "characters";
-      const updatedItem = {
-        ...item,
-        borderColor: isSelected ? "fg" : "bo",
-        itemBorderColor: isCharacterResource
+      const isImageResource = props.resourceType === "images";
+      const defaultItemBorderColor = isCharacterResource
+        ? isSelected
+          ? "pr"
+          : "bo"
+        : isImageResource
           ? isSelected
             ? "pr"
             : "bo"
           : isSelected
             ? "pr"
-            : "tr",
+            : "tr";
+
+      const updatedItem = {
+        ...item,
+        borderColor: isSelected ? "fg" : "bo",
+        itemBorderColor: defaultItemBorderColor,
+        itemHoverBorderColor: isSelected ? defaultItemBorderColor : "ac",
       };
 
       // If item has children, recursively process them

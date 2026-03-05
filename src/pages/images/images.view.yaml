@@ -58,4 +58,4 @@ template:
           - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: #000;"': null
           - $if fullImagePreviewFileId:
               - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=bo bw=sm br=md: null
+                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
