@@ -31,6 +31,8 @@ Read the links from the following files to familiarize with the code before star
 
 - Prefer direct property access or nullish coalescing (`??`) for defaults.
 - Avoid defensive `typeof x === "string" ? x : ""` patterns unless runtime type narrowing is truly required.
+- Prefer `undefined` over `null`.
+- Avoid explicit `= null` initialization; use `let value;` when a later assignment is expected.
 
 ## Layering
 

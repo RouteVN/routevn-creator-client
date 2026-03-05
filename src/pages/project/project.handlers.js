@@ -18,33 +18,44 @@ export const handleFormChange = async (deps, payload) => {
 
 export const handleFormExtraEvent = async (deps) => {
   const { appService, subject, render, store } = deps;
+  let file;
 
   try {
-    const file = await appService.pickFiles({
+    file = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
       validations: [{ type: "square" }],
       upload: true,
     });
-
-    if (!file || !file.uploadSucessful || !file.uploadResult) {
-      return; // User cancelled
-    }
-
-    const result = file.uploadResult;
-    const currentProject = appService.getCurrentProjectEntry();
-    if (currentProject.id && currentProject.source === "local") {
-      await appService.updateProjectEntry(currentProject.id, {
-        iconFileId: result.fileId,
-      });
-    }
-
-    store.setIconFileId({ iconFileId: result.fileId });
-    subject.dispatch("project-image-update");
-    render();
-  } catch (error) {
-    console.error("Project image upload failed:", error);
+  } catch {
+    appService.showToast("Failed to select file.", {
+      title: "Error",
+    });
+    return;
   }
+
+  if (!file) {
+    return; // User cancelled
+  }
+
+  if (!file.uploadSucessful || !file.uploadResult) {
+    appService.showToast("Failed to upload project icon.", {
+      title: "Error",
+    });
+    return;
+  }
+
+  const result = file.uploadResult;
+  const currentProject = appService.getCurrentProjectEntry();
+  if (currentProject.id && currentProject.source === "local") {
+    await appService.updateProjectEntry(currentProject.id, {
+      iconFileId: result.fileId,
+    });
+  }
+
+  store.setIconFileId({ iconFileId: result.fileId });
+  subject.dispatch("project-image-update");
+  render();
 };
 
 export const handleBackToProjects = async (deps) => {
