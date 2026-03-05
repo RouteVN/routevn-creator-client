@@ -427,11 +427,15 @@ export const handleWhiteboardClick = (deps, payload) => {
     const { formX, formY, whiteboardX, whiteboardY } = payload._event.detail;
 
     // Reset form data
-    store.setSceneFormData({ name: "", folderId: "_root" });
+    store.setSceneFormData({ data: { name: "", folderId: "_root" } });
 
     // Show the form at the clicked position
-    store.setSceneFormPosition({ x: formX, y: formY });
-    store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
+    store.setSceneFormPosition({
+      position: { x: formX, y: formY },
+    });
+    store.setSceneWhiteboardPosition({
+      position: { x: whiteboardX, y: whiteboardY },
+    });
     store.setWaitingForTransform({ isWaiting: false });
     store.setShowSceneForm({ show: true });
     render();
@@ -443,11 +447,15 @@ export const handleWhiteboardCanvasContextMenu = (deps, payload) => {
   const { formX, formY, whiteboardX, whiteboardY } = payload._event.detail;
 
   // Reset form data
-  store.setSceneFormData({ name: "", folderId: "_root" });
+  store.setSceneFormData({ data: { name: "", folderId: "_root" } });
 
   // Show the form at the right-clicked position
-  store.setSceneFormPosition({ x: formX, y: formY });
-  store.setSceneWhiteboardPosition({ x: whiteboardX, y: whiteboardY });
+  store.setSceneFormPosition({
+    position: { x: formX, y: formY },
+  });
+  store.setSceneWhiteboardPosition({
+    position: { x: whiteboardX, y: whiteboardY },
+  });
   store.setShowSceneForm({ show: true });
   render();
 };
@@ -466,7 +474,10 @@ export const handleSceneFormAction = async (deps, payload) => {
     store.resetSceneForm();
     render();
   } else if (actionId === "submit") {
-    const sceneWhiteboardPosition = store.selectSceneWhiteboardPosition();
+    const sceneWhiteboardPosition = store.selectSceneWhiteboardPosition() || {
+      x: 0,
+      y: 0,
+    };
 
     // Get form values from the event detail (same pattern as typography)
     const formData = payload._event.detail.values;
@@ -572,10 +583,12 @@ export const handleSceneFormAction = async (deps, payload) => {
 
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
-      id: newSceneId,
-      name: formData.name,
-      x: sceneWhiteboardPosition.x,
-      y: sceneWhiteboardPosition.y,
+      newItem: {
+        id: newSceneId,
+        name: formData.name,
+        x: sceneWhiteboardPosition.x,
+        y: sceneWhiteboardPosition.y,
+      },
     });
 
     // Update store with new scenes data

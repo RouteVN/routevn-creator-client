@@ -30,10 +30,14 @@ const COLLAB_REFRESH_HANDLER_NAMES = [
   "handleFileExplorerDataChanged",
 ];
 const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
-const DEFAULT_COLLAB_ENDPOINT = "ws://127.0.0.1:8787/sync";
+const DEFAULT_COLLAB_ENDPOINT = "wss://127.0.0.1:8787/sync";
 const COLLAB_HEARTBEAT_INTERVAL_MS = 10_000;
 const COLLAB_RECONNECT_INTERVAL_MS = 5_000;
 const COLLAB_CONNECTION_ERROR_THROTTLE_MS = 10_000;
+const APP_DB_NAME = "app";
+const APP_DB_VERSION = 1;
+const APP_DB_KV_STORE = "kv";
+const APP_DB_PROJECT_ENTRIES_KEY = "projectEntries";
 
 const parseEnabledFlag = (value) => value === "1" || value === "true";
 
@@ -274,6 +278,38 @@ const generateClientIdSuffix = () => {
   return Math.random().toString(36).slice(2, 14);
 };
 
+const openAppDb = () =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open(APP_DB_NAME, APP_DB_VERSION);
+    request.onsuccess = (event) => resolve(event.target.result);
+    request.onerror = (event) => reject(event.target.error);
+  });
+
+const loadLocalProjectEntries = async () => {
+  let db = null;
+  try {
+    db = await openAppDb();
+    const entriesRecord = await new Promise((resolve, reject) => {
+      const transaction = db.transaction(APP_DB_KV_STORE, "readonly");
+      const store = transaction.objectStore(APP_DB_KV_STORE);
+      const request = store.get(APP_DB_PROJECT_ENTRIES_KEY);
+      request.onsuccess = (event) => resolve(event.target.result);
+      request.onerror = (event) => reject(event.target.error);
+    });
+
+    if (!entriesRecord || typeof entriesRecord.value !== "string") {
+      return [];
+    }
+
+    const parsed = JSON.parse(entriesRecord.value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  } finally {
+    db?.close?.();
+  }
+};
+
 const getCollabEndpointCandidates = (endpointUrl) => {
   const raw =
     typeof endpointUrl === "string" && endpointUrl.length > 0
@@ -326,6 +362,7 @@ const createCollabRuntimeBootstrap = ({
   const collabRuntime = {
     endpointUrl: DEFAULT_COLLAB_ENDPOINT,
     autoConnectMode: "not_started",
+    remoteEnabled: false,
     lastConnectError: null,
     userId: null,
     clientId: null,
@@ -438,6 +475,7 @@ const createCollabRuntimeBootstrap = ({
 
   const shouldAttemptAutoConnect = () => {
     if (collabRuntime.autoConnectMode === "not_started") return false;
+    if (!collabRuntime.remoteEnabled) return false;
     const projectId = getCollabProjectId();
     if (!projectId) return false;
 
@@ -545,6 +583,14 @@ const createCollabRuntimeBootstrap = ({
     const params = new URLSearchParams(window.location.search);
     const enabledParam = params.get("collab");
     const projectId = params.get("p");
+    const localProjectEntries = await loadLocalProjectEntries();
+    const isLocalProject =
+      typeof projectId === "string" &&
+      projectId.length > 0 &&
+      localProjectEntries.some(
+        (entry) => typeof entry?.id === "string" && entry.id === projectId,
+      );
+    const remoteEnabled = Boolean(projectId) && !isLocalProject;
     const enabledByQuery = enabledParam === "1" || enabledParam === "true";
 
     const endpointUrl = params.get("collabEndpoint") || DEFAULT_COLLAB_ENDPOINT;
@@ -553,15 +599,29 @@ const createCollabRuntimeBootstrap = ({
     const clientId =
       params.get("collabClient") || buildDefaultClientId(projectId);
     const token = params.get("collabToken") || undefined;
-    const autoConnectMode = enabledByQuery ? "query_enabled" : "always_enabled";
+    const autoConnectMode = remoteEnabled
+      ? enabledByQuery
+        ? "query_enabled"
+        : "always_enabled"
+      : "disabled_for_local_project";
     collabRuntime.endpointUrl = endpointUrl;
     collabRuntime.autoConnectMode = autoConnectMode;
+    collabRuntime.remoteEnabled = remoteEnabled;
     collabRuntime.lastConnectError = null;
     collabRuntime.userId = userId;
     collabRuntime.clientId = clientId;
     collabRuntime.token = token || null;
     collabRuntime.reconnectAttempts = 0;
     collabRuntime.lastReconnectAttemptAt = null;
+
+    if (!remoteEnabled) {
+      collabDebugLog("info", "auto-connect skipped for local project", {
+        mode: autoConnectMode,
+        projectId: projectId || null,
+        isLocalProject,
+      });
+      return;
+    }
 
     collabDebugLog("info", "auto-connect attempting", {
       mode: autoConnectMode,

@@ -150,6 +150,185 @@ const getLineElementById = (refs, lineId) => {
   );
 };
 
+const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
+let deleteShortcutTimerId = null;
+
+const isShortcutDigit = (key) => {
+  return /^[0-9]$/.test(key);
+};
+
+const handleBlockModeCharacterShortcut = (deps, payload, { lineId } = {}) => {
+  const { store, dispatchEvent, props } = deps;
+  const event = payload._event;
+  const key = event.key;
+  const isAwaitingCharacterShortcut = store.selectAwaitingCharacterShortcut();
+
+  if (isAwaitingCharacterShortcut) {
+    store.setAwaitingCharacterShortcut({
+      awaitingCharacterShortcut: false,
+    });
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isShortcutDigit(key)) {
+      return true;
+    }
+
+    const targetLineId = lineId || props.selectedLineId;
+    if (!targetLineId) {
+      return true;
+    }
+
+    dispatchEvent(
+      new CustomEvent("dialogue-character-shortcut", {
+        detail: {
+          lineId: targetLineId,
+          shortcut: key,
+        },
+      }),
+    );
+    return true;
+  }
+
+  const isCharacterShortcutStartKey =
+    typeof key === "string" &&
+    key.toLowerCase() === "c" &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey;
+
+  if (!isCharacterShortcutStartKey) {
+    return false;
+  }
+
+  store.setAwaitingCharacterShortcut({
+    awaitingCharacterShortcut: true,
+  });
+  event.preventDefault();
+  event.stopPropagation();
+  return true;
+};
+
+const clearDeleteShortcutState = (store) => {
+  store.setAwaitingDeleteShortcut({
+    awaitingDeleteShortcut: false,
+  });
+  if (deleteShortcutTimerId !== null) {
+    clearTimeout(deleteShortcutTimerId);
+    deleteShortcutTimerId = null;
+  }
+};
+
+const armDeleteShortcutState = (store) => {
+  if (deleteShortcutTimerId !== null) {
+    clearTimeout(deleteShortcutTimerId);
+  }
+
+  deleteShortcutTimerId = setTimeout(() => {
+    clearDeleteShortcutState(store);
+  }, DELETE_SHORTCUT_TIMEOUT_MS);
+};
+
+const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
+  const { store, dispatchEvent, props } = deps;
+  const event = payload._event;
+  const key = String(event.key || "");
+  const isDeleteShortcutKey =
+    key === "d" &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey &&
+    !event.shiftKey;
+  const isAwaitingDeleteShortcut = store.selectAwaitingDeleteShortcut();
+
+  if (isAwaitingDeleteShortcut) {
+    clearDeleteShortcutState(store);
+
+    if (!isDeleteShortcutKey) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const targetLineId = lineId || props.selectedLineId;
+    if (!targetLineId) {
+      return true;
+    }
+
+    dispatchEvent(
+      new CustomEvent("delete-line-shortcut", {
+        detail: {
+          lineId: targetLineId,
+        },
+      }),
+    );
+    return true;
+  }
+
+  if (!isDeleteShortcutKey) {
+    return false;
+  }
+
+  store.setAwaitingDeleteShortcut({
+    awaitingDeleteShortcut: true,
+  });
+  armDeleteShortcutState(store);
+  event.preventDefault();
+  event.stopPropagation();
+  return true;
+};
+
+const enterInsertModeAtLineStart = (deps, lineId) => {
+  const { store } = deps;
+  if (!lineId) {
+    return;
+  }
+
+  const lineElement = getLineElementById(deps.refs, lineId);
+  if (!lineElement) {
+    return;
+  }
+
+  store.setCursorPosition({ position: 0 });
+  store.setGoalColumn({ goalColumn: 0 });
+  store.setNavigationDirection({ direction: null });
+  updateSelectedLine(deps, { currentLineId: lineId });
+};
+
+const enterInsertModeAtLineEnd = (deps, lineId) => {
+  const { store } = deps;
+  if (!lineId) {
+    return;
+  }
+
+  const lineElement = getLineElementById(deps.refs, lineId);
+  if (!lineElement) {
+    return;
+  }
+
+  const textLength = lineElement.textContent.length;
+  store.setCursorPosition({ position: textLength });
+  store.setGoalColumn({ goalColumn: textLength });
+  store.setNavigationDirection({ direction: "end" });
+  updateSelectedLine(deps, { currentLineId: lineId });
+};
+
+const dispatchBlockModeSwapLine = (dispatchEvent, lineId, direction) => {
+  if (!lineId || (direction !== "up" && direction !== "down")) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("swapLine", {
+      detail: {
+        lineId,
+        direction,
+      },
+    }),
+  );
+};
+
 // Helper function to check if cursor is on the first line of contenteditable
 const isCursorOnFirstLine = (element) => {
   const range = getSelectionRange(element);
@@ -323,7 +502,67 @@ export const handleContainerKeyDown = (deps, payload) => {
     const currentLineId = props.selectedLineId;
     const lines = props.lines || [];
 
-    switch (payload._event.key) {
+    const handledShortcut = handleBlockModeCharacterShortcut(deps, payload, {
+      lineId: currentLineId,
+    });
+    if (handledShortcut) {
+      return;
+    }
+
+    const handledDeleteShortcut = handleBlockModeDeleteShortcut(deps, payload, {
+      lineId: currentLineId,
+    });
+    if (handledDeleteShortcut) {
+      return;
+    }
+
+    const event = payload._event;
+    let navKey = event.key;
+    if (event.shiftKey && event.code === "KeyI") {
+      navKey = "Shift+I";
+    } else if (event.shiftKey && event.code === "KeyA") {
+      navKey = "Shift+A";
+    } else if (event.altKey && event.code === "KeyJ") {
+      navKey = "Alt+J";
+    } else if (event.altKey && event.code === "KeyK") {
+      navKey = "Alt+K";
+    } else if (event.altKey && event.code === "ArrowDown") {
+      navKey = "Alt+ArrowDown";
+    } else if (event.altKey && event.code === "ArrowUp") {
+      navKey = "Alt+ArrowUp";
+    }
+
+    const hasModifierKey = event.ctrlKey || event.metaKey || event.altKey;
+    if (!hasModifierKey) {
+      if (navKey === "j" || navKey === "J") {
+        navKey = "ArrowDown";
+      } else if (navKey === "k" || navKey === "K") {
+        navKey = "ArrowUp";
+      }
+    }
+
+    if (navKey === "o" || navKey === "O") {
+      payload._event.preventDefault();
+      payload._event.stopPropagation();
+
+      console.log("[linesEditor][block-new-line] shortcut", {
+        key: navKey,
+        selectedLineId: currentLineId || null,
+        linesCount: lines.length,
+      });
+
+      dispatchEvent(
+        new CustomEvent("newLine", {
+          detail: {
+            lineId: currentLineId || null,
+            position: navKey === "O" ? "before" : "after",
+          },
+        }),
+      );
+      return;
+    }
+
+    switch (navKey) {
       case "ArrowUp":
         payload._event.preventDefault();
         payload._event.stopPropagation();
@@ -491,21 +730,36 @@ export const handleContainerKeyDown = (deps, payload) => {
         break;
       case "Enter":
         payload._event.preventDefault();
-        if (currentLineId) {
-          // Focus the selected line to enter text-editor mode at the end
-          const lineElement = getLineElementById(deps.refs, currentLineId);
-
-          if (lineElement) {
-            // Position cursor at the end before focusing
-            const textLength = lineElement.textContent.length;
-            store.setCursorPosition({ position: textLength });
-            store.setGoalColumn({ goalColumn: textLength });
-            store.setNavigationDirection({ direction: "end" });
-
-            // Use updateSelectedLine to properly position cursor at end
-            updateSelectedLine(deps, { currentLineId });
-          }
-        }
+        enterInsertModeAtLineEnd(deps, currentLineId);
+        break;
+      case "Shift+I":
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        enterInsertModeAtLineStart(deps, currentLineId);
+        break;
+      case "Shift+A":
+        payload._event.preventDefault();
+        enterInsertModeAtLineEnd(deps, currentLineId);
+        break;
+      case "Alt+J":
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, currentLineId, "down");
+        break;
+      case "Alt+K":
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, currentLineId, "up");
+        break;
+      case "Alt+ArrowDown":
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, currentLineId, "down");
+        break;
+      case "Alt+ArrowUp":
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, currentLineId, "up");
         break;
     }
   }
@@ -515,6 +769,49 @@ export const handleLineKeyDown = (deps, payload) => {
   const { dispatchEvent, store, render, props } = deps;
   const id = getLineIdFromElement(payload._event.currentTarget);
   const mode = store.selectMode();
+
+  if (mode === "block") {
+    const handledShortcut = handleBlockModeCharacterShortcut(deps, payload, {
+      lineId: id,
+    });
+    if (handledShortcut) {
+      return;
+    }
+
+    const handledDeleteShortcut = handleBlockModeDeleteShortcut(deps, payload, {
+      lineId: id,
+    });
+    if (handledDeleteShortcut) {
+      return;
+    }
+  }
+
+  let navKey = payload._event.key;
+  if (mode === "block") {
+    if (payload._event.shiftKey && payload._event.code === "KeyI") {
+      navKey = "Shift+I";
+    } else if (payload._event.shiftKey && payload._event.code === "KeyA") {
+      navKey = "Shift+A";
+    } else if (payload._event.altKey && payload._event.code === "KeyJ") {
+      navKey = "Alt+J";
+    } else if (payload._event.altKey && payload._event.code === "KeyK") {
+      navKey = "Alt+K";
+    } else if (payload._event.altKey && payload._event.code === "ArrowDown") {
+      navKey = "Alt+ArrowDown";
+    } else if (payload._event.altKey && payload._event.code === "ArrowUp") {
+      navKey = "Alt+ArrowUp";
+    }
+
+    const hasModifierKey =
+      payload._event.ctrlKey || payload._event.metaKey || payload._event.altKey;
+    if (!hasModifierKey) {
+      if (navKey === "j" || navKey === "J") {
+        navKey = "ArrowDown";
+      } else if (navKey === "k" || navKey === "K") {
+        navKey = "ArrowUp";
+      }
+    }
+  }
 
   // Capture cursor position immediately before any key handling
   if (mode === "text-editor") {
@@ -541,7 +838,7 @@ export const handleLineKeyDown = (deps, payload) => {
     }
   }
 
-  switch (payload._event.key) {
+  switch (navKey) {
     case "Backspace":
       if (mode === "text-editor") {
         // Check if cursor is at position 0
@@ -611,6 +908,47 @@ export const handleLineKeyDown = (deps, payload) => {
             }),
           );
         });
+      }
+      break;
+    case "Shift+I":
+      if (mode === "block") {
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        enterInsertModeAtLineStart(deps, id);
+      }
+      break;
+    case "Shift+A":
+      if (mode === "block") {
+        payload._event.preventDefault();
+        enterInsertModeAtLineEnd(deps, id);
+      }
+      break;
+    case "Alt+J":
+      if (mode === "block") {
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, id, "down");
+      }
+      break;
+    case "Alt+K":
+      if (mode === "block") {
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, id, "up");
+      }
+      break;
+    case "Alt+ArrowDown":
+      if (mode === "block") {
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, id, "down");
+      }
+      break;
+    case "Alt+ArrowUp":
+      if (mode === "block") {
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchBlockModeSwapLine(dispatchEvent, id, "up");
       }
       break;
     case "ArrowUp":

@@ -1,0 +1,4 @@
+componentName: rvn-register
+propsSchema:
+  type: object
+  properties: {}

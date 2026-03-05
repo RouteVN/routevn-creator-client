@@ -1,0 +1,31 @@
+refs:
+  backButton:
+    eventListeners:
+      click:
+        handler: handleBackButtonClick
+  requestOtpForm:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+  verifyOtpForm:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+  registerForm:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+template:
+  - rtgl-view w=f h=f ah=c av=c p=lg:
+      - rtgl-view w=420 sm-w=f:
+          - rtgl-view w=f mb=sm:
+              - rtgl-button#backButton variant=se: Back
+          - rtgl-view w=f bw=xs bc=bo br=md p=lg bgc=bg:
+              - $if isOtpStep || isRegisterStep:
+                  - rtgl-text s=sm c=mu-fg mb=sm: ${requestedEmail}
+              - $if isRequestOtpStep:
+                  - rtgl-form#requestOtpForm :form=requestOtpForm :defaultValues=requestOtpDefaultValues w=f: null
+                $elif isOtpStep:
+                  - rtgl-form#verifyOtpForm :form=verifyOtpForm :defaultValues=verifyOtpDefaultValues w=f: null
+                $elif isRegisterStep:
+                  - rtgl-form#registerForm :form=registerForm :defaultValues=registerDefaultValues w=f: null

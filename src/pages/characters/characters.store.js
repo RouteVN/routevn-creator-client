@@ -1,5 +1,18 @@
 import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 
+const CHARACTER_SHORTCUT_OPTIONS = [
+  { label: "", value: "" },
+  { label: "1", value: "1" },
+  { label: "2", value: "2" },
+  { label: "3", value: "3" },
+  { label: "4", value: "4" },
+  { label: "5", value: "5" },
+  { label: "6", value: "6" },
+  { label: "7", value: "7" },
+  { label: "8", value: "8" },
+  { label: "9", value: "9" },
+];
+
 const form = {
   fields: [
     {
@@ -12,6 +25,12 @@ const form = {
       name: "description",
       type: "popover-input",
       label: "Description",
+    },
+    {
+      name: "shortcut",
+      type: "select",
+      label: "Shortcut",
+      options: CHARACTER_SHORTCUT_OPTIONS,
     },
   ],
 };
@@ -27,6 +46,7 @@ export const createInitialState = () => ({
   dialogDefaultValues: {
     name: "",
     description: "",
+    shortcut: "",
   },
   dialogForm: {
     title: "Add Character",
@@ -41,6 +61,13 @@ export const createInitialState = () => ({
         name: "description",
         type: "input-text",
         label: "Description",
+        required: false,
+      },
+      {
+        name: "shortcut",
+        type: "select",
+        label: "Shortcut",
+        options: CHARACTER_SHORTCUT_OPTIONS,
         required: false,
       },
       {
@@ -153,6 +180,7 @@ export const selectViewData = ({ state }) => {
     defaultValues = {
       name: selectedItem.name,
       description: selectedItem.description || "No description provided",
+      shortcut: selectedItem.shortcut || "",
     };
   }
 
@@ -226,6 +254,13 @@ export const selectViewData = ({ state }) => {
         required: false,
       },
       {
+        name: "shortcut",
+        type: "select",
+        label: "Shortcut",
+        options: CHARACTER_SHORTCUT_OPTIONS,
+        required: false,
+      },
+      {
         type: "slot",
         slot: "avatar-slot",
         label: "Avatar",
@@ -247,6 +282,7 @@ export const selectViewData = ({ state }) => {
     editDefaultValues = {
       name: editItem.name || "",
       description: editItem.description || "",
+      shortcut: editItem.shortcut || "",
     };
   }
 

@@ -61,12 +61,14 @@ const createDetailFormValues = (item) => {
     return {
       name: "",
       description: "",
+      shortcut: "",
     };
   }
 
   return {
     name: item.name || "",
     description: item.description || "No description provided",
+    shortcut: item.shortcut || "",
   };
 };
 
@@ -133,6 +135,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     values: {
       name: characterItem.name || "",
       description: characterItem.description || "",
+      shortcut: characterItem.shortcut || "",
     },
   });
 };
@@ -243,7 +246,8 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
 
 export const handleCharacterCreated = async (deps, payload) => {
   const { store, render, projectService } = deps;
-  const { groupId, name, description, avatarFileId } = payload._event.detail;
+  const { groupId, name, description, shortcut, avatarFileId } =
+    payload._event.detail;
 
   try {
     // Create default sprites folder with proper structure
@@ -254,6 +258,7 @@ export const handleCharacterCreated = async (deps, payload) => {
       type: "character",
       name: name,
       description: description,
+      shortcut: shortcut || "",
       sprites: {
         tree: [
           {
@@ -455,6 +460,7 @@ export const handleDialogFormActionClick = (deps, payload) => {
           groupId: targetGroupId,
           name: formData.name,
           description: formData.description,
+          shortcut: formData.shortcut || "",
           avatarFileId: avatarFileId,
         },
       },
@@ -593,6 +599,7 @@ export const handleEditFormAction = async (deps, payload) => {
     const updateData = {
       name: formData.name,
       description: formData.description,
+      shortcut: formData.shortcut || "",
     };
 
     // Include avatar file ID if it was changed

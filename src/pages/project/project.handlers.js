@@ -1,16 +1,45 @@
 import { validateIconDimensions } from "../../utils/fileProcessors";
 
+const resolveProjectSource = async (appService) => {
+  const payload = appService.getPayload() || {};
+  const projectId = typeof payload?.p === "string" ? payload.p : "";
+  if (!projectId) {
+    return "local";
+  }
+
+  try {
+    const entries = await appService.getProjectEntries();
+    const isLocalProject =
+      Array.isArray(entries) &&
+      entries.some(
+        (entry) => typeof entry?.id === "string" && entry.id === projectId,
+      );
+    return isLocalProject ? "local" : "cloud";
+  } catch {
+    return "local";
+  }
+};
+
 export const handleAfterMount = async (deps) => {
   await handleDataChanged(deps);
 };
 
 export const handleDataChanged = async (deps) => {
-  const { projectService, store, render } = deps;
-  await projectService.ensureRepository();
-  const state = projectService.getState();
-  const { project } = state;
-  store.setProject({ project: project });
+  const { appService, projectService, store, render } = deps;
+  const source = await resolveProjectSource(appService);
+  store.setProjectSource({ source });
   render();
+
+  try {
+    await projectService.ensureRepository();
+    const state = projectService.getState();
+    const { project } = state;
+    store.setProject({ project: project });
+    render();
+  } catch (error) {
+    console.error("Failed to load project data:", error);
+    appService.showToast(error?.message || "Failed to load project.");
+  }
 };
 
 export const handleFormChange = async (deps, payload) => {

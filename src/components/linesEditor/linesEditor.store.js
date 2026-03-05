@@ -7,11 +7,17 @@ export const createInitialState = () => ({
   goalColumn: 0, // Remember the desired column when moving vertically
   isNavigating: false, // Flag to prevent cursor reset during navigation
   navigationDirection: null, // 'up', 'down', 'end', or null - for proper cursor positioning
+  awaitingCharacterShortcut: false,
+  awaitingDeleteShortcut: false,
   repositoryState: {},
 });
 
 export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
+  if (mode !== "block") {
+    state.awaitingCharacterShortcut = false;
+    state.awaitingDeleteShortcut = false;
+  }
 };
 
 export const setReady = ({ state }, _payload = {}) => {
@@ -38,6 +44,20 @@ export const setNavigationDirection = ({ state }, { direction } = {}) => {
   state.navigationDirection = direction;
 };
 
+export const setAwaitingCharacterShortcut = (
+  { state },
+  { awaitingCharacterShortcut } = {},
+) => {
+  state.awaitingCharacterShortcut = awaitingCharacterShortcut;
+};
+
+export const setAwaitingDeleteShortcut = (
+  { state },
+  { awaitingDeleteShortcut } = {},
+) => {
+  state.awaitingDeleteShortcut = awaitingDeleteShortcut;
+};
+
 export const selectMode = ({ state }) => {
   return state.mode;
 };
@@ -56,6 +76,14 @@ export const selectGoalColumn = ({ state }) => {
 
 export const selectNavigationDirection = ({ state }) => {
   return state.navigationDirection;
+};
+
+export const selectAwaitingCharacterShortcut = ({ state }) => {
+  return state.awaitingCharacterShortcut;
+};
+
+export const selectAwaitingDeleteShortcut = ({ state }) => {
+  return state.awaitingDeleteShortcut;
 };
 
 export const selectLineContent = ({ props }, payload) => {

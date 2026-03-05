@@ -1,0 +1,17 @@
+refs:
+  backButton:
+    eventListeners:
+      click:
+        handler: handleBackButtonClick
+  form:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+template:
+  - rtgl-view w=f h=f ah=c av=c p=lg:
+      - rtgl-view w=420 sm-w=f:
+          - rtgl-view w=f mb=sm:
+              - rtgl-button#backButton variant=se: Back
+          - rtgl-view w=f bw=xs bc=bo br=md p=lg bgc=bg:
+              - rtgl-text s=sm c=mu-fg mb=sm: ${email}
+              - rtgl-form#form :form=registerForm :defaultValues=registerDefaultValues w=f: null

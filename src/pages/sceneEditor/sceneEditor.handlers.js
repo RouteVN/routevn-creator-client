@@ -458,6 +458,26 @@ async function flushDialogueQueue(deps) {
   });
 }
 
+const findCharacterIdByShortcut = (repositoryState, shortcut) => {
+  const normalizedShortcut = String(shortcut || "").trim();
+  if (!normalizedShortcut) {
+    return null;
+  }
+
+  const characters = repositoryState?.characters?.items || {};
+  for (const [characterId, character] of Object.entries(characters)) {
+    if (character?.type !== "character") {
+      continue;
+    }
+
+    if (String(character?.shortcut || "").trim() === normalizedShortcut) {
+      return characterId;
+    }
+  }
+
+  return null;
+};
+
 export const handleBeforeMount = (deps) => {
   const { graphicsService, store } = deps;
   const cleanupSubscriptions = mountSubscriptions(deps);
@@ -876,6 +896,77 @@ export const handleEditorDataChanged = async (deps, payload) => {
   });
 };
 
+export const handleDialogueCharacterShortcut = async (deps, payload) => {
+  const { store, projectService, render, subject } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  const detail = payload?._event?.detail || {};
+  const lineId = detail.lineId || store.selectSelectedLineId();
+  const shortcut = detail.shortcut;
+  if (!lineId || !shortcut) {
+    return;
+  }
+
+  await flushDialogueQueue(deps);
+
+  const domainState = projectService.getDomainState();
+  const existingDialogue =
+    domainState?.lines?.[lineId]?.actions?.dialogue || {};
+
+  const isClearShortcut = String(shortcut) === "0";
+  if (isClearShortcut && !existingDialogue.characterId) {
+    return;
+  }
+
+  let characterId = null;
+  if (!isClearShortcut) {
+    const repositoryState = projectService.getState();
+    characterId = findCharacterIdByShortcut(repositoryState, shortcut);
+    if (!characterId) {
+      return;
+    }
+  }
+
+  if (!isClearShortcut && existingDialogue.characterId === characterId) {
+    return;
+  }
+
+  const selectedLine = store.selectSelectedLine();
+  const selectedLineContent =
+    selectedLine?.id === lineId
+      ? selectedLine?.actions?.dialogue?.content
+      : undefined;
+
+  const updatedDialogue = {
+    ...existingDialogue,
+    ...(existingDialogue.content
+      ? {}
+      : selectedLineContent
+        ? { content: selectedLineContent }
+        : {}),
+  };
+
+  if (isClearShortcut) {
+    delete updatedDialogue.characterId;
+  } else {
+    updatedDialogue.characterId = characterId;
+  }
+
+  await projectService.updateLineActions({
+    lineId,
+    patch: {
+      dialogue: updatedDialogue,
+    },
+    replace: false,
+  });
+
+  syncStoreProjectState(store, projectService);
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {});
+};
+
 export const handleAddActionsButtonClick = (deps) => {
   const { refs, render } = deps;
   refs.systemActions?.transformedHandlers?.open?.({
@@ -884,20 +975,11 @@ export const handleAddActionsButtonClick = (deps) => {
   render();
 };
 
-export const handleSectionAddClick = async (deps) => {
+const createSectionWithName = async (deps, sectionName) => {
   const { store, projectService, render, graphicsService } = deps;
-  if (isSectionsOverviewOpen(store)) {
-    return;
-  }
-
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
   const newLineId = nanoid();
-
-  // Get current scene to count sections
-  const scene = store.selectScene();
-  const sectionCount = scene?.sections?.length || 0;
-  const newSectionName = `Section ${sectionCount + 1}`;
 
   // Get layouts from repository to find first dialogue and base layouts
   const { layouts } = projectService.getState();
@@ -944,7 +1026,7 @@ export const handleSectionAddClick = async (deps) => {
   await projectService.createSectionItem({
     sceneId,
     sectionId: newSectionId,
-    name: newSectionName,
+    name: sectionName,
     position: "last",
   });
   await projectService.createLineItem({
@@ -968,6 +1050,19 @@ export const handleSectionAddClick = async (deps) => {
   setTimeout(async () => {
     await renderSceneState(store, graphicsService);
   }, 10);
+};
+
+export const handleSectionAddClick = (deps) => {
+  const { store, render } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  const scene = store.selectScene();
+  const sectionCount = scene?.sections?.length || 0;
+  const defaultName = `Section ${sectionCount + 1}`;
+  store.showSectionCreateDialog({ defaultName });
+  render();
 };
 
 export const handleSectionsOverviewClick = (deps, payload) => {
@@ -1321,23 +1416,61 @@ export const handlePasteLines = async (deps, payload) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
-export const handleNewLine = async (deps) => {
-  const { store, render, projectService } = deps;
+export const handleNewLine = async (deps, payload) => {
+  const { store, render, projectService, subject, refs } = deps;
+  const detail = payload?._event?.detail || {};
+  console.log("[sceneEditor][handleNewLine] received", detail);
+
   if (isSectionsOverviewOpen(store)) {
+    console.log("[sceneEditor][handleNewLine] skipped: sections overview open");
     return;
   }
 
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
+  if (!sectionId) {
+    console.log("[sceneEditor][handleNewLine] skipped: missing sectionId");
+    return;
+  }
+
+  const requestedPosition =
+    detail.position === "before" || detail.position === "after"
+      ? detail.position
+      : null;
+  const referenceLineId =
+    typeof detail.lineId === "string" && detail.lineId ? detail.lineId : null;
+
   const selectedLine = store.selectSelectedLine();
+  const selectedLineId = store.selectSelectedLineId();
+  const baseLineId = referenceLineId || selectedLineId || selectedLine?.id;
+
+  console.log("[sceneEditor][handleNewLine] resolved", {
+    sectionId,
+    requestedPosition,
+    referenceLineId,
+    selectedLineId: selectedLineId || null,
+    selectedLineEntityId: selectedLine?.id || null,
+    baseLineId: baseLineId || null,
+    newLineId,
+  });
+
+  if (requestedPosition && !baseLineId) {
+    console.log(
+      "[sceneEditor][handleNewLine] skipped: position requested without baseLineId",
+    );
+    return;
+  }
+
   const domainState = projectService.getDomainState();
-  const existingDialogue = selectedLine?.actions?.dialogue || {};
+  const existingDialogue = baseLineId
+    ? domainState?.lines?.[baseLineId]?.actions?.dialogue || {}
+    : selectedLine?.actions?.dialogue || {};
   const shouldInheritNvl =
     existingDialogue?.mode === "nvl" ||
     shouldInheritNvlModeFromPreviousLine({
       domainState,
       sectionId,
-      lineId: selectedLine?.id,
+      lineId: baseLineId,
       existingDialogue,
     });
   const newLineActions = shouldInheritNvl
@@ -1348,16 +1481,91 @@ export const handleNewLine = async (deps) => {
       }
     : {};
 
-  await projectService.createLineItem({
+  const scene = store.selectScene();
+  const selectedSection = scene?.sections?.find(
+    (section) => section?.id === sectionId,
+  );
+  const orderedLineIds = Array.isArray(selectedSection?.lines)
+    ? selectedSection.lines
+        .map((line) => line?.id)
+        .filter((lineId) => typeof lineId === "string" && lineId)
+    : [];
+  const baseLineIndex = baseLineId ? orderedLineIds.indexOf(baseLineId) : -1;
+
+  let afterLineId = null;
+  if (requestedPosition === "after" && baseLineId) {
+    afterLineId = baseLineId;
+  } else if (requestedPosition === "before" && baseLineId) {
+    afterLineId = baseLineIndex > 0 ? orderedLineIds[baseLineIndex - 1] : null;
+  }
+
+  const createLinePayload = {
     sectionId,
     lineId: newLineId,
     line: {
       actions: newLineActions,
     },
-    position: "last",
+  };
+
+  if (afterLineId) {
+    createLinePayload.afterLineId = afterLineId;
+  } else if (!requestedPosition) {
+    createLinePayload.position = "last";
+  }
+
+  console.log("[sceneEditor][handleNewLine] createLineItem payload", {
+    sectionId: createLinePayload.sectionId,
+    lineId: createLinePayload.lineId,
+    position: createLinePayload.position ?? null,
+    afterLineId: createLinePayload.afterLineId ?? null,
+    requestedPosition,
+    baseLineId: baseLineId ?? null,
+    baseLineIndex,
+    inheritedMode: newLineActions?.dialogue?.mode || null,
   });
 
+  await projectService.createLineItem(createLinePayload);
+
+  if (requestedPosition === "before" && baseLineIndex === 0) {
+    await projectService.moveLineItem({
+      lineId: newLineId,
+      toSectionId: sectionId,
+      index: 0,
+    });
+    console.log("[sceneEditor][handleNewLine] moved new line to index 0", {
+      newLineId,
+      sectionId,
+    });
+  }
+
+  console.log("[sceneEditor][handleNewLine] createLineItem done", {
+    newLineId,
+  });
+
+  syncStoreProjectState(store, projectService);
+  store.setSelectedLineId({ selectedLineId: newLineId });
+
+  const shouldEnterInsertMode = !!requestedPosition;
+  const linesEditorRef = refs?.linesEditor;
+  if (shouldEnterInsertMode && linesEditorRef) {
+    linesEditorRef.store.setCursorPosition({ position: 0 });
+    linesEditorRef.store.setGoalColumn({ goalColumn: 0 });
+    linesEditorRef.store.setNavigationDirection({ direction: null });
+    linesEditorRef.store.setIsNavigating({ isNavigating: true });
+  }
+
   render();
+
+  if (shouldEnterInsertMode && linesEditorRef) {
+    requestAnimationFrame(() => {
+      linesEditorRef.transformedHandlers.updateSelectedLine({
+        currentLineId: newLineId,
+      });
+      linesEditorRef.render();
+    });
+  }
+
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleLineNavigation = (deps, payload) => {
@@ -1525,6 +1733,53 @@ export const handleLineNavigation = (deps, payload) => {
     render();
     subject.dispatch("sceneEditor.renderCanvas", {});
   }
+};
+
+export const handleSwapLine = async (deps, payload) => {
+  const { store, projectService, render, subject } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  const detail = payload?._event?.detail || {};
+  const direction =
+    detail.direction === "up" || detail.direction === "down"
+      ? detail.direction
+      : null;
+  const lineId =
+    typeof detail.lineId === "string" && detail.lineId
+      ? detail.lineId
+      : store.selectSelectedLineId();
+  const sectionId = store.selectSelectedSectionId();
+
+  if (!direction || !lineId || !sectionId) {
+    return;
+  }
+
+  const scene = store.selectScene();
+  const section = scene?.sections?.find((item) => item.id === sectionId);
+  const lines = Array.isArray(section?.lines) ? section.lines : [];
+  const currentIndex = lines.findIndex((line) => line.id === lineId);
+  if (currentIndex < 0) {
+    return;
+  }
+
+  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+  if (targetIndex < 0 || targetIndex >= lines.length) {
+    return;
+  }
+
+  await flushDialogueQueue(deps);
+  await projectService.moveLineItem({
+    lineId,
+    toSectionId: sectionId,
+    index: targetIndex,
+  });
+
+  syncStoreProjectState(store, projectService);
+  store.setSelectedLineId({ selectedLineId: lineId });
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleMergeLines = async (deps, payload) => {
@@ -1702,6 +1957,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     store.showPopover({
       position,
       sectionId,
+      mode: "rename-section",
+      defaultName: "",
     });
   } else if (action === "delete-actions") {
     const selectedLineId = store.selectSelectedLineId();
@@ -1762,6 +2019,36 @@ export const handlePopoverClickOverlay = (deps) => {
   render();
 };
 
+export const handleSectionCreateDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.hideSectionCreateDialog();
+  render();
+};
+
+export const handleSectionCreateFormActionClick = async (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const action = detail.actionId;
+  const values = detail.values || {};
+  const nextSectionName = String(values.name || "").trim();
+
+  if (action === "cancel") {
+    store.hideSectionCreateDialog();
+    render();
+    return;
+  }
+
+  if (action === "submit") {
+    store.hideSectionCreateDialog();
+    if (nextSectionName) {
+      await createSectionWithName(deps, nextSectionName);
+      return;
+    }
+  }
+
+  render();
+};
+
 export const handleFormActionClick = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const detail = payload._event.detail;
@@ -1776,18 +2063,25 @@ export const handleFormActionClick = async (deps, payload) => {
   }
 
   if (action === "submit") {
-    // Get the popover section ID from state
-    const sectionId = store.getState().popover.sectionId;
+    const popoverState = store.getState().popover || {};
+    const sectionId = popoverState.sectionId;
+    const popoverMode = popoverState.mode;
     const sceneId = store.selectSceneId();
+    const nextSectionName = String(values?.name || "").trim();
 
     // Hide popover
     store.hidePopover();
 
-    if (sectionId && values.name && sceneId) {
+    if (popoverMode === "create-section" && nextSectionName && sceneId) {
+      await createSectionWithName(deps, nextSectionName);
+      return;
+    }
+
+    if (sectionId && nextSectionName && sceneId) {
       await projectService.renameSectionItem({
         sceneId,
         sectionId,
-        name: values.name,
+        name: nextSectionName,
       });
 
       // Update store with new repository state
@@ -1811,6 +2105,65 @@ export const handlePreviewClick = (deps) => {
   const lineId = store.selectSelectedLineId();
   store.showPreviewSceneId({ sceneId, sectionId, lineId });
   render();
+};
+
+export const handleDeleteLineShortcut = async (deps, payload) => {
+  const { store, subject, render, projectService, globalUI, appService } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  const detail = payload?._event?.detail || {};
+  const lineId =
+    typeof detail.lineId === "string" && detail.lineId
+      ? detail.lineId
+      : store.selectSelectedLineId();
+  const sectionId = store.selectSelectedSectionId();
+
+  if (!lineId || !sectionId) {
+    return;
+  }
+
+  const scene = store.selectScene();
+  const section = scene?.sections?.find((item) => item.id === sectionId);
+  const lines = Array.isArray(section?.lines) ? section.lines : [];
+  const currentIndex = lines.findIndex((line) => line.id === lineId);
+  if (currentIndex < 0) {
+    return;
+  }
+
+  const dialogOptions = {
+    title: "Delete Line",
+    message: "Are you sure you want to delete this line?",
+    confirmText: "Delete",
+  };
+
+  let confirmationResult = false;
+  if (typeof globalUI?.showConfirm === "function") {
+    confirmationResult = await globalUI.showConfirm(dialogOptions);
+  } else if (typeof appService?.showDialog === "function") {
+    confirmationResult = await appService.showDialog(dialogOptions);
+  }
+
+  const confirmed =
+    typeof confirmationResult === "boolean"
+      ? confirmationResult
+      : !!(confirmationResult?.confirmed ?? confirmationResult?.value);
+  if (!confirmed) {
+    return;
+  }
+
+  const nextSelectedLineId =
+    lines[currentIndex + 1]?.id || lines[currentIndex - 1]?.id;
+
+  await flushDialogueQueue(deps);
+  await projectService.deleteLineItem({ lineId });
+
+  syncStoreProjectState(store, projectService);
+  store.setSelectedLineId({ selectedLineId: nextSelectedLineId });
+
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
 export const handleLineDeleteActionItem = async (deps, payload) => {
