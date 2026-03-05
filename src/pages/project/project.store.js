@@ -30,17 +30,18 @@ export const createInitialState = () => ({
   dataLoaded: false,
 });
 
-export const setProject = ({ state }, { project } = {}) => {
-  state.project = project;
+export const setCurrentProject = ({ state }, { project } = {}) => {
+  state.project = {
+    name: project?.name || "",
+    description: project?.description || "",
+    iconFileId: project?.iconFileId || null,
+  };
+  state.projectSource = project?.source === "cloud" ? "cloud" : "local";
   state.dataLoaded = true;
 };
 
 export const setIconFileId = ({ state }, { iconFileId } = {}) => {
   state.project.iconFileId = iconFileId;
-};
-
-export const setProjectSource = ({ state }, { source } = {}) => {
-  state.projectSource = source === "cloud" ? "cloud" : "local";
 };
 
 export const selectViewData = ({ state }) => {

@@ -275,16 +275,14 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const files = await appService.pickFiles({
+  const file = await appService.pickFiles({
     accept: "video/*",
     multiple: false,
   });
 
-  if (files.length === 0) {
+  if (!file) {
     return; // User cancelled
   }
-
-  const file = files[0];
 
   const uploadedFiles = await projectService.uploadFiles([file]);
 

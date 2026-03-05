@@ -11,12 +11,11 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { projectService, store, render } = deps;
+  const { projectService, appService, store, render } = deps;
   await projectService.ensureRepository();
-  const state = projectService.getState();
-  const project = state.project;
+  const project = appService.getCurrentProjectEntry();
 
-  if (!project.iconFileId) {
+  if (!project?.iconFileId) {
     return;
   }
 
@@ -44,11 +43,10 @@ export const handleHeaderClick = (deps) => {
 };
 
 export const handleProjectImageUpdate = async (deps) => {
-  const { projectService, store, render } = deps;
-  const state = projectService.getState();
-  const project = state.project;
+  const { projectService, appService, store, render } = deps;
+  const project = appService.getCurrentProjectEntry();
 
-  if (!project.iconFileId) {
+  if (!project?.iconFileId) {
     return;
   }
 

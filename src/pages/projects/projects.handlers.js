@@ -1,25 +1,15 @@
 const getSessionAuthToken = (appService) => {
   const authSession = appService.getUserConfig("auth.session");
-  const authToken =
-    typeof authSession?.authToken === "string"
-      ? authSession.authToken.trim()
-      : "";
+  const authToken = authSession?.authToken?.trim?.() ?? "";
   return authToken;
 };
 
 const mapApiUserToAuthUser = (user) => {
-  const id = typeof user?.id === "string" ? user.id : "";
-  const email = typeof user?.email === "string" ? user.email : "";
-  const name =
-    typeof user?.creatorDisplayName === "string" ? user.creatorDisplayName : "";
-  const displayColor =
-    typeof user?.creatorDisplayColor === "string" && user.creatorDisplayColor
-      ? user.creatorDisplayColor
-      : "#E2E8F0";
-  const avatar =
-    typeof user?.creatorDisplayAvatar === "string"
-      ? user.creatorDisplayAvatar
-      : "";
+  const id = user?.id;
+  const email = user?.email;
+  const name = user?.creatorDisplayName;
+  const displayColor = user?.creatorDisplayColor ?? "#E2E8F0";
+  const avatar = user?.creatorDisplayAvatar;
 
   return {
     id,
@@ -32,13 +22,10 @@ const mapApiUserToAuthUser = (user) => {
 };
 
 const mapCloudProject = (project) => {
-  const projectId = typeof project?.id === "string" ? project.id : "";
-  const name = typeof project?.name === "string" ? project.name : "Untitled";
-  const role = typeof project?.role === "string" ? project.role : "member";
-  const data =
-    project?.data && typeof project.data === "object" ? project.data : {};
-  const description =
-    typeof data.description === "string" ? data.description : "";
+  const projectId = project?.id;
+  const name = project?.name ?? "Untitled";
+  const role = project?.role ?? "member";
+  const description = project?.data?.description ?? "";
   const memberCount = Array.isArray(project?.members)
     ? project.members.length
     : 0;
@@ -106,11 +93,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 const getProjectIdFromEvent = (event) => {
-  return (
-    event?.currentTarget?.getAttribute?.("data-project-id") ||
-    event?.currentTarget?.id?.replace("project", "") ||
-    ""
-  );
+  return event?.currentTarget?.dataset?.projectId ?? "";
 };
 
 const buildProjectPageUrl = (projectId) => {

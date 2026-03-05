@@ -2,6 +2,7 @@ import { readDir, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
+import { validateIconDimensions } from "../../utils/fileProcessors";
 
 const DEFAULT_USER_CONFIG = {
   groupImagesView: {
@@ -15,6 +16,53 @@ const DEFAULT_USER_CONFIG = {
 };
 
 const USER_CONFIG_KEY = "routevn-user-config";
+const FILE_VALIDATION_ERROR_TITLE = "Error";
+
+const runFileValidation = async ({ file, validation } = {}) => {
+  if (!file || !validation || typeof validation !== "object") {
+    return { isValid: true, message: null };
+  }
+
+  if (validation.type === "square") {
+    return validateIconDimensions(file);
+  }
+
+  return { isValid: true, message: null };
+};
+
+const validatePickedFiles = async ({ files, validations } = {}) => {
+  const fileList = Array.isArray(files) ? files : [];
+  const validationList = Array.isArray(validations) ? validations : [];
+
+  for (const file of fileList) {
+    for (const validation of validationList) {
+      const result = await runFileValidation({ file, validation });
+      if (!result?.isValid) {
+        return {
+          isValid: false,
+          message: result?.message || "Invalid file selected.",
+        };
+      }
+    }
+  }
+
+  return { isValid: true, message: null };
+};
+
+const attachUploadState = ({ file, uploadResult } = {}) => {
+  if (!file) {
+    return file;
+  }
+  const isSuccessful = !!uploadResult;
+  try {
+    file.uploadSucessful = isSuccessful;
+    file.uploadSuccessful = isSuccessful;
+    file.uploadResult = uploadResult || null;
+  } catch {
+    // Ignore if File object cannot be extended in this runtime.
+  }
+  return file;
+};
 
 /**
  * Check whether the currently focused element is an actionable element within the provided root.
@@ -79,10 +127,13 @@ export const createAppService = ({
     ? JSON.parse(storedConfig)
     : { ...DEFAULT_USER_CONFIG };
 
-  const loadProjectDataFromDatabase = async (projectPath) => {
-    const repository = await projectService.getRepositoryByPath(projectPath);
-    const { project } = repository.getState();
-    return project;
+  const deriveProjectNameFromPath = (projectPath) => {
+    if (typeof projectPath !== "string" || projectPath.length === 0) {
+      return "Untitled Project";
+    }
+    const normalizedPath = projectPath.replace(/[\\/]+$/, "");
+    const segments = normalizedPath.split(/[\\/]/).filter(Boolean);
+    return segments[segments.length - 1] || "Untitled Project";
   };
 
   const loadProjectIcon = async (projectPath, iconFileId) => {
@@ -96,6 +147,60 @@ export const createAppService = ({
       console.error("Failed to load project icon:", error);
       return null;
     }
+  };
+
+  const createEmptyProjectEntry = ({ id = "", source = "local" } = {}) => {
+    return {
+      id,
+      source,
+      name: "",
+      description: "",
+      iconFileId: null,
+    };
+  };
+
+  const normalizeLocalProjectEntry = (entry) => {
+    return {
+      ...entry,
+      source: "local",
+      name: entry?.name || "",
+      description: entry?.description || "",
+      iconFileId: entry?.iconFileId || null,
+    };
+  };
+
+  let currentProjectEntry = createEmptyProjectEntry();
+
+  const getCurrentProjectId = () => {
+    return router.getPayload()?.p ?? "";
+  };
+
+  const resolveCurrentProjectEntry = async () => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      return createEmptyProjectEntry();
+    }
+
+    try {
+      const entries = (await db.get("projectEntries")) || [];
+      if (!Array.isArray(entries)) {
+        return createEmptyProjectEntry({ id: projectId, source: "local" });
+      }
+
+      const localEntry = entries.find((entry) => entry?.id === projectId);
+      if (localEntry) {
+        return normalizeLocalProjectEntry(localEntry);
+      }
+
+      return createEmptyProjectEntry({ id: projectId, source: "cloud" });
+    } catch {
+      return createEmptyProjectEntry({ id: projectId, source: "local" });
+    }
+  };
+
+  const refreshCurrentProjectEntry = async () => {
+    currentProjectEntry = await resolveCurrentProjectEntry();
+    return currentProjectEntry;
   };
 
   return {
@@ -118,6 +223,9 @@ export const createAppService = ({
 
       entries.push(entry);
       await db.set("projectEntries", entries);
+      if (entry?.id === getCurrentProjectId()) {
+        currentProjectEntry = normalizeLocalProjectEntry(entry);
+      }
       return entries;
     },
 
@@ -125,6 +233,12 @@ export const createAppService = ({
       const entries = await this.getProjectEntries();
       const filtered = entries.filter((e) => e.id !== projectId);
       await db.set("projectEntries", filtered);
+      if (currentProjectEntry.id === projectId) {
+        const routeProjectId = getCurrentProjectId();
+        currentProjectEntry = routeProjectId
+          ? createEmptyProjectEntry({ id: routeProjectId, source: "cloud" })
+          : createEmptyProjectEntry();
+      }
       return filtered;
     },
 
@@ -134,6 +248,12 @@ export const createAppService = ({
       if (index !== -1) {
         entries[index] = { ...entries[index], ...updates };
         await db.set("projectEntries", entries);
+        if (
+          currentProjectEntry.id === projectId &&
+          currentProjectEntry.source === "local"
+        ) {
+          currentProjectEntry = normalizeLocalProjectEntry(entries[index]);
+        }
       }
       return entries;
     },
@@ -143,44 +263,25 @@ export const createAppService = ({
 
       const projectsWithFullData = await Promise.all(
         projectEntries.map(async (entry) => {
-          try {
-            const projectState = await loadProjectDataFromDatabase(
-              entry.projectPath,
-            );
+          const project = {
+            id: entry.id,
+            name: entry.name || "Untitled Project",
+            description: entry.description || "",
+            iconFileId: entry.iconFileId || null,
+            projectPath: entry.projectPath,
+            createdAt: entry.createdAt,
+            lastOpenedAt: entry.lastOpenedAt,
+          };
 
-            const project = {
-              id: entry.id,
-              name: projectState.name || "Untitled Project",
-              description: projectState.description || "",
-              iconFileId: projectState.iconFileId || null,
-              projectPath: entry.projectPath,
-              createdAt: entry.createdAt,
-              lastOpenedAt: entry.lastOpenedAt,
-            };
-
-            const iconUrl = await loadProjectIcon(
-              entry.projectPath,
-              project.iconFileId,
-            );
-            if (iconUrl) {
-              project.iconUrl = iconUrl;
-            }
-
-            return project;
-          } catch (error) {
-            console.error(
-              `Failed to load project data for ${entry.id}:`,
-              error,
-            );
-            return {
-              id: entry.id,
-              name: "Error loading project",
-              description: "Unable to read project data",
-              projectPath: entry.projectPath,
-              createdAt: entry.createdAt,
-              lastOpenedAt: entry.lastOpenedAt,
-            };
+          const iconUrl = await loadProjectIcon(
+            entry.projectPath,
+            project.iconFileId,
+          );
+          if (iconUrl) {
+            project.iconUrl = iconUrl;
           }
+
+          return project;
         }),
       );
 
@@ -216,18 +317,10 @@ export const createAppService = ({
     },
 
     async importProject(projectPath) {
-      const projectState = await loadProjectDataFromDatabase(projectPath);
-
-      if (!projectState.name || !projectState.description) {
-        throw new Error(
-          "Project database is missing required project information (name or description)",
-        );
-      }
-
       return {
-        name: projectState.name,
-        description: projectState.description,
-        iconFileId: projectState.iconFileId || null,
+        name: deriveProjectNameFromPath(projectPath),
+        description: "",
+        iconFileId: null,
       };
     },
 
@@ -244,6 +337,9 @@ export const createAppService = ({
       const projectEntry = {
         id: deviceProjectId,
         projectPath: folderPath,
+        name: projectData.name,
+        description: projectData.description,
+        iconFileId: projectData.iconFileId || null,
         createdAt: Date.now(),
         lastOpenedAt: null,
       };
@@ -252,9 +348,6 @@ export const createAppService = ({
 
       const fullProject = {
         ...projectEntry,
-        name: projectData.name,
-        description: projectData.description,
-        iconFileId: projectData.iconFileId,
       };
 
       if (projectData.iconFileId) {
@@ -283,13 +376,14 @@ export const createAppService = ({
       const projectEntry = {
         id: deviceProjectId,
         projectPath,
+        name,
+        description,
+        iconFileId: null,
         createdAt: Date.now(),
         lastOpenedAt: null,
       };
 
       await projectService.initializeProject({
-        name,
-        description,
         projectPath,
         template,
       });
@@ -298,9 +392,6 @@ export const createAppService = ({
 
       return {
         ...projectEntry,
-        name,
-        description,
-        iconFileId: null,
       };
     },
 
@@ -332,6 +423,18 @@ export const createAppService = ({
 
     getPayload() {
       return router.getPayload();
+    },
+
+    getCurrentProjectId() {
+      return getCurrentProjectId();
+    },
+
+    getCurrentProjectEntry() {
+      return currentProjectEntry;
+    },
+
+    async refreshCurrentProjectEntry() {
+      return refreshCurrentProjectEntry();
     },
 
     setPayload(payload) {
@@ -377,7 +480,12 @@ export const createAppService = ({
     // Browser-style file picker that returns File objects (for uploads)
     pickFiles(options = {}) {
       return new Promise((resolve) => {
-        const { accept = "*/*", multiple = false } = options;
+        const {
+          accept = "*/*",
+          multiple = false,
+          validations = [],
+          upload = false,
+        } = options;
 
         const input = document.createElement("input");
         input.type = "file";
@@ -385,15 +493,60 @@ export const createAppService = ({
         input.multiple = multiple;
         input.style.display = "none";
 
-        input.onchange = (event) => {
+        const cleanup = () => {
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+          }
+        };
+
+        input.onchange = async (event) => {
           const files = Array.from(event.target.files || []);
-          document.body.removeChild(input);
-          resolve(files);
+          const filesToValidate = multiple ? files : files.slice(0, 1);
+          const validationResult = await validatePickedFiles({
+            files: filesToValidate,
+            validations,
+          });
+
+          cleanup();
+
+          if (!validationResult.isValid) {
+            globalUI.showAlert({
+              message: validationResult.message,
+              title: FILE_VALIDATION_ERROR_TITLE,
+            });
+            resolve(multiple ? [] : null);
+            return;
+          }
+
+          if (!upload) {
+            resolve(multiple ? files : files[0] || null);
+            return;
+          }
+
+          const uploadResults =
+            await projectService.uploadFiles(filesToValidate);
+          if (multiple) {
+            const enrichedFiles = files.map((file) => {
+              const uploadResult =
+                uploadResults.find((item) => item.file === file) || null;
+              return attachUploadState({ file, uploadResult });
+            });
+            resolve(enrichedFiles);
+            return;
+          }
+
+          const file = files[0] || null;
+          const uploadResult =
+            uploadResults.find((item) => item.file === file) ||
+            uploadResults[0] ||
+            null;
+          resolve(attachUploadState({ file, uploadResult }));
+          return;
         };
 
         input.oncancel = () => {
-          document.body.removeChild(input);
-          resolve([]);
+          cleanup();
+          resolve(multiple ? [] : null);
         };
 
         document.body.appendChild(input);

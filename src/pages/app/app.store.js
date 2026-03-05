@@ -1,5 +1,6 @@
 export const createInitialState = () => ({
   currentRoute: "/projects",
+  isRepositoryLoading: false,
 });
 
 const SIDEBAR_WIDTH_PX = 64;
@@ -73,6 +74,10 @@ export const selectCurrentRoutePattern = ({ state }) => {
 
 export const setCurrentRoute = ({ state }, { route } = {}) => {
   state.currentRoute = route;
+};
+
+export const setRepositoryLoading = ({ state }, { isLoading } = {}) => {
+  state.isRepositoryLoading = !!isLoading;
 };
 
 export const selectViewData = ({ state }) => {

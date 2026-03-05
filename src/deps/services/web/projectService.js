@@ -128,7 +128,12 @@ const summarizeRepositoryEventsForSync = (events = []) => {
 
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
-export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
+export const createProjectService = ({
+  router,
+  filePicker,
+  onRemoteEvent,
+  db,
+}) => {
   const collabLog = (level, message, meta = {}) => {
     const fn =
       level === "error"
@@ -158,6 +163,24 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
     return p;
+  };
+
+  const getProjectMetadataFromEntries = async (projectId) => {
+    if (!db || typeof db.get !== "function") {
+      return {
+        name: "",
+        description: "",
+      };
+    }
+
+    const entries = (await db.get("projectEntries")) || [];
+    const entry = Array.isArray(entries)
+      ? entries.find((item) => item?.id === projectId)
+      : null;
+    return {
+      name: entry?.name || "",
+      description: entry?.description || "",
+    };
   };
 
   const ensureCommittedIdLoaded = async (projectId) => {
@@ -268,6 +291,7 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
       resolvedProjectId,
       partitions,
     );
+    const projectMetadata = await getProjectMetadataFromEntries(projectId);
     const clientStore = await createPersistedInMemoryClientStore({
       projectId,
       adapter,
@@ -280,8 +304,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     await ensureCommittedIdLoaded(projectId);
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
-      projectName: state.project?.name || "",
-      projectDescription: state.project?.description || "",
+      projectName: projectMetadata.name,
+      projectDescription: projectMetadata.description,
       initialState: projectRepositoryStateToDomainState({
         repositoryState: state,
         projectId: resolvedProjectId,
@@ -776,10 +800,9 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
         },
       );
     },
-    onSessionCleared: ({ projectId, reason }) => {
+    onSessionCleared: ({ projectId }) => {
       collabApplyQueueByProject.delete(projectId);
       collabAppliedCommittedIdsByProject.delete(projectId);
-      void reason;
     },
     onSessionTransportUpdated: () => {},
   });
@@ -801,10 +824,8 @@ export const createProjectService = ({ router, filePicker, onRemoteEvent }) => {
     ...serviceCore.typedCommandApi,
     addVersionToProject: serviceCore.addVersionToProject,
     deleteVersionFromProject: serviceCore.deleteVersionFromProject,
-    async initializeProject({ name, description, projectId, template }) {
+    async initializeProject({ projectId, template }) {
       return initializeWebProject({
-        name,
-        description,
         projectId,
         template,
       });

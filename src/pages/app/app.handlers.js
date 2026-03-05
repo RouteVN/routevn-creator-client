@@ -4,6 +4,8 @@ const GLOBAL_NAV_TIMEOUT_MS = 1500;
 
 let awaitingGlobalNavigationTarget = false;
 let globalNavigationTimerId = null;
+let routeTransitionToken = 0;
+let lastEnsuredProjectId = "";
 
 const isProjectRoute = (path) => {
   return path === "/project" || path.startsWith("/project/");
@@ -12,6 +14,17 @@ const isProjectRoute = (path) => {
 const getCurrentQueryPayload = (appService) => {
   const payload = appService.getPayload() || {};
   return Object.keys(payload).length > 0 ? payload : undefined;
+};
+
+const normalizePayload = (payload) => {
+  if (payload && typeof payload === "object") {
+    return payload;
+  }
+  return undefined;
+};
+
+const routeNeedsRepository = (path, projectId) => {
+  return isProjectRoute(path) && !!projectId;
 };
 
 const clearGlobalNavigationState = () => {
@@ -106,20 +119,73 @@ const mountSubscriptions = (deps) => {
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
+const runRouteTransition = async (
+  deps,
+  { path, payload, shouldUpdateHistory = false } = {},
+) => {
+  const { appService, projectService, store, render } = deps;
+  const transitionToken = ++routeTransitionToken;
+  const nextPayload = normalizePayload(payload);
+
+  if (shouldUpdateHistory) {
+    appService.redirect(path, nextPayload);
+  }
+
+  const currentProject = await appService.refreshCurrentProjectEntry();
+  const currentProjectId = currentProject.id || "";
+  const needsRepository = routeNeedsRepository(path, currentProjectId);
+  const isAlreadyEnsured = currentProjectId === lastEnsuredProjectId;
+
+  store.setCurrentRoute({ route: path });
+  store.setRepositoryLoading({
+    isLoading: needsRepository && !isAlreadyEnsured,
+  });
+  render();
+
+  if (!needsRepository || isAlreadyEnsured) {
+    if (transitionToken !== routeTransitionToken) {
+      return;
+    }
+    store.setRepositoryLoading({ isLoading: false });
+    render();
+    return;
+  }
+
+  try {
+    await projectService.ensureRepository();
+    if (transitionToken !== routeTransitionToken) {
+      return;
+    }
+    lastEnsuredProjectId = currentProjectId;
+    store.setRepositoryLoading({ isLoading: false });
+    render();
+  } catch (error) {
+    if (transitionToken !== routeTransitionToken) {
+      return;
+    }
+    store.setRepositoryLoading({ isLoading: false });
+    appService.showToast(error?.message || "Failed to load project.");
+    appService.redirect("/projects");
+    store.setCurrentRoute({ route: "/projects" });
+    render();
+  }
+};
+
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   const { appService } = deps;
   const currentPath = appService.getPath();
   clearGlobalNavigationState();
 
-  if (currentPath === "/") {
-    appService.navigate("/projects");
-    deps.store.setCurrentRoute({ route: "/projects" });
-  } else {
-    deps.store.setCurrentRoute({ route: currentPath });
-  }
+  const initialPath = currentPath === "/" ? "/projects" : currentPath;
+  runRouteTransition(deps, {
+    path: initialPath,
+    payload: appService.getPayload(),
+    shouldUpdateHistory: currentPath === "/",
+  }).catch((error) => {
+    console.error("Failed to resolve initial route:", error);
+  });
 
-  deps.render();
   return () => {
     clearGlobalNavigationState();
     cleanupSubscriptions();
@@ -134,17 +200,25 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleRedirect = (deps, payload) => {
-  const { appService } = deps;
-  deps.store.setCurrentRoute({ route: payload.path });
-  appService.redirect(payload.path, payload.payload);
-  deps.render();
+  runRouteTransition(deps, {
+    path: payload.path,
+    payload: payload.payload,
+    shouldUpdateHistory: true,
+  }).catch((error) => {
+    console.error("Failed to navigate:", error);
+  });
 };
 
 export const handleWindowPop = (deps) => {
   const { appService } = deps;
-  deps.store.setCurrentRoute({ route: appService.getPath() });
   clearGlobalNavigationState();
-  deps.render();
+  runRouteTransition(deps, {
+    path: appService.getPath(),
+    payload: appService.getPayload(),
+    shouldUpdateHistory: false,
+  }).catch((error) => {
+    console.error("Failed to apply browser navigation:", error);
+  });
 };
 
 export const handleGlobalKeyDown = (deps, payload) => {

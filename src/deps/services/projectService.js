@@ -73,6 +73,17 @@ export const createProjectService = ({ router, db, filePicker }) => {
     return p;
   };
 
+  const getProjectMetadataFromEntries = async (projectId) => {
+    const entries = (await db.get("projectEntries")) || [];
+    const entry = Array.isArray(entries)
+      ? entries.find((item) => item?.id === projectId)
+      : null;
+    return {
+      name: entry?.name || "",
+      description: entry?.description || "",
+    };
+  };
+
   const createSessionForProject = async ({
     projectId,
     token,
@@ -101,10 +112,11 @@ export const createProjectService = ({ router, db, filePicker }) => {
       resolvedProjectId,
       partitions,
     );
+    const projectMetadata = await getProjectMetadataFromEntries(projectId);
     const collabSession = createProjectCollabService({
       projectId: resolvedProjectId,
-      projectName: state.project?.name || "",
-      projectDescription: state.project?.description || "",
+      projectName: projectMetadata.name,
+      projectDescription: projectMetadata.description,
       initialState: projectRepositoryStateToDomainState({
         repositoryState: state,
         projectId: resolvedProjectId,
@@ -468,7 +480,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     deleteVersionFromProject: serviceCore.deleteVersionFromProject,
 
     // Initialize a new project at a given path
-    async initializeProject({ name, description, projectPath, template }) {
+    async initializeProject({ projectPath, template }) {
       if (!template) {
         throw new Error("Template is required for project initialization");
       }
@@ -485,7 +497,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
         ...initialProjectData,
         ...templateData,
         model_version: 2,
-        project: { name, description },
+        project: { id: projectPath },
       };
 
       const bootstrapDomainState = projectRepositoryStateToDomainState({

@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { validateIconDimensions } from "../../../utils/fileProcessors";
 
 const DEFAULT_USER_CONFIG = {
   groupImagesView: {
@@ -12,6 +13,53 @@ const DEFAULT_USER_CONFIG = {
 };
 
 const USER_CONFIG_KEY = "routevn-user-config";
+const FILE_VALIDATION_ERROR_TITLE = "Error";
+
+const runFileValidation = async ({ file, validation } = {}) => {
+  if (!file || !validation || typeof validation !== "object") {
+    return { isValid: true, message: null };
+  }
+
+  if (validation.type === "square") {
+    return validateIconDimensions(file);
+  }
+
+  return { isValid: true, message: null };
+};
+
+const validatePickedFiles = async ({ files, validations } = {}) => {
+  const fileList = Array.isArray(files) ? files : [];
+  const validationList = Array.isArray(validations) ? validations : [];
+
+  for (const file of fileList) {
+    for (const validation of validationList) {
+      const result = await runFileValidation({ file, validation });
+      if (!result?.isValid) {
+        return {
+          isValid: false,
+          message: result?.message || "Invalid file selected.",
+        };
+      }
+    }
+  }
+
+  return { isValid: true, message: null };
+};
+
+const attachUploadState = ({ file, uploadResult } = {}) => {
+  if (!file) {
+    return file;
+  }
+  const isSuccessful = !!uploadResult;
+  try {
+    file.uploadSucessful = isSuccessful;
+    file.uploadSuccessful = isSuccessful;
+    file.uploadResult = uploadResult || null;
+  } catch {
+    // Ignore if File object cannot be extended in this runtime.
+  }
+  return file;
+};
 
 const isInputFocused = (root = document) => {
   let active = root.activeElement;
@@ -68,16 +116,14 @@ export const createAppService = ({
     isUpdateAvailable: () => false,
   };
 
-  const loadProjectDataFromDatabase = async (projectId) => {
-    const repository = await projectService.getRepositoryById(projectId);
-    const { project } = repository.getState();
-    return project;
-  };
-
   const loadProjectIcon = async (projectId, iconFileId) => {
     if (!iconFileId) return null;
     try {
+      await projectService.getRepositoryById(projectId);
       const adapter = projectService.getAdapterById(projectId);
+      if (!adapter) {
+        return null;
+      }
       const blob = await adapter.getFile(iconFileId);
       if (blob) {
         return URL.createObjectURL(blob);
@@ -87,6 +133,60 @@ export const createAppService = ({
       console.error("Failed to load project icon:", error);
       return null;
     }
+  };
+
+  const createEmptyProjectEntry = ({ id = "", source = "local" } = {}) => {
+    return {
+      id,
+      source,
+      name: "",
+      description: "",
+      iconFileId: null,
+    };
+  };
+
+  const normalizeLocalProjectEntry = (entry) => {
+    return {
+      ...entry,
+      source: "local",
+      name: entry?.name || "",
+      description: entry?.description || "",
+      iconFileId: entry?.iconFileId || null,
+    };
+  };
+
+  let currentProjectEntry = createEmptyProjectEntry();
+
+  const getCurrentProjectId = () => {
+    return router.getPayload()?.p ?? "";
+  };
+
+  const resolveCurrentProjectEntry = async () => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      return createEmptyProjectEntry();
+    }
+
+    try {
+      const entries = (await db.get("projectEntries")) || [];
+      if (!Array.isArray(entries)) {
+        return createEmptyProjectEntry({ id: projectId, source: "local" });
+      }
+
+      const localEntry = entries.find((entry) => entry?.id === projectId);
+      if (localEntry) {
+        return normalizeLocalProjectEntry(localEntry);
+      }
+
+      return createEmptyProjectEntry({ id: projectId, source: "cloud" });
+    } catch {
+      return createEmptyProjectEntry({ id: projectId, source: "local" });
+    }
+  };
+
+  const refreshCurrentProjectEntry = async () => {
+    currentProjectEntry = await resolveCurrentProjectEntry();
+    return currentProjectEntry;
   };
 
   return {
@@ -102,12 +202,21 @@ export const createAppService = ({
       }
       entries.push(entry);
       await db.set("projectEntries", entries);
+      if (entry?.id === getCurrentProjectId()) {
+        currentProjectEntry = normalizeLocalProjectEntry(entry);
+      }
       return entries;
     },
     async removeProjectEntry(projectId) {
       const entries = await this.getProjectEntries();
       const filtered = entries.filter((e) => e.id !== projectId);
       await db.set("projectEntries", filtered);
+      if (currentProjectEntry.id === projectId) {
+        const routeProjectId = getCurrentProjectId();
+        currentProjectEntry = routeProjectId
+          ? createEmptyProjectEntry({ id: routeProjectId, source: "cloud" })
+          : createEmptyProjectEntry();
+      }
       return filtered;
     },
     async updateProjectEntry(projectId, updates) {
@@ -116,6 +225,12 @@ export const createAppService = ({
       if (index !== -1) {
         entries[index] = { ...entries[index], ...updates };
         await db.set("projectEntries", entries);
+        if (
+          currentProjectEntry.id === projectId &&
+          currentProjectEntry.source === "local"
+        ) {
+          currentProjectEntry = normalizeLocalProjectEntry(entries[index]);
+        }
       }
       return entries;
     },
@@ -123,34 +238,19 @@ export const createAppService = ({
       const projectEntries = await this.getProjectEntries();
       const projectsWithFullData = await Promise.all(
         projectEntries.map(async (entry) => {
-          try {
-            const projectState = await loadProjectDataFromDatabase(entry.id);
-            const project = {
-              id: entry.id,
-              name: projectState.name || "Untitled Project",
-              description: projectState.description || "",
-              iconFileId: projectState.iconFileId || null,
-              createdAt: entry.createdAt,
-              lastOpenedAt: entry.lastOpenedAt,
-            };
-            const iconUrl = await loadProjectIcon(entry.id, project.iconFileId);
-            if (iconUrl) {
-              project.iconUrl = iconUrl;
-            }
-            return project;
-          } catch (error) {
-            console.error(
-              `Failed to load project data for ${entry.id}:`,
-              error,
-            );
-            return {
-              id: entry.id,
-              name: "Error loading project",
-              description: "Unable to read project data",
-              createdAt: entry.createdAt,
-              lastOpenedAt: entry.lastOpenedAt,
-            };
+          const project = {
+            id: entry.id,
+            name: entry.name || "Untitled Project",
+            description: entry.description || "",
+            iconFileId: entry.iconFileId || null,
+            createdAt: entry.createdAt,
+            lastOpenedAt: entry.lastOpenedAt,
+          };
+          const iconUrl = await loadProjectIcon(entry.id, project.iconFileId);
+          if (iconUrl) {
+            project.iconUrl = iconUrl;
           }
+          return project;
         }),
       );
       return projectsWithFullData;
@@ -168,17 +268,18 @@ export const createAppService = ({
       const projectId = nanoid();
       const projectEntry = {
         id: projectId,
+        name,
+        description,
+        iconFileId: null,
         createdAt: Date.now(),
         lastOpenedAt: null,
       };
       await projectService.initializeProject({
-        name,
-        description,
         projectId,
         template,
       });
       await this.addProjectEntry(projectEntry);
-      return { ...projectEntry, name, description, iconFileId: null };
+      return { ...projectEntry };
     },
     async getSetting(key) {
       return await db.get(`setting:${key}`);
@@ -200,6 +301,15 @@ export const createAppService = ({
     },
     getPayload() {
       return router.getPayload();
+    },
+    getCurrentProjectId() {
+      return getCurrentProjectId();
+    },
+    getCurrentProjectEntry() {
+      return currentProjectEntry;
+    },
+    async refreshCurrentProjectEntry() {
+      return refreshCurrentProjectEntry();
     },
     setPayload(payload) {
       router.setPayload(payload);
@@ -230,7 +340,58 @@ export const createAppService = ({
       return filePicker.saveFilePicker(blob, filename);
     },
     async pickFiles(options = {}) {
-      return filePicker.openFilePicker({ ...options, multiple: true });
+      const multiple = options.multiple ?? false;
+      const upload = options.upload ?? false;
+      const validations = Array.isArray(options.validations)
+        ? options.validations
+        : [];
+      const selection = await filePicker.openFilePicker({
+        ...options,
+        multiple,
+      });
+
+      const files = Array.isArray(selection)
+        ? selection
+        : selection
+          ? [selection]
+          : [];
+      if (files.length === 0) {
+        return multiple ? [] : null;
+      }
+
+      const validationResult = await validatePickedFiles({
+        files: multiple ? files : files.slice(0, 1),
+        validations,
+      });
+      if (!validationResult.isValid) {
+        globalUI.showAlert({
+          message: validationResult.message,
+          title: FILE_VALIDATION_ERROR_TITLE,
+        });
+        return multiple ? [] : null;
+      }
+
+      if (!upload) {
+        return multiple ? files : files[0] || null;
+      }
+
+      const filesToUpload = multiple ? files : files.slice(0, 1);
+      const uploadResults = await projectService.uploadFiles(filesToUpload);
+
+      if (multiple) {
+        return files.map((file) => {
+          const uploadResult =
+            uploadResults.find((item) => item.file === file) || null;
+          return attachUploadState({ file, uploadResult });
+        });
+      }
+
+      const file = files[0] || null;
+      const uploadResult =
+        uploadResults.find((item) => item.file === file) ||
+        uploadResults[0] ||
+        null;
+      return attachUploadState({ file, uploadResult });
     },
     isInputFocused,
     getAppVersion() {
