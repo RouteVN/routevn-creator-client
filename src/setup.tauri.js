@@ -63,7 +63,7 @@ const appService = createAppService({
 });
 
 const apiService = createApiService({
-  baseUrl: "https://api.routevn.com/rpc",
+  baseUrl: "https://127.0.0.1:8787/rpc",
 });
 
 // Initialize async resources first

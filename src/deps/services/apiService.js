@@ -1,5 +1,5 @@
 const DEFAULT_LOCAL_API_BASE_URL = "http://127.0.0.1:8787";
-const DEFAULT_REMOTE_API_BASE_URL = "https://api.routevn.com";
+const DEFAULT_REMOTE_API_BASE_URL = "https://127.0.0.1:8787";
 const API_BASE_URL_STORAGE_KEY = "routevn.apiBaseUrl";
 
 const normalizeBaseUrl = (input) => {
