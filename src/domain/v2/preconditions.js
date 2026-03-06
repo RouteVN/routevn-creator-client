@@ -27,21 +27,77 @@ export const assertCommandPreconditions = (state, command) => {
       assert(!state.scenes[p.sceneId], "scene already exists", {
         sceneId: p.sceneId,
       });
+      if (p.parentId !== undefined && p.parentId !== null) {
+        assert(!!state.scenes[p.parentId], "parent scene not found", {
+          sceneId: p.sceneId,
+          parentId: p.parentId,
+        });
+        assert(
+          state.scenes[p.parentId].type === "folder",
+          "scene parent must be folder",
+          {
+            sceneId: p.sceneId,
+            parentId: p.parentId,
+            parentType: state.scenes[p.parentId].type,
+          },
+        );
+      }
       return;
     case COMMAND_TYPES.SCENE_UPDATE:
     case COMMAND_TYPES.SCENE_RENAME:
     case COMMAND_TYPES.SCENE_DELETE:
+      assert(!!state.scenes[p.sceneId], "scene not found", {
+        sceneId: p.sceneId,
+      });
+      return;
     case COMMAND_TYPES.SCENE_SET_INITIAL:
+      assert(!!state.scenes[p.sceneId], "scene not found", {
+        sceneId: p.sceneId,
+      });
+      assert(
+        state.scenes[p.sceneId].type !== "folder",
+        "initial scene cannot be a folder",
+        {
+          sceneId: p.sceneId,
+        },
+      );
+      return;
     case COMMAND_TYPES.SCENE_REORDER:
       assert(!!state.scenes[p.sceneId], "scene not found", {
         sceneId: p.sceneId,
       });
+      if (p.parentId !== undefined && p.parentId !== null) {
+        assert(p.parentId !== p.sceneId, "scene cannot parent itself", {
+          sceneId: p.sceneId,
+          parentId: p.parentId,
+        });
+        assert(!!state.scenes[p.parentId], "parent scene not found", {
+          sceneId: p.sceneId,
+          parentId: p.parentId,
+        });
+        assert(
+          state.scenes[p.parentId].type === "folder",
+          "scene parent must be folder",
+          {
+            sceneId: p.sceneId,
+            parentId: p.parentId,
+            parentType: state.scenes[p.parentId].type,
+          },
+        );
+      }
       return;
 
     case COMMAND_TYPES.SECTION_CREATE:
       assert(!!state.scenes[p.sceneId], "parent scene not found", {
         sceneId: p.sceneId,
       });
+      assert(
+        state.scenes[p.sceneId].type !== "folder",
+        "cannot create section inside folder scene",
+        {
+          sceneId: p.sceneId,
+        },
+      );
       assert(!state.sections[p.sectionId], "section already exists", {
         sectionId: p.sectionId,
       });

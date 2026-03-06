@@ -196,7 +196,9 @@ const buildSceneWhiteboardItems = ({
   const domainScenes = domainState?.scenes || {};
   const initialSceneId = domainState?.story?.initialSceneId || null;
   const repositoryScenesById = repositoryState?.scenes?.items || {};
-  const orderedSceneIds = getOrderedSceneIds(domainState);
+  const orderedSceneIds = getOrderedSceneIds(domainState).filter(
+    (sceneId) => domainScenes[sceneId]?.type !== "folder",
+  );
   const layouts = repositoryState?.layouts;
 
   return orderedSceneIds.map((sceneId) => {
@@ -231,6 +233,76 @@ const buildSceneWhiteboardItems = ({
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId || detail.id || detail.item?.id || "";
+};
+
+const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
+  const currentPayload = appService.getPayload();
+  const nextPayload = {
+    ...currentPayload,
+    sceneId,
+  };
+  if (sectionId) {
+    nextPayload.sectionId = sectionId;
+  }
+  appService.navigate("/project/scene-editor", nextPayload);
+};
+
+const getSceneItemById = ({ store, sceneId } = {}) => {
+  if (!sceneId) {
+    return undefined;
+  }
+
+  const scenesData = store.selectScenesData();
+  const sceneItem = scenesData?.items?.[sceneId];
+  if (sceneItem?.type !== "scene") {
+    return undefined;
+  }
+  return sceneItem;
+};
+
+const syncScenesState = ({ store, projectService } = {}) => {
+  const repositoryState = projectService.getState();
+  const domainState = projectService.getDomainState();
+  const sceneData = repositoryState?.scenes ?? { tree: [], items: {} };
+  const layoutsData = repositoryState?.layouts ?? { tree: [], items: {} };
+  const currentWhiteboardItems = store.selectWhiteboardItems() ?? [];
+  const sceneItems = buildSceneWhiteboardItems({
+    domainState,
+    repositoryState,
+    currentWhiteboardItems,
+  });
+
+  store.setItems({ scenesData: sceneData });
+  store.setLayouts({ layoutsData });
+  store.setWhiteboardItems({ items: sceneItems });
+};
+
+const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
+  const { store, refs, render } = deps;
+  if (!sceneId) {
+    return;
+  }
+
+  const sceneItem = getSceneItemById({ store, sceneId });
+  if (!sceneItem) {
+    return;
+  }
+
+  const editValues = {
+    name: sceneItem.name ?? "",
+    description: sceneItem.description ?? "",
+  };
+
+  store.setSelectedItemId({ itemId: sceneId });
+  const { fileexplorer, editForm } = refs;
+  fileexplorer.selectItem({ itemId: sceneId });
+  store.openEditDialog({
+    itemId: sceneId,
+    defaultValues: editValues,
+  });
+  render();
+  editForm.reset();
+  editForm.setValues({ values: editValues });
 };
 
 export const handleAfterMount = async (deps) => {
@@ -282,24 +354,7 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
-  const repositoryState = projectService.getState();
-  const domainState = projectService.getDomainState();
-  const { scenes, layouts } = repositoryState;
-  const sceneData = scenes || { tree: [], items: {} };
-
-  // Get current whiteboard items to preserve positions during updates
-  const currentWhiteboardItems = store.selectWhiteboardItems() || [];
-
-  const sceneItems = buildSceneWhiteboardItems({
-    domainState,
-    repositoryState,
-    currentWhiteboardItems,
-  });
-
-  // Update both scenes data and whiteboard items
-  store.setItems({ scenesData: sceneData });
-  store.setLayouts({ layoutsData: layouts });
-  store.setWhiteboardItems({ items: sceneItems });
+  syncScenesState({ store, projectService });
   render();
 };
 
@@ -388,12 +443,18 @@ export const handleWhiteboardItemDoubleClick = (deps, payload) => {
     return;
   }
 
-  // Redirect to scene editor with sceneId in payload
-  const currentPayload = appService.getPayload();
-  appService.navigate("/project/scene-editor", {
-    ...currentPayload,
-    sceneId: itemId,
-  });
+  navigateToSceneEditor({ appService, sceneId: itemId });
+};
+
+export const handleOpenSceneClick = (deps, payload) => {
+  const { appService } = deps;
+  const sceneId = payload?._event?.currentTarget?.dataset?.sceneId;
+
+  if (!sceneId) {
+    return;
+  }
+
+  navigateToSceneEditor({ appService, sceneId });
 };
 
 export const handleAddSceneClick = (deps) => {
@@ -401,20 +462,6 @@ export const handleAddSceneClick = (deps) => {
 
   // Start waiting for transform
   store.setWaitingForTransform({ isWaiting: true });
-  render();
-};
-
-export const handleFormChange = async (deps, payload) => {
-  const { projectService, render, store } = deps;
-  await projectService.updateSceneItem({
-    sceneId: store.selectSelectedItemId(),
-    patch: {
-      [payload._event.detail.name]: payload._event.detail.value,
-    },
-  });
-
-  const { scenes } = projectService.getState();
-  store.setItems({ scenesData: scenes });
   render();
 };
 
@@ -648,7 +695,7 @@ export const handleDropdownMenuClose = (deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
   const detail = payload._event.detail;
   const itemId = store.selectDropdownMenuItemId();
 
@@ -658,6 +705,22 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   // Hide dropdown
   store.hideDropdownMenu();
   render();
+
+  if (item.value === "open-item" && itemId) {
+    navigateToSceneEditor({ appService, sceneId: itemId });
+    return;
+  }
+
+  if (item.value === "preview-item" && itemId) {
+    store.showPreviewSceneId({ sceneId: itemId });
+    render();
+    return;
+  }
+
+  if (item.value === "edit-item" && itemId) {
+    openEditDialogWithValues({ deps, sceneId: itemId });
+    return;
+  }
 
   // Handle set initial scene action
   if (item.value === "set-initial" && itemId) {
@@ -710,6 +773,45 @@ export const handleClickShowScenePreview = (deps, payload) => {
   render();
 };
 
+export const handleEditDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditFormAction = async (deps, payload) => {
+  const { store, render, appService, projectService } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Scene name is required.", { title: "Warning" });
+    return;
+  }
+
+  const editItemId = store.getState().editItemId;
+  if (!editItemId) {
+    store.closeEditDialog();
+    render();
+    return;
+  }
+
+  await projectService.updateSceneItem({
+    sceneId: editItemId,
+    patch: {
+      name,
+      description: values?.description ?? "",
+    },
+  });
+
+  syncScenesState({ store, projectService });
+  store.closeEditDialog();
+  render();
+};
+
 export const handleSectionsListToggle = (deps) => {
   const { store, render } = deps;
   store.toggleSectionsList();
@@ -744,12 +846,7 @@ export const handleSectionsListItemClick = (deps, payload) => {
     return;
   }
 
-  const currentPayload = appService.getPayload();
-  appService.navigate("/project/scene-editor", {
-    ...currentPayload,
-    sceneId,
-    sectionId,
-  });
+  navigateToSceneEditor({ appService, sceneId, sectionId });
 };
 
 export const handleWhiteboardZoomChanged = (deps, payload) => {

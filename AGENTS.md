@@ -4,10 +4,10 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Commands
 
-Build the project:
+Build the web app:
 
 ```bash
-bun run build
+bun run build:web
 ```
 
 This command:
@@ -15,6 +15,11 @@ This command:
 1. Removes the existing `_site` directory
 2. Copies static files from `static/` to `_site/`
 3. Runs the Rettangoli CLI to build the frontend bundle to `_site/public/main.js`
+
+Notes:
+
+- `bun run build` may not exist in this repo; use `build:web` for validation.
+- Before pushing, run lint/format checks (the push hook also enforces this).
 
 ## Architecture
 
@@ -41,16 +46,40 @@ Read the links from the following files to familiarize with the code before star
 - Keep page/component handlers simple and orchestration-focused.
 - Push domain logic, validation, and async complexity into services.
 - Route-level async setup/loading should be handled in app-level orchestration, not repeated in page handlers.
+- Prefer single-purpose store actions (`setCurrentProject`, etc.) over multiple related setter calls.
+
+## Detail Panel Pattern
+
+- Use `rvn-detail-view` for read-only right panels (instead of read-only forms).
+- Build read-only data in store as `detailFields` (types: `text`, `description`, `slot`).
+- Prefer `text` over `text-inline` unless explicitly required.
+- Keep custom interactive UI (preview button, lists, actions) as slots inside `rvn-detail-view`.
+- Place panel title/header outside `rvn-detail-view` when needed.
+- For edit flows, use a dialog form opened from the detail panel (do not edit inline in read-only detail view).
+- When opening edit dialogs, prefill explicitly after render:
+  - `editForm.reset()`
+  - `editForm.setValues({ values })`
+
+## Handler Simplicity
+
+- Do not add dynamic form method wrappers (for example, `callFormMethod`) or retry loops to wait for refs.
+- Call known methods directly (`formRef.reset()`, `formRef.setValues(...)`).
+- Avoid defensive guard noise when data contract is already stable.
+- Define/deconstruct refs at the top of handlers for clarity.
+- Use one canonical event payload shape per handler; remove multi-fallback id extraction once event contract is known.
+- If two UIs emit similar events with different responsibilities (for example left explorer vs right list), use separate handlers to avoid recursion and side effects.
 
 ## UX/Error Handling
 
 - Do not silently swallow errors with `console.error` only for user actions; show user-facing feedback via `appService.showToast(...)`.
 - Prefer stable, explicit toast messages over raw `error?.message` text.
+- If async picker/upload fails, toast and return early. Do not continue with partial state.
 
 ## Event/Data Access
 
 - For project click handlers, read project ids from `event.currentTarget.dataset.projectId` only.
 - Do not parse ids from element `id` as a fallback.
+- In stable handlers, prefer direct destructuring from event detail (for example `const { itemId } = payload._event.detail`).
 
 ## File Picker Contract
 
@@ -60,3 +89,24 @@ Read the links from the following files to familiarize with the code before star
 - Use picker-level validations: `validations: [{ type: "square" }]` instead of duplicating inline handler validation.
 - Use picker-level upload when needed: `upload: true`.
 - When `upload: true`, read upload metadata from the returned file object (`uploadSucessful` and `uploadResult`) instead of calling upload service directly in handlers.
+
+## Selection Sync Rules
+
+- When selecting an item in custom center/right views, sync left explorer selection with `fileExplorer.selectItem({ itemId })`.
+- Folder selections should clear item selection with `undefined`, not `null`.
+- Hover styling must not override selected styling.
+
+## Resource Target Support
+
+- When enabling a `repositoryTarget` in file explorer, ensure all relevant actions support it:
+  - create folder
+  - rename
+  - delete
+  - duplicate
+  - move/reorder (`handleTargetChanged`)
+- `variables` supports folder tree operations, including drag/drop move.
+
+## Project Data Ownership
+
+- Project `name`, `description`, and `iconFileId` are owned by local project DB entries (app-level project entries), not repository/insieme state.
+- Prefer synchronous project context reads via app service cache (`getCurrentProjectEntry`, current project id helpers) in page handlers.

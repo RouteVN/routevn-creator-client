@@ -48,32 +48,25 @@ export const selectViewData = ({ state, constants }) => {
   const detailFields = [
     {
       type: "slot",
-      slot: "project-icon",
+      slot: "project-title",
       label: "",
     },
     {
-      type: "text",
-      label: "Name",
-      value: state.project.name ?? "",
-    },
-    {
-      type: "text",
-      label: "Source",
-      value: state.project.source ?? "local",
-    },
-    {
-      type: "description",
-      value: state.project.description ?? "",
+      type: "slot",
+      slot: "project-description",
+      label: "",
     },
     {
       type: "slot",
-      slot: "edit-action",
+      slot: "project-icon",
       label: "",
     },
   ];
 
   return {
     detailFields,
+    projectName: state.project.name ?? "",
+    projectDescription: state.project.description ?? "",
     projectIconFileId: state.project.iconFileId,
     isEditDialogOpen: state.isEditDialogOpen,
     editDefaultValues: state.editDefaultValues,

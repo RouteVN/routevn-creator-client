@@ -27,14 +27,6 @@ refs:
         handler: handleWhiteboardZoomChanged
       pan-changed:
         handler: handleWhiteboardPanChanged
-  addSceneBtn:
-    eventListeners:
-      click:
-        handler: handleAddSceneClick
-  detailForm:
-    eventListeners:
-      form-change:
-        handler: handleFormChange
   sceneForm:
     eventListeners:
       form-action:
@@ -43,6 +35,14 @@ refs:
     eventListeners:
       close:
         handler: handleSceneFormClose
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
   dropdownMenu:
     eventListeners:
       close:
@@ -53,6 +53,10 @@ refs:
     eventListeners:
       click:
         handler: handleClickShowScenePreview
+  openSceneButton:
+    eventListeners:
+      click:
+        handler: handleOpenSceneClick
   sectionsListToggle:
     eventListeners:
       click:
@@ -71,8 +75,12 @@ refs:
     eventListeners:
       close:
         action: hidePreviewScene
+  mapAddHintClose:
+    eventListeners:
+      click:
+        action: hideMapAddHint
 template:
-  - rtgl-view d=h w=f h=f:
+  - rtgl-view d=h w=f h=f pos=rel:
       - rtgl-view d=h h=f w=f:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
@@ -83,31 +91,41 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues:
-                          - rtgl-button#previewButton slot="preview" data-scene-id="${selectedItemId}": Preview
-                          - rtgl-view slot="sections-list" d=v w=f g=sm:
-                              - rtgl-view#sectionsListToggle d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:
-                                  - rtgl-text s=sm w=f: Sections List
-                              - $if sectionsListOpen:
-                                  - $if selectedSceneSections.length == 0:
-                                      - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:
-                                          - rtgl-text s=sm c=mu-fg: No sections
-                                    $else:
-                                      - rtgl-view d=v w=f:
-                                          - $for section, sectionIndex in selectedSceneSections:
-                                              - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:
-                                                  - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0"': ${section.name}
-                                                  - $if section.isDeadEnd:
-                                                      - rtgl-svg#sectionsListWarning${sectionIndex} svg=warning-dead-end wh=16: null
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=fg: ${selectedSceneName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                              - rtgl-button#openSceneButton slot="open-action" data-scene-id="${selectedItemId}": Open
+                              - rtgl-button#previewButton slot="preview" data-scene-id="${selectedItemId}": Preview
+                              - rtgl-view slot="sections-list" d=v w=f g=sm:
+                                  - rtgl-view#sectionsListToggle d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:
+                                      - rtgl-text s=sm w=f: Sections List
+                                  - $if sectionsListOpen:
+                                      - $if selectedSceneSections.length == 0:
+                                          - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:
+                                              - rtgl-text s=sm c=mu-fg: No sections
+                                        $else:
+                                          - rtgl-view d=v w=f:
+                                              - $for section, sectionIndex in selectedSceneSections:
+                                                  - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:
+                                                      - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0"': ${section.name}
+                                                      - $if section.isDeadEnd:
+                                                          - rtgl-svg#sectionsListWarning${sectionIndex} svg=warning-dead-end wh=16: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="left: 50%; transform: translateX(-50%); bottom: 20px;"':
-          - rtgl-view d=h av=c:
-              - rtgl-button#addSceneBtn pre="plus" s=md v=${addSceneButtonVariant}: Add Scene
       - rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
           - rtgl-form#sceneForm key=${showSceneForm} slot=content :form=sceneFormFields w=320: null
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f: null
       - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
+      - $if showMapAddHint:
+          - 'rtgl-view pos=abs z=150 style="left: 50%; bottom: 24px; transform: translateX(-50%);"':
+              - rtgl-view d=h av=c g=sm bgc=mu bc=bo bw=xs br=sm pv=md ph=md:
+                  - rtgl-text c=fg s=sm mh=xl: Right click in the map to add a scene
+                  - rtgl-view#mapAddHintClose d=h av=c ah=c w=20 h=20 cur=pointer:
+                      - rtgl-svg svg=x wh=14 c=mu-fg: null
   - $if previewVisible:
       - rvn-vn-preview#vnPreview scene-id="${previewSceneId}": null

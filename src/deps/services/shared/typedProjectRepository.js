@@ -547,6 +547,7 @@ const resolveSectionLineOrder = (domainState, sectionId) => {
 
 const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
   const repositoryScenesItems = repositoryState?.scenes?.items || {};
+  const repositoryScenesTree = repositoryState?.scenes?.tree || [];
   const sceneOrder = resolveStorySceneOrder(domainState);
   const scenesItems = {};
 
@@ -554,6 +555,24 @@ const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
     const scene = domainState?.scenes?.[sceneId];
     if (!scene) continue;
     const existingScene = repositoryScenesItems?.[sceneId] || {};
+    const sceneType = scene.type === "folder" ? "folder" : "scene";
+
+    if (sceneType === "folder") {
+      scenesItems[sceneId] = {
+        ...structuredClone(existingScene),
+        ...structuredClone(scene),
+        id: sceneId,
+        type: "folder",
+        name: scene.name || `Folder ${sceneId}`,
+        parentId: typeof scene.parentId === "string" ? scene.parentId : null,
+        sections: {
+          items: {},
+          tree: [],
+        },
+      };
+      continue;
+    }
+
     const existingSections = existingScene?.sections || {};
     const existingSectionItems = existingSections?.items || {};
     const sectionOrder = resolveSceneSectionOrder(domainState, sceneId);
@@ -596,6 +615,7 @@ const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
       ...structuredClone(scene),
       id: sceneId,
       type: "scene",
+      parentId: typeof scene.parentId === "string" ? scene.parentId : null,
       sections: {
         items: sectionItems,
         tree: buildTreeNodesFromOrderedIds(sectionOrder),
@@ -603,14 +623,27 @@ const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
     };
   }
 
+  const sceneTree = buildHierarchyOrderFromFlatCollection({
+    items: scenesItems,
+    tree: repositoryScenesTree,
+  });
+  const initialSceneId = domainState?.story?.initialSceneId;
+  const firstPlayableSceneId = sceneOrder.find(
+    (sceneId) => scenesItems[sceneId]?.type !== "folder",
+  );
+  const resolvedInitialSceneId =
+    initialSceneId && scenesItems[initialSceneId]?.type !== "folder"
+      ? initialSceneId
+      : firstPlayableSceneId || null;
+
   return {
     story: {
       ...repositoryState?.story,
-      initialSceneId: domainState?.story?.initialSceneId || null,
+      initialSceneId: resolvedInitialSceneId,
     },
     scenes: {
       items: scenesItems,
-      tree: buildTreeNodesFromOrderedIds(sceneOrder),
+      tree: sceneTree,
     },
   };
 };

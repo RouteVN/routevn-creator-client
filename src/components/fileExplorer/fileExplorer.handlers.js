@@ -246,6 +246,16 @@ export const handleFileAction = async (deps, payload) => {
         parentId: null,
         position: "last",
       });
+    } else if (isScenesTarget(repositoryTarget)) {
+      await projectService.createSceneItem({
+        sceneId: nanoid(),
+        name: "New Folder",
+        parentId: null,
+        position: "last",
+        data: {
+          type: "folder",
+        },
+      });
     } else if (isLayoutsTarget(repositoryTarget)) {
       await projectService.createLayoutItem({
         layoutId: nanoid(),
@@ -378,10 +388,7 @@ export const handleFileAction = async (deps, payload) => {
           layoutId: itemId,
           name: detail.newName,
         });
-      } else if (
-        isScenesTarget(repositoryTarget) &&
-        currentItem?.type === "scene"
-      ) {
+      } else if (isScenesTarget(repositoryTarget) && currentItem) {
         await projectService.renameSceneItem({
           sceneId: itemId,
           name: detail.newName,
@@ -495,10 +502,7 @@ export const handleFileAction = async (deps, payload) => {
         await projectService.deleteLayoutItem({
           layoutId: itemId,
         });
-      } else if (
-        isScenesTarget(repositoryTarget) &&
-        currentItem.type === "scene"
-      ) {
+      } else if (isScenesTarget(repositoryTarget) && currentItem) {
         await projectService.deleteSceneItem({
           sceneId: itemId,
         });
@@ -541,6 +545,16 @@ export const handleFileAction = async (deps, payload) => {
       } else if (isLayoutsTarget(repositoryTarget)) {
         await projectService.createLayoutItem({
           layoutId: nanoid(),
+          name: "New Folder",
+          parentId: itemId,
+          position: "last",
+          data: {
+            type: "folder",
+          },
+        });
+      } else if (isScenesTarget(repositoryTarget) && isCurrentFolder) {
+        await projectService.createSceneItem({
+          sceneId: nanoid(),
           name: "New Folder",
           parentId: itemId,
           position: "last",
@@ -815,7 +829,7 @@ export const handleTargetChanged = async (deps, payload) => {
       parentId: parent,
       position: repositoryPosition,
     });
-  } else if (isScenesTarget(repositoryTarget) && source.type === "scene") {
+  } else if (isScenesTarget(repositoryTarget)) {
     await projectService.reorderSceneItem({
       sceneId: source.id,
       parentId: parent,

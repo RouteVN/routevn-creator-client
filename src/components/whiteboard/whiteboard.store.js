@@ -41,6 +41,7 @@ const getNextZoomLevel = (currentZoom, direction) => {
 export const createInitialState = () => ({
   isDragging: false,
   dragItemId: null,
+  hoveredItemId: undefined,
   // Pan state
   isPanMode: false,
   isPanning: false,
@@ -145,6 +146,10 @@ export const selectIsDragging = ({ state }) => {
 
 export const selectDragItemId = ({ state }) => state.dragItemId;
 
+export const setHoveredItemId = ({ state }, { itemId } = {}) => {
+  state.hoveredItemId = itemId;
+};
+
 export const selectIsPanMode = ({ state }) => state.isPanMode;
 export const selectIsPanning = ({ state }) => state.isPanning;
 export const selectPan = ({ state }) => ({
@@ -224,7 +229,16 @@ const generateMinimapData = (items, pan) => {
 export const selectViewData = ({ state, props }) => {
   const items = (props.items || []).map((item) => ({
     ...item,
-    borderColor: props.selectedItemId === item.id ? "fg" : "ac",
+    borderColor:
+      props.selectedItemId === item.id || state.hoveredItemId === item.id
+        ? "fg"
+        : "ac",
+    borderWidth:
+      props.selectedItemId === item.id
+        ? "sm"
+        : state.hoveredItemId === item.id
+          ? "xs"
+          : "sm",
   }));
 
   // Use framework cursor values: grab, grabbing, or undefined (for default)
@@ -262,6 +276,13 @@ export const selectViewData = ({ state, props }) => {
           const arrowData = drawArrowBetweenScenes(sourceItem, targetItem);
           // Add unique identifier for DOM reference
           arrowData.id = `arrow-${sourceItem.id}-to-${targetSceneId}`;
+          const selectedItemId = props.selectedItemId;
+          const isConnectedToSelected =
+            selectedItemId &&
+            (sourceItem.id === selectedItemId ||
+              targetSceneId === selectedItemId);
+          arrowData.strokeColor = "var(--foreground)";
+          arrowData.strokeWidth = isConnectedToSelected ? 2.25 : 1.5;
           arrowsList.push(arrowData);
         }
       });

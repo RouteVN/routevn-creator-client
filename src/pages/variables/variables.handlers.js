@@ -42,6 +42,25 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = (deps, payload) => {
+  const { store, render, refs } = deps;
+  const detail = payload?._event?.detail ?? {};
+  const itemId = resolveDetailItemId(detail);
+  const isFolder =
+    detail.isFolder === true ||
+    detail.item?.type === "folder" ||
+    detail.itemType === "folder";
+
+  if (isFolder || !itemId) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  const { groupview } = refs;
+  groupview.openEditDialog({ itemId });
+  render();
+};
+
 export const handleVariableItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
   const detail = payload?._event?.detail ?? {};

@@ -333,11 +333,34 @@ export const projectRepositoryStateToDomainState = ({
 
   const sceneItems = repositoryState?.scenes?.items || {};
   const sceneHierarchy = getHierarchyNodes(repositoryState?.scenes);
-  const { orderedIds: sceneHierarchyOrder } =
+  const { parentById: sceneParentById, orderedIds: sceneHierarchyOrder } =
     buildHierarchyParentMap(sceneHierarchy);
 
   for (const [sceneId, scene] of Object.entries(sceneItems)) {
-    if (!scene || scene.type !== "scene") continue;
+    if (!scene || typeof scene !== "object") continue;
+    const sceneType = scene.type === "folder" ? "folder" : "scene";
+    const parentId = sceneParentById.has(sceneId)
+      ? sceneParentById.get(sceneId)
+      : (scene?.parentId ?? null);
+
+    if (sceneType === "folder") {
+      state.scenes[sceneId] = {
+        id: sceneId,
+        type: "folder",
+        name: scene.name || `Folder ${sceneId}`,
+        sectionIds: [],
+        initialSectionId: null,
+        parentId,
+        position: cloneOr(scene.position, { x: 200, y: 200 }),
+        createdAt: toFiniteTimestamp(scene.createdAt, now),
+        updatedAt: toFiniteTimestamp(
+          scene.updatedAt,
+          toFiniteTimestamp(scene.createdAt, now),
+        ),
+      };
+      continue;
+    }
+
     const sections = scene.sections || { items: {}, tree: [] };
     const sectionItems = sections.items || {};
     const sectionHierarchy = getHierarchyNodes(sections);
@@ -359,9 +382,11 @@ export const projectRepositoryStateToDomainState = ({
 
     state.scenes[sceneId] = {
       id: sceneId,
+      type: "scene",
       name: scene.name || `Scene ${sceneId}`,
       sectionIds,
       initialSectionId,
+      parentId,
       position: cloneOr(scene.position, { x: 200, y: 200 }),
       createdAt: toFiniteTimestamp(scene.createdAt, now),
       updatedAt: toFiniteTimestamp(
@@ -421,9 +446,14 @@ export const projectRepositoryStateToDomainState = ({
   state.story.sceneOrder = sceneOrder;
 
   const initialSceneId = repositoryState?.story?.initialSceneId;
+  const firstPlayableSceneId = sceneOrder.find(
+    (sceneId) => state.scenes[sceneId]?.type !== "folder",
+  );
   state.story.initialSceneId =
-    (initialSceneId && state.scenes[initialSceneId] && initialSceneId) ||
-    sceneOrder[0] ||
+    (initialSceneId &&
+      state.scenes[initialSceneId]?.type !== "folder" &&
+      initialSceneId) ||
+    firstPlayableSceneId ||
     null;
 
   state.resources = projectRepositoryResources({ repositoryState });
