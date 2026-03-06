@@ -2,9 +2,9 @@ import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const getCharacterItemById = ({ store, itemId } = {}) => {
-  if (!itemId) return null;
+  if (!itemId) return undefined;
   const item = store.getState().charactersData?.items?.[itemId];
-  if (!item || item.type !== "character") return null;
+  if (!item || item.type !== "character") return undefined;
   return item;
 };
 
@@ -12,129 +12,25 @@ const resolveDetailItemId = (detail = {}) => {
   return detail.itemId || detail.id || detail.item?.id || "";
 };
 
-const callFormMethod = ({ formRef, methodName, payload } = {}) => {
-  if (!formRef || !methodName) return false;
-
-  if (typeof formRef[methodName] === "function") {
-    formRef[methodName](payload);
-    return true;
-  }
-
-  if (typeof formRef.transformedMethods?.[methodName] === "function") {
-    formRef.transformedMethods[methodName](payload);
-    return true;
-  }
-
-  return false;
-};
-
-const syncEditFormValues = ({ deps, values, attempt = 0 } = {}) => {
-  const formRef = deps?.refs?.editForm;
-
-  if (!formRef) {
-    if (attempt < 6) {
-      setTimeout(() => {
-        syncEditFormValues({ deps, values, attempt: attempt + 1 });
-      }, 0);
-    }
-    return;
-  }
-
-  callFormMethod({ formRef, methodName: "reset" });
-
-  const didSet = callFormMethod({
-    formRef,
-    methodName: "setValues",
-    payload: { values },
-  });
-
-  if (!didSet && attempt < 6) {
-    setTimeout(() => {
-      syncEditFormValues({ deps, values, attempt: attempt + 1 });
-    }, 0);
-  }
-};
-
-const createDetailFormValues = (item) => {
-  if (!item) {
-    return {
-      name: "",
-      description: "",
-      shortcut: "",
-    };
-  }
-
-  return {
-    name: item.name || "",
-    description: item.description || "No description provided",
-    shortcut: item.shortcut || "",
-  };
-};
-
-const syncDetailFormValues = ({
-  deps,
-  values,
-  selectedItemId,
-  attempt = 0,
-} = {}) => {
-  const formRef = deps?.refs?.detailForm;
-  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
-
-  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
-    return;
-  }
-
-  if (!formRef) {
-    if (attempt < 6) {
-      setTimeout(() => {
-        syncDetailFormValues({
-          deps,
-          values,
-          selectedItemId,
-          attempt: attempt + 1,
-        });
-      }, 0);
-    }
-    return;
-  }
-
-  callFormMethod({ formRef, methodName: "reset" });
-
-  const didSet = callFormMethod({
-    formRef,
-    methodName: "setValues",
-    payload: { values },
-  });
-
-  if (!didSet && attempt < 6) {
-    setTimeout(() => {
-      syncDetailFormValues({
-        deps,
-        values,
-        selectedItemId,
-        attempt: attempt + 1,
-      });
-    }, 0);
-  }
-};
-
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) return;
 
-  const { store, render } = deps;
+  const { store, render, refs } = deps;
+  const { editForm, fileExplorer } = refs;
   const characterItem = getCharacterItemById({ store, itemId });
   if (!characterItem) return;
 
-  store.setSelectedItemId({ itemId: itemId });
-  store.openEditDialog({ itemId: itemId });
+  store.setSelectedItemId({ itemId });
+  fileExplorer.selectItem({ itemId });
+  store.openEditDialog({ itemId });
   render();
 
-  syncEditFormValues({
-    deps,
+  editForm.reset();
+  editForm.setValues({
     values: {
-      name: characterItem.name || "",
-      description: characterItem.description || "",
-      shortcut: characterItem.shortcut || "",
+      name: characterItem.name ?? "",
+      description: characterItem.description ?? "",
+      shortcut: characterItem.shortcut ?? "",
     },
   });
 };
@@ -151,18 +47,7 @@ export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { characters } = projectService.getState();
   store.setItems({ charactersData: characters });
-  const selectedItemId = store.selectSelectedItemId();
-  const selectedItem = store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
   render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId,
-    });
-  }
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
@@ -183,17 +68,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: id });
-  const selectedItem = detail.item || store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
   render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId: id,
-    });
-  }
 };
 
 export const handleCharacterItemClick = async (deps, payload) => {
@@ -208,17 +83,7 @@ export const handleCharacterItemClick = async (deps, payload) => {
 
   const { fileExplorer } = refs;
   fileExplorer.selectItem({ itemId });
-  const selectedItem = detail.item || store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
   render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId: itemId,
-    });
-  }
 };
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {
@@ -357,49 +222,12 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       // Update the store with the new repository state and get new file URL
       const { characters } = projectService.getState();
       store.setItems({ charactersData: characters });
-      const selectedItemId = store.selectSelectedItemId();
-      const updatedSelectedItem = store.selectSelectedItem();
-      const detailValues = createDetailFormValues(updatedSelectedItem);
       render();
-
-      if (updatedSelectedItem) {
-        syncDetailFormValues({
-          deps,
-          values: detailValues,
-          selectedItemId,
-        });
-      }
     } else {
       console.error("Avatar upload failed:", file.name);
     }
   } catch (error) {
     console.error("Avatar upload error:", file.name, error);
-  }
-};
-
-export const handleFormChange = async (deps, payload) => {
-  const { projectService, render, store } = deps;
-  const selectedItemId = store.selectSelectedItemId();
-  await projectService.updateResourceItem({
-    resourceType: "characters",
-    resourceId: selectedItemId,
-    patch: {
-      [payload._event.detail.name]: payload._event.detail.value,
-    },
-  });
-
-  const { characters } = projectService.getState();
-  store.setItems({ charactersData: characters });
-  const selectedItem = store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
-  render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId,
-    });
   }
 };
 
@@ -591,18 +419,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
     const { characters } = projectService.getState();
     store.setItems({ charactersData: characters });
-    const selectedItemId = store.selectSelectedItemId();
-    const selectedItem = store.selectSelectedItem();
-    const detailValues = createDetailFormValues(selectedItem);
     store.closeEditDialog();
     render();
-
-    if (selectedItem) {
-      syncDetailFormValues({
-        deps,
-        values: detailValues,
-        selectedItemId,
-      });
-    }
   }
 };

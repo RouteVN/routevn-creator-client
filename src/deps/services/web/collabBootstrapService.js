@@ -7,7 +7,7 @@ const COLLAB_PAGE_COMPONENT_TAGS = [
   "rvn-images",
   "rvn-characters",
   "rvn-character-sprites",
-  "rvn-sound",
+  "rvn-sounds",
   "rvn-tweens",
   "rvn-transforms",
   "rvn-videos",

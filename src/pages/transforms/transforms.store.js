@@ -1,48 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 
-const form = {
-  fields: [
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "x",
-      type: "read-only-text",
-      label: "Position X",
-      content: "${x}",
-    },
-    {
-      name: "y",
-      type: "read-only-text",
-      label: "Position Y",
-      content: "${y}",
-    },
-    {
-      name: "scaleX",
-      type: "read-only-text",
-      label: "Scale X",
-      content: "${scaleX}",
-    },
-    {
-      name: "scaleY",
-      type: "read-only-text",
-      label: "Scale Y",
-      content: "${scaleY}",
-    },
-    {
-      name: "anchorX",
-      type: "read-only-text",
-      label: "Anchor X",
-      content: "${anchorX}",
-    },
-    {
-      name: "anchorY",
-      type: "read-only-text",
-      label: "Anchor Y",
-      content: "${anchorY}",
-    },
-    //{ name: "rotation", type: "read-only-text", description: "Rotation" },
-  ],
-};
-
 export const createInitialState = () => ({
   transformData: { tree: [], items: {} },
   selectedItemId: null,
@@ -61,14 +18,6 @@ export const createInitialState = () => ({
   targetGroupId: null,
   editMode: false,
   editItemId: null,
-  context: {
-    x: "",
-    y: "",
-    scaleX: "",
-    scaleY: "",
-    anchorX: "",
-    anchorY: "",
-  },
   defaultValues: {
     name: "",
     x: "0",
@@ -216,9 +165,9 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
 export const openTransformFormDialog = ({ state }, options = {}) => {
   const {
     editMode = false,
-    itemId = null,
-    itemData = null,
-    targetGroupId = null,
+    itemId = undefined,
+    itemData = undefined,
+    targetGroupId = undefined,
   } = options;
 
   // Set edit mode and update form accordingly
@@ -238,11 +187,11 @@ export const openTransformFormDialog = ({ state }, options = {}) => {
   // Set default values based on item data
   if (itemData) {
     state.defaultValues = {
-      name: itemData.name || "",
-      x: String(itemData.x || "0"),
-      y: String(itemData.y || "0"),
-      scaleX: String(itemData.scaleX || "1"),
-      scaleY: String(itemData.scaleY || "1"),
+      name: itemData.name ?? "",
+      x: String(itemData.x ?? "0"),
+      y: String(itemData.y ?? "0"),
+      scaleX: String(itemData.scaleX ?? "1"),
+      scaleY: String(itemData.scaleY ?? "1"),
       anchor: { anchorX: itemData.anchorX, anchorY: itemData.anchorY },
       //rotation: String(itemData.rotation || "0"),
     };
@@ -303,6 +252,15 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
+export const selectSelectedItem = ({ state }) => {
+  if (!state.selectedItemId) {
+    return undefined;
+  }
+
+  const flatItems = toFlatItems(state.transformData);
+  return flatItems.find((item) => item.id === state.selectedItemId);
+};
+
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.transformData);
   const rawFlatGroups = toFlatGroups(state.transformData);
@@ -310,61 +268,61 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
-  let defaultValues = {};
-  let formContext = {
-    ...state.context,
-    x: "",
-    y: "",
-    scaleX: "",
-    scaleY: "",
-    anchorX: "",
-    anchorY: "",
-  };
-  if (selectedItem) {
-    const x = String(selectedItem.x ?? 0);
-    const y = String(selectedItem.y ?? 0);
-    const scaleX = String(selectedItem.scaleX ?? 1);
-    const scaleY = String(selectedItem.scaleY ?? 1);
-    const anchorX = String(selectedItem.anchorX ?? 0);
-    const anchorY = String(selectedItem.anchorY ?? 0);
-
-    defaultValues = {
-      name: selectedItem.name,
-      x,
-      y,
-      scaleX,
-      scaleY,
-      anchorX,
-      anchorY,
-      //rotation: selectedItem.rotation || "",
-    };
-
-    formContext = {
-      ...state.context,
-      x,
-      y,
-      scaleX,
-      scaleY,
-      anchorX,
-      anchorY,
-    };
-  }
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "slot",
+          slot: "transform-preview",
+          label: "",
+        },
+        {
+          type: "text",
+          label: "Position X",
+          value: String(selectedItem.x ?? 0),
+        },
+        {
+          type: "text",
+          label: "Position Y",
+          value: String(selectedItem.y ?? 0),
+        },
+        {
+          type: "text",
+          label: "Scale X",
+          value: String(selectedItem.scaleX ?? 1),
+        },
+        {
+          type: "text",
+          label: "Scale Y",
+          value: String(selectedItem.scaleY ?? 1),
+        },
+        {
+          type: "text",
+          label: "Anchor X",
+          value: String(selectedItem.anchorX ?? 0),
+        },
+        {
+          type: "text",
+          label: "Anchor Y",
+          value: String(selectedItem.anchorY ?? 0),
+        },
+      ]
+    : [];
 
   // Apply search filter
-  const searchQuery = (state.searchQuery || "").toLowerCase().trim();
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   let filteredGroups = rawFlatGroups;
 
   if (searchQuery) {
     filteredGroups = rawFlatGroups
       .map((group) => {
-        const filteredChildren = (group.children || []).filter((item) => {
-          const name = (item.name || "").toLowerCase();
+        const filteredChildren = (group.children ?? []).filter((item) => {
+          const name = (item.name ?? "").toLowerCase();
           return name.includes(searchQuery);
         });
 
-        const groupName = (group.name || "").toLowerCase();
+        const groupName = (group.name ?? "").toLowerCase();
         const shouldIncludeGroup =
           filteredChildren.length > 0 || groupName.includes(searchQuery);
 
@@ -385,7 +343,7 @@ export const selectViewData = ({ state }) => {
     isCollapsed: state.collapsedIds.includes(group.id),
     children: state.collapsedIds.includes(group.id)
       ? []
-      : (group.children || []).map((item) => ({
+      : (group.children ?? []).map((item) => ({
           ...item,
           selectedStyle:
             item.id === state.selectedItemId
@@ -409,11 +367,10 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "transforms",
     repositoryTarget: "transforms",
     selectedItemId: state.selectedItemId,
+    selectedItemName: selectedItem?.name ?? "",
+    detailFields,
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
-    form,
-    context: formContext,
-    defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "transforms",
     title: "Transforms",
@@ -424,6 +381,6 @@ export const selectViewData = ({ state }) => {
     transformForm: state.transformForm,
     dialogDefaultValues: state.defaultValues,
     items,
-    selectedItem: items[state.selectedItemId],
+    selectedItem,
   };
 };

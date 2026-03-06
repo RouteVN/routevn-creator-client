@@ -1,18 +1,6 @@
 import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { resetState } from "./tweens.constants";
 
-const form = {
-  fields: [
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "duration",
-      type: "read-only-text",
-      label: "Duration",
-      content: "${duration}",
-    },
-  ],
-};
-
 const createAddKeyframeForm = (property) => {
   if (!property) {
     return {};
@@ -670,30 +658,19 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
-  let defaultValues = {};
-  let context = {
-    duration: "",
-  };
-  if (selectedItem) {
-    const duration = selectedItem.duration ?? "";
-    defaultValues = {
-      name: selectedItem.name,
-      duration,
-      keyframes: selectedItem.keyframes || "",
-    };
-    context = {
-      duration,
-    };
-  }
+  const selectedTweenPropertyCount = Object.keys(
+    selectedItem?.properties ?? {},
+  ).length;
+  const selectedItemDuration = String(selectedItem?.duration ?? "");
 
   // Apply search filtering to flatGroups (collapse state is now handled by groupResourcesView)
-  const searchQuery = (state.searchQuery || "").toLowerCase();
+  const searchQuery = (state.searchQuery ?? "").toLowerCase();
   const matchesSearch = (item) => {
     if (!searchQuery) return true;
-    const name = (item.name || "").toLowerCase();
-    const description = (item.description || "").toLowerCase();
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
     return name.includes(searchQuery) || description.includes(searchQuery);
   };
 
@@ -802,12 +779,12 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "tweens",
     repositoryTarget: "tweens",
     selectedItemId: state.selectedItemId,
+    selectedItemName: selectedItem?.name ?? "",
+    selectedItemDuration,
+    selectedTweenPropertyCount,
     searchQuery: state.searchQuery,
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
-    form,
-    context,
-    defaultValues,
     // Dialog state
     isDialogOpen: state.isDialogOpen,
     dialogDefaultValues: state.dialogDefaultValues,

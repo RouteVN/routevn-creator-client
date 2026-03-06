@@ -39,10 +39,6 @@ refs:
     eventListeners:
       click:
         handler: handleDialogAvatarClick
-  detailForm:
-    eventListeners:
-      form-change:
-        handler: handleFormChange
   editDialog:
     eventListeners:
       close:
@@ -75,8 +71,15 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :defaultValues=defaultValues:
-                          - rvn-file-image#detailPanelAvatar slot="avatar" cur=pointer w=128 h=128 br=f fileId="${selectedItem.fileId}": null
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                              - $if selectedAvatarFileId:
+                                  - rvn-file-image#detailPanelAvatar slot="avatar" cur=pointer w=128 h=128 br=f fileId="${selectedAvatarFileId}": null
+                                $else:
+                                  - rtgl-view#detailPanelAvatar slot="avatar" w=128 h=128 av=c ah=c bgc=bg bc=bo bw=xs br=f cur=pointer:
+                                      - rtgl-text c=mu-fg s=sm: No Avatar
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection

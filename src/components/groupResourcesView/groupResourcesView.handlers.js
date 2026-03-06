@@ -152,7 +152,11 @@ export const handleItemClick = (deps, payload) => {
 
 export const handleItemMouseEnter = (deps, payload) => {
   const { store, render, props } = deps;
-  if (props.resourceType !== "images") {
+  if (
+    props.resourceType !== "images" &&
+    props.resourceType !== "sounds" &&
+    props.resourceType !== "videos"
+  ) {
     return;
   }
 
@@ -171,7 +175,11 @@ export const handleItemMouseEnter = (deps, payload) => {
 
 export const handleItemMouseLeave = (deps) => {
   const { store, render, props } = deps;
-  if (props.resourceType !== "images") {
+  if (
+    props.resourceType !== "images" &&
+    props.resourceType !== "sounds" &&
+    props.resourceType !== "videos"
+  ) {
     return;
   }
 
@@ -200,10 +208,10 @@ export const handleItemDoubleClick = (deps, payload) => {
   );
 };
 
-export const handleZoomPreviewClick = (deps, payload) => {
+export const handlePreviewActionClick = (deps, payload) => {
   const { dispatchEvent, props } = deps;
   payload._event.stopPropagation();
-  const itemId = getDataId(payload._event, "data-item-id", "zoomPreview");
+  const itemId = getDataId(payload._event, "data-item-id", "previewAction");
   if (!itemId) {
     return;
   }

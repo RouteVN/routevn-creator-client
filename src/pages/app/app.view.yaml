@@ -30,7 +30,7 @@ template:
                 $elif currentRoutePattern == "/project/resources/character-sprites":
                   - rvn-character-sprites: []
                 $elif currentRoutePattern == "/project/resources/sounds":
-                  - rvn-sound: []
+                  - rvn-sounds: []
                 $elif currentRoutePattern == "/project/resources/tweens":
                   - rvn-tweens: []
                 $elif currentRoutePattern == "/project/resources/transforms":

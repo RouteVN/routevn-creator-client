@@ -55,14 +55,36 @@ export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items =
-    props.resourceType === "images"
-      ? [
-          { label: "Edit", type: "item", value: "edit-item" },
-          { label: "Preview", type: "item", value: "preview-item" },
-          { label: "Delete", type: "item", value: "delete-item" },
-        ]
-      : [{ label: "Delete", type: "item", value: "delete-item" }];
+  if (props.resourceType === "images") {
+    state.dropdownMenu.items = [
+      { label: "Edit", type: "item", value: "edit-item" },
+      { label: "Preview", type: "item", value: "preview-item" },
+      { label: "Delete", type: "item", value: "delete-item" },
+    ];
+    return;
+  }
+
+  if (props.resourceType === "sounds") {
+    state.dropdownMenu.items = [
+      { label: "Edit", type: "item", value: "edit-item" },
+      { label: "Play", type: "item", value: "preview-item" },
+      { label: "Delete", type: "item", value: "delete-item" },
+    ];
+    return;
+  }
+
+  if (props.resourceType === "videos") {
+    state.dropdownMenu.items = [
+      { label: "Edit", type: "item", value: "edit-item" },
+      { label: "Preview", type: "item", value: "preview-item" },
+      { label: "Delete", type: "item", value: "delete-item" },
+    ];
+    return;
+  }
+
+  state.dropdownMenu.items = [
+    { label: "Delete", type: "item", value: "delete-item" },
+  ];
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -110,6 +132,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       const isSelected = item.id === props.selectedItemId;
       const isCharacterResource = props.resourceType === "characters";
       const isImageResource = props.resourceType === "images";
+      const isSoundResource = props.resourceType === "sounds";
+      const isVideoResource = props.resourceType === "videos";
+      const isTransformResource = props.resourceType === "transforms";
+      const isTweenResource = props.resourceType === "tweens";
       const defaultItemBorderColor = isCharacterResource
         ? isSelected
           ? "pr"
@@ -118,16 +144,27 @@ export const selectViewData = ({ state, props, props: attrs }) => {
           ? isSelected
             ? "pr"
             : "bo"
-          : isSelected
-            ? "pr"
-            : "tr";
+          : isTransformResource || isTweenResource
+            ? isSelected
+              ? "pr"
+              : "bo"
+            : isSelected
+              ? "pr"
+              : "tr";
 
       const updatedItem = {
         ...item,
         borderColor: isSelected ? "fg" : "bo",
         itemBorderColor: defaultItemBorderColor,
         itemHoverBorderColor: isSelected ? defaultItemBorderColor : "ac",
-        showZoomIcon: isImageResource && item.id === state.hoveredItemId,
+        showPreviewIcon:
+          (isImageResource || isSoundResource || isVideoResource) &&
+          item.id === state.hoveredItemId,
+        previewIcon: isImageResource
+          ? "zoomIn"
+          : isSoundResource || isVideoResource
+            ? "play"
+            : "",
       };
 
       // If item has children, recursively process them

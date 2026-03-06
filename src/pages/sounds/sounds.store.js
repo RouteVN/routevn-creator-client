@@ -1,16 +1,18 @@
 import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { formatFileSize } from "../../utils/index.js";
 
-const formatDimensions = (item) => {
-  if (!item?.width || !item?.height) {
-    return "";
+const formatDuration = (duration) => {
+  if (duration === undefined || duration === null) {
+    return "Unknown";
   }
 
-  return `${item.width} × ${item.height}`;
+  return `${Math.floor(duration / 60).toString()}:${Math.floor(duration % 60)
+    .toString()
+    .padStart(2, "0")}`;
 };
 
 export const createInitialState = () => ({
-  videosData: { tree: [], items: {} },
+  soundData: { tree: [], items: {} },
   selectedItemId: undefined,
   searchQuery: "",
   isEditDialogOpen: false,
@@ -19,14 +21,19 @@ export const createInitialState = () => ({
     name: "",
     description: "",
   },
-  editThumbnailFileId: undefined,
-  editVideoUploadResult: undefined,
-  videoVisible: false,
-  selectedVideo: undefined,
+  editWaveformDataFileId: undefined,
+  editSoundUploadResult: undefined,
+  playingSound: {
+    title: "",
+    fileId: undefined,
+  },
+  showAudioPlayer: false,
+  audioPlayerLeft: 0,
+  audioPlayerRight: 0,
 });
 
-export const setItems = ({ state }, { videosData } = {}) => {
-  state.videosData = videosData;
+export const setItems = ({ state }, { soundData } = {}) => {
+  state.soundData = soundData;
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
@@ -39,7 +46,7 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
 
 export const openEditDialog = (
   { state },
-  { itemId, defaultValues, thumbnailFileId } = {},
+  { itemId, defaultValues, waveformDataFileId } = {},
 ) => {
   state.isEditDialogOpen = true;
   state.editItemId = itemId;
@@ -47,8 +54,8 @@ export const openEditDialog = (
     name: defaultValues?.name ?? "",
     description: defaultValues?.description ?? "",
   };
-  state.editThumbnailFileId = thumbnailFileId;
-  state.editVideoUploadResult = undefined;
+  state.editWaveformDataFileId = waveformDataFileId;
+  state.editSoundUploadResult = undefined;
 };
 
 export const closeEditDialog = ({ state }, _payload = {}) => {
@@ -58,23 +65,50 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
     name: "",
     description: "",
   };
-  state.editThumbnailFileId = undefined;
-  state.editVideoUploadResult = undefined;
+  state.editWaveformDataFileId = undefined;
+  state.editSoundUploadResult = undefined;
 };
 
-export const setEditVideoUpload = ({ state }, { uploadResult } = {}) => {
-  state.editVideoUploadResult = uploadResult;
-  state.editThumbnailFileId = uploadResult?.thumbnailFileId;
+export const setEditSoundUpload = ({ state }, { uploadResult } = {}) => {
+  state.editSoundUploadResult = uploadResult;
+  state.editWaveformDataFileId = uploadResult?.waveformDataFileId;
 };
 
-export const setVideoVisible = ({ state }, { video } = {}) => {
-  state.videoVisible = true;
-  state.selectedVideo = video?.url ? video : undefined;
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
+  state.showAudioPlayer = true;
 };
 
-export const setVideoNotVisible = ({ state }, _payload = {}) => {
-  state.videoVisible = false;
-  state.selectedVideo = undefined;
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
+  state.showAudioPlayer = false;
+  state.playingSound = {
+    title: "",
+    fileId: undefined,
+  };
+};
+
+const resolveAudioPlayerWidth = (input = {}) => {
+  const widthValue = input?.payload?.width ?? input?.width;
+  const parsedWidth =
+    typeof widthValue === "number" ? widthValue : Number(widthValue);
+  return Number.isFinite(parsedWidth) ? parsedWidth : 0;
+};
+
+export const updateAudioPlayerLeft = ({ state }, payload = {}) => {
+  state.audioPlayerLeft = resolveAudioPlayerWidth(payload) + 64;
+};
+
+export const updateAudioPlayerRight = ({ state }, payload = {}) => {
+  state.audioPlayerRight = resolveAudioPlayerWidth(payload);
+};
+
+export const selectAudioPlayerLeft = ({ state }) => {
+  return state.audioPlayerLeft;
+};
+
+export const selectAudioPlayerRight = ({ state }) => {
+  return state.audioPlayerRight;
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -82,13 +116,13 @@ export const selectSelectedItem = ({ state }) => {
     return undefined;
   }
 
-  const flatItems = toFlatItems(state.videosData);
+  const flatItems = toFlatItems(state.soundData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };
 
-export const selectVideoItemById = ({ state }, { itemId } = {}) => {
-  const item = state.videosData?.items?.[itemId];
-  return item?.type === "video" ? item : undefined;
+export const selectSoundItemById = ({ state }, { itemId } = {}) => {
+  const item = state.soundData?.items?.[itemId];
+  return item?.type === "sound" ? item : undefined;
 };
 
 export const selectSelectedItemId = ({ state }) => {
@@ -96,8 +130,8 @@ export const selectSelectedItemId = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.videosData);
-  const rawFlatGroups = toFlatGroups(state.videosData);
+  const flatItems = toFlatItems(state.soundData);
+  const rawFlatGroups = toFlatGroups(state.soundData);
   const searchQuery = (state.searchQuery ?? "").toLowerCase();
 
   const matchesSearch = (item) => {
@@ -134,7 +168,7 @@ export const selectViewData = ({ state }) => {
     ? [
         {
           type: "slot",
-          slot: "video-thumbnail-file-id",
+          slot: "sound-waveform",
           label: "",
         },
         {
@@ -153,14 +187,14 @@ export const selectViewData = ({ state }) => {
         },
         {
           type: "text",
-          label: "Dimensions",
-          value: formatDimensions(selectedItem),
+          label: "Duration",
+          value: formatDuration(selectedItem.duration),
         },
       ]
     : [];
 
   const editForm = {
-    title: "Edit Video",
+    title: "Edit Sound",
     fields: [
       {
         name: "name",
@@ -176,8 +210,8 @@ export const selectViewData = ({ state }) => {
       },
       {
         type: "slot",
-        slot: "video-slot",
-        label: "Video",
+        slot: "sound-slot",
+        label: "Sound",
       },
     ],
     actions: {
@@ -186,7 +220,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          label: "Update Video",
+          label: "Update Sound",
         },
       ],
     },
@@ -196,23 +230,25 @@ export const selectViewData = ({ state }) => {
     flatItems,
     flatGroups,
     resourceCategory: "assets",
-    selectedResourceId: "videos",
+    selectedResourceId: "sounds",
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,
-    repositoryTarget: "videos",
-    title: "Videos",
+    repositoryTarget: "sounds",
     searchQuery: state.searchQuery,
-    resourceType: "videos",
-    uploadText: "Upload Video",
-    acceptedFileTypes: [".mp4"],
-    selectedVideoThumbnailFileId: selectedItem?.thumbnailFileId,
+    resourceType: "sounds",
+    title: "Sound",
+    uploadText: "Upload Sound",
+    acceptedFileTypes: [".mp3", ".wav", ".ogg"],
+    selectedSoundWaveformDataFileId: selectedItem?.waveformDataFileId,
     isEditDialogOpen: state.isEditDialogOpen,
     editItemId: state.editItemId,
     editForm,
     editDefaultValues: state.editDefaultValues,
-    editThumbnailFileId: state.editThumbnailFileId,
-    videoVisible: state.videoVisible,
-    selectedVideo: state.selectedVideo,
+    editWaveformDataFileId: state.editWaveformDataFileId,
+    playingSound: state.playingSound,
+    showAudioPlayer: state.showAudioPlayer,
+    audioPlayerLeft: state.audioPlayerLeft,
+    audioPlayerRight: state.audioPlayerRight,
   };
 };

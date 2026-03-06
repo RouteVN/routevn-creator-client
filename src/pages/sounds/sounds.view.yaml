@@ -10,28 +10,30 @@ refs:
   groupview:
     eventListeners:
       item-click:
-        handler: handleVideoItemClick
+        handler: handleSoundItemClick
       item-dblclick:
-        handler: handleVideoItemDoubleClick
+        handler: handleSoundItemDoubleClick
       item-preview:
-        handler: handleVideoItemPreview
+        handler: handleSoundItemPreview
       item-edit:
-        handler: handleVideoItemEdit
+        handler: handleSoundItemEdit
       files-uploaded:
         handler: handleDragDropFileSelected
       search-input:
-        handler: handleSearchInput
+        action: setSearchQuery
+        payload:
+          value: ${_event.detail.value}
       item-delete:
         handler: handleItemDelete
-  videoPreviewDialog:
+  rvnAudioPlayer:
     eventListeners:
-      close:
-        handler: handleOutsideVideoClick
-  detailThumbnail:
+      audio-player-close:
+        handler: handleAudioPlayerClose
+  detailWaveform:
     eventListeners:
       click:
         handler: handleFormExtraEvent
-  detailThumbnailPlaceholder:
+  detailWaveformPlaceholder:
     eventListeners:
       click:
         handler: handleFormExtraEvent
@@ -43,14 +45,14 @@ refs:
     eventListeners:
       form-action:
         handler: handleEditFormAction
-  editDialogThumbnail:
+  editDialogWaveform:
     eventListeners:
       click:
-        handler: handleEditDialogVideoClick
-  editDialogThumbnailPlaceholder:
+        handler: handleEditDialogSoundClick
+  editDialogWaveformPlaceholder:
     eventListeners:
       click:
-        handler: handleEditDialogVideoClick
+        handler: handleEditDialogSoundClick
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -67,10 +69,11 @@ template:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
-                              - $if selectedVideoThumbnailFileId:
-                                  - rvn-file-image#detailThumbnail slot="video-thumbnail-file-id" fileId=${selectedVideoThumbnailFileId} h=135 bw=xs bc=bo br=md cur=pointer: null
+                              - $if selectedSoundWaveformDataFileId:
+                                  - rtgl-view slot="sound-waveform" p=sm bw=xs bc=bo br=md cur=pointer:
+                                      - rvn-waveform-visualizer#detailWaveform waveformDataFileId=${selectedSoundWaveformDataFileId} w=220 h=100: null
                                 $else:
-                                  - rtgl-view#detailThumbnailPlaceholder slot="video-thumbnail-file-id" w=f h=135 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                  - rtgl-view#detailWaveformPlaceholder slot="sound-waveform" w=f h=100 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                                       - rtgl-text c=mu-fg s=sm: Click to Upload
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
@@ -78,17 +81,12 @@ template:
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
-              - $if editThumbnailFileId:
-                  - rvn-file-image#editDialogThumbnail slot="video-slot" fileId=${editThumbnailFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editThumbnailFileId}: null
+              - $if editWaveformDataFileId:
+                  - rtgl-view slot="sound-slot" p=sm bw=xs bc=bo br=md cur=pointer:
+                      - rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editWaveformDataFileId} w=400 h=110: null
                 $else:
-                  - rtgl-view#editDialogThumbnailPlaceholder slot="video-slot" w=f h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                  - rtgl-view#editDialogWaveformPlaceholder slot="sound-slot" w=f h=110 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                       - rtgl-text c=mu-fg s=sm: Click to Upload
-  - rtgl-dialog#videoPreviewDialog ?open=${videoVisible}:
-      - rtgl-view#dialogContainer slot=content bw=xs bgc=bg w=80vw h=80vh br=sm av=c ah=c:
-          - $if selectedVideo:
-              - $if selectedVideo.url:
-                  - video controls=true autoplay=true style="height:100%; width:100%;":
-                      - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
-                $else:
-                  - rtgl-view w=f h=f av=c ah=c:
-                      - rtgl-text s=lg c=mu-fg: Loading video...
+  - $if showAudioPlayer:
+      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
+          - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=playingSound.title: null
