@@ -561,9 +561,9 @@ export const selectViewData = ({ state }) => {
     id: section.id,
     name: section.name || `Section ${index + 1}`,
     isSelected: section.id === state.selectedSectionId,
-    rowBgc: section.id === state.selectedSectionId ? "ac" : "bg",
-    rowBc: section.id === state.selectedSectionId ? "ac" : "mu",
-    rowTextColor: section.id === state.selectedSectionId ? "bg" : "fg",
+    rowBgc: "mu",
+    rowBc: "mu",
+    rowTextColor: "fg",
     isDeadEnd: !!sectionPresentationById[section.id]?.isDeadEnd,
   }));
 
@@ -613,6 +613,7 @@ export const selectViewData = ({ state }) => {
   );
 
   const sectionCreateForm = {
+    title: "Create Section",
     fields: [
       {
         name: "name",

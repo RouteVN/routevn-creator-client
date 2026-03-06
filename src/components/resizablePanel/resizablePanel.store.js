@@ -1,6 +1,7 @@
 export const createInitialState = () => ({
   panelWidth: 280, // Will be updated based on attrs
   isResizing: false,
+  isHandleHovered: false,
   startX: 0,
   startWidth: 280,
 });
@@ -15,6 +16,10 @@ export const setPanelWidth = ({ state, props: attrs }, { width } = {}) => {
 
 export const setIsResizing = ({ state }, { isResizing } = {}) => {
   state.isResizing = isResizing;
+};
+
+export const setIsHandleHovered = ({ state }, { isHandleHovered } = {}) => {
+  state.isHandleHovered = isHandleHovered;
 };
 
 export const startResize = ({ state }, { startX, startWidth } = {}) => {
@@ -41,6 +46,7 @@ export const selectViewData = ({ state, props: attrs }) => {
     panelType: attrs.panelType || "file-explorer",
     panelWidth: state.panelWidth,
     isResizing: state.isResizing,
+    dividerColor: state.isHandleHovered ? "ac" : "mu",
   };
 };
 

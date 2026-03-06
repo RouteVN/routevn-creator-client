@@ -111,8 +111,8 @@ template:
                                         $else:
                                           - rtgl-view d=v w=f:
                                               - $for section, sectionIndex in selectedSceneSections:
-                                                  - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" d=h av=c ph=md bw=xs bc=mu bgc=bg h-bgc=mu br=sm h=36 w=f cur=pointer:
-                                                      - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0"': ${section.name}
+                                                  - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                                                      - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0"': ${section.name}
                                                       - $if section.isDeadEnd:
                                                           - rtgl-svg#sectionsListWarning${sectionIndex} svg=warning-dead-end wh=16: null
                     $else:
