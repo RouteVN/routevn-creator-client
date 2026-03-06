@@ -18,6 +18,8 @@ propsSchema:
       type: string
     bc:
       type: string
+    cur:
+      type: string
     key:
       type: string
   required: []

@@ -1,0 +1,13 @@
+projectForm:
+  fields:
+    - name: name
+      type: popover-input
+      label: Project Name
+      required: true
+    - name: description
+      type: popover-input
+      label: Description
+      required: true
+    - type: slot
+      slot: icon-file-id
+      label: Project Icon
