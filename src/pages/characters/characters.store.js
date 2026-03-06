@@ -13,28 +13,6 @@ const CHARACTER_SHORTCUT_OPTIONS = [
   { label: "9", value: "9" },
 ];
 
-const form = {
-  fields: [
-    {
-      name: "fileId",
-      type: "slot",
-      slot: "avatar",
-    },
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "description",
-      type: "popover-input",
-      label: "Description",
-    },
-    {
-      name: "shortcut",
-      type: "select",
-      label: "Shortcut",
-      options: CHARACTER_SHORTCUT_OPTIONS,
-    },
-  ],
-};
-
 export const createInitialState = () => ({
   charactersData: { tree: [], items: {} },
   selectedItemId: null,
@@ -173,16 +151,24 @@ export const selectViewData = ({ state }) => {
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
 
-  // Transform selectedItem into form defaults
-  let defaultValues = {};
-
-  if (selectedItem) {
-    defaultValues = {
-      name: selectedItem.name,
-      description: selectedItem.description || "No description provided",
-      shortcut: selectedItem.shortcut || "",
-    };
-  }
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "slot",
+          slot: "avatar",
+          label: "",
+        },
+        {
+          type: "description",
+          value: selectedItem.description ?? "",
+        },
+        {
+          type: "text",
+          label: "Shortcut",
+          value: selectedItem.shortcut ?? "",
+        },
+      ]
+    : [];
 
   // Apply search filter
   const searchQuery = (state.searchQuery || "").toLowerCase().trim();
@@ -292,10 +278,10 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
-    selectedItem,
+    selectedItemName: selectedItem?.name ?? "",
+    selectedAvatarFileId: selectedItem?.fileId,
+    detailFields,
     repositoryTarget: "characters",
-    form,
-    defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "characters",
     title: "Characters",

@@ -38,6 +38,43 @@ const findVariableWithGroup = (flatGroups = [], itemId) => {
   return null;
 };
 
+const openEditDialogForItem = ({ deps, itemId } = {}) => {
+  const { store, render, dispatchEvent, props } = deps;
+  if (!itemId) {
+    return;
+  }
+
+  const found = findVariableWithGroup(props.flatGroups, itemId);
+  if (!found) {
+    return;
+  }
+
+  const { group, item } = found;
+  const type = item.type || "string";
+  const defaultValue =
+    item.default === undefined ? getDefaultValueByType(type) : item.default;
+
+  dispatchEvent(
+    new CustomEvent("variable-item-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+
+  store.openEditDialog({
+    groupId: group.id,
+    itemId,
+    defaultValues: {
+      name: item.name || "",
+      scope: item.scope || "context",
+      type,
+      default: defaultValue,
+    },
+  });
+  render();
+};
+
 export const handleGroupClick = (deps, payload) => {
   const { store, render } = deps;
   const groupId = getDataId(payload._event, "data-group-id", "group");
@@ -130,41 +167,13 @@ export const handleRowClick = (deps, payload) => {
 };
 
 export const handleRowDoubleClick = (deps, payload) => {
-  const { store, render, dispatchEvent, props } = deps;
   const itemId = getDataId(payload._event, "data-item-id", "row");
-  if (!itemId) {
-    return;
-  }
+  openEditDialogForItem({ deps, itemId });
+};
 
-  const found = findVariableWithGroup(props.flatGroups, itemId);
-  if (!found) {
-    return;
-  }
-
-  const { group, item } = found;
-  const type = item.type || "string";
-  const defaultValue =
-    item.default === undefined ? getDefaultValueByType(type) : item.default;
-
-  dispatchEvent(
-    new CustomEvent("variable-item-click", {
-      detail: { itemId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-
-  store.openEditDialog({
-    groupId: group.id,
-    itemId,
-    defaultValues: {
-      name: item.name || "",
-      scope: item.scope || "context",
-      type,
-      default: defaultValue,
-    },
-  });
-  render();
+export const handleOpenEditDialog = (deps, payload) => {
+  const itemId = payload?.itemId ?? "";
+  openEditDialogForItem({ deps, itemId });
 };
 
 export const handleRowContextMenu = (deps, payload) => {

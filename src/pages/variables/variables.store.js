@@ -1,32 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 
-const form = {
-  fields: [
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "scope",
-      type: "read-only-text",
-      label: "Scope",
-      content: "${scope}",
-    },
-    {
-      name: "type",
-      type: "read-only-text",
-      label: "Type",
-      content: "${type}",
-    },
-    {
-      name: "default",
-      type: "read-only-text",
-      label: "Default",
-      content: "${default}",
-    },
-  ],
-};
-
 export const createInitialState = () => ({
   variablesData: { tree: [], items: {} },
-  selectedItemId: null,
+  selectedItemId: undefined,
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
     { label: "Rename", type: "item", value: "rename-item" },
@@ -48,9 +24,9 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectSelectedItem = ({ state }) => {
-  if (!state.selectedItemId) return null;
+  if (!state.selectedItemId) return undefined;
   const flatItems = toFlatItems(state.variablesData);
-  return flatItems.find((item) => item.id === state.selectedItemId) || null;
+  return flatItems.find((item) => item.id === state.selectedItemId);
 };
 
 export const selectViewData = ({ state }) => {
@@ -60,34 +36,34 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
-  let defaultValues = {};
-  let formContext = {
-    scope: "",
-    type: "",
-    default: "",
-  };
-
-  if (selectedItem) {
-    let defaultValue = selectedItem.default ?? "";
-    // Convert boolean to string for form display
-    if (typeof defaultValue === "boolean") {
-      defaultValue = defaultValue ? "true" : "false";
-    }
-    defaultValues = {
-      name: selectedItem.name,
-      scope: selectedItem.scope || "",
-      type: selectedItem.type || "",
-      default: defaultValue,
-    };
-
-    formContext = {
-      scope: selectedItem.scope || "",
-      type: selectedItem.type || "",
-      default: defaultValue,
-    };
+  let selectedVariableDefault = "";
+  if (typeof selectedItem?.default === "boolean") {
+    selectedVariableDefault = selectedItem.default ? "true" : "false";
+  } else if (selectedItem?.default !== undefined) {
+    selectedVariableDefault = String(selectedItem.default);
   }
+
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "text",
+          label: "Scope",
+          value: selectedItem.scope ?? "",
+        },
+        {
+          type: "text",
+          label: "Type",
+          value: selectedItem.type ?? "",
+        },
+        {
+          type: "text",
+          label: "Default",
+          value: selectedVariableDefault,
+        },
+      ]
+    : [];
 
   return {
     flatItems,
@@ -96,9 +72,8 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "variables",
     repositoryTarget: "variables",
     selectedItemId: state.selectedItemId,
-    form,
-    context: formContext,
-    defaultValues,
+    selectedItemName: selectedItem?.name ?? "",
+    detailFields,
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
   };

@@ -1,54 +1,21 @@
 import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { formatFileSize } from "../../utils/index.js";
 
-const form = {
-  fields: [
-    {
-      type: "slot",
-      slot: "image-file-id",
-      label: "Image",
-    },
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "fileType",
-      type: "read-only-text",
-      label: "File Type",
-      content: "${fileType}",
-    },
-    {
-      name: "fileSize",
-      type: "read-only-text",
-      label: "File Size",
-      content: "${fileSize}",
-    },
-    {
-      name: "dimensions",
-      type: "read-only-text",
-      label: "Dimensions",
-      content: "${dimensions}",
-    },
-  ],
-};
-
 export const createInitialState = () => ({
   imagesData: { tree: [], items: {} },
   selectedItemId: null,
-  context: {
-    fileId: {
-      src: "",
-    },
-    fileType: "",
-    fileSize: "",
-    dimensions: "",
+  isEditDialogOpen: false,
+  editItemId: undefined,
+  editDefaultValues: {
+    name: "",
+    description: "",
   },
+  editImageFileId: undefined,
+  editImageUploadResult: undefined,
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
 });
-
-export const setContext = ({ state }, { context } = {}) => {
-  state.context = context;
-};
 
 export const setItems = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData;
@@ -58,11 +25,67 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
-export const selectSelectedItem = ({ state }) => {
-  if (!state.selectedItemId) return null;
-  // state.imagesData contains the full structure with tree and items
+export const openEditDialog = (
+  { state },
+  { itemId, defaultValues, fileId } = {},
+) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues = {
+    name: defaultValues?.name ?? "",
+    description: defaultValues?.description ?? "",
+  };
+  state.editImageFileId = fileId;
+  state.editImageUploadResult = undefined;
+};
+
+export const closeEditDialog = ({ state }, _payload = {}) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = undefined;
+  state.editDefaultValues = {
+    name: "",
+    description: "",
+  };
+  state.editImageFileId = undefined;
+  state.editImageUploadResult = undefined;
+};
+
+export const setEditImageUpload = ({ state }, { uploadResult } = {}) => {
+  state.editImageUploadResult = uploadResult;
+  state.editImageFileId = uploadResult?.fileId;
+};
+
+const getSelectedItemFromState = (state) => {
+  if (!state.selectedItemId) {
+    return null;
+  }
   const flatItems = toFlatItems(state.imagesData);
-  return flatItems.find((item) => item.id === state.selectedItemId);
+  return flatItems.find((item) => item.id === state.selectedItemId) ?? null;
+};
+
+const createDetailFormValues = (item) => {
+  if (!item) {
+    return {
+      fileType: "",
+      fileSize: "",
+      dimensions: "",
+    };
+  }
+
+  return {
+    fileType: item.fileType ?? "",
+    fileSize: formatFileSize(item.fileSize),
+    dimensions: `${item.width} × ${item.height}`,
+  };
+};
+
+export const selectSelectedItem = ({ state }) => {
+  return getSelectedItemFromState(state);
+};
+
+export const selectImageItemById = ({ state }, { itemId } = {}) => {
+  const item = state.imagesData?.items?.[itemId];
+  return item?.type === "image" ? item : undefined;
 };
 
 export const selectSelectedItemId = ({ state }) => {
@@ -70,7 +93,7 @@ export const selectSelectedItemId = ({ state }) => {
 };
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
-  state.searchQuery = value || "";
+  state.searchQuery = value ?? "";
 };
 
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {
@@ -91,14 +114,14 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.imagesData);
   const rawFlatGroups = toFlatGroups(state.imagesData);
-  const searchQuery = (state.searchQuery || "").toLowerCase();
+  const searchQuery = (state.searchQuery ?? "").toLowerCase();
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
     if (!searchQuery) return true;
 
-    const name = (item.name || "").toLowerCase();
-    const description = (item.description || "").toLowerCase();
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
 
     return name.includes(searchQuery) || description.includes(searchQuery);
   };
@@ -113,7 +136,7 @@ export const selectViewData = ({ state }) => {
   const flatGroups = rawFlatGroups
     .map((group) => {
       // Filter children based on search query
-      const filteredChildren = (group.children || []).filter(matchesSearch);
+      const filteredChildren = (group.children ?? []).filter(matchesSearch);
 
       // Only show groups that have matching children or if there's no search query
       const hasMatchingChildren = filteredChildren.length > 0;
@@ -139,63 +162,60 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
-  // Transform selectedItem into detailPanel props
-  let detailFields;
-  let defaultValues = {};
-
-  let formContext = {
-    ...state.context,
-    fileType: "",
-    fileSize: "",
-    dimensions: "",
-  };
+  let detailFields = [];
+  const selectedItemName = selectedItem?.name ?? "";
 
   if (selectedItem) {
-    const formattedFileSize = formatFileSize(selectedItem.fileSize);
-    const formattedDimensions = `${selectedItem.width} × ${selectedItem.height}`;
-    const fileType = selectedItem.fileType;
-
-    defaultValues = {
-      name: selectedItem.name,
-      fileType,
-      fileSize: formattedFileSize,
-      dimensions: formattedDimensions,
-    };
-
-    formContext = {
-      ...state.context,
-      fileType,
-      fileSize: formattedFileSize,
-      dimensions: formattedDimensions,
-    };
+    const detailFormValues = createDetailFormValues(selectedItem);
+    const { fileType, fileSize, dimensions } = detailFormValues;
 
     detailFields = [
       {
-        type: "image",
-        fileId: selectedItem.fileId,
-        width: 240,
-        editable: true,
-        accept: "image/*",
-        eventType: "image-file-selected",
+        type: "slot",
+        slot: "image-file-id",
+        label: "",
       },
-      { id: "name", type: "text", value: selectedItem.name, editable: true },
+      { type: "description", value: selectedItem.description ?? "" },
       { type: "text", label: "File Type", value: fileType },
-      {
-        type: "text",
-        label: "File Size",
-        value: formattedFileSize,
-      },
-      {
-        type: "text",
-        label: "Dimensions",
-        value: formattedDimensions,
-      },
+      { type: "text", label: "File Size", value: fileSize },
+      { type: "text", label: "Dimensions", value: dimensions },
     ];
   }
 
-  const detailEmptyMessage = "No selection";
+  const editForm = {
+    title: "Edit Image",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        required: false,
+      },
+      {
+        type: "slot",
+        slot: "image-slot",
+        label: "Image",
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Update Image",
+        },
+      ],
+    },
+  };
 
   return {
     flatItems,
@@ -203,13 +223,9 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "images",
     selectedItemId: state.selectedItemId,
-    detailTitle: undefined,
+    selectedItemName,
     detailFields,
-    detailEmptyMessage,
     repositoryTarget: "images",
-    form,
-    context: formContext,
-    defaultValues,
     searchQuery: state.searchQuery,
     resourceType: "images",
     title: "Images",
@@ -220,5 +236,10 @@ export const selectViewData = ({ state }) => {
     selectedImageFileId: selectedItem?.fileId,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    isEditDialogOpen: state.isEditDialogOpen,
+    editItemId: state.editItemId,
+    editForm,
+    editDefaultValues: state.editDefaultValues,
+    editImageFileId: state.editImageFileId,
   };
 };

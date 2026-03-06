@@ -3,97 +3,19 @@ import { resetState } from "./tweens.constants";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const resolveDetailItemId = (detail = {}) => {
-  return detail.itemId || detail.id || detail.item?.id || "";
-};
-
-const callFormMethod = ({ formRef, methodName, payload } = {}) => {
-  if (!formRef || !methodName) return false;
-
-  if (typeof formRef[methodName] === "function") {
-    formRef[methodName](payload);
-    return true;
-  }
-
-  if (typeof formRef.transformedMethods?.[methodName] === "function") {
-    formRef.transformedMethods[methodName](payload);
-    return true;
-  }
-
-  return false;
-};
-
-const createDetailFormValues = (item) => {
-  if (!item) {
-    return {
-      name: "",
-      duration: "",
-    };
-  }
-
-  return {
-    name: item.name || "",
-    duration: item.duration ?? "",
-  };
-};
-
-const syncDetailFormValues = ({
-  deps,
-  values,
-  selectedItemId,
-  attempt = 0,
-} = {}) => {
-  const formRef = deps?.refs?.detailForm;
-  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
-
-  if (!selectedItemId || selectedItemId !== currentSelectedItemId) {
-    return;
-  }
-
-  if (!formRef) {
-    if (attempt < 6) {
-      setTimeout(() => {
-        syncDetailFormValues({
-          deps,
-          values,
-          selectedItemId,
-          attempt: attempt + 1,
-        });
-      }, 0);
-    }
-    return;
-  }
-
-  callFormMethod({ formRef, methodName: "reset" });
-
-  const didSet = callFormMethod({
-    formRef,
-    methodName: "setValues",
-    payload: { values },
-  });
-
-  if (!didSet && attempt < 6) {
-    setTimeout(() => {
-      syncDetailFormValues({
-        deps,
-        values,
-        selectedItemId,
-        attempt: attempt + 1,
-      });
-    }, 0);
-  }
+  return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
 };
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, graphicsService, refs } = deps;
   await projectService.ensureRepository();
   const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens || { tree: [], items: {} } });
+  store.setItems({ tweensData: tweens ?? { tree: [], items: {} } });
 
   // Initialize graphicsService if canvas is present
   const { canvas } = refs;
   if (
     graphicsService &&
-    canvas &&
     canvas &&
     !store.selectIsGraphicsServiceInitialized()
   ) {
@@ -109,71 +31,42 @@ export const handleAfterMount = async (deps) => {
 export const handleDataChanged = async (deps) => {
   const { store, render, projectService } = deps;
   const { tweens } = projectService.getState();
-
-  const tweenData = tweens || { tree: [], items: {} };
-
-  store.setItems({ tweensData: tweenData });
-  const selectedItemId = store.selectSelectedItemId();
-  const selectedItem = store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
+  store.setItems({ tweensData: tweens ?? { tree: [], items: {} } });
   render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId,
-    });
-  }
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const detail = payload?._event?.detail || {};
+  const detail = payload?._event?.detail ?? {};
+  const { isFolder } = detail;
+  if (isFolder) {
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    return;
+  }
+
   const id = resolveDetailItemId(detail);
   if (!id) {
     return;
   }
 
   store.setSelectedItemId({ itemId: id });
-  const selectedItem = detail.item || store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
   render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId: id,
-    });
-  }
 };
 
 export const handleAnimationItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
-  const detail = payload?._event?.detail || {};
+  const detail = payload?._event?.detail ?? {};
   const itemId = resolveDetailItemId(detail);
   if (!itemId) {
     return;
   }
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
-  store.setSelectedItemId({ itemId: itemId });
-  const selectedItem = detail.item || store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
+  store.setSelectedItemId({ itemId });
   render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId: itemId,
-    });
-  }
 };
 
 export const handleAnimationCreated = async (deps, payload) => {
@@ -214,50 +107,13 @@ export const handleAnimationUpdated = async (deps, payload) => {
 
   const { tweens } = projectService.getState();
   store.setItems({ tweensData: tweens });
-  const selectedItemId = store.selectSelectedItemId();
-  const selectedItem = store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
   render();
-
-  if (selectedItem && selectedItemId === itemId) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId,
-    });
-  }
-};
-
-export const handleFormChange = async (deps, payload) => {
-  const { projectService, render, store } = deps;
-  const selectedItemId = store.selectSelectedItemId();
-  await projectService.updateResourceItem({
-    resourceType: "tweens",
-    resourceId: selectedItemId,
-    patch: {
-      [payload._event.detail.name]: payload._event.detail.value,
-    },
-  });
-
-  const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens });
-  const selectedItem = store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
-  render();
-
-  if (selectedItem) {
-    syncDetailFormValues({
-      deps,
-      values: detailValues,
-      selectedItemId,
-    });
-  }
 };
 
 // Handlers forwarded from groupResourcesView
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = payload._event.detail.value || "";
+  const searchQuery = payload._event.detail.value ?? "";
   store.setSearchQuery({ query: searchQuery });
   render();
 };
@@ -305,6 +161,13 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
       itemData: { ...itemData, parent },
     });
     render();
+    const { animationForm } = refs;
+    animationForm.reset();
+    animationForm.setValues({
+      values: {
+        name: itemData.name ?? "",
+      },
+    });
 
     const { canvas } = refs;
     if (canvas && graphicsService) {

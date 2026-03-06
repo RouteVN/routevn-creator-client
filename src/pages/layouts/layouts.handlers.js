@@ -18,7 +18,13 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id } = payload._event.detail;
+  const { id, isFolder } = payload._event.detail;
+
+  if (isFolder) {
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    return;
+  }
 
   store.setSelectedItemId({ itemId: id });
   render();
@@ -26,12 +32,10 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
 export const handleImageItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail;
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
   store.setSelectedItemId({ itemId: itemId });
   render();
@@ -94,24 +98,9 @@ export const handleDragDropFileSelected = async (deps, payload) => {
   render();
 };
 
-export const handleFormChange = async (deps, payload) => {
-  const { projectService, render, store } = deps;
-  const fieldName = payload._event.detail.name;
-  if (fieldName !== "name") {
-    return;
-  }
-  await projectService.renameLayoutItem({
-    layoutId: store.selectSelectedItemId(),
-    name: payload._event.detail.value,
-  });
-
-  const { layouts } = projectService.getState();
-  store.setItems({ layoutsData: layouts });
-  render();
-};
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = payload._event.detail?.value || "";
+  const searchQuery = payload._event.detail?.value ?? "";
   store.setSearchQuery({ query: searchQuery });
   render();
 };

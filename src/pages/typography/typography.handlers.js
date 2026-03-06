@@ -15,69 +15,6 @@ const syncRepositoryToStore = (store, projectService) => {
   store.setFontsData({ fontsData: fonts });
 };
 
-const callFormMethod = ({ formRef, methodName, payload } = {}) => {
-  if (!formRef || !methodName) return false;
-
-  if (typeof formRef[methodName] === "function") {
-    formRef[methodName](payload);
-    return true;
-  }
-
-  if (typeof formRef.transformedMethods?.[methodName] === "function") {
-    formRef.transformedMethods[methodName](payload);
-    return true;
-  }
-
-  return false;
-};
-
-const syncDetailFormValues = ({
-  deps,
-  values,
-  selectedItemId,
-  attempt = 0,
-} = {}) => {
-  const formRef = deps?.refs?.detailForm;
-  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
-
-  if (selectedItemId && selectedItemId !== currentSelectedItemId) {
-    return;
-  }
-
-  if (!formRef) {
-    if (attempt < 6) {
-      setTimeout(() => {
-        syncDetailFormValues({
-          deps,
-          values,
-          selectedItemId,
-          attempt: attempt + 1,
-        });
-      }, 0);
-    }
-    return;
-  }
-
-  callFormMethod({ formRef, methodName: "reset" });
-
-  const didSet = callFormMethod({
-    formRef,
-    methodName: "setValues",
-    payload: { values },
-  });
-
-  if (!didSet && attempt < 6) {
-    setTimeout(() => {
-      syncDetailFormValues({
-        deps,
-        values,
-        selectedItemId,
-        attempt: attempt + 1,
-      });
-    }, 0);
-  }
-};
-
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
@@ -93,198 +30,16 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id, item, isFolder } = payload._event.detail;
+  const { id, isFolder } = payload._event.detail;
 
-  // If this is a folder, clear selection and context
   if (isFolder) {
-    store.setSelectedItemId({ itemId: null });
-    store.setContext({
-      context: {
-        typographyPreview: {
-          src: null,
-        },
-      },
-    });
+    store.setSelectedItemId({ itemId: undefined });
     render();
     return;
   }
 
   store.setSelectedItemId({ itemId: id });
-  const selectedItem = item || store.selectSelectedItem();
-  const colorsData = store.selectColorsData();
-  const fontsData = store.selectFontsData();
-  const detailValues = createDetailFormValues({
-    item: selectedItem,
-    colorsData,
-    fontsData,
-  });
-  store.setContext({
-    context: {
-      typographyPreview: {
-        src: detailValues.typographyPreview,
-      },
-    },
-  });
-
   render();
-  syncDetailFormValues({
-    deps,
-    values: detailValues,
-    selectedItemId: id,
-  });
-};
-
-// Helper function to generate typography preview image
-const generateTypographyPreview = (item, colorsData, fontsData) => {
-  if (!item) {
-    throw new Error("Typography item is required");
-  }
-
-  // Create canvas
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  canvas.width = 300;
-  canvas.height = 120;
-
-  // Background
-  const backgroundColor = "#1a1a1a";
-  ctx.fillStyle = backgroundColor;
-  ctx.fillRect(0, 0, 300, 120);
-
-  // Resolve color
-  if (!item.colorId) {
-    throw new Error("colorId is required");
-  }
-  if (!colorsData) {
-    throw new Error("Color data not available to resolve colorId");
-  }
-  const colorItems = toFlatItems(colorsData);
-  const color = colorItems.find(
-    (c) => c.type === "color" && c.id === item.colorId,
-  );
-  if (!color || !color.hex) {
-    throw new Error(
-      `Color with ID ${item.colorId} not found or has no hex value`,
-    );
-  }
-  const textColor = color.hex;
-
-  // Resolve font
-  if (!item.fontId) {
-    throw new Error("fontId is required");
-  }
-  if (!fontsData) {
-    throw new Error("Font data not available to resolve fontId");
-  }
-  const fontItems = toFlatItems(fontsData);
-  const font = fontItems.find((f) => f.type === "font" && f.id === item.fontId);
-  if (!font || !font.fontFamily) {
-    throw new Error(
-      `Font with ID ${item.fontId} not found or has no fontFamily`,
-    );
-  }
-  const fontFamily = font.fontFamily;
-
-  // Validate required properties
-  if (!item.fontSize) {
-    throw new Error("fontSize is required");
-  }
-  if (!item.fontWeight) {
-    throw new Error("fontWeight is required");
-  }
-  if (!item.lineHeight) {
-    throw new Error("lineHeight is required");
-  }
-  if (!item.previewText) {
-    throw new Error("previewText is required");
-  }
-
-  // Set font properties
-  ctx.fillStyle = textColor;
-  ctx.font = `${item.fontWeight} ${item.fontSize}px "${fontFamily}", sans-serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-
-  // Draw text with word wrapping
-  const maxWidth = 280;
-  const x = 10;
-  let y = 10;
-  const words = item.previewText.split(" ");
-  let line = "";
-  const lineHeightPx = item.fontSize * item.lineHeight;
-
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + " ";
-    const metrics = ctx.measureText(testLine);
-    const testWidth = metrics.width;
-
-    if (testWidth > maxWidth && n > 0) {
-      ctx.fillText(line, x, y);
-      line = words[n] + " ";
-      y += lineHeightPx;
-
-      if (y + lineHeightPx > 110) break;
-    } else {
-      line = testLine;
-    }
-  }
-
-  if (line.length > 0 && y + lineHeightPx <= 110) {
-    ctx.fillText(line, x, y);
-  }
-
-  return canvas.toDataURL("image/png");
-};
-
-const getColorName = (colorsData, colorId) => {
-  if (!colorId || !colorsData) return "";
-  const colorItems = toFlatItems(colorsData);
-  const color = colorItems.find(
-    (entry) => entry.type === "color" && entry.id === colorId,
-  );
-  return color?.name || "";
-};
-
-const getFontName = (fontsData, fontId) => {
-  if (!fontId || !fontsData) return "";
-  const fontItems = toFlatItems(fontsData);
-  const font = fontItems.find(
-    (entry) => entry.type === "font" && entry.id === fontId,
-  );
-  return font?.fontFamily || "";
-};
-
-const createDetailFormValues = ({ item, colorsData, fontsData } = {}) => {
-  if (!item) {
-    return {
-      typographyPreview: null,
-      name: "",
-      fontSize: "",
-      lineHeight: "",
-      colorName: "",
-      fontName: "",
-      fontWeight: "",
-      previewText: "",
-    };
-  }
-
-  let typographyPreview = null;
-  try {
-    typographyPreview = generateTypographyPreview(item, colorsData, fontsData);
-  } catch {
-    typographyPreview = null;
-  }
-
-  return {
-    typographyPreview,
-    name: item.name || "",
-    fontSize: item.fontSize ?? "",
-    lineHeight: item.lineHeight ?? "",
-    colorName: getColorName(colorsData, item.colorId),
-    fontName: getFontName(fontsData, item.fontId),
-    fontWeight: item.fontWeight ?? "",
-    previewText: item.previewText ?? "",
-  };
 };
 
 export const handleTypographyItemClick = (deps, payload) => {
@@ -293,32 +48,9 @@ export const handleTypographyItemClick = (deps, payload) => {
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
-
-  const selectedItem = store.selectSelectedItem();
-  const colorsData = store.selectColorsData();
-  const fontsData = store.selectFontsData();
-  const detailValues = createDetailFormValues({
-    item: selectedItem,
-    colorsData,
-    fontsData,
-  });
-  store.setContext({
-    context: {
-      typographyPreview: {
-        src: detailValues.typographyPreview,
-      },
-    },
-  });
+  fileExplorer.selectItem({ itemId });
 
   render();
-  syncDetailFormValues({
-    deps,
-    values: detailValues,
-    selectedItemId: itemId,
-  });
 };
 
 export const handleDragDropFileSelected = async (deps, payload) => {
@@ -417,54 +149,6 @@ const handleTypographyUpdated = async (deps, payload) => {
   });
 
   syncRepositoryToStore(store, projectService);
-  render();
-};
-
-export const handleFormChange = async (deps, payload) => {
-  const { projectService, render, store } = deps;
-  await projectService.updateResourceItem({
-    resourceType: "typography",
-    resourceId: store.selectSelectedItemId(),
-    patch: {
-      [payload._event.detail.name]: payload._event.detail.value,
-    },
-  });
-
-  syncRepositoryToStore(store, projectService);
-
-  // Update context with new preview after form change
-  const selectedItem = store.selectSelectedItem();
-  if (selectedItem) {
-    try {
-      // Use selectors instead of getState
-      const colorsData = store.selectColorsData();
-      const fontsData = store.selectFontsData();
-
-      const previewImage = generateTypographyPreview(
-        selectedItem,
-        colorsData,
-        fontsData,
-      );
-
-      store.setContext({
-        context: {
-          typographyPreview: {
-            src: previewImage,
-          },
-        },
-      });
-    } catch (error) {
-      console.error("Failed to update typography preview:", error);
-      store.setContext({
-        context: {
-          typographyPreview: {
-            src: null,
-          },
-        },
-      });
-    }
-  }
-
   render();
 };
 
@@ -757,7 +441,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
 };
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = payload._event.detail?.value || "";
+  const searchQuery = payload._event.detail?.value ?? "";
   store.setSearchQuery({ query: searchQuery });
   render();
 };

@@ -1,0 +1,20 @@
+editProjectForm:
+  title: Edit Project
+  fields:
+    - name: name
+      type: input-text
+      label: Project Name
+      required: true
+    - name: description
+      type: input-textarea
+      label: Description
+      required: false
+    - type: slot
+      slot: project-icon-edit
+      label: Project Icon
+  actions:
+    layout: ""
+    buttons:
+      - id: submit
+        variant: pr
+        label: Save Changes

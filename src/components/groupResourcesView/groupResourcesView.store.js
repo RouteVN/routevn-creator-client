@@ -3,6 +3,7 @@ export const createInitialState = () => ({
   collapsedIds: [],
   lastClickedItemId: null,
   lastClickedAt: 0,
+  hoveredItemId: undefined,
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -34,6 +35,12 @@ export const selectLastClickedItemId = ({ state }) => state.lastClickedItemId;
 
 export const selectLastClickedAt = ({ state }) => state.lastClickedAt;
 
+export const setHoveredItemId = ({ state }, { itemId } = {}) => {
+  state.hoveredItemId = itemId;
+};
+
+export const selectHoveredItemId = ({ state }) => state.hoveredItemId;
+
 export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
@@ -43,11 +50,38 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   }
 };
 
-export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
+export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
+  if (props.resourceType === "images") {
+    state.dropdownMenu.items = [
+      { label: "Edit", type: "item", value: "edit-item" },
+      { label: "Preview", type: "item", value: "preview-item" },
+      { label: "Delete", type: "item", value: "delete-item" },
+    ];
+    return;
+  }
+
+  if (props.resourceType === "sounds") {
+    state.dropdownMenu.items = [
+      { label: "Edit", type: "item", value: "edit-item" },
+      { label: "Play", type: "item", value: "preview-item" },
+      { label: "Delete", type: "item", value: "delete-item" },
+    ];
+    return;
+  }
+
+  if (props.resourceType === "videos") {
+    state.dropdownMenu.items = [
+      { label: "Edit", type: "item", value: "edit-item" },
+      { label: "Preview", type: "item", value: "preview-item" },
+      { label: "Delete", type: "item", value: "delete-item" },
+    ];
+    return;
+  }
+
   state.dropdownMenu.items = [
     { label: "Delete", type: "item", value: "delete-item" },
   ];
@@ -96,25 +130,40 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const setBorderColorForItems = (items) => {
     return items.map((item) => {
       const isSelected = item.id === props.selectedItemId;
-      const isCharacterResource = props.resourceType === "characters";
       const isImageResource = props.resourceType === "images";
-      const defaultItemBorderColor = isCharacterResource
+      const isSoundResource = props.resourceType === "sounds";
+      const isVideoResource = props.resourceType === "videos";
+      const shouldShowDefaultBorder = [
+        "characters",
+        "images",
+        "transforms",
+        "tweens",
+        "colors",
+        "fonts",
+        "typography",
+        "layouts",
+      ].includes(props.resourceType);
+      const defaultItemBorderColor = shouldShowDefaultBorder
         ? isSelected
           ? "pr"
           : "bo"
-        : isImageResource
-          ? isSelected
-            ? "pr"
-            : "bo"
-          : isSelected
-            ? "pr"
-            : "tr";
+        : isSelected
+          ? "pr"
+          : "tr";
 
       const updatedItem = {
         ...item,
         borderColor: isSelected ? "fg" : "bo",
         itemBorderColor: defaultItemBorderColor,
         itemHoverBorderColor: isSelected ? defaultItemBorderColor : "ac",
+        showPreviewIcon:
+          (isImageResource || isSoundResource || isVideoResource) &&
+          item.id === state.hoveredItemId,
+        previewIcon: isImageResource
+          ? "zoomIn"
+          : isSoundResource || isVideoResource
+            ? "play"
+            : "",
       };
 
       // If item has children, recursively process them

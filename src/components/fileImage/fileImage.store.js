@@ -54,5 +54,6 @@ export const selectViewData = ({ state, props: attrs }) => {
     containerAttrString: stringifyAttrs(restAttrs),
     key: attrs.key,
     bw: attrs.bw,
+    cur: attrs.cur,
   };
 };

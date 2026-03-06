@@ -1,26 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../domain/v2/treeHelpers.js";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";
 
-const form = {
-  fields: [
-    { name: "name", type: "popover-input", label: "Name" },
-    { name: "preview", type: "slot", slot: "preview" },
-    {
-      name: "sectionCount",
-      type: "read-only-text",
-      label: "Sections",
-      content: "${sectionCount}",
-    },
-    {
-      name: "sectionsList",
-      type: "slot",
-      slot: "sections-list",
-      label: "Sections List",
-    },
-  ],
-};
-
 const CONTEXT_MENU_ITEMS = [
+  { label: "Open", type: "item", value: "open-item" },
+  { label: "Preview", type: "item", value: "preview-item" },
+  { label: "Edit", type: "item", value: "edit-item" },
   { label: "Set Initial Scene", type: "item", value: "set-initial" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
@@ -46,12 +30,19 @@ export const createInitialState = () => ({
   },
   previewVisible: false,
   previewSceneId: undefined,
-  sectionsListOpen: false,
+  sectionsListOpen: true,
   deadEndTooltip: {
     open: false,
     x: 0,
     y: 0,
     content: "",
+  },
+  showMapAddHint: true,
+  isEditDialogOpen: false,
+  editItemId: undefined,
+  editDefaultValues: {
+    name: "",
+    description: "",
   },
 });
 
@@ -81,7 +72,7 @@ export const selectPreviewScene = ({ state }) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   if (state.selectedItemId !== itemId) {
-    state.sectionsListOpen = false;
+    state.sectionsListOpen = true;
     state.deadEndTooltip.open = false;
   }
   state.selectedItemId = itemId;
@@ -104,6 +95,31 @@ export const hideDeadEndTooltip = ({ state }, _payload = {}) => {
   state.deadEndTooltip = {
     ...state.deadEndTooltip,
     open: false,
+  };
+};
+
+export const hideMapAddHint = ({ state }, _payload = {}) => {
+  state.showMapAddHint = false;
+};
+
+export const openEditDialog = (
+  { state },
+  { itemId, defaultValues = {} } = {},
+) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues = {
+    name: defaultValues?.name ?? "",
+    description: defaultValues?.description ?? "",
+  };
+};
+
+export const closeEditDialog = ({ state }, _payload = {}) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = undefined;
+  state.editDefaultValues = {
+    name: "",
+    description: "",
   };
 };
 
@@ -239,12 +255,11 @@ export const selectViewData = ({ state }, payload) => {
     selectedItem?.initialSectionId || selectedSceneFirstSectionId;
   const menuSceneId = repositoryState?.story?.initialSceneId;
 
-  let defaultValues = {};
-  let context = {
-    sectionCount: "",
-  };
+  let selectedSceneName = "";
+  let detailFields = [];
   let selectedSceneSections = [];
   if (selectedItem?.type === "scene") {
+    selectedSceneName = selectedItem.name ?? "";
     selectedSceneSections = toFlatItems(
       selectedItem.sections || {
         tree: [],
@@ -264,14 +279,28 @@ export const selectViewData = ({ state }, payload) => {
         isDeadEnd,
       };
     });
-
-    defaultValues = {
-      name: selectedItem.name,
-      sectionCount: selectedSceneSections.length,
-    };
-    context = {
-      sectionCount: selectedSceneSections.length,
-    };
+    detailFields = [
+      {
+        type: "text",
+        label: "",
+        value: selectedSceneName,
+      },
+      {
+        type: "slot",
+        slot: "open-action",
+        label: "",
+      },
+      {
+        type: "slot",
+        slot: "preview",
+        label: "",
+      },
+      {
+        type: "slot",
+        slot: "sections-list",
+        label: "",
+      },
+    ];
   }
 
   // Get folder options for form
@@ -316,6 +345,34 @@ export const selectViewData = ({ state }, payload) => {
     },
   };
 
+  const editForm = {
+    title: "Edit Scene",
+    description: "Update scene details",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+      {
+        name: "description",
+        type: "textarea",
+        label: "Description",
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Save",
+        },
+      ],
+    },
+  };
+
   // console.log({
   //   selectedItemId: state.selectedItemId,
   //   defaultValues: defaultValues,
@@ -330,19 +387,22 @@ export const selectViewData = ({ state }, payload) => {
     selectedItemId: state.selectedItemId,
     addSceneButtonVariant: state.isWaitingForTransform ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
-    form,
-    context,
-    defaultValues,
+    detailFields,
+    selectedSceneName,
     isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,
     sceneFormPosition: state.sceneFormPosition,
     sceneFormData: state.sceneFormData,
     sceneFormFields,
+    isEditDialogOpen: state.isEditDialogOpen,
+    editDefaultValues: state.editDefaultValues,
+    editForm,
     folderOptions,
     whiteboardCursor: state.isWaitingForTransform ? "crosshair" : undefined,
     dropdownMenu: state.dropdownMenu,
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
+    showMapAddHint: state.showMapAddHint,
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
     deadEndTooltip: state.deadEndTooltip,

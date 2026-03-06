@@ -1,5 +1,6 @@
 import { createWebSocketTransport } from "../../../collab/v2/index.js";
 import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
+import { recursivelyCheckResource } from "../../../utils/resourceUsageChecker.js";
 import { createTypedCommandApi } from "./typedCommandApi.js";
 
 export const createProjectServiceCore = ({
@@ -249,6 +250,30 @@ export const createProjectServiceCore = ({
     resourceTypePartitionFor,
   });
 
+  const deleteResourceItemIfUnused = async ({
+    resourceType,
+    resourceId,
+    checkTargets = [],
+  }) => {
+    const state = typedCommandApi.getState();
+    const usage = recursivelyCheckResource({
+      state,
+      itemId: resourceId,
+      checkTargets,
+    });
+
+    if (usage.isUsed) {
+      return { deleted: false, usage };
+    }
+
+    await typedCommandApi.deleteResourceItem({
+      resourceType,
+      resourceId,
+    });
+
+    return { deleted: true, usage };
+  };
+
   return {
     getCurrentProjectId,
     getBasePartitions,
@@ -265,5 +290,6 @@ export const createProjectServiceCore = ({
     submitCommand,
     addVersionToProject,
     deleteVersionFromProject,
+    deleteResourceItemIfUnused,
   };
 };

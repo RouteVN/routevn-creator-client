@@ -35,10 +35,6 @@ refs:
     eventListeners:
       click:
         handler: handleSectionsOverviewClick
-  sectionsOverviewClose:
-    eventListeners:
-      click:
-        handler: handleSectionsOverviewClose
   sectionOverviewRow*:
     eventListeners:
       click:
@@ -67,6 +63,10 @@ refs:
     eventListeners:
       close:
         handler: handleSectionCreateDialogClose
+  sectionsOverviewDialog:
+    eventListeners:
+      close:
+        handler: handleSectionsOverviewClose
   sectionCreateForm:
     eventListeners:
       form-action:
@@ -125,34 +125,21 @@ template:
                   - rtgl-view:
                       - rtgl-text: ${sectionsGraph}
             $else:
-              - $if sectionsOverviewOpen:
-                  - 'rtgl-view#sceneEditorLeftOverview w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
-                      - rtgl-view d=h av=c g=sm bwb=xs p=lg w=f:
-                          - rtgl-text s=lg fw=600: Sections Overview
-                          - rtgl-view w=1fg: null
-                          - rtgl-button#sectionsOverviewClose v=gh: Close
-                      - 'rtgl-view d=v w=f h=1fg sv p=md g=sm style="min-height: 0px;"':
-                          - $for section, sectionIndex in sectionsOverviewItems:
-                              - rtgl-view#sectionOverviewRow${sectionIndex} data-section-id=${section.id} w=f d=h av=c g=sm p=md cur=pointer bw=xs bc=${section.rowBc} bgc=${section.rowBgc} br=sm h-bgc=mu:
-                                  - 'rtgl-text s=md c=${section.rowTextColor} w=1fg style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"': ${section.name}
-                                  - $if section.isDeadEnd:
-                                      - rtgl-svg#sectionsOverviewWarning${sectionIndex} data-section-id=${section.id} svg=warning-dead-end wh=20: null
-                $else:
-                  - 'rtgl-view#sceneEditorLeftEditor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
-                      - rtgl-view d=h g=xs w=f:
-                          - rtgl-view d=h sh:
-                              - rtgl-view d=h g=xs:
-                              - $for section, sectionIndex in sections:
-                                      - rtgl-view#sectionTab${sectionIndex} data-section-id=${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=pointer:
-                                          - rtgl-text s=sm: ${section.name}
-                          - rtgl-view#sectionAdd h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
-                              - rtgl-text s=sm: +
-                          - rtgl-view#sectionsOverview h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
-                              - rtgl-text s=sm: ...
-                          - rtgl-view w=1fg: null
-                      - rtgl-view w=f p=md sv h=1fg:
-                          - rvn-lines-editor#linesEditor :lines=currentLines :selectedLineId=selectedLineId :sectionLineChanges=sectionLineChanges: null
-                          - rtgl-view h=30vh: null
+              - 'rtgl-view#sceneEditorLeftEditor w="calc((100vw - 64px) / 2)" d=v h=f style="min-height: 0px"':
+                  - rtgl-view d=h g=xs w=f:
+                      - rtgl-view d=h sh:
+                          - rtgl-view d=h g=xs:
+                          - $for section, sectionIndex in sections:
+                                  - rtgl-view#sectionTab${sectionIndex} data-section-id=${section.id} w=120 h=32 av=c ph=lg ah=c bgc=${section.bgc} cur=pointer:
+                                      - rtgl-text s=sm: ${section.name}
+                      - rtgl-view#sectionAdd h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
+                          - rtgl-text s=sm: +
+                      - rtgl-view#sectionsOverview h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
+                          - rtgl-text s=sm: ...
+                      - rtgl-view w=1fg: null
+                  - rtgl-view w=f p=md sv h=1fg:
+                      - rvn-lines-editor#linesEditor :lines=currentLines :selectedLineId=selectedLineId :sectionLineChanges=sectionLineChanges: null
+                      - rtgl-view h=30vh: null
           - rtgl-view w=1 h=f bgc=mu: null
           - rtgl-view w=f:
               - rtgl-view:
@@ -170,11 +157,18 @@ template:
   - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - rtgl-form#form slot=content :form=form: null
-  - rtgl-dialog#sectionCreateDialog ?open=${sectionCreateDialog.isOpen} s=f:
-      - rtgl-view slot=content w=f h=f p=xl:
-          - rtgl-view w=f h=f ah=c av=s:
-              - rtgl-view w=560 sm-w=f:
-                  - rtgl-form#sectionCreateForm key=${sectionCreateDialog.formKey} :form=sectionCreateForm :defaultValues=sectionCreateDialog.defaultValues w=f: null
+  - rtgl-dialog#sectionCreateDialog ?open=${sectionCreateDialog.isOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#sectionCreateForm key=${sectionCreateDialog.formKey} :form=sectionCreateForm :defaultValues=sectionCreateDialog.defaultValues w=f: null
+  - rtgl-dialog#sectionsOverviewDialog ?open=${sectionsOverviewOpen} s=md:
+      - rtgl-view slot=content w=f p=lg br=md:
+          - rtgl-text s=sm c=mu-fg: Sections
+          - rtgl-view d=v w=f sv g=sm mt=lg h=60vh:
+              - $for section, sectionIndex in sectionsOverviewItems:
+                  - rtgl-view#sectionOverviewRow${sectionIndex} data-section-id=${section.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0"': ${section.name}
+                      - $if section.isDeadEnd:
+                          - rtgl-svg#sectionsOverviewWarning${sectionIndex} data-section-id=${section.id} svg=warning-dead-end wh=16: null
   - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
   - $if previewVisible:
       - rvn-vn-preview#vnPreview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}": null

@@ -49,7 +49,10 @@ const cascadeDeleteScene = (state, sceneId) => {
   removeFromArray(state.story.sceneOrder, sceneId);
 
   if (state.story.initialSceneId === sceneId) {
-    state.story.initialSceneId = state.story.sceneOrder[0] || null;
+    state.story.initialSceneId =
+      state.story.sceneOrder.find(
+        (id) => state.scenes[id]?.type !== "folder",
+      ) || null;
   }
 };
 
@@ -427,10 +430,15 @@ const reducers = {
   },
 
   "scene.created": ({ state, payload, now }) => {
+    const sceneData = structuredClone(payload.data || {});
+    const sceneType = sceneData.type === "folder" ? "folder" : "scene";
     state.scenes[payload.sceneId] = {
       id: payload.sceneId,
       name: payload.name,
+      type: sceneType,
       sectionIds: [],
+      parentId: typeof payload.parentId === "string" ? payload.parentId : null,
+      ...sceneData,
       createdAt: now,
       updatedAt: now,
     };
@@ -441,7 +449,7 @@ const reducers = {
       items: state.scenes,
     });
 
-    if (!state.story.initialSceneId) {
+    if (!state.story.initialSceneId && sceneType !== "folder") {
       state.story.initialSceneId = payload.sceneId;
     }
   },
@@ -451,6 +459,7 @@ const reducers = {
     const patch = structuredClone(payload.patch || {});
     delete patch.id;
     delete patch.sectionIds;
+    delete patch.type;
     state.scenes[payload.sceneId] = {
       ...current,
       ...patch,
@@ -477,6 +486,8 @@ const reducers = {
       payload.sceneId,
       normalizeIndex(payload.index),
     );
+    state.scenes[payload.sceneId].parentId =
+      typeof payload.parentId === "string" ? payload.parentId : null;
   },
 
   "section.created": ({ state, payload, now }) => {

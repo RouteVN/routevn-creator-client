@@ -140,6 +140,22 @@ export const createTypedCommandShared = ({
     });
   };
 
+  const resolveVariableIndex = ({
+    state,
+    parentId,
+    position,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(state?.variables, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      movingId,
+    });
+  };
+
   const resolveSectionIndex = ({
     scene,
     parentId,
@@ -220,6 +236,7 @@ export const createTypedCommandShared = ({
     resolveResourceIndex,
     resolveSceneIndex,
     resolveLayoutIndex,
+    resolveVariableIndex,
     resolveSectionIndex,
     resolveLineIndex,
     resolveLayoutElementIndex,

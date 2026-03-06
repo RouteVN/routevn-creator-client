@@ -8,3 +8,10 @@ propsSchema:
     selectedItemId:
       type: string
       description: ID of currently selected item
+methods:
+  type: object
+  properties:
+    openEditDialog:
+      description: Opens the variable edit dialog for an item id.
+      params: []
+      returns: void

@@ -21,10 +21,6 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  detailForm:
-    eventListeners:
-      form-change:
-        handler: handleFormChange
   addLayoutDialog:
     eventListeners:
       close:
@@ -45,7 +41,10 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues :fieldResources=fieldResources: null
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection

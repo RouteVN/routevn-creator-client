@@ -263,6 +263,26 @@ export const handleItemContextMenu = (deps, payload) => {
   );
 };
 
+export const handleItemMouseEnter = (deps, payload) => {
+  const { store, render } = deps;
+  const itemId =
+    payload._event.currentTarget?.dataset?.itemId ||
+    payload._event.currentTarget?.id?.replace("item", "") ||
+    "";
+  if (!itemId) {
+    return;
+  }
+
+  store.setHoveredItemId({ itemId });
+  render();
+};
+
+export const handleItemMouseLeave = (deps) => {
+  const { store, render } = deps;
+  store.setHoveredItemId({ itemId: undefined });
+  render();
+};
+
 export const handleWindowMouseMove = (deps, payload) => {
   const { store, refs, render, dispatchEvent } = deps;
 

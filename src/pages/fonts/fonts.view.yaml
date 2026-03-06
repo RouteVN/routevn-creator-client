@@ -27,12 +27,10 @@ refs:
     eventListeners:
       click:
         handler: handleCloseModal
-  detailForm:
+  detailFontPreview:
     eventListeners:
-      form-field-event:
+      click:
         handler: handleFormExtraEvent
-      form-change:
-        handler: handleFormChange
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f w=f:
@@ -45,7 +43,16 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :defaultValues=defaultValues :context=context: null
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                              - $if selectedFontFileId:
+                                  - rtgl-view#detailFontPreview slot="font-preview" bw=xs bc=bo br=md p=md cur=pointer:
+                                      - rvn-font-preview fileId=${selectedFontFileId} fontFamily=${selectedFontFamily} previewText="Aa" fontSize=60 width=220 height=110 av=c ah=c: null
+                                $else:
+                                  - rtgl-view#detailFontPreview slot="font-preview" h=110 bw=xs bc=bo br=md av=c ah=c cur=pointer:
+                                      - rtgl-text c=mu-fg s=sm: No Preview
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection

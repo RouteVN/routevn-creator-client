@@ -478,6 +478,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     addVersionToProject: serviceCore.addVersionToProject,
 
     deleteVersionFromProject: serviceCore.deleteVersionFromProject,
+    deleteResourceItemIfUnused: serviceCore.deleteResourceItemIfUnused,
 
     // Initialize a new project at a given path
     async initializeProject({ projectPath, template }) {

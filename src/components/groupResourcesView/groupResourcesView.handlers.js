@@ -150,6 +150,47 @@ export const handleItemClick = (deps, payload) => {
   );
 };
 
+export const handleItemMouseEnter = (deps, payload) => {
+  const { store, render, props } = deps;
+  if (
+    props.resourceType !== "images" &&
+    props.resourceType !== "sounds" &&
+    props.resourceType !== "videos"
+  ) {
+    return;
+  }
+
+  const itemId = getDataId(payload._event, "data-item-id", "item");
+  if (!itemId) {
+    return;
+  }
+
+  if (store.selectHoveredItemId() === itemId) {
+    return;
+  }
+
+  store.setHoveredItemId({ itemId });
+  render();
+};
+
+export const handleItemMouseLeave = (deps) => {
+  const { store, render, props } = deps;
+  if (
+    props.resourceType !== "images" &&
+    props.resourceType !== "sounds" &&
+    props.resourceType !== "videos"
+  ) {
+    return;
+  }
+
+  if (store.selectHoveredItemId() === undefined) {
+    return;
+  }
+
+  store.setHoveredItemId({ itemId: undefined });
+  render();
+};
+
 export const handleItemDoubleClick = (deps, payload) => {
   const { dispatchEvent } = deps;
   const itemId = getDataId(payload._event, "data-item-id", "item");
@@ -161,6 +202,26 @@ export const handleItemDoubleClick = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("item-dblclick", {
       detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handlePreviewActionClick = (deps, payload) => {
+  const { dispatchEvent, props } = deps;
+  payload._event.stopPropagation();
+  const itemId = getDataId(payload._event, "data-item-id", "previewAction");
+  if (!itemId) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("item-preview", {
+      detail: {
+        resourceType: props.resourceType,
+        itemId,
+      },
       bubbles: true,
       composed: true,
     }),
@@ -369,9 +430,33 @@ export const handleContextMenuClickItem = async (deps, payload) => {
   const dropdownMenu = store.selectDropdownMenu();
   const itemId = dropdownMenu.targetItemId;
 
-  // Only handle delete actions
-  if (item && item.value === "delete-item") {
-    // Dispatch item-delete event to let parent page handle repository delete operation
+  if (item?.value === "edit-item") {
+    dispatchEvent(
+      new CustomEvent("item-edit", {
+        detail: {
+          resourceType: props.resourceType,
+          itemId,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  if (item?.value === "preview-item") {
+    dispatchEvent(
+      new CustomEvent("item-preview", {
+        detail: {
+          resourceType: props.resourceType,
+          itemId,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  if (item?.value === "delete-item") {
     dispatchEvent(
       new CustomEvent("item-delete", {
         detail: {

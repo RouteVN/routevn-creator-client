@@ -4,20 +4,66 @@ export const handleBeforeMount = (deps) => {
   store.setCurrentProject({ project });
 };
 
-export const handleFormChange = async (deps, payload) => {
-  const { appService } = deps;
-  const currentProject = appService.getCurrentProjectEntry();
-  if (!currentProject.id || currentProject.source !== "local") {
+export const handleEditButtonClick = (deps) => {
+  const { store, render, refs } = deps;
+  store.openEditDialog();
+  render();
+
+  const { editForm } = refs;
+  const { editDefaultValues } = store.getState();
+  editForm.reset();
+  editForm.setValues({ values: editDefaultValues });
+};
+
+export const handleEditDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditFormAction = async (deps, payload) => {
+  const { appService, store, render, subject } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
     return;
   }
 
-  await appService.updateProjectEntry(currentProject.id, {
-    [payload._event.detail.name]: payload._event.detail.value,
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Project name is required.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  const currentProject = appService.getCurrentProjectEntry();
+  if (!currentProject.id || currentProject.source !== "local") {
+    store.closeEditDialog();
+    render();
+    return;
+  }
+
+  const patch = {
+    name,
+    description: values?.description ?? "",
+    iconFileId: store.getState().editIconFileId,
+  };
+
+  await appService.updateProjectEntry(currentProject.id, patch);
+
+  store.setCurrentProject({
+    project: {
+      ...currentProject,
+      ...patch,
+    },
   });
+  store.closeEditDialog();
+  subject.dispatch("project-image-update");
+  render();
 };
 
-export const handleFormExtraEvent = async (deps) => {
-  const { appService, subject, render, store } = deps;
+export const handleEditDialogIconClick = async (deps) => {
+  const { appService, render, store } = deps;
   let file;
 
   try {
@@ -46,15 +92,7 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const result = file.uploadResult;
-  const currentProject = appService.getCurrentProjectEntry();
-  if (currentProject.id && currentProject.source === "local") {
-    await appService.updateProjectEntry(currentProject.id, {
-      iconFileId: result.fileId,
-    });
-  }
-
-  store.setIconFileId({ iconFileId: result.fileId });
-  subject.dispatch("project-image-update");
+  store.setEditIconFileId({ iconFileId: result.fileId });
   render();
 };
 

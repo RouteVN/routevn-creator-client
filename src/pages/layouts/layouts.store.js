@@ -39,26 +39,10 @@ const layoutForm = {
   },
 };
 
-const form = {
-  fields: [
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "layoutTypeDisplay",
-      type: "read-only-text",
-      label: "Layout Type",
-      content: "${layoutTypeDisplay}",
-    },
-  ],
-};
-
 export const createInitialState = () => ({
   layoutsData: { tree: [], items: {} },
   selectedItemId: null,
   searchQuery: "",
-  fieldResources: {},
-  context: {
-    layoutTypeDisplay: "",
-  },
   isAddDialogOpen: false,
   targetGroupId: null,
   contextMenuItems: [
@@ -71,10 +55,6 @@ export const createInitialState = () => ({
     { label: "New Folder", type: "item", value: "new-item" },
   ],
 });
-
-export const setFieldResources = ({ state }, { resources } = {}) => {
-  state.fieldResources = resources;
-};
 
 export const setItems = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData;
@@ -113,50 +93,41 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
-  // Transform selectedItem into form defaults
-  let defaultValues = {};
-  let context = {
-    layoutTypeDisplay: "",
+  const layoutTypeLabels = {
+    normal: "Normal",
+    dialogue: "Dialogue",
+    nvl: "NVL",
+    choice: "Choice",
+    base: "Base",
   };
-
-  if (selectedItem) {
-    const layoutTypeLabels = {
-      normal: "Normal",
-      dialogue: "Dialogue",
-      nvl: "NVL",
-      choice: "Choice",
-      base: "Base",
-    };
-
-    const layoutTypeLabel = selectedItem.layoutType
-      ? layoutTypeLabels[selectedItem.layoutType] || selectedItem.layoutType
-      : "";
-
-    defaultValues = {
-      name: selectedItem.name,
-      layoutTypeDisplay: layoutTypeLabel,
-    };
-
-    context = {
-      layoutTypeDisplay: layoutTypeLabel,
-    };
-  }
+  const selectedLayoutTypeLabel = selectedItem?.layoutType
+    ? (layoutTypeLabels[selectedItem.layoutType] ?? selectedItem.layoutType)
+    : "";
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "text",
+          label: "Layout Type",
+          value: selectedLayoutTypeLabel,
+        },
+      ]
+    : [];
 
   // Apply search filter
-  const searchQuery = state.searchQuery.toLowerCase().trim();
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   let filteredGroups = rawFlatGroups;
 
   if (searchQuery) {
     filteredGroups = rawFlatGroups
       .map((group) => {
-        const filteredChildren = (group.children || []).filter((item) => {
-          const name = (item.name || "").toLowerCase();
+        const filteredChildren = (group.children ?? []).filter((item) => {
+          const name = (item.name ?? "").toLowerCase();
           return name.includes(searchQuery);
         });
 
-        const groupName = (group.name || "").toLowerCase();
+        const groupName = (group.name ?? "").toLowerCase();
         const shouldIncludeGroup =
           filteredChildren.length > 0 || groupName.includes(searchQuery);
 
@@ -174,7 +145,7 @@ export const selectViewData = ({ state }) => {
   // Apply selection styling (collapse state is now handled by groupResourcesView)
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
-    children: (group.children || []).map((item) => ({
+    children: (group.children ?? []).map((item) => ({
       ...item,
       selectedStyle:
         item.id === state.selectedItemId
@@ -189,13 +160,11 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "userInterface",
     selectedResourceId: "layouts",
     selectedItemId: state.selectedItemId,
+    selectedItemName: selectedItem?.name ?? "",
+    detailFields,
     repositoryTarget: "layouts",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
-    form,
-    context,
-    defaultValues,
-    fieldResources: state.fieldResources,
     searchQuery: state.searchQuery,
     resourceType: "layouts",
     title: "Layouts",

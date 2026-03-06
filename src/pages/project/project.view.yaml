@@ -1,21 +1,51 @@
 refs:
-  form:
-    eventListeners:
-      form-change:
-        handler: handleFormChange
-  iconImage:
+  projectTitle:
     eventListeners:
       click:
-        handler: handleFormExtraEvent
+        handler: handleEditButtonClick
+  projectDescription:
+    eventListeners:
+      click:
+        handler: handleEditButtonClick
+  projectImage:
+    eventListeners:
+      click:
+        handler: handleEditButtonClick
   backButton:
     eventListeners:
       click:
         handler: handleBackToProjects
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+  editDialogIcon:
+    eventListeners:
+      click:
+        handler: handleEditDialogIconClick
 template:
-  - rtgl-view d=h av=c g=sm mt=lg:
-      - rtgl-button#backButton pre=chevronLeft v=gh: Back to Projects
-      - rtgl-text s=xs c=mu-fg: ${projectSourceLabel} Project
-  - rtgl-view w=f h=f ph=lg:
-      - $if dataLoaded:
-          - rtgl-form#form :form=form :context=context w=240 :defaultValues=defaultValues:
-              - rvn-file-image#iconImage fileId=${defaultValues.iconFileId} wh=128 slot=icon-file-id cur=pointer: null
+  - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+      - rtgl-view w=f d=h av=c g=sm:
+          - rtgl-button#backButton pre=chevronLeft v=gh: Back to Projects
+          - $if projectSource == 'cloud':
+              - rtgl-text s=xs c=mu-fg: Cloud Project
+  - rtgl-view w=f h=f ph=lg pt=md:
+      - rtgl-view w=320 h=f d=v:
+          - rvn-detail-view#detailView w=f h=1fg :fields=detailFields:
+              - rtgl-view#projectTitle slot=project-title cur=pointer:
+                  - rtgl-text s=md: ${projectName}
+              - rtgl-view#projectDescription slot=project-description cur=pointer:
+                  - rtgl-text c=mu-fg: ${projectDescription}
+              - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} h=128 bw=xs bc=bo br=md cur=pointer: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
+              - $if editIconFileId:
+                  - rvn-file-image#editDialogIcon fileId=${editIconFileId} h=120 slot=project-icon-edit bw=xs bc=bo br=md cur=pointer: null
+                $else:
+                  - rtgl-view#editDialogIcon slot=project-icon-edit h=120 av=c ah=c bw=xs bc=bo br=md cur=pointer:
+                      - rtgl-text c=mu-fg: Click to upload icon

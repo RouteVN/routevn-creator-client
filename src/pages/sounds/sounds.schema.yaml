@@ -1,4 +1,4 @@
-componentName: rvn-sound
+componentName: rvn-sounds
 propsSchema:
   type: object
   properties: {}

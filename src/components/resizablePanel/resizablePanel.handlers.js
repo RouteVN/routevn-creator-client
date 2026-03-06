@@ -40,6 +40,18 @@ export const handleResizeStart = (deps, payload) => {
   document.addEventListener("mouseup", handleMouseUp);
 };
 
+export const handleResizeHandleMouseEnter = (deps) => {
+  const { store, render } = deps;
+  store.setIsHandleHovered({ isHandleHovered: true });
+  render();
+};
+
+export const handleResizeHandleMouseLeave = (deps) => {
+  const { store, render } = deps;
+  store.setIsHandleHovered({ isHandleHovered: false });
+  render();
+};
+
 const handleResizeMove = (deps, payload) => {
   const { store, render, props: attrs, subject } = deps;
 

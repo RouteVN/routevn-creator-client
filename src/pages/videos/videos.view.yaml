@@ -13,6 +13,10 @@ refs:
         handler: handleVideoItemClick
       item-dblclick:
         handler: handleVideoItemDoubleClick
+      item-preview:
+        handler: handleVideoItemPreview
+      item-edit:
+        handler: handleVideoItemEdit
       files-uploaded:
         handler: handleDragDropFileSelected
       search-input:
@@ -23,40 +27,68 @@ refs:
     eventListeners:
       close:
         handler: handleOutsideVideoClick
-  detailForm:
-    eventListeners:
-      form-field-event:
-        handler: handleFormExtraEvent
-      form-change:
-        handler: handleFormChange
   detailThumbnail:
     eventListeners:
       click:
         handler: handleFormExtraEvent
+  detailThumbnailPlaceholder:
+    eventListeners:
+      click:
+        handler: handleFormExtraEvent
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+  editDialogThumbnail:
+    eventListeners:
+      click:
+        handler: handleEditDialogVideoClick
+  editDialogThumbnailPlaceholder:
+    eventListeners:
+      click:
+        handler: handleEditDialogVideoClick
 template:
-  - rtgl-view d=h w=f h=f:
-      - rtgl-view d=h h=f w=f:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget: null
-          - rtgl-view w=1fg h=f:
-              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
+          - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+              - rvn-group-resources-view#groupview w=f h=f :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues:
-                          - $if selectedVideoThumbnailFileId:
-                              - rvn-file-image#detailThumbnail slot="video-thumbnail-file-id" fileId=${selectedVideoThumbnailFileId} w=240 h=135 br=md cur=pointer: null
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                              - $if selectedVideoThumbnailFileId:
+                                  - rvn-file-image#detailThumbnail slot="video-thumbnail-file-id" fileId=${selectedVideoThumbnailFileId} h=135 bw=xs bc=bo br=md cur=pointer: null
+                                $else:
+                                  - rtgl-view#detailThumbnailPlaceholder slot="video-thumbnail-file-id" w=f h=135 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                      - rtgl-text c=mu-fg s=sm: Click to Upload
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      - rtgl-dialog#videoPreviewDialog ?open=${videoVisible}:
-          - rtgl-view#dialogContainer slot=content bw=xs bgc=bg w=80vw h=80vh br=sm av=c ah=c:
-              - $if selectedVideo:
-                  - $if selectedVideo.url:
-                      - video controls=true autoplay=true style="height:100%; width:100%;":
-                          - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
-                    $else:
-                      - rtgl-view w=f h=f av=c ah=c:
-                          - rtgl-text s=lg c=mu-fg: Loading video...
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
+              - $if editThumbnailFileId:
+                  - rvn-file-image#editDialogThumbnail slot="video-slot" fileId=${editThumbnailFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editThumbnailFileId}: null
+                $else:
+                  - rtgl-view#editDialogThumbnailPlaceholder slot="video-slot" w=f h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                      - rtgl-text c=mu-fg s=sm: Click to Upload
+  - rtgl-dialog#videoPreviewDialog ?open=${videoVisible}:
+      - rtgl-view#dialogContainer slot=content bw=xs bgc=bg w=80vw h=80vh br=sm av=c ah=c:
+          - $if selectedVideo:
+              - $if selectedVideo.url:
+                  - video controls=true autoplay=true style="height:100%; width:100%;":
+                      - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
+                $else:
+                  - rtgl-view w=f h=f av=c ah=c:
+                      - rtgl-text s=lg c=mu-fg: Loading video...

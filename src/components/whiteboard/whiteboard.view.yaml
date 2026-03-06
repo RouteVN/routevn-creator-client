@@ -13,6 +13,10 @@ refs:
       mousedown:
         required: true
         handler: handleItemMouseDown
+      mouseenter:
+        handler: handleItemMouseEnter
+      mouseleave:
+        handler: handleItemMouseLeave
       dblclick:
         handler: handleItemDoubleClick
       contextmenu:
@@ -39,14 +43,14 @@ template:
                           - rtgl-text s=sm: Start
                       - rtgl-view w=30 h=2 bgc=ac: null
               - 'rtgl-view#itemRef${itemIndex} data-item-id=${item.id} w=120 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
-                  - rtgl-view cur=${itemCursor} w=120 h=f av=c ah=c p=md bgc=mu bw=sm bc=${item.borderColor} br=md:
+                  - rtgl-view cur=${itemCursor} w=120 h=f av=c ah=c p=md bgc=mu bw=${item.borderWidth} bc=${item.borderColor} br=md:
                       - rtgl-text s=sm: ${item.name}
           - $for arrow in arrowsList:
               - svg data-arrow-id="${arrow.id}" style="${arrow.style}" width="${arrow.svgWidth}" height="${arrow.svgHeight}":
                   - defs:
-                      - marker id="arrowhead" fill="#ccc" markerWidth=10 markerHeight=10 refX=10 refY=5 orient="auto":
-                          - polygon points="0 0, 10 5, 0 10": null
-                  - path d="${arrow.path}" stroke="#ccc" fill="none" z-index="1000" marker-end="url(#arrowhead)": null
+                      - marker id="arrowheadRef" markerUnits="userSpaceOnUse" markerWidth=10 markerHeight=10 refX=10 refY=5 orient="auto":
+                          - polygon points="0 0, 10 5, 0 10" fill="${arrow.strokeColor}": null
+                  - path d="${arrow.path}" stroke="${arrow.strokeColor}" stroke-width=${arrow.strokeWidth} fill="none" z-index="1000" marker-end="url(#arrowheadRef)": null
       - $if showMinimap:
           - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px;"':
               - $for item in minimapData.items:

@@ -1,0 +1,92 @@
+refs:
+  fileExplorer:
+    eventListeners:
+      data-changed:
+        handler: handleDataChanged
+      item-click:
+        handler: handleFileExplorerSelectionChanged
+      dblclick-item:
+        handler: handleFileExplorerDoubleClick
+  groupview:
+    eventListeners:
+      item-click:
+        handler: handleSoundItemClick
+      item-dblclick:
+        handler: handleSoundItemDoubleClick
+      item-preview:
+        handler: handleSoundItemPreview
+      item-edit:
+        handler: handleSoundItemEdit
+      files-uploaded:
+        handler: handleDragDropFileSelected
+      search-input:
+        action: setSearchQuery
+        payload:
+          value: ${_event.detail.value}
+      item-delete:
+        handler: handleItemDelete
+  rvnAudioPlayer:
+    eventListeners:
+      audio-player-close:
+        handler: handleAudioPlayerClose
+  detailWaveform:
+    eventListeners:
+      click:
+        handler: handleFormExtraEvent
+  detailWaveformPlaceholder:
+    eventListeners:
+      click:
+        handler: handleFormExtraEvent
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+  editDialogWaveform:
+    eventListeners:
+      click:
+        handler: handleEditDialogSoundClick
+  editDialogWaveformPlaceholder:
+    eventListeners:
+      click:
+        handler: handleEditDialogSoundClick
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget: null
+          - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+              - rvn-group-resources-view#groupview w=f h=f :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
+          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                              - $if selectedSoundWaveformDataFileId:
+                                  - rtgl-view slot="sound-waveform" p=sm bw=xs bc=bo br=md cur=pointer:
+                                      - rvn-waveform-visualizer#detailWaveform waveformDataFileId=${selectedSoundWaveformDataFileId} w=220 h=100: null
+                                $else:
+                                  - rtgl-view#detailWaveformPlaceholder slot="sound-waveform" w=f h=100 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                      - rtgl-text c=mu-fg s=sm: Click to Upload
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
+              - $if editWaveformDataFileId:
+                  - rtgl-view slot="sound-slot" p=sm bw=xs bc=bo br=md cur=pointer:
+                      - rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editWaveformDataFileId} w=400 h=110: null
+                $else:
+                  - rtgl-view#editDialogWaveformPlaceholder slot="sound-slot" w=f h=110 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                      - rtgl-text c=mu-fg s=sm: Click to Upload
+  - $if showAudioPlayer:
+      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
+          - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=playingSound.title: null

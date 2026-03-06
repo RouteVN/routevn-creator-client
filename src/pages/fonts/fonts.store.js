@@ -31,40 +31,6 @@ const fontToBase64Image = (fontFamily, text = "Aa") => {
   return canvas.toDataURL("image/png");
 };
 
-const form = {
-  fields: [
-    {
-      name: "fontPreview",
-      type: "image",
-    },
-    {
-      name: "fileId",
-      type: "font",
-      previewText: "Aa",
-      fontFamily: "${fileId.fontFamily}",
-    },
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "fontFamily",
-      type: "read-only-text",
-      label: "Font Family",
-      content: "${fontFamily}",
-    },
-    {
-      name: "fileType",
-      type: "read-only-text",
-      label: "File Type",
-      content: "${fileType}",
-    },
-    {
-      name: "fileSize",
-      type: "read-only-text",
-      label: "File Size",
-      content: "${fileSize}",
-    },
-  ],
-};
-
 const fontInfoForm = {
   title: "Font Details",
   fields: [
@@ -125,11 +91,6 @@ const fontInfoForm = {
 export const createInitialState = () => ({
   fontsData: { tree: [], items: {} },
   selectedItemId: null,
-  context: {
-    fileId: {
-      fontFamily: "",
-    },
-  },
   isModalOpen: false,
   selectedFontInfo: null,
   searchQuery: "",
@@ -151,10 +112,6 @@ export const selectSelectedItem = ({ state }) => {
 };
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
-
-export const setContext = ({ state }, { context } = {}) => {
-  state.context = context;
-};
 
 export const setModalOpen = ({ state }, { isOpen } = {}) => {
   state.isModalOpen = isOpen;
@@ -216,14 +173,14 @@ export const getGlyphList = (_context = {}, _payload = {}) => {
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.fontsData);
   const rawFlatGroups = toFlatGroups(state.fontsData);
-  const searchQuery = state.searchQuery.toLowerCase();
+  const searchQuery = (state.searchQuery ?? "").toLowerCase();
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
     if (!searchQuery) return true;
 
-    const name = (item.name || "").toLowerCase();
-    const description = (item.description || "").toLowerCase();
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
 
     return name.includes(searchQuery) || description.includes(searchQuery);
   };
@@ -232,7 +189,7 @@ export const selectViewData = ({ state }) => {
   const flatGroups = rawFlatGroups
     .map((group) => {
       // Filter children based on search query
-      const filteredChildren = (group.children || []).filter(matchesSearch);
+      const filteredChildren = (group.children ?? []).filter(matchesSearch);
 
       // Only show groups that have matching children or if there's no search query
       const hasMatchingChildren = filteredChildren.length > 0;
@@ -245,7 +202,7 @@ export const selectViewData = ({ state }) => {
           ? []
           : filteredChildren.map((item) => ({
               ...item,
-              fontFamily: item.fontFamily || "sans-serif",
+              fontFamily: item.fontFamily ?? "sans-serif",
               previewText: "Aa",
               selectedStyle:
                 item.id === state.selectedItemId
@@ -261,64 +218,57 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
-  let defaultValues = {};
-  let formContext = {
-    ...state.context,
-    fileId: {
-      ...state.context?.fileId,
-      fontFamily: state.context?.fileId?.fontFamily || "",
-    },
-    fontFamily: "",
-    fileType: "",
-    fileSize: "",
+  // Get file type from extension if browser MIME type is empty
+  const getFileTypeFromName = (fileName) => {
+    if (!fileName) return "";
+    const extension = fileName.toLowerCase().split(".").pop();
+    const extensionMap = {
+      ttf: "font/ttf",
+      otf: "font/otf",
+      woff: "font/woff",
+      woff2: "font/woff2",
+      ttc: "font/ttc",
+      eot: "font/eot",
+    };
+    return extensionMap[extension] || `font/${extension}`;
   };
-  if (selectedItem) {
-    // Generate font preview image for the main form
-    const previewImage = fontToBase64Image(selectedItem.fontFamily, "Aa");
 
-    // Get file type from extension if browser MIME type is empty
-    const getFileTypeFromName = (fileName) => {
-      if (!fileName) return "";
-      const extension = fileName.toLowerCase().split(".").pop();
-      const extensionMap = {
-        ttf: "font/ttf",
-        otf: "font/otf",
-        woff: "font/woff",
-        woff2: "font/woff2",
-        ttc: "font/ttc",
-        eot: "font/eot",
-      };
-      return extensionMap[extension] || `font/${extension}`;
-    };
-
-    const fontFamily = selectedItem.fontFamily || "";
-    const fileType =
-      selectedItem.fileType || getFileTypeFromName(selectedItem.name);
-    const fileSize = selectedItem.fileSize
-      ? formatFileSize(selectedItem.fileSize)
-      : "";
-
-    defaultValues = {
-      fontPreview: previewImage || null,
-      name: selectedItem.name,
-      fontFamily,
-      fileType,
-      fileSize,
-    };
-
-    formContext = {
-      ...state.context,
-      fileId: {
-        ...state.context?.fileId,
-        fontFamily,
-      },
-      fontFamily,
-      fileType,
-      fileSize,
-    };
-  }
+  const selectedFontFamily = selectedItem?.fontFamily ?? "";
+  const selectedFileType = selectedItem?.fileType
+    ? selectedItem.fileType
+    : getFileTypeFromName(selectedItem?.name ?? "");
+  const selectedFileSize = selectedItem?.fileSize
+    ? formatFileSize(selectedItem.fileSize)
+    : "";
+  const selectedFontPreview = selectedItem
+    ? fontToBase64Image(selectedFontFamily, "Aa")
+    : "";
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "slot",
+          slot: "font-preview",
+          label: "",
+        },
+        {
+          type: "text",
+          label: "Font Family",
+          value: selectedFontFamily,
+        },
+        {
+          type: "text",
+          label: "File Type",
+          value: selectedFileType,
+        },
+        {
+          type: "text",
+          label: "File Size",
+          value: selectedFileSize,
+        },
+      ]
+    : [];
 
   // Font info form values
   let fontInfoValues = {};
@@ -342,11 +292,13 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "userInterface",
     selectedResourceId: "fonts",
     selectedItemId: state.selectedItemId,
+    selectedItemName: selectedItem?.name ?? "",
+    detailFields,
     repositoryTarget: "fonts",
     title: "Fonts",
-    form,
-    defaultValues,
-    context: formContext,
+    selectedFontFamily,
+    selectedFontFileId: selectedItem?.fileId,
+    selectedFontPreview,
     isModalOpen: state.isModalOpen,
     selectedFontInfo: state.selectedFontInfo,
     glyphList: state.selectedFontInfo?.glyphs || getGlyphList(),
