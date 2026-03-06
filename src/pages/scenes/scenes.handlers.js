@@ -247,6 +247,48 @@ const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
   appService.navigate("/project/scene-editor", nextPayload);
 };
 
+const getCurrentProjectId = (appService) => {
+  return appService.getPayload()?.p;
+};
+
+const getPersistedSelectedSceneId = ({ appService, sceneItems } = {}) => {
+  const projectId = getCurrentProjectId(appService);
+  if (!projectId) {
+    return undefined;
+  }
+
+  const persistedSceneId = appService.getUserConfig(
+    `scenesMap.selectedSceneIdByProject.${projectId}`,
+  );
+  if (typeof persistedSceneId !== "string" || persistedSceneId.length === 0) {
+    return undefined;
+  }
+
+  const hasScene = Array.isArray(sceneItems)
+    ? sceneItems.some((item) => item?.id === persistedSceneId)
+    : false;
+  return hasScene ? persistedSceneId : undefined;
+};
+
+const persistSelectedSceneId = ({ appService, sceneId } = {}) => {
+  const projectId = getCurrentProjectId(appService);
+  if (!projectId) {
+    return;
+  }
+
+  const nextSceneId =
+    typeof sceneId === "string" && sceneId.length > 0 ? sceneId : undefined;
+  appService.setUserConfig(
+    `scenesMap.selectedSceneIdByProject.${projectId}`,
+    nextSceneId,
+  );
+};
+
+const setSelectedScene = ({ store, appService, sceneId } = {}) => {
+  store.setSelectedItemId({ itemId: sceneId });
+  persistSelectedSceneId({ appService, sceneId });
+};
+
 const getSceneItemById = ({ store, sceneId } = {}) => {
   if (!sceneId) {
     return undefined;
@@ -278,7 +320,7 @@ const syncScenesState = ({ store, projectService } = {}) => {
 };
 
 const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
-  const { store, refs, render } = deps;
+  const { store, refs, render, appService } = deps;
   if (!sceneId) {
     return;
   }
@@ -293,7 +335,7 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
     description: sceneItem.description ?? "",
   };
 
-  store.setSelectedItemId({ itemId: sceneId });
+  setSelectedScene({ store, appService, sceneId });
   const { fileexplorer, editForm } = refs;
   fileexplorer.selectItem({ itemId: sceneId });
   store.openEditDialog({
@@ -324,6 +366,26 @@ export const handleAfterMount = async (deps) => {
 
   // Initialize whiteboard with scene items only
   store.setWhiteboardItems({ items: sceneItems });
+
+  const shouldHideMapAddHint =
+    appService.getUserConfig("scenesMap.hideAddSceneHint") === true;
+  if (shouldHideMapAddHint) {
+    store.hideMapAddHint();
+  }
+
+  const persistedSelectedSceneId = getPersistedSelectedSceneId({
+    appService,
+    sceneItems,
+  });
+  if (persistedSelectedSceneId) {
+    setSelectedScene({
+      store,
+      appService,
+      sceneId: persistedSelectedSceneId,
+    });
+    const { fileexplorer } = refs;
+    fileexplorer.selectItem({ itemId: persistedSelectedSceneId });
+  }
 
   const initialViewport = resolveInitialWhiteboardViewport({
     appService,
@@ -359,13 +421,13 @@ export const handleDataChanged = async (deps) => {
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   const detail = payload?._event?.detail || {};
   const itemId = resolveDetailItemId(detail);
   const isFolder = detail.isFolder === true || detail.item?.type === "folder";
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: null });
+    setSelectedScene({ store, appService, sceneId: null });
     render();
     return;
   }
@@ -374,7 +436,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  setSelectedScene({ store, appService, sceneId: itemId });
   render();
 };
 
@@ -426,11 +488,11 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
 };
 
 export const handleWhiteboardItemSelected = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   const { itemId } = payload._event.detail;
 
   // Update selected item for detail panel
-  store.setSelectedItemId({ itemId: itemId });
+  setSelectedScene({ store, appService, sceneId: itemId });
   render();
 };
 
@@ -650,7 +712,7 @@ export const handleSceneFormAction = async (deps, payload) => {
 };
 
 export const handleWhiteboardItemDelete = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
   const { itemId } = payload._event.detail;
 
   await projectService.deleteSceneItem({ sceneId: itemId });
@@ -669,7 +731,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   // Clear selection if the deleted item was selected
   const selectedItemId = store.selectSelectedItemId();
   if (selectedItemId === itemId) {
-    store.setSelectedItemId({ itemId: null });
+    setSelectedScene({ store, appService, sceneId: null });
   }
 
   render();
@@ -691,6 +753,13 @@ export const handleWhiteboardItemContextMenu = (deps, payload) => {
 export const handleDropdownMenuClose = (deps) => {
   const { store, render } = deps;
   store.hideDropdownMenu();
+  render();
+};
+
+export const handleMapAddHintClose = (deps) => {
+  const { store, render, appService } = deps;
+  store.hideMapAddHint();
+  appService.setUserConfig("scenesMap.hideAddSceneHint", true);
   render();
 };
 
@@ -760,7 +829,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     // Clear selection if the deleted item was selected
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId === itemId) {
-      store.setSelectedItemId({ itemId: null });
+      setSelectedScene({ store, appService, sceneId: null });
     }
 
     render();

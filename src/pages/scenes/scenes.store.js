@@ -30,7 +30,7 @@ export const createInitialState = () => ({
   },
   previewVisible: false,
   previewSceneId: undefined,
-  sectionsListOpen: false,
+  sectionsListOpen: true,
   deadEndTooltip: {
     open: false,
     x: 0,
@@ -72,7 +72,7 @@ export const selectPreviewScene = ({ state }) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   if (state.selectedItemId !== itemId) {
-    state.sectionsListOpen = false;
+    state.sectionsListOpen = true;
     state.deadEndTooltip.open = false;
   }
   state.selectedItemId = itemId;
@@ -282,7 +282,7 @@ export const selectViewData = ({ state }, payload) => {
     detailFields = [
       {
         type: "text",
-        label: "Name",
+        label: "",
         value: selectedSceneName,
       },
       {
@@ -294,11 +294,6 @@ export const selectViewData = ({ state }, payload) => {
         type: "slot",
         slot: "preview",
         label: "",
-      },
-      {
-        type: "text",
-        label: "Sections",
-        value: String(selectedSceneSections.length),
       },
       {
         type: "slot",
