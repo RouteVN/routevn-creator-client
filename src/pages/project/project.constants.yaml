@@ -1,13 +1,20 @@
-projectForm:
+editProjectForm:
+  title: Edit Project
   fields:
     - name: name
-      type: popover-input
+      type: input-text
       label: Project Name
       required: true
     - name: description
-      type: popover-input
+      type: input-textarea
       label: Description
-      required: true
+      required: false
     - type: slot
-      slot: icon-file-id
+      slot: project-icon-edit
       label: Project Icon
+  actions:
+    layout: ""
+    buttons:
+      - id: submit
+        variant: pr
+        label: Save Changes

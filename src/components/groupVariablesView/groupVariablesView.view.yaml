@@ -76,7 +76,7 @@ template:
                                               - rtgl-text c=mu-fg s=sm: Default
                                       - $for item, j in group.children:
                                           - $if item.isSelected:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu br=sm:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu h-bgc=mu br=sm:
                                                   - rtgl-view w=2fg:
                                                       - rtgl-text s=sm: ${item.name}
                                                   - rtgl-view w=1fg:
@@ -86,7 +86,7 @@ template:
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md h-bgc=mu:
                                                   - rtgl-view w=2fg:
                                                       - rtgl-text s=sm: ${item.name}
                                                   - rtgl-view w=1fg:

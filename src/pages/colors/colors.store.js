@@ -10,25 +10,6 @@ const hexToRgb = (hex) => {
   return `rgb(${r}, ${g}, ${b})`;
 };
 
-const form = {
-  fields: [
-    { name: "colorImage", type: "image" },
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "hex",
-      type: "read-only-text",
-      label: "Hex Value",
-      content: "${hex}",
-    },
-    {
-      name: "rgb",
-      type: "read-only-text",
-      label: "RGB Value",
-      content: "${rgb}",
-    },
-  ],
-};
-
 export const createInitialState = () => ({
   colorsData: { tree: [], items: {} },
   selectedItemId: null,
@@ -38,11 +19,6 @@ export const createInitialState = () => ({
   targetGroupId: null,
   searchQuery: "",
   collapsedIds: [],
-  context: {
-    colorImage: {
-      src: "",
-    },
-  },
   addDefaultValues: {
     name: "",
     hex: "#ffffff",
@@ -60,10 +36,6 @@ export const createInitialState = () => ({
 
 export const setItems = ({ state }, { colorsData } = {}) => {
   state.colorsData = colorsData;
-};
-
-export const setContext = ({ state }, { context } = {}) => {
-  state.context = context;
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
@@ -122,44 +94,43 @@ export const selectViewData = ({ state }) => {
   // Get selected item details
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
+    : undefined;
 
-  let defaultValues = {};
-  let formContext = {
-    ...state.context,
-    hex: "",
-    rgb: "",
-  };
-  if (selectedItem) {
-    const hex = selectedItem.hex ?? "";
-    const rgb = hexToRgb(hex);
-    defaultValues = {
-      colorImage: state.context?.colorImage?.src || null,
-      name: selectedItem.name,
-      hex,
-      rgb,
-    };
-    formContext = {
-      ...state.context,
-      hex,
-      rgb,
-    };
-  }
+  const selectedColorHex = selectedItem?.hex ?? "";
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "slot",
+          slot: "color-preview",
+          label: "",
+        },
+        {
+          type: "text",
+          label: "Hex Value",
+          value: selectedColorHex,
+        },
+        {
+          type: "text",
+          label: "RGB Value",
+          value: hexToRgb(selectedColorHex),
+        },
+      ]
+    : [];
 
   // Apply search filter
-  const searchQuery = state.searchQuery.toLowerCase().trim();
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   let filteredGroups = rawFlatGroups;
 
   if (searchQuery) {
     filteredGroups = rawFlatGroups
       .map((group) => {
-        const filteredChildren = (group.children || []).filter((item) => {
-          const name = (item.name || "").toLowerCase();
-          const hex = (item.hex || "").toLowerCase();
+        const filteredChildren = (group.children ?? []).filter((item) => {
+          const name = (item.name ?? "").toLowerCase();
+          const hex = (item.hex ?? "").toLowerCase();
           return name.includes(searchQuery) || hex.includes(searchQuery);
         });
 
-        const groupName = (group.name || "").toLowerCase();
+        const groupName = (group.name ?? "").toLowerCase();
         const shouldIncludeGroup =
           filteredChildren.length > 0 || groupName.includes(searchQuery);
 
@@ -180,7 +151,7 @@ export const selectViewData = ({ state }) => {
     isCollapsed: state.collapsedIds.includes(group.id),
     children: state.collapsedIds.includes(group.id)
       ? []
-      : (group.children || []).map((item) => ({
+      : (group.children ?? []).map((item) => ({
           ...item,
           selectedStyle:
             item.id === state.selectedItemId
@@ -192,7 +163,7 @@ export const selectViewData = ({ state }) => {
   // Get edit item details
   const editItem = state.editItemId
     ? flatItems.find((item) => item.id === state.editItemId)
-    : null;
+    : undefined;
 
   let editDefaultValues = {};
   let editForm = {
@@ -225,8 +196,8 @@ export const selectViewData = ({ state }) => {
 
   if (editItem) {
     editDefaultValues = {
-      name: editItem.name,
-      hex: editItem.hex || "",
+      name: editItem.name ?? "",
+      hex: editItem.hex ?? "",
     };
   }
 
@@ -265,13 +236,13 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "userInterface",
     selectedResourceId: "colors",
     selectedItemId: state.selectedItemId,
+    selectedItemName: selectedItem?.name ?? "",
+    selectedColorHex,
+    detailFields,
     repositoryTarget: "colors",
     title: "Colors",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
-    form,
-    context: formContext,
-    defaultValues,
     isEditDialogOpen: state.isEditDialogOpen,
     editDefaultValues,
     editForm,

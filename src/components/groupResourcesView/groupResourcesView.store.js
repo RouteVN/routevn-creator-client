@@ -130,27 +130,26 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const setBorderColorForItems = (items) => {
     return items.map((item) => {
       const isSelected = item.id === props.selectedItemId;
-      const isCharacterResource = props.resourceType === "characters";
       const isImageResource = props.resourceType === "images";
       const isSoundResource = props.resourceType === "sounds";
       const isVideoResource = props.resourceType === "videos";
-      const isTransformResource = props.resourceType === "transforms";
-      const isTweenResource = props.resourceType === "tweens";
-      const defaultItemBorderColor = isCharacterResource
+      const shouldShowDefaultBorder = [
+        "characters",
+        "images",
+        "transforms",
+        "tweens",
+        "colors",
+        "fonts",
+        "typography",
+        "layouts",
+      ].includes(props.resourceType);
+      const defaultItemBorderColor = shouldShowDefaultBorder
         ? isSelected
           ? "pr"
           : "bo"
-        : isImageResource
-          ? isSelected
-            ? "pr"
-            : "bo"
-          : isTransformResource || isTweenResource
-            ? isSelected
-              ? "pr"
-              : "bo"
-            : isSelected
-              ? "pr"
-              : "tr";
+        : isSelected
+          ? "pr"
+          : "tr";
 
       const updatedItem = {
         ...item,

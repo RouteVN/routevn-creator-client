@@ -827,6 +827,14 @@ export const handleTargetChanged = async (deps, payload) => {
       parentId: parent,
       position: repositoryPosition,
     });
+  } else if (isVariablesTarget(repositoryTarget)) {
+    await projectService.updateVariableItem({
+      variableId: source.id,
+      patch: {
+        parentId: parent,
+      },
+      position: repositoryPosition,
+    });
   } else if (characterSpritesTarget) {
     await applyCharacterSpritesPatch({
       projectService,

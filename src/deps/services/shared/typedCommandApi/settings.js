@@ -53,8 +53,38 @@ export const createSettingsCommandApi = (shared) => ({
     return nextVariableId;
   },
 
-  async updateVariableItem({ variableId, patch }) {
+  async updateVariableItem({
+    variableId,
+    patch = {},
+    parentId,
+    position,
+    index,
+  }) {
     const context = await shared.ensureTypedCommandContext();
+    const nextPatch = structuredClone(patch ?? {});
+    const hasParentChange = Object.prototype.hasOwnProperty.call(
+      nextPatch,
+      "parentId",
+    );
+    if (hasParentChange) {
+      nextPatch.parentId = normalizeParentId(nextPatch.parentId);
+    }
+    const resolvedParentId = hasParentChange
+      ? nextPatch.parentId
+      : normalizeParentId(parentId);
+    const resolvedIndex =
+      hasParentChange ||
+      parentId !== undefined ||
+      Number.isInteger(index) ||
+      position !== undefined
+        ? shared.resolveVariableIndex({
+            state: context.state,
+            parentId: resolvedParentId,
+            position,
+            index,
+            movingId: variableId,
+          })
+        : undefined;
 
     await shared.submitTypedCommandWithContext({
       context,
@@ -62,7 +92,9 @@ export const createSettingsCommandApi = (shared) => ({
       type: "variable.update",
       payload: {
         variableId,
-        patch: structuredClone(patch || {}),
+        patch: nextPatch,
+        ...(resolvedIndex !== undefined ? { index: resolvedIndex } : {}),
+        ...(position !== undefined ? { position } : {}),
       },
       partitions: [],
     });

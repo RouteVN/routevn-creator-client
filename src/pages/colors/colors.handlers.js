@@ -1,151 +1,20 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
-const hexToBase64Image = (hex) => {
-  if (!hex) return "";
-
-  // Create a canvas element
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  // Set canvas size
-  canvas.width = 100;
-  canvas.height = 100;
-
-  // Fill with the color
-  ctx.fillStyle = hex;
-  ctx.fillRect(0, 0, 100, 100);
-
-  // Convert to base64
-  return canvas.toDataURL("image/png");
-};
-
-const hexToRgb = (hex) => {
-  if (!hex) return "";
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return "";
-  const r = parseInt(result[1], 16);
-  const g = parseInt(result[2], 16);
-  const b = parseInt(result[3], 16);
-  return `rgb(${r}, ${g}, ${b})`;
-};
-
 const getColorItemById = ({ store, itemId } = {}) => {
-  if (!itemId) return null;
+  if (!itemId) return undefined;
   const item = store.getState().colorsData?.items?.[itemId];
-  if (!item || item.type !== "color") return null;
+  if (!item || item.type !== "color") return undefined;
   return item;
 };
 
-const callFormMethod = ({ formRef, methodName, payload } = {}) => {
-  if (!formRef || !methodName) return false;
-
-  if (typeof formRef[methodName] === "function") {
-    formRef[methodName](payload);
-    return true;
-  }
-
-  if (typeof formRef.transformedMethods?.[methodName] === "function") {
-    formRef.transformedMethods[methodName](payload);
-    return true;
-  }
-
-  return false;
-};
-
-const syncEditFormValues = ({ deps, values, attempt = 0 } = {}) => {
+const syncEditFormValues = ({ deps, values } = {}) => {
   const formRef = deps?.refs?.editForm;
-
   if (!formRef) {
-    if (attempt < 6) {
-      setTimeout(() => {
-        syncEditFormValues({ deps, values, attempt: attempt + 1 });
-      }, 0);
-    }
     return;
   }
-
-  callFormMethod({ formRef, methodName: "reset" });
-
-  const didSet = callFormMethod({
-    formRef,
-    methodName: "setValues",
-    payload: { values },
-  });
-
-  if (!didSet && attempt < 6) {
-    setTimeout(() => {
-      syncEditFormValues({ deps, values, attempt: attempt + 1 });
-    }, 0);
-  }
-};
-
-const syncDetailFormValues = ({
-  deps,
-  values,
-  selectedItemId,
-  attempt = 0,
-} = {}) => {
-  const formRef = deps?.refs?.detailForm;
-  const currentSelectedItemId = deps?.store?.selectSelectedItemId?.();
-
-  if (selectedItemId && selectedItemId !== currentSelectedItemId) {
-    return;
-  }
-
-  if (!formRef) {
-    if (attempt < 6) {
-      setTimeout(() => {
-        syncDetailFormValues({
-          deps,
-          values,
-          selectedItemId,
-          attempt: attempt + 1,
-        });
-      }, 0);
-    }
-    return;
-  }
-
-  callFormMethod({ formRef, methodName: "reset" });
-
-  const didSet = callFormMethod({
-    formRef,
-    methodName: "setValues",
-    payload: { values },
-  });
-
-  if (!didSet && attempt < 6) {
-    setTimeout(() => {
-      syncDetailFormValues({
-        deps,
-        values,
-        selectedItemId,
-        attempt: attempt + 1,
-      });
-    }, 0);
-  }
-};
-
-const createDetailFormValues = (item) => {
-  if (!item) {
-    return {
-      colorImage: null,
-      name: "",
-      hex: "",
-      rgb: "",
-    };
-  }
-
-  const hex = item.hex ?? "";
-  const colorImage = hex ? hexToBase64Image(hex) : null;
-
-  return {
-    colorImage,
-    name: item.name || "",
-    hex,
-    rgb: hexToRgb(hex),
-  };
+  formRef.reset();
+  formRef.setValues({ values });
 };
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
@@ -162,8 +31,8 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   syncEditFormValues({
     deps,
     values: {
-      name: colorItem.name || "",
-      hex: colorItem.hex || "",
+      name: colorItem.name ?? "",
+      hex: colorItem.hex ?? "",
     },
   });
 };
@@ -185,65 +54,27 @@ export const handleDataChanged = async (deps) => {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id, item, isFolder } = payload._event.detail;
+  const { id, isFolder } = payload._event.detail;
 
-  // If this is a folder, clear selection and context
   if (isFolder) {
-    store.setSelectedItemId({ itemId: null });
-    store.setContext({
-      context: {
-        colorImage: {
-          src: null,
-        },
-      },
-    });
+    store.setSelectedItemId({ itemId: undefined });
     render();
     return;
   }
 
   store.setSelectedItemId({ itemId: id });
-  const selectedItem = item || store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
-  store.setContext({
-    context: {
-      colorImage: {
-        src: detailValues.colorImage,
-      },
-    },
-  });
-
   render();
-  syncDetailFormValues({
-    deps,
-    values: detailValues,
-    selectedItemId: id,
-  });
 };
 
 export const handleColorItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail; // Extract from forwarded event
+  const { itemId } = payload._event.detail;
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
   fileExplorer.selectItem({ itemId });
 
-  const selectedItem = store.selectSelectedItem();
-  const detailValues = createDetailFormValues(selectedItem);
-  store.setContext({
-    context: {
-      colorImage: {
-        src: detailValues.colorImage,
-      },
-    },
-  });
-
   render();
-  syncDetailFormValues({
-    deps,
-    values: detailValues,
-    selectedItemId: itemId,
-  });
 };
 
 export const handleColorCreated = async (deps, payload) => {
@@ -279,33 +110,6 @@ export const handleColorEdited = (deps, payload) => {
       hex,
     },
   });
-};
-
-export const handleFormChange = async (deps, payload) => {
-  const { projectService, render, store } = deps;
-  await projectService.updateResourceItem({
-    resourceType: "colors",
-    resourceId: store.selectSelectedItemId(),
-    patch: {
-      [payload._event.detail.name]: payload._event.detail.value,
-    },
-  });
-
-  const { colors } = projectService.getState();
-  store.setItems({ colorsData: colors });
-
-  // Update context if hex value changed
-  if (payload._event.detail.name === "hex") {
-    store.setContext({
-      context: {
-        colorImage: {
-          src: hexToBase64Image(payload._event.detail.value),
-        },
-      },
-    });
-  }
-
-  render();
 };
 
 export const handleColorItemDoubleClick = (deps, payload) => {
@@ -361,30 +165,16 @@ export const handleEditFormAction = async (deps, payload) => {
     const { colors } = projectService.getState();
     store.setItems({ colorsData: colors });
 
-    // Update context if this is the selected item
-    if (editItemId === store.getState().selectedItemId) {
-      store.setContext({
-        context: {
-          colorImage: {
-            src: hexToBase64Image(formData.hex),
-          },
-        },
-      });
-    }
-
     store.closeEditDialog();
     render();
   }
 };
 
-export const handleFormFieldClick = (deps, payload) => {
+export const handleFormFieldClick = (deps) => {
   const { store } = deps;
-  // Check if the clicked field is the color image
-  if (payload._event.detail.name === "colorImage") {
-    const selectedItemId = store.selectSelectedItemId();
-    if (selectedItemId) {
-      openEditDialogWithValues({ deps, itemId: selectedItemId });
-    }
+  const selectedItemId = store.selectSelectedItemId();
+  if (selectedItemId) {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
   }
 };
 
@@ -430,7 +220,7 @@ export const handleAddFormAction = async (deps, payload) => {
 
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
-  const searchQuery = payload._event.detail?.value || "";
+  const searchQuery = payload._event.detail?.value ?? "";
   store.setSearchQuery({ query: searchQuery });
   render();
 };

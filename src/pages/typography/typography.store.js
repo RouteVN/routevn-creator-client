@@ -73,63 +73,12 @@ const createAddFontForm = (fontFolderOptions) => ({
   },
 });
 
-const form = {
-  fields: [
-    {
-      name: "typographyPreview",
-      type: "image",
-    },
-    { name: "name", type: "popover-input", label: "Name" },
-    {
-      name: "fontSize",
-      type: "read-only-text",
-      label: "Font Size",
-      content: "${fontSize}",
-    },
-    {
-      name: "lineHeight",
-      type: "read-only-text",
-      label: "Line Height",
-      content: "${lineHeight}",
-    },
-    {
-      name: "colorName",
-      type: "read-only-text",
-      label: "Color",
-      content: "${colorName}",
-    },
-    {
-      name: "fontName",
-      type: "read-only-text",
-      label: "Font",
-      content: "${fontName}",
-    },
-    {
-      name: "fontWeight",
-      type: "read-only-text",
-      label: "Font Weight",
-      content: "${fontWeight}",
-    },
-    {
-      name: "previewText",
-      type: "read-only-text",
-      label: "Preview Text",
-      content: "${previewText}",
-    },
-  ],
-};
-
 export const createInitialState = () => ({
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
   selectedItemId: undefined,
   searchQuery: "",
-  context: {
-    typographyPreview: {
-      src: "",
-    },
-  },
 
   // Dialog state
   isDialogOpen: false,
@@ -196,10 +145,6 @@ export const setColorsData = ({ state }, { colorsData } = {}) => {
 
 export const setFontsData = ({ state }, { fontsData } = {}) => {
   state.fontsData = fontsData;
-};
-
-export const setContext = ({ state }, { context } = {}) => {
-  state.context = context;
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
@@ -361,18 +306,18 @@ export const selectViewData = ({ state }) => {
     : undefined;
 
   // Apply search filter
-  const searchQuery = state.searchQuery.toLowerCase().trim();
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   let filteredGroups = rawFlatGroups;
 
   if (searchQuery) {
     filteredGroups = rawFlatGroups
       .map((group) => {
-        const filteredChildren = (group.children || []).filter((item) => {
-          const name = (item.name || "").toLowerCase();
+        const filteredChildren = (group.children ?? []).filter((item) => {
+          const name = (item.name ?? "").toLowerCase();
           return name.includes(searchQuery);
         });
 
-        const groupName = (group.name || "").toLowerCase();
+        const groupName = (group.name ?? "").toLowerCase();
         const shouldIncludeGroup =
           filteredChildren.length > 0 || groupName.includes(searchQuery);
 
@@ -412,14 +357,14 @@ export const selectViewData = ({ state }) => {
   // Apply selection styling and add typography-specific preview data (collapse state is now handled by groupResourcesView)
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
-    children: (group.children || []).map((item) => {
+    children: (group.children ?? []).map((item) => {
       const fontData = getFontData(item.fontId);
       return {
         ...item,
         fontStyle: fontData.fontFamily,
         fontFileId: fontData.fileId,
         color: getColorHex(item.colorId),
-        previewText: item.previewText || "",
+        previewText: item.previewText ?? "",
         selectedStyle:
           item.id === state.selectedItemId
             ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
@@ -430,25 +375,69 @@ export const selectViewData = ({ state }) => {
 
   // Helper function to get color name from ID
   const getColorName = (colorId) => {
-    if (!colorId) throw new Error("colorId is required");
+    if (!colorId) return "";
     const colorItems = toFlatItems(state.colorsData);
     const color = colorItems.find(
       (item) => item.type === "color" && item.id === colorId,
     );
-    if (!color) throw new Error(`Color with ID ${colorId} not found`);
-    return color.name;
+    if (!color) return "";
+    return color.name ?? "";
   };
 
   // Helper function to get font name from ID
   const getFontName = (fontId) => {
-    if (!fontId) throw new Error("fontId is required");
+    if (!fontId) return "";
     const fontItems = toFlatItems(state.fontsData);
     const font = fontItems.find(
       (item) => item.type === "font" && item.id === fontId,
     );
-    if (!font) throw new Error(`Font with ID ${fontId} not found`);
-    return font.fontFamily;
+    if (!font) return "";
+    return font.fontFamily ?? "";
   };
+
+  const detailPreviewFontData = selectedItem
+    ? getFontData(selectedItem.fontId)
+    : { fontFamily: undefined, fileId: undefined };
+
+  const detailFields = selectedItem
+    ? [
+        {
+          type: "slot",
+          slot: "typography-preview",
+          label: "",
+        },
+        {
+          type: "text",
+          label: "Font Size",
+          value: String(selectedItem.fontSize ?? ""),
+        },
+        {
+          type: "text",
+          label: "Line Height",
+          value: String(selectedItem.lineHeight ?? ""),
+        },
+        {
+          type: "text",
+          label: "Color",
+          value: selectedItem.colorId ? getColorName(selectedItem.colorId) : "",
+        },
+        {
+          type: "text",
+          label: "Font",
+          value: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
+        },
+        {
+          type: "text",
+          label: "Font Weight",
+          value: String(selectedItem.fontWeight ?? ""),
+        },
+        {
+          type: "text",
+          label: "Preview Text",
+          value: selectedItem.previewText ?? "",
+        },
+      ]
+    : [];
 
   // Generate color options for dialog form
   const colorOptions = state.colorsData
@@ -632,62 +621,29 @@ export const selectViewData = ({ state }) => {
 
   const previewFontData = getPreviewFontData();
 
-  let detailFormDefaultValues = {};
-
-  if (selectedItem) {
-    try {
-      detailFormDefaultValues = {
-        typographyPreview: state.context?.typographyPreview?.src || null,
-        name: selectedItem.name,
-        fontSize: selectedItem.fontSize ?? "",
-        lineHeight: selectedItem.lineHeight ?? "",
-        colorName: selectedItem.colorId
-          ? getColorName(selectedItem.colorId)
-          : "",
-        fontName: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
-        fontWeight: selectedItem.fontWeight ?? "",
-        previewText: selectedItem.previewText ?? "",
-      };
-    } catch (error) {
-      console.error("Failed to get detail form values:", error);
-      detailFormDefaultValues = {
-        typographyPreview: state.context?.typographyPreview?.src || null,
-        name: selectedItem.name || "",
-        fontSize: selectedItem.fontSize ?? "",
-        lineHeight: selectedItem.lineHeight ?? "",
-        colorName: "",
-        fontName: "",
-        fontWeight: selectedItem.fontWeight ?? "",
-        previewText: selectedItem.previewText ?? "",
-      };
-    }
-  }
-
-  const detailFormContext = {
-    ...state.context,
-    fontSize: detailFormDefaultValues.fontSize ?? "",
-    lineHeight: detailFormDefaultValues.lineHeight ?? "",
-    colorName: detailFormDefaultValues.colorName ?? "",
-    fontName: detailFormDefaultValues.fontName ?? "",
-    fontWeight: detailFormDefaultValues.fontWeight ?? "",
-    previewText: detailFormDefaultValues.previewText ?? "",
-  };
-
   return {
     flatItems,
     flatGroups,
     resourceCategory: "userInterface",
     selectedResourceId: "typography",
     selectedItemId: state.selectedItemId,
+    selectedItemName: selectedItem?.name ?? "",
+    detailFields,
+    detailPreviewText: selectedItem?.previewText ?? "",
+    detailPreviewFontSize: selectedItem?.fontSize ?? 16,
+    detailPreviewLineHeight: selectedItem?.lineHeight ?? 1.5,
+    detailPreviewFontWeight: selectedItem?.fontWeight ?? "400",
+    detailPreviewColor: selectedItem?.colorId
+      ? getColorHex(selectedItem.colorId)
+      : undefined,
+    detailPreviewFontFamily: detailPreviewFontData.fontFamily,
+    detailPreviewFontFileId: detailPreviewFontData.fileId,
     repositoryTarget: "typography",
     title: "Typography",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     colorsData: state.colorsData,
     fontsData: state.fontsData,
-    form,
-    context: detailFormContext,
-    defaultValues: detailFormDefaultValues,
 
     // Dialog-related data
     isDialogOpen: state.isDialogOpen,

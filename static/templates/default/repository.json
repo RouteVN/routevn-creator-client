@@ -265,13 +265,6 @@
         "fontFamily": "sample_font",
         "fileType": "font/sample_font",
         "fileSize": 857712
-      },
-      "font-system-arial": {
-        "type": "font",
-        "name": "Arial (System)",
-        "fontFamily": "Arial",
-        "fileType": "font/system",
-        "fileSize": 0
       }
     },
     "tree": [
@@ -280,10 +273,6 @@
         "children": [
           {
             "id": "-hpZD817Q_lRDt-vjl4UN",
-            "children": []
-          },
-          {
-            "id": "font-system-arial",
             "children": []
           }
         ]
@@ -417,7 +406,7 @@
         "fontSize": 24,
         "lineHeight": 1.2,
         "colorId": "color-white",
-        "fontId": "font-system-arial",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
         "fontWeight": "400",
         "previewText": "Default"
       },
@@ -447,7 +436,7 @@
         "fontSize": 24,
         "lineHeight": 1.2,
         "colorId": "color-yellow",
-        "fontId": "font-system-arial",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
         "fontWeight": "400",
         "previewText": "Default Hover"
       }

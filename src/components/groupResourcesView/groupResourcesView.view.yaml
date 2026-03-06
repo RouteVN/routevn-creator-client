@@ -136,7 +136,7 @@ template:
                                         $else:
                                           - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                               - $if resourceType == 'fonts':
-                                                  - rtgl-view bc=${item.borderColor} p=md g=md w=${mediaWidth} d=v bw=xs br=md:
+                                                  - rtgl-view p=md g=md w=${mediaWidth} d=v br=md:
                                                       - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c: null
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                                 $elif resourceType == 'videos':
@@ -169,15 +169,15 @@ template:
                                                       - rvn-file-image br=md mw=${maxWidth} h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
                                                       - rtgl-text s=xs c=mu-fg ellipsis mw=${maxWidth}: ${item.name}
                                                 $elif resourceType == 'colors':
-                                                  - 'rtgl-view bc=${item.borderColor} p=md g=md br=md bw=xs style="overflow: hidden;"':
+                                                  - 'rtgl-view p=md g=md br=md style="overflow: hidden;"':
                                                       - 'rtgl-view w=${mediaWidth} h=${mediaHeight} style="background-color: ${item.hex}"': null
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                                 $elif resourceType == 'typography':
-                                                  - rtgl-view bc=${item.borderColor} p=md g=md w=f br=md bw=xs:
+                                                  - rtgl-view p=md g=md w=f br=md:
                                                       - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=700 height=80 showBorder=false: null
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                                 $elif resourceType == 'layouts':
-                                                  - rtgl-view bc=${item.borderColor} w=${mediaWidth} h=${mediaHeight} ah=c av=c bw=xs br=sm cur=pointer:
+                                                  - rtgl-view w=${mediaWidth} h=${mediaHeight} ah=c av=c br=sm cur=pointer:
                                                       - rtgl-view av=c ah=c w=f ph=sm:
                                                           - rtgl-text s=md ellipsis w=f: ${item.name}
                                                           - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.layoutType}
