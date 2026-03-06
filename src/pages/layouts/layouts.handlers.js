@@ -29,9 +29,7 @@ export const handleImageItemClick = (deps, payload) => {
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
   store.setSelectedItemId({ itemId: itemId });
   render();

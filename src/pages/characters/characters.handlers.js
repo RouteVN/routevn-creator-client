@@ -207,9 +207,7 @@ export const handleCharacterItemClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
   const selectedItem = detail.item || store.selectSelectedItem();
   const detailValues = createDetailFormValues(selectedItem);
   render();
@@ -236,9 +234,7 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
   if (!itemId) return;
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
   openEditDialogWithValues({ deps, itemId: itemId });
 };

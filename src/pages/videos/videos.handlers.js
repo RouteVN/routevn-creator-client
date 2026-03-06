@@ -199,9 +199,7 @@ export const handleVideoItemClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
   const selectedItem = detail.item || store.selectSelectedItem();
   const detailValues = createDetailFormValues(selectedItem);

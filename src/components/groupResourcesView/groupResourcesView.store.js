@@ -3,6 +3,7 @@ export const createInitialState = () => ({
   collapsedIds: [],
   lastClickedItemId: null,
   lastClickedAt: 0,
+  hoveredItemId: undefined,
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -34,6 +35,12 @@ export const selectLastClickedItemId = ({ state }) => state.lastClickedItemId;
 
 export const selectLastClickedAt = ({ state }) => state.lastClickedAt;
 
+export const setHoveredItemId = ({ state }, { itemId } = {}) => {
+  state.hoveredItemId = itemId;
+};
+
+export const selectHoveredItemId = ({ state }) => state.hoveredItemId;
+
 export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
@@ -43,14 +50,19 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   }
 };
 
-export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
+export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items = [
-    { label: "Delete", type: "item", value: "delete-item" },
-  ];
+  state.dropdownMenu.items =
+    props.resourceType === "images"
+      ? [
+          { label: "Edit", type: "item", value: "edit-item" },
+          { label: "Preview", type: "item", value: "preview-item" },
+          { label: "Delete", type: "item", value: "delete-item" },
+        ]
+      : [{ label: "Delete", type: "item", value: "delete-item" }];
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -115,6 +127,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         borderColor: isSelected ? "fg" : "bo",
         itemBorderColor: defaultItemBorderColor,
         itemHoverBorderColor: isSelected ? defaultItemBorderColor : "ac",
+        showZoomIcon: isImageResource && item.id === state.hoveredItemId,
       };
 
       // If item has children, recursively process them

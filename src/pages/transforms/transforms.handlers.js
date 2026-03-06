@@ -207,9 +207,7 @@ export const handleTransformItemClick = (deps, payload) => {
   }
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
   store.setSelectedItemId({ itemId: itemId });
   const selectedItem = detail.item || store.selectSelectedItem();

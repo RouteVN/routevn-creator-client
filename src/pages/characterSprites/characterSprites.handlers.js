@@ -258,9 +258,7 @@ export const handleImageItemClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
   const selectedItem = detail.item || store.selectSelectedItem();
   let imageSrc = null;

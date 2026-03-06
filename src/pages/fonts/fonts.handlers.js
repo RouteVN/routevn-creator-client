@@ -186,9 +186,7 @@ export const handleFontItemClick = (deps, payload) => {
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
-  fileExplorer.transformedHandlers.handlePageItemClick({
-    _event: { detail: { itemId } },
-  });
+  fileExplorer.selectItem({ itemId });
 
   const selectedItem = store.selectSelectedItem();
   const detailValues = createDetailFormValues(selectedItem);

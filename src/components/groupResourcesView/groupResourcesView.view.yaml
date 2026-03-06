@@ -45,6 +45,10 @@ refs:
         handler: handleItemClick
       dblclick:
         handler: handleItemDoubleClick
+      mouseenter:
+        handler: handleItemMouseEnter
+      mouseleave:
+        handler: handleItemMouseLeave
       contextmenu:
         handler: handleItemContextMenu
   transformItem*:
@@ -71,6 +75,10 @@ refs:
         handler: handleDragLeave
       drop:
         handler: handleDrop
+  zoomPreview*:
+    eventListeners:
+      click:
+        handler: handleZoomPreviewClick
   backButton:
     eventListeners:
       click:
@@ -143,8 +151,11 @@ template:
                                                     $else:
                                                       - rtgl-image bc=${item.borderColor} p=md g=md bw=xs br=md w=${mediaWidth} h=${mediaHeight} src=/public/project_logo_placeholder.png: null
                                                 $elif resourceType == 'images':
-                                                  - 'rtgl-view p=md g=md br=md w=${maxWidth} style="max-width: 100%;"':
+                                                  - 'rtgl-view p=md g=md br=md w=${maxWidth} pos=rel style="max-width: 100%;"':
                                                       - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.fileId} key=${item.fileId}-${imageHeight}x${maxWidth}: null
+                                                      - $if item.showZoomIcon:
+                                                          - 'rtgl-view#zoomPreviewRef${gIndex}x${itemIndex} data-item-id=${item.id} bw=xs bc=ac bgc=bg br=f w=24 h=24 ah=c av=c pos=abs cur=pointer style="top: 8px; right: 8px; z-index: 2;"':
+                                                              - rtgl-svg svg=zoomIn wh=12 c=ac: null
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $elif resourceType == 'characterSprites':
                                                   - rtgl-view bc=${item.borderColor} p=md g=md bw=xs br=md:

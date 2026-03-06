@@ -27,3 +27,10 @@ propsSchema:
       type: string
       description: Repository target for data operations (e.g. 'images', 'sounds')
       required: true
+methods:
+  type: object
+  properties:
+    selectItem:
+      description: Selects an item by id in the explorer list.
+      params: []
+      returns: void

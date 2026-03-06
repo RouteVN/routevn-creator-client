@@ -824,6 +824,7 @@ export const createProjectService = ({
     ...serviceCore.typedCommandApi,
     addVersionToProject: serviceCore.addVersionToProject,
     deleteVersionFromProject: serviceCore.deleteVersionFromProject,
+    deleteResourceItemIfUnused: serviceCore.deleteResourceItemIfUnused,
     async initializeProject({ projectId, template }) {
       return initializeWebProject({
         projectId,

@@ -13,6 +13,10 @@ refs:
         handler: handleImageItemClick
       item-dblclick:
         handler: handleImageItemDoubleClick
+      item-preview:
+        handler: handleImageItemPreview
+      item-edit:
+        handler: handleImageItemEdit
       files-uploaded:
         handler: handleDragDropFileSelected
       search-input:
@@ -25,12 +29,22 @@ refs:
     eventListeners:
       click:
         action: hideFullImagePreview
-  detailForm:
+  editDialog:
     eventListeners:
-      form-field-event:
-        handler: handleFormExtraEvent
-      form-change:
-        handler: handleFormChange
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+  editDialogImage:
+    eventListeners:
+      click:
+        handler: handleEditDialogImageClick
+  editDialogImagePlaceholder:
+    eventListeners:
+      click:
+        handler: handleEditDialogImageClick
   detailImage:
     eventListeners:
       click:
@@ -47,15 +61,28 @@ template:
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues:
-                          - $if selectedImageFileId:
-                              - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedImageFileId} w=240 h=160 br=md cur=pointer: null
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                              - $if selectedImageFileId:
+                                  - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedImageFileId} h=160 bw=xs bc=bo br=md cur=pointer: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      - $when: fullImagePreviewVisible
-        rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-          - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: #000;"': null
-          - $if fullImagePreviewFileId:
-              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
+              - $if editImageFileId:
+                  - rtgl-view slot=image-slot av=c ah=c:
+                      - rvn-file-image#editDialogImage fileId=${editImageFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editImageFileId}: null
+                $else:
+                  - rtgl-view slot=image-slot av=c ah=c:
+                      - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-text c=mu-fg s=sm: Click to Upload
+  - $when: fullImagePreviewVisible
+    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+      - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: #000;"': null
+      - $if fullImagePreviewFileId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
