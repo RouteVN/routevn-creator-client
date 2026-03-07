@@ -2,7 +2,8 @@
 
 ## Maintainer Docs
 
-1. [Codebase Structure](./Codebase-structure.md)
+1. [Product](./product.md)
+2. [Engineering](./engineering.md)
 
 ## Runbooks
 

@@ -2,6 +2,15 @@
 
 This file provides guidance to AI coding agents when working with code in this repository.
 
+## Read First
+
+Before making changes, read these repo docs:
+
+- `docs/product.md` for product principles and UX direction
+- `docs/engineering.md` for stack, file structure, and engineering boundaries
+
+`AGENTS.md` is the source of truth for coding conventions and agent workflow rules.
+
 ## Commands
 
 Build the web app:
@@ -19,6 +28,7 @@ This command:
 Notes:
 
 - `bun run build` may not exist in this repo; use `build:web` for validation.
+- Do not run `bun run build:web` after each change. The user is expected to be running a watch-mode session during active development.
 - Before pushing, run lint/format checks (the push hook also enforces this).
 
 ## Architecture
