@@ -14,15 +14,16 @@ Desktop builds persist project data through Tauri/SQLite-backed stores.
 
 - [@rettangoli/fe](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-fe) - Is used as the frontend framework
 - [@rettangoli/ui](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-ui) - Is used as the UI library
+- [Product](docs/product.md) - Product principles and UX contract
+- [Engineering](docs/engineering.md) - Code structure, stack, and engineering boundaries
 - [Platform Spec](docs/platform/README.md) - Current project model, command/event flow, and storage contracts
-- [Codebase Structure](docs/Codebase-structure.md) - Maintainer-facing architecture guide for this repo
 - [Docs Index](docs/README.md) - Entry point for internal documentation
 
 ## Project Structure
 
 Entrypoint defined in `static/index.html` with the `<rvn-app>` tag.
 
-See [docs/README.md](docs/README.md) for the internal docs index and [docs/Codebase-structure.md](docs/Codebase-structure.md) for the current maintainer-facing architecture.
+See [docs/README.md](docs/README.md) for the internal docs index, [docs/product.md](docs/product.md) for product principles, and [docs/engineering.md](docs/engineering.md) for the engineering guide.
 
 `src/pages/app/` - **Application entrypoint**
 
