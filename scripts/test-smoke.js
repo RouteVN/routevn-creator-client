@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
-import { createProjectCollabService } from "../src/collab/v2/createProjectCollabService.js";
+import { createProjectCollabService } from "../src/collab/createProjectCollabService.js";
 import {
   applyCommandToRepository,
   createProjectCreatedRepositoryEvent,
   createProjectRepository,
   initialProjectData,
 } from "../src/deps/services/shared/projectRepository.js";
-import { COMMAND_VERSION } from "../src/domain/v2/constants.js";
-import { processCommand } from "../src/domain/v2/engine.js";
-import { DomainPreconditionError } from "../src/domain/v2/errors.js";
-import { assertDomainInvariants } from "../src/domain/v2/invariants.js";
-import { createEmptyProjectState } from "../src/domain/v2/model.js";
-import { projectRepositoryStateToDomainState } from "../src/domain/v2/stateProjection.js";
+import { COMMAND_VERSION } from "../src/domain/constants.js";
+import { processCommand } from "../src/domain/engine.js";
+import { DomainPreconditionError } from "../src/domain/errors.js";
+import { assertDomainInvariants } from "../src/domain/invariants.js";
+import { createEmptyProjectState } from "../src/domain/model.js";
+import { projectRepositoryStateToDomainState } from "../src/domain/stateProjection.js";
 
 const projectId = "proj-test-001";
 const actor = { userId: "user-1", clientId: "client-1" };
@@ -68,7 +68,7 @@ const createInMemoryRepositoryEventStore = () => {
 let state = createEmptyProjectState({
   projectId,
   name: "Smoke",
-  description: "v2",
+  description: "current",
 });
 assertDomainInvariants(state);
 
@@ -345,7 +345,7 @@ assert.equal(state.layouts["layout-2"].parentId, "layout-folder");
 const collab = createProjectCollabService({
   projectId,
   projectName: "Smoke",
-  projectDescription: "v2",
+  projectDescription: "current",
   token: "user:user-1:client:client-1",
   actor,
   partitions: [`project:${projectId}:story`],
@@ -493,4 +493,4 @@ await applyCommandToRepository({
 
 assertLayoutsNestedUnderDefault(projectionRepository.getState());
 
-console.log("V2 smoke tests: PASS");
+console.log("Smoke tests: PASS");

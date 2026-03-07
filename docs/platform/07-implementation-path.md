@@ -1,21 +1,21 @@
-# 07 Implementation Path (Big-Bang V2)
+# 07 Implementation Path
 
 Date baseline: February 24, 2026.
 
-This is the executable path to ship V2-only collaboration with durable data guarantees.
-No V1 backward compatibility is included.
+This is the executable path to ship the current collaboration platform with durable data guarantees.
+No backward compatibility with older project formats is included.
 
 ## Release Strategy
 
-- Single cutover to V2 runtime and V2 project format.
+- Single cutover to the current runtime and project format.
 - Hard fail on `model_version !== 2`.
 - All writes are command-based and server-authoritative.
 
 ## Immediate Actions (Start Now)
 
-1. Freeze V2 spec as source of truth.
-2. Keep domain mutations exclusive to `src/domain/v2/*`.
-3. Route collaboration calls through `src/collab/v2/*`.
+1. Freeze the platform spec as source of truth.
+2. Keep domain mutations exclusive to `src/domain/*`.
+3. Route collaboration calls through `src/collab/*`.
 4. Enforce model gate in both services:
    - `src/deps/services/projectService.js`
    - `src/deps/services/web/projectService.js`
@@ -27,7 +27,7 @@ No V1 backward compatibility is included.
 
 ## Phase 1: Runtime Foundation (1-2 days)
 
-- Keep current app build green while introducing V2 domain/collab modules.
+- Keep current app build green while introducing the current domain/collab modules.
 - Complete deterministic reducer + invariant enforcement.
 - Add command-envelope helpers for all write operations.
 
@@ -39,7 +39,7 @@ Done criteria:
 ## Phase 2: Insieme Upgrade + Sync Server (2-3 days)
 
 - Upgrade dependency from `insieme@0.0.8` to current 1.x release.
-- Stand up sync server using `scripts/collab-v2/start-sync-server.js`.
+- Stand up sync server using `scripts/collab/start-sync-server.js`.
 - Replace demo auth/authz with production auth provider.
 - Implement validation pipeline:
   - command schema validation
@@ -69,7 +69,7 @@ Done criteria:
 
 Done criteria:
 - Current project load no longer rebuilds current state via full in-app replay.
-- V2 project open/create/export paths are fully command/event based.
+- Project open/create/export paths are fully command/event based.
 
 ## Phase 5: Hardening and Release Gates (3-5 days)
 

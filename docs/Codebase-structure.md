@@ -23,10 +23,10 @@ This document explains how the RouteVN Creator client is organized today and whe
 - `src/deps/services/`
   Application services used by handlers.
 
-- `src/domain/v2/`
+- `src/domain/`
   Domain model, state projection, and command-processing logic.
 
-- `src/collab/v2/`
+- `src/collab/`
   Collaboration client/runtime logic.
 
 - `src/utils/`
@@ -42,7 +42,7 @@ This document explains how the RouteVN Creator client is organized today and whe
   E2E/runtime templates and testing support.
 
 - `docs/`
-  Maintainer docs and V2 platform spec.
+  Maintainer docs and the current platform spec.
 
 ## Runtime Entry Points
 
@@ -158,7 +158,7 @@ These adapter files are where platform-specific storage, file IO, and collab tra
 
 ### Domain
 
-`src/domain/v2/` is the source of truth for domain behavior.
+`src/domain/` is the source of truth for domain behavior.
 
 Important responsibilities:
 
@@ -167,11 +167,11 @@ Important responsibilities:
 - state projection
 - invariants and command semantics
 
-If a rule changes what a project means, it belongs in `domain/v2`, not in page handlers.
+If a rule changes what a project means, it belongs in `domain`, not in page handlers.
 
 ### Collaboration
 
-`src/collab/v2/` owns synchronization behavior.
+`src/collab/` owns synchronization behavior.
 
 Important responsibilities:
 
@@ -228,7 +228,7 @@ If the component becomes page-specific, move the logic back to the page instead 
 
 ### Add a new domain rule
 
-Put it in `src/domain/v2/`.
+Put it in `src/domain/`.
 
 Do not hide domain rules in handlers or stores.
 
@@ -286,9 +286,9 @@ If you are new to the repo, read in this order:
 
 1. `README.md`
 2. `docs/Codebase-structure.md`
-3. `docs/v2/README.md`
+3. `docs/platform/README.md`
 4. `src/setup.web.js` and `src/setup.tauri.js`
 5. `src/pages/app/*`
 6. `src/deps/services/shared/*`
-7. `src/domain/v2/*`
-8. `src/collab/v2/*`
+7. `src/domain/*`
+8. `src/collab/*`

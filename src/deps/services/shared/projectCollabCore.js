@@ -1,5 +1,5 @@
-import { createWebSocketTransport } from "../../../collab/v2/index.js";
-import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
+import { createWebSocketTransport } from "../../../collab/index.js";
+import { RESOURCE_TYPES } from "../../../domain/constants.js";
 import { recursivelyCheckResource } from "../../../utils/resourceUsageChecker.js";
 import { createCommandApi } from "./commandApi.js";
 

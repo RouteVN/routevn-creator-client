@@ -10,11 +10,11 @@ import {
 import {
   createProjectCollabService,
   createWebSocketTransport,
-} from "../../../collab/v2/index.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
+} from "../../../collab/index.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
 import {
   applyCommandToRepository,
-  assertV2State,
+  assertSupportedProjectState,
   createProjectCreatedRepositoryEvent,
   initialProjectData,
 } from "../shared/projectRepository.js";
@@ -283,7 +283,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
 
       const repository = await getRepositoryByProject(projectId);
       const state = repository.getState();
-      assertV2State(state);
+      assertSupportedProjectState(state);
 
       const resolvedProjectId = state.project?.id || projectId;
       const resolvedPartitions = partitioning.getBasePartitions(

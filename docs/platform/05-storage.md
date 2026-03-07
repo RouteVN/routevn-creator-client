@@ -1,4 +1,4 @@
-# 05 Storage (V2)
+# 05 Storage
 
 ## Server SQLite
 

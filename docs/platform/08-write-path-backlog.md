@@ -1,4 +1,4 @@
-# 08 Write Path Backlog (Big-Bang V2)
+# 08 Write Path Backlog
 
 This backlog tracks the remaining work to keep all mutation paths command-only.
 
@@ -27,7 +27,7 @@ Remaining `appendEvent(...)` sites:
 
 For each remaining mutation path:
 
-1. Build a V2 command envelope with:
+1. Build a command envelope with:
    - stable `id`
    - `projectId`
    - `partition`

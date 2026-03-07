@@ -1,8 +1,8 @@
-# 09 Partitioning and Write Contract (V2 Target)
+# 09 Partitioning and Write Contract
 
 Date baseline: February 26, 2026.
 
-This document defines the required end-state write contract for V2.
+This document defines the required end-state write contract for the current platform.
 
 ## Canonical Model
 

@@ -1,13 +1,13 @@
-# RouteVN V2 Platform Spec
+# RouteVN Platform Spec
 
-This folder defines the V2-only platform for RouteVN Creator.
+This folder defines the current platform for RouteVN Creator.
 
 Date baseline: February 24, 2026.
 
 ## Scope
 
-- V2 is a breaking format and protocol cutover.
-- V1 projects are not opened by V2 runtime.
+- The current platform is the only supported project and protocol format.
+- Older projects are not opened by the current runtime.
 - All write operations must go through authoritative collaboration server validation.
 
 ## Version Contract
@@ -30,6 +30,6 @@ Date baseline: February 24, 2026.
 
 ## Implementation Mapping
 
-- Domain runtime: `src/domain/v2/*`
-- Client collaboration runtime: `src/collab/v2/*`
-- Server bootstrap scripts: `scripts/collab-v2/*`
+- Domain runtime: `src/domain/*`
+- Client collaboration runtime: `src/collab/*`
+- Server bootstrap scripts: `scripts/collab/*`

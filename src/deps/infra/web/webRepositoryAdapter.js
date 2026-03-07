@@ -2,7 +2,7 @@ import {
   loadTemplate,
   getTemplateFiles,
 } from "../../../utils/templateLoader.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
 import { createProjectCreatedRepositoryEvent } from "../../services/shared/projectRepository.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter

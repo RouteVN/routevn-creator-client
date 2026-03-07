@@ -1,4 +1,4 @@
-import { COMMAND_VERSION } from "../../domain/v2/constants.js";
+import { COMMAND_VERSION } from "../domain/constants.js";
 import { buildScopePartition } from "insieme/client";
 
 const defaultUuid = () =>

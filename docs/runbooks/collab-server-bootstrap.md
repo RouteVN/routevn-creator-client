@@ -1,6 +1,6 @@
-# Collab V2 Server Bootstrap
+# Collab Server Bootstrap
 
-This folder contains bootstrap scripts for RouteVN V2 authoritative collaboration server.
+This folder contains bootstrap scripts for the RouteVN authoritative collaboration server.
 
 ## Runtime Assumptions
 

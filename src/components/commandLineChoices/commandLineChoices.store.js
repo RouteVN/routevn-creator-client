@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../domain/v2/treeHelpers.js";
+import { toFlatItems } from "../../domain/treeHelpers.js";
 
 const CHOICE_FORM_TEMPLATE = Object.freeze({
   title: "Edit Choice",

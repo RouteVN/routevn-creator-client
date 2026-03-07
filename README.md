@@ -33,8 +33,8 @@ Folder structure
 - `src/deps/` - Infrastructure and service dependencies injected into pages/components
 - `src/setup.web.js` - Web-specific configuration
 - `src/setup.tauri.js` - Tauri desktop-specific configuration
-- `src/domain/v2/` - Domain rules, command processing, and state projection
-- `src/collab/v2/` - Collaboration runtime
+- `src/domain/` - Domain rules, command processing, and state projection
+- `src/collab/` - Collaboration runtime
 - `scripts/` - Build and utility scripts
 - `static/` - Static HTML files and assets
 - `_site/` - Build output directory

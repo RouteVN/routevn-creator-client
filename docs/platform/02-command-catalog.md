@@ -1,4 +1,4 @@
-# 02 Command Catalog (V2)
+# 02 Command Catalog
 
 All mutations are commands. UI must only submit commands from this catalog.
 

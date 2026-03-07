@@ -2,7 +2,7 @@ import {
   committedSyncEventToCommand,
   commandToSyncEvent as mapCommandToSyncEvent,
 } from "insieme/client";
-import { COMMAND_VERSION } from "../../domain/v2/constants.js";
+import { COMMAND_VERSION } from "../domain/constants.js";
 
 export const commandToSyncEvent = (command) => mapCommandToSyncEvent(command);
 

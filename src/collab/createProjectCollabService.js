@@ -1,8 +1,8 @@
 import { createCommandSyncSession } from "insieme/browser";
-import { processCommand } from "../../domain/v2/engine.js";
-import { assertDomainInvariants } from "../../domain/v2/invariants.js";
-import { createEmptyProjectState } from "../../domain/v2/model.js";
-import { validateCommand } from "../../domain/v2/validateCommand.js";
+import { processCommand } from "../domain/engine.js";
+import { assertDomainInvariants } from "../domain/invariants.js";
+import { createEmptyProjectState } from "../domain/model.js";
+import { validateCommand } from "../domain/validateCommand.js";
 
 const isTransportDisconnectedError = (error) => {
   const code = error?.code;

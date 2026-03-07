@@ -1,4 +1,7 @@
-import { assertV2State, createProjectRepository } from "./projectRepository.js";
+import {
+  assertSupportedProjectState,
+  createProjectRepository,
+} from "./projectRepository.js";
 import { getOrCreateLocked } from "./getOrCreateLocked.js";
 
 export const createProjectRepositoryService = ({
@@ -125,7 +128,7 @@ export const createProjectRepositoryService = ({
           store,
           events,
         });
-        assertV2State(repository.getState());
+        assertSupportedProjectState(repository.getState());
 
         if (reference.projectId) {
           storesByProject.set(reference.projectId, store);

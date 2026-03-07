@@ -1,4 +1,4 @@
-# 03 Event Model (V2)
+# 03 Event Model
 
 Commands become committed events with server-assigned `committed_id`.
 
@@ -54,4 +54,4 @@ Must use deep key-sorted deterministic JSON.
 ## Event-Reducer Contract
 
 - Reducer must be deterministic and side-effect free.
-- Unknown event type is invalid in V2 (reject before commit).
+- Unknown event type is invalid and must be rejected before commit.

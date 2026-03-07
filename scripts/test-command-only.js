@@ -4,8 +4,8 @@ import { createInMemorySyncStore, createSyncServer } from "insieme/server";
 import {
   createCommandEnvelope,
   createProjectCollabService,
-} from "../src/collab/v2/index.js";
-import { validateCommand } from "../src/domain/v2/validateCommand.js";
+} from "../src/collab/index.js";
+import { validateCommand } from "../src/domain/validateCommand.js";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -234,4 +234,4 @@ try {
   await server.shutdown();
 }
 
-console.log("V2 command-only tests: PASS");
+console.log("Command-only tests: PASS");

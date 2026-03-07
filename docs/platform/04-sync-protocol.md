@@ -1,4 +1,4 @@
-# 04 Sync Protocol (V2)
+# 04 Sync Protocol
 
 Protocol layer is Insieme `1.0` based.
 

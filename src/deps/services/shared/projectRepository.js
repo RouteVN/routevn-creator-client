@@ -1,6 +1,6 @@
-import { processCommand } from "../../../domain/v2/engine.js";
-import { COMMAND_VERSION } from "../../../domain/v2/constants.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
+import { processCommand } from "../../../domain/engine.js";
+import { COMMAND_VERSION } from "../../../domain/constants.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
 import {
   commandToSyncEvent,
@@ -39,10 +39,10 @@ export const initialProjectData = {
   scenes: createTreeCollection(),
 };
 
-export const assertV2State = (state) => {
+export const assertSupportedProjectState = (state) => {
   if (!state || state.model_version !== 2) {
     throw new Error(
-      "Unsupported project model version. RouteVN V2 only supports model_version=2 projects.",
+      "Unsupported project model version. RouteVN only supports model_version=2 projects.",
     );
   }
 };
@@ -810,7 +810,7 @@ export const createProjectRepository = async ({
         event,
         projectId,
       }),
-    assertState: assertV2State,
+    assertState: assertSupportedProjectState,
   });
 
 export const applyCommandToRepository = async ({

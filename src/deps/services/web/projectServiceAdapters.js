@@ -6,8 +6,8 @@ import {
 import {
   createProjectCollabService,
   createWebSocketTransport,
-} from "../../../collab/v2/index.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
+} from "../../../collab/index.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
 import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
 import {
   clearCommittedCursor,
@@ -17,7 +17,7 @@ import {
 import {
   applyCommandToRepository,
   assertRepositoryCommandEvent,
-  assertV2State,
+  assertSupportedProjectState,
   repositoryEventToCommand,
 } from "../shared/projectRepository.js";
 import { createBundle } from "../../../utils/bundleUtils.js";
@@ -349,7 +349,7 @@ export const createWebProjectServiceAdapters = ({
 
       const repository = await getRepositoryByProject(projectId);
       const state = repository.getState();
-      assertV2State(state);
+      assertSupportedProjectState(state);
       const adapter = await getStoreByProject(projectId);
 
       const resolvedProjectId = state.project?.id || projectId;

@@ -1,4 +1,4 @@
-# 01 Domain Model (V2)
+# 01 Domain Model
 
 ## Root Envelope
 

@@ -1,7 +1,7 @@
 import { createSyncServer, createSqliteSyncStore } from "insieme/server";
-import { processCommand } from "../../src/domain/v2/engine.js";
-import { createEmptyProjectState } from "../../src/domain/v2/model.js";
-import { validateCommand } from "../../src/domain/v2/validateCommand.js";
+import { processCommand } from "../../src/domain/engine.js";
+import { createEmptyProjectState } from "../../src/domain/model.js";
+import { validateCommand } from "../../src/domain/validateCommand.js";
 
 let Database;
 try {
@@ -127,7 +127,7 @@ const server = createSyncServer({
 });
 
 console.log(
-  "RouteVN V2 sync server runtime initialized. Integrate with websocket gateway to attach connections.",
+  "RouteVN sync server runtime initialized. Integrate with websocket gateway to attach connections.",
 );
 
 export { server };

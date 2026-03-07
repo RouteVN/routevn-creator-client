@@ -1,4 +1,4 @@
-# 06 Acceptance Gates (V2)
+# 06 Acceptance Gates
 
 ## Must Pass Before Release
 
@@ -10,7 +10,7 @@
 6. Reconnect/catch-up idempotency tests pass.
 7. Crash-recovery tests pass.
 8. SQLite integrity checks pass.
-9. Append-event command bridge coverage passes (`bun run test:v2-append-bridge`).
+9. Append-event command bridge coverage passes.
 
 ## Non-Functional Gates
 
@@ -20,6 +20,6 @@
 
 ## Rollout Policy
 
-- V2-only runtime.
-- V1 project open/import is rejected with explicit message.
+- Only the current runtime and project format are supported.
+- Older project open/import attempts are rejected with explicit message.
 - Feature flags for staged deployment cohorts.

@@ -3,11 +3,11 @@ import { createInMemorySyncStore, createSyncServer } from "insieme/server";
 import {
   createCommandEnvelope,
   createProjectCollabService,
-} from "../src/collab/v2/index.js";
-import { COMMAND_VERSION } from "../src/domain/v2/constants.js";
-import { processCommand } from "../src/domain/v2/engine.js";
-import { createEmptyProjectState } from "../src/domain/v2/model.js";
-import { validateCommand } from "../src/domain/v2/validateCommand.js";
+} from "../src/collab/index.js";
+import { COMMAND_VERSION } from "../src/domain/constants.js";
+import { processCommand } from "../src/domain/engine.js";
+import { createEmptyProjectState } from "../src/domain/model.js";
+import { validateCommand } from "../src/domain/validateCommand.js";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -451,4 +451,4 @@ await runScenario("partition-isolation", async () => {
   }
 });
 
-console.log("V2 integration tests: PASS");
+console.log("Integration tests: PASS");
