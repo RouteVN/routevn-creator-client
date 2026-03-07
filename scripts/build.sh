@@ -24,7 +24,7 @@ if command -v flock >/dev/null 2>&1; then
 fi
 
 echo "Generating bundle file..."
-bunx esbuild scripts/main.js --bundle --format=esm --minify --outfile=static/bundle/main.js
+bun run build:bundle
 
 # Download Rettangoli UI if needed
 echo "Checking Rettangoli UI..."
