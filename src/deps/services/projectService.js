@@ -5,43 +5,40 @@ import { nanoid } from "nanoid";
 import JSZip from "jszip";
 import { createInsiemeTauriStoreAdapter } from "../infra/tauri/tauriRepositoryAdapter";
 import { loadTemplate, getTemplateFiles } from "../../utils/templateLoader";
-import { createBundle } from "../../utils/bundleUtils";
 import {
   createProjectCollabService,
   createWebSocketTransport,
 } from "../../collab/v2/index.js";
 import { createProjectServiceCore } from "./shared/projectServiceCore.js";
-import {
-  getImageDimensions,
-  getVideoDimensions,
-  extractWaveformData,
-  extractVideoThumbnail,
-  detectFileType,
-} from "../../utils/fileProcessors";
 import { projectRepositoryStateToDomainState } from "../../domain/v2/stateProjection.js";
 import {
   applyCommandToRepository,
   assertV2State,
   createProjectCreatedRepositoryEvent,
-  createProjectRepository,
   initialProjectData,
 } from "./shared/projectRepository.js";
-import { getOrCreateLocked } from "./shared/getOrCreateLocked.js";
 
-// Font loading helper
-const loadFont = async (fontName, fontUrl) => {
-  const existingFont = Array.from(document.fonts).find(
-    (font) => font.family === fontName,
-  );
-  if (existingFont) {
-    return existingFont;
+async function copyTemplateFiles(templateId, targetPath) {
+  const templateFilesPath = `/templates/${templateId}/files/`;
+  const filesToCopy = await getTemplateFiles(templateId);
+
+  for (const fileName of filesToCopy) {
+    try {
+      const sourcePath = templateFilesPath + fileName;
+      const targetFilePath = await join(targetPath, fileName);
+
+      const response = await fetch(sourcePath + "?raw");
+      if (response.ok) {
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        await writeFile(targetFilePath, uint8Array);
+      }
+    } catch (error) {
+      console.error(`Failed to copy template file ${fileName}:`, error);
+    }
   }
-
-  const fontFace = new FontFace(fontName, `url(${fontUrl})`);
-  await fontFace.load();
-  document.fonts.add(fontFace);
-  return fontFace;
-};
+}
 
 export const createProjectService = ({ router, db, filePicker }) => {
   const collabLog = (level, message, meta = {}) => {
@@ -54,406 +51,32 @@ export const createProjectService = ({ router, db, filePicker }) => {
     fn(`[routevn.collab.tauri] ${message}`, meta);
   };
 
-  // Repository cache
-  const repositoriesByProject = new Map();
-  const repositoriesByPath = new Map();
-  const adaptersByProject = new Map();
-  const adaptersByPath = new Map();
-
-  // Initialization locks - prevents duplicate initialization
-  const initLocksByProject = new Map(); // projectId -> Promise<Repository>
-  const initLocksByPath = new Map(); // projectPath -> Promise<Repository>
-
-  // Current repository cache (for sync access after ensureRepository is called)
-  let currentRepository = null;
-  let currentProjectId = null;
-
-  // Get current projectId from URL query params
-  const getCurrentProjectId = () => {
-    const { p } = router.getPayload();
-    return p;
-  };
-
-  const getProjectMetadataFromEntries = async (projectId) => {
-    const entries = (await db.get("projectEntries")) || [];
-    const entry = Array.isArray(entries)
-      ? entries.find((item) => item?.id === projectId)
-      : null;
-    return {
-      name: entry?.name || "",
-      description: entry?.description || "",
-    };
-  };
-
-  const createSessionForProject = async ({
-    projectId,
-    token,
-    userId,
-    clientId,
-    endpointUrl,
-    partitions,
-    mode,
-    partitioning,
-  }) => {
-    collabLog("info", "create session requested", {
-      projectId,
-      endpointUrl: endpointUrl || null,
-      mode,
-      hasToken: Boolean(token),
-      userId,
-      clientId,
-    });
-
-    const repository = await getRepositoryByProject(projectId);
-    const state = repository.getState();
-    assertV2State(state);
-
-    const resolvedProjectId = state.project?.id || projectId;
-    const resolvedPartitions = partitioning.getBasePartitions(
-      resolvedProjectId,
-      partitions,
-    );
-    const projectMetadata = await getProjectMetadataFromEntries(projectId);
-    const collabSession = createProjectCollabService({
-      projectId: resolvedProjectId,
-      projectName: projectMetadata.name,
-      projectDescription: projectMetadata.description,
-      initialState: projectRepositoryStateToDomainState({
-        repositoryState: state,
-        projectId: resolvedProjectId,
-      }),
-      token,
-      actor: {
-        userId,
-        clientId,
-      },
-      partitions: resolvedPartitions,
-      logger: (entry) => {
-        collabLog("debug", "sync-client", entry);
-      },
-      onCommittedCommand: async ({ command, isFromCurrentActor }) => {
-        if (isFromCurrentActor) return;
-        await applyCommandToRepository({
-          repository,
-          command,
-          projectId: resolvedProjectId,
-        });
-      },
-    });
-
-    await collabSession.start();
-    collabLog("info", "session started", {
-      projectId: resolvedProjectId,
-      mode,
-      partitions: resolvedPartitions,
-      online: Boolean(endpointUrl),
-    });
-    if (endpointUrl) {
-      collabLog("info", "attaching websocket transport", {
-        endpointUrl,
-      });
-      const transport = createWebSocketTransport({
-        url: endpointUrl,
-        label: "routevn.collab.tauri.transport",
-      });
-      await collabSession.setOnlineTransport(transport);
-      collabLog("info", "websocket transport attached", {
-        endpointUrl,
-      });
-    }
-
-    return collabSession;
-  };
-
-  // Get or create repository by path
-  const getRepositoryByPath = async (projectPath) => {
-    return getOrCreateLocked({
-      cache: repositoriesByPath,
-      locks: initLocksByPath,
-      key: projectPath,
-      create: async () => {
-        const store = await createInsiemeTauriStoreAdapter(projectPath);
-        const existingEvents = (await store.getEvents()) || [];
-        const repository = await createProjectRepository({
-          projectId: projectPath,
-          store,
-          events: existingEvents,
-        });
-        assertV2State(repository.getState());
-        repositoriesByPath.set(projectPath, repository);
-        adaptersByPath.set(projectPath, store);
-        return repository;
-      },
-    });
-  };
-
-  // Get or create repository by projectId
-  const getRepositoryByProject = async (projectId) => {
-    return getOrCreateLocked({
-      cache: repositoriesByProject,
-      locks: initLocksByProject,
-      key: projectId,
-      create: async () => {
-        const projects = (await db.get("projectEntries")) || [];
-        const project = projects.find((p) => p.id === projectId);
-        if (!project) {
-          throw new Error("project not found");
-        }
-
-        const repository = await getRepositoryByPath(project.projectPath);
-        const adapter = adaptersByPath.get(project.projectPath);
-        repositoriesByProject.set(projectId, repository);
-        adaptersByProject.set(projectId, adapter);
-        return repository;
-      },
-    });
-  };
-
-  // Get current project's repository (updates cache)
-  const getCurrentRepository = async () => {
-    const projectId = getCurrentProjectId();
-    if (!projectId) {
-      throw new Error("No project selected (missing ?p= in URL)");
-    }
-    const repository = await getRepositoryByProject(projectId);
-    // Update cache
-    currentRepository = repository;
-    currentProjectId = projectId;
-    return repository;
-  };
-
-  // Get cached repository (sync) - throws if not initialized
-  const getCachedRepository = () => {
-    const projectId = getCurrentProjectId();
-    if (!currentRepository || currentProjectId !== projectId) {
-      throw new Error(
-        "Repository not initialized. Call ensureRepository() first.",
-      );
-    }
-    return currentRepository;
-  };
-
-  // Get current project's path
-  const getCurrentProjectPath = async () => {
-    const projectId = getCurrentProjectId();
-    if (!projectId) {
-      throw new Error("No project selected (missing ?p= in URL)");
-    }
-    const projects = (await db.get("projectEntries")) || [];
-    const project = projects.find((p) => p.id === projectId);
-    if (!project) {
-      throw new Error("project not found");
-    }
-    return project.projectPath;
-  };
-
-  // File operations helpers
-  const getFilesPath = async () => {
-    const projectPath = await getCurrentProjectPath();
-    return await join(projectPath, "files");
-  };
-
-  const getBundleStaticFiles = async () => {
-    let indexHtml = null;
-    let mainJs = null;
-
-    try {
-      const indexResponse = await fetch("/bundle/index.html");
-      if (indexResponse.ok) {
-        indexHtml = await indexResponse.text();
-      }
-
-      const mainJsResponse = await fetch("/bundle/main.js");
-      if (mainJsResponse.ok) {
-        mainJs = await mainJsResponse.text();
-      }
-    } catch (error) {
-      console.error("Failed to fetch static bundle files:", error);
-    }
-
-    return { indexHtml, mainJs };
-  };
-
-  const storeFile = async (file) => {
-    const fileId = nanoid();
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-
-    const filesPath = await getFilesPath();
-    const filePath = await join(filesPath, fileId);
-    await writeFile(filePath, uint8Array);
-
-    const downloadUrl = convertFileSrc(filePath);
-    return { fileId, downloadUrl };
-  };
-
-  const getFileUrl = async (fileId) => {
-    const filesPath = await getFilesPath();
-    const filePath = await join(filesPath, fileId);
-
-    const fileExists = await exists(filePath);
-    if (!fileExists) {
-      throw new Error(`File not found: ${fileId}`);
-    }
-
-    const url = convertFileSrc(filePath);
-    return { url };
-  };
-
-  const storeMetadata = async (data) => {
-    const jsonString = JSON.stringify(data, null, 2);
-    const jsonBlob = new Blob([jsonString], { type: "application/json" });
-    const uniqueName = `metadata_${nanoid()}.json`;
-    Object.defineProperty(jsonBlob, "name", {
-      value: uniqueName,
-      writable: false,
-    });
-    return await storeFile(jsonBlob);
-  };
-
-  // File processors
-  const processors = {
-    image: async (file) => {
-      const dimensions = await getImageDimensions(file);
-      const { fileId, downloadUrl } = await storeFile(file);
-      return { fileId, downloadUrl, dimensions, type: "image" };
-    },
-
-    audio: async (file) => {
-      const arrayBuffer = await file.arrayBuffer();
-      const fileForWaveform = new File([arrayBuffer], file.name, {
-        type: file.type,
-      });
-      const fileForStorage = new File([arrayBuffer], file.name, {
-        type: file.type,
-      });
-
-      const waveformData = await extractWaveformData(fileForWaveform);
-      const { fileId, downloadUrl } = await storeFile(fileForStorage);
-
-      let waveformDataFileId = null;
-      if (waveformData) {
-        const compressedWaveformData = {
-          ...waveformData,
-          amplitudes: waveformData.amplitudes.map((value) =>
-            Math.round(value * 255),
-          ),
-        };
-        const waveformResult = await storeMetadata(compressedWaveformData);
-        waveformDataFileId = waveformResult.fileId;
+  const storageAdapter = {
+    resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
+      const projects = (await db.get("projectEntries")) || [];
+      const project = projects.find((entry) => entry.id === projectId);
+      if (!project) {
+        throw new Error("project not found");
       }
 
       return {
-        fileId,
-        downloadUrl,
-        waveformDataFileId,
-        waveformData,
-        duration: waveformData?.duration,
-        type: "audio",
+        projectPath: project.projectPath,
+        cacheKey: project.projectPath,
+        repositoryProjectId: project.projectPath,
       };
     },
 
-    video: async (file) => {
-      const [dimensions, thumbnailData] = await Promise.all([
-        getVideoDimensions(file),
-        extractVideoThumbnail(file, {
-          timeOffset: 1,
-          width: 240,
-          height: 135,
-          format: "image/jpeg",
-          quality: 0.8,
-        }),
-      ]);
+    resolveProjectReferenceByPath: async ({ projectPath }) => ({
+      projectPath,
+      cacheKey: projectPath,
+      repositoryProjectId: projectPath,
+    }),
 
-      const [videoResult, thumbnailResult] = await Promise.all([
-        storeFile(file),
-        storeFile(thumbnailData.blob),
-      ]);
-
-      return {
-        fileId: videoResult.fileId,
-        downloadUrl: videoResult.downloadUrl,
-        thumbnailFileId: thumbnailResult.fileId,
-        thumbnailData,
-        dimensions,
-        type: "video",
-      };
+    createStore: async ({ reference }) => {
+      return createInsiemeTauriStoreAdapter(reference.projectPath);
     },
 
-    font: async (file) => {
-      const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
-      const fontUrl = URL.createObjectURL(file);
-
-      try {
-        await loadFont(fontName, fontUrl);
-      } catch (loadError) {
-        URL.revokeObjectURL(fontUrl);
-        throw new Error(`Invalid font file: ${loadError.message}`);
-      }
-
-      const { fileId, downloadUrl } = await storeFile(file);
-      return { fileId, downloadUrl, fontName, fontUrl, type: "font" };
-    },
-
-    generic: async (file) => {
-      const { fileId, downloadUrl } = await storeFile(file);
-      return { fileId, downloadUrl, type: "generic" };
-    },
-  };
-
-  const processFile = async (file) => {
-    const fileType = detectFileType(file);
-    const processor = processors[fileType] || processors.generic;
-    return processor(file);
-  };
-  const serviceCore = createProjectServiceCore({
-    router,
-    idGenerator: nanoid,
-    collabLog,
-    getCurrentRepository,
-    getCachedRepository,
-    getRepositoryByProject,
-    getAdapterByProject: (projectId) => adaptersByProject.get(projectId),
-    createSessionForProject,
-    createTransport: ({ endpointUrl }) =>
-      createWebSocketTransport({
-        url: endpointUrl,
-        label: "routevn.collab.tauri.transport",
-      }),
-  });
-
-  return {
-    // Repository access - uses current project from URL
-    async getRepository() {
-      return getCurrentRepository();
-    },
-
-    async getRepositoryById(projectId) {
-      return getRepositoryByProject(projectId);
-    },
-
-    getAdapterById(projectId) {
-      return adaptersByProject.get(projectId);
-    },
-
-    async getRepositoryByPath(projectPath) {
-      return getRepositoryByPath(projectPath);
-    },
-
-    // Must be called before using sync methods (typically in handleAfterMount)
-    async ensureRepository() {
-      return getCurrentRepository();
-    },
-    ...serviceCore.commandApi,
-
-    // Version management
-    addVersionToProject: serviceCore.addVersionToProject,
-
-    deleteVersionFromProject: serviceCore.deleteVersionFromProject,
-    deleteResourceItemIfUnused: serviceCore.deleteResourceItemIfUnused,
-
-    // Initialize a new project at a given path
-    async initializeProject({ projectPath, template }) {
+    initializeProject: async ({ projectPath, template }) => {
       if (!template) {
         throw new Error("Template is required for project initialization");
       }
@@ -461,11 +84,9 @@ export const createProjectService = ({ router, db, filePicker }) => {
       const filesPath = await join(projectPath, "files");
       await mkdir(filesPath, { recursive: true });
 
-      // Load template data first
       const templateData = await loadTemplate(template);
       await copyTemplateFiles(template, filesPath);
 
-      // Merge template with project info
       const initData = {
         ...initialProjectData,
         ...templateData,
@@ -478,7 +99,6 @@ export const createProjectService = ({ router, db, filePicker }) => {
         projectId: projectPath,
       });
 
-      // Create store and initialize repository bootstrap state
       const store = await createInsiemeTauriStoreAdapter(projectPath);
       await store.appendEvent(
         createProjectCreatedRepositoryEvent({
@@ -489,77 +109,41 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
       await store.app.set("creator_version", "2");
     },
+  };
 
-    createCollabSession: serviceCore.createCollabSession,
-    getCollabSession: serviceCore.getCollabSession,
-    stopCollabSession: serviceCore.stopCollabSession,
-    submitCommand: serviceCore.submitCommand,
+  const fileAdapter = {
+    continueOnUploadError: false,
 
-    // File operations - uses current project
-    async uploadFiles(files) {
-      const fileArray = Array.isArray(files) ? files : Array.from(files);
+    storeFile: async ({ file, idGenerator, getCurrentReference }) => {
+      const reference = getCurrentReference();
+      const fileId = idGenerator();
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
 
-      const uploadPromises = fileArray.map(async (file) => {
-        const result = await processFile(file);
-        return {
-          success: true,
-          file,
-          displayName: file.name.replace(/\.[^.]+$/, ""),
-          ...result,
-        };
-      });
+      const filesPath = await join(reference.projectPath, "files");
+      const filePath = await join(filesPath, fileId);
+      await writeFile(filePath, uint8Array);
 
-      const results = await Promise.all(uploadPromises);
-      return results.filter((r) => r.success);
+      return {
+        fileId,
+        downloadUrl: convertFileSrc(filePath),
+      };
     },
 
-    async getFileContent(fileId) {
-      return await getFileUrl(fileId);
-    },
+    getFileContent: async ({ fileId, getCurrentReference }) => {
+      const reference = getCurrentReference();
+      const filesPath = await join(reference.projectPath, "files");
+      const filePath = await join(filesPath, fileId);
 
-    async downloadMetadata(fileId) {
-      try {
-        const { url } = await getFileUrl(fileId);
-        const response = await fetch(url);
-        if (response.ok) {
-          return await response.json();
-        }
-        console.error("Failed to download metadata:", response.statusText);
-        return null;
-      } catch (error) {
-        console.error("Failed to download metadata:", error);
-        return null;
+      const fileExists = await exists(filePath);
+      if (!fileExists) {
+        throw new Error(`File not found: ${fileId}`);
       }
+
+      return { url: convertFileSrc(filePath) };
     },
 
-    async loadFontFile({ fontName, fileId }) {
-      if (!fontName || !fileId || fileId === "undefined") {
-        throw new Error(
-          "Invalid font parameters: fontName and fileId are required.",
-        );
-      }
-      try {
-        const { url } = await getFileUrl(fileId);
-        await loadFont(fontName, url);
-        return { success: true };
-      } catch (error) {
-        console.error("Failed to load font file:", error);
-        return { success: false, error: error.message };
-      }
-    },
-
-    detectFileType,
-
-    // Bundle operations
-    createBundle(projectData, assets) {
-      return createBundle(projectData, assets);
-    },
-
-    exportProject(projectData, files) {
-      return createBundle(projectData, files);
-    },
-
-    async downloadBundle(bundle, filename, options = {}) {
+    downloadBundle: async ({ bundle, filename, options, filePicker }) => {
       try {
         const selectedPath = await filePicker.saveFilePicker({
           title: options.title || "Save Bundle File",
@@ -567,51 +151,60 @@ export const createProjectService = ({ router, db, filePicker }) => {
           filters: [{ name: "Visual Novel Bundle", extensions: ["bin"] }],
         });
 
-        if (selectedPath) {
-          await writeFile(selectedPath, bundle);
-          return selectedPath;
+        if (!selectedPath) {
+          return null;
         }
-        return null;
+
+        await writeFile(selectedPath, bundle);
+        return selectedPath;
       } catch (error) {
         console.error("Error saving bundle with dialog:", error);
         throw error;
       }
     },
 
-    async createDistributionZip(bundle, zipName, options = {}) {
+    createDistributionZip: async ({
+      bundle,
+      zipName,
+      options,
+      filePicker,
+      staticFiles,
+    }) => {
       try {
         const zip = new JSZip();
         zip.file("package.bin", bundle);
-
-        const { indexHtml, mainJs } = await getBundleStaticFiles();
-        if (indexHtml) zip.file("index.html", indexHtml);
-        if (mainJs) zip.file("main.js", mainJs);
+        if (staticFiles.indexHtml)
+          zip.file("index.html", staticFiles.indexHtml);
+        if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
 
         const zipBlob = await zip.generateAsync({ type: "uint8array" });
-
         const selectedPath = await filePicker.saveFilePicker({
           title: options.title || "Save Distribution ZIP",
           defaultPath: `${zipName}.zip`,
           filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
         });
 
-        if (selectedPath) {
-          await writeFile(selectedPath, zipBlob);
-          return selectedPath;
+        if (!selectedPath) {
+          return null;
         }
-        return null;
+
+        await writeFile(selectedPath, zipBlob);
+        return selectedPath;
       } catch (error) {
         console.error("Error saving distribution ZIP with dialog:", error);
         throw error;
       }
     },
 
-    async createDistributionZipStreamed(
+    createDistributionZipStreamed: async ({
       projectData,
       fileIds,
       zipName,
-      options = {},
-    ) {
+      options,
+      filePicker,
+      staticFiles,
+      getCurrentReference,
+    }) => {
       try {
         const selectedPath = await filePicker.saveFilePicker({
           title: options.title || "Save Distribution ZIP",
@@ -623,7 +216,8 @@ export const createProjectService = ({ router, db, filePicker }) => {
           return null;
         }
 
-        const filesPath = await getFilesPath();
+        const reference = getCurrentReference();
+        const filesPath = await join(reference.projectPath, "files");
         const uniqueFileIds = [];
         const seenFileIds = new Set();
 
@@ -648,14 +242,12 @@ export const createProjectService = ({ router, db, filePicker }) => {
           });
         }
 
-        const { indexHtml, mainJs } = await getBundleStaticFiles();
-
         await invoke("create_distribution_zip_streamed", {
           outputPath: selectedPath,
           assets,
           instructionsJson: JSON.stringify(projectData),
-          indexHtml,
-          mainJs,
+          indexHtml: staticFiles.indexHtml || null,
+          mainJs: staticFiles.mainJs || null,
           usePartFile: options.usePartFile ?? true,
         });
 
@@ -669,26 +261,106 @@ export const createProjectService = ({ router, db, filePicker }) => {
       }
     },
   };
-};
 
-async function copyTemplateFiles(templateId, targetPath) {
-  const templateFilesPath = `/templates/${templateId}/files/`;
-  const filesToCopy = await getTemplateFiles(templateId);
+  const collabAdapter = {
+    createTransport: ({ endpointUrl }) =>
+      createWebSocketTransport({
+        url: endpointUrl,
+        label: "routevn.collab.tauri.transport",
+      }),
 
-  for (const fileName of filesToCopy) {
-    try {
-      const sourcePath = templateFilesPath + fileName;
-      const targetFilePath = await join(targetPath, fileName);
+    createSessionForProject: async ({
+      projectId,
+      token,
+      userId,
+      clientId,
+      endpointUrl,
+      partitions,
+      mode,
+      partitioning,
+      getRepositoryByProject,
+      getProjectMetadataFromEntries,
+      collabLog,
+    }) => {
+      collabLog("info", "create session requested", {
+        projectId,
+        endpointUrl: endpointUrl || null,
+        mode,
+        hasToken: Boolean(token),
+        userId,
+        clientId,
+      });
 
-      const response = await fetch(sourcePath + "?raw");
-      if (response.ok) {
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        await writeFile(targetFilePath, uint8Array);
+      const repository = await getRepositoryByProject(projectId);
+      const state = repository.getState();
+      assertV2State(state);
+
+      const resolvedProjectId = state.project?.id || projectId;
+      const resolvedPartitions = partitioning.getBasePartitions(
+        resolvedProjectId,
+        partitions,
+      );
+      const projectMetadata = await getProjectMetadataFromEntries(projectId);
+      const collabSession = createProjectCollabService({
+        projectId: resolvedProjectId,
+        projectName: projectMetadata.name,
+        projectDescription: projectMetadata.description,
+        initialState: projectRepositoryStateToDomainState({
+          repositoryState: state,
+          projectId: resolvedProjectId,
+        }),
+        token,
+        actor: {
+          userId,
+          clientId,
+        },
+        partitions: resolvedPartitions,
+        logger: (entry) => {
+          collabLog("debug", "sync-client", entry);
+        },
+        onCommittedCommand: async ({ command, isFromCurrentActor }) => {
+          if (isFromCurrentActor) return;
+          await applyCommandToRepository({
+            repository,
+            command,
+            projectId: resolvedProjectId,
+          });
+        },
+      });
+
+      await collabSession.start();
+      collabLog("info", "session started", {
+        projectId: resolvedProjectId,
+        mode,
+        partitions: resolvedPartitions,
+        online: Boolean(endpointUrl),
+      });
+      if (endpointUrl) {
+        collabLog("info", "attaching websocket transport", {
+          endpointUrl,
+        });
+        const transport = createWebSocketTransport({
+          url: endpointUrl,
+          label: "routevn.collab.tauri.transport",
+        });
+        await collabSession.setOnlineTransport(transport);
+        collabLog("info", "websocket transport attached", {
+          endpointUrl,
+        });
       }
-    } catch (error) {
-      console.error(`Failed to copy template file ${fileName}:`, error);
-    }
-  }
-}
+
+      return collabSession;
+    },
+  };
+
+  return createProjectServiceCore({
+    router,
+    db,
+    filePicker,
+    idGenerator: nanoid,
+    collabLog,
+    storageAdapter,
+    fileAdapter,
+    collabAdapter,
+  });
+};
