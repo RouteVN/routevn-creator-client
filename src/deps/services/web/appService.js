@@ -119,12 +119,10 @@ export const createAppService = ({
   const loadProjectIcon = async (projectId, iconFileId) => {
     if (!iconFileId) return null;
     try {
-      await projectService.getRepositoryById(projectId);
-      const adapter = projectService.getAdapterById(projectId);
-      if (!adapter) {
-        return null;
-      }
-      const blob = await adapter.getFile(iconFileId);
+      const blob = await projectService.getFileByProjectId(
+        projectId,
+        iconFileId,
+      );
       if (blob) {
         return URL.createObjectURL(blob);
       }
@@ -178,7 +176,10 @@ export const createAppService = ({
         return normalizeLocalProjectEntry(localEntry);
       }
 
-      return createEmptyProjectEntry({ id: projectId, source: "cloud" });
+      return createEmptyProjectEntry({
+        id: projectId,
+        source: "cloud",
+      });
     } catch {
       return createEmptyProjectEntry({ id: projectId, source: "local" });
     }

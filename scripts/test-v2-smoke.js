@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { createProjectCollabService } from "../src/collab/v2/createProjectCollabService.js";
 import {
-  applyTypedCommandToRepository,
-  createProjectCreatedTypedEvent,
-  createInsiemeProjectRepositoryRuntime,
+  applyCommandToRepository,
+  createProjectCreatedRepositoryEvent,
+  createProjectRepository,
   initialProjectData,
-} from "../src/deps/services/shared/typedProjectRepository.js";
+} from "../src/deps/services/shared/projectRepository.js";
 import { COMMAND_VERSION } from "../src/domain/v2/constants.js";
 import { processCommand } from "../src/domain/v2/engine.js";
 import { DomainPreconditionError } from "../src/domain/v2/errors.js";
@@ -53,10 +53,10 @@ const findTreeNodeById = (nodes, targetId) => {
   return null;
 };
 
-const createInMemoryTypedEventStore = () => {
+const createInMemoryRepositoryEventStore = () => {
   const events = [];
   return {
-    async appendTypedEvent(event) {
+    async appendEvent(event) {
       events.push(structuredClone(event));
     },
     async getEvents() {
@@ -424,20 +424,29 @@ const projectedDomainState = projectRepositoryStateToDomainState({
   repositoryState: repositoryStateWithLayoutTree,
   projectId: projectionProjectId,
 });
-assert.equal(projectedDomainState.layouts["layout-a"].parentId, "default-folder");
-assert.equal(projectedDomainState.layouts["layout-b"].parentId, "default-folder");
-assert.equal(projectedDomainState.layouts["layout-c"].parentId, "default-folder");
+assert.equal(
+  projectedDomainState.layouts["layout-a"].parentId,
+  "default-folder",
+);
+assert.equal(
+  projectedDomainState.layouts["layout-b"].parentId,
+  "default-folder",
+);
+assert.equal(
+  projectedDomainState.layouts["layout-c"].parentId,
+  "default-folder",
+);
 assert.equal(
   projectedDomainState.layouts["layout-fallback"].parentId,
   "default-folder",
 );
 
-const projectionStore = createInMemoryTypedEventStore();
-const projectionRepository = await createInsiemeProjectRepositoryRuntime({
+const projectionStore = createInMemoryRepositoryEventStore();
+const projectionRepository = await createProjectRepository({
   projectId: projectionProjectId,
   store: projectionStore,
   events: [
-    createProjectCreatedTypedEvent({
+    createProjectCreatedRepositoryEvent({
       projectId: projectionProjectId,
       state: projectedDomainState,
       actor,
@@ -462,7 +471,7 @@ const assertLayoutsNestedUnderDefault = (repositoryState) => {
 
 assertLayoutsNestedUnderDefault(projectionRepository.getState());
 
-await applyTypedCommandToRepository({
+await applyCommandToRepository({
   repository: projectionRepository,
   projectId: projectionProjectId,
   command: {

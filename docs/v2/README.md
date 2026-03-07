@@ -1,12 +1,12 @@
 # RouteVN V2 Platform Spec
 
-This folder defines the non-legacy, big-bang V2 platform for RouteVN Creator.
+This folder defines the V2-only platform for RouteVN Creator.
 
 Date baseline: February 24, 2026.
 
 ## Scope
 
-- V2 is a breaking format and protocol migration.
+- V2 is a breaking format and protocol cutover.
 - V1 projects are not opened by V2 runtime.
 - All write operations must go through authoritative collaboration server validation.
 

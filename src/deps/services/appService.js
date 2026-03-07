@@ -192,7 +192,10 @@ export const createAppService = ({
         return normalizeLocalProjectEntry(localEntry);
       }
 
-      return createEmptyProjectEntry({ id: projectId, source: "cloud" });
+      return createEmptyProjectEntry({
+        id: projectId,
+        source: "cloud",
+      });
     } catch {
       return createEmptyProjectEntry({ id: projectId, source: "local" });
     }

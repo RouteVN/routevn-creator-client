@@ -1,7 +1,12 @@
-import { createInMemoryClientStore } from "insieme/client";
+import { createMaterializedViewRuntime } from "insieme/client";
 
 const PROJECT_STATE_VIEW_NAME = "project_repository_state";
 const PROJECT_STATE_VIEW_VERSION = "1";
+const PROJECT_STATE_CHECKPOINT = {
+  mode: "debounce",
+  debounceMs: 1000,
+  maxDirtyEvents: 100,
+};
 
 export const projectRepositoryStatePartitionFor = (projectId) =>
   `project:${projectId}:repository_state`;
@@ -54,16 +59,21 @@ export const createProjectRepositoryRuntime = async ({
 
   const projectPartition = projectRepositoryStatePartitionFor(projectId);
 
-  const projectStateStore = createInMemoryClientStore({
+  const projectStateRuntime = createMaterializedViewRuntime({
     materializedViews: [
       {
         name: PROJECT_STATE_VIEW_NAME,
         version: PROJECT_STATE_VIEW_VERSION,
+        checkpoint: PROJECT_STATE_CHECKPOINT,
         initialState: () => createInitialState(),
         reduce: ({ state, event, partition }) => {
           if (partition !== projectPartition) return state;
           const repositoryEvent = event?.event;
-          if (!repositoryEvent || typeof repositoryEvent.type !== "string") {
+          if (
+            !repositoryEvent ||
+            typeof repositoryEvent !== "object" ||
+            Array.isArray(repositoryEvent)
+          ) {
             return state;
           }
 
@@ -75,30 +85,49 @@ export const createProjectRepositoryRuntime = async ({
         },
       },
     ],
+    getLatestCommittedId: async () => events.length,
+    listCommittedAfter: async ({ sinceCommittedId, limit }) => {
+      const startIndex = Math.max(
+        0,
+        Number.isFinite(Number(sinceCommittedId))
+          ? Math.floor(Number(sinceCommittedId))
+          : 0,
+      );
+      const safeLimit =
+        Number.isInteger(limit) && limit > 0 ? limit : events.length;
+
+      return events
+        .slice(startIndex, startIndex + safeLimit)
+        .map((event, index) =>
+          toCommittedProjectStateEvent({
+            event,
+            committedId: startIndex + index + 1,
+            projectId,
+          }),
+        );
+    },
+    loadCheckpoint: async ({ viewName, partition }) =>
+      store.loadMaterializedViewCheckpoint?.({
+        viewName,
+        partition,
+      }),
+    saveCheckpoint: async (checkpoint) =>
+      store.saveMaterializedViewCheckpoint?.(checkpoint),
+    deleteCheckpoint: async ({ viewName, partition }) =>
+      store.deleteMaterializedViewCheckpoint?.({
+        viewName,
+        partition,
+      }),
   });
 
-  await projectStateStore.init();
-
-  if (events.length > 0) {
-    await projectStateStore.applyCommittedBatch({
-      events: events.map((event, index) =>
-        toCommittedProjectStateEvent({
-          event,
-          committedId: index + 1,
-          projectId,
-        }),
-      ),
-      nextCursor: events.length,
-    });
-  }
-
-  let currentState = await projectStateStore.loadMaterializedView({
+  let currentState = await projectStateRuntime.loadMaterializedView({
     viewName: PROJECT_STATE_VIEW_NAME,
     partition: projectPartition,
   });
   if (!currentState || typeof currentState !== "object") {
     currentState = createInitialState();
   }
+  assertState(currentState);
 
   return {
     getState(untilEventIndex) {
@@ -120,22 +149,19 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     async addEvent(event) {
-      await store.appendTypedEvent(event);
+      await store.appendEvent(event);
       events.push(structuredClone(event));
       const committedId = events.length;
 
-      await projectStateStore.applyCommittedBatch({
-        events: [
-          toCommittedProjectStateEvent({
-            event,
-            committedId,
-            projectId,
-          }),
-        ],
-        nextCursor: committedId,
-      });
+      await projectStateRuntime.onCommittedEvent(
+        toCommittedProjectStateEvent({
+          event,
+          committedId,
+          projectId,
+        }),
+      );
 
-      currentState = await projectStateStore.loadMaterializedView({
+      currentState = await projectStateRuntime.loadMaterializedView({
         viewName: PROJECT_STATE_VIEW_NAME,
         partition: projectPartition,
       });

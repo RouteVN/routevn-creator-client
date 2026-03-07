@@ -4,6 +4,24 @@ const getSessionAuthToken = (appService) => {
   return authToken;
 };
 
+const getAuthenticatedCloudSession = (appService) => {
+  const authToken = getSessionAuthToken(appService);
+  if (!authToken) {
+    return;
+  }
+
+  const authUser = appService.getUserConfig("auth.user");
+  const email = authUser?.email?.trim?.() ?? "";
+  if (!email) {
+    return;
+  }
+
+  return {
+    authToken,
+    authUser,
+  };
+};
+
 const mapApiUserToAuthUser = (user) => {
   const id = user?.id;
   const email = user?.email;
@@ -43,13 +61,12 @@ const mapCloudProject = (project) => {
   };
 };
 
-const loadCloudProjects = async ({ appService, apiService, store }) => {
-  const authToken = getSessionAuthToken(appService);
-  if (!authToken) {
-    store.setCloudProjects({ projects: [] });
-    return;
-  }
-
+const loadCloudProjects = async ({
+  appService,
+  apiService,
+  store,
+  authToken,
+}) => {
   const profile = await apiService.getProfile({ authToken });
   const profileUser = profile?.user;
 
@@ -72,13 +89,18 @@ export const handleAfterMount = async (deps) => {
   const { appService, apiService, store, render } = deps;
   const platform = appService.getPlatform();
   store.setPlatform({ platform: platform });
-  const authUser = appService.getUserConfig("auth.user");
+  const cloudSession = getAuthenticatedCloudSession(appService);
+  const authUser = cloudSession?.authUser;
   store.setAuthUser({ user: authUser });
 
-  const authToken = getSessionAuthToken(appService);
-  if (authToken) {
+  if (cloudSession) {
     try {
-      await loadCloudProjects({ appService, apiService, store });
+      await loadCloudProjects({
+        appService,
+        apiService,
+        store,
+        authToken: cloudSession.authToken,
+      });
     } catch (error) {
       console.error("Failed to load cloud profile:", error);
       store.setCloudProjects({ projects: [] });
@@ -109,8 +131,8 @@ export const handleCreateButtonClick = async (deps) => {
 
 export const handleCloudCreateButtonClick = (deps) => {
   const { appService, store, render } = deps;
-  const authToken = getSessionAuthToken(appService);
-  if (!authToken) {
+  const cloudSession = getAuthenticatedCloudSession(appService);
+  if (!cloudSession) {
     appService.showToast("Please login to create a cloud project.");
     return;
   }
@@ -143,8 +165,8 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
     return;
   }
 
-  const authToken = getSessionAuthToken(appService);
-  if (!authToken) {
+  const cloudSession = getAuthenticatedCloudSession(appService);
+  if (!cloudSession) {
     appService.showToast("Please login to create a cloud project.");
     return;
   }
@@ -158,7 +180,7 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
 
   try {
     const result = await apiService.createProject({
-      authToken,
+      authToken: cloudSession.authToken,
       name,
       description,
     });
@@ -546,8 +568,8 @@ export const handleAddMemberFormAction = async (deps, payload) => {
     return;
   }
 
-  const authToken = getSessionAuthToken(appService);
-  if (!authToken) {
+  const cloudSession = getAuthenticatedCloudSession(appService);
+  if (!cloudSession) {
     appService.showToast("Please login to add a member.");
     return;
   }
@@ -566,7 +588,7 @@ export const handleAddMemberFormAction = async (deps, payload) => {
 
   try {
     const result = await apiService.addMembers({
-      authToken,
+      authToken: cloudSession.authToken,
       projectId,
       memberEmails: [email],
     });
@@ -588,7 +610,12 @@ export const handleAddMemberFormAction = async (deps, payload) => {
       appService.showToast("No member was added.");
     }
 
-    await loadCloudProjects({ appService, apiService, store });
+    await loadCloudProjects({
+      appService,
+      apiService,
+      store,
+      authToken: cloudSession.authToken,
+    });
     store.closeAddMemberDialog();
     render();
   } catch (error) {

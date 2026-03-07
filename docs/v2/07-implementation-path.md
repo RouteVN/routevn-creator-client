@@ -59,16 +59,16 @@ Done criteria:
 
 Done criteria:
 - No UI write path bypasses command pipeline.
-- `rg \"appendEvent\\(\" src` returns only legacy-dead code slated for removal.
+- `rg \"appendEvent\\(\" src` returns only repository storage/bootstrap internals.
 
-## Phase 4: Remove Legacy Repository API (2-4 days)
+## Phase 4: Replace App-Owned Replay Runtime (2-4 days)
 
-- Remove reliance on old `createRepository` event log patterns.
-- Store/project state derives from committed command events.
-- Delete unused V1 helpers and adapters.
+- Remove app-owned repository replay/bootstrap logic.
+- Store/project current state hydrates through `insieme` materialized-view runtime.
+- Keep repository history as command events only.
 
 Done criteria:
-- No runtime imports from legacy Insieme APIs.
+- Current project load no longer rebuilds current state via full in-app replay.
 - V2 project open/create/export paths are fully command/event based.
 
 ## Phase 5: Hardening and Release Gates (3-5 days)
@@ -95,4 +95,4 @@ Done criteria:
 - Replace all UUID fallback IDs with UUIDv7 where available.
 - Add server-side canonical serialization for command dedupe.
 - Replace `Date.now()` in mutable reducers with event timestamp metadata.
-- Add domain-level migration blocker that rejects malformed in-memory state early.
+- Add domain-level format blocker that rejects malformed in-memory state early.

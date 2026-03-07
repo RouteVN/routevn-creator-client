@@ -51,4 +51,4 @@ Partitions must be coarse and stable.
 - No runtime write path emits `set/unset/node*`.
 - Story commands include scene-level partition when a scene is known.
 - Resource commands use resource-type partition only.
-- Reducer replay from typed command stream reconstructs canonical tree state.
+- Reducer replay from the command stream reconstructs canonical tree state.

@@ -20,12 +20,12 @@ import {
 } from "../../utils/fileProcessors";
 import { projectRepositoryStateToDomainState } from "../../domain/v2/stateProjection.js";
 import {
-  applyTypedCommandToRepository,
+  applyCommandToRepository,
   assertV2State,
-  createProjectCreatedTypedEvent,
-  createInsiemeProjectRepositoryRuntime,
+  createProjectCreatedRepositoryEvent,
+  createProjectRepository,
   initialProjectData,
-} from "./shared/typedProjectRepository.js";
+} from "./shared/projectRepository.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -132,7 +132,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       },
       onCommittedCommand: async ({ command, isFromCurrentActor }) => {
         if (isFromCurrentActor) return;
-        await applyTypedCommandToRepository({
+        await applyCommandToRepository({
           repository,
           command,
           projectId: resolvedProjectId,
@@ -181,8 +181,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
       try {
         const store = await createInsiemeTauriStoreAdapter(projectPath);
         let existingEvents = (await store.getEvents()) || [];
-
-        const repository = await createInsiemeProjectRepositoryRuntime({
+        const repository = await createProjectRepository({
           projectId: projectPath,
           store,
           events: existingEvents,
@@ -472,7 +471,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     async ensureRepository() {
       return getCurrentRepository();
     },
-    ...serviceCore.typedCommandApi,
+    ...serviceCore.commandApi,
 
     // Version management
     addVersionToProject: serviceCore.addVersionToProject,
@@ -506,10 +505,10 @@ export const createProjectService = ({ router, db, filePicker }) => {
         projectId: projectPath,
       });
 
-      // Create store and initialize typed bootstrap state
+      // Create store and initialize repository bootstrap state
       const store = await createInsiemeTauriStoreAdapter(projectPath);
-      await store.appendTypedEvent(
-        createProjectCreatedTypedEvent({
+      await store.appendEvent(
+        createProjectCreatedRepositoryEvent({
           projectId: projectPath,
           state: bootstrapDomainState,
         }),

@@ -62,9 +62,7 @@ const appService = createAppService({
   subject,
 });
 
-const apiService = createApiService({
-  baseUrl: "https://127.0.0.1:8787/rpc",
-});
+const apiService = createApiService();
 
 // Initialize async resources first
 const graphicsService = await createGraphicsService({ subject });

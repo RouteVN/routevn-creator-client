@@ -3,9 +3,12 @@ import {
   getTemplateFiles,
 } from "../../../utils/templateLoader.js";
 import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
-import { createProjectCreatedTypedEvent } from "../../services/shared/typedProjectRepository.js";
+import { createProjectCreatedRepositoryEvent } from "../../services/shared/projectRepository.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
+
+const REPOSITORY_DB_VERSION = 2;
+const MATERIALIZED_VIEW_STORE = "materialized_view_state";
 
 const openIDB = (name, version, upgradeCallback) => {
   return new Promise((resolve, reject) => {
@@ -67,8 +70,8 @@ export const initializeProject = async ({ projectId, template }) => {
     projectId,
   });
 
-  await adapter.appendTypedEvent(
-    createProjectCreatedTypedEvent({
+  await adapter.appendEvent(
+    createProjectCreatedRepositoryEvent({
       projectId,
       state: domainState,
     }),
@@ -89,7 +92,7 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
     );
   }
 
-  const db = await openIDB(projectId, 1, (event) => {
+  const db = await openIDB(projectId, REPOSITORY_DB_VERSION, (event) => {
     const idb = event.target.result;
     if (!idb.objectStoreNames.contains("events")) {
       idb.createObjectStore("events", { keyPath: "id", autoIncrement: true });
@@ -99,6 +102,11 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
     }
     if (!idb.objectStoreNames.contains("files")) {
       idb.createObjectStore("files", { keyPath: "id" });
+    }
+    if (!idb.objectStoreNames.contains(MATERIALIZED_VIEW_STORE)) {
+      idb.createObjectStore(MATERIALIZED_VIEW_STORE, {
+        keyPath: ["viewName", "partition"],
+      });
     }
   });
 
@@ -111,33 +119,104 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
         const store = transaction.objectStore("events");
         const request = store.getAll();
         request.onsuccess = (event) => {
-          let events = event.target.result;
+          try {
+            let events = event.target.result;
 
-          // Filter by since if provided (using auto-increment id)
-          if (since !== undefined) {
-            events = events.filter((row) => row.id > since);
+            // Filter by since if provided (using auto-increment id)
+            if (since !== undefined) {
+              events = events.filter((row) => row.id > since);
+            }
+
+            resolve(
+              events.map((row) => {
+                if (
+                  typeof row.payload !== "string" ||
+                  row.payload.length === 0
+                ) {
+                  throw new Error("Repository event row is missing payload");
+                }
+                return JSON.parse(row.payload);
+              }),
+            );
+          } catch (error) {
+            reject(error);
           }
-
-          resolve(
-            events.map((row) => ({
-              type: row.type,
-              payload: row.payload ? JSON.parse(row.payload) : null,
-            })),
-          );
         };
         request.onerror = (event) => reject(event.target.error);
       });
     },
 
-    async appendTypedEvent(event) {
+    async appendEvent(event) {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction("events", "readwrite");
         const store = transaction.objectStore("events");
         const eventToStore = {
-          type: event.type,
-          payload: JSON.stringify(event.payload),
+          payload: JSON.stringify(event),
+          createdAt: Date.now(),
         };
         const request = store.add(eventToStore);
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async loadMaterializedViewCheckpoint({ viewName, partition }) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(MATERIALIZED_VIEW_STORE, "readonly");
+        const store = transaction.objectStore(MATERIALIZED_VIEW_STORE);
+        const request = store.get([viewName, partition]);
+        request.onsuccess = (event) => {
+          const row = event.target.result;
+          if (!row) {
+            resolve(undefined);
+            return;
+          }
+          resolve({
+            viewVersion: row.viewVersion,
+            lastCommittedId: Number(row.lastCommittedId) || 0,
+            value: structuredClone(row.value),
+            updatedAt: Number(row.updatedAt) || 0,
+          });
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async saveMaterializedViewCheckpoint({
+      viewName,
+      partition,
+      viewVersion,
+      lastCommittedId,
+      value,
+      updatedAt,
+    }) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(
+          MATERIALIZED_VIEW_STORE,
+          "readwrite",
+        );
+        const store = transaction.objectStore(MATERIALIZED_VIEW_STORE);
+        const request = store.put({
+          viewName,
+          partition,
+          viewVersion,
+          lastCommittedId,
+          value: structuredClone(value),
+          updatedAt,
+        });
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async deleteMaterializedViewCheckpoint({ viewName, partition }) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(
+          MATERIALIZED_VIEW_STORE,
+          "readwrite",
+        );
+        const store = transaction.objectStore(MATERIALIZED_VIEW_STORE);
+        const request = store.delete([viewName, partition]);
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.error);
       });
