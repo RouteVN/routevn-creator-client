@@ -18,7 +18,11 @@ export const createAppService = (params) => {
         if (!blob) {
           return null;
         }
-        return URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
+        return {
+          url,
+          cleanup: () => URL.revokeObjectURL(url),
+        };
       } catch (error) {
         console.error("Failed to load project icon:", error);
         return null;
