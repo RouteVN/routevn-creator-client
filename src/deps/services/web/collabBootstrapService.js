@@ -12,7 +12,6 @@ const COLLAB_PAGE_COMPONENT_TAGS = [
   "rvn-transforms",
   "rvn-videos",
   "rvn-typography",
-  "rvn-choices",
   "rvn-variables",
   "rvn-scenes",
   "rvn-scene-editor",
