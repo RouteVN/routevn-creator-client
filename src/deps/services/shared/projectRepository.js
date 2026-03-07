@@ -2,6 +2,11 @@ import { processCommand } from "../../../domain/v2/engine.js";
 import { COMMAND_VERSION } from "../../../domain/v2/constants.js";
 import { projectRepositoryStateToDomainState } from "../../../domain/v2/stateProjection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
+import {
+  commandToSyncEvent,
+  committedSyncEventToCommand,
+  validateCommandSubmitItem,
+} from "insieme/client";
 
 export const createTreeCollection = () => {
   return {
@@ -157,6 +162,9 @@ const generateCommandId = () =>
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
+const isNonEmptyString = (value) =>
+  typeof value === "string" && value.length > 0;
+
 const defaultInitializationActor = (projectId) => ({
   userId: "system",
   clientId: `system-${projectId}`,
@@ -217,7 +225,76 @@ export const createProjectCreatedCommand = ({
   };
 };
 
-export const createProjectCreatedTypedEvent = ({
+const resolveCommandPartitions = (command) => {
+  const partitions = [];
+  const seen = new Set();
+
+  const push = (value) => {
+    if (!isNonEmptyString(value) || seen.has(value)) return;
+    seen.add(value);
+    partitions.push(value);
+  };
+
+  push(command?.partition);
+  for (const partition of Array.isArray(command?.partitions)
+    ? command.partitions
+    : []) {
+    push(partition);
+  }
+
+  return partitions;
+};
+
+export const isRepositoryCommandEvent = (repositoryEvent) => {
+  try {
+    validateCommandSubmitItem(repositoryEvent);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const assertRepositoryCommandEvent = (repositoryEvent) => {
+  validateCommandSubmitItem(repositoryEvent);
+  return repositoryEvent;
+};
+
+export const createRepositoryCommandEvent = ({ command }) => {
+  if (!command || typeof command !== "object" || Array.isArray(command)) {
+    throw new Error("command is required to create a repository event");
+  }
+
+  const partitions = resolveCommandPartitions(command);
+  if (partitions.length === 0) {
+    throw new Error("command partitions are required");
+  }
+
+  const repositoryEvent = {
+    partitions,
+    event: commandToSyncEvent(command),
+  };
+  assertRepositoryCommandEvent(repositoryEvent);
+  return repositoryEvent;
+};
+
+export const repositoryEventToCommand = (repositoryEvent) => {
+  assertRepositoryCommandEvent(repositoryEvent);
+  const command = committedSyncEventToCommand(
+    {
+      partitions: repositoryEvent.partitions,
+      event: repositoryEvent.event,
+    },
+    {
+      defaultCommandVersion: COMMAND_VERSION,
+    },
+  );
+  if (!command) {
+    throw new Error("Failed to convert repository event to command");
+  }
+  return command;
+};
+
+export const createProjectCreatedRepositoryEvent = ({
   projectId,
   state,
   actor,
@@ -225,13 +302,8 @@ export const createProjectCreatedTypedEvent = ({
   clientTs,
   partition,
   partitions,
-}) => ({
-  type: "typedCommand",
-  payload: {
-    projectId:
-      typeof projectId === "string" && projectId.length > 0
-        ? projectId
-        : state?.project?.id,
+}) =>
+  createRepositoryCommandEvent({
     command: createProjectCreatedCommand({
       projectId,
       state,
@@ -241,8 +313,7 @@ export const createProjectCreatedTypedEvent = ({
       partition,
       partitions,
     }),
-  },
-});
+  });
 
 export const isDirectDomainProjectionCommand = (command) =>
   command?.type === "project.created" ||
@@ -684,39 +755,35 @@ const projectDomainStateToRepositoryState = ({
   return nextState;
 };
 
-const applyTypedEventToRepositoryState = ({
+const applyRepositoryEventToRepositoryState = ({
   repositoryState,
   event,
   projectId,
 }) => {
-  if (event?.type === "typedCommand") {
-    const command = event?.payload?.command;
-    if (!isDirectDomainProjectionCommand(command)) {
-      throw new Error(
-        `No typed projection handler for command type '${command?.type || "unknown"}'`,
-      );
-    }
-
-    const resolvedProjectId =
-      event?.payload?.projectId ||
-      projectId ||
-      repositoryState?.project?.id ||
-      "unknown-project";
-    const domainStateBefore = projectRepositoryStateToDomainState({
-      repositoryState,
-      projectId: resolvedProjectId,
-    });
-    const { state: domainStateAfter } = processCommand({
-      state: domainStateBefore,
-      command,
-    });
-    return projectDomainStateToRepositoryState({
-      domainState: domainStateAfter,
-      repositoryState,
-    });
+  const command = repositoryEventToCommand(event);
+  if (!isDirectDomainProjectionCommand(command)) {
+    throw new Error(
+      `No command projection handler for command type '${command?.type || "unknown"}'`,
+    );
   }
 
-  return undefined;
+  const resolvedProjectId =
+    command.projectId ||
+    projectId ||
+    repositoryState?.project?.id ||
+    "unknown-project";
+  const domainStateBefore = projectRepositoryStateToDomainState({
+    repositoryState,
+    projectId: resolvedProjectId,
+  });
+  const { state: domainStateAfter } = processCommand({
+    state: domainStateBefore,
+    command,
+  });
+  return projectDomainStateToRepositoryState({
+    domainState: domainStateAfter,
+    repositoryState,
+  });
 };
 
 const createInitialRepositoryStateForProject = (projectId) => ({
@@ -727,7 +794,7 @@ const createInitialRepositoryStateForProject = (projectId) => ({
   },
 });
 
-export const createInsiemeProjectRepositoryRuntime = async ({
+export const createProjectRepository = async ({
   projectId,
   store,
   events: sourceEvents = [],
@@ -738,7 +805,7 @@ export const createInsiemeProjectRepositoryRuntime = async ({
     events: sourceEvents,
     createInitialState: () => createInitialRepositoryStateForProject(projectId),
     reduceEventToState: ({ repositoryState, event }) =>
-      applyTypedEventToRepositoryState({
+      applyRepositoryEventToRepositoryState({
         repositoryState,
         event,
         projectId,
@@ -746,31 +813,34 @@ export const createInsiemeProjectRepositoryRuntime = async ({
     assertState: assertV2State,
   });
 
-export const applyTypedCommandToRepository = async ({
+export const applyCommandToRepository = async ({
   repository,
   command,
   projectId,
 }) => {
   if (!isDirectDomainProjectionCommand(command)) {
     throw new Error(
-      `No typed projection handler for command type '${command?.type || "unknown"}'`,
+      `No command projection handler for command type '${command?.type || "unknown"}'`,
     );
   }
 
-  await repository.addEvent({
-    type: "typedCommand",
-    payload: {
-      projectId,
-      command: structuredClone(command),
-    },
-  });
+  const repositoryCommand = {
+    ...structuredClone(command),
+    projectId: command?.projectId || projectId,
+  };
+
+  await repository.addEvent(
+    createRepositoryCommandEvent({
+      command: repositoryCommand,
+    }),
+  );
 
   return {
-    mode: "typed_command_event",
+    mode: "command_event",
     events: [
       {
-        type: command.type,
-        payload: structuredClone(command.payload || {}),
+        type: repositoryCommand.type,
+        payload: structuredClone(repositoryCommand.payload || {}),
       },
     ],
   };

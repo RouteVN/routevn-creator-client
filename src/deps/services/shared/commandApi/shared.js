@@ -1,14 +1,14 @@
 import { createCommandEnvelope } from "../../../../collab/v2/index.js";
 import { projectRepositoryStateToDomainState } from "../../../../domain/v2/stateProjection.js";
 import {
-  applyTypedCommandToRepository,
+  applyCommandToRepository,
   assertV2State,
   getSiblingOrderNodes,
   resolveIndexFromPosition,
   uniquePartitions,
-} from "../typedProjectRepository.js";
+} from "../projectRepository.js";
 
-export const createTypedCommandShared = ({
+export const createCommandApiShared = ({
   idGenerator,
   getCurrentProjectId,
   getCurrentRepository,
@@ -29,7 +29,7 @@ export const createTypedCommandShared = ({
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   };
 
-  const ensureTypedCommandContext = async () => {
+  const ensureCommandContext = async () => {
     const repository = await getCurrentRepository();
     const currentProjectId = getCurrentProjectId();
     if (!currentProjectId) {
@@ -55,7 +55,7 @@ export const createTypedCommandShared = ({
     };
   };
 
-  const submitTypedCommandWithContext = async ({
+  const submitCommandWithContext = async ({
     context,
     scope,
     type,
@@ -77,7 +77,7 @@ export const createTypedCommandShared = ({
 
     await context.session.submitCommand(command);
 
-    const applyResult = await applyTypedCommandToRepository({
+    const applyResult = await applyCommandToRepository({
       repository: context.repository,
       command,
       projectId: context.projectId,
@@ -231,8 +231,8 @@ export const createTypedCommandShared = ({
   return {
     createId,
     getCurrentProjectId,
-    ensureTypedCommandContext,
-    submitTypedCommandWithContext,
+    ensureCommandContext,
+    submitCommandWithContext,
     resolveResourceIndex,
     resolveSceneIndex,
     resolveLayoutIndex,

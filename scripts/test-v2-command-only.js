@@ -92,7 +92,7 @@ const createInMemoryServerTransport = ({ server, connectionId }) => {
   };
 };
 
-const projectId = "project-typed-only-001";
+const projectId = "project-command-only-001";
 const actor = { userId: "user-1", clientId: "client-1" };
 
 const bypassScan = spawnSync(
@@ -155,7 +155,7 @@ const server = createSyncServer({
 
 const collab = createProjectCollabService({
   projectId,
-  projectName: "Typed Only",
+  projectName: "Command Only",
   projectDescription: "no legacy commands",
   token: "user:user-1:client:client-1",
   actor,
@@ -167,7 +167,7 @@ const collab = createProjectCollabService({
   ],
   transport: createInMemoryServerTransport({
     server,
-    connectionId: "typed-only-conn-1",
+    connectionId: "command-only-conn-1",
   }),
 });
 
@@ -188,8 +188,8 @@ try {
     type: "project.update",
     payload: {
       patch: {
-        name: "Typed Project",
-        description: "Only typed commands should sync",
+        name: "Command Project",
+        description: "Only commands should sync",
       },
     },
     actor,
@@ -234,4 +234,4 @@ try {
   await server.shutdown();
 }
 
-console.log("V2 typed-only command tests: PASS");
+console.log("V2 command-only tests: PASS");

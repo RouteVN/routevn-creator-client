@@ -1,7 +1,7 @@
 import { createWebSocketTransport } from "../../../collab/v2/index.js";
 import { RESOURCE_TYPES } from "../../../domain/v2/constants.js";
 import { recursivelyCheckResource } from "../../../utils/resourceUsageChecker.js";
-import { createTypedCommandApi } from "./typedCommandApi.js";
+import { createCommandApi } from "./commandApi.js";
 
 export const createProjectServiceCore = ({
   router,
@@ -238,7 +238,7 @@ export const createProjectServiceCore = ({
     await adapter.app.set("versions", newVersions);
   };
 
-  const typedCommandApi = createTypedCommandApi({
+  const commandApi = createCommandApi({
     idGenerator,
     getCurrentProjectId,
     getCurrentRepository,
@@ -255,7 +255,7 @@ export const createProjectServiceCore = ({
     resourceId,
     checkTargets = [],
   }) => {
-    const state = typedCommandApi.getState();
+    const state = commandApi.getState();
     const usage = recursivelyCheckResource({
       state,
       itemId: resourceId,
@@ -266,7 +266,7 @@ export const createProjectServiceCore = ({
       return { deleted: false, usage };
     }
 
-    await typedCommandApi.deleteResourceItem({
+    await commandApi.deleteResourceItem({
       resourceType,
       resourceId,
     });
@@ -281,7 +281,7 @@ export const createProjectServiceCore = ({
     storyScenePartitionFor,
     resourceTypePartitionFor,
     getOrCreateLocalActor,
-    typedCommandApi,
+    commandApi,
     ensureCommandSessionForProject,
     createCollabSession,
     getCollabSession,

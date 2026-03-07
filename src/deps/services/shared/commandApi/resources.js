@@ -1,4 +1,4 @@
-import { normalizeParentId } from "../typedProjectRepository.js";
+import { normalizeParentId } from "../projectRepository.js";
 
 export const createResourceCommandApi = (shared) => ({
   async createResourceItem({
@@ -9,7 +9,7 @@ export const createResourceCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const nextResourceId = resourceId || shared.createId();
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
@@ -23,7 +23,7 @@ export const createResourceCommandApi = (shared) => ({
       resourceType,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
@@ -42,13 +42,13 @@ export const createResourceCommandApi = (shared) => ({
   },
 
   async updateResourceItem({ resourceType, resourceId, patch }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       resourceType,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
@@ -69,7 +69,7 @@ export const createResourceCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
       resourceType,
@@ -83,7 +83,7 @@ export const createResourceCommandApi = (shared) => ({
       resourceType,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
@@ -100,13 +100,13 @@ export const createResourceCommandApi = (shared) => ({
   },
 
   async deleteResourceItem({ resourceType, resourceId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       resourceType,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
@@ -128,7 +128,7 @@ export const createResourceCommandApi = (shared) => ({
     index,
     name,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const collection = context.state?.[resourceType];
     const sourceItem = collection?.items?.[sourceId];
     const resolvedParentId = normalizeParentId(
@@ -147,7 +147,7 @@ export const createResourceCommandApi = (shared) => ({
       resourceType,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,

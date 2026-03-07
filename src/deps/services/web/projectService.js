@@ -9,7 +9,6 @@ import {
   createProjectCollabService,
   createWebSocketTransport,
 } from "../../../collab/v2/index.js";
-import { commandToSyncEvent } from "insieme/client";
 import {
   getImageDimensions,
   getVideoDimensions,
@@ -26,10 +25,12 @@ import {
 } from "./collabCommittedCursorStore.js";
 import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import {
-  applyTypedCommandToRepository,
+  applyCommandToRepository,
+  assertRepositoryCommandEvent,
   assertV2State,
-  createInsiemeProjectRepositoryRuntime,
-} from "../shared/typedProjectRepository.js";
+  createProjectRepository,
+  repositoryEventToCommand,
+} from "../shared/projectRepository.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -52,40 +53,10 @@ const countImageEntries = (imagesData) =>
   ).length;
 
 const toSyncSubmissionEvents = (repositoryEvents = []) =>
-  repositoryEvents
-    .map((repositoryEvent) => {
-      const command =
-        repositoryEvent?.type === "typedCommand"
-          ? repositoryEvent?.payload?.command
-          : repositoryEvent;
-      if (!command || typeof command !== "object") return null;
-
-      const partitions = Array.isArray(command?.partitions)
-        ? command.partitions.filter(
-            (partition) =>
-              typeof partition === "string" && partition.length > 0,
-          )
-        : [];
-      if (
-        partitions.length === 0 &&
-        typeof command?.partition === "string" &&
-        command.partition.length > 0
-      ) {
-        partitions.push(command.partition);
-      }
-      if (partitions.length === 0) return null;
-
-      const projectId =
-        command?.projectId || repositoryEvent?.payload?.projectId || undefined;
-      return {
-        partitions,
-        event: commandToSyncEvent({
-          ...command,
-          projectId,
-        }),
-      };
-    })
-    .filter(Boolean);
+  repositoryEvents.map((repositoryEvent) => {
+    assertRepositoryCommandEvent(repositoryEvent);
+    return structuredClone(repositoryEvent);
+  });
 
 const toUncommittedSyncSubmissionEvents = ({
   repositoryEvents = [],
@@ -103,26 +74,26 @@ const toUncommittedSyncSubmissionEvents = ({
 
 const summarizeRepositoryEventsForSync = (events = []) => {
   const normalizedEvents = Array.isArray(events) ? events : [];
-  const typedCommands = normalizedEvents
-    .map((event) => event?.payload?.command)
-    .filter((command) => command && typeof command === "object");
-  const firstTypedCommand = typedCommands[0] || null;
-  const commandTypes = typedCommands
+  const commands = normalizedEvents.map((event) =>
+    repositoryEventToCommand(event),
+  );
+  const firstCommand = commands[0] || null;
+  const commandTypes = commands
     .slice(0, 8)
     .map((command) => command?.type || "unknown");
-  const hasProjectCreated = typedCommands.some(
+  const hasProjectCreated = commands.some(
     (command) => command?.type === "project.created",
   );
 
   return {
     repositoryEventCount: normalizedEvents.length,
-    typedCommandCount: typedCommands.length,
+    commandEventCount: commands.length,
     hasProjectCreated,
     commandTypesSample: commandTypes,
-    firstTypedCommandType: firstTypedCommand?.type || null,
-    firstTypedCommandId: firstTypedCommand?.id || null,
-    firstTypedCommandProjectId: firstTypedCommand?.projectId || null,
-    firstTypedCommandPartition: firstTypedCommand?.partition || null,
+    firstCommandType: firstCommand?.type || null,
+    firstCommandId: firstCommand?.id || null,
+    firstCommandProjectId: firstCommand?.projectId || null,
+    firstCommandPartition: firstCommand?.partition || null,
   };
 };
 
@@ -181,6 +152,16 @@ export const createProjectService = ({
       name: entry?.name || "",
       description: entry?.description || "",
     };
+  };
+
+  const getAdapterByProject = async (projectId) => {
+    if (adaptersByProject.has(projectId)) {
+      return adaptersByProject.get(projectId);
+    }
+
+    const store = await createInsiemeWebStoreAdapter(projectId);
+    adaptersByProject.set(projectId, store);
+    return store;
   };
 
   const ensureCommittedIdLoaded = async (projectId) => {
@@ -343,48 +324,40 @@ export const createProjectService = ({
             isFromCurrentActor,
           }) => {
             if (isFromCurrentActor) {
-              collabLog(
-                "debug",
-                "typed command skipped (current actor source)",
-                {
-                  projectId,
-                  sourceType,
-                  commandId: command?.id || null,
-                  commandType: command?.type || null,
-                  committedId: Number.isFinite(
-                    Number(committedEvent?.committed_id),
-                  )
-                    ? Number(committedEvent.committed_id)
-                    : null,
-                },
-              );
+              collabLog("debug", "command skipped (current actor source)", {
+                projectId,
+                sourceType,
+                commandId: command?.id || null,
+                commandType: command?.type || null,
+                committedId: Number.isFinite(
+                  Number(committedEvent?.committed_id),
+                )
+                  ? Number(committedEvent.committed_id)
+                  : null,
+              });
               return;
             }
 
             const beforeState = repository.getState();
             const beforeImagesCount = countImageEntries(beforeState?.images);
-            const applyResult = await applyTypedCommandToRepository({
+            const applyResult = await applyCommandToRepository({
               repository,
               command,
               projectId: resolvedProjectId,
             });
             if (applyResult.events.length === 0) {
-              collabLog(
-                "warn",
-                "typed command ignored (no projection events)",
-                {
-                  projectId,
-                  sourceType,
-                  commandType: command?.type || null,
-                  commandId: command?.id || null,
-                },
-              );
+              collabLog("warn", "command ignored (no projection events)", {
+                projectId,
+                sourceType,
+                commandType: command?.type || null,
+                commandId: command?.id || null,
+              });
               return;
             }
 
             const afterState = repository.getState();
             const afterImagesCount = countImageEntries(afterState?.images);
-            collabLog("info", "remote typed command applied to repository", {
+            collabLog("info", "remote command applied to repository", {
               projectId,
               commandType: command?.type || null,
               applyMode: applyResult.mode,
@@ -559,11 +532,11 @@ export const createProjectService = ({
     // Create init promise and store lock
     const initPromise = (async () => {
       try {
-        const store = await createInsiemeWebStoreAdapter(projectId);
+        const store = await getAdapterByProject(projectId);
         let existingEvents = (await store.getEvents()) || [];
 
         // Recover from stale sync cursor state: a project can have a persisted
-        // cursor while local typed events are empty/minimal (e.g. cleared IDB events).
+        // cursor while local repository events are empty/minimal (e.g. cleared IDB events).
         const persistedCursor = await loadCommittedCursor({
           adapter: store,
           projectId,
@@ -584,7 +557,7 @@ export const createProjectService = ({
           });
         }
 
-        const repository = await createInsiemeProjectRepositoryRuntime({
+        const repository = await createProjectRepository({
           projectId,
           store,
           events: existingEvents,
@@ -592,7 +565,6 @@ export const createProjectService = ({
 
         assertV2State(repository.getState());
         repositoriesByProject.set(projectId, repository);
-        adaptersByProject.set(projectId, store);
         return repository;
       } finally {
         // Always remove the lock when done (success or failure)
@@ -818,10 +790,14 @@ export const createProjectService = ({
     getAdapterById(projectId) {
       return adaptersByProject.get(projectId);
     },
+    async getFileByProjectId(projectId, fileId) {
+      const adapter = await getAdapterByProject(projectId);
+      return adapter.getFile(fileId);
+    },
     async ensureRepository() {
       return getCurrentRepository();
     },
-    ...serviceCore.typedCommandApi,
+    ...serviceCore.commandApi,
     addVersionToProject: serviceCore.addVersionToProject,
     deleteVersionFromProject: serviceCore.deleteVersionFromProject,
     deleteResourceItemIfUnused: serviceCore.deleteResourceItemIfUnused,

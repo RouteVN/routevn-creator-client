@@ -1,7 +1,7 @@
 import {
   createTreeCollection,
   normalizeParentId,
-} from "../typedProjectRepository.js";
+} from "../projectRepository.js";
 
 export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({
@@ -13,10 +13,10 @@ export const createLayoutCommandApi = (shared) => ({
     position = "last",
     data = {},
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const nextLayoutId = layoutId || shared.createId();
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.create",
@@ -36,9 +36,9 @@ export const createLayoutCommandApi = (shared) => ({
   },
 
   async renameLayoutItem({ layoutId, name }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.rename",
@@ -51,9 +51,9 @@ export const createLayoutCommandApi = (shared) => ({
   },
 
   async deleteLayoutItem({ layoutId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.delete",
@@ -70,7 +70,7 @@ export const createLayoutCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const resolvedIndex = shared.resolveLayoutIndex({
       state: context.state,
       parentId,
@@ -79,7 +79,7 @@ export const createLayoutCommandApi = (shared) => ({
       movingId: layoutId,
     });
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.reorder",
@@ -94,9 +94,9 @@ export const createLayoutCommandApi = (shared) => ({
   },
 
   async updateLayoutElement({ layoutId, elementId, patch, replace = true }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.element.update",
@@ -118,7 +118,7 @@ export const createLayoutCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const nextElementId = elementId || shared.createId();
     const layout = context.state?.layouts?.items?.[layoutId];
     const resolvedIndex = shared.resolveLayoutElementIndex({
@@ -128,7 +128,7 @@ export const createLayoutCommandApi = (shared) => ({
       index,
     });
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.element.create",
@@ -153,7 +153,7 @@ export const createLayoutCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const layout = context.state?.layouts?.items?.[layoutId];
     const resolvedIndex = shared.resolveLayoutElementIndex({
       layout,
@@ -163,7 +163,7 @@ export const createLayoutCommandApi = (shared) => ({
       movingId: elementId,
     });
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.element.move",
@@ -179,9 +179,9 @@ export const createLayoutCommandApi = (shared) => ({
   },
 
   async deleteLayoutElement({ layoutId, elementId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "layouts",
       type: "layout.element.delete",

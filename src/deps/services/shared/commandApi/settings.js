@@ -1,15 +1,15 @@
-import { normalizeParentId } from "../typedProjectRepository.js";
+import { normalizeParentId } from "../projectRepository.js";
 
 export const createSettingsCommandApi = (shared) => ({
   async updateProjectFields({ patch }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const keys = Object.keys(patch || {}).filter(
       (key) =>
         key && key !== "id" && key !== "createdAt" && key !== "updatedAt",
     );
     if (keys.length === 0) return;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "settings",
       type: "project.update",
@@ -29,10 +29,10 @@ export const createSettingsCommandApi = (shared) => ({
     parentId = null,
     position = "last",
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const nextVariableId = variableId || shared.createId();
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "settings",
       type: "variable.create",
@@ -60,7 +60,7 @@ export const createSettingsCommandApi = (shared) => ({
     position,
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const nextPatch = structuredClone(patch ?? {});
     const hasParentChange = Object.prototype.hasOwnProperty.call(
       nextPatch,
@@ -86,7 +86,7 @@ export const createSettingsCommandApi = (shared) => ({
           })
         : undefined;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "settings",
       type: "variable.update",
@@ -101,9 +101,9 @@ export const createSettingsCommandApi = (shared) => ({
   },
 
   async deleteVariableItem({ variableId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "settings",
       type: "variable.delete",

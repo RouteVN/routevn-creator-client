@@ -2,7 +2,7 @@ import {
   findLineLocation,
   findSectionLocation,
   normalizeParentId,
-} from "../typedProjectRepository.js";
+} from "../projectRepository.js";
 
 export const createStoryCommandApi = (shared) => ({
   async createSceneItem({
@@ -13,7 +13,7 @@ export const createStoryCommandApi = (shared) => ({
     index,
     data = {},
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const finalSceneId = sceneId || shared.createId();
     const resolvedIndex = shared.resolveSceneIndex({
       state: context.state,
@@ -27,7 +27,7 @@ export const createStoryCommandApi = (shared) => ({
       finalSceneId,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "scene.create",
@@ -45,14 +45,14 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async updateSceneItem({ sceneId, patch }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const scenePartition = shared.storyScenePartitionFor(
       context.projectId,
       sceneId,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "scene.update",
@@ -65,14 +65,14 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async renameSceneItem({ sceneId, name }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const scenePartition = shared.storyScenePartitionFor(
       context.projectId,
       sceneId,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "scene.rename",
@@ -85,14 +85,14 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async deleteSceneItem({ sceneId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const scenePartition = shared.storyScenePartitionFor(
       context.projectId,
       sceneId,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "scene.delete",
@@ -104,14 +104,14 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async setInitialScene({ sceneId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const scenePartition = shared.storyScenePartitionFor(
       context.projectId,
       sceneId,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "scene.set_initial",
@@ -128,7 +128,7 @@ export const createStoryCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const resolvedIndex = shared.resolveSceneIndex({
       state: context.state,
       parentId,
@@ -142,7 +142,7 @@ export const createStoryCommandApi = (shared) => ({
       sceneId,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "scene.reorder",
@@ -165,7 +165,7 @@ export const createStoryCommandApi = (shared) => ({
     index,
     data = {},
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const nextSectionId = sectionId || shared.createId();
     const scene = context.state?.scenes?.items?.[sceneId];
     const resolvedIndex = shared.resolveSectionIndex({
@@ -180,7 +180,7 @@ export const createStoryCommandApi = (shared) => ({
       sceneId,
     );
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "section.create",
@@ -200,7 +200,7 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async renameSectionItem({ sceneId, sectionId, name }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const sectionLocation = findSectionLocation(context.state, sectionId);
     const sceneIdForPartition = sceneId || sectionLocation?.sceneId;
@@ -208,7 +208,7 @@ export const createStoryCommandApi = (shared) => ({
       ? shared.storyScenePartitionFor(context.projectId, sceneIdForPartition)
       : null;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "section.rename",
@@ -223,7 +223,7 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async deleteSectionItem({ sceneId, sectionId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const sectionLocation = findSectionLocation(context.state, sectionId);
     const sceneIdForPartition = sceneId || sectionLocation?.sceneId;
@@ -231,7 +231,7 @@ export const createStoryCommandApi = (shared) => ({
       ? shared.storyScenePartitionFor(context.projectId, sceneIdForPartition)
       : null;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "section.delete",
@@ -250,7 +250,7 @@ export const createStoryCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const sectionLocation = findSectionLocation(context.state, sectionId);
     const resolvedIndex = shared.resolveSectionIndex({
       scene: sectionLocation?.scene,
@@ -267,7 +267,7 @@ export const createStoryCommandApi = (shared) => ({
         )
       : null;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "section.reorder",
@@ -292,7 +292,7 @@ export const createStoryCommandApi = (shared) => ({
     position,
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const nextLineId = lineId || shared.createId();
     const sectionLocation = findSectionLocation(context.state, sectionId);
     const resolvedPosition =
@@ -311,7 +311,7 @@ export const createStoryCommandApi = (shared) => ({
         )
       : null;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "line.insert_after",
@@ -333,14 +333,14 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async updateLineActions({ lineId, patch, replace = false }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const lineLocation = findLineLocation(context.state, lineId);
     const scenePartition = lineLocation?.sceneId
       ? shared.storyScenePartitionFor(context.projectId, lineLocation.sceneId)
       : null;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "line.update_actions",
@@ -356,14 +356,14 @@ export const createStoryCommandApi = (shared) => ({
   },
 
   async deleteLineItem({ lineId }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const lineLocation = findLineLocation(context.state, lineId);
     const scenePartition = lineLocation?.sceneId
       ? shared.storyScenePartitionFor(context.projectId, lineLocation.sceneId)
       : null;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "line.delete",
@@ -383,7 +383,7 @@ export const createStoryCommandApi = (shared) => ({
     position = "last",
     index,
   }) {
-    const context = await shared.ensureTypedCommandContext();
+    const context = await shared.ensureCommandContext();
     const targetSection = findSectionLocation(context.state, toSectionId);
     const resolvedIndex = shared.resolveLineIndex({
       section: targetSection?.section,
@@ -401,7 +401,7 @@ export const createStoryCommandApi = (shared) => ({
       ? shared.storyScenePartitionFor(context.projectId, targetSection.sceneId)
       : null;
 
-    await shared.submitTypedCommandWithContext({
+    await shared.submitCommandWithContext({
       context,
       scope: "story",
       type: "line.move",
