@@ -1,3 +1,5 @@
+import { persistAuthenticatedSession } from "../../deps/services/shared/authSession.js";
+
 export const handleBackButtonClick = (deps) => {
   const { appService } = deps;
   appService.navigate("/projects");
@@ -67,44 +69,6 @@ const extractRegisterCode = (result) => {
   }
 
   return "";
-};
-
-const mapApiUserToAuthUser = (user) => {
-  const email = typeof user?.email === "string" ? user.email : "";
-  const name =
-    typeof user?.creatorDisplayName === "string" ? user.creatorDisplayName : "";
-  const displayColor =
-    typeof user?.creatorDisplayColor === "string" && user.creatorDisplayColor
-      ? user.creatorDisplayColor
-      : "#E2E8F0";
-  const avatar =
-    typeof user?.creatorDisplayAvatar === "string"
-      ? user.creatorDisplayAvatar
-      : "";
-  const id = typeof user?.id === "string" ? user.id : "";
-
-  return {
-    id,
-    email,
-    name,
-    displayColor,
-    avatar,
-    registered: true,
-  };
-};
-
-const persistAuthenticatedSession = (appService, authResult) => {
-  const authToken =
-    typeof authResult?.authToken === "string" ? authResult.authToken : "";
-  const refreshToken =
-    typeof authResult?.refreshToken === "string" ? authResult.refreshToken : "";
-  const mappedUser = mapApiUserToAuthUser(authResult?.user);
-
-  appService.setUserConfig("auth.session", {
-    authToken,
-    refreshToken,
-  });
-  appService.setUserConfig("auth.user", mappedUser);
 };
 
 export const handleFormAction = async (deps, payload) => {

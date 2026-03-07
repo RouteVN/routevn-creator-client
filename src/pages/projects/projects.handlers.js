@@ -1,43 +1,9 @@
-const getSessionAuthToken = (appService) => {
-  const authSession = appService.getUserConfig("auth.session");
-  const authToken = authSession?.authToken?.trim?.() ?? "";
-  return authToken;
-};
-
-const getAuthenticatedCloudSession = (appService) => {
-  const authToken = getSessionAuthToken(appService);
-  if (!authToken) {
-    return;
-  }
-
-  const authUser = appService.getUserConfig("auth.user");
-  const email = authUser?.email?.trim?.() ?? "";
-  if (!email) {
-    return;
-  }
-
-  return {
-    authToken,
-    authUser,
-  };
-};
-
-const mapApiUserToAuthUser = (user) => {
-  const id = user?.id;
-  const email = user?.email;
-  const name = user?.creatorDisplayName;
-  const displayColor = user?.creatorDisplayColor ?? "#E2E8F0";
-  const avatar = user?.creatorDisplayAvatar;
-
-  return {
-    id,
-    email,
-    name,
-    displayColor,
-    avatar,
-    registered: true,
-  };
-};
+import {
+  clearAuthenticatedSession,
+  getAuthenticatedSession,
+  getPersistedAuthenticatedUser,
+  mapApiUserToAuthUser,
+} from "../../deps/services/shared/authSession.js";
 
 const mapCloudProject = (project) => {
   const projectId = project?.id;
@@ -86,28 +52,12 @@ const loadCloudProjects = async ({
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, apiService, store, render } = deps;
+  const { appService, store, render } = deps;
   const platform = appService.getPlatform();
   store.setPlatform({ platform: platform });
-  const cloudSession = getAuthenticatedCloudSession(appService);
-  const authUser = cloudSession?.authUser;
+  const authUser = getPersistedAuthenticatedUser(appService);
   store.setAuthUser({ user: authUser });
-
-  if (cloudSession) {
-    try {
-      await loadCloudProjects({
-        appService,
-        apiService,
-        store,
-        authToken: cloudSession.authToken,
-      });
-    } catch (error) {
-      console.error("Failed to load cloud profile:", error);
-      store.setCloudProjects({ projects: [] });
-    }
-  } else {
-    store.setCloudProjects({ projects: [] });
-  }
+  store.setCloudProjects({ projects: [] });
 
   const projects = await appService.loadAllProjects();
   store.setProjects({ projects: projects });
@@ -131,7 +81,7 @@ export const handleCreateButtonClick = async (deps) => {
 
 export const handleCloudCreateButtonClick = (deps) => {
   const { appService, store, render } = deps;
-  const cloudSession = getAuthenticatedCloudSession(appService);
+  const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
     appService.showToast("Please login to create a cloud project.");
     return;
@@ -165,7 +115,7 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
     return;
   }
 
-  const cloudSession = getAuthenticatedCloudSession(appService);
+  const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
     appService.showToast("Please login to create a cloud project.");
     return;
@@ -370,8 +320,7 @@ export const handleProfileDropdownClickItem = async (deps, payload) => {
       return;
     }
 
-    appService.setUserConfig("auth.session", null);
-    appService.setUserConfig("auth.user", null);
+    clearAuthenticatedSession(appService);
     store.setAuthUser({ user: null });
     store.setCloudProjects({ projects: [] });
     render();
@@ -568,7 +517,7 @@ export const handleAddMemberFormAction = async (deps, payload) => {
     return;
   }
 
-  const cloudSession = getAuthenticatedCloudSession(appService);
+  const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
     appService.showToast("Please login to add a member.");
     return;
