@@ -23,8 +23,6 @@ template:
                   - rvn-cgs: []
                 $elif currentRoutePattern == "/project/resources/images":
                   - rvn-images: []
-                $elif currentRoutePattern == "/project/resources/backgrounds":
-                  - rvn-backgrounds: []
                 $elif currentRoutePattern == "/project/resources/characters":
                   - rvn-characters: []
                 $elif currentRoutePattern == "/project/resources/character-sprites":
@@ -35,14 +33,10 @@ template:
                   - rvn-tweens: []
                 $elif currentRoutePattern == "/project/resources/transforms":
                   - rvn-transforms: []
-                $elif currentRoutePattern == "/project/resources/visuals":
-                  - rvn-visuals: []
                 $elif currentRoutePattern == "/project/resources/videos":
                   - rvn-videos: []
                 $elif currentRoutePattern == "/project/resources/typography":
                   - rvn-typography: []
-                $elif currentRoutePattern == "/project/resources/choices":
-                  - rvn-choices: []
                 $elif currentRoutePattern == "/project/resources/variables":
                   - rvn-variables: []
                 $elif currentRoutePattern == "/project/scenes":

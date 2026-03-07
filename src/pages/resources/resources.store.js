@@ -47,26 +47,6 @@ export const createInitialState = () => ({
       label: "Typography",
       route: "/project/resources/typography",
     },
-    {
-      id: "components",
-      label: "Components",
-      route: "/project/resources/components",
-    },
-    {
-      id: "bases",
-      label: "Bases",
-      route: "/project/resources/bases",
-    },
-    {
-      id: "choices",
-      label: "Choices",
-      route: "/project/resources/choices",
-    },
-    {
-      id: "dialogue",
-      label: "Dialogue",
-      route: "/project/resources/dialogue",
-    },
   ],
   system: [
     {
