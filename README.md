@@ -14,7 +14,7 @@ Desktop builds persist project data through Tauri/SQLite-backed stores.
 
 - [@rettangoli/fe](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-fe) - Is used as the frontend framework
 - [@rettangoli/ui](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-ui) - Is used as the UI library
-- [Repository](docs/Repository.md) - Is used as the state management system (enables offline-first functionality)
+- [Platform Spec](docs/platform/README.md) - Current project model, command/event flow, and storage contracts
 - [Codebase Structure](docs/Codebase-structure.md) - Maintainer-facing architecture guide for this repo
 - [Docs Index](docs/README.md) - Entry point for internal documentation
 
