@@ -1,5 +1,5 @@
 import { parseAndRender } from "jempl";
-import { toFlatGroups } from "../../domain/v2/treeHelpers.js";
+import { toFlatGroups } from "../../domain/treeHelpers.js";
 import { getFirstTypographyId } from "../../constants/typography.js";
 import { getVariableOptions } from "../../utils/index.js";
 

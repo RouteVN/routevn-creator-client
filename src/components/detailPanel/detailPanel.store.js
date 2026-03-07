@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../domain/v2/treeHelpers.js";
+import { toFlatItems } from "../../domain/treeHelpers.js";
 
 export const createInitialState = () => ({
   // Popover state for renaming

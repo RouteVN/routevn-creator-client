@@ -10,7 +10,7 @@ import {
   insertTreeItem,
   moveTreeItem,
   updateTreeItem,
-} from "../../domain/v2/treeMutations.js";
+} from "../../domain/treeMutations.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 
 const lodashGet = (obj, path, defaultValue) => {

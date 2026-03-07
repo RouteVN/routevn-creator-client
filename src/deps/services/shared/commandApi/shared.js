@@ -1,8 +1,8 @@
-import { createCommandEnvelope } from "../../../../collab/v2/index.js";
-import { projectRepositoryStateToDomainState } from "../../../../domain/v2/stateProjection.js";
+import { createCommandEnvelope } from "../../../../collab/index.js";
+import { projectRepositoryStateToDomainState } from "../../../../domain/stateProjection.js";
 import {
   applyCommandToRepository,
-  assertV2State,
+  assertSupportedProjectState,
   getSiblingOrderNodes,
   resolveIndexFromPosition,
   uniquePartitions,
@@ -36,7 +36,7 @@ export const createCommandApiShared = ({
       throw new Error("No project selected (missing ?p= in URL)");
     }
     const state = repository.getState();
-    assertV2State(state);
+    assertSupportedProjectState(state);
 
     const projectId = state.project?.id || currentProjectId;
     const session = await ensureCommandSessionForProject(currentProjectId);
@@ -207,7 +207,7 @@ export const createCommandApiShared = ({
   const getStateImpl = () => {
     const repository = getCachedRepository();
     const state = repository.getState();
-    assertV2State(state);
+    assertSupportedProjectState(state);
     return state;
   };
 
