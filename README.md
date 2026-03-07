@@ -4,34 +4,42 @@
 
 RouteVN Creator Client is a frontend application for building Visual Novels with a drag & drop visual UI, without needing to write any code.
 
-This is a complete **Single Page Application (SPA)** that operates **offline-first** using localStorage persistence through the Repository system.
+This is a complete **Single Page Application (SPA)** that operates **offline-first**.
+
+Browser builds persist project data through IndexedDB-backed stores.
+
+Desktop builds persist project data through Tauri/SQLite-backed stores.
 
 ## Frameworks used
 
 - [@rettangoli/fe](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-fe) - Is used as the frontend framework
 - [@rettangoli/ui](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-ui) - Is used as the UI library
 - [Repository](docs/Repository.md) - Is used as the state management system (enables offline-first functionality)
+- [Codebase Structure](docs/Codebase-structure.md) - Maintainer-facing architecture guide for this repo
+- [Docs Index](docs/README.md) - Entry point for internal documentation
 
 ## Project Structure
 
 Entrypoint defined in `static/index.html` with the `<rvn-app>` tag.
+
+See [docs/README.md](docs/README.md) for the internal docs index and [docs/Codebase-structure.md](docs/Codebase-structure.md) for the current maintainer-facing architecture.
 
 `src/pages/app/` - **Application entrypoint**
 
 Folder structure
 
 - `src/components/` - Reusable UI components
-<!-- TODO better differenciate component and pages -->
 - `src/pages/` - Global components with their own state
-- `src/deps/` - Custom utilities that will be accessible via deps
-- `src/setup.common.js` - Shared setup logic for both web and desktop
+- `src/deps/` - Infrastructure and service dependencies injected into pages/components
 - `src/setup.web.js` - Web-specific configuration
 - `src/setup.tauri.js` - Tauri desktop-specific configuration
+- `src/domain/v2/` - Domain rules, command processing, and state projection
+- `src/collab/v2/` - Collaboration runtime
 - `scripts/` - Build and utility scripts
 - `static/` - Static HTML files and assets
 - `_site/` - Build output directory
 
-**Note:** `src/setup.js` is auto-generated during build and should not be edited directly.
+There is no shared `src/setup.common.js` entrypoint today. Shared runtime code lives behind service cores and adapters.
 
 ## Adding Routes
 
@@ -193,4 +201,3 @@ Join us on [Discord](https://discord.gg/8J9dyZSu9C) to ask questions, report bug
 
 - This project is licensed under the [MIT License](LICENSE).
 - The name RouteVN, and its logo are the exclusive property of Yuusoft
-
