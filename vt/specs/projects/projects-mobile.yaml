@@ -1,11 +1,11 @@
 ---
-title: Projects Wide Desktop
-description: Verifies the projects page and create dialog on a wide desktop viewport.
+title: Projects Mobile
+description: Verifies the projects page and create dialog on a mobile viewport.
 url: /projects
 viewport:
-  id: wide
-  width: 1440
-  height: 900
+  id: mobile
+  width: 390
+  height: 844
 steps:
   - action: waitFor
     selector: "[data-testid='create-project-button']"
