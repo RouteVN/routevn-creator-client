@@ -26,6 +26,7 @@ import {
   createProjectRepository,
   initialProjectData,
 } from "./shared/projectRepository.js";
+import { getOrCreateLocked } from "./shared/getOrCreateLocked.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -166,21 +167,13 @@ export const createProjectService = ({ router, db, filePicker }) => {
 
   // Get or create repository by path
   const getRepositoryByPath = async (projectPath) => {
-    // Check cache first
-    if (repositoriesByPath.has(projectPath)) {
-      return repositoriesByPath.get(projectPath);
-    }
-
-    // Check if initialization is already in progress
-    if (initLocksByPath.has(projectPath)) {
-      return initLocksByPath.get(projectPath);
-    }
-
-    // Create init promise and store lock
-    const initPromise = (async () => {
-      try {
+    return getOrCreateLocked({
+      cache: repositoriesByPath,
+      locks: initLocksByPath,
+      key: projectPath,
+      create: async () => {
         const store = await createInsiemeTauriStoreAdapter(projectPath);
-        let existingEvents = (await store.getEvents()) || [];
+        const existingEvents = (await store.getEvents()) || [];
         const repository = await createProjectRepository({
           projectId: projectPath,
           store,
@@ -190,31 +183,17 @@ export const createProjectService = ({ router, db, filePicker }) => {
         repositoriesByPath.set(projectPath, repository);
         adaptersByPath.set(projectPath, store);
         return repository;
-      } finally {
-        // Always remove the lock when done (success or failure)
-        initLocksByPath.delete(projectPath);
-      }
-    })();
-
-    initLocksByPath.set(projectPath, initPromise);
-    return initPromise;
+      },
+    });
   };
 
   // Get or create repository by projectId
   const getRepositoryByProject = async (projectId) => {
-    // Check cache first
-    if (repositoriesByProject.has(projectId)) {
-      return repositoriesByProject.get(projectId);
-    }
-
-    // Check if initialization is already in progress
-    if (initLocksByProject.has(projectId)) {
-      return initLocksByProject.get(projectId);
-    }
-
-    // Create init promise and store lock
-    const initPromise = (async () => {
-      try {
+    return getOrCreateLocked({
+      cache: repositoriesByProject,
+      locks: initLocksByProject,
+      key: projectId,
+      create: async () => {
         const projects = (await db.get("projectEntries")) || [];
         const project = projects.find((p) => p.id === projectId);
         if (!project) {
@@ -226,14 +205,8 @@ export const createProjectService = ({ router, db, filePicker }) => {
         repositoriesByProject.set(projectId, repository);
         adaptersByProject.set(projectId, adapter);
         return repository;
-      } finally {
-        // Always remove the lock when done (success or failure)
-        initLocksByProject.delete(projectId);
-      }
-    })();
-
-    initLocksByProject.set(projectId, initPromise);
-    return initPromise;
+      },
+    });
   };
 
   // Get current project's repository (updates cache)

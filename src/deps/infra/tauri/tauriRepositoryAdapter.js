@@ -4,50 +4,12 @@ import Database from "@tauri-apps/plugin-sql";
 const REPOSITORY_EVENTS_TABLE = "events";
 const MATERIALIZED_VIEW_TABLE = "materialized_view_state";
 
-const hasTable = async (db, tableName) => {
-  const rows = await db.select(
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = $1",
-    [tableName],
-  );
-  return Array.isArray(rows) && rows.length > 0;
-};
-
-const getTableColumns = async (db, tableName) => {
-  if (!(await hasTable(db, tableName))) {
-    return [];
-  }
-  return (await db.select(`PRAGMA table_info(${tableName})`)) || [];
-};
-
 const ensureRepositorySchema = async (db) => {
-  const eventColumns = await getTableColumns(db, REPOSITORY_EVENTS_TABLE);
-  const hasLegacyTypeColumn = eventColumns.some(
-    (column) => column?.name === "type",
-  );
-
-  if (eventColumns.length === 0) {
-    await db.execute(`CREATE TABLE IF NOT EXISTS ${REPOSITORY_EVENTS_TABLE} (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      payload TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
-  } else if (hasLegacyTypeColumn) {
-    await db.execute(
-      `ALTER TABLE ${REPOSITORY_EVENTS_TABLE} RENAME TO ${REPOSITORY_EVENTS_TABLE}_legacy`,
-    );
-    await db.execute(`CREATE TABLE ${REPOSITORY_EVENTS_TABLE} (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      payload TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
-    await db.execute(
-      `INSERT INTO ${REPOSITORY_EVENTS_TABLE} (id, payload, created_at)
-       SELECT id, payload, created_at
-       FROM ${REPOSITORY_EVENTS_TABLE}_legacy
-       ORDER BY id`,
-    );
-    await db.execute(`DROP TABLE ${REPOSITORY_EVENTS_TABLE}_legacy`);
-  }
+  await db.execute(`CREATE TABLE IF NOT EXISTS ${REPOSITORY_EVENTS_TABLE} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
 
   await db.execute(`CREATE TABLE IF NOT EXISTS app (
     key TEXT PRIMARY KEY,

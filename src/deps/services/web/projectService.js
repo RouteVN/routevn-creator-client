@@ -31,6 +31,7 @@ import {
   createProjectRepository,
   repositoryEventToCommand,
 } from "../shared/projectRepository.js";
+import { getOrCreateLocked } from "../shared/getOrCreateLocked.js";
 
 // Font loading helper
 const loadFont = async (fontName, fontUrl) => {
@@ -519,21 +520,13 @@ export const createProjectService = ({
 
   // Get or create repository by projectId
   const getRepositoryByProject = async (projectId) => {
-    // Check cache first
-    if (repositoriesByProject.has(projectId)) {
-      return repositoriesByProject.get(projectId);
-    }
-
-    // Check if initialization is already in progress
-    if (initLocksByProject.has(projectId)) {
-      return initLocksByProject.get(projectId);
-    }
-
-    // Create init promise and store lock
-    const initPromise = (async () => {
-      try {
+    return getOrCreateLocked({
+      cache: repositoriesByProject,
+      locks: initLocksByProject,
+      key: projectId,
+      create: async () => {
         const store = await getAdapterByProject(projectId);
-        let existingEvents = (await store.getEvents()) || [];
+        const existingEvents = (await store.getEvents()) || [];
 
         // Recover from stale sync cursor state: a project can have a persisted
         // cursor while local repository events are empty/minimal (e.g. cleared IDB events).
@@ -566,14 +559,8 @@ export const createProjectService = ({
         assertV2State(repository.getState());
         repositoriesByProject.set(projectId, repository);
         return repository;
-      } finally {
-        // Always remove the lock when done (success or failure)
-        initLocksByProject.delete(projectId);
-      }
-    })();
-
-    initLocksByProject.set(projectId, initPromise);
-    return initPromise;
+      },
+    });
   };
 
   // Get current project's repository (updates cache)
