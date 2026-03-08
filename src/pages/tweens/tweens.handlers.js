@@ -1,278 +1,181 @@
 import { nanoid } from "nanoid";
-import { resetState } from "./tweens.constants";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createCatalogPageHandlers } from "../../deps/features/resourcePages/catalog/createCatalogPageHandlers.js";
+import { resetState } from "./tweens.constants";
 
-const resolveDetailItemId = (detail = {}) => {
-  return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
+const defaultInitialValues = {
+  x: 960,
+  y: 540,
+  alpha: 1,
+  scaleX: 1,
+  scaleY: 1,
+  rotation: 0,
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render, graphicsService, refs } = deps;
-  await projectService.ensureRepository();
-  const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens ?? { tree: [], items: {} } });
+const openTweenDialog = async ({
+  deps,
+  editMode = false,
+  itemId,
+  itemData,
+  targetGroupId,
+} = {}) => {
+  const { graphicsService, refs, render, store } = deps;
 
-  // Initialize graphicsService if canvas is present
-  const { canvas } = refs;
-  if (
-    graphicsService &&
-    canvas &&
-    !store.selectIsGraphicsServiceInitialized()
-  ) {
-    await graphicsService.init({
-      canvas: canvas,
-    });
-    store.setGraphicsServiceInitialized({ initialized: true });
-  }
-
-  render();
-};
-
-const refreshTweensData = async (deps) => {
-  const { store, render, projectService } = deps;
-  const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens ?? { tree: [], items: {} } });
-  render();
-};
-
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createResourceFileExplorerHandlers({
-    resourceType: "tweens",
-    refresh: refreshTweensData,
+  store.openDialog({
+    editMode,
+    itemId,
+    itemData,
+    targetGroupId,
   });
-
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
-
-export const handleDataChanged = refreshTweensData;
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const detail = payload?._event?.detail ?? {};
-  const { isFolder } = detail;
-  if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
-    render();
-    return;
-  }
-
-  const id = resolveDetailItemId(detail);
-  if (!id) {
-    return;
-  }
-
-  store.setSelectedItemId({ itemId: id });
-  render();
-};
-
-export const handleAnimationItemClick = (deps, payload) => {
-  const { store, render, refs } = deps;
-  const detail = payload?._event?.detail ?? {};
-  const itemId = resolveDetailItemId(detail);
-  if (!itemId) {
-    return;
-  }
-
-  const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
-
-  store.setSelectedItemId({ itemId });
-  render();
-};
-
-export const handleAnimationCreated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
-  const { groupId, name, properties } = payload._event.detail;
-
-  await projectService.createResourceItem({
-    resourceType: "tweens",
-    resourceId: nanoid(),
-    data: {
-      type: "tween",
-      name,
-      duration: "4s",
-      keyframes: 3,
-      properties,
-    },
-    parentId: groupId,
-    position: "last",
-  });
-
-  const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens });
-  render();
-};
-
-export const handleAnimationUpdated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
-  const { itemId, name, properties } = payload._event.detail;
-
-  await projectService.updateResourceItem({
-    resourceType: "tweens",
-    resourceId: itemId,
-    patch: {
-      name,
-      properties,
-    },
-  });
-
-  const { tweens } = projectService.getState();
-  store.setItems({ tweensData: tweens });
-  render();
-};
-
-// Handlers forwarded from groupResourcesView
-export const handleSearchInput = (deps, payload) => {
-  const { store, render } = deps;
-  const searchQuery = payload._event.detail.value ?? "";
-  store.setSearchQuery({ query: searchQuery });
-  render();
-};
-
-export const handleAddAnimationClick = async (deps, payload) => {
-  const { store, render, graphicsService, refs } = deps;
-  const { groupId } = payload._event.detail;
-  store.setTargetGroupId({ groupId: groupId });
-  store.openDialog();
   render();
 
-  const { canvas } = refs;
-  if (canvas && graphicsService) {
-    await graphicsService.init({ canvas });
-    graphicsService.render(resetState);
-  }
-};
-
-export const handleAnimationItemDoubleClick = async (deps, payload) => {
-  const { store, render, graphicsService, refs } = deps;
-  const { itemId, isFolder } = payload._event.detail;
-  if (isFolder) return;
-
-  const tweensData = store.selectTweensData();
-
-  if (!tweensData || !tweensData.items) {
-    return;
-  }
-
-  const itemData = tweensData.items[itemId];
-
-  if (itemData) {
-    // Find parent group
-    let parent = null;
-    for (const [key, value] of Object.entries(tweensData.items)) {
-      if (value.children && value.children.includes(itemId)) {
-        parent = key;
-        break;
-      }
-    }
-
-    store.openDialog({
-      editMode: true,
-      itemId,
-      itemData: { ...itemData, parent },
-    });
-    render();
-    const { animationForm } = refs;
-    animationForm.reset();
-    animationForm.setValues({
+  if (editMode && itemData) {
+    refs.animationForm.reset();
+    refs.animationForm.setValues({
       values: {
         name: itemData.name ?? "",
       },
     });
-
-    const { canvas } = refs;
-    if (canvas && graphicsService) {
-      await graphicsService.init({ canvas });
-      graphicsService.render(resetState);
-    }
   }
+
+  const { canvas } = refs;
+  if (!canvas || !graphicsService) {
+    return;
+  }
+
+  await graphicsService.init({ canvas });
+  graphicsService.render(resetState);
 };
 
-// Dialog handlers
+const {
+  handleAfterMount,
+  refreshData: handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleItemClick: handleAnimationItemClick,
+  handleSearchInput,
+} = createCatalogPageHandlers({
+  resourceType: "tweens",
+});
+
+export {
+  handleAfterMount,
+  handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleAnimationItemClick,
+  handleSearchInput,
+};
+
+export const handleAddAnimationClick = async (deps, payload) => {
+  const { groupId } = payload._event.detail;
+
+  await openTweenDialog({
+    deps,
+    targetGroupId: groupId,
+  });
+};
+
+export const handleAnimationItemDoubleClick = async (deps, payload) => {
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder || !itemId) {
+    return;
+  }
+
+  const itemData = deps.store.selectTweenDisplayItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  await openTweenDialog({
+    deps,
+    editMode: true,
+    itemId,
+    itemData,
+  });
+};
+
 export const handleCloseDialog = (deps) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
   store.closeDialog();
   render();
 };
 
 export const handleClosePopover = (deps) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
   store.closePopover();
   render();
 };
 
-export const handleFormActionClick = (deps, payload) => {
-  const { store, render } = deps;
-
-  const actionId = payload._event.detail.actionId;
-
-  if (actionId === "submit") {
-    const formData = payload._event.detail.values;
-    const formState = store.selectFormState();
-    const { targetGroupId, editItemId, editMode, properties } = formState;
-
-    if (editMode && editItemId) {
-      handleAnimationUpdated(deps, {
-        _event: {
-          detail: {
-            itemId: editItemId,
-            name: formData.name,
-            properties,
-          },
-        },
-      });
-    } else {
-      handleAnimationCreated(deps, {
-        _event: {
-          detail: {
-            groupId: targetGroupId,
-            name: formData.name,
-            properties,
-          },
-        },
-      });
-    }
-
-    store.closeDialog();
-    render();
+export const handleFormActionClick = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
   }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Tween name is required.", { title: "Warning" });
+    return;
+  }
+
+  const properties = structuredClone(store.selectProperties());
+  const editMode = store.selectEditMode();
+  const editItemId = store.selectEditItemId();
+
+  if (editMode && editItemId) {
+    await projectService.updateResourceItem({
+      resourceType: "tweens",
+      resourceId: editItemId,
+      patch: {
+        name,
+        properties,
+      },
+    });
+  } else {
+    await projectService.createResourceItem({
+      resourceType: "tweens",
+      resourceId: nanoid(),
+      data: {
+        type: "tween",
+        name,
+        duration: "4s",
+        keyframes: 3,
+        properties,
+      },
+      parentId: store.selectTargetGroupId(),
+      position: "last",
+    });
+  }
+
+  store.closeDialog();
+  await handleDataChanged(deps);
 };
 
 export const handleAddPropertiesClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
 
   store.setPopover({
     mode: "addProperty",
     x: payload._event.clientX,
     y: payload._event.clientY,
   });
-
   render();
 };
 
 export const handleAddPropertyFormSubmit = (deps, payload) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
   const { property, initialValue, useInitialValue } =
     payload._event.detail.values;
-
-  const defaultValues = {
-    x: 960,
-    y: 540,
-    alpha: 1,
-    scaleX: 1,
-    scaleY: 1,
-    rotation: 0,
-  };
 
   const finalInitialValue = useInitialValue
     ? initialValue !== undefined
       ? initialValue
-      : defaultValues[property] !== undefined
-        ? defaultValues[property]
-        : 0
-    : defaultValues[property] !== undefined
-      ? defaultValues[property]
-      : 0;
+      : (defaultInitialValues[property] ?? 0)
+    : (defaultInitialValues[property] ?? 0);
 
   store.addProperty({ property, initialValue: finalInitialValue });
   store.closePopover();
@@ -280,7 +183,7 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
 };
 
 export const handleAddKeyframeInDialog = (deps, payload) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
 
   store.setPopover({
     mode: "addKeyframe",
@@ -290,18 +193,16 @@ export const handleAddKeyframeInDialog = (deps, payload) => {
       property: payload._event.detail.property,
     },
   });
-
   render();
 };
 
 export const handleAddKeyframeFormSubmit = (deps, payload) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
 
   const formValues = payload._event.detail.values;
-
   if (formValues.duration < 1) {
     formValues.duration = 1;
   }
@@ -347,47 +248,48 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
   const popover = store.selectPopover();
   const { property, index } = popover.payload;
   const { x, y } = popover;
+  const value = payload._event.detail.item.value;
 
-  if (payload._event.detail.item.value === "edit") {
+  if (value === "edit") {
     store.setPopover({
       mode: "editKeyframe",
-      x: x,
-      y: y,
+      x,
+      y,
       payload: {
         property,
         index,
       },
     });
-  } else if (payload._event.detail.item.value === "delete-property") {
+  } else if (value === "delete-property") {
     store.deleteProperty({ property });
     store.closePopover();
-  } else if (payload._event.detail.item.value === "delete-keyframe") {
+  } else if (value === "delete-keyframe") {
     store.deleteKeyframe({ property, index });
     store.closePopover();
-  } else if (payload._event.detail.item.value === "add-right") {
+  } else if (value === "add-right") {
     store.setPopover({
       mode: "addKeyframe",
-      x: x,
-      y: y,
+      x,
+      y,
       payload: {
         property,
         index: index + 1,
       },
     });
-  } else if (payload._event.detail.item.value === "add-left") {
+  } else if (value === "add-left") {
     store.setPopover({
       mode: "addKeyframe",
-      x: x,
-      y: y,
+      x,
+      y,
       payload: {
         property,
         index,
       },
     });
-  } else if (payload._event.detail.item.value === "move-right") {
+  } else if (value === "move-right") {
     store.moveKeyframeRight({ property, index });
     store.closePopover();
-  } else if (payload._event.detail.item.value === "move-left") {
+  } else if (value === "move-left") {
     store.moveKeyframeLeft({ property, index });
     store.closePopover();
   }
@@ -396,13 +298,12 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
 };
 
 export const handleEditKeyframeFormSubmit = (deps, payload) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
   const {
     payload: { property, index },
   } = store.selectPopover();
 
   const formValues = payload._event.detail.values;
-
   if (formValues.duration < 1) {
     formValues.duration = 1;
   }
@@ -429,72 +330,58 @@ export const handleInitialValueClick = (deps, payload) => {
   render();
 };
 
+const updatePopoverFieldValue = ({ store, detail } = {}) => {
+  const { name, value } = detail;
+  const currentFormValues = store.selectPopover().formValues ?? {};
+  store.updatePopoverFormValues({
+    formValues: {
+      ...currentFormValues,
+      [name]: value,
+    },
+  });
+};
+
 export const handleAddPropertyFormChange = (deps, payload) => {
-  const { store, render } = deps;
-
-  const { name, value: fieldValue } = payload._event.detail;
-
-  const currentFormValues = store.selectPopover().formValues || {};
-  const updatedFormValues = {
-    ...currentFormValues,
-    [name]: fieldValue,
-  };
-  store.updatePopoverFormValues({ formValues: updatedFormValues });
+  const { render, store } = deps;
+  updatePopoverFieldValue({
+    store,
+    detail: payload._event.detail,
+  });
   render();
 };
 
 export const handleEditInitialValueFormChange = (deps, payload) => {
-  const { store, render } = deps;
-
-  const { name, value: fieldValue } = payload._event.detail;
-
-  const currentFormValues = store.selectPopover().formValues || {};
-  const updatedFormValues = {
-    ...currentFormValues,
-    [name]: fieldValue,
-  };
-
-  store.updatePopoverFormValues({ formValues: updatedFormValues });
+  const { render, store } = deps;
+  updatePopoverFieldValue({
+    store,
+    detail: payload._event.detail,
+  });
   render();
 };
 
 export const handleReplayAnimation = async (deps) => {
-  const { store, graphicsService } = deps;
-
-  if (!graphicsService || !store.selectIsGraphicsServiceInitialized()) {
+  const { graphicsService, store } = deps;
+  if (!graphicsService) {
     return;
   }
 
   await graphicsService.render(resetState);
 
   setTimeout(() => {
-    const renderState = store.selectAnimationRenderStateWithAnimations();
-    graphicsService.render(renderState);
+    graphicsService.render(store.selectAnimationRenderStateWithAnimations());
   }, 100);
 };
 
 export const handleEditInitialValueFormSubmit = (deps, payload) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
   const {
     payload: { property },
   } = store.selectPopover();
 
   const { initialValue, valueSource } = payload._event.detail.values;
-
-  const defaultValues = {
-    x: 960,
-    y: 540,
-    alpha: 1,
-    scaleX: 1,
-    scaleY: 1,
-    rotation: 0,
-  };
-
   const finalInitialValue =
     valueSource === "default" || initialValue === undefined
-      ? defaultValues[property] !== undefined
-        ? defaultValues[property]
-        : 0
+      ? (defaultInitialValues[property] ?? 0)
       : initialValue;
 
   store.updateInitialValue({
@@ -506,30 +393,27 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { appService, projectService } = deps;
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
 
-  const state = projectService.getState();
   const usage = recursivelyCheckResource({
-    state,
+    state: projectService.getState(),
     itemId,
     checkTargets: ["scenes", "layouts"],
   });
 
   if (usage.isUsed) {
     appService.showToast("Cannot delete resource, it is currently in use.");
-    render();
     return;
   }
 
-  // Perform the delete operation
   await projectService.deleteResourceItem({
-    resourceType,
+    resourceType: "tweens",
     resourceId: itemId,
   });
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems({ tweensData: data });
-  render();
+  await handleDataChanged(deps);
 };

@@ -76,6 +76,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
         return {
           ...item,
+          itemWidth: item.itemWidth ?? 225,
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isSelected ? "pr" : "ac",
         };

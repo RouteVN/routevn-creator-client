@@ -1,10 +1,12 @@
-import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
+import { toFlatItems } from "../../domain/treeHelpers.js";
+import { createCatalogPageStore } from "../../deps/features/resourcePages/catalog/createCatalogPageStore.js";
 import { resetState } from "./tweens.constants";
 
 const createAddKeyframeForm = (property) => {
   if (!property) {
     return {};
   }
+
   const sliderConfig = {
     x: {
       min: 0,
@@ -29,11 +31,8 @@ const createAddKeyframeForm = (property) => {
       max: 5,
       step: 0.1,
     },
-    // rotation: {
-    //   min: -360,
-    //   max: 360,
-    // },
   };
+
   return {
     title: "Add Keyframe",
     fields: [
@@ -157,10 +156,9 @@ const propertyOptions = [
   { label: "Position Y", value: "y" },
   { label: "Scale X", value: "scaleX" },
   { label: "Scale Y", value: "scaleY" },
-  // { label: "Rotation", value: "rotation" },
 ];
 
-const createAddPropertyForm = (propertyOptions) => {
+const createAddPropertyForm = (availableProperties) => {
   return {
     title: "Add tween property",
     fields: [
@@ -168,7 +166,7 @@ const createAddPropertyForm = (propertyOptions) => {
         name: "property",
         type: "select",
         label: "Property",
-        options: propertyOptions,
+        options: availableProperties,
         required: true,
       },
       {
@@ -226,15 +224,6 @@ const createAddPropertyForm = (propertyOptions) => {
             step: 0.1,
             label: "Initial value",
           },
-          // {
-          //   $when: 'property == "rotation"',
-          //   name: "initialValue",
-          //   type: "slider-with-input",
-          //   min: -360,
-          //   max: 360,
-          //   step: 1,
-          //   label: "Initial value",
-          // },
         ],
       },
     ],
@@ -348,32 +337,171 @@ const editTweenForm = {
   },
 };
 
+const defaultInitialValuesByProperty = {
+  x: 960,
+  y: 540,
+  alpha: 1,
+  scaleX: 1,
+  scaleY: 1,
+  rotation: 0,
+};
+
+const buildCatalogItem = (item) => ({
+  ...item,
+  cardKind: "tween",
+  itemWidth: "f",
+});
+
+const matchesSearch = (item, searchQuery) => {
+  if (!searchQuery) {
+    return true;
+  }
+
+  const name = (item.name ?? "").toLowerCase();
+  const description = (item.description ?? "").toLowerCase();
+  return name.includes(searchQuery) || description.includes(searchQuery);
+};
+
+const {
+  createInitialState: createCatalogInitialState,
+  setItems,
+  setSelectedItemId,
+  selectSelectedItem,
+  selectItemById,
+  selectSelectedItemId,
+  setSearchQuery,
+  selectViewData: selectCatalogViewData,
+} = createCatalogPageStore({
+  itemType: "tween",
+  resourceType: "tweens",
+  title: "Tweens",
+  selectedResourceId: "tweens",
+  resourceCategory: "assets",
+  addText: "Add Tween Animation",
+  buildCatalogItem,
+  matchesSearch,
+  extendViewData: ({ state, selectedItem, baseViewData }) => {
+    const selectedTweenPropertyCount = Object.keys(
+      selectedItem?.properties ?? {},
+    ).length;
+
+    const availableProperties = propertyOptions.filter(
+      (item) => !Object.keys(state.properties).includes(item.value),
+    );
+
+    const keyframeDropdownItems = (() => {
+      if (state.popover.mode !== "keyframeMenu") {
+        return propertyNameDropdownItems;
+      }
+
+      const { property, index } = state.popover.payload;
+      const keyframes = state.properties[property]?.keyframes ?? [];
+      const currentIndex = Number(index);
+      const isFirstKeyframe = currentIndex === 0;
+      const isLastKeyframe = currentIndex === keyframes.length - 1;
+
+      return baseKeyframeDropdownItems.filter((item) => {
+        if (item.value === "move-left" && isFirstKeyframe) {
+          return false;
+        }
+        if (item.value === "move-right" && isLastKeyframe) {
+          return false;
+        }
+        return true;
+      });
+    })();
+
+    let addPropertyContext = {};
+    let editKeyframeDefaultValues = {};
+    let editInitialValueDefaultValues = {};
+    let editInitialValueContext = {};
+
+    if (state.popover.mode === "addProperty") {
+      addPropertyContext = { ...state.popover.formValues };
+    }
+
+    if (state.popover.mode === "editKeyframe") {
+      const { property, index } = state.popover.payload;
+      const currentKeyframe = state.properties[property]?.keyframes?.[index];
+
+      if (currentKeyframe) {
+        editKeyframeDefaultValues = {
+          duration: currentKeyframe.duration,
+          value: currentKeyframe.value,
+          easing: currentKeyframe.easing,
+          relative: currentKeyframe.relative,
+        };
+      }
+    }
+
+    if (state.popover.mode === "editInitialValue") {
+      const { property } = state.popover.payload;
+      const currentInitialValue = state.properties[property]?.initialValue;
+      const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
+      const isUsingDefault = currentInitialValue === defaultValue;
+
+      editInitialValueDefaultValues = {
+        initialValue: currentInitialValue,
+        valueSource: isUsingDefault ? "default" : "custom",
+      };
+
+      editInitialValueContext = {
+        ...editInitialValueDefaultValues,
+        ...state.popover.formValues,
+      };
+    }
+
+    return {
+      ...baseViewData,
+      selectedItemDuration: String(selectedItem?.duration ?? ""),
+      selectedTweenPropertyCount,
+      isDialogOpen: state.isDialogOpen,
+      dialogDefaultValues: state.dialogDefaultValues,
+      dialogForm: state.dialogForm,
+      properties: state.properties,
+      addPropertyForm: createAddPropertyForm(availableProperties),
+      addPropertyContext,
+      addKeyframeForm: createAddKeyframeForm(state.popover.payload?.property),
+      addKeyframeDefaultValues,
+      updateKeyframeForm: createUpdateKeyframeForm(
+        state.popover.payload?.property,
+      ),
+      editInitialValueForm,
+      editInitialValueContext,
+      editKeyframeDefaultValues,
+      editInitialValueDefaultValues,
+      keyframeDropdownItems,
+      addPropertyButtonVisible: availableProperties.length > 0,
+      popover: {
+        ...state.popover,
+        popoverIsOpen: [
+          "addProperty",
+          "addKeyframe",
+          "editKeyframe",
+          "editInitialValue",
+        ].includes(state.popover.mode),
+        dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
+          state.popover.mode,
+        ),
+      },
+      addPropertyFormDefaultValues: {
+        useInitialValue: false,
+      },
+    };
+  },
+});
+
 export const createInitialState = () => ({
-  tweensData: { tree: [], items: {} },
-  selectedItemId: null,
-  contextMenuItems: [
-    { label: "New Folder", type: "item", value: "new-item" },
-    { label: "Duplicate", type: "item", value: "duplicate-item" },
-    { label: "Rename", type: "item", value: "rename-item" },
-    { label: "Delete", type: "item", value: "delete-item" },
-  ],
-  emptyContextMenuItems: [
-    { label: "New Folder", type: "item", value: "new-item" },
-  ],
-  // Animation dialog state
-  searchQuery: "",
+  ...createCatalogInitialState(),
   isDialogOpen: false,
-  isGraphicsServiceInitialized: false,
-  targetGroupId: null,
-  selectedProperties: [],
-  initialValue: 0,
+  targetGroupId: undefined,
   properties: {},
   dialogDefaultValues: {
     name: "",
   },
   dialogForm: addTweenForm,
   editMode: false,
-  editItemId: null,
+  editItemId: undefined,
   popover: {
     mode: "none",
     x: undefined,
@@ -383,27 +511,88 @@ export const createInitialState = () => ({
   },
 });
 
-export const setItems = ({ state }, { tweensData } = {}) => {
-  state.tweensData = tweensData;
+export {
+  setItems,
+  setSelectedItemId,
+  selectSelectedItem,
+  selectSelectedItemId,
+  setSearchQuery,
 };
 
-export const setSelectedItemId = ({ state }, { itemId } = {}) => {
-  state.selectedItemId = itemId;
+export const selectTweenItemById = selectItemById;
+
+export const selectTweenDisplayItemById = ({ state }, { itemId } = {}) => {
+  return toFlatItems(state.data).find(
+    (item) => item.id === itemId && item.type === "tween",
+  );
 };
 
-export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+export const openDialog = (
+  { state },
+  { editMode, itemId, itemData, targetGroupId } = {},
+) => {
+  state.isDialogOpen = true;
+  state.editMode = Boolean(editMode);
+  state.editItemId = itemId;
 
-export const selectTweensData = ({ state }) => state.tweensData;
+  if (editMode && itemData) {
+    state.targetGroupId = itemData.parentId ?? undefined;
+    state.dialogForm = editTweenForm;
+    state.dialogDefaultValues = {
+      name: itemData.name ?? "",
+    };
+    state.properties = structuredClone(itemData.properties ?? {});
+    return;
+  }
 
-export const setSearchQuery = ({ state }, { query } = {}) => {
-  state.searchQuery = query;
+  state.targetGroupId =
+    targetGroupId === "_root"
+      ? undefined
+      : (targetGroupId ?? itemData?.parentId ?? undefined);
+  state.dialogForm = addTweenForm;
+  state.dialogDefaultValues = {
+    name: "",
+  };
+  state.properties = {};
+};
+
+export const closeDialog = ({ state }, _payload = {}) => {
+  state.isDialogOpen = false;
+  state.targetGroupId = undefined;
+  state.editMode = false;
+  state.editItemId = undefined;
+  state.dialogDefaultValues = {
+    name: "",
+  };
+  state.dialogForm = addTweenForm;
+  state.properties = {};
+};
+
+export const setTargetGroupId = ({ state }, { groupId } = {}) => {
+  state.targetGroupId = groupId === "_root" ? undefined : groupId;
+};
+
+export const selectTargetGroupId = ({ state }) => {
+  return state.targetGroupId;
+};
+
+export const selectEditMode = ({ state }) => {
+  return state.editMode;
+};
+
+export const selectEditItemId = ({ state }) => {
+  return state.editItemId;
+};
+
+export const selectProperties = ({ state }) => {
+  return state.properties;
 };
 
 export const setPopover = ({ state }, { mode, x, y, payload } = {}) => {
   state.popover.mode = mode;
   state.popover.x = x;
   state.popover.y = y;
-  state.popover.payload = payload;
+  state.popover.payload = payload ?? {};
 };
 
 export const closePopover = ({ state }, _payload = {}) => {
@@ -415,119 +604,60 @@ export const closePopover = ({ state }, _payload = {}) => {
 };
 
 export const updatePopoverFormValues = ({ state }, { formValues } = {}) => {
-  state.popover.formValues = formValues;
+  state.popover.formValues = formValues ?? {};
 };
 
 export const selectPopover = ({ state }) => {
   return state.popover;
 };
 
-export const selectFormState = ({ state }) => {
-  return {
-    targetGroupId: state.targetGroupId,
-    editItemId: state.editItemId,
-    editMode: state.editMode,
-    properties: state.properties,
-  };
-};
-
-export const openDialog = ({ state }, { editMode, itemId, itemData } = {}) => {
-  state.isDialogOpen = true;
-  state.editMode = editMode;
-  state.editItemId = itemId;
-
-  if (editMode && itemData) {
-    state.targetGroupId = itemData.parent || null;
-    state.dialogForm = editTweenForm;
-    state.dialogDefaultValues = {
-      name: itemData.name,
-    };
-    state.properties = itemData.properties || {};
-  } else {
-    state.dialogForm = addTweenForm;
-    state.dialogDefaultValues = {};
-    state.properties = {};
-  }
-};
-
-export const closeDialog = ({ state }, _payload = {}) => {
-  state.isDialogOpen = false;
-  state.editMode = false;
-  state.editItemId = null;
-  state.dialogForm = addTweenForm;
-  state.dialogDefaultValues = {
-    name: "",
-  };
-  state.properties = {};
-};
-
-export const setTargetGroupId = ({ state }, { groupId } = {}) => {
-  state.targetGroupId = groupId;
-};
-
-export const setGraphicsServiceInitialized = (
-  { state },
-  { initialized } = {},
-) => {
-  state.isGraphicsServiceInitialized = initialized;
-};
-
-export const selectIsGraphicsServiceInitialized = ({ state }) => {
-  return state.isGraphicsServiceInitialized;
-};
-
-// Helper function to create render state with animations
 const createAnimationRenderState = (properties, includeAnimations = true) => {
   const animations = [];
+
   if (includeAnimations && properties && Object.keys(properties).length > 0) {
     for (const [property, config] of Object.entries(properties)) {
-      if (config.keyframes && config.keyframes.length > 0) {
-        let propName = property;
-
-        let defaultValue = 0;
-        if (property === "x") defaultValue = 960;
-        else if (property === "y") defaultValue = 540;
-        else if (property === "rotation") defaultValue = 0;
-        else if (property === "alpha") defaultValue = 1;
-        else if (property === "scaleX" || property === "scaleY")
-          defaultValue = 1;
-
-        const initialValue =
-          config.initialValue !== undefined && config.initialValue !== ""
-            ? parseFloat(config.initialValue)
-            : defaultValue;
-
-        let processedInitialValue = isNaN(initialValue)
-          ? defaultValue
-          : initialValue;
-        if (property === "rotation") {
-          processedInitialValue = (processedInitialValue * Math.PI) / 180;
-        }
-
-        const animationProperties = {};
-        animationProperties[propName] = {
-          initialValue: processedInitialValue,
-          keyframes: config.keyframes.map((kf) => {
-            let value = parseFloat(kf.value) ?? 0;
-            if (property === "rotation") {
-              value = (value * Math.PI) / 180;
-            }
-            return {
-              duration: kf.duration,
-              value: value,
-              easing: kf.easing ?? "linear",
-              relative: kf.relative ?? false,
-            };
-          }),
-        };
-
-        animations.push({
-          id: `animation-${property}`,
-          targetId: "preview-element",
-          type: "tween",
-          properties: animationProperties,
-        });
+      if (!config.keyframes?.length) {
+        continue;
       }
+
+      let propName = property;
+      const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
+      const initialValue =
+        config.initialValue !== undefined && config.initialValue !== ""
+          ? parseFloat(config.initialValue)
+          : defaultValue;
+
+      let processedInitialValue = Number.isNaN(initialValue)
+        ? defaultValue
+        : initialValue;
+      if (property === "rotation") {
+        processedInitialValue = (processedInitialValue * Math.PI) / 180;
+      }
+
+      const animationProperties = {};
+      animationProperties[propName] = {
+        initialValue: processedInitialValue,
+        keyframes: config.keyframes.map((keyframe) => {
+          let value = parseFloat(keyframe.value) ?? 0;
+          if (property === "rotation") {
+            value = (value * Math.PI) / 180;
+          }
+
+          return {
+            duration: keyframe.duration,
+            value,
+            easing: keyframe.easing ?? "linear",
+            relative: keyframe.relative ?? false,
+          };
+        }),
+      };
+
+      animations.push({
+        id: `animation-${property}`,
+        targetId: "preview-element",
+        type: "tween",
+        properties: animationProperties,
+      });
     }
   }
 
@@ -546,9 +676,10 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
 };
 
 export const addProperty = ({ state }, { property, initialValue } = {}) => {
-  if (state.properties[property]) {
+  if (!property || state.properties[property]) {
     return;
   }
+
   state.properties[property] = {
     initialValue,
     keyframes: [],
@@ -559,77 +690,68 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
   if (!keyframe.property) {
     return;
   }
+
   const keyframes = state.properties[keyframe.property]?.keyframes;
   if (!Array.isArray(keyframes)) {
     return;
   }
-  let index = keyframe.index;
-  if (keyframe.index === undefined) {
-    index = keyframes.length;
-  }
+
+  const index =
+    keyframe.index === undefined ? keyframes.length : keyframe.index;
 
   keyframes.splice(index, 0, {
-    duration: parseInt(keyframe.duration),
+    duration: parseInt(keyframe.duration, 10),
     easing: keyframe.easing,
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
   });
 };
 
-export const deleteKeyframe = ({ state }, payload = {}) => {
-  const { property, index } = payload;
+export const deleteKeyframe = ({ state }, { property, index } = {}) => {
   const keyframes = state.properties[property]?.keyframes;
   if (!Array.isArray(keyframes)) {
     return;
   }
+
   keyframes.splice(index, 1);
 };
 
-export const deleteProperty = ({ state }, payload = {}) => {
-  const { property } = payload;
+export const deleteProperty = ({ state }, { property } = {}) => {
   if (!property) {
     return;
   }
 
-  state.selectedProperties = state.selectedProperties.filter(
-    (p) => p.name !== property,
-  );
-
   delete state.properties[property];
 };
 
-export const moveKeyframeRight = ({ state }, payload = {}) => {
-  const { property, index } = payload;
+export const moveKeyframeRight = ({ state }, { property, index } = {}) => {
   const numIndex = Number(index);
   const keyframes = state.properties[property]?.keyframes;
-  if (!Array.isArray(keyframes)) {
+  if (!Array.isArray(keyframes) || numIndex >= keyframes.length - 1) {
     return;
   }
 
-  if (numIndex < keyframes.length - 1) {
-    const temp = keyframes[numIndex];
-    keyframes[numIndex] = keyframes[numIndex + 1];
-    keyframes[numIndex + 1] = temp;
-  }
+  const current = keyframes[numIndex];
+  keyframes[numIndex] = keyframes[numIndex + 1];
+  keyframes[numIndex + 1] = current;
 };
 
-export const moveKeyframeLeft = ({ state }, payload = {}) => {
-  const { property, index } = payload;
+export const moveKeyframeLeft = ({ state }, { property, index } = {}) => {
   const numIndex = Number(index);
   const keyframes = state.properties[property]?.keyframes;
-  if (!Array.isArray(keyframes)) {
+  if (!Array.isArray(keyframes) || numIndex <= 0) {
     return;
   }
 
-  if (numIndex > 0) {
-    const temp = keyframes[numIndex];
-    keyframes[numIndex] = keyframes[numIndex - 1];
-    keyframes[numIndex - 1] = temp;
-  }
+  const current = keyframes[numIndex];
+  keyframes[numIndex] = keyframes[numIndex - 1];
+  keyframes[numIndex - 1] = current;
 };
 
-export const updateKeyframe = ({ state }, payload = {}) => {
-  const { property, index, keyframe } = payload;
+export const updateKeyframe = (
+  { state },
+  { property, index, keyframe } = {},
+) => {
   const keyframes = state.properties[property]?.keyframes;
   if (!Array.isArray(keyframes) || !keyframe) {
     return;
@@ -637,188 +759,23 @@ export const updateKeyframe = ({ state }, payload = {}) => {
 
   keyframes[index] = {
     ...keyframe,
-    duration: parseInt(keyframe.duration),
+    duration: parseInt(keyframe.duration, 10),
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
 };
 
-export const updateInitialValue = ({ state }, payload = {}) => {
-  const { property, initialValue } = payload;
+export const updateInitialValue = (
+  { state },
+  { property, initialValue } = {},
+) => {
   if (!property || !state.properties[property]) {
     return;
   }
+
   state.properties[property].initialValue = initialValue;
 };
 
-export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.tweensData);
-  const rawFlatGroups = toFlatGroups(state.tweensData);
-
-  // Get selected item details
-  const selectedItem = state.selectedItemId
-    ? flatItems.find((item) => item.id === state.selectedItemId)
-    : undefined;
-
-  const selectedTweenPropertyCount = Object.keys(
-    selectedItem?.properties ?? {},
-  ).length;
-  const selectedItemDuration = String(selectedItem?.duration ?? "");
-
-  // Apply search filtering to flatGroups (collapse state is now handled by groupResourcesView)
-  const searchQuery = (state.searchQuery ?? "").toLowerCase();
-  const matchesSearch = (item) => {
-    if (!searchQuery) return true;
-    const name = (item.name ?? "").toLowerCase();
-    const description = (item.description ?? "").toLowerCase();
-    return name.includes(searchQuery) || description.includes(searchQuery);
-  };
-
-  const flatGroups = rawFlatGroups
-    .map((group) => {
-      // Filter children based on search query
-      const filteredChildren = (group.children || []).filter(matchesSearch);
-
-      // Only show groups that have matching children or if there's no search query
-      const hasMatchingChildren = filteredChildren.length > 0;
-      const shouldShowGroup = !searchQuery || hasMatchingChildren;
-
-      return {
-        ...group,
-        children: filteredChildren.map((item) => ({
-          ...item,
-          selectedStyle:
-            item.id === state.selectedItemId
-              ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-              : "",
-        })),
-        hasChildren: filteredChildren.length > 0,
-        shouldDisplay: shouldShowGroup,
-      };
-    })
-    .filter((group) => group.shouldDisplay);
-
-  // Build dialog-specific view data
-  const toAddProperties = propertyOptions.filter(
-    (item) => !Object.keys(state.properties).includes(item.value),
-  );
-
-  const keyframeDropdownItems = (() => {
-    if (state.popover.mode !== "keyframeMenu") {
-      return propertyNameDropdownItems;
-    }
-
-    const { property, index } = state.popover.payload;
-    const keyframes = state.properties[property].keyframes;
-    const currentIndex = Number(index);
-    const isFirstKeyframe = currentIndex === 0;
-    const isLastKeyframe = currentIndex === keyframes.length - 1;
-
-    return baseKeyframeDropdownItems.filter((item) => {
-      if (item.value === "move-left" && isFirstKeyframe) return false;
-      if (item.value === "move-right" && isLastKeyframe) return false;
-      return true;
-    });
-  })();
-
-  const addPropertyForm = createAddPropertyForm(toAddProperties);
-
-  let addPropertyDefaultValues = {};
-  let editKeyframeDefaultValues = {};
-  let editInitialValueDefaultValues = {};
-  let addPropertyContext = {};
-  let editInitialValueContext = {};
-
-  if (state.popover.mode === "addProperty") {
-    addPropertyDefaultValues = state.popover.formValues || {};
-    addPropertyContext = { ...addPropertyDefaultValues };
-  }
-
-  if (state.popover.mode === "editKeyframe") {
-    const { property, index } = state.popover.payload;
-    const currentKeyframe = state.properties[property].keyframes[index];
-
-    editKeyframeDefaultValues = {
-      duration: currentKeyframe.duration,
-      value: currentKeyframe.value,
-      easing: currentKeyframe.easing,
-      relative: currentKeyframe.relative,
-    };
-  }
-
-  if (state.popover.mode === "editInitialValue") {
-    const { property } = state.popover.payload;
-    const currentInitialValue = state.properties[property].initialValue;
-
-    const defaultValues = {
-      x: 0,
-      y: 0,
-      alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
-      rotation: 0,
-    };
-
-    const isUsingDefault = currentInitialValue === defaultValues[property];
-
-    editInitialValueDefaultValues = {
-      initialValue: currentInitialValue,
-      valueSource: isUsingDefault ? "default" : "custom",
-    };
-
-    editInitialValueContext = {
-      ...editInitialValueDefaultValues,
-      ...state.popover.formValues,
-    };
-  }
-
-  return {
-    flatItems,
-    flatGroups,
-    resourceCategory: "assets",
-    selectedResourceId: "tweens",
-    selectedItemId: state.selectedItemId,
-    selectedItemName: selectedItem?.name ?? "",
-    selectedItemDuration,
-    selectedTweenPropertyCount,
-    searchQuery: state.searchQuery,
-    contextMenuItems: state.contextMenuItems,
-    emptyContextMenuItems: state.emptyContextMenuItems,
-    // Dialog state
-    isDialogOpen: state.isDialogOpen,
-    dialogDefaultValues: state.dialogDefaultValues,
-    dialogForm: state.dialogForm,
-    properties: state.properties,
-    initialValue: state.initialValue,
-    addPropertyForm,
-    addPropertyContext,
-    addKeyframeForm: createAddKeyframeForm(state?.popover?.payload?.property),
-    addKeyframeDefaultValues,
-    updateKeyframeForm: createUpdateKeyframeForm(
-      state?.popover?.payload?.property,
-    ),
-    editInitialValueForm,
-    editInitialValueContext,
-    editKeyframeDefaultValues,
-    editInitialValueDefaultValues,
-    keyframeDropdownItems,
-    addPropertyButtonVisible: toAddProperties.length !== 0,
-    popover: {
-      ...state.popover,
-      popoverIsOpen: [
-        "addProperty",
-        "addKeyframe",
-        "editKeyframe",
-        "editInitialValue",
-      ].includes(state.popover.mode),
-      dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
-        state.popover.mode,
-      ),
-    },
-    addPropertyFormDefaultValues: {
-      useInitialValue: false,
-    },
-    resourceType: "tweens",
-    title: "Tweens",
-  };
+export const selectViewData = (context) => {
+  return selectCatalogViewData(context);
 };
