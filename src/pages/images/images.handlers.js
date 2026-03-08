@@ -1,109 +1,125 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
+import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
 
 const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
 
-const openEditDialogWithValues = ({ deps, itemId } = {}) => {
-  const { store, render, refs } = deps;
-  const { fileExplorer, editForm } = refs;
-  if (!itemId) {
+const {
+  refreshData: handleDataChanged,
+  handleBeforeMount,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerDoubleClick,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleSearchInput,
+  handleItemClick: handleImageItemClick,
+  handleItemDoubleClick: handleImageItemDoubleClick,
+  handleItemEdit: handleImageItemEdit,
+} = createMediaPageHandlers({
+  resourceType: "images",
+  subscriptions: (deps) => {
+    const { subject } = deps;
+    return [
+      subject.pipe(
+        filter(({ action }) => action === COLLAB_IMAGES_REFRESH_ACTION),
+        tap(() => {
+          deps.handlers.handleDataChanged(deps);
+        }),
+      ),
+    ];
+  },
+  selectItemById: (store, { itemId }) => store.selectImageItemById({ itemId }),
+  getEditPreviewFileId: (item) => item?.fileId,
+});
+
+export {
+  handleBeforeMount,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerDoubleClick,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleDataChanged,
+  handleSearchInput,
+  handleImageItemClick,
+  handleImageItemDoubleClick,
+  handleImageItemEdit,
+};
+
+const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
+  const { appService, projectService } = deps;
+  let successfulUploads;
+
+  try {
+    successfulUploads = await projectService.uploadFiles(files);
+  } catch {
+    appService.showToast("Failed to upload images.", { title: "Error" });
     return;
   }
 
-  const imageItem = store.selectImageItemById({ itemId });
-  if (!imageItem) {
+  if (!successfulUploads.length) {
+    appService.showToast("Failed to upload images.", { title: "Error" });
     return;
   }
 
-  const editValues = {
-    name: imageItem.name ?? "",
-    description: imageItem.description ?? "",
-  };
+  for (const result of successfulUploads) {
+    await projectService.createResourceItem({
+      resourceType: "images",
+      resourceId: nanoid(),
+      data: {
+        type: "image",
+        fileId: result.fileId,
+        name: result.displayName,
+        fileType: result.file.type,
+        fileSize: result.file.size,
+        width: result.dimensions.width,
+        height: result.dimensions.height,
+      },
+      parentId,
+      position: "last",
+    });
+  }
 
-  store.setSelectedItemId({ itemId });
-  fileExplorer.selectItem({ itemId });
-  store.openEditDialog({
-    itemId,
-    defaultValues: editValues,
-    fileId: imageItem.fileId,
+  await handleDataChanged(deps);
+};
+
+export const handleUploadClick = async (deps, payload) => {
+  const { appService } = deps;
+  const { groupId } = payload._event.detail;
+  let files;
+
+  try {
+    files = await appService.pickFiles({
+      accept: ".jpg,.jpeg,.png,.webp",
+      multiple: true,
+    });
+  } catch {
+    appService.showToast("Failed to select files.", { title: "Error" });
+    return;
+  }
+
+  if (!files?.length) {
+    return;
+  }
+
+  await createImagesFromFiles({
+    deps,
+    files,
+    parentId: resolveResourceParentId(groupId),
   });
-  render();
-  editForm.reset();
-  editForm.setValues({ values: editValues });
 };
 
-const mountSubscriptions = (deps) => {
-  const streams = subscriptions(deps) ?? [];
-  const active = streams.map((stream) => stream.subscribe());
-  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
-};
-
-export const handleBeforeMount = (deps) => {
-  const { store, projectService } = deps;
-  const { images } = projectService.getState();
-  store.setItems({ imagesData: images });
-  return mountSubscriptions(deps);
-};
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const detail = payload._event.detail;
-  const { itemId: id } = detail;
-  const { isFolder } = detail;
-
-  if (isFolder) {
-    store.setSelectedItemId({ itemId: null });
-    render();
-    return;
-  }
-
-  if (!id) {
-    return;
-  }
-
-  store.setSelectedItemId({ itemId: id });
-  render();
-};
-
-export const handleFileExplorerDoubleClick = (deps, payload) => {
-  const { itemId, isFolder } = payload._event.detail;
-  if (isFolder) return;
-  openEditDialogWithValues({ deps, itemId });
-};
-
-const refreshImagesData = async (deps) => {
-  const { store, render, projectService } = deps;
-  const repository = await projectService.getRepository();
-  const state = repository.getState();
-  store.setItems({ imagesData: state.images });
-  render();
-};
-
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createResourceFileExplorerHandlers({
-    resourceType: "images",
-    refresh: refreshImagesData,
+export const handleFilesDropped = async (deps, payload) => {
+  const { files, targetGroupId } = payload._event.detail;
+  await createImagesFromFiles({
+    deps,
+    files,
+    parentId: targetGroupId ?? undefined,
   });
-
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
-
-export const handleFileExplorerDataChanged = refreshImagesData;
-
-const subscriptions = (deps) => {
-  const { subject } = deps;
-  return [
-    subject.pipe(
-      filter(({ action }) => action === COLLAB_IMAGES_REFRESH_ACTION),
-      tap(() => {
-        deps.handlers.handleFileExplorerDataChanged(deps);
-      }),
-    ),
-  ];
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   let file;
 
   const selectedItem = store.selectSelectedItem();
@@ -113,7 +129,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   try {
     file = await appService.pickFiles({
-      accept: "image/*",
+      accept: ".jpg,.jpeg,.png,.webp",
       multiple: false,
       upload: true,
     });
@@ -123,7 +139,7 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   if (!file) {
-    return; // User cancelled
+    return;
   }
 
   if (!(file.uploadSucessful && file.uploadResult)) {
@@ -145,31 +161,7 @@ export const handleFormExtraEvent = async (deps) => {
     },
   });
 
-  // Update the store with the new repository state
-  const { images } = projectService.getState();
-  store.setItems({ imagesData: images });
-  render();
-};
-
-export const handleImageItemClick = (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail;
-
-  if (!itemId) {
-    return;
-  }
-
-  store.setSelectedItemId({ itemId: itemId });
-
-  const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
-
-  render();
-};
-
-export const handleImageItemDoubleClick = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openEditDialogWithValues({ deps, itemId });
+  await handleDataChanged(deps);
 };
 
 export const handleImageItemPreview = (deps, payload) => {
@@ -177,11 +169,6 @@ export const handleImageItemPreview = (deps, payload) => {
   const { itemId } = payload._event.detail;
   store.showFullImagePreview({ itemId });
   render();
-};
-
-export const handleImageItemEdit = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openEditDialogWithValues({ deps, itemId });
 };
 
 export const handleEditDialogClose = (deps) => {
@@ -196,7 +183,7 @@ export const handleEditDialogImageClick = async (deps) => {
 
   try {
     file = await appService.pickFiles({
-      accept: "image/*",
+      accept: ".jpg,.jpeg,.png,.webp",
       multiple: false,
       upload: true,
     });
@@ -214,7 +201,10 @@ export const handleEditDialogImageClick = async (deps) => {
     return;
   }
 
-  store.setEditImageUpload({ uploadResult: file.uploadResult });
+  store.setEditUpload({
+    uploadResult: file.uploadResult,
+    previewFileId: file.uploadResult.fileId,
+  });
   render();
 };
 
@@ -238,14 +228,14 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const editImageUploadResult = store.getState().editImageUploadResult;
-  const imagePatch = editImageUploadResult
+  const editUploadResult = store.getState().editUploadResult;
+  const imagePatch = editUploadResult
     ? {
-        fileId: editImageUploadResult.fileId,
-        fileType: editImageUploadResult.file.type,
-        fileSize: editImageUploadResult.file.size,
-        width: editImageUploadResult.dimensions.width,
-        height: editImageUploadResult.dimensions.height,
+        fileId: editUploadResult.fileId,
+        fileType: editUploadResult.file.type,
+        fileSize: editUploadResult.file.size,
+        width: editUploadResult.dimensions.width,
+        height: editUploadResult.dimensions.height,
       }
     : {};
 
@@ -259,49 +249,15 @@ export const handleEditFormAction = async (deps, payload) => {
     },
   });
 
-  const { images } = projectService.getState();
-  store.setItems({ imagesData: images });
   store.closeEditDialog();
-  render();
-};
-
-export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, projectService } = deps;
-  const { files, targetGroupId } = payload._event.detail;
-  const id = targetGroupId;
-
-  const successfulUploads = await projectService.uploadFiles(files);
-  for (const result of successfulUploads) {
-    await projectService.createResourceItem({
-      resourceType: "images",
-      resourceId: nanoid(),
-      data: {
-        type: "image",
-        fileId: result.fileId,
-        name: result.displayName,
-        fileType: result.file.type,
-        fileSize: result.file.size,
-        width: result.dimensions.width,
-        height: result.dimensions.height,
-      },
-      parentId: id,
-      position: "last",
-    });
-  }
-
-  if (successfulUploads.length > 0) {
-    const { images } = projectService.getState();
-    store.setItems({ imagesData: images });
-  }
-
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
   const result = await projectService.deleteResourceItemIfUnused({
-    resourceType,
+    resourceType: "images",
     resourceId: itemId,
     checkTargets: ["scenes", "layouts"],
   });
@@ -312,8 +268,5 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems({ imagesData: data });
-  render();
+  await handleDataChanged(deps);
 };

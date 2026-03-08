@@ -12,17 +12,19 @@ refs:
   groupview:
     eventListeners:
       item-click:
-        handler: handleImageItemClick
+        handler: handleSpriteItemClick
       item-dblclick:
-        action: showFullImagePreview
-        payload:
-          itemId: ${_event.detail.itemId}
-      files-uploaded:
-        handler: handleDragDropFileSelected
+        handler: handleSpriteItemDoubleClick
+      files-dropped:
+        handler: handleFilesDropped
+      upload-click:
+        handler: handleUploadClick
       search-input:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
+      back-click:
+        handler: handleBackClick
   previewOverlay:
     eventListeners:
       click:
@@ -41,7 +43,7 @@ template:
                   - rvn-resource-types :resourceCategory=resourceCategory  :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - rtgl-view w=1fg h=f:
-              - rvn-group-resources-view#groupview :backUrl=backUrl show-zoom-controls :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
+              - rvn-media-resources-view#groupview w=f h=f show-back-button show-zoom-controls :navTitle=title :groups=mediaGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes :itemContextMenuItems=centerItemContextMenuItems: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:

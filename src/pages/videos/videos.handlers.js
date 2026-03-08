@@ -1,62 +1,13 @@
 import { nanoid } from "nanoid";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
-
-const openEditDialogWithValues = ({ deps, itemId } = {}) => {
-  const { store, refs, render } = deps;
-  const { fileExplorer, editForm } = refs;
-  if (!itemId) {
-    return;
-  }
-
-  const videoItem = store.selectVideoItemById({ itemId });
-  if (!videoItem) {
-    return;
-  }
-
-  const editValues = {
-    name: videoItem.name ?? "",
-    description: videoItem.description ?? "",
-  };
-
-  store.setSelectedItemId({ itemId });
-  fileExplorer.selectItem({ itemId });
-  store.openEditDialog({
-    itemId,
-    defaultValues: editValues,
-    thumbnailFileId: videoItem.thumbnailFileId,
-  });
-
-  render();
-  editForm.reset();
-  editForm.setValues({ values: editValues });
-};
-
-const openVideoPreviewById = async ({ deps, itemId } = {}) => {
-  const { store, render, projectService } = deps;
-  if (!itemId) {
-    return;
-  }
-
-  const videoItem = store.selectVideoItemById({ itemId });
-  if (!videoItem?.fileId) {
-    return;
-  }
-
-  const { url } = await projectService.getFileContent(videoItem.fileId);
-  store.setVideoVisible({
-    video: {
-      url,
-      fileType: videoItem.fileType,
-    },
-  });
-  render();
-};
+import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
+import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
 
 const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
   let file;
+
   try {
     file = await appService.pickFiles({
-      accept: "video/*",
+      accept: ".mp4",
       multiple: false,
     });
   } catch {
@@ -82,91 +33,21 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
   return { uploadResult };
 };
 
-export const handleBeforeMount = (deps) => {
-  const { store, projectService } = deps;
-  const { videos } = projectService.getState();
-  store.setItems({ videosData: videos ?? { tree: [], items: {} } });
-};
+const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
+  const { appService, projectService } = deps;
+  let successfulUploads;
 
-const refreshVideosData = async (deps) => {
-  const { store, render, projectService } = deps;
-  const repository = await projectService.getRepository();
-  const state = repository.getState();
-  store.setItems({ videosData: state.videos ?? { tree: [], items: {} } });
-  render();
-};
-
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createResourceFileExplorerHandlers({
-    resourceType: "videos",
-    refresh: refreshVideosData,
-  });
-
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
-
-export const handleDataChanged = refreshVideosData;
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const { itemId, isFolder } = payload._event.detail;
-
-  if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
-    render();
+  try {
+    successfulUploads = await projectService.uploadFiles(files);
+  } catch {
+    appService.showToast("Failed to upload video.", { title: "Error" });
     return;
   }
 
-  if (!itemId) {
+  if (!successfulUploads.length) {
+    appService.showToast("Failed to upload video.", { title: "Error" });
     return;
   }
-
-  store.setSelectedItemId({ itemId });
-  render();
-};
-
-export const handleFileExplorerDoubleClick = (deps, payload) => {
-  const { itemId, isFolder } = payload._event.detail;
-  if (isFolder) {
-    return;
-  }
-
-  openEditDialogWithValues({ deps, itemId });
-};
-
-export const handleVideoItemClick = (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail;
-  if (!itemId) {
-    return;
-  }
-
-  store.setSelectedItemId({ itemId });
-  const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
-  render();
-};
-
-export const handleVideoItemDoubleClick = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openEditDialogWithValues({ deps, itemId });
-};
-
-export const handleVideoItemPreview = async (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  await openVideoPreviewById({ deps, itemId });
-};
-
-export const handleVideoItemEdit = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openEditDialogWithValues({ deps, itemId });
-};
-
-export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, projectService } = deps;
-  const { files, targetGroupId } = payload._event.detail;
-  const id = targetGroupId === "root" ? undefined : targetGroupId;
-
-  const successfulUploads = await projectService.uploadFiles(files);
 
   for (const result of successfulUploads) {
     await projectService.createResourceItem({
@@ -183,22 +64,108 @@ export const handleDragDropFileSelected = async (deps, payload) => {
         width: result.dimensions?.width,
         height: result.dimensions?.height,
       },
-      parentId: id,
+      parentId,
       position: "last",
     });
   }
 
-  if (successfulUploads.length > 0) {
-    const { videos } = projectService.getState();
-    store.setItems({ videosData: videos ?? { tree: [], items: {} } });
+  await handleDataChanged(deps);
+};
+
+const openVideoPreviewById = async ({ deps, itemId } = {}) => {
+  const { store, render, projectService } = deps;
+  if (!itemId) {
+    return;
   }
 
+  const videoItem = store.selectVideoItemById({ itemId });
+  if (!videoItem?.fileId) {
+    return;
+  }
+
+  const { url } = await projectService.getFileContent(videoItem.fileId);
+  store.setVideoVisible({
+    video: {
+      url,
+      fileType: videoItem.fileType,
+    },
+  });
   render();
 };
 
-export const handleFormExtraEvent = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+const {
+  handleBeforeMount,
+  refreshData: handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerDoubleClick,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleSearchInput,
+  handleItemClick: handleVideoItemClick,
+  handleItemDoubleClick: handleVideoItemDoubleClick,
+  handleItemEdit: handleVideoItemEdit,
+} = createMediaPageHandlers({
+  resourceType: "videos",
+  selectItemById: (store, { itemId }) => store.selectVideoItemById({ itemId }),
+  getEditPreviewFileId: (item) => item?.thumbnailFileId,
+});
 
+export {
+  handleBeforeMount,
+  handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerDoubleClick,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleSearchInput,
+  handleVideoItemClick,
+  handleVideoItemDoubleClick,
+  handleVideoItemEdit,
+};
+
+export const handleVideoItemPreview = async (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  await openVideoPreviewById({ deps, itemId });
+};
+
+export const handleUploadClick = async (deps, payload) => {
+  const { appService } = deps;
+  const { groupId } = payload._event.detail;
+  let files;
+
+  try {
+    files = await appService.pickFiles({
+      accept: ".mp4",
+      multiple: true,
+    });
+  } catch {
+    appService.showToast("Failed to select files.", { title: "Error" });
+    return;
+  }
+
+  if (!files?.length) {
+    return;
+  }
+
+  await createVideosFromFiles({
+    deps,
+    files,
+    parentId: resolveResourceParentId(groupId),
+  });
+};
+
+export const handleFilesDropped = async (deps, payload) => {
+  const { files, targetGroupId } = payload._event.detail;
+
+  await createVideosFromFiles({
+    deps,
+    files,
+    parentId: targetGroupId ?? undefined,
+  });
+};
+
+export const handleFormExtraEvent = async (deps) => {
+  const { appService, projectService, store } = deps;
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
@@ -234,29 +201,17 @@ export const handleFormExtraEvent = async (deps) => {
     },
   });
 
-  const { videos } = projectService.getState();
-  store.setItems({ videosData: videos ?? { tree: [], items: {} } });
-  render();
-};
-
-export const handleSearchInput = (deps, payload) => {
-  const { store, render } = deps;
-  const searchQuery = payload._event.detail.value ?? "";
-
-  store.setSearchQuery({ value: searchQuery });
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleOutsideVideoClick = (deps) => {
   const { store, render } = deps;
-
   store.setVideoNotVisible();
   render();
 };
 
 export const handleEditDialogClose = (deps) => {
   const { store, render } = deps;
-
   store.closeEditDialog();
   render();
 };
@@ -279,7 +234,10 @@ export const handleEditDialogVideoClick = async (deps) => {
     return;
   }
 
-  store.setEditVideoUpload({ uploadResult: result.uploadResult });
+  store.setEditUpload({
+    uploadResult: result.uploadResult,
+    previewFileId: result.uploadResult.thumbnailFileId,
+  });
   render();
 };
 
@@ -296,22 +254,21 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const editItemId = store.getState().editItemId;
+  const { editItemId, editUploadResult } = store.getState();
   if (!editItemId) {
     store.closeEditDialog();
     render();
     return;
   }
 
-  const editVideoUploadResult = store.getState().editVideoUploadResult;
-  const videoPatch = editVideoUploadResult
+  const videoPatch = editUploadResult
     ? {
-        fileId: editVideoUploadResult.fileId,
-        thumbnailFileId: editVideoUploadResult.thumbnailFileId,
-        fileType: editVideoUploadResult.file.type,
-        fileSize: editVideoUploadResult.file.size,
-        width: editVideoUploadResult.dimensions?.width,
-        height: editVideoUploadResult.dimensions?.height,
+        fileId: editUploadResult.fileId,
+        thumbnailFileId: editUploadResult.thumbnailFileId,
+        fileType: editUploadResult.file.type,
+        fileSize: editUploadResult.file.size,
+        width: editUploadResult.dimensions?.width,
+        height: editUploadResult.dimensions?.height,
       }
     : {};
 
@@ -325,17 +282,16 @@ export const handleEditFormAction = async (deps, payload) => {
     },
   });
 
-  const { videos } = projectService.getState();
-  store.setItems({ videosData: videos ?? { tree: [], items: {} } });
   store.closeEditDialog();
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
+
   const result = await projectService.deleteResourceItemIfUnused({
-    resourceType,
+    resourceType: "videos",
     resourceId: itemId,
     checkTargets: ["scenes", "layouts"],
   });
@@ -346,7 +302,5 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  const data = projectService.getState()[resourceType];
-  store.setItems({ videosData: data ?? { tree: [], items: {} } });
-  render();
+  await handleDataChanged(deps);
 };

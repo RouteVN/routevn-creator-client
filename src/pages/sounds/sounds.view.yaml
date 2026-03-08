@@ -19,12 +19,12 @@ refs:
         handler: handleSoundItemPreview
       item-edit:
         handler: handleSoundItemEdit
-      files-uploaded:
-        handler: handleDragDropFileSelected
+      files-dropped:
+        handler: handleFilesDropped
+      upload-click:
+        handler: handleUploadClick
       search-input:
-        action: setSearchQuery
-        payload:
-          value: ${_event.detail.value}
+        handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
   rvnAudioPlayer:
@@ -63,7 +63,7 @@ template:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-              - rvn-group-resources-view#groupview w=f h=f :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
+              - rvn-media-resources-view#groupview w=f h=f :navTitle=title :groups=mediaGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes :itemContextMenuItems=centerItemContextMenuItems: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
@@ -71,9 +71,9 @@ template:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
-                              - $if selectedSoundWaveformDataFileId:
+                              - $if selectedPreviewFileId:
                                   - rtgl-view slot="sound-waveform" p=sm bw=xs bc=bo br=md cur=pointer:
-                                      - rvn-waveform-visualizer#detailWaveform waveformDataFileId=${selectedSoundWaveformDataFileId} w=220 h=100: null
+                                      - rvn-waveform-visualizer#detailWaveform waveformDataFileId=${selectedPreviewFileId} w=220 h=100: null
                                 $else:
                                   - rtgl-view#detailWaveformPlaceholder slot="sound-waveform" w=f h=100 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                                       - rtgl-text c=mu-fg s=sm: Click to Upload
@@ -83,9 +83,9 @@ template:
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
-              - $if editWaveformDataFileId:
+              - $if editPreviewFileId:
                   - rtgl-view slot="sound-slot" p=sm bw=xs bc=bo br=md cur=pointer:
-                      - rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editWaveformDataFileId} w=400 h=110: null
+                      - rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editPreviewFileId} w=400 h=110: null
                 $else:
                   - rtgl-view#editDialogWaveformPlaceholder slot="sound-slot" w=f h=110 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                       - rtgl-text c=mu-fg s=sm: Click to Upload

@@ -1,66 +1,44 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createCatalogPageHandlers } from "../../deps/features/resourcePages/catalog/createCatalogPageHandlers.js";
 import { createLayoutsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
-  await projectService.ensureRepository();
-  const { layouts } = projectService.getState();
-  store.setItems({ layoutsData: layouts });
-  render();
-};
+const {
+  handleAfterMount,
+  refreshData: handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleItemClick: handleLayoutItemClick,
+  handleSearchInput,
+} = createCatalogPageHandlers({
+  resourceType: "layouts",
+  createExplorerHandlers: ({ refresh }) =>
+    createLayoutsFileExplorerHandlers({
+      refresh,
+    }),
+});
 
-const refreshLayoutsData = async (deps) => {
-  const { store, render, projectService } = deps;
-  const { layouts } = projectService.getState();
-  store.setItems({ layoutsData: layouts });
-  render();
-};
-
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createLayoutsFileExplorerHandlers({
-    refresh: refreshLayoutsData,
-  });
-
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
-
-export const handleDataChanged = refreshLayoutsData;
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const { id, isFolder } = payload._event.detail;
-
-  if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
-    render();
-    return;
-  }
-
-  store.setSelectedItemId({ itemId: id });
-  render();
-};
-
-export const handleImageItemClick = (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail;
-
-  const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
-
-  store.setSelectedItemId({ itemId: itemId });
-  render();
+export {
+  handleAfterMount,
+  handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleLayoutItemClick,
+  handleSearchInput,
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
   const { appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
-  if (isFolder) return;
+  if (isFolder) {
+    return;
+  }
 
-  // Get current payload to preserve projectId
   const currentPayload = appService.getPayload();
-
   appService.navigate("/project/resources/layout-editor", {
-    ...currentPayload, // Preserve existing payload (including p for projectId)
+    ...currentPayload,
     layoutId: itemId,
   });
 };
@@ -68,50 +46,7 @@ export const handleItemDoubleClick = (deps, payload) => {
 export const handleAddLayoutClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
-
-  store.openAddDialog({ groupId: groupId });
-  render();
-};
-
-export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, projectService } = deps;
-  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
-  const id = targetGroupId;
-
-  // Upload all files
-  const successfulUploads = await projectService.uploadFiles(files);
-
-  for (const result of successfulUploads) {
-    await projectService.createLayoutItem({
-      layoutId: nanoid(),
-      name: result.displayName,
-      layoutType: "normal",
-      elements: {
-        items: {},
-        tree: [],
-      },
-      parentId: id,
-      position: "last",
-      data: {
-        fileId: result.fileId,
-        fileType: result.file.type,
-        fileSize: result.file.size,
-      },
-    });
-  }
-
-  if (successfulUploads.length > 0) {
-    const { layouts } = projectService.getState();
-    store.setItems({ layoutsData: layouts });
-  }
-
-  render();
-};
-
-export const handleSearchInput = (deps, payload) => {
-  const { store, render } = deps;
-  const searchQuery = payload._event.detail?.value ?? "";
-  store.setSearchQuery({ query: searchQuery });
+  store.openAddDialog({ groupId });
   render();
 };
 
@@ -193,7 +128,9 @@ const createLayoutTemplate = (layoutType) => {
         },
       ],
     };
-  } else if (layoutType === "nvl") {
+  }
+
+  if (layoutType === "nvl") {
     const nvlContainerId = nanoid();
     const nvlBackgroundId = nanoid();
     const nvlLinesId = nanoid();
@@ -322,7 +259,9 @@ const createLayoutTemplate = (layoutType) => {
         },
       ],
     };
-  } else if (layoutType === "normal") {
+  }
+
+  if (layoutType === "normal") {
     const rootId = nanoid();
     const textId = nanoid();
 
@@ -372,7 +311,9 @@ const createLayoutTemplate = (layoutType) => {
         },
       ],
     };
-  } else if (layoutType === "base") {
+  }
+
+  if (layoutType === "base") {
     const spriteId = nanoid();
 
     return {
@@ -412,44 +353,43 @@ const createLayoutTemplate = (layoutType) => {
 };
 
 export const handleLayoutFormActionClick = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, projectService, appService } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
 
-  const formData = payload._event.detail.values;
-  const targetGroupId = store.getState().targetGroupId;
-
-  // Validate required fields
-  if (!formData.name) {
+  const name = values?.name?.trim();
+  if (!name) {
     appService.showToast("Please enter a layout name", { title: "Warning" });
     return;
   }
-  if (!formData.layoutType) {
+
+  const layoutType = values?.layoutType;
+  if (!layoutType) {
     appService.showToast("Please select a layout type", { title: "Warning" });
     return;
   }
 
-  // Create the layout directly in the repository (like colors page does)
   await projectService.createLayoutItem({
     layoutId: nanoid(),
-    name: formData.name,
-    layoutType: formData.layoutType,
-    elements: createLayoutTemplate(formData.layoutType),
-    parentId: targetGroupId,
+    name,
+    layoutType,
+    elements: createLayoutTemplate(layoutType),
+    parentId: store.getState().targetGroupId,
     position: "last",
   });
 
-  const { layouts } = projectService.getState();
-  store.setItems({ layoutsData: layouts });
   store.closeAddDialog();
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
 
-  const state = projectService.getState();
   const usage = recursivelyCheckResource({
-    state,
+    state: projectService.getState(),
     itemId,
     checkTargets: ["scenes"],
   });
@@ -460,11 +400,6 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  // Perform the delete operation
   await projectService.deleteLayoutItem({ layoutId: itemId });
-
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems({ layoutsData: data });
-  render();
+  await handleDataChanged(deps);
 };

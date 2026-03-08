@@ -184,6 +184,60 @@ Handlers must stay thin.
 Stores must not absorb domain logic.
 Views must stay declarative.
 
+## Resource Page Pattern
+
+Resource pages should stay explicit at the page level.
+
+Do not hide an entire resource page behind one large page factory or one generic layout abstraction.
+
+The preferred structure is:
+
+- page YAML stays in `src/pages/<page>/`
+- reusable center-pane UI lives in `src/components/`
+- shared page-family orchestration lives in `src/deps/features/resourcePages/`
+
+Current family pattern:
+
+- `src/components/mediaResourcesView/`
+  UI-only center-pane component for media-style resource pages
+- `src/deps/features/resourcePages/media/`
+  shared store/handler helpers for media-family pages
+- `src/components/catalogResourcesView/`
+  UI-only center-pane component for catalog-style resource pages
+- `src/deps/features/resourcePages/catalog/`
+  shared store/handler helpers for catalog-family pages
+
+Page-family helpers should own:
+
+- repeated page-store shape
+- repeated page handler wiring
+- shared selection/search/edit orchestration
+
+They should not absorb:
+
+- route structure
+- page-specific dialogs and overlays
+- page-specific upload payload mapping
+- domain rules that belong in services or `src/domain/`
+
+Resource center components must stay presentational.
+
+They may own:
+
+- local UI state such as hover, collapse, zoom, and context menu display
+- rendering normalized item cards
+- emitting generic events such as `item-click`, `item-preview`, `upload-click`
+
+They must not own:
+
+- file picking
+- uploads
+- repository mutations
+- resource-type-specific service orchestration
+
+When a set of resource pages shares the same interaction model, add a family-specific component and shared feature helpers.
+Do not force unrelated resource pages into one universal resource-page system.
+
 ## Public Service Facades
 
 UI handlers should normally talk to only:

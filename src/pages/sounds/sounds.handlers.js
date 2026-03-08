@@ -1,16 +1,11 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
+import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
 
 const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
 const UNSUPPORTED_FORMAT_MESSAGE =
   "The audio file format is not supported. Please use MP3, WAV, or OGG (Windows only) files.";
-
-const mountSubscriptions = (deps) => {
-  const streams = subscriptions(deps) ?? [];
-  const active = streams.map((stream) => stream.subscribe());
-  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
-};
 
 const showUnsupportedFormatDialog = async (appService) => {
   await appService.showDialog({
@@ -20,41 +15,12 @@ const showUnsupportedFormatDialog = async (appService) => {
   });
 };
 
-const openEditDialogWithValues = ({ deps, itemId } = {}) => {
-  const { store, refs, render } = deps;
-  const { fileExplorer, editForm } = refs;
-  if (!itemId) {
-    return;
-  }
-
-  const soundItem = store.selectSoundItemById({ itemId });
-  if (!soundItem) {
-    return;
-  }
-
-  const editValues = {
-    name: soundItem.name ?? "",
-    description: soundItem.description ?? "",
-  };
-
-  store.setSelectedItemId({ itemId });
-  fileExplorer.selectItem({ itemId });
-  store.openEditDialog({
-    itemId,
-    defaultValues: editValues,
-    waveformDataFileId: soundItem.waveformDataFileId,
-  });
-
-  render();
-  editForm.reset();
-  editForm.setValues({ values: editValues });
-};
-
 const pickAndUploadSound = async ({ appService, projectService } = {}) => {
   let file;
+
   try {
     file = await appService.pickFiles({
-      accept: "audio/*",
+      accept: ".mp3,.wav,.ogg",
       multiple: false,
     });
   } catch {
@@ -80,10 +46,91 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
   return { uploadResult };
 };
 
+const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
+  const { appService, projectService } = deps;
+  let successfulUploads;
+
+  try {
+    successfulUploads = await projectService.uploadFiles(files);
+  } catch {
+    await showUnsupportedFormatDialog(appService);
+    return;
+  }
+
+  if (!successfulUploads.length) {
+    appService.showToast("Failed to upload sound.", { title: "Error" });
+    return;
+  }
+
+  for (const result of successfulUploads) {
+    await projectService.createResourceItem({
+      resourceType: "sounds",
+      resourceId: nanoid(),
+      data: {
+        type: "sound",
+        fileId: result.fileId,
+        name: result.displayName,
+        description: "",
+        fileType: result.file.type,
+        fileSize: result.file.size,
+        waveformDataFileId: result.waveformDataFileId,
+        duration: result.duration,
+      },
+      parentId,
+      position: "last",
+    });
+  }
+
+  await handleDataChanged(deps);
+};
+
+const handlePanelResize = (deps, payload) => {
+  const { store, render } = deps;
+  const { panelType, width } = payload;
+
+  if (panelType === "file-explorer") {
+    store.updateAudioPlayerLeft({ width });
+    render();
+  }
+
+  if (panelType === "detail-panel") {
+    store.updateAudioPlayerRight({ width });
+    render();
+  }
+};
+
+const {
+  handleBeforeMount: handleMediaBeforeMount,
+  refreshData: handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerDoubleClick,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleSearchInput,
+  handleItemClick: handleSoundItemClick,
+  handleItemDoubleClick: handleSoundItemDoubleClick,
+  handleItemEdit: handleSoundItemEdit,
+} = createMediaPageHandlers({
+  resourceType: "sounds",
+  subscriptions: (deps) => {
+    const { subject } = deps;
+
+    return [
+      subject.pipe(
+        filter(({ action }) => action === "panel-resize"),
+        tap(({ payload }) => {
+          handlePanelResize(deps, payload);
+        }),
+      ),
+    ];
+  },
+  selectItemById: (store, { itemId }) => store.selectSoundItemById({ itemId }),
+  getEditPreviewFileId: (item) => item?.waveformDataFileId,
+});
+
 export const handleBeforeMount = (deps) => {
-  const { store, projectService, appService } = deps;
-  const { sounds } = projectService.getState();
-  store.setItems({ soundData: sounds ?? { tree: [], items: {} } });
+  const { appService, store } = deps;
+  const cleanup = handleMediaBeforeMount(deps);
 
   const defaultLeft = parseInt(
     appService.getUserConfig("resizablePanel.file-explorerWidth"),
@@ -91,75 +138,22 @@ export const handleBeforeMount = (deps) => {
   const defaultRight = parseInt(
     appService.getUserConfig("resizablePanel.detail-panelWidth"),
   );
-  store.updateAudioPlayerLeft({ width: defaultLeft, appService });
-  store.updateAudioPlayerRight({ width: defaultRight, appService });
+  store.updateAudioPlayerLeft({ width: defaultLeft });
+  store.updateAudioPlayerRight({ width: defaultRight });
 
-  return mountSubscriptions(deps);
+  return cleanup;
 };
 
-const refreshSoundsData = async (deps) => {
-  const { store, render, projectService } = deps;
-  const { sounds } = projectService.getState();
-  store.setItems({ soundData: sounds ?? { tree: [], items: {} } });
-  render();
-};
-
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createResourceFileExplorerHandlers({
-    resourceType: "sounds",
-    refresh: refreshSoundsData,
-  });
-
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
-
-export const handleDataChanged = refreshSoundsData;
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const { itemId, isFolder } = payload._event.detail;
-
-  if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
-    render();
-    return;
-  }
-
-  if (!itemId) {
-    return;
-  }
-
-  store.setSelectedItemId({ itemId });
-  render();
-};
-
-export const handleFileExplorerDoubleClick = (deps, payload) => {
-  const { itemId, isFolder } = payload._event.detail;
-  if (isFolder) {
-    return;
-  }
-
-  openEditDialogWithValues({ deps, itemId });
-};
-
-export const handleSoundItemClick = (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail;
-
-  if (!itemId) {
-    return;
-  }
-
-  store.setSelectedItemId({ itemId });
-
-  const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
-
-  render();
-};
-
-export const handleSoundItemDoubleClick = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openEditDialogWithValues({ deps, itemId });
+export {
+  handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerDoubleClick,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleSearchInput,
+  handleSoundItemClick,
+  handleSoundItemDoubleClick,
+  handleSoundItemEdit,
 };
 
 export const handleSoundItemPreview = (deps, payload) => {
@@ -181,53 +175,44 @@ export const handleSoundItemPreview = (deps, payload) => {
   render();
 };
 
-export const handleSoundItemEdit = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openEditDialogWithValues({ deps, itemId });
-};
+export const handleUploadClick = async (deps, payload) => {
+  const { appService } = deps;
+  const { groupId } = payload._event.detail;
+  let files;
 
-export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const { files, targetGroupId } = payload._event.detail;
-
-  let successfulUploads;
   try {
-    successfulUploads = await projectService.uploadFiles(files);
+    files = await appService.pickFiles({
+      accept: ".mp3,.wav,.ogg",
+      multiple: true,
+    });
   } catch {
-    await showUnsupportedFormatDialog(appService);
+    appService.showToast("Failed to select files.", { title: "Error" });
     return;
   }
 
-  for (const result of successfulUploads) {
-    await projectService.createResourceItem({
-      resourceType: "sounds",
-      resourceId: nanoid(),
-      data: {
-        type: "sound",
-        fileId: result.fileId,
-        name: result.displayName,
-        description: "",
-        fileType: result.file.type,
-        fileSize: result.file.size,
-        waveformDataFileId: result.waveformDataFileId,
-        duration: result.duration,
-      },
-      parentId: targetGroupId,
-      position: "last",
-    });
+  if (!files?.length) {
+    return;
   }
 
-  if (successfulUploads.length > 0) {
-    const { sounds } = projectService.getState();
-    store.setItems({ soundData: sounds ?? { tree: [], items: {} } });
-  }
+  await createSoundsFromFiles({
+    deps,
+    files,
+    parentId: resolveResourceParentId(groupId),
+  });
+};
 
-  render();
+export const handleFilesDropped = async (deps, payload) => {
+  const { files, targetGroupId } = payload._event.detail;
+
+  await createSoundsFromFiles({
+    deps,
+    files,
+    parentId: targetGroupId ?? undefined,
+  });
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const { appService, projectService, store, render } = deps;
-
+  const { appService, projectService, store } = deps;
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
@@ -266,9 +251,7 @@ export const handleFormExtraEvent = async (deps) => {
     },
   });
 
-  const { sounds } = projectService.getState();
-  store.setItems({ soundData: sounds ?? { tree: [], items: {} } });
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleEditDialogClose = (deps) => {
@@ -300,7 +283,10 @@ export const handleEditDialogSoundClick = async (deps) => {
     return;
   }
 
-  store.setEditSoundUpload({ uploadResult: result.uploadResult });
+  store.setEditUpload({
+    uploadResult: result.uploadResult,
+    previewFileId: result.uploadResult.waveformDataFileId,
+  });
   render();
 };
 
@@ -317,21 +303,20 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const editItemId = store.getState().editItemId;
+  const { editItemId, editUploadResult } = store.getState();
   if (!editItemId) {
     store.closeEditDialog();
     render();
     return;
   }
 
-  const editSoundUploadResult = store.getState().editSoundUploadResult;
-  const soundPatch = editSoundUploadResult
+  const soundPatch = editUploadResult
     ? {
-        fileId: editSoundUploadResult.fileId,
-        fileType: editSoundUploadResult.file.type,
-        fileSize: editSoundUploadResult.file.size,
-        waveformDataFileId: editSoundUploadResult.waveformDataFileId,
-        duration: editSoundUploadResult.duration,
+        fileId: editUploadResult.fileId,
+        fileType: editUploadResult.file.type,
+        fileSize: editUploadResult.file.size,
+        waveformDataFileId: editUploadResult.waveformDataFileId,
+        duration: editUploadResult.duration,
       }
     : {};
 
@@ -345,25 +330,22 @@ export const handleEditFormAction = async (deps, payload) => {
     },
   });
 
-  const { sounds } = projectService.getState();
-  store.setItems({ soundData: sounds ?? { tree: [], items: {} } });
   store.closeEditDialog();
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleAudioPlayerClose = (deps) => {
   const { store, render } = deps;
-
   store.closeAudioPlayer();
   render();
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
 
   const result = await projectService.deleteResourceItemIfUnused({
-    resourceType,
+    resourceType: "sounds",
     resourceId: itemId,
     checkTargets: ["scenes", "layouts"],
   });
@@ -374,33 +356,5 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  const data = projectService.getState()[resourceType];
-  store.setItems({ soundData: data ?? { tree: [], items: {} } });
-  render();
-};
-
-export const handlePanelResize = (deps, payload) => {
-  const { store, render } = deps;
-  const { panelType, width } = payload;
-  if (panelType === "file-explorer") {
-    store.updateAudioPlayerLeft({ width });
-    render();
-  }
-
-  if (panelType === "detail-panel") {
-    store.updateAudioPlayerRight({ width });
-    render();
-  }
-};
-
-const subscriptions = (deps) => {
-  const { subject } = deps;
-  return [
-    subject.pipe(
-      filter(({ action }) => action === "panel-resize"),
-      tap(({ payload }) => {
-        handlePanelResize(deps, payload);
-      }),
-    ),
-  ];
+  await handleDataChanged(deps);
 };

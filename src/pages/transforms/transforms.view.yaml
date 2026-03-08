@@ -38,9 +38,9 @@ template:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
-                  - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+                  - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - rtgl-view w=1fg h=f:
-              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :collapsedIds=collapsedIds :emptyMessage="No transforms found" :uploadText="Upload Files" :acceptedFileTypes=[] :items=items: null
+              - rvn-catalog-resources-view#groupview w=f h=f :navTitle=title :groups=catalogGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :emptyMessage=emptyMessage :addText=addText :itemContextMenuItems=centerItemContextMenuItems: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:

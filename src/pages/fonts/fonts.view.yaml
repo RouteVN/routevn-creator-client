@@ -15,8 +15,10 @@ refs:
         handler: handleFontItemClick
       item-dblclick:
         handler: handleFontItemDoubleClick
-      files-uploaded:
-        handler: handleDragDropFileSelected
+      files-dropped:
+        handler: handleFilesDropped
+      upload-click:
+        handler: handleUploadClick
       search-input:
         handler: handleSearchInput
       item-delete:
@@ -41,7 +43,7 @@ template:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - rtgl-view w=1fg h=f:
-              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
+              - rvn-media-resources-view#groupview :navTitle=title :groups=mediaGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes :itemContextMenuItems=centerItemContextMenuItems: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
@@ -49,9 +51,9 @@ template:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
-                              - $if selectedFontFileId:
+                              - $if selectedPreviewFileId:
                                   - rtgl-view#detailFontPreview slot="font-preview" bw=xs bc=bo br=md p=md cur=pointer:
-                                      - rvn-font-preview fileId=${selectedFontFileId} fontFamily=${selectedFontFamily} previewText="Aa" fontSize=60 width=220 height=110 av=c ah=c: null
+                                      - rvn-font-preview fileId=${selectedPreviewFileId} fontFamily=${selectedFontFamily} previewText="Aa" fontSize=60 width=220 height=110 av=c ah=c: null
                                 $else:
                                   - rtgl-view#detailFontPreview slot="font-preview" h=110 bw=xs bc=bo br=md av=c ah=c cur=pointer:
                                       - rtgl-text c=mu-fg s=sm: No Preview
