@@ -1,0 +1,264 @@
+---
+title: Project Flow
+description: Creates a project through the real UI and captures the reachable project routes.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "#createButton"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "#createButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#createProjectDialog rtgl-input[data-field-name='name']"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "#createProjectDialog rtgl-input[data-field-name='name']"
+    steps:
+      - action: write
+        value: VT UI Flow
+  - action: select
+    selector: "#createProjectDialog rtgl-input[data-field-name='description']"
+    steps:
+      - action: write
+        value: Created through the real UI.
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#createProjectDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-project"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "#projectTitle"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#editDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#sidebar [data-item-id='/project/settings/about']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-about"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 400
+  - action: screenshot
+  - action: select
+    selector: "#sidebar [data-item-id='/project/releases/versions']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-versions"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 400
+  - action: screenshot
+  - action: select
+    selector: "#sidebar [data-item-id='/project/scenes']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-scenes"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 800
+  - action: screenshot
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: click
+  - action: wait
+    ms: 350
+  - action: screenshot
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: "rvn-scene-editor"
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 1800
+  - action: screenshot
+  - action: select
+    selector: "#sidebar [data-item-id='/project/resources/images']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-images"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='characters']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-characters"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='sounds']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-sounds"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='videos']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-videos"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='transforms']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-transforms"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='tweens']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-tweens"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "#sidebar [data-item-id='/project/resources/colors']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='fonts']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-fonts"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='typography']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-typography"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-resource-types [data-item-id='layouts']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-layouts"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 800
+  - action: screenshot
+  - action: select
+    selector: "#groupview #itemRef0x0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: "rvn-layout-editor"
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 900
+  - action: screenshot
+  - action: select
+    selector: "#sidebar [data-item-id='/project/resources/variables']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-variables"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+---

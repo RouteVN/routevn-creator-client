@@ -3,8 +3,8 @@
 set -euo pipefail
 
 images=(
+  "han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.5"
   "han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.0-rc13"
-  "han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.0-rc12"
 )
 
 find_local_image() {
@@ -31,7 +31,27 @@ pull_image() {
   return 1
 }
 
+pull_image_if_missing() {
+  local image="$1"
+
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    printf '%s\n' "$image"
+    return 0
+  fi
+
+  if docker pull "$image" </dev/null; then
+    printf '%s\n' "$image"
+    return 0
+  fi
+
+  return 1
+}
+
 IMAGE="${RTGL_VT_IMAGE:-}"
+
+if [ -z "$IMAGE" ]; then
+  IMAGE="$(pull_image_if_missing "${images[0]}" || true)"
+fi
 
 if [ -z "$IMAGE" ]; then
   IMAGE="$(find_local_image || true)"
@@ -46,4 +66,9 @@ if [ -z "$IMAGE" ]; then
   exit 1
 fi
 
-exec docker run --rm --pull=never --user "$(id -u):$(id -g)" -v "$PWD:/app" -w /app "$IMAGE" rtgl "$@"
+env_args=()
+while IFS='=' read -r key _; do
+  env_args+=("-e" "$key")
+done < <(env | grep '^RTGL_VT_' || true)
+
+exec docker run --rm --pull=never --user "$(id -u):$(id -g)" "${env_args[@]}" -v "$PWD:/app" -w /app "$IMAGE" rtgl "$@"

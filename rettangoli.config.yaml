@@ -21,6 +21,6 @@ vt:
   name: "RouteVN Creator Visual Tests"
   description: "Visual testing for RouteVN Creator pages"
   sections:
-    - title: "Projects"
-      files: "projects"
-      description: "Project list and creation flow visual tests"
+    - title: "Project Flow"
+      files: "project"
+      description: "Project creation and project route visual tests"
