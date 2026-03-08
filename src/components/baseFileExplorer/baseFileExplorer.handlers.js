@@ -23,12 +23,8 @@ export const handleBeforeMount = (deps) => {
   return mountSubscriptions(deps);
 };
 
-const getItemIdFromEvent = (event, prefix = "item") => {
-  return (
-    event?.currentTarget?.getAttribute?.("data-item-id") ||
-    event?.currentTarget?.id?.replace(prefix, "") ||
-    ""
-  );
+const getItemIdFromEvent = (event) => {
+  return event?.currentTarget?.getAttribute?.("data-item-id") || "";
 };
 
 const calculateForbiddenTargets = (sourceItem, allItems) => {
@@ -478,6 +474,9 @@ export const handleContainerContextMenu = (deps, payload) => {
   const emptyContextMenuItems = Array.isArray(props.emptyContextMenuItems)
     ? props.emptyContextMenuItems
     : undefined;
+  if (!emptyContextMenuItems?.length) {
+    return;
+  }
 
   // Show dropdown menu for empty space
   store.showDropdownMenuFileExplorerEmpty({
@@ -494,6 +493,9 @@ export const handleEmptyMessageClick = (deps, payload) => {
   const emptyContextMenuItems = Array.isArray(props.emptyContextMenuItems)
     ? props.emptyContextMenuItems
     : undefined;
+  if (!emptyContextMenuItems?.length) {
+    return;
+  }
 
   // Show dropdown menu when clicking on empty message
   const rect = payload._event.currentTarget.getBoundingClientRect();
@@ -518,15 +520,18 @@ export const handleItemContextMenu = (deps, payload) => {
   const contextMenuItems = Array.isArray(props.contextMenuItems)
     ? props.contextMenuItems
     : undefined;
-
-  // Filter context menu items based on item type
-  let filteredMenuItems = contextMenuItems;
-  if (item && (item.type === "sprite" || item.type.startsWith("text"))) {
-    // For sprite and text items, only show Rename and Delete options
-    filteredMenuItems = contextMenuItems?.filter(
-      (menuItem) =>
-        menuItem.value === "rename-item" || menuItem.value === "delete-item",
-    );
+  const folderContextMenuItems = Array.isArray(props.folderContextMenuItems)
+    ? props.folderContextMenuItems
+    : undefined;
+  const itemContextMenuItems = Array.isArray(props.itemContextMenuItems)
+    ? props.itemContextMenuItems
+    : undefined;
+  const resolvedContextMenuItems =
+    item?.type === "folder"
+      ? (folderContextMenuItems ?? contextMenuItems)
+      : (itemContextMenuItems ?? contextMenuItems);
+  if (!resolvedContextMenuItems?.length) {
+    return;
   }
 
   // Show dropdown menu for item
@@ -534,17 +539,21 @@ export const handleItemContextMenu = (deps, payload) => {
     position: { x: payload._event.clientX, y: payload._event.clientY },
     id: itemId,
     type: item?.type,
-    contextMenuItems: filteredMenuItems,
+    contextMenuItems,
+    folderContextMenuItems,
+    itemContextMenuItems,
   });
   render();
 };
 
 export const handleItemClick = (deps, payload) => {
-  const { dispatchEvent, store, render } = deps;
+  const { dispatchEvent, store, render, props } = deps;
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {
     return;
   }
+  const item = props.items?.find((entry) => entry.id === itemId);
+  const isFolder = item?.type === "folder";
 
   // Update selected item
   store.clearPendingDrag();
@@ -555,22 +564,30 @@ export const handleItemClick = (deps, payload) => {
     new CustomEvent("item-click", {
       detail: {
         id: itemId,
+        itemId,
+        item,
+        isFolder,
       },
     }),
   );
 };
 
 export const handleItemDblClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, props } = deps;
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {
     return;
   }
+  const item = props.items?.find((entry) => entry.id === itemId);
+  const isFolder = item?.type === "folder";
 
   dispatchEvent(
     new CustomEvent("dblclick-item", {
       detail: {
+        id: itemId,
         itemId,
+        item,
+        isFolder,
       },
     }),
   );
@@ -587,7 +604,7 @@ export const handlePageItemClick = (deps, payload) => {
 export const handleArrowClick = (deps, payload) => {
   const { store, render } = deps;
   payload._event.stopPropagation(); // Prevent triggering item click
-  const folderId = getItemIdFromEvent(payload._event, "arrow");
+  const folderId = getItemIdFromEvent(payload._event);
   if (!folderId) {
     return;
   }

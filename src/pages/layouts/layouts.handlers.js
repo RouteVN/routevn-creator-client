@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createLayoutsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -9,12 +10,21 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshLayoutsData = async (deps) => {
   const { store, render, projectService } = deps;
   const { layouts } = projectService.getState();
   store.setItems({ layoutsData: layouts });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createLayoutsFileExplorerHandlers({
+    refresh: refreshLayoutsData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshLayoutsData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

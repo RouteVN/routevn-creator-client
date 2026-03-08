@@ -239,7 +239,6 @@ export const selectViewData = ({ state }) => {
     selectedItemName: selectedItem?.name ?? "",
     selectedColorHex,
     detailFields,
-    repositoryTarget: "colors",
     title: "Colors",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,

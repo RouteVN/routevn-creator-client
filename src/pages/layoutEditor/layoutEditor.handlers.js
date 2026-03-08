@@ -5,6 +5,7 @@ import {
   layoutHierarchyStructureToRenderState,
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
+import { createLayoutElementsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -398,11 +399,9 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   await renderLayoutPreview(deps);
 };
 
-// Use the generic render handler
-export const handleTargetChanged = handleRenderOnly;
 export const handleAddLayoutClick = handleRenderOnly;
 
-export const handleDataChanged = async (deps) => {
+const refreshLayoutElementsData = async (deps) => {
   const { appService, store, projectService, render } = deps;
   const { layoutId } = appService.getPayload();
   const repository = await projectService.getRepository();
@@ -412,6 +411,16 @@ export const handleDataChanged = async (deps) => {
   render();
   await renderLayoutPreview(deps);
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createLayoutElementsFileExplorerHandlers({
+    getLayoutId: (deps) => deps.store.selectLayoutId(),
+    refresh: refreshLayoutElementsData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshLayoutElementsData;
 
 const unflattenKey = (key, value) => {
   // Support both "." and "_" as separators

@@ -70,7 +70,6 @@ export const selectViewData = ({ state }) => {
     flatGroups,
     resourceCategory: "systemConfig",
     selectedResourceId: "variables",
-    repositoryTarget: "variables",
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,

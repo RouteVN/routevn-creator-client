@@ -1,6 +1,23 @@
 import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
 import { formatFileSize } from "../../utils/index.js";
 
+const folderContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-child-folder" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const itemContextMenuItems = [
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const emptyContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-item" },
+];
+
 const formatDuration = (duration) => {
   if (duration === undefined || duration === null) {
     return "Unknown";
@@ -234,12 +251,14 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,
-    repositoryTarget: "sounds",
     searchQuery: state.searchQuery,
     resourceType: "sounds",
     title: "Sound",
     uploadText: "Upload Sound",
     acceptedFileTypes: [".mp3", ".wav", ".ogg"],
+    folderContextMenuItems,
+    itemContextMenuItems,
+    emptyContextMenuItems,
     selectedSoundWaveformDataFileId: selectedItem?.waveformDataFileId,
     isEditDialogOpen: state.isEditDialogOpen,
     editItemId: state.editItemId,

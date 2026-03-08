@@ -365,7 +365,6 @@ export const selectViewData = ({ state }) => {
     flatGroups,
     resourceCategory: "assets",
     selectedResourceId: "transforms",
-    repositoryTarget: "transforms",
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,

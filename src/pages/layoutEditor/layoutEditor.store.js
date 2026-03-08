@@ -759,7 +759,6 @@ export const selectViewData = ({ state }) => {
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
-    repositoryTarget: `layouts.items.${state.layout?.id}.elements`,
     resourceCategory: "userInterface",
     selectedResourceId: "layout-editor",
     contextMenuItems: parseAndRender(contextMenuItems, {

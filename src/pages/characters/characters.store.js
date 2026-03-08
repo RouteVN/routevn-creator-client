@@ -1,5 +1,22 @@
 import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
 
+const folderContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-child-folder" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const itemContextMenuItems = [
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const emptyContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-item" },
+];
+
 const CHARACTER_SHORTCUT_OPTIONS = [
   { label: "", value: "" },
   { label: "1", value: "1" },
@@ -281,10 +298,12 @@ export const selectViewData = ({ state }) => {
     selectedItemName: selectedItem?.name ?? "",
     selectedAvatarFileId: selectedItem?.fileId,
     detailFields,
-    repositoryTarget: "characters",
     searchQuery: state.searchQuery,
     resourceType: "characters",
     title: "Characters",
+    folderContextMenuItems,
+    itemContextMenuItems,
+    emptyContextMenuItems,
     isDialogOpen: state.isDialogOpen,
     dialogDefaultValues: state.dialogDefaultValues,
     dialogForm: state.dialogForm,

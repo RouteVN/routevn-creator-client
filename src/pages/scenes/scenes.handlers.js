@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { createScenesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
@@ -414,11 +415,20 @@ export const handleSetInitialScene = async (sceneId, deps) => {
   await projectService.setInitialScene({ sceneId });
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshScenesData = async (deps) => {
   const { store, render, projectService } = deps;
   syncScenesState({ store, projectService });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createScenesFileExplorerHandlers({
+    refresh: refreshScenesData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshScenesData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render, appService } = deps;

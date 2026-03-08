@@ -1,19 +1,3 @@
-// Context menu constants
-const CONTEXT_MENU_FOLDERS = [
-  { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
-];
-
-const CONTEXT_MENU_ITEMS = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
-];
-
-const EMPTY_CONTEXT_MENU_ITEMS = [
-  { label: "New Folder", type: "item", value: "new-item" },
-];
-
 const getBooleanAttr = (attrs, camelName, kebabName) => {
   const compactName = kebabName.replaceAll("-", "");
   const value =
@@ -161,14 +145,19 @@ export const toggleFolderExpand = ({ state }, { folderId } = {}) => {
 
 export const showDropdownMenuFileExplorerItem = (
   { state },
-  { position, id, type, contextMenuItems } = {},
+  {
+    position,
+    id,
+    type,
+    contextMenuItems,
+    folderContextMenuItems,
+    itemContextMenuItems,
+  } = {},
 ) => {
-  let items;
-  if (contextMenuItems) {
-    items = contextMenuItems;
-  } else {
-    items = type === "folder" ? CONTEXT_MENU_FOLDERS : CONTEXT_MENU_ITEMS;
-  }
+  const items =
+    type === "folder"
+      ? (folderContextMenuItems ?? contextMenuItems ?? [])
+      : (itemContextMenuItems ?? contextMenuItems ?? []);
 
   state.dropdownMenu = {
     isOpen: true,
@@ -186,7 +175,7 @@ export const showDropdownMenuFileExplorerEmpty = (
     isOpen: true,
     position,
     itemId: null,
-    items: emptyContextMenuItems || EMPTY_CONTEXT_MENU_ITEMS,
+    items: emptyContextMenuItems ?? [],
   };
 };
 
@@ -285,7 +274,6 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       bgc = "mu";
     }
 
-    // TODO: move out of base file explorer
     let svg = item.type;
     if (item.type.startsWith("text")) {
       svg = "text";

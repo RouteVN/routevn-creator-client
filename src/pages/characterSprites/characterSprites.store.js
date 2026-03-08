@@ -1,5 +1,22 @@
 import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
 
+const folderContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-child-folder" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const itemContextMenuItems = [
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const emptyContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-item" },
+];
+
 const form = {
   fields: [
     {
@@ -158,7 +175,6 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characterSprites",
     selectedItemId: state.selectedItemId,
-    repositoryTarget: `characters.items.${state.characterId}.sprites`,
     form,
     context: state.context,
     defaultValues,
@@ -167,6 +183,9 @@ export const selectViewData = ({ state }) => {
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    folderContextMenuItems,
+    itemContextMenuItems,
+    emptyContextMenuItems,
     title: state.characterName,
     backUrl: "/project/resources/characters",
   };

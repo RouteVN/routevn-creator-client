@@ -6,6 +6,7 @@ import {
 } from "../../constants/typography.js";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = (store, projectService) => {
@@ -22,11 +23,21 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshTypographyData = async (deps) => {
   const { store, render, projectService } = deps;
   syncRepositoryToStore(store, projectService);
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "typography",
+    refresh: refreshTypographyData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshTypographyData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

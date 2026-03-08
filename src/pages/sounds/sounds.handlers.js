@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
 const UNSUPPORTED_FORMAT_MESSAGE =
@@ -96,12 +97,22 @@ export const handleBeforeMount = (deps) => {
   return mountSubscriptions(deps);
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshSoundsData = async (deps) => {
   const { store, render, projectService } = deps;
   const { sounds } = projectService.getState();
   store.setItems({ soundData: sounds ?? { tree: [], items: {} } });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "sounds",
+    refresh: refreshSoundsData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshSoundsData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

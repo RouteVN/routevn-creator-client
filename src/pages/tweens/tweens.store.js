@@ -777,7 +777,6 @@ export const selectViewData = ({ state }) => {
     flatGroups,
     resourceCategory: "assets",
     selectedResourceId: "tweens",
-    repositoryTarget: "tweens",
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     selectedItemDuration,

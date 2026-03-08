@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../domain/treeHelpers.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;
@@ -68,12 +69,22 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshTransformsData = async (deps) => {
   const { store, render, projectService } = deps;
   const { transforms } = projectService.getState();
   store.setItems({ transformData: transforms ?? { tree: [], items: {} } });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "transforms",
+    refresh: refreshTransformsData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshTransformsData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
