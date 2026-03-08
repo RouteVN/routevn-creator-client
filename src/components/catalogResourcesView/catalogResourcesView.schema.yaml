@@ -1,0 +1,31 @@
+componentName: rvn-catalog-resources-view
+propsSchema:
+  type: object
+  properties:
+    navTitle:
+      type: string
+      description: Optional title to display in the header
+    groups:
+      type: array
+      description: Array of normalized catalog groups to display
+    selectedItemId:
+      type: string
+      description: ID of the currently selected item
+    searchQuery:
+      type: string
+      description: Current search query
+    searchPlaceholder:
+      type: string
+      description: Placeholder text for search input
+    emptyMessage:
+      type: string
+      description: Message to show when no items match
+    addText:
+      type: string
+      description: Text to display in add affordances
+    canAdd:
+      type: boolean
+      description: Whether add actions should be shown
+    itemContextMenuItems:
+      type: array
+      description: Context menu items for catalog cards

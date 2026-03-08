@@ -202,6 +202,10 @@ Current family pattern:
   UI-only center-pane component for media-style resource pages
 - `src/deps/features/resourcePages/media/`
   shared store/handler helpers for media-family pages
+- `src/components/catalogResourcesView/`
+  UI-only center-pane component for catalog-style resource pages
+- `src/deps/features/resourcePages/catalog/`
+  shared store/handler helpers for catalog-family pages
 
 Page-family helpers should own:
 

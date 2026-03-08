@@ -1,32 +1,27 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
-
-const getColorItemById = ({ store, itemId } = {}) => {
-  if (!itemId) return undefined;
-  const item = store.getState().colorsData?.items?.[itemId];
-  if (!item || item.type !== "color") return undefined;
-  return item;
-};
+import { createCatalogPageHandlers } from "../../deps/features/resourcePages/catalog/createCatalogPageHandlers.js";
 
 const syncEditFormValues = ({ deps, values } = {}) => {
-  const formRef = deps?.refs?.editForm;
-  if (!formRef) {
-    return;
-  }
-  formRef.reset();
-  formRef.setValues({ values });
+  const { editForm } = deps.refs;
+  editForm.reset();
+  editForm.setValues({ values });
 };
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
-  if (!itemId) return;
+  if (!itemId) {
+    return;
+  }
 
-  const { store, render } = deps;
-  const colorItem = getColorItemById({ store, itemId });
-  if (!colorItem) return;
+  const { store, render, refs } = deps;
+  const colorItem = store.selectColorItemById({ itemId });
+  if (!colorItem) {
+    return;
+  }
 
-  store.setSelectedItemId({ itemId: itemId });
-  store.openEditDialog({ itemId: itemId });
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer.selectItem({ itemId });
+  store.openEditDialog({ itemId });
   render();
 
   syncEditFormValues({
@@ -38,111 +33,41 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
-  await projectService.ensureRepository();
-  const { colors } = projectService.getState();
-  store.setItems({ colorsData: colors });
-  render();
-};
+const {
+  handleAfterMount,
+  refreshData: handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleItemClick: handleColorItemClick,
+  handleSearchInput,
+} = createCatalogPageHandlers({
+  resourceType: "colors",
+});
 
-const refreshColorsData = async (deps) => {
-  const { store, render, projectService } = deps;
-  const { colors } = projectService.getState();
-  store.setItems({ colorsData: colors });
-  render();
-};
-
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createResourceFileExplorerHandlers({
-    resourceType: "colors",
-    refresh: refreshColorsData,
-  });
-
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
-
-export const handleDataChanged = refreshColorsData;
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const { id, isFolder } = payload._event.detail;
-
-  if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
-    render();
-    return;
-  }
-
-  store.setSelectedItemId({ itemId: id });
-  render();
-};
-
-export const handleColorItemClick = (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail;
-  store.setSelectedItemId({ itemId: itemId });
-
-  const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
-
-  render();
-};
-
-export const handleColorCreated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
-  const { groupId, name, hex } = payload._event.detail;
-
-  await projectService.createResourceItem({
-    resourceType: "colors",
-    resourceId: nanoid(),
-    data: {
-      type: "color",
-      name,
-      hex,
-    },
-    parentId: groupId,
-    position: "last",
-  });
-
-  const { colors } = projectService.getState();
-  store.setItems({ colorsData: colors });
-  render();
-};
-
-export const handleColorEdited = (deps, payload) => {
-  const { subject } = deps;
-  const { itemId, name, hex } = payload._event.detail;
-
-  // Dispatch to app handlers for repository update
-  subject.dispatch("update-color", {
-    itemId,
-    updates: {
-      name,
-      hex,
-    },
-  });
+export {
+  handleAfterMount,
+  handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleColorItemClick,
+  handleSearchInput,
 };
 
 export const handleColorItemDoubleClick = (deps, payload) => {
-  const { store } = deps;
-  const detail = payload?._event?.detail || {};
-  const isFolder = detail.isFolder === true;
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
 
-  if (isFolder) return;
-
-  const candidateIds = [detail.itemId, detail.id, store.selectSelectedItemId()];
-  const itemId = candidateIds.find((candidateId) =>
-    getColorItemById({ store, itemId: candidateId }),
-  );
-  if (!itemId) return;
-
-  openEditDialogWithValues({ deps, itemId: itemId });
+  openEditDialogWithValues({ deps, itemId });
 };
 
 export const handleAddColorClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
-  store.openAddDialog({ groupId: groupId });
+  store.openAddDialog({ groupId });
   render();
 };
 
@@ -153,40 +78,41 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, projectService, appService, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
 
-  if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.values;
-    const editItemId = store.getState().editItemId;
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Color name is required.", { title: "Warning" });
+    return;
+  }
 
-    if (!formData.name || !formData.name.trim()) {
-      appService.showToast("Color name is required.", { title: "Warning" });
-      return;
-    }
-    // Update the color in the repository
-    await projectService.updateResourceItem({
-      resourceType: "colors",
-      resourceId: editItemId,
-      patch: {
-        name: formData.name,
-        hex: formData.hex,
-      },
-    });
-
-    const { colors } = projectService.getState();
-    store.setItems({ colorsData: colors });
-
+  const editItemId = store.getState().editItemId;
+  if (!editItemId) {
     store.closeEditDialog();
     render();
+    return;
   }
+
+  await projectService.updateResourceItem({
+    resourceType: "colors",
+    resourceId: editItemId,
+    patch: {
+      name,
+      hex: values?.hex ?? "#ffffff",
+    },
+  });
+
+  store.closeEditDialog();
+  await handleDataChanged(deps);
 };
 
 export const handleFormFieldClick = (deps) => {
-  const { store } = deps;
-  const selectedItemId = store.selectSelectedItemId();
-  if (selectedItemId) {
-    openEditDialogWithValues({ deps, itemId: selectedItemId });
-  }
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
 export const handleAddDialogClose = (deps) => {
@@ -196,60 +122,40 @@ export const handleAddDialogClose = (deps) => {
 };
 
 export const handleAddFormAction = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-
-  if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.values;
-
-    if (!formData.name || !formData.name.trim()) {
-      appService.showToast("Color name cannot be empty.", { title: "Warning" });
-      return;
-    }
-
-    const targetGroupId = store.getState().targetGroupId;
-    const newColorId = nanoid();
-
-    // Create the color in the repository
-    await projectService.createResourceItem({
-      resourceType: "colors",
-      resourceId: newColorId,
-      data: {
-        type: "color",
-        name: formData.name,
-        hex: formData.hex,
-      },
-      parentId: targetGroupId,
-      position: "last",
-    });
-
-    const { colors } = projectService.getState();
-    store.setItems({ colorsData: colors });
-    store.closeAddDialog();
-    render();
+  const { store, projectService, appService } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
   }
-};
 
-export const handleSearchInput = (deps, payload) => {
-  const { store, render } = deps;
-  const searchQuery = payload._event.detail?.value ?? "";
-  store.setSearchQuery({ query: searchQuery });
-  render();
-};
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Color name cannot be empty.", { title: "Warning" });
+    return;
+  }
 
-export const handleGroupToggle = (deps, payload) => {
-  const { store, render } = deps;
-  const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse({ groupId: groupId });
-  render();
+  await projectService.createResourceItem({
+    resourceType: "colors",
+    resourceId: nanoid(),
+    data: {
+      type: "color",
+      name,
+      hex: values?.hex ?? "#ffffff",
+    },
+    parentId: store.getState().targetGroupId,
+    position: "last",
+  });
+
+  store.closeAddDialog();
+  await handleDataChanged(deps);
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
 
-  const state = projectService.getState();
   const usage = recursivelyCheckResource({
-    state,
+    state: projectService.getState(),
     itemId,
     checkTargets: ["typography"],
   });
@@ -260,14 +166,10 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  // Perform the delete operation
   await projectService.deleteResourceItem({
-    resourceType,
+    resourceType: "colors",
     resourceId: itemId,
   });
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems({ colorsData: data });
-  render();
+  await handleDataChanged(deps);
 };
