@@ -18,7 +18,7 @@
   "dependencies": {
     "@rettangoli/fe": "1.0.3",
     "@rettangoli/ui": "1.0.3",
-    "@rettangoli/vt": "1.0.1",
+    "@rettangoli/vt": "1.0.2",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "2.4.2",
     "@tauri-apps/plugin-fs": "^2.4.2",
@@ -52,7 +52,7 @@
     "test:integration": "node scripts/test-integration.js",
     "test:command-only": "node scripts/test-command-only.js",
     "check:contracts": "rtgl check --dir src/components --dir src/pages",
-    "vt:generate": "bun run build:web && RTGL_VT_ENABLE=1 bash ./scripts/run-vt-docker.sh vt screenshot",
+    "vt:generate": "bun run build:web && bash ./scripts/run-vt-docker.sh vt screenshot",
     "vt:docker": "bun run vt:generate",
     "vt:report": "bun run vt:generate && bash ./scripts/run-vt-docker.sh vt report",
     "vt:accept": "bash ./scripts/run-vt-docker.sh vt accept",

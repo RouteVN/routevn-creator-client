@@ -6,7 +6,7 @@
       "dependencies": {
         "@rettangoli/fe": "1.0.3",
         "@rettangoli/ui": "1.0.3",
-        "@rettangoli/vt": "1.0.1",
+        "@rettangoli/vt": "1.0.2",
         "@tauri-apps/api": "^2.8.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "^2.4.2",
@@ -207,7 +207,7 @@
 
     "@rettangoli/ui": ["@rettangoli/ui@1.0.3", "", { "dependencies": { "@floating-ui/dom": "^1.6.13", "@rettangoli/fe": "1.0.3", "commander": "^13.1.0", "jempl": "1.0.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "snabbdom": "^3.6.2" } }, "sha512-CQTlWaRpwwmyKrnDZpwzkSrEBMbF/tOF063Y0lrLp9hdnKmpIOSB1GLtalMEU7x1oZuLQq+zBStbNwVVOxS7UQ=="],
 
-    "@rettangoli/vt": ["@rettangoli/vt@1.0.1", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-Tis1JkOjP9EDZ0hxyafmKG5BvwzNOnEgiA6NnsoBHBrKHh6f3R902sfhgWydTuOm0lpiurWmC0l7P/5RBtimwQ=="],
+    "@rettangoli/vt": ["@rettangoli/vt@1.0.2", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-QHweZ2BJFiQi0mc8KvSLiFjKTm9ovjs++x9cOTtN89AyK/Pn0acuD0mA+kjOu4zgPcaHvjOAINNqMFsqhx9Hgw=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.55.1", "", { "os": "android", "cpu": "arm" }, "sha512-9R0DM/ykwfGIlNu6+2U09ga0WXeZ9MRC2Ter8jnz8415VbuIykVuc6bhdrbORFZANDmTDvq26mJrEVTl8TdnDg=="],
 
