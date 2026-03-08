@@ -1,5 +1,7 @@
 import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
 
+const EMPTY_TREE = { tree: [], items: {} };
+
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
   { label: "Duplicate", type: "item", value: "duplicate-item" },
@@ -15,6 +17,10 @@ const itemContextMenuItems = [
 
 const emptyContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-item" },
+];
+
+const centerItemContextMenuItems = [
+  { label: "Delete", type: "item", value: "delete-item" },
 ];
 
 const form = {
@@ -35,14 +41,31 @@ const form = {
   ],
 };
 
+const createDetailValues = (item, imageSrc) => ({
+  fileId: imageSrc,
+  name: item?.name ?? "",
+  description: item?.description ?? "",
+});
+
+const matchesSearch = (item, searchQuery) => {
+  if (!searchQuery) {
+    return true;
+  }
+
+  const name = (item.name ?? "").toLowerCase();
+  const description = (item.description ?? "").toLowerCase();
+
+  return name.includes(searchQuery) || description.includes(searchQuery);
+};
+
 export const createInitialState = () => ({
-  spritesData: { tree: [], items: {} },
+  spritesData: EMPTY_TREE,
   selectedItemId: undefined,
   characterId: undefined,
   characterName: undefined,
   context: {
     fileId: {
-      src: "",
+      src: undefined,
     },
   },
   searchQuery: "",
@@ -55,7 +78,7 @@ export const setContext = ({ state }, { context } = {}) => {
 };
 
 export const setItems = ({ state }, { spritesData } = {}) => {
-  state.spritesData = spritesData;
+  state.spritesData = spritesData ?? EMPTY_TREE;
 };
 
 export const setCharacterId = ({ state }, { characterId } = {}) => {
@@ -71,13 +94,17 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
-  state.searchQuery = query;
+  state.searchQuery = query ?? "";
 };
 
 export const selectSelectedItem = ({ state }) => {
-  if (!state.selectedItemId) return null;
-  const flatItems = toFlatItems(state.spritesData);
-  return flatItems.find((item) => item.id === state.selectedItemId);
+  const item = state.spritesData.items?.[state.selectedItemId];
+  return item?.type === "image" ? item : undefined;
+};
+
+export const selectSpriteItemById = ({ state }, { itemId } = {}) => {
+  const item = state.spritesData.items?.[itemId];
+  return item?.type === "image" ? item : undefined;
 };
 
 export const selectSelectedItemId = ({ state }) => {
@@ -88,15 +115,10 @@ export const selectCharacterId = ({ state }) => {
   return state.characterId;
 };
 
-export const selectFlatItems = ({ state }) => {
-  return toFlatItems(state.spritesData);
-};
-
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {
-  const flatItems = toFlatItems(state.spritesData);
-  const item = flatItems.find((item) => item.id === itemId);
+  const item = state.spritesData.items?.[itemId];
 
-  if (item && item.fileId) {
+  if (item?.fileId) {
     state.fullImagePreviewVisible = true;
     state.fullImagePreviewFileId = item.fileId;
   }
@@ -110,83 +132,51 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.spritesData);
   const rawFlatGroups = toFlatGroups(state.spritesData);
-
-  // Get selected item details
-  const selectedItem = state.selectedItemId
-    ? flatItems.find((item) => item.id === state.selectedItemId)
-    : null;
-
-  // Transform selectedItem into form defaults
-  let defaultValues = {};
-
-  if (selectedItem) {
-    defaultValues = {
-      fileId: state.context?.fileId?.src || null,
-      name: selectedItem.name,
-      description: selectedItem.description || "No description provided",
-    };
-  }
-
-  // Apply search filter
   const searchQuery = state.searchQuery.toLowerCase().trim();
-  let filteredGroups = rawFlatGroups;
 
-  if (searchQuery) {
-    filteredGroups = rawFlatGroups
-      .map((group) => {
-        const filteredChildren = (group.children || []).filter((item) => {
-          const name = (item.name || "").toLowerCase();
-          const description = (item.description || "").toLowerCase();
-          return (
-            name.includes(searchQuery) || description.includes(searchQuery)
-          );
-        });
+  const mediaGroups = rawFlatGroups
+    .map((group) => {
+      const children = (group.children ?? []).filter((item) =>
+        matchesSearch(item, searchQuery),
+      );
+      const shouldDisplay = !searchQuery || children.length > 0;
 
-        const groupName = (group.name || "").toLowerCase();
-        const shouldIncludeGroup =
-          filteredChildren.length > 0 || groupName.includes(searchQuery);
+      return {
+        ...group,
+        children: children.map((item) => ({
+          ...item,
+          cardKind: "image",
+          imageFileId: item.fileId,
+        })),
+        hasChildren: children.length > 0,
+        shouldDisplay,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
-        return shouldIncludeGroup
-          ? {
-              ...group,
-              children: filteredChildren,
-              hasChildren: filteredChildren.length > 0,
-            }
-          : null;
-      })
-      .filter(Boolean);
-  }
-
-  // Apply collapsed state and selection styling
-  const flatGroups = filteredGroups.map((group) => ({
-    ...group,
-    children: (group.children || []).map((item) => ({
-      ...item,
-      selectedStyle:
-        item.id === state.selectedItemId
-          ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-          : "",
-    })),
-  }));
+  const selectedItem = state.spritesData.items?.[state.selectedItemId];
 
   return {
     flatItems,
-    flatGroups,
+    mediaGroups,
     resourceCategory: "assets",
     selectedResourceId: "characterSprites",
     selectedItemId: state.selectedItemId,
     form,
     context: state.context,
-    defaultValues,
+    defaultValues: createDetailValues(
+      selectedItem?.type === "image" ? selectedItem : undefined,
+      state.context.fileId.src,
+    ),
     searchQuery: state.searchQuery,
-    resourceType: "characterSprites",
+    uploadText: "Upload Sprite",
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
     folderContextMenuItems,
     itemContextMenuItems,
     emptyContextMenuItems,
+    centerItemContextMenuItems,
     title: state.characterName,
-    backUrl: "/project/resources/characters",
   };
 };

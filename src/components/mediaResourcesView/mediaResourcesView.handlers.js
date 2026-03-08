@@ -20,6 +20,17 @@ export const handleSearchInput = (deps, payload) => {
   );
 };
 
+export const handleBackClick = (deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("back-click", {
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleDragEnter = (deps, payload) => {
   const { store, render, props } = deps;
   if (props.canUpload === false) {

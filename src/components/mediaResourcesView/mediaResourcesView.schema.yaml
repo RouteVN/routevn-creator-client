@@ -35,6 +35,9 @@ propsSchema:
     showZoomControls:
       type: boolean
       description: Whether to show zoom controls
+    showBackButton:
+      type: boolean
+      description: Whether to show a back button in the header
     canUpload:
       type: boolean
       description: Whether upload actions should be shown

@@ -101,6 +101,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const mediaHeight = Math.round(baseMediaHeight * state.zoomLevel);
   const showZoomControlsAttr =
     attrs.showZoomControls ?? attrs["show-zoom-controls"];
+  const showBackButtonAttr = attrs.showBackButton ?? attrs["show-back-button"];
   const canUploadAttr = attrs.canUpload ?? attrs["can-upload"];
 
   const groups = (props.groups ?? []).map((group) => {
@@ -143,6 +144,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     mediaHeight,
     zoomLevel: state.zoomLevel,
     showZoomControls: parseBooleanProp(showZoomControlsAttr),
+    showBackButton: parseBooleanProp(showBackButtonAttr),
     canUpload: parseBooleanProp(canUploadAttr, true),
     draggingGroupId: state.draggingGroupId,
     dropdownMenu: state.dropdownMenu,
