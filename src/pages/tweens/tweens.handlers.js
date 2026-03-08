@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { resetState } from "./tweens.constants";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";

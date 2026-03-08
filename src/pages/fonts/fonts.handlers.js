@@ -3,7 +3,7 @@ import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { toFlatItems } from "../../domain/treeHelpers.js";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;

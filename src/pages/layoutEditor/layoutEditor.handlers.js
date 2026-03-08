@@ -5,7 +5,7 @@ import {
   layoutHierarchyStructureToRenderState,
 } from "../../utils/index.js";
 import { parseAndRender } from "jempl";
-import { createLayoutElementsFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createLayoutElementsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];

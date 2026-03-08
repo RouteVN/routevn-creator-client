@@ -6,7 +6,7 @@ import {
   updateTreeItem,
 } from "../../domain/treeMutations.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createCharacterSpritesFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const applyCharacterSpritesPatch = async ({
   projectService,

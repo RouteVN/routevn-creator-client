@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   const { store, refs, render } = deps;

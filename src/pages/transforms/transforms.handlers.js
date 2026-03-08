@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../domain/treeHelpers.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 // Constants for graphicsService integration (moved from groupTransformsView)
 const MARKER_SIZE = 30;

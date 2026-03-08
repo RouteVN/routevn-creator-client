@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { createScenesFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createScenesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
-import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
 

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createLayoutsFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createLayoutsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
-import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
 const UNSUPPORTED_FORMAT_MESSAGE =

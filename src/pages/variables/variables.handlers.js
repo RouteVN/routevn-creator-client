@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { createVariablesFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
+import { createVariablesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";

@@ -52,6 +52,7 @@ Local-first collaborative behavior uses Insieme:
 │   ├── components/
 │   ├── pages/
 │   ├── deps/
+│   │   ├── features/
 │   │   ├── infra/
 │   │   └── services/
 │   │       ├── shared/
@@ -82,6 +83,9 @@ Local-first collaborative behavior uses Insieme:
 
 - `src/deps/infra/`
   Low-level platform integrations such as router, DB, file system, pickers, and updater hooks.
+
+- `src/deps/features/`
+  Shared feature-level orchestration helpers used by handlers when code is not a UI component, domain rule, or public service facade.
 
 - `src/deps/services/`
   Handler-facing and internal services.
@@ -124,6 +128,9 @@ Local-first collaborative behavior uses Insieme:
 
 - `src/deps/infra/`
   Low-level platform integrations such as DB, file pickers, router, updater, and storage adapters.
+
+- `src/deps/features/`
+  Shared feature orchestration helpers that can be reused across pages without turning them into components or public services.
 
 - `src/deps/services/`
   Application services used by handlers.
@@ -277,6 +284,12 @@ Put it in:
 
 - `src/deps/infra/*` for low-level primitives
 - `src/deps/services/web/*` or `src/deps/services/tauri/*` for service adapters
+
+### Add shared feature orchestration
+
+Put it in:
+
+- `src/deps/features/*` when the code is shared across pages, stays above domain rules, and is not part of the public `appService` / `projectService` facade
 
 ### Add service behavior
 
