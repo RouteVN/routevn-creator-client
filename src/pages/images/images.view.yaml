@@ -19,12 +19,12 @@ refs:
         handler: handleImageItemPreview
       item-edit:
         handler: handleImageItemEdit
-      files-uploaded:
-        handler: handleDragDropFileSelected
+      files-dropped:
+        handler: handleFilesDropped
+      upload-click:
+        handler: handleUploadClick
       search-input:
-        action: setSearchQuery
-        payload:
-          value: ${_event.detail.value}
+        handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
   previewOverlay:
@@ -59,7 +59,7 @@ template:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-              - rvn-group-resources-view#groupview w=f h=f :navTitle=title show-zoom-controls :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes :imageHeight=imageHeight :maxWidth=maxWidth: null
+              - rvn-media-resources-view#groupview w=f h=f :navTitle=title show-zoom-controls :groups=mediaGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes :imageHeight=imageHeight :maxWidth=maxWidth :itemContextMenuItems=centerItemContextMenuItems: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
@@ -67,17 +67,17 @@ template:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
-                              - $if selectedImageFileId:
-                                  - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedImageFileId} h=160 bw=xs bc=bo br=md cur=pointer: null
+                              - $if selectedPreviewFileId:
+                                  - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedPreviewFileId} h=160 bw=xs bc=bo br=md cur=pointer: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
-              - $if editImageFileId:
+              - $if editPreviewFileId:
                   - rtgl-view slot=image-slot av=c ah=c:
-                      - rvn-file-image#editDialogImage fileId=${editImageFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editImageFileId}: null
+                      - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
                 $else:
                   - rtgl-view slot=image-slot av=c ah=c:
                       - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:

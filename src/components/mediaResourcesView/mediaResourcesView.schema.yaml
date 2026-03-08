@@ -1,0 +1,43 @@
+componentName: rvn-media-resources-view
+propsSchema:
+  type: object
+  properties:
+    navTitle:
+      type: string
+      description: Optional title to display in the header
+    groups:
+      type: array
+      description: Array of normalized media groups to display
+    selectedItemId:
+      type: string
+      description: ID of the currently selected item
+    searchQuery:
+      type: string
+      description: Current search query
+    uploadText:
+      type: string
+      description: Text to display in upload affordances
+    acceptedFileTypes:
+      type: array
+      description: Array of accepted file extensions
+    searchPlaceholder:
+      type: string
+      description: Placeholder text for search input
+    emptyMessage:
+      type: string
+      description: Message to show when no items match
+    imageHeight:
+      type: number
+      description: Base height for image cards
+    maxWidth:
+      type: number
+      description: Base width for image cards
+    showZoomControls:
+      type: boolean
+      description: Whether to show zoom controls
+    canUpload:
+      type: boolean
+      description: Whether upload actions should be shown
+    itemContextMenuItems:
+      type: array
+      description: Context menu items for media cards

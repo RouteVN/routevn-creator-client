@@ -1,96 +1,176 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
-import { toFlatItems } from "../../domain/treeHelpers.js";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
+import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
-  await projectService.ensureRepository();
-  const { fonts } = projectService.getState();
-  store.setItems({ fontsData: fonts });
-  render();
+const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
+
+const showInvalidFormatToast = (appService) => {
+  appService.showToast(
+    "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, .ttc, or .eot)",
+    { title: "Warning" },
+  );
 };
 
-const refreshFontsData = async (deps) => {
-  const { store, render, projectService } = deps;
-  const { fonts } = projectService.getState();
-  store.setItems({ fontsData: fonts });
-  render();
+const validateFontFiles = ({ appService, files } = {}) => {
+  const invalidFiles = Array.from(files ?? []).filter(
+    (file) => !file.name.match(FONT_FILE_PATTERN),
+  );
+
+  if (invalidFiles.length > 0) {
+    showInvalidFormatToast(appService);
+    return false;
+  }
+
+  return true;
 };
 
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createResourceFileExplorerHandlers({
-    resourceType: "fonts",
-    refresh: refreshFontsData,
-  });
+const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
+  const { appService, projectService } = deps;
+  if (!validateFontFiles({ appService, files })) {
+    return;
+  }
+
+  let successfulUploads;
+  try {
+    successfulUploads = await projectService.uploadFiles(files);
+  } catch {
+    appService.showToast("Failed to upload font.", { title: "Error" });
+    return;
+  }
+
+  if (!successfulUploads.length) {
+    appService.showToast("Failed to upload font.", { title: "Error" });
+    return;
+  }
+
+  for (const result of successfulUploads) {
+    await projectService.createResourceItem({
+      resourceType: "fonts",
+      resourceId: nanoid(),
+      data: {
+        type: "font",
+        fileId: result.fileId,
+        name: result.displayName,
+        fontFamily: result.fontName,
+        fileType: getFileType(result),
+        fileSize: result.file.size,
+      },
+      parentId,
+      position: "last",
+    });
+  }
+
+  await handleDataChanged(deps);
+};
+
+const {
+  refreshData: handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleSearchInput,
+  handleItemClick: handleFontItemClick,
+} = createMediaPageHandlers({
+  resourceType: "fonts",
+  selectItemById: (store, { itemId }) => store.selectFontItemById({ itemId }),
+});
 
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 
-export const handleDataChanged = refreshFontsData;
+export const handleAfterMount = async (deps) => {
+  const { projectService } = deps;
+  await projectService.ensureRepository();
+  await handleDataChanged(deps);
+};
 
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render } = deps;
-  const { id, isFolder } = payload._event.detail;
+export {
+  handleDataChanged,
+  handleFileExplorerSelectionChanged,
+  handleSearchInput,
+  handleFontItemClick,
+};
 
-  if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
-    render();
+export const handleUploadClick = async (deps, payload) => {
+  const { appService } = deps;
+  const { groupId } = payload._event.detail;
+  let files;
+
+  try {
+    files = await appService.pickFiles({
+      accept: ".ttf,.otf,.woff,.woff2,.ttc,.eot",
+      multiple: true,
+    });
+  } catch {
+    appService.showToast("Failed to select files.", { title: "Error" });
     return;
   }
 
-  store.setSelectedItemId({ itemId: id });
-  render();
+  if (!files?.length) {
+    return;
+  }
+
+  await createFontsFromFiles({
+    deps,
+    files,
+    parentId: resolveResourceParentId(groupId),
+  });
 };
 
-export const handleFontItemClick = (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { itemId } = payload._event.detail;
-  store.setSelectedItemId({ itemId: itemId });
+export const handleFilesDropped = async (deps, payload) => {
+  const { files, targetGroupId } = payload._event.detail;
 
-  const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
-
-  render();
+  await createFontsFromFiles({
+    deps,
+    files,
+    parentId: targetGroupId ?? undefined,
+  });
 };
 
 export const handleFormExtraEvent = async (deps) => {
-  const { appService, projectService, store, render } = deps;
-
-  // Get the currently selected item
+  const { appService, projectService, store } = deps;
   const selectedItem = store.selectSelectedItem();
+
   if (!selectedItem) {
-    console.warn("No item selected for font replacement");
     return;
   }
 
-  const file = await appService.pickFiles({
-    accept: ".ttf,.otf,.woff,.woff2,.ttc",
-    multiple: false,
-  });
+  let file;
+  try {
+    file = await appService.pickFiles({
+      accept: ".ttf,.otf,.woff,.woff2,.ttc,.eot",
+      multiple: false,
+    });
+  } catch {
+    appService.showToast("Failed to select file.", { title: "Error" });
+    return;
+  }
 
   if (!file) {
-    return; // User cancelled
-  }
-
-  // Validate file format
-  if (!file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i)) {
-    appService.showToast(
-      "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, or .ttc)",
-      { title: "Warning" },
-    );
     return;
   }
 
-  const uploadedFiles = await projectService.uploadFiles([file]);
-
-  if (uploadedFiles.length === 0) {
-    console.error("File upload failed, no files uploaded");
+  if (!validateFontFiles({ appService, files: [file] })) {
     return;
   }
 
-  const uploadResult = uploadedFiles[0];
+  let uploadedFiles;
+  try {
+    uploadedFiles = await projectService.uploadFiles([file]);
+  } catch {
+    appService.showToast("Failed to upload font.", { title: "Error" });
+    return;
+  }
+
+  const uploadResult = uploadedFiles?.[0];
+
+  if (!uploadResult) {
+    appService.showToast("Failed to upload font.", { title: "Error" });
+    return;
+  }
+
   await projectService.updateResourceItem({
     resourceType: "fonts",
     resourceId: selectedItem.id,
@@ -103,132 +183,45 @@ export const handleFormExtraEvent = async (deps) => {
     },
   });
 
-  // Update the store with the new repository state
-  const { fonts } = projectService.getState();
-  store.setItems({ fontsData: fonts });
-  render();
-};
-
-export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
-  const id = targetGroupId;
-
-  // Validate all files first
-  const invalidFiles = Array.from(files).filter(
-    (file) => !file.name.match(/\.(ttf|otf|woff|woff2|ttc)$/i),
-  );
-  if (invalidFiles.length > 0) {
-    appService.showToast(
-      "Invalid file format. Please upload only font files (.ttf, .otf, .woff, .woff2, or .ttc)",
-      { title: "Warning" },
-    );
-    return;
-  }
-
-  // Upload files
-  const successfulUploads = await projectService.uploadFiles(files);
-
-  // Add successfully uploaded files to repository and collect new font items
-  const newFontItems = [];
-  for (const result of successfulUploads) {
-    const fontItem = {
-      id: nanoid(),
-      type: "font",
-      fileId: result.fileId,
-      name: result.displayName,
-      fontFamily: result.fontName,
-      fileType: getFileType(result),
-      fileSize: result.file.size,
-    };
-
-    await projectService.createResourceItem({
-      resourceType: "fonts",
-      resourceId: fontItem.id,
-      data: fontItem,
-      parentId: id,
-      position: "last",
-    });
-
-    newFontItems.push(fontItem);
-  }
-
-  if (successfulUploads.length > 0) {
-    const { fonts } = projectService.getState();
-    store.setItems({ fontsData: fonts });
-
-    // Load the newly uploaded fonts to ensure they're available
-    const loadPromises = newFontItems.map((item) =>
-      projectService.loadFontFile({
-        fontName: item.fontFamily,
-        fileId: item.fileId,
-      }),
-    );
-    await Promise.all(loadPromises);
-  }
-
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleFontItemDoubleClick = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
-  if (isFolder) return;
-
-  // Find the font item
-  const { fonts } = projectService.getState();
-  const flatItems = toFlatItems(fonts);
-  const fontItem = flatItems.find((item) => item.id === itemId);
-
-  if (!fontItem) {
-    console.warn("Font item not found:", itemId);
+  if (isFolder || !itemId) {
     return;
   }
 
-  // Extract font information
+  const fontItem = store.selectFontItemById({ itemId });
+  if (!fontItem) {
+    return;
+  }
+
   const fontInfoExtractor = createFontInfoExtractor({
     getFileContent: (fileId) => projectService.getFileContent(fileId),
     loadFont: (fontName, fontUrl) => appService.loadFont(fontName, fontUrl),
   });
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
 
-  // Open modal with font info
-  store.setSelectedFontInfo({ fontInfo: fontInfo });
+  store.setSelectedFontInfo({ fontInfo });
   store.setModalOpen({ isOpen: true });
   render();
 };
 
 export const handleCloseModal = (deps) => {
   const { store, render } = deps;
-
   store.setModalOpen({ isOpen: false });
-  store.setSelectedFontInfo({ fontInfo: null });
-  render();
-};
-
-export const handleSearchInput = (deps, payload) => {
-  const { store, render } = deps;
-  const searchQuery = payload._event.detail.value ?? "";
-
-  store.setSearchQuery({ query: searchQuery });
-  render();
-};
-
-export const handleGroupToggle = (deps, payload) => {
-  const { store, render } = deps;
-  const groupId = payload._event.detail.groupId;
-
-  store.toggleGroupCollapse({ groupId: groupId });
+  store.setSelectedFontInfo({ fontInfo: undefined });
   render();
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
 
-  const state = projectService.getState();
   const usage = recursivelyCheckResource({
-    state,
+    state: projectService.getState(),
     itemId,
     checkTargets: ["typography"],
   });
@@ -239,14 +232,10 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  // Perform the delete operation
   await projectService.deleteResourceItem({
-    resourceType,
+    resourceType: "fonts",
     resourceId: itemId,
   });
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems({ fontsData: data });
-  render();
+  await handleDataChanged(deps);
 };
