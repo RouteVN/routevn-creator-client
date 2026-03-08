@@ -1,8 +1,10 @@
 refs:
   fileExplorer:
     eventListeners:
-      data-changed:
-        handler: handleDataChanged
+      file-action:
+        handler: handleFileExplorerAction
+      target-changed:
+        handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
@@ -57,7 +59,7 @@ template:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
-                  - rvn-file-explorer#fileExplorer :items=flatItems :repositoryTarget=repositoryTarget: null
+                  - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - rvn-group-resources-view#groupview w=f h=f :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":

@@ -6,6 +6,7 @@ import {
   updateTreeItem,
 } from "../../domain/treeMutations.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createCharacterSpritesFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 const applyCharacterSpritesPatch = async ({
   projectService,
@@ -130,7 +131,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshCharacterSpritesData = async (deps) => {
   const { appService, render, store, projectService, globalUI } = deps;
   const { characterId } = appService.getPayload();
   await projectService.ensureRepository();
@@ -171,6 +172,16 @@ export const handleDataChanged = async (deps) => {
     });
   }
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createCharacterSpritesFileExplorerHandlers({
+    getCharacterId: (deps) => deps.store.selectCharacterId(),
+    refresh: refreshCharacterSpritesData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshCharacterSpritesData;
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render, projectService } = deps;

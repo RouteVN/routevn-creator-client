@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { resetState } from "./tweens.constants";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
@@ -28,12 +29,22 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshTweensData = async (deps) => {
   const { store, render, projectService } = deps;
   const { tweens } = projectService.getState();
   store.setItems({ tweensData: tweens ?? { tree: [], items: {} } });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "tweens",
+    refresh: refreshTweensData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshTweensData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

@@ -3,6 +3,7 @@ import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { toFlatItems } from "../../domain/treeHelpers.js";
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
@@ -12,12 +13,22 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshFontsData = async (deps) => {
   const { store, render, projectService } = deps;
   const { fonts } = projectService.getState();
   store.setItems({ fontsData: fonts });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "fonts",
+    refresh: refreshFontsData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshFontsData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

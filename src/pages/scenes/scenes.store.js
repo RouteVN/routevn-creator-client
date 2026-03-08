@@ -8,6 +8,21 @@ const CONTEXT_MENU_ITEMS = [
   { label: "Set Initial Scene", type: "item", value: "set-initial" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
+
+const fileExplorerFolderContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-child-folder" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const fileExplorerItemContextMenuItems = [
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const fileExplorerEmptyContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-item" },
+];
 const toFiniteNumberOr = (value, fallback) =>
   Number.isFinite(value) ? value : fallback;
 
@@ -383,7 +398,6 @@ export const selectViewData = ({ state }, payload) => {
     flatGroups,
     resourceCategory: "project",
     selectedResourceId: "scenes",
-    repositoryTarget: "scenes",
     selectedItemId: state.selectedItemId,
     addSceneButtonVariant: state.isWaitingForTransform ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
@@ -406,5 +420,8 @@ export const selectViewData = ({ state }, payload) => {
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
     deadEndTooltip: state.deadEndTooltip,
+    folderContextMenuItems: fileExplorerFolderContextMenuItems,
+    itemContextMenuItems: fileExplorerItemContextMenuItems,
+    emptyContextMenuItems: fileExplorerEmptyContextMenuItems,
   };
 };

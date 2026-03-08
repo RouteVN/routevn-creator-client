@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { createVariablesFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
@@ -12,12 +13,21 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshVariablesData = async (deps) => {
   const { store, render, projectService } = deps;
   const { variables } = projectService.getState();
   store.setItems({ variablesData: variables ?? { tree: [], items: {} } });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createVariablesFileExplorerHandlers({
+    refresh: refreshVariablesData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshVariablesData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

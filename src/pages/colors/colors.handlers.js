@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 const getColorItemById = ({ store, itemId } = {}) => {
   if (!itemId) return undefined;
@@ -45,12 +46,22 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshColorsData = async (deps) => {
   const { store, render, projectService } = deps;
   const { colors } = projectService.getState();
   store.setItems({ colorsData: colors });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "colors",
+    refresh: refreshColorsData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshColorsData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

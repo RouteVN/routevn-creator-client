@@ -638,7 +638,6 @@ export const selectViewData = ({ state }) => {
       : undefined,
     detailPreviewFontFamily: detailPreviewFontData.fontFamily,
     detailPreviewFontFileId: detailPreviewFontData.fileId,
-    repositoryTarget: "typography",
     title: "Typography",
     contextMenuItems: state.contextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,

@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   const { store, refs, render } = deps;
@@ -87,13 +88,23 @@ export const handleBeforeMount = (deps) => {
   store.setItems({ videosData: videos ?? { tree: [], items: {} } });
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshVideosData = async (deps) => {
   const { store, render, projectService } = deps;
   const repository = await projectService.getRepository();
   const state = repository.getState();
   store.setItems({ videosData: state.videos ?? { tree: [], items: {} } });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "videos",
+    refresh: refreshVideosData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshVideosData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;

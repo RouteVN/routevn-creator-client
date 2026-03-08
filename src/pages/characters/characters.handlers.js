@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 const getCharacterItemById = ({ store, itemId } = {}) => {
   if (!itemId) return undefined;
@@ -43,12 +44,22 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleDataChanged = async (deps) => {
+const refreshCharactersData = async (deps) => {
   const { store, render, projectService } = deps;
   const { characters } = projectService.getState();
   store.setItems({ charactersData: characters });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "characters",
+    refresh: refreshCharactersData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshCharactersData;
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render } = deps;

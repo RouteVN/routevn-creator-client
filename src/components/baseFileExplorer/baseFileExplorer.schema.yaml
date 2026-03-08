@@ -20,6 +20,12 @@ propsSchema:
     contextMenuItems:
       type: array
       description: Menu items for right-clicking on an item
+    folderContextMenuItems:
+      type: array
+      description: Menu items for right-clicking on a folder item
+    itemContextMenuItems:
+      type: array
+      description: Menu items for right-clicking on a non-folder item
     emptyContextMenuItems:
       type: array
       description: Menu items for right-clicking on empty space
@@ -38,3 +44,10 @@ propsSchema:
     no-empty-message:
       type: boolean
       description: Whether to show the empty message when there are no items
+methods:
+  type: object
+  properties:
+    selectItem:
+      description: Selects an item by id in the explorer list.
+      params: []
+      returns: void

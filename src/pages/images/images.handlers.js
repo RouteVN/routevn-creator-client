@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
+import { createResourceFileExplorerHandlers } from "../shared/fileExplorerHandlers.js";
 
 const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
 
@@ -71,13 +72,23 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
   openEditDialogWithValues({ deps, itemId });
 };
 
-export const handleFileExplorerDataChanged = async (deps) => {
+const refreshImagesData = async (deps) => {
   const { store, render, projectService } = deps;
   const repository = await projectService.getRepository();
   const state = repository.getState();
   store.setItems({ imagesData: state.images });
   render();
 };
+
+const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+  createResourceFileExplorerHandlers({
+    resourceType: "images",
+    refresh: refreshImagesData,
+  });
+
+export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+
+export const handleFileExplorerDataChanged = refreshImagesData;
 
 const subscriptions = (deps) => {
   const { subject } = deps;

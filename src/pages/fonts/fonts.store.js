@@ -1,6 +1,23 @@
 import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
 import { formatFileSize } from "../../utils/index.js";
 
+const folderContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-child-folder" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const itemContextMenuItems = [
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const emptyContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-item" },
+];
+
 const fontToBase64Image = (fontFamily, text = "Aa") => {
   if (!fontFamily) return "";
 
@@ -294,7 +311,6 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,
-    repositoryTarget: "fonts",
     title: "Fonts",
     selectedFontFamily,
     selectedFontFileId: selectedItem?.fileId,
@@ -308,6 +324,9 @@ export const selectViewData = ({ state }) => {
     collapsedIds: state.collapsedIds,
     uploadText: "Upload Font",
     acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
+    folderContextMenuItems,
+    itemContextMenuItems,
+    emptyContextMenuItems,
     resourceType: "fonts",
   };
 

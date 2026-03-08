@@ -48,7 +48,7 @@ template:
           - rtgl-view w=f h=f:
               - $if items.length == 0 && !noEmptyMessage:
                   - rtgl-view#emptyMessage w=f h=f d=f av=c ah=c p=xl cur=pointer:
-                      - rtgl-text s=sm c=mu-fg ta=c: No items. Click to create a folder.
+                      - rtgl-text s=sm c=mu-fg ta=c: No items.
                 $else:
                   - $for item, i in items:
                       - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
