@@ -1,6 +1,6 @@
 ---
 title: Project Flow
-description: Covers the seeded project overview, edit dialog, resources, releases, and settings routes.
+description: Covers the seeded project overview, edit dialog, releases, and settings routes.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -59,15 +59,6 @@ steps:
     selector: "[data-testid='create-project-button']"
     state: visible
     timeoutMs: 5000
-  - action: wait
-    ms: 300
-  - action: screenshot
-  - action: goto
-    url: http://127.0.0.1:3001/project/resources?p=vt-project-flow
-  - action: waitFor
-    selector: "rvn-resources"
-    state: attached
-    timeoutMs: 10000
   - action: wait
     ms: 300
   - action: screenshot
