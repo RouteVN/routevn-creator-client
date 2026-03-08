@@ -1,0 +1,7 @@
+---
+title: Authenticate Page
+description: Verifies the authentication page shell renders.
+url: /authenticate
+waitStrategy: selector
+waitSelector: rvn-authenticate
+---

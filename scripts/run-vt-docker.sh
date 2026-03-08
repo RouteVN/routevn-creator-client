@@ -46,4 +46,9 @@ if [ -z "$IMAGE" ]; then
   exit 1
 fi
 
-exec docker run --rm --pull=never --user "$(id -u):$(id -g)" -v "$PWD:/app" -w /app "$IMAGE" rtgl "$@"
+env_args=()
+while IFS='=' read -r key _; do
+  env_args+=("-e" "$key")
+done < <(env | grep '^RTGL_VT_' || true)
+
+exec docker run --rm --pull=never --user "$(id -u):$(id -g)" "${env_args[@]}" -v "$PWD:/app" -w /app "$IMAGE" rtgl "$@"

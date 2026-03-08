@@ -1,0 +1,57 @@
+---
+title: Story Pages
+description: Covers the seeded project scene map, scene editor, and layout editor routes.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: editor
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: routevnVt.reset
+    value:
+      ok: true
+  - action: assert
+    type: js
+    fn: routevnVt.createProject
+    args:
+      - id: vt-project-story
+        name: VT Story Routes
+        description: Seeded project for story route screenshots.
+    value:
+      ok: true
+      projectId: vt-project-story
+  - action: goto
+    url: http://127.0.0.1:3001/project/scenes?p=vt-project-story
+  - action: waitFor
+    selector: "rvn-scenes"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: goto
+    url: http://127.0.0.1:3001/project/scene-editor?p=vt-project-story&sceneId=eXLwPZNpFqDjmXjORfonq
+  - action: waitFor
+    selector: "rvn-scene-editor"
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 1800
+  - action: screenshot
+  - action: goto
+    url: http://127.0.0.1:3001/project/resources/layout-editor?p=vt-project-story&layoutId=YgqAiakoomeYEtJrxBLuv
+  - action: waitFor
+    selector: "rvn-layout-editor"
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 800
+  - action: screenshot
+---

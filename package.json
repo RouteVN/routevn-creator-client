@@ -52,7 +52,7 @@
     "test:integration": "node scripts/test-integration.js",
     "test:command-only": "node scripts/test-command-only.js",
     "check:contracts": "rtgl check --dir src/components --dir src/pages",
-    "vt:generate": "bun run build:web && bash ./scripts/run-vt-docker.sh vt screenshot",
+    "vt:generate": "bun run build:web && RTGL_VT_ENABLE=1 bash ./scripts/run-vt-docker.sh vt screenshot",
     "vt:docker": "bun run vt:generate",
     "vt:report": "bun run vt:generate && bash ./scripts/run-vt-docker.sh vt report",
     "vt:accept": "bash ./scripts/run-vt-docker.sh vt accept",

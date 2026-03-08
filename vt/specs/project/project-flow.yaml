@@ -1,0 +1,101 @@
+---
+title: Project Flow
+description: Covers the seeded project overview, edit dialog, resources, releases, and settings routes.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: routevnVt.reset
+    value:
+      ok: true
+  - action: assert
+    type: js
+    fn: routevnVt.createProject
+    args:
+      - id: vt-project-flow
+        name: VT Project Flow
+        description: Seeded project for RouteVN visual testing.
+    value:
+      ok: true
+      projectId: vt-project-flow
+  - action: goto
+    url: http://127.0.0.1:3001/project?p=vt-project-flow
+  - action: waitFor
+    selector: "rvn-project"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 400
+  - action: screenshot
+  - action: select
+    testId: project-title-trigger
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "[data-testid='project-edit-dialog']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "[data-testid='project-edit-dialog']"
+    state: hidden
+    timeoutMs: 5000
+  - action: goto
+    url: http://127.0.0.1:3001/projects
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: goto
+    url: http://127.0.0.1:3001/project/resources?p=vt-project-flow
+  - action: waitFor
+    selector: "rvn-resources"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: goto
+    url: http://127.0.0.1:3001/project/releases/versions?p=vt-project-flow
+  - action: waitFor
+    selector: "rvn-versions"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: goto
+    url: http://127.0.0.1:3001/project/settings/about?p=vt-project-flow
+  - action: waitFor
+    selector: "rvn-about"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: goto
+    url: http://127.0.0.1:3001/project/settings/user?p=vt-project-flow
+  - action: waitFor
+    selector: "rvn-settings-user"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+---

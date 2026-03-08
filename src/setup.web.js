@@ -9,6 +9,7 @@ import { createAppService } from "./deps/services/web/appService.js";
 import { createWebProjectServiceWithCollab } from "./deps/services/web/collabBootstrapService.js";
 import { createPendingQueueService } from "./deps/services/pendingQueueService.js";
 import { createApiService } from "./deps/services/apiService.js";
+import { setupVtBridge } from "./deps/services/web/vtBridge.js";
 
 // Shared Services & Dependencies
 import { createAudioService } from "./deps/services/audioService.js";
@@ -64,6 +65,12 @@ const appService = createAppService({
 });
 
 const apiService = createApiService();
+
+setupVtBridge({
+  appDb,
+  appService,
+  projectService,
+});
 
 // Initialize async resources first
 const graphicsService = await createGraphicsService({ subject });
