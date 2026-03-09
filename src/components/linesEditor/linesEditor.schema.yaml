@@ -11,6 +11,8 @@ propsSchema:
       type: string
     sectionLineChanges:
       type: object
+    repositoryState:
+      type: object
 methods:
   type: object
   properties:
@@ -20,5 +22,17 @@ methods:
       returns: void
     syncAllContentLines:
       description: Forces all rendered line elements to match the current lines prop.
+      params: []
+      returns: void
+    focusLine:
+      description: Focuses a rendered line and applies caret/navigation state.
+      params: []
+      returns: void
+    focusContainer:
+      description: Focuses the outer block-mode container.
+      params: []
+      returns: void
+    scrollLineIntoView:
+      description: Scrolls a rendered line into view within the editor viewport.
       params: []
       returns: void

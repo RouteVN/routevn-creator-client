@@ -497,6 +497,49 @@ export const setLineTextContent = ({ state }, { lineId, content } = {}) => {
   }
 };
 
+export const splitLineOptimistically = (
+  { state },
+  { sectionId, lineId, newLineId, leftContent, newLineActions } = {},
+) => {
+  if (!sectionId || !lineId || !newLineId) {
+    return;
+  }
+
+  const section = state.domainState?.sections?.[sectionId];
+  const currentLine = state.domainState?.lines?.[lineId];
+  if (!section || !currentLine) {
+    return;
+  }
+
+  if (!currentLine.actions) {
+    currentLine.actions = {};
+  }
+
+  const existingDialogue = currentLine.actions.dialogue || {};
+  currentLine.actions.dialogue = {
+    ...existingDialogue,
+    content: leftContent || [{ text: "" }],
+  };
+  currentLine.updatedAt = Date.now();
+
+  if (!state.domainState.lines) {
+    state.domainState.lines = {};
+  }
+
+  state.domainState.lines[newLineId] = {
+    id: newLineId,
+    sectionId,
+    actions: structuredClone(newLineActions || {}),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  const currentIndex = section.lineIds.indexOf(lineId);
+  const insertIndex =
+    currentIndex >= 0 ? currentIndex + 1 : section.lineIds.length;
+  section.lineIds.splice(insertIndex, 0, newLineId);
+};
+
 export const selectProjectData = ({ state }) => {
   return constructProjectData(state.repositoryState);
 };

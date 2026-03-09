@@ -1,3 +1,5 @@
+import { debugLog, previewDebugText } from "../../utils/debugLog.js";
+
 const getLineContent = (element) => {
   if (!element || typeof element.getContent !== "function") {
     return "";
@@ -24,6 +26,45 @@ const hasSelectionRange = (element) => {
 
 const getLineIdFromElement = (element) => {
   return element?.dataset?.lineId || element?.id?.replace(/^line/, "") || "";
+};
+
+const shouldIgnoreElementInput = (element) => {
+  return element?.__rvnIgnoreInputUntilFocus === true;
+};
+
+const suppressElementInputUntilFocus = (element) => {
+  if (element) {
+    element.__rvnIgnoreInputUntilFocus = true;
+  }
+};
+
+const clearElementInputSuppression = (element) => {
+  if (element) {
+    element.__rvnIgnoreInputUntilFocus = false;
+  }
+};
+
+const dispatchEditorDataChanged = (dispatchEvent, element) => {
+  const lineId = getLineIdFromElement(element);
+  if (!lineId) {
+    return;
+  }
+
+  const content = getLineContent(element);
+  debugLog("lines", "editor.dispatch-data-changed", {
+    lineId,
+    contentLength: content.length,
+    content: previewDebugText(content),
+  });
+
+  dispatchEvent(
+    new CustomEvent("editor-data-changed", {
+      detail: {
+        lineId,
+        content,
+      },
+    }),
+  );
 };
 
 const getLineElementById = (refs, lineId) => {
@@ -323,15 +364,15 @@ const dispatchBlockModeSwapLine = (dispatchEvent, lineId, direction) => {
   );
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, refs, projectService } = deps;
+export const handleAfterMount = (deps) => {
+  const { refs } = deps;
 
-  await projectService.ensureRepository();
-  store.setRepositoryState({ repositoryState: projectService.getState() });
-  store.setReady();
-
-  // Focus container on mount to enable keyboard navigation
   focusContainerAfterPaint(refs);
+};
+
+export const handleBeforeMount = (deps) => {
+  const { store } = deps;
+  store.setReady();
 };
 
 export const handlePreviewRightClick = async (deps, payload) => {
@@ -718,11 +759,9 @@ export const handleLineKeyDown = (deps, payload) => {
     case "Backspace":
       if (mode === "text-editor") {
         // Check if cursor is at position 0
-        const currentPos = getCursorPosition(payload._event.currentTarget);
-        const currentContent = getLineContent(payload._event.currentTarget);
-        const currentLineId = getLineIdFromElement(
-          payload._event.currentTarget,
-        );
+        const currentElement = payload._event.currentTarget;
+        const currentPos = getCursorPosition(currentElement);
+        const currentLineId = getLineIdFromElement(currentElement);
 
         if (currentPos === 0) {
           payload._event.preventDefault();
@@ -734,15 +773,18 @@ export const handleLineKeyDown = (deps, payload) => {
           );
 
           if (currentIndex > 0) {
-            const prevLine = props.lines[currentIndex - 1];
+            dispatchEditorDataChanged(dispatchEvent, currentElement);
+            suppressElementInputUntilFocus(currentElement);
+            debugLog("lines", "editor.merge-request", {
+              lineId: currentLineId,
+              cursorPos: currentPos,
+            });
 
             // Dispatch event to merge lines
             dispatchEvent(
               new CustomEvent("mergeLines", {
                 detail: {
-                  prevLineId: prevLine.id,
                   currentLineId: currentLineId,
-                  contentToAppend: currentContent,
                 },
               }),
             );
@@ -765,15 +807,31 @@ export const handleLineKeyDown = (deps, payload) => {
     case "Enter":
       if (mode === "text-editor") {
         payload._event.preventDefault();
+        const currentElement = payload._event.currentTarget;
 
-        // Get current cursor position and text content
-        const cursorPos = getCursorPosition(payload._event.currentTarget);
-        const fullText = getLineContent(payload._event.currentTarget);
-
-        // Split the content at cursor position
-        const leftContent = fullText.substring(0, cursorPos);
-        const rightContent = fullText.substring(cursorPos);
+        debugLog("lines", "editor.enter-keydown", {
+          lineId: id,
+          textLength: getLineContent(currentElement).length,
+          cursorPos: getCursorPosition(currentElement),
+        });
         requestAnimationFrame(() => {
+          const cursorPos = getCursorPosition(currentElement);
+          const fullText = getLineContent(currentElement);
+          suppressElementInputUntilFocus(currentElement);
+
+          // Split the content at cursor position after the latest DOM/input work
+          // has settled, then let the parent structural handler own the writes.
+          const leftContent = fullText.substring(0, cursorPos);
+          const rightContent = fullText.substring(cursorPos);
+          debugLog("lines", "editor.enter-snapshot", {
+            lineId: id,
+            cursorPos,
+            fullTextLength: fullText.length,
+            fullText: previewDebugText(fullText),
+            leftContent: previewDebugText(leftContent),
+            rightContent: previewDebugText(rightContent),
+          });
+
           dispatchEvent(
             new CustomEvent("splitLine", {
               detail: {
@@ -1050,13 +1108,28 @@ export const handleLineMouseUp = (deps, payload) => {
 
 export const handleOnInput = (deps, payload) => {
   const { dispatchEvent, store } = deps;
+  const currentElement = payload._event.currentTarget;
 
-  const lineId = getLineIdFromElement(payload._event.currentTarget);
-  const content = getLineContent(payload._event.currentTarget);
+  if (shouldIgnoreElementInput(currentElement)) {
+    debugLog("lines", "editor.input-ignored", {
+      lineId: getLineIdFromElement(currentElement),
+      content: previewDebugText(getLineContent(currentElement)),
+    });
+    return;
+  }
+
+  const lineId = getLineIdFromElement(currentElement);
+  const content = getLineContent(currentElement);
 
   // Save cursor position on every input
-  const cursorPos = getCursorPosition(payload._event.currentTarget);
+  const cursorPos = getCursorPosition(currentElement);
   store.setCursorPosition({ position: cursorPos });
+  debugLog("lines", "editor.input", {
+    lineId,
+    cursorPos,
+    contentLength: content.length,
+    content: previewDebugText(content),
+  });
 
   const detail = {
     lineId,
@@ -1171,10 +1244,15 @@ export const updateSelectedLine = (deps, payload) => {
 
 export const handleOnFocus = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  const lineId = getLineIdFromElement(payload._event.currentTarget);
+  const lineElement = payload._event.currentTarget;
+  clearElementInputSuppression(lineElement);
+  const lineId = getLineIdFromElement(lineElement);
+  debugLog("lines", "editor.focus", {
+    lineId,
+    contentLength: getLineContent(lineElement).length,
+  });
 
   // Get the line element's coordinates
-  const lineElement = payload._event.currentTarget;
   const lineRect = lineElement.getBoundingClientRect();
 
   // Always update the selected line ID with coordinates
