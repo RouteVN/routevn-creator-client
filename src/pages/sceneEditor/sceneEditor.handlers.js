@@ -9,6 +9,7 @@ import {
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
 } from "../../utils/index.js";
+import { debugLog, previewDebugText } from "../../utils/debugLog.js";
 import { filter, tap, debounceTime } from "rxjs";
 
 const DEAD_END_TOOLTIP_CONTENT =
@@ -201,6 +202,68 @@ const syncStoreProjectState = (store, projectService) => {
     domainState: projectService.getDomainState(),
   });
   return repositoryState;
+};
+
+const getLinesEditorRef = (refs) => {
+  return refs?.linesEditor;
+};
+
+const focusLinesEditorLine = (refs, payload = {}) => {
+  const linesEditorRef = getLinesEditorRef(refs);
+  if (!linesEditorRef) {
+    return;
+  }
+
+  linesEditorRef.focusLine(payload);
+};
+
+const scrollLinesEditorLineIntoView = (refs, lineId) => {
+  const linesEditorRef = getLinesEditorRef(refs);
+  if (!linesEditorRef || !lineId) {
+    return;
+  }
+
+  linesEditorRef.scrollLineIntoView({ lineId });
+};
+
+const getDialogueText = (line) => {
+  return (line?.actions?.dialogue?.content || [])
+    .map((item) => item?.text ?? "")
+    .join("");
+};
+
+const resolveMergeLinesContext = (domainState, currentLineId) => {
+  const currentLine = domainState?.lines?.[currentLineId];
+  const sectionId = currentLine?.sectionId;
+  const section = sectionId ? domainState?.sections?.[sectionId] : undefined;
+  const lineIds = section?.lineIds || [];
+  const currentIndex = lineIds.indexOf(currentLineId);
+
+  if (!currentLine || currentIndex <= 0) {
+    return {};
+  }
+
+  const prevLineId = lineIds[currentIndex - 1];
+  const prevLine = domainState?.lines?.[prevLineId];
+
+  if (!prevLineId || !prevLine) {
+    return {};
+  }
+
+  return {
+    sectionId,
+    currentLine,
+    prevLineId,
+    prevLine,
+  };
+};
+
+const isMissingLinePreconditionError = (error, lineId) => {
+  return (
+    error?.name === "DomainPreconditionError" &&
+    error?.message === "line not found" &&
+    (!lineId || error?.details?.lineId === lineId)
+  );
 };
 
 async function loadAssetsForSceneIds(
@@ -436,6 +499,16 @@ async function writeDialogueContent(deps, lineId, { sectionId, content }) {
     existingDialogue,
   });
 
+  debugLog("lines", "scene.write-dialogue", {
+    lineId,
+    sectionId,
+    contentLength: (content || []).map((item) => item?.text ?? "").join("")
+      .length,
+    content: previewDebugText(
+      (content || []).map((item) => item?.text ?? "").join(""),
+    ),
+  });
+
   await projectService.updateLineActions({
     lineId,
     patch: {
@@ -453,10 +526,31 @@ async function writeDialogueContent(deps, lineId, { sectionId, content }) {
 async function flushDialogueQueue(deps) {
   const { dialogueQueueService } = deps;
 
+  debugLog("lines", "scene.flush-dialogue-queue:start", {
+    pendingSize: dialogueQueueService.size(),
+  });
+
   await dialogueQueueService.flush(async (lineId, data) => {
     await writeDialogueContent(deps, lineId, data);
   });
+
+  debugLog("lines", "scene.flush-dialogue-queue:end", {
+    pendingSize: dialogueQueueService.size(),
+  });
 }
+
+const applyPendingDialogueQueueToStore = (store, dialogueQueueService) => {
+  for (const [lineId, data] of dialogueQueueService.entries()) {
+    if (!lineId || !Array.isArray(data?.content)) {
+      continue;
+    }
+
+    store.setLineTextContent({
+      lineId,
+      content: data.content,
+    });
+  }
+};
 
 const findCharacterIdByShortcut = (repositoryState, shortcut) => {
   const normalizedShortcut = String(shortcut || "").trim();
@@ -672,9 +766,18 @@ const reconcileSceneSelection = (store) => {
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, projectService, render, subject } = deps;
+  const { store, projectService, render, subject, dialogueQueueService } = deps;
   await projectService.ensureRepository();
+
+  if (store.selectLockingLineId()) {
+    debugLog("lines", "scene.data-changed-skipped-while-locked", {
+      lockingLineId: store.selectLockingLineId(),
+    });
+    return;
+  }
+
   syncStoreProjectState(store, projectService);
+  applyPendingDialogueQueueToStore(store, dialogueQueueService);
 
   reconcileSceneSelection(store);
 
@@ -874,14 +977,47 @@ export const handleEditorDataChanged = async (deps, payload) => {
   }
 
   const lineId = payload._event.detail.lineId;
+  const selectedLineId = store.selectSelectedLineId();
+  const lockingLineId = store.selectLockingLineId();
+
+  if (!lineId) {
+    return;
+  }
+
+  // Ignore late input events from a line that is no longer selected or is in
+  // the middle of a structural split/merge operation.
+  if (lineId !== selectedLineId || lineId === lockingLineId) {
+    debugLog("lines", "scene.editor-data-ignored", {
+      lineId,
+      selectedLineId,
+      lockingLineId,
+      content: previewDebugText(payload._event.detail.content),
+    });
+    return;
+  }
+
   const content = [{ text: payload._event.detail.content }];
+  debugLog("lines", "scene.editor-data-accepted", {
+    lineId,
+    selectedLineId,
+    lockingLineId,
+    contentLength: payload._event.detail.content.length,
+    content: previewDebugText(payload._event.detail.content),
+  });
 
   // Update local store immediately for UI responsiveness
   store.setLineTextContent({ lineId, content });
 
   // Queue the pending update and schedule debounced write
-  const sectionId = store.selectSelectedSectionId();
+  const sectionId =
+    store.selectDomainState()?.lines?.[lineId]?.sectionId ??
+    store.selectSelectedSectionId();
   try {
+    debugLog("lines", "scene.editor-data-queued", {
+      lineId,
+      sectionId,
+      content: previewDebugText(payload._event.detail.content),
+    });
     dialogueQueueService.setAndSchedule(lineId, { sectionId, content });
   } catch (error) {
     console.error("[sceneEditor] Failed to queue dialogue update:", error);
@@ -1138,122 +1274,133 @@ export const handleSplitLine = async (deps, payload) => {
 
   // Mark this line as being processed IMMEDIATELY to prevent duplicate operations
   store.setLockingLineId({ lineId: lineId });
+  let shouldReleaseLockAfterFocus = false;
 
-  const newLineId = nanoid();
+  try {
+    const newLineId = nanoid();
 
-  // Flush pending dialogue updates before modifying repository
-  await flushDialogueQueue(deps);
+    // Flush pending dialogue updates before modifying repository
+    await flushDialogueQueue(deps);
 
-  // Get existing actions data to preserve everything except dialogue content
-  const domainState = projectService.getDomainState();
-  const existingDialogue =
-    domainState?.lines?.[lineId]?.actions?.dialogue || {};
-
-  // First, update the current line with the left content
-  // Only update the dialogue.content, preserve everything else
-  const leftContentArray = leftContent
-    ? [{ text: leftContent }]
-    : [{ text: "" }];
-
-  if (existingDialogue && Object.keys(existingDialogue).length > 0) {
-    await projectService.updateLineActions({
+    const domainState = projectService.getDomainState();
+    const existingDialogue =
+      domainState?.lines?.[lineId]?.actions?.dialogue || {};
+    debugLog("lines", "scene.split.after-flush", {
       lineId,
-      patch: {
-        dialogue: {
-          ...existingDialogue,
-          content: leftContentArray,
-        },
-      },
-      replace: false,
+      newLineId,
+      domainContent: previewDebugText(
+        (domainState?.lines?.[lineId]?.actions?.dialogue?.content || [])
+          .map((item) => item?.text ?? "")
+          .join(""),
+      ),
+      leftContent: previewDebugText(leftContent),
+      rightContent: previewDebugText(rightContent),
     });
-  } else {
-    await projectService.updateLineActions({
-      lineId,
-      patch: {
-        dialogue: {
-          content: leftContentArray,
-        },
-      },
-      replace: false,
-    });
-  }
 
-  // Then, create a new line with the right content and insert it after the current line
-  // New line should have empty actions except for dialogue.content
-  const rightContentArray = rightContent
-    ? [{ text: rightContent }]
-    : [{ text: "" }];
-  const shouldInheritNvl =
-    existingDialogue?.mode === "nvl" ||
-    shouldInheritNvlModeFromPreviousLine({
-      domainState,
-      sectionId,
-      lineId,
-      existingDialogue,
-    });
-  const shouldCreateDialogueAction = shouldInheritNvl || !!rightContent;
-  const newLineActions = shouldCreateDialogueAction
-    ? {
-        dialogue: {
-          mode: shouldInheritNvl ? "nvl" : "adv",
-          ...(rightContent ? { content: rightContentArray } : {}),
-        },
-      }
-    : {};
+    // First, update the current line with the left content
+    // Only update the dialogue.content, preserve everything else
+    const leftContentArray = leftContent
+      ? [{ text: leftContent }]
+      : [{ text: "" }];
 
-  await projectService.createLineItem({
-    sectionId,
-    lineId: newLineId,
-    line: {
-      actions: newLineActions,
-    },
-    afterLineId: lineId,
-  });
-
-  // Update store with new repository state (pending updates were already flushed)
-  syncStoreProjectState(store, projectService);
-
-  // Handle UI updates immediately for responsiveness
-  // Pre-configure the linesEditor before rendering
-  const refIds = refs;
-  const linesEditorRef = refIds["linesEditor"];
-
-  if (linesEditorRef) {
-    // Set cursor position to 0 (beginning of new line)
-    linesEditorRef.store.setCursorPosition({ position: 0 });
-    linesEditorRef.store.setGoalColumn({ goalColumn: 0 });
-    linesEditorRef.store.setNavigationDirection({ direction: "down" });
-    linesEditorRef.store.setIsNavigating({ isNavigating: true });
-  }
-
-  // Update selectedLineId through the store (not directly in linesEditor)
-  store.setSelectedLineId({ selectedLineId: newLineId });
-
-  // Render after setting the selected line ID
-  render();
-
-  // Use requestAnimationFrame for focus operations
-  requestAnimationFrame(() => {
-    if (linesEditorRef) {
-      linesEditorRef.transformedHandlers.updateSelectedLine({
-        currentLineId: newLineId,
-      });
-
-      linesEditorRef.syncContentLine({
+    if (existingDialogue && Object.keys(existingDialogue).length > 0) {
+      await projectService.updateLineActions({
         lineId,
+        patch: {
+          dialogue: {
+            ...existingDialogue,
+            content: leftContentArray,
+          },
+        },
+        replace: false,
       });
-
-      linesEditorRef.render();
+    } else {
+      await projectService.updateLineActions({
+        lineId,
+        patch: {
+          dialogue: {
+            content: leftContentArray,
+          },
+        },
+        replace: false,
+      });
     }
 
-    // Clear the splitting lock - allows new line to be split if Enter is still held
-    requestAnimationFrame(() => {
-      store.clearLockingLineId();
-    });
-  });
+    // Then, create a new line with the right content and insert it after the current line
+    // New line should have empty actions except for dialogue.content
+    const rightContentArray = rightContent
+      ? [{ text: rightContent }]
+      : [{ text: "" }];
+    const shouldInheritNvl =
+      existingDialogue?.mode === "nvl" ||
+      shouldInheritNvlModeFromPreviousLine({
+        domainState,
+        sectionId,
+        lineId,
+        existingDialogue,
+      });
+    const shouldCreateDialogueAction = shouldInheritNvl || !!rightContent;
+    const newLineActions = shouldCreateDialogueAction
+      ? {
+          dialogue: {
+            mode: shouldInheritNvl ? "nvl" : "adv",
+            ...(rightContent ? { content: rightContentArray } : {}),
+          },
+        }
+      : {};
 
-  // Trigger debounced canvas render
-  subject.dispatch("sceneEditor.renderCanvas", {});
+    const linesEditorRef = getLinesEditorRef(refs);
+    debugLog("lines", "scene.split.start", {
+      lineId,
+      sectionId,
+      newLineId,
+      leftContent: previewDebugText(leftContent),
+      rightContent: previewDebugText(rightContent),
+    });
+
+    await projectService.createLineItem({
+      sectionId,
+      lineId: newLineId,
+      line: {
+        actions: newLineActions,
+      },
+      afterLineId: lineId,
+    });
+    debugLog("lines", "scene.split.created-line", {
+      lineId,
+      newLineId,
+      leftContent: previewDebugText(leftContent),
+      rightContent: previewDebugText(rightContent),
+    });
+
+    syncStoreProjectState(store, projectService);
+    store.setSelectedLineId({ selectedLineId: newLineId });
+    render();
+    shouldReleaseLockAfterFocus = true;
+
+    requestAnimationFrame(() => {
+      if (linesEditorRef) {
+        linesEditorRef.focusLine({
+          lineId: newLineId,
+          cursorPosition: 0,
+          goalColumn: 0,
+          direction: "down",
+          syncLineId: lineId,
+        });
+      }
+
+      requestAnimationFrame(() => {
+        store.clearLockingLineId();
+      });
+    });
+
+    // Trigger debounced canvas render
+    subject.dispatch("sceneEditor.renderCanvas", {});
+  } finally {
+    if (!shouldReleaseLockAfterFocus) {
+      store.clearLockingLineId();
+    }
+  }
 };
 
 export const handlePasteLines = async (deps, payload) => {
@@ -1374,22 +1521,12 @@ export const handlePasteLines = async (deps, payload) => {
   syncStoreProjectState(store, projectService);
 
   // Set cursor position at end of last line
-  const refIds = refs;
-  const linesEditorRef = refIds["linesEditor"];
-
-  if (linesEditorRef) {
-    // Calculate cursor position (end of last pasted content)
-    const lastLineContent =
-      lines.length === 1
-        ? firstLineContent + rightContent
-        : lines[lines.length - 1] + rightContent;
-    const cursorPosition = lastLineContent.length - rightContent.length;
-
-    linesEditorRef.store.setCursorPosition({ position: cursorPosition });
-    linesEditorRef.store.setGoalColumn({ goalColumn: cursorPosition });
-    linesEditorRef.store.setNavigationDirection({ direction: null });
-    linesEditorRef.store.setIsNavigating({ isNavigating: true });
-  }
+  const linesEditorRef = getLinesEditorRef(refs);
+  const lastLineContent =
+    lines.length === 1
+      ? firstLineContent + rightContent
+      : lines[lines.length - 1] + rightContent;
+  const cursorPosition = lastLineContent.length - rightContent.length;
 
   // Update selectedLineId
   store.setSelectedLineId({ selectedLineId: lastCreatedLineId });
@@ -1400,15 +1537,13 @@ export const handlePasteLines = async (deps, payload) => {
   // Focus the last created line
   requestAnimationFrame(() => {
     if (linesEditorRef) {
-      linesEditorRef.transformedHandlers.updateSelectedLine({
-        currentLineId: lastCreatedLineId,
+      linesEditorRef.focusLine({
+        lineId: lastCreatedLineId,
+        cursorPosition: cursorPosition,
+        goalColumn: cursorPosition,
+        direction: null,
+        syncLineId: lineId,
       });
-
-      linesEditorRef.syncContentLine({
-        lineId,
-      });
-
-      linesEditorRef.render();
     }
   });
 
@@ -1514,22 +1649,18 @@ export const handleNewLine = async (deps, payload) => {
   store.setSelectedLineId({ selectedLineId: newLineId });
 
   const shouldEnterInsertMode = !!requestedPosition;
-  const linesEditorRef = refs?.linesEditor;
-  if (shouldEnterInsertMode && linesEditorRef) {
-    linesEditorRef.store.setCursorPosition({ position: 0 });
-    linesEditorRef.store.setGoalColumn({ goalColumn: 0 });
-    linesEditorRef.store.setNavigationDirection({ direction: null });
-    linesEditorRef.store.setIsNavigating({ isNavigating: true });
-  }
+  const linesEditorRef = getLinesEditorRef(refs);
 
   render();
 
   if (shouldEnterInsertMode && linesEditorRef) {
     requestAnimationFrame(() => {
-      linesEditorRef.transformedHandlers.updateSelectedLine({
-        currentLineId: newLineId,
+      linesEditorRef.focusLine({
+        lineId: newLineId,
+        cursorPosition: 0,
+        goalColumn: 0,
+        direction: null,
       });
-      linesEditorRef.render();
     });
   }
 
@@ -1542,7 +1673,7 @@ export const handleLineNavigation = (deps, payload) => {
     return;
   }
 
-  const { targetLineId, mode, direction, targetCursorPosition, lineRect } =
+  const { targetLineId, mode, direction, targetCursorPosition } =
     payload._event.detail;
 
   // For block mode, just update the selection and handle scrolling
@@ -1563,65 +1694,14 @@ export const handleLineNavigation = (deps, payload) => {
     store.setSelectedLineId({ selectedLineId: targetLineId });
     render();
 
-    // Check if we need to scroll the line into view using provided coordinates
-    if (lineRect) {
+    if (targetLineId) {
       requestAnimationFrame(() => {
-        const refIds = refs;
-        const linesEditorRef = refIds["linesEditor"];
-
-        if (linesEditorRef) {
-          const linesEditorElm = linesEditorRef;
-
-          // The scroll container is actually the parent of the lines-editor component
-          // It's the rtgl-view with 'sv' (scroll vertical) attribute
-          const scrollContainer = linesEditorElm.parentElement;
-
-          const containerRect = scrollContainer?.getBoundingClientRect() || {};
-
-          // Check if the line is fully visible in the viewport using provided coordinates
-          const isAboveViewport = lineRect.top < containerRect.top;
-          const isBelowViewport = lineRect.bottom > containerRect.bottom;
-
-          // Only scroll if the line is not fully visible
-          if (isAboveViewport || isBelowViewport) {
-            // Query for the line element to scroll it
-            // The line elements are inside the lines-editor component
-            let lineElement = null;
-
-            // First try shadow DOM
-            if (linesEditorElm.shadowRoot) {
-              lineElement = linesEditorElm.shadowRoot.querySelector(
-                `#line${targetLineId}`,
-              );
-            }
-
-            // If not found, try regular DOM inside the component
-            if (!lineElement) {
-              lineElement = linesEditorElm.querySelector(
-                `#line${targetLineId}`,
-              );
-            }
-
-            // Last resort: search in the whole document
-            if (!lineElement) {
-              lineElement = document.querySelector(`#line${targetLineId}`);
-            }
-
-            if (lineElement) {
-              lineElement.scrollIntoView({
-                behavior: "auto", // Immediate scroll, no animation
-                block: "nearest",
-                inline: "nearest",
-              });
-            }
-          }
-        }
+        scrollLinesEditorLineIntoView(refs, targetLineId);
       });
     }
 
     // Trigger debounced canvas render
     subject.dispatch("sceneEditor.renderCanvas", {});
-    render();
     return;
   }
 
@@ -1640,58 +1720,30 @@ export const handleLineNavigation = (deps, payload) => {
 
   // Handle navigation to different line
   if (nextLineId && nextLineId !== currentLineId) {
-    const refIds = refs;
-    const linesEditorRef = refIds["linesEditor"];
+    const linesEditorRef = getLinesEditorRef(refs);
 
     // Update selectedLineId through the store
     store.setSelectedLineId({ selectedLineId: nextLineId });
+    render();
 
-    // Handle cursor positioning based on direction
-    if (linesEditorRef) {
-      if (targetCursorPosition !== undefined) {
-        if (targetCursorPosition === -1) {
-          // Special value: position at end of target line (for ArrowLeft navigation)
-          // Set a large goal column - updateSelectedLine will clamp to actual text length
-          // when direction is "end"
-          linesEditorRef.store.setCursorPosition({
-            position: Number.MAX_SAFE_INTEGER,
-          });
-          linesEditorRef.store.setGoalColumn({
-            goalColumn: Number.MAX_SAFE_INTEGER,
-          });
-          linesEditorRef.store.setNavigationDirection({ direction: "end" }); // Special direction for end positioning
-        } else {
-          linesEditorRef.store.setCursorPosition({
-            position: targetCursorPosition,
-          });
-          if (targetCursorPosition === 0) {
-            // When moving to beginning, set goal column to 0 as well
-            linesEditorRef.store.setGoalColumn({ goalColumn: 0 });
-          }
-        }
-      }
-
-      // Set direction flag in store before calling updateSelectedLine
-      if (direction) {
-        linesEditorRef.store.setNavigationDirection({ direction: direction });
-      }
-
-      linesEditorRef.transformedHandlers.updateSelectedLine({
-        currentLineId: nextLineId,
-      });
-    }
-
-    // Force a render to update line colors after navigation
-    setTimeout(() => {
-      render();
-      // Also render the linesEditor to update line colors
+    requestAnimationFrame(() => {
       if (linesEditorRef) {
-        linesEditorRef.render();
+        const isEndNavigation = targetCursorPosition === -1;
+        focusLinesEditorLine(refs, {
+          lineId: nextLineId,
+          cursorPosition: isEndNavigation
+            ? Number.MAX_SAFE_INTEGER
+            : targetCursorPosition,
+          goalColumn: isEndNavigation
+            ? Number.MAX_SAFE_INTEGER
+            : targetCursorPosition,
+          direction: direction ?? null,
+        });
       }
 
       // Trigger debounced canvas render
       subject.dispatch("sceneEditor.renderCanvas", {});
-    }, 0);
+    });
   } else if (direction === "up" && currentLineId === targetLineId) {
     // First line - show animation effects
     graphicsService.render({
@@ -1756,95 +1808,122 @@ export const handleMergeLines = async (deps, payload) => {
     return;
   }
 
-  const { prevLineId, currentLineId, contentToAppend } = payload._event.detail;
-
-  const sectionId = store.selectSelectedSectionId();
+  const { currentLineId } = payload._event.detail;
 
   // Check if this line is already being processed (split/merge)
   const lockingLineId = store.selectLockingLineId();
 
-  if (lockingLineId === currentLineId) {
+  if (lockingLineId) {
     return;
   }
 
   store.setLockingLineId({ lineId: currentLineId });
+  let shouldReleaseLockAfterFocus = false;
+  let resolvedPrevLineId;
 
-  // Flush pending dialogue updates before modifying repository
-  await flushDialogueQueue(deps);
+  try {
+    // Flush pending dialogue updates before modifying repository
+    await flushDialogueQueue(deps);
 
-  // Get previous line content and existing dialogue properties
-  const scene = store.selectScene();
-  const section = scene.sections.find((s) => s.id === sectionId);
-  const prevLine = section.lines.find((s) => s.id === prevLineId);
+    // Re-resolve merge targets from authoritative domain state after the queue
+    // flush so held Backspace cannot operate on stale DOM/store state.
+    const domainState = projectService.getDomainState();
+    const { currentLine, prevLineId, prevLine } = resolveMergeLinesContext(
+      domainState,
+      currentLineId,
+    );
+    resolvedPrevLineId = prevLineId;
 
-  if (!prevLine) {
-    return;
-  }
-
-  // Get previous line content - it's an array of content objects
-  const prevContentArray = prevLine.actions?.dialogue?.content || [];
-  const prevContentText = prevContentArray.map((c) => c.text || "").join("");
-  const mergedContent = prevContentText + contentToAppend;
-
-  // Store the length of the previous content for cursor positioning
-  const prevContentLength = prevContentText.length;
-
-  // Get existing dialogue data to preserve layoutId and characterId
-  let existingDialogue = {};
-  if (prevLine.actions?.dialogue) {
-    existingDialogue = prevLine.actions.dialogue;
-  }
-
-  const finalContent = [{ text: mergedContent }];
-  // Update previous line with merged content
-  await projectService.updateLineActions({
-    lineId: prevLineId,
-    patch: {
-      dialogue: {
-        ...existingDialogue,
-        content: finalContent,
-      },
-    },
-    replace: false,
-  });
-
-  await projectService.deleteLineItem({ lineId: currentLineId });
-
-  // Update repository state in store to reflect the changes
-  syncStoreProjectState(store, projectService);
-
-  // Update selected line to the previous one
-  store.setSelectedLineId({ selectedLineId: prevLineId });
-
-  // Pre-configure the linesEditor for cursor positioning
-  const refIds = refs;
-  const linesEditorRef = refIds["linesEditor"];
-
-  if (linesEditorRef) {
-    // Set cursor position to where the previous content ended
-    linesEditorRef.store.setCursorPosition({ position: prevContentLength });
-    linesEditorRef.store.setGoalColumn({ goalColumn: prevContentLength });
-    linesEditorRef.store.setIsNavigating({ isNavigating: true });
-  }
-
-  // Render and then focus
-  render();
-
-  requestAnimationFrame(() => {
-    if (linesEditorRef) {
-      linesEditorRef.transformedHandlers.updateSelectedLine({
-        currentLineId: prevLineId,
-      });
-      linesEditorRef.render();
+    if (!currentLine || !prevLineId || !prevLine) {
+      return;
     }
 
-    requestAnimationFrame(() => {
-      store.clearLockingLineId();
-    });
-  });
+    const prevContentText = getDialogueText(prevLine);
+    const currentContentText = getDialogueText(currentLine);
+    const mergedContent = prevContentText + currentContentText;
 
-  // Trigger debounced canvas render
-  subject.dispatch("sceneEditor.renderCanvas", {});
+    // Store the length of the previous content for cursor positioning
+    const prevContentLength = prevContentText.length;
+
+    // Get existing dialogue data to preserve layoutId and characterId
+    let existingDialogue = {};
+    if (prevLine.actions?.dialogue) {
+      existingDialogue = prevLine.actions.dialogue;
+    }
+
+    const finalContent = [{ text: mergedContent }];
+    // Update previous line with merged content
+    await projectService.updateLineActions({
+      lineId: prevLineId,
+      patch: {
+        dialogue: {
+          ...existingDialogue,
+          content: finalContent,
+        },
+      },
+      replace: false,
+    });
+
+    // Re-check existence in case another merge/delete removed the line while the
+    // previous update command was being processed.
+    if (!projectService.getDomainState()?.lines?.[currentLineId]) {
+      return;
+    }
+
+    try {
+      await projectService.deleteLineItem({ lineId: currentLineId });
+    } catch (error) {
+      if (isMissingLinePreconditionError(error, currentLineId)) {
+        return;
+      }
+
+      throw error;
+    }
+
+    // Update repository state in store to reflect the changes
+    syncStoreProjectState(store, projectService);
+
+    // Update selected line to the previous one
+    store.setSelectedLineId({ selectedLineId: prevLineId });
+
+    // Pre-configure the linesEditor for cursor positioning
+    const linesEditorRef = getLinesEditorRef(refs);
+
+    // Render and then focus
+    render();
+    shouldReleaseLockAfterFocus = true;
+
+    requestAnimationFrame(() => {
+      if (linesEditorRef) {
+        linesEditorRef.focusLine({
+          lineId: prevLineId,
+          cursorPosition: prevContentLength,
+          goalColumn: prevContentLength,
+          direction: null,
+        });
+      }
+
+      requestAnimationFrame(() => {
+        store.clearLockingLineId();
+      });
+    });
+
+    // Trigger debounced canvas render
+    subject.dispatch("sceneEditor.renderCanvas", {});
+  } catch (error) {
+    if (
+      isMissingLinePreconditionError(error, currentLineId) ||
+      isMissingLinePreconditionError(error, resolvedPrevLineId)
+    ) {
+      return;
+    }
+
+    throw error;
+  } finally {
+    if (!shouldReleaseLockAfterFocus) {
+      store.clearLockingLineId();
+    }
+  }
 };
 
 export const handleSectionTabRightClick = (deps, payload) => {

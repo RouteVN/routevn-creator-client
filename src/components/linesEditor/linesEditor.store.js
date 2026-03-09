@@ -24,8 +24,9 @@ export const setReady = ({ state }, _payload = {}) => {
   state.ready = true;
 };
 
+// Compatibility shim while the linesEditor repository dependency is moving to props.
 export const setRepositoryState = ({ state }, { repositoryState } = {}) => {
-  state.repositoryState = repositoryState;
+  state.repositoryState = repositoryState || {};
 };
 
 export const setCursorPosition = ({ state }, { position } = {}) => {
@@ -88,16 +89,12 @@ export const selectAwaitingDeleteShortcut = ({ state }) => {
 
 export const selectLineContent = ({ props }, payload) => {
   const { lineId } = payload;
-  const line = (props.lines || []).find((l) => l.id === lineId);
-  if (line) {
-    const firstContent = line.actions?.dialogue?.content?.[0];
-    if (firstContent) {
-      return firstContent.text || "";
-    }
-  }
+  const line = (props.lines || []).find((item) => item.id === lineId);
+  return line?.actions?.dialogue?.content?.[0]?.text ?? "";
 };
 
 export const selectViewData = ({ state, props }) => {
+  const repositoryState = props.repositoryState || state.repositoryState || {};
   const sectionLineChanges = props.sectionLineChanges || {};
   const changesLines = sectionLineChanges.lines || [];
 
@@ -116,8 +113,7 @@ export const selectViewData = ({ state, props }) => {
       background = {
         changeType: changes.background.changeType,
         resourceId: bgData.resourceId,
-        fileId:
-          state.repositoryState.images?.items?.[bgData.resourceId]?.fileId,
+        fileId: repositoryState.images?.items?.[bgData.resourceId]?.fileId,
       };
     }
 
@@ -130,8 +126,7 @@ export const selectViewData = ({ state, props }) => {
           changeType: changes.character.changeType,
           items: charData.items
             .map((char) => {
-              const character =
-                state.repositoryState.characters?.items?.[char.id];
+              const character = repositoryState.characters?.items?.[char.id];
               let spriteFileId = null;
 
               if (
@@ -148,12 +143,10 @@ export const selectViewData = ({ state, props }) => {
                   if (sprite?.fileId) {
                     spriteFileId = sprite.fileId;
                   } else if (
-                    state.repositoryState.images?.items?.[
-                      firstSprite.resourceId
-                    ]
+                    repositoryState.images?.items?.[firstSprite.resourceId]
                   ) {
                     spriteFileId =
-                      state.repositoryState.images.items[firstSprite.resourceId]
+                      repositoryState.images.items[firstSprite.resourceId]
                         .fileId;
                   }
                 }
@@ -220,7 +213,7 @@ export const selectViewData = ({ state, props }) => {
     // Dialogue character icon (who is speaking) - still from line.actions
     let characterFileId;
     if (line.actions?.dialogue?.characterId) {
-      const characters = toFlatItems(state.repositoryState.characters || []);
+      const characters = toFlatItems(repositoryState.characters || []);
       const character = characters.find(
         (c) => c.id === line.actions.dialogue.characterId,
       );
@@ -241,14 +234,14 @@ export const selectViewData = ({ state, props }) => {
     if (sectionTransitionData) {
       if (sectionTransitionData.sceneId) {
         sectionTransition = true;
-        const allScenes = toFlatItems(state.repositoryState.scenes || []);
+        const allScenes = toFlatItems(repositoryState.scenes || []);
         const targetScene = allScenes.find(
           (scene) => scene.id === sectionTransitionData.sceneId,
         );
         transitionTarget = targetScene?.name || "Unknown Scene";
       } else if (sectionTransitionData.sectionId) {
         sectionTransition = true;
-        const allScenes = toFlatItems(state.repositoryState.scenes || []);
+        const allScenes = toFlatItems(repositoryState.scenes || []);
         let sectionName = "Unknown Section";
         for (const scene of allScenes) {
           if (scene.sections) {

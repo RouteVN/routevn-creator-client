@@ -1,3 +1,5 @@
+import { debugLog, previewDebugText } from "../../utils/debugLog.js";
+
 /**
  * Creates a pending queue service for managing debounced updates.
  *
@@ -14,7 +16,36 @@
 export function createPendingQueueService({ debounceMs = 2000 } = {}) {
   const pending = new Map();
   const timers = new Map();
+  const activeWrites = new Map();
   let onWriteCallback = null;
+
+  const trackActiveWrite = async (key, writePromise) => {
+    activeWrites.set(key, writePromise);
+
+    try {
+      await writePromise;
+    } finally {
+      if (activeWrites.get(key) === writePromise) {
+        activeWrites.delete(key);
+      }
+    }
+  };
+
+  const waitForActiveWrites = async (key) => {
+    if (key !== undefined) {
+      const writePromise = activeWrites.get(key);
+      if (writePromise) {
+        await writePromise;
+      }
+      return;
+    }
+
+    if (activeWrites.size === 0) {
+      return;
+    }
+
+    await Promise.all(Array.from(activeWrites.values()));
+  };
 
   return {
     /**
@@ -33,6 +64,13 @@ export function createPendingQueueService({ debounceMs = 2000 } = {}) {
      */
     setAndSchedule(key, data) {
       pending.set(key, data);
+      debugLog("lines", "queue.set-and-schedule", {
+        key,
+        pendingSize: pending.size,
+        content: previewDebugText(
+          data?.content?.map((item) => item?.text ?? "").join(""),
+        ),
+      });
 
       // Clear existing timer for this key
       if (timers.has(key)) {
@@ -43,18 +81,43 @@ export function createPendingQueueService({ debounceMs = 2000 } = {}) {
       const timer = setTimeout(async () => {
         timers.delete(key);
         const currentData = pending.get(key);
+        debugLog("lines", "queue.timer-fired", {
+          key,
+          hasCurrentData: !!currentData,
+          pendingSize: pending.size,
+        });
 
         if (currentData && onWriteCallback) {
-          try {
-            await onWriteCallback(key, currentData);
-            // Only delete if reference matches (prevents race condition)
-            if (pending.get(key) === currentData) {
-              pending.delete(key);
+          const writePromise = (async () => {
+            try {
+              debugLog("lines", "queue.write-start", {
+                key,
+                content: previewDebugText(
+                  currentData?.content
+                    ?.map((item) => item?.text ?? "")
+                    .join(""),
+                ),
+              });
+              await onWriteCallback(key, currentData);
+              // Only delete if reference matches (prevents race condition)
+              if (pending.get(key) === currentData) {
+                pending.delete(key);
+              }
+              debugLog("lines", "queue.write-success", {
+                key,
+                pendingSize: pending.size,
+              });
+            } catch (error) {
+              console.error(`Debounced write failed for ${key}:`, error);
+              // Keep in pending for next attempt or flush
+              debugLog("lines", "queue.write-failed", {
+                key,
+                message: error?.message,
+              });
             }
-          } catch (error) {
-            console.error(`Debounced write failed for ${key}:`, error);
-            // Keep in pending for next attempt or flush
-          }
+          })();
+
+          await trackActiveWrite(key, writePromise);
         }
       }, debounceMs);
 
@@ -82,6 +145,10 @@ export function createPendingQueueService({ debounceMs = 2000 } = {}) {
       return pending.size;
     },
 
+    entries() {
+      return Array.from(pending.entries());
+    },
+
     /**
      * Flush all pending updates immediately.
      * Cancels all pending debounce timers first,
@@ -91,11 +158,19 @@ export function createPendingQueueService({ debounceMs = 2000 } = {}) {
      * @param {Function} writeFn - async (key, data) => void
      */
     async flush(writeFn) {
+      debugLog("lines", "queue.flush-start", {
+        pendingSize: pending.size,
+        activeWrites: activeWrites.size,
+      });
       // Cancel all pending timers first
       for (const timer of timers.values()) {
         clearTimeout(timer);
       }
       timers.clear();
+
+      // Wait for any debounced write that has already started so a structural
+      // mutation does not race against an older text write landing afterward.
+      await waitForActiveWrites();
 
       if (pending.size === 0) {
         return;
@@ -104,17 +179,43 @@ export function createPendingQueueService({ debounceMs = 2000 } = {}) {
       // Snapshot and clear immediately
       const entries = Array.from(pending.entries());
       pending.clear();
+      debugLog("lines", "queue.flush-entries", {
+        count: entries.length,
+        keys: entries.map(([key]) => key),
+      });
 
       // Write all entries
       for (const [key, data] of entries) {
         try {
+          debugLog("lines", "queue.flush-write-start", {
+            key,
+            content: previewDebugText(
+              data?.content?.map((item) => item?.text ?? "").join(""),
+            ),
+          });
           await writeFn(key, data);
+          debugLog("lines", "queue.flush-write-success", {
+            key,
+          });
         } catch (error) {
           // Restore failed entry back to queue
           pending.set(key, data);
           console.error(`Flush failed for ${key}:`, error);
+          debugLog("lines", "queue.flush-write-failed", {
+            key,
+            message: error?.message,
+          });
         }
       }
+
+      debugLog("lines", "queue.flush-end", {
+        pendingSize: pending.size,
+        activeWrites: activeWrites.size,
+      });
+    },
+
+    async waitForIdle(key) {
+      await waitForActiveWrites(key);
     },
   };
 }
