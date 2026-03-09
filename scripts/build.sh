@@ -59,6 +59,8 @@ cp -rf static/* _site/
 # Build UI components
 echo "Building UI components..."
 rtgl ui build-svg
+mkdir -p _site/public
+cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
 # Build frontend bundle
 echo "Building frontend bundle with ${SETUP_FILE}..."

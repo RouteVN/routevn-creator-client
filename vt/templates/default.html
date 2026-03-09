@@ -7,7 +7,96 @@
     <link rel="stylesheet" href="/public/theme.css">
     <script src="/public/rtgl-icons.js"></script>
     <script src="/public/@rettangoli/ui@1.0.3/dist/rettangoli-iife-ui.min.js"></script>
-    <script type="module" src="/public/main.js"></script>
+    <script type="module">
+      const VT_RESET_KEY = "routevn.vt.indexeddb-reset-done";
+
+      const openDb = (name, version) =>
+        new Promise((resolve, reject) => {
+          const request = indexedDB.open(name, version);
+          request.onsuccess = (event) => resolve(event.target.result);
+          request.onerror = (event) => reject(event.target.error);
+        });
+
+      const readProjectDatabaseNames = async () => {
+        let db;
+        try {
+          db = await openDb("app", 1);
+          const projectEntries = await new Promise((resolve, reject) => {
+            const transaction = db.transaction("kv", "readonly");
+            const store = transaction.objectStore("kv");
+            const request = store.get("projectEntries");
+            request.onsuccess = (event) => {
+              const result = event.target.result;
+              if (!result?.value) {
+                resolve([]);
+                return;
+              }
+              try {
+                resolve(JSON.parse(result.value) || []);
+              } catch {
+                resolve([]);
+              }
+            };
+            request.onerror = (event) => reject(event.target.error);
+          });
+
+          if (!Array.isArray(projectEntries)) {
+            return [];
+          }
+
+          return projectEntries
+            .map((entry) => entry?.id)
+            .filter((projectId) => typeof projectId === "string" && projectId.length > 0);
+        } catch {
+          return [];
+        } finally {
+          db?.close?.();
+        }
+      };
+
+      const deleteDatabase = (name) =>
+        new Promise((resolve) => {
+          if (typeof name !== "string" || name.length === 0) {
+            resolve();
+            return;
+          }
+
+          const request = indexedDB.deleteDatabase(name);
+          request.onsuccess = () => resolve();
+          request.onerror = () => resolve();
+          request.onblocked = () => resolve();
+        });
+
+      const resetIndexedDbState = async () => {
+        const databaseNames = new Set(["app"]);
+        const projectDatabaseNames = await readProjectDatabaseNames();
+        projectDatabaseNames.forEach((name) => databaseNames.add(name));
+
+        if (typeof indexedDB.databases === "function") {
+          try {
+            const databases = await indexedDB.databases();
+            databases.forEach((database) => {
+              if (typeof database?.name === "string" && database.name.length > 0) {
+                databaseNames.add(database.name);
+              }
+            });
+          } catch {}
+        }
+
+        for (const databaseName of databaseNames) {
+          await deleteDatabase(databaseName);
+        }
+      };
+
+      try {
+        if (!sessionStorage.getItem(VT_RESET_KEY)) {
+          sessionStorage.setItem(VT_RESET_KEY, "1");
+          await resetIndexedDbState();
+        }
+      } catch {}
+
+      await import("/public/main.js");
+    </script>
   </head>
   <body class="dark">
     <rvn-app></rvn-app>
