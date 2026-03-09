@@ -1,13 +1,5 @@
 import { fromEvent, tap } from "rxjs";
 
-const getRuntime = (refs) => {
-  refs.__whiteboardRuntime ??= {
-    dragOffset: { x: 0, y: 0 },
-    lastDraggedPosition: undefined,
-  };
-  return refs.__whiteboardRuntime;
-};
-
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
@@ -172,7 +164,6 @@ export const handleZoomOutClick = (deps) => {
 export const handleItemMouseDown = (deps, payload) => {
   payload._event.stopPropagation();
   const { store, refs } = deps;
-  const runtime = getRuntime(refs);
 
   if (store.selectIsPanMode()) {
     // Don't drag items in pan mode
@@ -199,15 +190,17 @@ export const handleItemMouseDown = (deps, payload) => {
   const itemY = parseInt(itemElement.style.top, 10) || 0;
 
   // Calculate drag offset relative to item's top-left corner
-  runtime.dragOffset.x = mouseInCanvasX - itemX;
-  runtime.dragOffset.y = mouseInCanvasY - itemY;
+  store.setDragOffset({
+    x: mouseInCanvasX - itemX,
+    y: mouseInCanvasY - itemY,
+  });
 
   store.startDragging({ itemId });
-  runtime.lastDraggedPosition = {
+  store.setLastDraggedPosition({
     itemId,
     x: itemX,
     y: itemY,
-  };
+  });
 
   // Dispatch selection event
   deps.dispatchEvent(
@@ -291,7 +284,6 @@ export const handleItemMouseLeave = (deps) => {
 
 export const handleWindowMouseMove = (deps, payload) => {
   const { store, refs, render, dispatchEvent } = deps;
-  const runtime = getRuntime(refs);
 
   if (store.selectIsPanning()) {
     // Handle panning
@@ -318,6 +310,7 @@ export const handleWindowMouseMove = (deps, payload) => {
     const dragItemId = store.selectDragItemId();
     const pan = store.selectPan();
     const zoomLevel = store.selectZoomLevel();
+    const dragOffset = store.selectDragOffset();
 
     // Calculate current mouse position in canvas coordinate space
     const mouseInCanvasX =
@@ -326,8 +319,8 @@ export const handleWindowMouseMove = (deps, payload) => {
       (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
 
     // Calculate new item position by subtracting the drag offset
-    const newX = mouseInCanvasX - runtime.dragOffset.x;
-    const newY = mouseInCanvasY - runtime.dragOffset.y;
+    const newX = mouseInCanvasX - dragOffset.x;
+    const newY = mouseInCanvasY - dragOffset.y;
 
     // Get the container's visible area
     const container = refs.container;
@@ -353,11 +346,11 @@ export const handleWindowMouseMove = (deps, payload) => {
 
     const snappedX = Math.round(constrainedX / 5) * 5;
     const snappedY = Math.round(constrainedY / 5) * 5;
-    runtime.lastDraggedPosition = {
+    store.setLastDraggedPosition({
       itemId: dragItemId,
       x: snappedX,
       y: snappedY,
-    };
+    });
 
     // Dispatch real-time position update to parent (scenes page)
     dispatchEvent(
@@ -374,7 +367,6 @@ export const handleWindowMouseMove = (deps, payload) => {
 
 export const handleWindowMouseUp = (deps) => {
   const { store, refs, dispatchEvent } = deps;
-  const runtime = getRuntime(refs);
 
   if (store.selectIsPanning()) {
     store.stopPanning();
@@ -384,8 +376,9 @@ export const handleWindowMouseUp = (deps) => {
       (candidate) => candidate?.dataset?.itemId === dragItemId,
     );
 
-    let finalX = runtime.lastDraggedPosition?.x;
-    let finalY = runtime.lastDraggedPosition?.y;
+    const lastDraggedPosition = store.selectLastDraggedPosition();
+    let finalX = lastDraggedPosition?.x;
+    let finalY = lastDraggedPosition?.y;
 
     if (!Number.isFinite(finalX) || !Number.isFinite(finalY)) {
       finalX = parseInt(itemElement?.style?.left || "", 10);
@@ -412,7 +405,7 @@ export const handleWindowMouseUp = (deps) => {
     }
 
     store.stopDragging();
-    runtime.lastDraggedPosition = undefined;
+    store.clearLastDraggedPosition();
   }
 };
 
