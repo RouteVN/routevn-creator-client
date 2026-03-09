@@ -1,5 +1,4 @@
 let debugSequence = 0;
-const ALWAYS_ENABLED_SCOPES = new Set(["lines"]);
 
 const getWindowDebugKey = (scope) => {
   return `__RVN_DEBUG_${String(scope || "")
@@ -8,10 +7,6 @@ const getWindowDebugKey = (scope) => {
 };
 
 export const isDebugEnabled = (scope) => {
-  if (ALWAYS_ENABLED_SCOPES.has(scope)) {
-    return true;
-  }
-
   if (typeof window === "undefined") {
     return false;
   }

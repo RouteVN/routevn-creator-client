@@ -13,8 +13,6 @@ propsSchema:
       type: object
     repositoryState:
       type: object
-    isLineOperationLocked:
-      type: boolean
 methods:
   type: object
   properties:

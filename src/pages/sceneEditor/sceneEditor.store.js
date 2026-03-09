@@ -569,7 +569,6 @@ export const selectViewData = ({ state }) => {
       ),
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
-      isLineOperationLocked: !!state.lockingLineId,
     };
   }
 
@@ -717,7 +716,6 @@ export const selectViewData = ({ state }) => {
     muteIcon: state.isMuted ? "mute" : "unmute",
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
-    isLineOperationLocked: !!state.lockingLineId,
   };
 };
 
