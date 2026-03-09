@@ -7,7 +7,11 @@ import { createScenesFileExplorerHandlers } from "../../deps/features/fileExplor
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
-let cleanupCollabRemoteRefresh;
+
+const getRuntime = (refs) => {
+  refs.__scenesPageRuntime ??= {};
+  return refs.__scenesPageRuntime;
+};
 
 /**
  * Extract transitions from layout element click actions
@@ -353,15 +357,17 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
   editForm.setValues({ values: editValues });
 };
 
-export const handleBeforeMount = () => {
+export const handleBeforeMount = (deps) => {
+  const runtime = getRuntime(deps.refs);
   return () => {
-    cleanupCollabRemoteRefresh?.();
-    cleanupCollabRemoteRefresh = undefined;
+    runtime.cleanupCollabRemoteRefresh?.();
+    runtime.cleanupCollabRemoteRefresh = undefined;
   };
 };
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
+  const runtime = getRuntime(refs);
   await projectService.ensureRepository();
   const repositoryState = projectService.getState();
   const domainState = projectService.getDomainState();
@@ -420,8 +426,8 @@ export const handleAfterMount = async (deps) => {
   }
 
   render();
-  cleanupCollabRemoteRefresh?.();
-  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+  runtime.cleanupCollabRemoteRefresh?.();
+  runtime.cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
     deps,
     matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
     refresh: refreshScenesData,

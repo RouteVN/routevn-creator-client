@@ -7,7 +7,10 @@ const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
 };
 
-let cleanupProjectSubscription;
+const getRuntime = (refs) => {
+  refs.__variablesPageRuntime ??= {};
+  return refs.__variablesPageRuntime;
+};
 
 const syncVariablesData = ({ store, repositoryState, projectService } = {}) => {
   const state = repositoryState ?? projectService?.getState?.();
@@ -16,23 +19,24 @@ const syncVariablesData = ({ store, repositoryState, projectService } = {}) => {
   });
 };
 
-export const handleBeforeMount = () => {
+export const handleBeforeMount = (deps) => {
+  const runtime = getRuntime(deps.refs);
   return () => {
-    cleanupProjectSubscription?.();
-    cleanupProjectSubscription = undefined;
+    runtime.cleanupProjectSubscription?.();
+    runtime.cleanupProjectSubscription = undefined;
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
+  const { store, projectService, render, refs } = deps;
+  const runtime = getRuntime(refs);
   await projectService.ensureRepository();
-  cleanupProjectSubscription?.();
-  cleanupProjectSubscription = await projectService.subscribeProjectState(
-    ({ repositoryState }) => {
+  runtime.cleanupProjectSubscription?.();
+  runtime.cleanupProjectSubscription =
+    await projectService.subscribeProjectState(({ repositoryState }) => {
       syncVariablesData({ store, repositoryState });
       render();
-    },
-  );
+    });
 };
 
 const refreshVariablesData = async (deps) => {

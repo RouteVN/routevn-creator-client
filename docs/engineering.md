@@ -192,6 +192,26 @@ Handlers must stay thin.
 Stores must not absorb domain logic.
 Views must stay declarative.
 
+## Handler Runtime State
+
+Do not keep mutable module-scoped runtime state in `*.handlers.js`.
+
+Forbidden:
+
+- module-level subscription cleanup refs
+- module-level timers
+- module-level mutable caches or drag state
+- cross-instance mutable `let` state in handler files
+
+If handler runtime state must survive across lifecycle hooks, keep it per
+instance:
+
+- prefer the `handleBeforeMount` cleanup closure when the state is owned there
+- otherwise store it on instance-owned `refs.__...Runtime`
+
+Handler module files must be safe for multiple mounted instances at the same
+time.
+
 ## JavaScript Style
 
 Prefer `undefined` over `null`.

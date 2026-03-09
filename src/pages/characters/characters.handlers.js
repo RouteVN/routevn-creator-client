@@ -2,7 +2,10 @@ import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
-let cleanupProjectSubscription;
+const getRuntime = (refs) => {
+  refs.__charactersPageRuntime ??= {};
+  return refs.__charactersPageRuntime;
+};
 
 const syncCharactersData = ({
   store,
@@ -43,23 +46,24 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
-export const handleBeforeMount = () => {
+export const handleBeforeMount = (deps) => {
+  const runtime = getRuntime(deps.refs);
   return () => {
-    cleanupProjectSubscription?.();
-    cleanupProjectSubscription = undefined;
+    runtime.cleanupProjectSubscription?.();
+    runtime.cleanupProjectSubscription = undefined;
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
+  const { store, projectService, render, refs } = deps;
+  const runtime = getRuntime(refs);
   await projectService.ensureRepository();
-  cleanupProjectSubscription?.();
-  cleanupProjectSubscription = await projectService.subscribeProjectState(
-    ({ repositoryState }) => {
+  runtime.cleanupProjectSubscription?.();
+  runtime.cleanupProjectSubscription =
+    await projectService.subscribeProjectState(({ repositoryState }) => {
       syncCharactersData({ store, repositoryState });
       render();
-    },
-  );
+    });
 };
 
 const refreshCharactersData = async (deps) => {

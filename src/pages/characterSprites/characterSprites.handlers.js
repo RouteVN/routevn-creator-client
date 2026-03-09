@@ -10,7 +10,11 @@ import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
-let cleanupProjectSubscription;
+
+const getRuntime = (refs) => {
+  refs.__characterSpritesPageRuntime ??= {};
+  return refs.__characterSpritesPageRuntime;
+};
 
 const applyCharacterSpritesPatch = async ({
   projectService,
@@ -221,19 +225,21 @@ const createSpritesFromFiles = async ({
   await refreshCharacterSpritesData(deps);
 };
 
-export const handleBeforeMount = () => {
+export const handleBeforeMount = (deps) => {
+  const runtime = getRuntime(deps.refs);
   return () => {
-    cleanupProjectSubscription?.();
-    cleanupProjectSubscription = undefined;
+    runtime.cleanupProjectSubscription?.();
+    runtime.cleanupProjectSubscription = undefined;
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { projectService, store, render } = deps;
+  const { projectService, store, render, refs } = deps;
+  const runtime = getRuntime(refs);
   await projectService.ensureRepository();
-  cleanupProjectSubscription?.();
-  cleanupProjectSubscription = await projectService.subscribeProjectState(
-    async ({ repositoryState }) => {
+  runtime.cleanupProjectSubscription?.();
+  runtime.cleanupProjectSubscription =
+    await projectService.subscribeProjectState(async ({ repositoryState }) => {
       const characterId =
         store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
       const character = repositoryState?.characters?.items?.[characterId];
@@ -268,12 +274,11 @@ export const handleAfterMount = async (deps) => {
 
       if (selectedItem) {
         syncDetailForm({
-          refs: deps.refs,
+          refs,
           values: createDetailFormValues(selectedItem, imageSrc),
         });
       }
-    },
-  );
+    });
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =

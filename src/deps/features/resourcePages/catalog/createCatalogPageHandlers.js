@@ -10,7 +10,10 @@ export const createCatalogPageHandlers = ({
       refresh,
     }),
 }) => {
-  let cleanupProjectSubscription;
+  const getRuntime = (refs) => {
+    refs.__catalogPageRuntime ??= {};
+    return refs.__catalogPageRuntime;
+  };
 
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
@@ -19,23 +22,25 @@ export const createCatalogPageHandlers = ({
     render();
   };
 
-  const handleBeforeMount = () => {
+  const handleBeforeMount = (deps) => {
+    const runtime = getRuntime(deps.refs);
     return () => {
-      cleanupProjectSubscription?.();
-      cleanupProjectSubscription = undefined;
+      runtime.cleanupProjectSubscription?.();
+      runtime.cleanupProjectSubscription = undefined;
     };
   };
 
   const handleAfterMount = async (deps) => {
-    const { projectService, store, render } = deps;
+    const { projectService, store, render, refs } = deps;
+    const runtime = getRuntime(refs);
     await projectService.ensureRepository();
-    cleanupProjectSubscription = await projectService.subscribeProjectState(
-      ({ repositoryState }) => {
+    runtime.cleanupProjectSubscription?.();
+    runtime.cleanupProjectSubscription =
+      await projectService.subscribeProjectState(({ repositoryState }) => {
         const data = repositoryState?.[resourceType] ?? EMPTY_TREE;
         store.setItems({ data });
         render();
-      },
-    );
+      });
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {

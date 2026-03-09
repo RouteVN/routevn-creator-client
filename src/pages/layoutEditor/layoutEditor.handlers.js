@@ -34,18 +34,25 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
-// File content cache to avoid redundant API calls
-const fileContentCache = new Map();
-
-// Track keyboard navigation timeout
-let keyboardNavigationTimeout = null;
-let cleanupCollabRemoteRefresh;
+const getRuntime = (refs) => {
+  refs.__layoutEditorRuntime ??= {
+    fileContentCache: new Map(),
+    keyboardNavigationTimeout: undefined,
+    cleanupCollabRemoteRefresh: undefined,
+  };
+  return refs.__layoutEditorRuntime;
+};
 
 export const handleBeforeMount = (deps) => {
+  const runtime = getRuntime(deps.refs);
   const cleanupSubscriptions = mountSubscriptions(deps);
   return () => {
-    cleanupCollabRemoteRefresh?.();
-    cleanupCollabRemoteRefresh = undefined;
+    if (runtime.keyboardNavigationTimeout !== undefined) {
+      clearTimeout(runtime.keyboardNavigationTimeout);
+      runtime.keyboardNavigationTimeout = undefined;
+    }
+    runtime.cleanupCollabRemoteRefresh?.();
+    runtime.cleanupCollabRemoteRefresh = undefined;
     cleanupSubscriptions?.();
   };
 };
@@ -57,17 +64,18 @@ export const handleBeforeMount = (deps) => {
  * @param {string} layoutId - The layout ID
  */
 const scheduleKeyboardSave = (deps, itemId, layoutId) => {
+  const runtime = getRuntime(deps.refs);
   // Clear existing timeout if still navigating
-  if (keyboardNavigationTimeout) {
-    clearTimeout(keyboardNavigationTimeout);
+  if (runtime.keyboardNavigationTimeout !== undefined) {
+    clearTimeout(runtime.keyboardNavigationTimeout);
   }
 
-  keyboardNavigationTimeout = setTimeout(() => {
+  runtime.keyboardNavigationTimeout = setTimeout(() => {
     const { store, subject } = deps;
 
     // Check if the selected item has changed
     if (store.selectSelectedItemId() !== itemId) {
-      keyboardNavigationTimeout = null;
+      runtime.keyboardNavigationTimeout = undefined;
       return;
     }
 
@@ -85,7 +93,7 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
       });
     }
 
-    keyboardNavigationTimeout = null;
+    runtime.keyboardNavigationTimeout = undefined;
   }, DEBOUNCE_DELAYS.KEYBOARD);
 };
 
@@ -97,7 +105,8 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileReferences, fontsItems) => {
-  const { projectService } = deps;
+  const { projectService, refs } = deps;
+  const runtime = getRuntime(refs);
   const assets = {};
 
   for (const fileObj of fileReferences) {
@@ -107,13 +116,13 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
     let url;
     const cacheKey = fileId;
 
-    if (fileContentCache.has(cacheKey)) {
-      const cachedUrl = fileContentCache.get(cacheKey);
+    if (runtime.fileContentCache.has(cacheKey)) {
+      const cachedUrl = runtime.fileContentCache.get(cacheKey);
       if (!isBlobUrl(cachedUrl)) {
         url = cachedUrl;
       } else {
         // Blob URLs are short-lived and can be revoked by consumers.
-        fileContentCache.delete(cacheKey);
+        runtime.fileContentCache.delete(cacheKey);
       }
     }
 
@@ -123,7 +132,7 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
       url = result.url;
       // Cache only stable URLs. Blob URLs can become invalid after revoke.
       if (!isBlobUrl(url)) {
-        fileContentCache.set(cacheKey, url);
+        runtime.fileContentCache.set(cacheKey, url);
       }
     }
 
@@ -252,7 +261,7 @@ const renderLayoutPreview = async (deps) => {
       await graphicsService.loadAssets(assets);
     } catch {
       // Recover from stale URL cache (especially revoked blob URLs).
-      fileContentCache.clear();
+      getRuntime(deps.refs).fileContentCache.clear();
       assets = await loadAssets(deps, fileReferences, fontsItems);
       await graphicsService.loadAssets(assets);
     }
@@ -362,6 +371,7 @@ const renderLayoutPreview = async (deps) => {
 export const handleAfterMount = async (deps) => {
   const { appService, store, projectService, render, refs, graphicsService } =
     deps;
+  const runtime = getRuntime(refs);
   const payload = appService.getPayload() || {};
   const { layoutId } = payload;
   const repository = await projectService.getRepository();
@@ -385,8 +395,8 @@ export const handleAfterMount = async (deps) => {
 
   await renderLayoutPreview(deps);
   render();
-  cleanupCollabRemoteRefresh?.();
-  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+  runtime.cleanupCollabRemoteRefresh?.();
+  runtime.cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
     deps,
     matches: matchesRemoteTargets([
       "layouts",

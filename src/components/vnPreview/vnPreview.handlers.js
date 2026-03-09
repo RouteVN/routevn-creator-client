@@ -37,10 +37,13 @@ const createAssetLoadCache = () => ({
   fileIds: new Set(),
 });
 
-let assetLoadCache = createAssetLoadCache();
+const getAssetLoadCache = (refs) => {
+  refs.__vnPreviewAssetLoadCache ??= createAssetLoadCache();
+  return refs.__vnPreviewAssetLoadCache;
+};
 
-const resetAssetLoadCache = () => {
-  assetLoadCache = createAssetLoadCache();
+const resetAssetLoadCache = (refs) => {
+  refs.__vnPreviewAssetLoadCache = createAssetLoadCache();
 };
 
 const setAssetLoading = (deps, isLoading) => {
@@ -55,7 +58,8 @@ async function loadAssetsForSceneIds(
   sceneIds,
   { showLoading = true } = {},
 ) {
-  const { appService } = deps;
+  const { appService, refs } = deps;
+  const assetLoadCache = getAssetLoadCache(refs);
   const allScenes = projectData?.story?.scenes || {};
 
   const uniqueSceneIds = Array.from(new Set(sceneIds || [])).filter(
@@ -131,6 +135,7 @@ const preloadDirectTransitionScenes = async (deps, projectData, sceneIds) => {
 };
 
 const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
+  const assetLoadCache = getAssetLoadCache(deps.refs);
   const uniqueLayoutIds = Array.from(new Set(layoutIds || [])).filter(
     (layoutId) => Boolean(projectData?.resources?.layouts?.[layoutId]),
   );
@@ -208,7 +213,7 @@ export const handleBeforeMount = (deps) => {
   window.addEventListener("keydown", handleKeyDown);
   return () => {
     store.setAssetLoading({ isLoading: false });
-    resetAssetLoadCache();
+    resetAssetLoadCache(deps.refs);
     window.removeEventListener("keydown", handleKeyDown);
   };
 };
@@ -246,7 +251,7 @@ export const handleAfterMount = async (deps) => {
     canvas: canvas,
     beforeHandleActions,
   });
-  resetAssetLoadCache();
+  resetAssetLoadCache(refs);
   store.setAssetLoading({ isLoading: false });
 
   const initialSceneIds = extractInitialHybridSceneIds(

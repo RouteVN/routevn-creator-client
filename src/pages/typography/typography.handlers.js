@@ -20,25 +20,29 @@ const syncRepositoryToStore = ({
   store.setFontsData({ fontsData: state?.fonts });
 };
 
-let cleanupProjectSubscription;
+const getRuntime = (refs) => {
+  refs.__typographyPageRuntime ??= {};
+  return refs.__typographyPageRuntime;
+};
 
-export const handleBeforeMount = () => {
+export const handleBeforeMount = (deps) => {
+  const runtime = getRuntime(deps.refs);
   return () => {
-    cleanupProjectSubscription?.();
-    cleanupProjectSubscription = undefined;
+    runtime.cleanupProjectSubscription?.();
+    runtime.cleanupProjectSubscription = undefined;
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
+  const { store, projectService, render, refs } = deps;
+  const runtime = getRuntime(refs);
   await projectService.ensureRepository();
-  cleanupProjectSubscription?.();
-  cleanupProjectSubscription = await projectService.subscribeProjectState(
-    ({ repositoryState }) => {
+  runtime.cleanupProjectSubscription?.();
+  runtime.cleanupProjectSubscription =
+    await projectService.subscribeProjectState(({ repositoryState }) => {
       syncRepositoryToStore({ store, repositoryState });
       render();
-    },
-  );
+    });
 };
 
 const refreshTypographyData = async (deps) => {

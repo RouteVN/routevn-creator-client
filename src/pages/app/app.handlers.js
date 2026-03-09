@@ -2,10 +2,15 @@ import { filter, fromEvent, tap } from "rxjs";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 
-let awaitingGlobalNavigationTarget = false;
-let globalNavigationTimerId = null;
-let routeTransitionToken = 0;
-let lastEnsuredProjectId = "";
+const getRuntime = (refs) => {
+  refs.__appPageRuntime ??= {
+    awaitingGlobalNavigationTarget: false,
+    globalNavigationTimerId: undefined,
+    routeTransitionToken: 0,
+    lastEnsuredProjectId: "",
+  };
+  return refs.__appPageRuntime;
+};
 
 const isProjectRoute = (path) => {
   return path === "/project" || path.startsWith("/project/");
@@ -27,21 +32,23 @@ const routeNeedsRepository = (path, projectId) => {
   return isProjectRoute(path) && !!projectId;
 };
 
-const clearGlobalNavigationState = () => {
-  awaitingGlobalNavigationTarget = false;
-  if (globalNavigationTimerId !== null) {
-    clearTimeout(globalNavigationTimerId);
-    globalNavigationTimerId = null;
+const clearGlobalNavigationState = (refs) => {
+  const runtime = getRuntime(refs);
+  runtime.awaitingGlobalNavigationTarget = false;
+  if (runtime.globalNavigationTimerId !== undefined) {
+    clearTimeout(runtime.globalNavigationTimerId);
+    runtime.globalNavigationTimerId = undefined;
   }
 };
 
-const armGlobalNavigationState = () => {
-  awaitingGlobalNavigationTarget = true;
-  if (globalNavigationTimerId !== null) {
-    clearTimeout(globalNavigationTimerId);
+const armGlobalNavigationState = (refs) => {
+  const runtime = getRuntime(refs);
+  runtime.awaitingGlobalNavigationTarget = true;
+  if (runtime.globalNavigationTimerId !== undefined) {
+    clearTimeout(runtime.globalNavigationTimerId);
   }
-  globalNavigationTimerId = setTimeout(() => {
-    clearGlobalNavigationState();
+  runtime.globalNavigationTimerId = setTimeout(() => {
+    clearGlobalNavigationState(refs);
   }, GLOBAL_NAV_TIMEOUT_MS);
 };
 
@@ -124,8 +131,9 @@ const runRouteTransition = async (
   deps,
   { path, payload, shouldUpdateHistory = false } = {},
 ) => {
-  const { appService, projectService, store, render } = deps;
-  const transitionToken = ++routeTransitionToken;
+  const { appService, projectService, store, render, refs } = deps;
+  const runtime = getRuntime(refs);
+  const transitionToken = ++runtime.routeTransitionToken;
   const nextPayload = normalizePayload(payload);
 
   if (shouldUpdateHistory) {
@@ -135,7 +143,7 @@ const runRouteTransition = async (
   const currentProject = await appService.refreshCurrentProjectEntry();
   const currentProjectId = currentProject.id || "";
   const needsRepository = routeNeedsRepository(path, currentProjectId);
-  const isAlreadyEnsured = currentProjectId === lastEnsuredProjectId;
+  const isAlreadyEnsured = currentProjectId === runtime.lastEnsuredProjectId;
 
   store.setCurrentRoute({ route: path });
   store.setRepositoryLoading({
@@ -144,7 +152,7 @@ const runRouteTransition = async (
   render();
 
   if (!needsRepository || isAlreadyEnsured) {
-    if (transitionToken !== routeTransitionToken) {
+    if (transitionToken !== runtime.routeTransitionToken) {
       return;
     }
     store.setRepositoryLoading({ isLoading: false });
@@ -154,14 +162,14 @@ const runRouteTransition = async (
 
   try {
     await projectService.ensureRepository();
-    if (transitionToken !== routeTransitionToken) {
+    if (transitionToken !== runtime.routeTransitionToken) {
       return;
     }
-    lastEnsuredProjectId = currentProjectId;
+    runtime.lastEnsuredProjectId = currentProjectId;
     store.setRepositoryLoading({ isLoading: false });
     render();
   } catch (error) {
-    if (transitionToken !== routeTransitionToken) {
+    if (transitionToken !== runtime.routeTransitionToken) {
       return;
     }
     store.setRepositoryLoading({ isLoading: false });
@@ -176,7 +184,7 @@ export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   const { appService } = deps;
   const currentPath = appService.getPath();
-  clearGlobalNavigationState();
+  clearGlobalNavigationState(deps.refs);
 
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
   runRouteTransition(deps, {
@@ -188,7 +196,7 @@ export const handleBeforeMount = (deps) => {
   });
 
   return () => {
-    clearGlobalNavigationState();
+    clearGlobalNavigationState(deps.refs);
     cleanupSubscriptions();
   };
 };
@@ -212,7 +220,7 @@ export const handleRedirect = (deps, payload) => {
 
 export const handleWindowPop = (deps) => {
   const { appService } = deps;
-  clearGlobalNavigationState();
+  clearGlobalNavigationState(deps.refs);
   runRouteTransition(deps, {
     path: appService.getPath(),
     payload: appService.getPayload(),
@@ -228,7 +236,7 @@ export const handleGlobalKeyDown = (deps, payload) => {
   const currentPath = appService.getPath();
 
   if (!isProjectRoute(currentPath)) {
-    clearGlobalNavigationState();
+    clearGlobalNavigationState(deps.refs);
     return;
   }
 
@@ -249,8 +257,10 @@ export const handleGlobalKeyDown = (deps, payload) => {
     return;
   }
 
-  if (awaitingGlobalNavigationTarget) {
-    clearGlobalNavigationState();
+  const runtime = getRuntime(deps.refs);
+
+  if (runtime.awaitingGlobalNavigationTarget) {
+    clearGlobalNavigationState(deps.refs);
     const queryPayload = getCurrentQueryPayload(appService);
     const targetPathByKey = {
       p: "/project",
@@ -284,7 +294,7 @@ export const handleGlobalKeyDown = (deps, payload) => {
   if (key === "g") {
     event.preventDefault();
     event.stopPropagation();
-    armGlobalNavigationState();
+    armGlobalNavigationState(deps.refs);
   }
 };
 
