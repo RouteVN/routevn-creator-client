@@ -110,11 +110,7 @@ const createActionHandlers = ({ handleAction, handleMove }) => {
   };
 };
 
-const maybeRefresh = async (refresh, deps) => {
-  if (typeof refresh === "function") {
-    await refresh(deps);
-  }
-};
+const noopRefresh = async () => {};
 
 const applyCharacterSpritesPatch = async ({
   projectService,
@@ -204,7 +200,7 @@ const validateResourceDeletion = async ({
 
 export const createResourceFileExplorerHandlers = ({
   resourceType,
-  refresh,
+  refresh = noopRefresh,
 }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
@@ -318,7 +314,7 @@ export const createResourceFileExplorerHandlers = ({
         return;
       }
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -336,12 +332,14 @@ export const createResourceFileExplorerHandlers = ({
         position: move.repositoryPosition,
       });
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
   });
 };
 
-export const createLayoutsFileExplorerHandlers = ({ refresh }) => {
+export const createLayoutsFileExplorerHandlers = ({
+  refresh = noopRefresh,
+}) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -444,7 +442,7 @@ export const createLayoutsFileExplorerHandlers = ({ refresh }) => {
         return;
       }
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -461,14 +459,14 @@ export const createLayoutsFileExplorerHandlers = ({ refresh }) => {
         position: move.repositoryPosition,
       });
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
   });
 };
 
 export const createLayoutElementsFileExplorerHandlers = ({
   getLayoutId,
-  refresh,
+  refresh = noopRefresh,
 }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
@@ -586,7 +584,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         return;
       }
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -610,12 +608,12 @@ export const createLayoutElementsFileExplorerHandlers = ({
         position: move.repositoryPosition,
       });
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
   });
 };
 
-export const createScenesFileExplorerHandlers = ({ refresh }) => {
+export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -670,7 +668,7 @@ export const createScenesFileExplorerHandlers = ({ refresh }) => {
         return;
       }
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -687,12 +685,14 @@ export const createScenesFileExplorerHandlers = ({ refresh }) => {
         position: move.repositoryPosition,
       });
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
   });
 };
 
-export const createVariablesFileExplorerHandlers = ({ refresh }) => {
+export const createVariablesFileExplorerHandlers = ({
+  refresh = noopRefresh,
+}) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -771,7 +771,7 @@ export const createVariablesFileExplorerHandlers = ({ refresh }) => {
         return;
       }
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -790,14 +790,14 @@ export const createVariablesFileExplorerHandlers = ({ refresh }) => {
         position: move.repositoryPosition,
       });
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
   });
 };
 
 export const createCharacterSpritesFileExplorerHandlers = ({
   getCharacterId,
-  refresh,
+  refresh = noopRefresh,
 }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
@@ -951,7 +951,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         return;
       }
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -980,7 +980,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           }),
       });
 
-      await maybeRefresh(refresh, deps);
+      await refresh(deps);
     },
   });
 };
