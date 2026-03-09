@@ -11,3 +11,14 @@ propsSchema:
       type: string
     sectionLineChanges:
       type: object
+methods:
+  type: object
+  properties:
+    syncContentLine:
+      description: Forces one rendered line element to match the current lines prop.
+      params: []
+      returns: void
+    syncAllContentLines:
+      description: Forces all rendered line elements to match the current lines prop.
+      params: []
+      returns: void

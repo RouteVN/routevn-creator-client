@@ -79,6 +79,71 @@ const isLineElement = (element) => {
   return Boolean(element && getLineIdFromElement(element));
 };
 
+const getLineText = (line) => {
+  return line?.actions?.dialogue?.content?.[0]?.text ?? "";
+};
+
+const syncRenderedLineContent = (refs, lines, lineId) => {
+  if (!lineId) {
+    return;
+  }
+
+  const lineRef = getLineElementById(refs, lineId);
+  if (!lineRef || typeof lineRef.updateContent !== "function") {
+    return;
+  }
+
+  const line = (lines || []).find((item) => item.id === lineId);
+  if (!line) {
+    return;
+  }
+
+  lineRef.updateContent(getLineText(line));
+};
+
+const syncAllRenderedLineContent = (refs, lines) => {
+  for (const line of lines || []) {
+    syncRenderedLineContent(refs, lines, line.id);
+  }
+};
+
+const didLineStructureChange = (oldLines, newLines) => {
+  if ((oldLines || []).length !== (newLines || []).length) {
+    return true;
+  }
+
+  for (let i = 0; i < (newLines || []).length; i++) {
+    if (oldLines?.[i]?.id !== newLines?.[i]?.id) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const syncChangedRenderedLineContent = (refs, oldLines, newLines) => {
+  if (!oldLines || oldLines.length === 0) {
+    syncAllRenderedLineContent(refs, newLines);
+    return;
+  }
+
+  if (didLineStructureChange(oldLines, newLines)) {
+    syncAllRenderedLineContent(refs, newLines);
+    return;
+  }
+
+  const oldLineContentById = new Map(
+    oldLines.map((line) => [line.id, getLineText(line)]),
+  );
+
+  for (const line of newLines || []) {
+    const nextContent = getLineText(line);
+    if (oldLineContentById.get(line.id) !== nextContent) {
+      syncRenderedLineContent(refs, newLines, line.id);
+    }
+  }
+};
+
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 let deleteShortcutTimerId = null;
 
@@ -1053,17 +1118,20 @@ export const handleLinePaste = (deps, payload) => {
 };
 
 export const forceSyncContentLine = (deps, payload) => {
-  const { store, refs } = deps;
-  const refIds = refs;
+  const { refs, props } = deps;
+  syncRenderedLineContent(refs, props.lines, payload?.lineId);
+};
 
-  const { lineId } = payload;
-  const lineRef = getLineElementById(refIds, lineId);
-  // Check if lineRef exists and has the elm property
-  if (!lineRef) {
-    return;
-  }
-  const lineContent = store.selectLineContent({ lineId });
-  lineRef.updateContent(lineContent);
+export const forceSyncAllContentLines = (deps) => {
+  const { refs, props } = deps;
+  syncAllRenderedLineContent(refs, props.lines);
+};
+
+export const handleOnUpdate = (deps, payload) => {
+  const { refs } = deps;
+  const oldLines = payload?.oldProps?.lines;
+  const newLines = payload?.newProps?.lines;
+  syncChangedRenderedLineContent(refs, oldLines, newLines);
 };
 
 export const updateSelectedLine = (deps, payload) => {
