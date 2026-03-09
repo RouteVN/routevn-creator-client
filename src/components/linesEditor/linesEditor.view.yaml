@@ -22,12 +22,12 @@ refs:
       contextmenu:
         handler: handlePreviewRightClick
 styles:
-  div[contenteditable]:
+  rvn-editable-text:
     font-size: 16px
     font-family: inherit
     line-height: 1.5
     word-break: break-word
-  div[contenteditable]:focus:
+  rvn-editable-text:focus:
     outline: none
   rvn-file-image:
     pointer-events: none
@@ -45,7 +45,7 @@ template:
                           - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f: null
                   - rtgl-view d=h w=f:
                       - rtgl-view w=f:
-                          - 'div#line${i} data-line-id="${line.id}" style="width: 100%; padding-bottom: 4px;" contenteditable=plaintext-only': ${line.actions.dialogue.content[0].text}
+                          - 'rvn-editable-text#line${i} data-line-id="${line.id}" style="width: 100%; padding-bottom: 4px;"': ${line.actions.dialogue.content[0].text}
                           - $if line.sectionTransition:
                               - rtgl-view#previewSectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
                                   - rtgl-svg svg="transition" wh=16: null

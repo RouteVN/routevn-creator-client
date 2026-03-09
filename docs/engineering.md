@@ -51,6 +51,7 @@ Local-first collaborative behavior uses Insieme:
 ├── src/
 │   ├── components/
 │   ├── pages/
+│   ├── primitives/
 │   ├── deps/
 │   │   ├── features/
 │   │   ├── infra/
@@ -80,6 +81,9 @@ Local-first collaborative behavior uses Insieme:
 
 - `src/pages/`
   Route-level pages and screen-specific logic.
+
+- `src/primitives/`
+  Registered browser primitives such as custom elements that wrap low-level DOM behavior.
 
 - `src/deps/infra/`
   Low-level platform integrations such as router, DB, file system, pickers, and updater hooks.
@@ -123,6 +127,9 @@ Local-first collaborative behavior uses Insieme:
 - `src/pages/`
   Route-level screens. Pages usually follow the Rettangoli `view/store/handlers` pattern.
 
+- `src/primitives/`
+  Browser-native custom elements and low-level DOM wrappers used when behavior does not fit Rettangoli component files.
+
 - `src/components/`
   Reusable UI building blocks. Components can also use `view/store/handlers` when they own interaction state.
 
@@ -163,6 +170,7 @@ These entry points are responsible for:
 1. creating infrastructure dependencies
 2. creating services
 3. exposing dependencies through `deps`
+4. registering browser primitives needed by the UI runtime
 
 Handlers must not build dependencies themselves.
 

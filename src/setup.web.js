@@ -15,6 +15,9 @@ import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import Router from "./deps/infra/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
+import { registerPrimitives } from "./primitives/registerPrimitives.js";
+
+registerPrimitives();
 
 // Initialize app database using web adapter
 const appDb = createDb({ path: "app" });

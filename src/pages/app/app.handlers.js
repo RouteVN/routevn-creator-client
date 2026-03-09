@@ -52,6 +52,7 @@ const EDITABLE_TAGS = new Set([
   "rtgl-input",
   "rtgl-select",
   "rtgl-textarea",
+  "rvn-editable-text",
 ]);
 
 const isEditableElement = (element) => {
@@ -70,7 +71,7 @@ const isEditableElement = (element) => {
 
   if (typeof element.closest === "function") {
     const editableParent = element.closest(
-      "[contenteditable], input, textarea, select, rtgl-input, rtgl-select, rtgl-textarea",
+      "[contenteditable], input, textarea, select, rtgl-input, rtgl-select, rtgl-textarea, rvn-editable-text",
     );
     if (editableParent) {
       return true;
