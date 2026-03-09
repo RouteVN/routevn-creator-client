@@ -9,10 +9,6 @@ const getCharacterItemById = ({ store, itemId } = {}) => {
   return item;
 };
 
-const resolveDetailItemId = (detail = {}) => {
-  return detail.itemId || detail.id || detail.item?.id || "";
-};
-
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) return;
 
@@ -63,29 +59,25 @@ export const handleDataChanged = refreshCharactersData;
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { store, render } = deps;
-  const detail = payload?._event?.detail || {};
-  const id = resolveDetailItemId(detail);
-  const { isFolder } = detail;
+  const { itemId, isFolder } = payload._event.detail;
 
-  // If this is a folder, clear selection
   if (isFolder) {
     store.setSelectedItemId({ itemId: null });
     render();
     return;
   }
 
-  if (!id) {
+  if (!itemId) {
     return;
   }
 
-  store.setSelectedItemId({ itemId: id });
+  store.setSelectedItemId({ itemId });
   render();
 };
 
 export const handleCharacterItemClick = async (deps, payload) => {
   const { store, render, refs } = deps;
-  const detail = payload?._event?.detail || {};
-  const itemId = resolveDetailItemId(detail);
+  const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
   }
@@ -98,21 +90,14 @@ export const handleCharacterItemClick = async (deps, payload) => {
 };
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {
-  const { store, refs } = deps;
-  const detail = payload?._event?.detail || {};
-  const isFolder = detail.isFolder === true;
-  if (isFolder) return;
-
-  const candidateIds = [detail.itemId, detail.id, store.selectSelectedItemId()];
-  const itemId = candidateIds.find((candidateId) =>
-    getCharacterItemById({ store, itemId: candidateId }),
-  );
+  const { refs } = deps;
+  const { itemId } = payload._event.detail;
   if (!itemId) return;
 
   const { fileExplorer } = refs;
   fileExplorer.selectItem({ itemId });
 
-  openEditDialogWithValues({ deps, itemId: itemId });
+  openEditDialogWithValues({ deps, itemId });
 };
 
 export const handleCharacterCreated = async (deps, payload) => {
@@ -249,13 +234,6 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
-export const handleGroupToggle = (deps, payload) => {
-  const { store, render } = deps;
-  const { groupId } = payload._event.detail;
-  store.toggleGroupCollapse({ groupId: groupId });
-  render();
-};
-
 export const handleAddCharacterClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
@@ -330,8 +308,8 @@ export const handleDialogAvatarClick = async (deps) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
 
   const state = projectService.getState();
   const character = state.characters.items[itemId];
@@ -360,14 +338,11 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.deleteResourceItem({
-    resourceType,
+    resourceType: "characters",
     resourceId: itemId,
   });
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems({ charactersData: data });
-  render();
+  await refreshCharactersData(deps);
 };
 
 export const handleEditDialogClose = (deps) => {

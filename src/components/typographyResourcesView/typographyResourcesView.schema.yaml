@@ -1,0 +1,25 @@
+componentName: rvn-typography-resources-view
+propsSchema:
+  type: object
+  properties:
+    navTitle:
+      type: string
+      description: Optional title to display in the header
+    groups:
+      type: array
+      description: Array of typography groups to display
+    selectedItemId:
+      type: string
+      description: ID of the currently selected typography item
+    searchQuery:
+      type: string
+      description: Current search query
+    searchPlaceholder:
+      type: string
+      description: Placeholder text for search input
+    emptyMessage:
+      type: string
+      description: Message to show when no items match
+    addText:
+      type: string
+      description: Text to display in add affordances

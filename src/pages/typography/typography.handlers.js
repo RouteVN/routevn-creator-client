@@ -41,7 +41,7 @@ export const handleDataChanged = refreshTypographyData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
-  const { id, isFolder } = payload._event.detail;
+  const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder) {
     store.setSelectedItemId({ itemId: undefined });
@@ -49,7 +49,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId: id });
+  store.setSelectedItemId({ itemId });
   render();
 };
 
@@ -60,40 +60,6 @@ export const handleTypographyItemClick = (deps, payload) => {
 
   const { fileExplorer } = refs;
   fileExplorer.selectItem({ itemId });
-
-  render();
-};
-
-export const handleDragDropFileSelected = async (deps, payload) => {
-  const { store, render, projectService } = deps;
-  const { files, targetGroupId } = payload._event.detail; // Extract from forwarded event
-  const id = targetGroupId;
-
-  // Upload all files
-  const uploadResults = await projectService.uploadFiles(files);
-
-  // uploadResults already contains only successful uploads
-  const successfulUploads = uploadResults;
-
-  for (const result of successfulUploads) {
-    await projectService.createResourceItem({
-      resourceType: "typography",
-      resourceId: nanoid(),
-      data: {
-        type: "typography",
-        fileId: result.fileId,
-        name: result.displayName,
-        fileType: result.file.type,
-        fileSize: result.file.size,
-      },
-      parentId: id,
-      position: "last",
-    });
-  }
-
-  if (successfulUploads.length > 0) {
-    syncRepositoryToStore(store, projectService);
-  }
 
   render();
 };
@@ -458,19 +424,17 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, store, render } = deps;
-  const { resourceType, itemId } = payload._event.detail;
+  const { projectService, appService, render } = deps;
+  const { itemId } = payload._event.detail;
 
   const state = projectService.getState();
 
-  if (resourceType === "typography") {
-    const typographyCount = getTypographyCount(state.typography);
-    const removalCount = getTypographyRemovalCount(state.typography, itemId);
-    if (typographyCount - removalCount < 1) {
-      appService.showToast("At least one typography must remain.");
-      render();
-      return;
-    }
+  const typographyCount = getTypographyCount(state.typography);
+  const removalCount = getTypographyRemovalCount(state.typography, itemId);
+  if (typographyCount - removalCount < 1) {
+    appService.showToast("At least one typography must remain.");
+    render();
+    return;
   }
 
   const usage = recursivelyCheckResource({
@@ -487,12 +451,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   // Perform the delete operation
   await projectService.deleteResourceItem({
-    resourceType,
+    resourceType: "typography",
     resourceId: itemId,
   });
 
-  // Refresh data and update store (reuse existing logic from handleDataChanged)
-  const data = projectService.getState()[resourceType];
-  store.setItems({ typographyData: data });
-  render();
+  await refreshTypographyData(deps);
 };

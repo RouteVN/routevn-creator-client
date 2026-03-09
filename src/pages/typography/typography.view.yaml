@@ -9,14 +9,12 @@ refs:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleTypographyItemDoubleClick
-  groupview:
+  typographyView:
     eventListeners:
       item-click:
         handler: handleTypographyItemClick
       item-dblclick:
         handler: handleTypographyItemDoubleClick
-      files-uploaded:
-        handler: handleDragDropFileSelected
       add-click:
         handler: handleAddTypographyClick
       search-input:
@@ -65,7 +63,7 @@ template:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - rtgl-view w=1fg h=f:
-              - rvn-group-resources-view#groupview :navTitle=title :resourceType=resourceType :flatGroups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery show-zoom-controls=false: null
+              - rvn-typography-resources-view#typographyView :navTitle=title :groups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
