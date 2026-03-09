@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
 import {
   COLLAB_CONNECTION_ERROR_THROTTLE_MS,
   COLLAB_HEARTBEAT_INTERVAL_MS,
@@ -7,7 +7,10 @@ import {
 } from "./constants.js";
 import { isLocalProjectId } from "./localProjectMode.js";
 
-const generateClientIdSuffix = () => nanoid(12);
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+const generateClientIdSuffix = customAlphabet(BASE58_ALPHABET, 12);
 
 const getCollabEndpointCandidates = (endpointUrl) => {
   const raw =
