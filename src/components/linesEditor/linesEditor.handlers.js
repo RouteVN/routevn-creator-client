@@ -14,6 +14,14 @@ const getCursorPosition = (element) => {
   return element.getCaretPosition();
 };
 
+const hasSelectionRange = (element) => {
+  if (!element || typeof element.hasSelectionRange !== "function") {
+    return true;
+  }
+
+  return element.hasSelectionRange();
+};
+
 const getLineIdFromElement = (element) => {
   return element?.dataset?.lineId || element?.id?.replace(/^line/, "") || "";
 };
@@ -22,6 +30,53 @@ const getLineElementById = (refs, lineId) => {
   return Object.values(refs || {}).find(
     (element) => getLineIdFromElement(element) === lineId,
   );
+};
+
+const syncStoredCursorState = (
+  store,
+  element,
+  { updateGoalColumn = true, remainingFrames = 2 } = {},
+) => {
+  requestAnimationFrame(() => {
+    const cursorPosition = getCursorPosition(element);
+    const selectionReady = hasSelectionRange(element);
+
+    if (!selectionReady && remainingFrames > 0) {
+      syncStoredCursorState(store, element, {
+        updateGoalColumn,
+        remainingFrames: remainingFrames - 1,
+      });
+      return;
+    }
+
+    store.setCursorPosition({ position: cursorPosition });
+    if (updateGoalColumn) {
+      store.setGoalColumn({ goalColumn: cursorPosition });
+    }
+  });
+};
+
+const focusContainerAfterPaint = (refs) => {
+  requestAnimationFrame(() => {
+    const container = refs["container"];
+    if (container) {
+      container.focus();
+    }
+  });
+};
+
+const getActualActiveElement = (element) => {
+  const root = element?.getRootNode();
+
+  if (root instanceof ShadowRoot && root.activeElement) {
+    return root.activeElement;
+  }
+
+  return document.activeElement;
+};
+
+const isLineElement = (element) => {
+  return Boolean(element && getLineIdFromElement(element));
 };
 
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
@@ -211,12 +266,7 @@ export const handleAfterMount = async (deps) => {
   store.setReady();
 
   // Focus container on mount to enable keyboard navigation
-  setTimeout(() => {
-    const container = refs["container"];
-    if (container) {
-      container.focus();
-    }
-  }, 0);
+  focusContainerAfterPaint(refs);
 };
 
 export const handlePreviewRightClick = async (deps, payload) => {
@@ -311,12 +361,6 @@ export const handleContainerKeyDown = (deps, payload) => {
     if (navKey === "o" || navKey === "O") {
       payload._event.preventDefault();
       payload._event.stopPropagation();
-
-      console.log("[linesEditor][block-new-line] shortcut", {
-        key: navKey,
-        selectedLineId: currentLineId || null,
-        linesCount: lines.length,
-      });
 
       dispatchEvent(
         new CustomEvent("newLine", {
@@ -936,22 +980,7 @@ export const handleLineKeyDown = (deps, payload) => {
 export const handleLineMouseUp = (deps, payload) => {
   const { store } = deps;
 
-  // Save cursor position after mouse up (selection change)
-  // Use multiple attempts with slight delays to ensure selection is established
-  setTimeout(() => {
-    const cursorPos = getCursorPosition(payload._event.currentTarget);
-    if (cursorPos > 0) {
-      store.setCursorPosition({ position: cursorPos });
-      store.setGoalColumn({ goalColumn: cursorPos });
-    } else {
-      // Try again with longer delay if position is 0
-      setTimeout(() => {
-        const cursorPos2 = getCursorPosition(payload._event.currentTarget);
-        store.setCursorPosition({ position: cursorPos2 });
-        store.setGoalColumn({ goalColumn: cursorPos2 });
-      }, 10);
-    }
-  }, 0);
+  syncStoredCursorState(store, payload._event.currentTarget);
 };
 
 export const handleOnInput = (deps, payload) => {
@@ -1109,12 +1138,7 @@ export const handleOnFocus = (deps, payload) => {
   }
 
   // When user clicks to focus (not navigating), set goal column to current position
-  setTimeout(() => {
-    const cursorPos = getCursorPosition(payload._event.currentTarget);
-    if (cursorPos >= 0) {
-      store.setGoalColumn({ goalColumn: cursorPos });
-    }
-  }, 10);
+  syncStoredCursorState(store, payload._event.currentTarget);
 
   render();
 };
@@ -1122,7 +1146,7 @@ export const handleOnFocus = (deps, payload) => {
 export const handleLineBlur = (deps, payload) => {
   const { store, render, refs } = deps;
 
-  // Capture element references before the timeout
+  // Capture element references before focus settles on the next paint.
   const blurredElement = payload._event.currentTarget;
   const shadowRoot = blurredElement.getRootNode();
 
@@ -1131,18 +1155,14 @@ export const handleLineBlur = (deps, payload) => {
     return;
   }
 
-  // Small delay to check if focus is moving to another line or staying within the editor
-  setTimeout(() => {
-    const activeElement = document.activeElement;
+  // Wait one paint so the next focused element is observable.
+  requestAnimationFrame(() => {
     const actualActiveElement =
-      (shadowRoot && shadowRoot.activeElement) || activeElement;
+      (shadowRoot && shadowRoot.activeElement) ||
+      getActualActiveElement(blurredElement);
 
     // Check if focus moved to another line within the editor
-    if (
-      actualActiveElement &&
-      actualActiveElement.id &&
-      actualActiveElement.id.startsWith("line")
-    ) {
+    if (isLineElement(actualActiveElement)) {
       // Focus moved to another line, stay in text-editor mode
       return;
     }
@@ -1164,5 +1184,5 @@ export const handleLineBlur = (deps, payload) => {
 
       render();
     }
-  }, 0);
+  });
 };

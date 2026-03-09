@@ -129,6 +129,7 @@ const setSelectionFromRange = (element, range) => {
 };
 
 export const EDITABLE_TEXT_TAG_NAME = "rvn-editable-text";
+const LINE_TOP_TOLERANCE_PX = 5;
 
 export class EditableTextElement extends HTMLElement {
   connectedCallback() {
@@ -160,6 +161,10 @@ export class EditableTextElement extends HTMLElement {
     preCaretRange.selectNodeContents(this);
     preCaretRange.setEnd(range.endContainer, range.endOffset);
     return preCaretRange.toString().length;
+  }
+
+  hasSelectionRange() {
+    return Boolean(getSelectionRange(this));
   }
 
   setCaretPosition(position, { preventScroll = true } = {}) {
@@ -198,7 +203,7 @@ export class EditableTextElement extends HTMLElement {
         if (lastLineTop === undefined) {
           lastLineTop = rect.top;
           lastLineStartPosition = position;
-        } else if (Math.abs(rect.top - lastLineTop) > 5) {
+        } else if (Math.abs(rect.top - lastLineTop) > LINE_TOP_TOLERANCE_PX) {
           break;
         } else {
           lastLineStartPosition = position;
@@ -227,7 +232,8 @@ export class EditableTextElement extends HTMLElement {
     startRange.setEnd(firstRange.endContainer, firstRange.endOffset);
 
     return (
-      Math.abs(cursorRect.top - startRange.getBoundingClientRect().top) <= 5
+      Math.abs(cursorRect.top - startRange.getBoundingClientRect().top) <=
+      LINE_TOP_TOLERANCE_PX
     );
   }
 
@@ -252,6 +258,9 @@ export class EditableTextElement extends HTMLElement {
       this.getContent().length,
     );
 
-    return Math.abs(cursorRect.top - endRange.getBoundingClientRect().top) <= 5;
+    return (
+      Math.abs(cursorRect.top - endRange.getBoundingClientRect().top) <=
+      LINE_TOP_TOLERANCE_PX
+    );
   }
 }
