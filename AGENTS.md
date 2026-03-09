@@ -57,6 +57,9 @@ Read the links from the following files to familiarize with the code before star
 - Push domain logic, validation, and async complexity into services.
 - Route-level async setup/loading should be handled in app-level orchestration, not repeated in page handlers.
 - Prefer single-purpose store actions (`setCurrentProject`, etc.) over multiple related setter calls.
+- Do not call browser globals like `document` or `window` directly from page handlers for cross-cutting side effects.
+- If a handler needs browser-side behavior such as blurring the active element, global focus changes, history changes, or global listeners, route that through `deps/services` or `deps/infra`.
+- Keep low-level DOM-heavy behavior in `src/primitives/` or in components that own that DOM surface directly.
 
 ## Detail Panel Pattern
 

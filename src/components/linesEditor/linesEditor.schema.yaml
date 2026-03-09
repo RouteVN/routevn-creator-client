@@ -9,10 +9,6 @@ propsSchema:
         properties: null
     selectedLineId:
       type: string
-    sectionLineChanges:
-      type: object
-    repositoryState:
-      type: object
 methods:
   type: object
   properties:

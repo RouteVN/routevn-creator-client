@@ -192,6 +192,35 @@ Handlers must stay thin.
 Stores must not absorb domain logic.
 Views must stay declarative.
 
+## Browser Side Effects
+
+Page and component handlers must not reach for browser globals directly for
+cross-cutting side effects such as:
+
+- `document.activeElement.blur()`
+- `window.addEventListener(...)`
+- `document.querySelector(...)` outside local component DOM ownership
+- global focus, history, or viewport manipulation
+
+Those side effects must live behind an explicit dependency or primitive:
+
+- `src/deps/services/shared/*` when the behavior is app-shell/browser
+  orchestration
+- `src/deps/infra/*` for low-level platform adapters
+- `src/primitives/*` for DOM-heavy browser primitives such as custom elements
+
+This keeps page handlers orchestration-only and prevents hidden browser
+coupling from spreading through route code.
+
+Allowed exceptions:
+
+- local DOM work inside a primitive
+- local DOM work inside a reusable component when that DOM is the component's
+  owned editing or interaction surface
+
+If a page handler needs to affect browser state, add a method to `deps` and
+call that method instead of touching `window` or `document` directly.
+
 ## Resource Page Pattern
 
 Resource pages should stay explicit at the page level.
@@ -255,6 +284,51 @@ They must not own:
 
 When a set of resource pages shares the same interaction model, add a family-specific component and shared feature helpers.
 Do not force unrelated resource pages into one universal resource-page system.
+
+## Scene Editor Pattern
+
+Scene editing uses three layers:
+
+- `src/primitives/editableText.js`
+  low-level contenteditable/caret behavior
+- `src/components/linesEditor/`
+  UI-only editing surface for line focus, keyboard handling, caret movement,
+  and semantic editor events
+- `src/deps/features/sceneEditing/`
+  shared scene-editing workflows such as line mutations, dialogue queue
+  coordination, and line view-model shaping
+- `src/pages/sceneEditor/`
+  page orchestration, asset loading, preview/canvas rendering, and dialogs
+
+Current scene-editing feature modules:
+
+- `lineViewModels.js`
+  builds enriched line view models for the editor surface
+- `lineOperations.js`
+  owns split/merge/new/paste/swap flows and dialogue queue writes
+- `runtime.js`
+  owns scene-editor runtime concerns such as asset loading, canvas rendering,
+  preview reset, and render subscriptions
+- `sectionOperations.js`
+  owns section selection, section creation, and section-selection reconciliation
+
+Keep `linesEditor` in its fixed Rettangoli component files.
+Do not add ad hoc sibling helper files inside the component folder when the
+logic is really scene-editing orchestration.
+
+`linesEditor` must not own:
+
+- repository or domain state reads
+- project service orchestration
+- split/merge/create/delete persistence workflows
+- scene-specific preview and badge shaping
+
+Those responsibilities belong in `src/deps/features/sceneEditing/` and
+`src/pages/sceneEditor/`.
+
+`sceneEditor.handlers.js` should stay as the page composition layer.
+It may export many handlers because of the framework contract, but the heavy
+work should be delegated into `src/deps/features/sceneEditing/`.
 
 ## Public Service Facades
 
