@@ -1,8 +1,13 @@
 import { nanoid } from "nanoid";
+import {
+  matchesRemoteTargets,
+  mountCollabRemoteRefresh,
+} from "../../deps/features/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
+let cleanupCollabRemoteRefresh;
 
 /**
  * Extract transitions from layout element click actions
@@ -348,6 +353,13 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
   editForm.setValues({ values: editValues });
 };
 
+export const handleBeforeMount = () => {
+  return () => {
+    cleanupCollabRemoteRefresh?.();
+    cleanupCollabRemoteRefresh = undefined;
+  };
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
@@ -408,6 +420,12 @@ export const handleAfterMount = async (deps) => {
   }
 
   render();
+  cleanupCollabRemoteRefresh?.();
+  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+    deps,
+    matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
+    refresh: refreshScenesData,
+  });
 };
 
 export const handleSetInitialScene = async (sceneId, deps) => {

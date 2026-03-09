@@ -11,6 +11,8 @@ export const createMediaPageHandlers = ({
   }),
   getEditPreviewFileId = () => undefined,
 }) => {
+  let cleanupProjectSubscription;
+
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
     syncMediaPageData({
@@ -60,13 +62,29 @@ export const createMediaPageHandlers = ({
   };
 
   const handleBeforeMount = (deps) => {
-    const { store, projectService } = deps;
-    syncMediaPageData({
-      store,
-      projectService,
-      resourceType,
-    });
-    return mountSubscriptions(deps);
+    const cleanupStreams = mountSubscriptions(deps);
+
+    return () => {
+      cleanupProjectSubscription?.();
+      cleanupProjectSubscription = undefined;
+      cleanupStreams?.();
+    };
+  };
+
+  const handleAfterMount = async (deps) => {
+    const { projectService, store, render } = deps;
+
+    await projectService.ensureRepository();
+    cleanupProjectSubscription = await projectService.subscribeProjectState(
+      ({ repositoryState }) => {
+        syncMediaPageData({
+          store,
+          repositoryState,
+          resourceType,
+        });
+        render();
+      },
+    );
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {
@@ -134,6 +152,7 @@ export const createMediaPageHandlers = ({
     refreshData,
     openEditDialogWithValues,
     handleBeforeMount,
+    handleAfterMount,
     handleFileExplorerSelectionChanged,
     handleFileExplorerDoubleClick,
     handleFileExplorerAction,

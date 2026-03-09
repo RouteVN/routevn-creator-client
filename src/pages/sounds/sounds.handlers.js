@@ -101,6 +101,7 @@ const handlePanelResize = (deps, payload) => {
 
 const {
   handleBeforeMount: handleMediaBeforeMount,
+  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerDoubleClick,
@@ -145,6 +146,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export {
+  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerDoubleClick,

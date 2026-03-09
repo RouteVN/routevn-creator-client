@@ -110,6 +110,12 @@ const createActionHandlers = ({ handleAction, handleMove }) => {
   };
 };
 
+const maybeRefresh = async (refresh, deps) => {
+  if (typeof refresh === "function") {
+    await refresh(deps);
+  }
+};
+
 const applyCharacterSpritesPatch = async ({
   projectService,
   characterId,
@@ -312,7 +318,7 @@ export const createResourceFileExplorerHandlers = ({
         return;
       }
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -330,7 +336,7 @@ export const createResourceFileExplorerHandlers = ({
         position: move.repositoryPosition,
       });
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
   });
 };
@@ -438,7 +444,7 @@ export const createLayoutsFileExplorerHandlers = ({ refresh }) => {
         return;
       }
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -455,7 +461,7 @@ export const createLayoutsFileExplorerHandlers = ({ refresh }) => {
         position: move.repositoryPosition,
       });
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
   });
 };
@@ -580,7 +586,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         return;
       }
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -604,7 +610,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         position: move.repositoryPosition,
       });
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
   });
 };
@@ -664,7 +670,7 @@ export const createScenesFileExplorerHandlers = ({ refresh }) => {
         return;
       }
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -681,7 +687,7 @@ export const createScenesFileExplorerHandlers = ({ refresh }) => {
         position: move.repositoryPosition,
       });
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
   });
 };
@@ -765,7 +771,7 @@ export const createVariablesFileExplorerHandlers = ({ refresh }) => {
         return;
       }
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -784,7 +790,7 @@ export const createVariablesFileExplorerHandlers = ({ refresh }) => {
         position: move.repositoryPosition,
       });
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
   });
 };
@@ -945,7 +951,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         return;
       }
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
     handleMove: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -974,7 +980,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           }),
       });
 
-      await refresh(deps);
+      await maybeRefresh(refresh, deps);
     },
   });
 };

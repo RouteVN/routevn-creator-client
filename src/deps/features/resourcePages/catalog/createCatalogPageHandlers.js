@@ -10,6 +10,8 @@ export const createCatalogPageHandlers = ({
       refresh,
     }),
 }) => {
+  let cleanupProjectSubscription;
+
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
     const data = projectService.getState()[resourceType] ?? EMPTY_TREE;
@@ -17,10 +19,23 @@ export const createCatalogPageHandlers = ({
     render();
   };
 
+  const handleBeforeMount = () => {
+    return () => {
+      cleanupProjectSubscription?.();
+      cleanupProjectSubscription = undefined;
+    };
+  };
+
   const handleAfterMount = async (deps) => {
-    const { projectService } = deps;
+    const { projectService, store, render } = deps;
     await projectService.ensureRepository();
-    await refreshData(deps);
+    cleanupProjectSubscription = await projectService.subscribeProjectState(
+      ({ repositoryState }) => {
+        const data = repositoryState?.[resourceType] ?? EMPTY_TREE;
+        store.setItems({ data });
+        render();
+      },
+    );
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {
@@ -64,6 +79,7 @@ export const createCatalogPageHandlers = ({
 
   return {
     refreshData,
+    handleBeforeMount,
     handleAfterMount,
     handleFileExplorerSelectionChanged,
     handleFileExplorerAction,

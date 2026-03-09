@@ -2,6 +2,7 @@ import { createProjectAssetService } from "./projectAssetService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
+import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
 
 export const createProjectServiceCore = ({
   router,
@@ -63,6 +64,25 @@ export const createProjectServiceCore = ({
     getRepositoryById: repositoryService.getRepositoryById,
     getAdapterById: repositoryService.getAdapterById,
     ensureRepository: repositoryService.ensureRepository,
+    async subscribeProjectState(listener, options) {
+      return repositoryService.subscribeProjectState(
+        ({ projectId, repositoryState }) => {
+          const resolvedProjectId =
+            repositoryState?.project?.id || projectId || "unknown-project";
+          const domainState = projectRepositoryStateToDomainState({
+            repositoryState,
+            projectId: resolvedProjectId,
+          });
+
+          listener({
+            projectId: resolvedProjectId,
+            repositoryState,
+            domainState,
+          });
+        },
+        options,
+      );
+    },
     ...("getRepositoryByPath" in repositoryService
       ? {
           getRepositoryByPath: repositoryService.getRepositoryByPath,

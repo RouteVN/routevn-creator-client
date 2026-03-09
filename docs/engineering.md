@@ -192,6 +192,42 @@ Handlers must stay thin.
 Stores must not absorb domain logic.
 Views must stay declarative.
 
+## Repository-Driven Rendering
+
+For project-backed pages, repository state is the authoritative source of truth.
+
+Preferred flow:
+
+```text
+command or remote collab event
+-> repository state changes
+-> projectService emits subscribed state update
+-> page store updates its subscribed snapshot
+-> selectors derive view data
+-> render updates
+```
+
+Prefer this over:
+
+```text
+mutation
+-> page calls refresh handler
+-> page copies repository slices manually
+-> render
+```
+
+Use `projectService.subscribeProjectState(...)` for project-backed pages.
+
+Page stores should keep:
+
+- subscribed repository/domain snapshot needed for selectors
+- UI-local state such as selection, search, dialog open state, hover state,
+  zoom, or editor mode
+
+Page handlers should not be responsible for manually refreshing copied
+repository data after every mutation. If the repository changes, subscribed
+pages should update from that change naturally.
+
 ## Browser Side Effects
 
 Page and component handlers must not reach for browser globals directly for
@@ -387,6 +423,24 @@ Put these concerns there:
 - sync protocol behavior
 
 Page handlers must not know protocol details.
+
+`src/deps/services/web/collabBootstrapService.js` must stay a web-runtime
+composition layer only:
+
+- create the web project service
+- create the collab connection runtime
+- publish normalized remote collab events
+- expose debug helpers when enabled
+
+It must not:
+
+- scan the DOM for mounted pages
+- know page tags or handler names
+- call page handlers directly
+
+During the migration to repository-driven rendering, page-owned refresh policy
+belongs in page handlers or shared page-family helpers. If a page still needs a
+remote refresh bridge, subscribe to normalized collab events in the page layer.
 
 ### Platform-Specific Logic
 

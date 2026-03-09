@@ -56,6 +56,7 @@ export const createProjectRepositoryRuntime = async ({
   const events = Array.isArray(sourceEvents)
     ? sourceEvents.map((event) => structuredClone(event))
     : [];
+  const listeners = new Set();
 
   const projectPartition = projectRepositoryStatePartitionFor(projectId);
 
@@ -129,6 +130,13 @@ export const createProjectRepositoryRuntime = async ({
   }
   assertState(currentState);
 
+  const notifyStateListeners = () => {
+    const snapshot = structuredClone(currentState);
+    listeners.forEach((listener) => {
+      listener(snapshot);
+    });
+  };
+
   return {
     getState(untilEventIndex) {
       if (untilEventIndex === undefined || untilEventIndex === null) {
@@ -146,6 +154,21 @@ export const createProjectRepositoryRuntime = async ({
 
     getEvents() {
       return events.map((event) => structuredClone(event));
+    },
+
+    subscribe(listener, { emitCurrent = true } = {}) {
+      if (typeof listener !== "function") {
+        throw new Error("listener must be a function");
+      }
+
+      listeners.add(listener);
+      if (emitCurrent) {
+        listener(structuredClone(currentState));
+      }
+
+      return () => {
+        listeners.delete(listener);
+      };
     },
 
     async addEvent(event) {
@@ -166,6 +189,7 @@ export const createProjectRepositoryRuntime = async ({
         partition: projectPartition,
       });
       assertState(currentState);
+      notifyStateListeners();
     },
   };
 };

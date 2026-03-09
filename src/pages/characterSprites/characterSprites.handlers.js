@@ -1,5 +1,9 @@
 import { nanoid } from "nanoid";
 import {
+  matchesRemoteTargets,
+  mountCollabRemoteRefresh,
+} from "../../deps/features/collabRefresh.js";
+import {
   ROOT_TREE_PARENT_ID,
   deleteTreeItem,
   insertTreeItem,
@@ -10,6 +14,7 @@ import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
+let cleanupCollabRemoteRefresh;
 
 const applyCharacterSpritesPatch = async ({
   projectService,
@@ -220,10 +225,23 @@ const createSpritesFromFiles = async ({
   await refreshCharacterSpritesData(deps);
 };
 
+export const handleBeforeMount = () => {
+  return () => {
+    cleanupCollabRemoteRefresh?.();
+    cleanupCollabRemoteRefresh = undefined;
+  };
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService } = deps;
   await projectService.ensureRepository();
   await refreshCharacterSpritesData(deps);
+  cleanupCollabRemoteRefresh?.();
+  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+    deps,
+    matches: matchesRemoteTargets(["characters"]),
+    refresh: refreshCharacterSpritesData,
+  });
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =

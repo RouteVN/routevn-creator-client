@@ -1,8 +1,21 @@
 import { nanoid } from "nanoid";
+import {
+  matchesRemoteTargets,
+  mountCollabRemoteRefresh,
+} from "../../deps/features/collabRefresh.js";
 import { createVariablesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
+};
+
+let cleanupCollabRemoteRefresh;
+
+export const handleBeforeMount = () => {
+  return () => {
+    cleanupCollabRemoteRefresh?.();
+    cleanupCollabRemoteRefresh = undefined;
+  };
 };
 
 export const handleAfterMount = async (deps) => {
@@ -11,6 +24,12 @@ export const handleAfterMount = async (deps) => {
   const { variables } = projectService.getState();
   store.setItems({ variablesData: variables ?? { tree: [], items: {} } });
   render();
+  cleanupCollabRemoteRefresh?.();
+  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+    deps,
+    matches: matchesRemoteTargets(["variables"]),
+    refresh: refreshVariablesData,
+  });
 };
 
 const refreshVariablesData = async (deps) => {

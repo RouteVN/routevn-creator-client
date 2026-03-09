@@ -186,6 +186,27 @@ export const createProjectRepositoryService = ({
     return repository;
   };
 
+  const subscribeProjectState = async (
+    listener,
+    { projectId, emitCurrent = true } = {},
+  ) => {
+    const targetProjectId = projectId || getCurrentProjectId();
+    if (!targetProjectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    const repository = await getRepositoryByProject(targetProjectId);
+    return repository.subscribe(
+      (repositoryState) => {
+        listener({
+          projectId: targetProjectId,
+          repositoryState,
+        });
+      },
+      { emitCurrent },
+    );
+  };
+
   const getCachedRepository = () => {
     const projectId = getCurrentProjectId();
     if (!currentRepository || currentProjectId !== projectId) {
@@ -240,6 +261,9 @@ export const createProjectRepositoryService = ({
     },
     async ensureRepository() {
       return ensureRepository();
+    },
+    async subscribeProjectState(listener, options) {
+      return subscribeProjectState(listener, options);
     },
     ...(typeof getRepositoryByPath === "function"
       ? {

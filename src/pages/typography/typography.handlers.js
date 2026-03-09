@@ -1,6 +1,10 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../domain/treeHelpers.js";
 import {
+  matchesRemoteTargets,
+  mountCollabRemoteRefresh,
+} from "../../deps/features/collabRefresh.js";
+import {
   getTypographyCount,
   getTypographyRemovalCount,
 } from "../../constants/typography.js";
@@ -16,11 +20,26 @@ const syncRepositoryToStore = (store, projectService) => {
   store.setFontsData({ fontsData: fonts });
 };
 
+let cleanupCollabRemoteRefresh;
+
+export const handleBeforeMount = () => {
+  return () => {
+    cleanupCollabRemoteRefresh?.();
+    cleanupCollabRemoteRefresh = undefined;
+  };
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   syncRepositoryToStore(store, projectService);
   render();
+  cleanupCollabRemoteRefresh?.();
+  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+    deps,
+    matches: matchesRemoteTargets(["typography", "colors", "fonts"]),
+    refresh: refreshTypographyData,
+  });
 };
 
 const refreshTypographyData = async (deps) => {

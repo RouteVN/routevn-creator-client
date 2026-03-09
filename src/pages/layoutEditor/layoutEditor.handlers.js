@@ -1,4 +1,8 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
+import {
+  matchesRemoteTargets,
+  mountCollabRemoteRefresh,
+} from "../../deps/features/collabRefresh.js";
 import { toHierarchyStructure } from "../../domain/treeHelpers.js";
 import {
   extractFileIdsFromRenderState,
@@ -35,9 +39,15 @@ const fileContentCache = new Map();
 
 // Track keyboard navigation timeout
 let keyboardNavigationTimeout = null;
+let cleanupCollabRemoteRefresh;
 
 export const handleBeforeMount = (deps) => {
-  return mountSubscriptions(deps);
+  const cleanupSubscriptions = mountSubscriptions(deps);
+  return () => {
+    cleanupCollabRemoteRefresh?.();
+    cleanupCollabRemoteRefresh = undefined;
+    cleanupSubscriptions?.();
+  };
 };
 
 /**
@@ -375,6 +385,19 @@ export const handleAfterMount = async (deps) => {
 
   await renderLayoutPreview(deps);
   render();
+  cleanupCollabRemoteRefresh?.();
+  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+    deps,
+    matches: matchesRemoteTargets([
+      "layouts",
+      "images",
+      "typography",
+      "colors",
+      "fonts",
+      "variables",
+    ]),
+    refresh: refreshLayoutElementsData,
+  });
 };
 
 export const handleBackClick = (deps) => {

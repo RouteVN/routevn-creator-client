@@ -1,4 +1,8 @@
 import { nanoid } from "nanoid";
+import {
+  matchesRemoteTargets,
+  mountCollabRemoteRefresh,
+} from "../../deps/features/collabRefresh.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
@@ -32,12 +36,25 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
+export const handleBeforeMount = () => {
+  return () => {
+    cleanupCollabRemoteRefresh?.();
+    cleanupCollabRemoteRefresh = undefined;
+  };
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
   const { characters } = projectService.getState();
   store.setItems({ charactersData: characters });
   render();
+  cleanupCollabRemoteRefresh?.();
+  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+    deps,
+    matches: matchesRemoteTargets(["characters"]),
+    refresh: refreshCharactersData,
+  });
 };
 
 const refreshCharactersData = async (deps) => {
@@ -409,3 +426,4 @@ export const handleEditFormAction = async (deps, payload) => {
     render();
   }
 };
+let cleanupCollabRemoteRefresh;

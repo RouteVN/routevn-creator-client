@@ -48,6 +48,7 @@ const openTweenDialog = async ({
 };
 
 const {
+  handleBeforeMount,
   handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
@@ -60,6 +61,7 @@ const {
 });
 
 export {
+  handleBeforeMount,
   handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
