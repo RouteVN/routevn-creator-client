@@ -1,7 +1,7 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
 import {
+  createCollabRemoteRefreshStream,
   matchesRemoteTargets,
-  mountCollabRemoteRefresh,
 } from "../../deps/features/collabRefresh.js";
 import { toHierarchyStructure } from "../../domain/treeHelpers.js";
 import {
@@ -34,25 +34,15 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
-const getRuntime = (refs) => {
-  refs.__layoutEditorRuntime ??= {
-    fileContentCache: new Map(),
-    keyboardNavigationTimeout: undefined,
-    cleanupCollabRemoteRefresh: undefined,
-  };
-  return refs.__layoutEditorRuntime;
-};
-
 export const handleBeforeMount = (deps) => {
-  const runtime = getRuntime(deps.refs);
   const cleanupSubscriptions = mountSubscriptions(deps);
   return () => {
-    if (runtime.keyboardNavigationTimeout !== undefined) {
-      clearTimeout(runtime.keyboardNavigationTimeout);
-      runtime.keyboardNavigationTimeout = undefined;
+    const keyboardNavigationTimeoutId =
+      deps.store.selectKeyboardNavigationTimeoutId();
+    if (keyboardNavigationTimeoutId !== undefined) {
+      clearTimeout(keyboardNavigationTimeoutId);
+      deps.store.clearKeyboardNavigationTimeout();
     }
-    runtime.cleanupCollabRemoteRefresh?.();
-    runtime.cleanupCollabRemoteRefresh = undefined;
     cleanupSubscriptions?.();
   };
 };
@@ -64,18 +54,19 @@ export const handleBeforeMount = (deps) => {
  * @param {string} layoutId - The layout ID
  */
 const scheduleKeyboardSave = (deps, itemId, layoutId) => {
-  const runtime = getRuntime(deps.refs);
+  const { store } = deps;
+  const keyboardNavigationTimeoutId = store.selectKeyboardNavigationTimeoutId();
   // Clear existing timeout if still navigating
-  if (runtime.keyboardNavigationTimeout !== undefined) {
-    clearTimeout(runtime.keyboardNavigationTimeout);
+  if (keyboardNavigationTimeoutId !== undefined) {
+    clearTimeout(keyboardNavigationTimeoutId);
   }
 
-  runtime.keyboardNavigationTimeout = setTimeout(() => {
-    const { store, subject } = deps;
+  const timeoutId = setTimeout(() => {
+    const { subject } = deps;
 
     // Check if the selected item has changed
     if (store.selectSelectedItemId() !== itemId) {
-      runtime.keyboardNavigationTimeout = undefined;
+      store.clearKeyboardNavigationTimeout();
       return;
     }
 
@@ -93,8 +84,10 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
       });
     }
 
-    runtime.keyboardNavigationTimeout = undefined;
+    store.clearKeyboardNavigationTimeout();
   }, DEBOUNCE_DELAYS.KEYBOARD);
+
+  store.setKeyboardNavigationTimeoutId({ timeoutId });
 };
 
 /**
@@ -105,8 +98,7 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileReferences, fontsItems) => {
-  const { projectService, refs } = deps;
-  const runtime = getRuntime(refs);
+  const { projectService, store } = deps;
   const assets = {};
 
   for (const fileObj of fileReferences) {
@@ -116,13 +108,14 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
     let url;
     const cacheKey = fileId;
 
-    if (runtime.fileContentCache.has(cacheKey)) {
-      const cachedUrl = runtime.fileContentCache.get(cacheKey);
+    const cachedUrl = store.selectCachedFileContent({ fileId: cacheKey });
+
+    if (cachedUrl) {
       if (!isBlobUrl(cachedUrl)) {
         url = cachedUrl;
       } else {
         // Blob URLs are short-lived and can be revoked by consumers.
-        runtime.fileContentCache.delete(cacheKey);
+        store.clearCachedFileContent({ fileId: cacheKey });
       }
     }
 
@@ -132,7 +125,7 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
       url = result.url;
       // Cache only stable URLs. Blob URLs can become invalid after revoke.
       if (!isBlobUrl(url)) {
-        runtime.fileContentCache.set(cacheKey, url);
+        store.cacheFileContent({ fileId: cacheKey, url });
       }
     }
 
@@ -261,7 +254,7 @@ const renderLayoutPreview = async (deps) => {
       await graphicsService.loadAssets(assets);
     } catch {
       // Recover from stale URL cache (especially revoked blob URLs).
-      getRuntime(deps.refs).fileContentCache.clear();
+      deps.store.clearFileContentCache();
       assets = await loadAssets(deps, fileReferences, fontsItems);
       await graphicsService.loadAssets(assets);
     }
@@ -371,13 +364,12 @@ const renderLayoutPreview = async (deps) => {
 export const handleAfterMount = async (deps) => {
   const { appService, store, projectService, render, refs, graphicsService } =
     deps;
-  const runtime = getRuntime(refs);
   const payload = appService.getPayload() || {};
   const { layoutId } = payload;
   const repository = await projectService.getRepository();
   const { layouts, images, typography, colors, fonts, variables } =
     repository.getState();
-  const layout = layoutId ? layouts.items?.[layoutId] : null;
+  const layout = layoutId ? layouts.items?.[layoutId] : undefined;
   store.setLayout({ id: layoutId, layout });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images });
@@ -395,19 +387,6 @@ export const handleAfterMount = async (deps) => {
 
   await renderLayoutPreview(deps);
   render();
-  runtime.cleanupCollabRemoteRefresh?.();
-  runtime.cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
-    deps,
-    matches: matchesRemoteTargets([
-      "layouts",
-      "images",
-      "typography",
-      "colors",
-      "fonts",
-      "variables",
-    ]),
-    refresh: refreshLayoutElementsData,
-  });
 };
 
 export const handleBackClick = (deps) => {
@@ -612,6 +591,18 @@ const subscriptions = (deps) => {
   const { subject, appService } = deps;
   const { isInputFocused } = appService;
   return [
+    createCollabRemoteRefreshStream({
+      deps,
+      matches: matchesRemoteTargets([
+        "layouts",
+        "images",
+        "typography",
+        "colors",
+        "fonts",
+        "variables",
+      ]),
+      refresh: refreshLayoutElementsData,
+    }),
     fromEvent(window, "keydown").pipe(
       filter((e) => {
         const isInput = isInputFocused();

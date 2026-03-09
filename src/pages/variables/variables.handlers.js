@@ -1,15 +1,12 @@
 import { nanoid } from "nanoid";
 import { createVariablesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
-};
-
-const getRuntime = (refs) => {
-  refs.__variablesPageRuntime ??= {};
-  return refs.__variablesPageRuntime;
 };
 
 const syncVariablesData = ({ store, repositoryState, projectService } = {}) => {
@@ -20,23 +17,23 @@ const syncVariablesData = ({ store, repositoryState, projectService } = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const runtime = getRuntime(deps.refs);
+  const { projectService, store, render } = deps;
+  const subscription = createProjectStateStream({ projectService })
+    .pipe(
+      tap(({ repositoryState }) => {
+        syncVariablesData({ store, repositoryState });
+        render();
+      }),
+    )
+    .subscribe();
+
   return () => {
-    runtime.cleanupProjectSubscription?.();
-    runtime.cleanupProjectSubscription = undefined;
+    subscription.unsubscribe();
   };
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render, refs } = deps;
-  const runtime = getRuntime(refs);
+export const handleAfterMount = async ({ projectService }) => {
   await projectService.ensureRepository();
-  runtime.cleanupProjectSubscription?.();
-  runtime.cleanupProjectSubscription =
-    await projectService.subscribeProjectState(({ repositoryState }) => {
-      syncVariablesData({ store, repositoryState });
-      render();
-    });
 };
 
 const refreshVariablesData = async (deps) => {

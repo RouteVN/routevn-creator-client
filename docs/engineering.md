@@ -207,7 +207,11 @@ If handler runtime state must survive across lifecycle hooks, keep it per
 instance:
 
 - prefer the `handleBeforeMount` cleanup closure when the state is owned there
-- otherwise store it on instance-owned `refs.__...Runtime`
+- prefer RxJS streams/subscriptions for async project or collab lifecycles
+- use explicit top-level store fields only for plain local values such as timer
+  ids or cache entries
+
+Do not store handler runtime state on `refs.__...Runtime`.
 
 Handler module files must be safe for multiple mounted instances at the same
 time.

@@ -1,5 +1,7 @@
 import { createResourceFileExplorerHandlers } from "../../fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../projectStateStream.js";
 import { syncMediaPageData } from "./mediaPageShared.js";
+import { tap } from "rxjs";
 
 export const createMediaPageHandlers = ({
   resourceType,
@@ -11,11 +13,6 @@ export const createMediaPageHandlers = ({
   }),
   getEditPreviewFileId = () => undefined,
 }) => {
-  const getRuntime = (refs) => {
-    refs.__mediaPageRuntime ??= {};
-    return refs.__mediaPageRuntime;
-  };
-
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
     syncMediaPageData({
@@ -54,7 +51,21 @@ export const createMediaPageHandlers = ({
   };
 
   const mountSubscriptions = (deps) => {
-    const streams = subscriptions?.(deps) ?? [];
+    const { projectService, store, render } = deps;
+    const streams = [
+      createProjectStateStream({ projectService }).pipe(
+        tap(({ repositoryState }) => {
+          syncMediaPageData({
+            store,
+            repositoryState,
+            resourceType,
+          });
+          render();
+        }),
+      ),
+      ...(subscriptions?.(deps) ?? []),
+    ];
+
     if (!streams.length) {
       return undefined;
     }
@@ -65,31 +76,11 @@ export const createMediaPageHandlers = ({
   };
 
   const handleBeforeMount = (deps) => {
-    const runtime = getRuntime(deps.refs);
-    const cleanupStreams = mountSubscriptions(deps);
-
-    return () => {
-      runtime.cleanupProjectSubscription?.();
-      runtime.cleanupProjectSubscription = undefined;
-      cleanupStreams?.();
-    };
+    return mountSubscriptions(deps);
   };
 
-  const handleAfterMount = async (deps) => {
-    const { projectService, store, render, refs } = deps;
-    const runtime = getRuntime(refs);
-
+  const handleAfterMount = async ({ projectService }) => {
     await projectService.ensureRepository();
-    runtime.cleanupProjectSubscription?.();
-    runtime.cleanupProjectSubscription =
-      await projectService.subscribeProjectState(({ repositoryState }) => {
-        syncMediaPageData({
-          store,
-          repositoryState,
-          resourceType,
-        });
-        render();
-      });
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {

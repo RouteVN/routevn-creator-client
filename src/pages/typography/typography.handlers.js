@@ -7,6 +7,8 @@ import {
 import { getFileType } from "../../utils/fileTypeUtils";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { tap } from "rxjs";
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = ({
@@ -20,29 +22,24 @@ const syncRepositoryToStore = ({
   store.setFontsData({ fontsData: state?.fonts });
 };
 
-const getRuntime = (refs) => {
-  refs.__typographyPageRuntime ??= {};
-  return refs.__typographyPageRuntime;
-};
-
 export const handleBeforeMount = (deps) => {
-  const runtime = getRuntime(deps.refs);
+  const { projectService, store, render } = deps;
+  const subscription = createProjectStateStream({ projectService })
+    .pipe(
+      tap(({ repositoryState }) => {
+        syncRepositoryToStore({ store, repositoryState });
+        render();
+      }),
+    )
+    .subscribe();
+
   return () => {
-    runtime.cleanupProjectSubscription?.();
-    runtime.cleanupProjectSubscription = undefined;
+    subscription.unsubscribe();
   };
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render, refs } = deps;
-  const runtime = getRuntime(refs);
+export const handleAfterMount = async ({ projectService }) => {
   await projectService.ensureRepository();
-  runtime.cleanupProjectSubscription?.();
-  runtime.cleanupProjectSubscription =
-    await projectService.subscribeProjectState(({ repositoryState }) => {
-      syncRepositoryToStore({ store, repositoryState });
-      render();
-    });
 };
 
 const refreshTypographyData = async (deps) => {

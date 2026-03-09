@@ -1,11 +1,8 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
-
-const getRuntime = (refs) => {
-  refs.__charactersPageRuntime ??= {};
-  return refs.__charactersPageRuntime;
-};
+import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { tap } from "rxjs";
 
 const syncCharactersData = ({
   store,
@@ -47,23 +44,23 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const runtime = getRuntime(deps.refs);
+  const { projectService, store, render } = deps;
+  const subscription = createProjectStateStream({ projectService })
+    .pipe(
+      tap(({ repositoryState }) => {
+        syncCharactersData({ store, repositoryState });
+        render();
+      }),
+    )
+    .subscribe();
+
   return () => {
-    runtime.cleanupProjectSubscription?.();
-    runtime.cleanupProjectSubscription = undefined;
+    subscription.unsubscribe();
   };
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render, refs } = deps;
-  const runtime = getRuntime(refs);
+export const handleAfterMount = async ({ projectService }) => {
   await projectService.ensureRepository();
-  runtime.cleanupProjectSubscription?.();
-  runtime.cleanupProjectSubscription =
-    await projectService.subscribeProjectState(({ repositoryState }) => {
-      syncCharactersData({ store, repositoryState });
-      render();
-    });
 };
 
 const refreshCharactersData = async (deps) => {
@@ -87,7 +84,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: null });
+    store.setSelectedItemId({ itemId: undefined });
     render();
     return;
   }

@@ -1,5 +1,5 @@
 import {
-  mountCollabRemoteRefresh,
+  createCollabRemoteRefreshStream,
   matchesRemoteTargets,
 } from "../../deps/features/collabRefresh.js";
 import {
@@ -33,11 +33,6 @@ import { debugLog, previewDebugText } from "../../utils/debugLog.js";
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
 
-const getRuntime = (refs) => {
-  refs.__sceneEditorRuntime ??= {};
-  return refs.__sceneEditorRuntime;
-};
-
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
 };
@@ -61,26 +56,8 @@ const scrollLinesEditorLineIntoView = (refs, lineId) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const runtime = getRuntime(deps.refs);
   const cleanupSubscriptions = mountSceneEditorSubscriptions(deps);
-
-  return async () => {
-    runtime.cleanupCollabRemoteRefresh?.();
-    runtime.cleanupCollabRemoteRefresh = undefined;
-    cleanupSubscriptions();
-    await flushDialogueQueue(deps);
-    resetSceneEditorRuntime(deps);
-  };
-};
-
-export const handleAfterMount = async (deps) => {
-  const runtime = getRuntime(deps.refs);
-  await initializeSceneEditorPage({
-    ...deps,
-    syncProjectState: syncStoreProjectState,
-  });
-  runtime.cleanupCollabRemoteRefresh?.();
-  runtime.cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+  const collabRefreshSubscription = createCollabRemoteRefreshStream({
     deps,
     matches: matchesRemoteTargets([
       "story",
@@ -97,6 +74,20 @@ export const handleAfterMount = async (deps) => {
       "tweens",
     ]),
     refresh: handleDataChanged,
+  }).subscribe();
+
+  return async () => {
+    collabRefreshSubscription.unsubscribe();
+    cleanupSubscriptions();
+    await flushDialogueQueue(deps);
+    resetSceneEditorRuntime(deps);
+  };
+};
+
+export const handleAfterMount = async (deps) => {
+  await initializeSceneEditorPage({
+    ...deps,
+    syncProjectState: syncStoreProjectState,
   });
 };
 

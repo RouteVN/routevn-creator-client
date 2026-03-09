@@ -1,4 +1,6 @@
 import { createResourceFileExplorerHandlers } from "../../fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../projectStateStream.js";
+import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -10,11 +12,6 @@ export const createCatalogPageHandlers = ({
       refresh,
     }),
 }) => {
-  const getRuntime = (refs) => {
-    refs.__catalogPageRuntime ??= {};
-    return refs.__catalogPageRuntime;
-  };
-
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
     const data = projectService.getState()[resourceType] ?? EMPTY_TREE;
@@ -23,24 +20,24 @@ export const createCatalogPageHandlers = ({
   };
 
   const handleBeforeMount = (deps) => {
-    const runtime = getRuntime(deps.refs);
+    const { projectService, store, render } = deps;
+    const subscription = createProjectStateStream({ projectService })
+      .pipe(
+        tap(({ repositoryState }) => {
+          const data = repositoryState?.[resourceType] ?? EMPTY_TREE;
+          store.setItems({ data });
+          render();
+        }),
+      )
+      .subscribe();
+
     return () => {
-      runtime.cleanupProjectSubscription?.();
-      runtime.cleanupProjectSubscription = undefined;
+      subscription.unsubscribe();
     };
   };
 
-  const handleAfterMount = async (deps) => {
-    const { projectService, store, render, refs } = deps;
-    const runtime = getRuntime(refs);
+  const handleAfterMount = async ({ projectService }) => {
     await projectService.ensureRepository();
-    runtime.cleanupProjectSubscription?.();
-    runtime.cleanupProjectSubscription =
-      await projectService.subscribeProjectState(({ repositoryState }) => {
-        const data = repositoryState?.[resourceType] ?? EMPTY_TREE;
-        store.setItems({ data });
-        render();
-      });
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {

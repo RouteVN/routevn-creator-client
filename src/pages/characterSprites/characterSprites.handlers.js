@@ -7,14 +7,11 @@ import {
 } from "../../domain/treeMutations.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { tap } from "rxjs";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
-
-const getRuntime = (refs) => {
-  refs.__characterSpritesPageRuntime ??= {};
-  return refs.__characterSpritesPageRuntime;
-};
 
 const applyCharacterSpritesPatch = async ({
   projectService,
@@ -134,6 +131,51 @@ const refreshCharacterSpritesData = async (deps) => {
   }
 };
 
+const syncCharacterSpritesRepositoryState = async ({
+  deps,
+  repositoryState,
+} = {}) => {
+  const { projectService, store, render, refs } = deps;
+  const characterId =
+    store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
+  const character = repositoryState?.characters?.items?.[characterId];
+
+  if (!characterId || !character) {
+    return;
+  }
+
+  store.setCharacterId({ characterId });
+  store.setCharacterName({ characterName: character.name });
+  store.setItems({ spritesData: character.sprites ?? EMPTY_TREE });
+
+  if (store.selectSelectedItemId() && !store.selectSelectedItem()) {
+    store.setSelectedItemId({ itemId: undefined });
+  }
+
+  const selectedItem = store.selectSelectedItem();
+  const imageSrc = await getPreviewImageSrc({
+    projectService,
+    item: selectedItem,
+  });
+
+  store.setContext({
+    context: {
+      fileId: {
+        src: imageSrc,
+      },
+    },
+  });
+
+  render();
+
+  if (selectedItem) {
+    syncDetailForm({
+      refs,
+      values: createDetailFormValues(selectedItem, imageSrc),
+    });
+  }
+};
+
 const selectSprite = async ({ deps, itemId, syncExplorer = false } = {}) => {
   const { projectService, refs, render, store } = deps;
   const item = store.selectSpriteItemById({ itemId });
@@ -226,59 +268,25 @@ const createSpritesFromFiles = async ({
 };
 
 export const handleBeforeMount = (deps) => {
-  const runtime = getRuntime(deps.refs);
+  const { projectService } = deps;
+  const subscription = createProjectStateStream({ projectService })
+    .pipe(
+      tap(({ repositoryState }) => {
+        void syncCharacterSpritesRepositoryState({
+          deps,
+          repositoryState,
+        });
+      }),
+    )
+    .subscribe();
+
   return () => {
-    runtime.cleanupProjectSubscription?.();
-    runtime.cleanupProjectSubscription = undefined;
+    subscription.unsubscribe();
   };
 };
 
-export const handleAfterMount = async (deps) => {
-  const { projectService, store, render, refs } = deps;
-  const runtime = getRuntime(refs);
+export const handleAfterMount = async ({ projectService }) => {
   await projectService.ensureRepository();
-  runtime.cleanupProjectSubscription?.();
-  runtime.cleanupProjectSubscription =
-    await projectService.subscribeProjectState(async ({ repositoryState }) => {
-      const characterId =
-        store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
-      const character = repositoryState?.characters?.items?.[characterId];
-
-      if (!characterId || !character) {
-        return;
-      }
-
-      store.setCharacterId({ characterId });
-      store.setCharacterName({ characterName: character.name });
-      store.setItems({ spritesData: character.sprites ?? EMPTY_TREE });
-
-      if (store.selectSelectedItemId() && !store.selectSelectedItem()) {
-        store.setSelectedItemId({ itemId: undefined });
-      }
-
-      const selectedItem = store.selectSelectedItem();
-      const imageSrc = await getPreviewImageSrc({
-        projectService,
-        item: selectedItem,
-      });
-
-      store.setContext({
-        context: {
-          fileId: {
-            src: imageSrc,
-          },
-        },
-      });
-
-      render();
-
-      if (selectedItem) {
-        syncDetailForm({
-          refs,
-          values: createDetailFormValues(selectedItem, imageSrc),
-        });
-      }
-    });
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =

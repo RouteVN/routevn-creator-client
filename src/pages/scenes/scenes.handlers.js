@@ -1,17 +1,12 @@
 import { nanoid } from "nanoid";
 import {
+  createCollabRemoteRefreshStream,
   matchesRemoteTargets,
-  mountCollabRemoteRefresh,
 } from "../../deps/features/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
-
-const getRuntime = (refs) => {
-  refs.__scenesPageRuntime ??= {};
-  return refs.__scenesPageRuntime;
-};
 
 /**
  * Extract transitions from layout element click actions
@@ -358,16 +353,19 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const runtime = getRuntime(deps.refs);
+  const subscription = createCollabRemoteRefreshStream({
+    deps,
+    matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
+    refresh: refreshScenesData,
+  }).subscribe();
+
   return () => {
-    runtime.cleanupCollabRemoteRefresh?.();
-    runtime.cleanupCollabRemoteRefresh = undefined;
+    subscription.unsubscribe();
   };
 };
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
-  const runtime = getRuntime(refs);
   await projectService.ensureRepository();
   const repositoryState = projectService.getState();
   const domainState = projectService.getDomainState();
@@ -426,12 +424,6 @@ export const handleAfterMount = async (deps) => {
   }
 
   render();
-  runtime.cleanupCollabRemoteRefresh?.();
-  runtime.cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
-    deps,
-    matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
-    refresh: refreshScenesData,
-  });
 };
 
 export const handleSetInitialScene = async (sceneId, deps) => {
@@ -461,7 +453,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const isFolder = detail.isFolder === true || detail.item?.type === "folder";
 
   if (isFolder) {
-    setSelectedScene({ store, appService, sceneId: null });
+    setSelectedScene({ store, appService, sceneId: undefined });
     render();
     return;
   }
@@ -765,7 +757,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   // Clear selection if the deleted item was selected
   const selectedItemId = store.selectSelectedItemId();
   if (selectedItemId === itemId) {
-    setSelectedScene({ store, appService, sceneId: null });
+    setSelectedScene({ store, appService, sceneId: undefined });
   }
 
   render();
@@ -863,7 +855,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     // Clear selection if the deleted item was selected
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId === itemId) {
-      setSelectedScene({ store, appService, sceneId: null });
+      setSelectedScene({ store, appService, sceneId: undefined });
     }
 
     render();

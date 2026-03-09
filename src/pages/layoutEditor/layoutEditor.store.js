@@ -549,9 +549,11 @@ export const createInitialState = () => ({
   lastUpdateDate: undefined,
   isDragging: false,
   dragStartPosition: undefined,
+  keyboardNavigationTimeoutId: undefined,
+  fileContentCacheById: {},
   layoutData: { tree: [], items: {} },
-  selectedItemId: null,
-  layout: null,
+  selectedItemId: undefined,
+  layout: undefined,
   images: { tree: [], items: {} },
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
@@ -572,16 +574,16 @@ export const setItems = ({ state }, { layoutData } = {}) => {
 };
 
 export const setLayout = ({ state }, payload = {}) => {
-  const { id = null, layout = null } = payload || {};
+  const { id, layout } = payload || {};
 
   if (!layout && !id) {
-    state.layout = null;
+    state.layout = undefined;
     return;
   }
 
   state.layout = {
     ...layout,
-    id: id || layout?.id || null,
+    id: id || layout?.id || undefined,
   };
 };
 
@@ -645,6 +647,49 @@ export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
 
+export const setKeyboardNavigationTimeoutId = (
+  { state },
+  { timeoutId } = {},
+) => {
+  state.keyboardNavigationTimeoutId = timeoutId;
+};
+
+export const clearKeyboardNavigationTimeout = ({ state }, _payload = {}) => {
+  state.keyboardNavigationTimeoutId = undefined;
+};
+
+export const selectKeyboardNavigationTimeoutId = ({ state }) => {
+  return state.keyboardNavigationTimeoutId;
+};
+
+export const cacheFileContent = ({ state }, { fileId, url } = {}) => {
+  if (!fileId || !url) {
+    return;
+  }
+
+  state.fileContentCacheById[fileId] = url;
+};
+
+export const clearCachedFileContent = ({ state }, { fileId } = {}) => {
+  if (!fileId) {
+    return;
+  }
+
+  delete state.fileContentCacheById[fileId];
+};
+
+export const clearFileContentCache = ({ state }, _payload = {}) => {
+  state.fileContentCacheById = {};
+};
+
+export const selectCachedFileContent = ({ state }, { fileId } = {}) => {
+  if (!fileId) {
+    return undefined;
+  }
+
+  return state.fileContentCacheById[fileId];
+};
+
 export const setDialogueDefaultValue = (
   { state },
   { name, fieldValue } = {},
@@ -694,12 +739,12 @@ export const selectChoiceDefaultValues = ({ state }) => {
 export const selectImages = ({ state }) => state.images;
 
 export const selectSelectedItem = ({ state }) => {
-  if (!state.selectedItemId) return null;
+  if (!state.selectedItemId) return undefined;
   const flatItems = toFlatItems(state.layoutData);
   const item = flatItems.find((item) => item.id === state.selectedItemId);
 
   if (!item) {
-    return null;
+    return undefined;
   }
 
   return {

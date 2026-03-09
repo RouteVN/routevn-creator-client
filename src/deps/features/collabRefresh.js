@@ -50,11 +50,3 @@ export const createCollabRemoteRefreshStream = ({
     }),
   );
 };
-
-export const mountCollabRemoteRefresh = (options) => {
-  const stream = createCollabRemoteRefreshStream(options);
-  const subscription = stream.subscribe();
-  return () => {
-    subscription.unsubscribe();
-  };
-};
