@@ -1,9 +1,5 @@
 import { nanoid } from "nanoid";
 import {
-  matchesRemoteTargets,
-  mountCollabRemoteRefresh,
-} from "../../deps/features/collabRefresh.js";
-import {
   ROOT_TREE_PARENT_ID,
   deleteTreeItem,
   insertTreeItem,
@@ -14,7 +10,7 @@ import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
-let cleanupCollabRemoteRefresh;
+let cleanupProjectSubscription;
 
 const applyCharacterSpritesPatch = async ({
   projectService,
@@ -227,21 +223,57 @@ const createSpritesFromFiles = async ({
 
 export const handleBeforeMount = () => {
   return () => {
-    cleanupCollabRemoteRefresh?.();
-    cleanupCollabRemoteRefresh = undefined;
+    cleanupProjectSubscription?.();
+    cleanupProjectSubscription = undefined;
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { projectService } = deps;
+  const { projectService, store, render } = deps;
   await projectService.ensureRepository();
-  await refreshCharacterSpritesData(deps);
-  cleanupCollabRemoteRefresh?.();
-  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
-    deps,
-    matches: matchesRemoteTargets(["characters"]),
-    refresh: refreshCharacterSpritesData,
-  });
+  cleanupProjectSubscription?.();
+  cleanupProjectSubscription = await projectService.subscribeProjectState(
+    async ({ repositoryState }) => {
+      const characterId =
+        store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
+      const character = repositoryState?.characters?.items?.[characterId];
+
+      if (!characterId || !character) {
+        return;
+      }
+
+      store.setCharacterId({ characterId });
+      store.setCharacterName({ characterName: character.name });
+      store.setItems({ spritesData: character.sprites ?? EMPTY_TREE });
+
+      if (store.selectSelectedItemId() && !store.selectSelectedItem()) {
+        store.setSelectedItemId({ itemId: undefined });
+      }
+
+      const selectedItem = store.selectSelectedItem();
+      const imageSrc = await getPreviewImageSrc({
+        projectService,
+        item: selectedItem,
+      });
+
+      store.setContext({
+        context: {
+          fileId: {
+            src: imageSrc,
+          },
+        },
+      });
+
+      render();
+
+      if (selectedItem) {
+        syncDetailForm({
+          refs: deps.refs,
+          values: createDetailFormValues(selectedItem, imageSrc),
+        });
+      }
+    },
+  );
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =

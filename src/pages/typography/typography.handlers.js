@@ -1,10 +1,6 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../domain/treeHelpers.js";
 import {
-  matchesRemoteTargets,
-  mountCollabRemoteRefresh,
-} from "../../deps/features/collabRefresh.js";
-import {
   getTypographyCount,
   getTypographyRemovalCount,
 } from "../../constants/typography.js";
@@ -13,38 +9,41 @@ import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 // Helper function to sync repository state to store
-const syncRepositoryToStore = (store, projectService) => {
-  const { typography, colors, fonts } = projectService.getState();
-  store.setItems({ typographyData: typography });
-  store.setColorsData({ colorsData: colors });
-  store.setFontsData({ fontsData: fonts });
+const syncRepositoryToStore = ({
+  store,
+  repositoryState,
+  projectService,
+} = {}) => {
+  const state = repositoryState ?? projectService?.getState?.();
+  store.setItems({ typographyData: state?.typography });
+  store.setColorsData({ colorsData: state?.colors });
+  store.setFontsData({ fontsData: state?.fonts });
 };
 
-let cleanupCollabRemoteRefresh;
+let cleanupProjectSubscription;
 
 export const handleBeforeMount = () => {
   return () => {
-    cleanupCollabRemoteRefresh?.();
-    cleanupCollabRemoteRefresh = undefined;
+    cleanupProjectSubscription?.();
+    cleanupProjectSubscription = undefined;
   };
 };
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render } = deps;
   await projectService.ensureRepository();
-  syncRepositoryToStore(store, projectService);
-  render();
-  cleanupCollabRemoteRefresh?.();
-  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
-    deps,
-    matches: matchesRemoteTargets(["typography", "colors", "fonts"]),
-    refresh: refreshTypographyData,
-  });
+  cleanupProjectSubscription?.();
+  cleanupProjectSubscription = await projectService.subscribeProjectState(
+    ({ repositoryState }) => {
+      syncRepositoryToStore({ store, repositoryState });
+      render();
+    },
+  );
 };
 
 const refreshTypographyData = async (deps) => {
   const { store, render, projectService } = deps;
-  syncRepositoryToStore(store, projectService);
+  syncRepositoryToStore({ store, projectService });
   render();
 };
 
@@ -84,7 +83,7 @@ export const handleTypographyItemClick = (deps, payload) => {
 };
 
 const handleTypographyCreated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { projectService } = deps;
   const {
     groupId,
     name,
@@ -113,12 +112,11 @@ const handleTypographyCreated = async (deps, payload) => {
     position: "last",
   });
 
-  syncRepositoryToStore(store, projectService);
-  render();
+  await refreshTypographyData(deps);
 };
 
 const handleTypographyUpdated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { projectService } = deps;
   const {
     itemId,
     name,
@@ -144,8 +142,7 @@ const handleTypographyUpdated = async (deps, payload) => {
     },
   });
 
-  syncRepositoryToStore(store, projectService);
-  render();
+  await refreshTypographyData(deps);
 };
 
 export const handleFormExtraEvent = (deps) => {
@@ -343,7 +340,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
     });
 
     // Sync repository to store to ensure all data is updated
-    syncRepositoryToStore(store, projectService);
+    syncRepositoryToStore({ store, projectService });
 
     // Don't update the form values - keep preview consistent with form state
     // The user can manually select the new color from the dropdown
@@ -427,7 +424,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
     });
 
     // Sync repository to store to ensure all data is updated
-    syncRepositoryToStore(store, projectService);
+    syncRepositoryToStore({ store, projectService });
 
     // Clear selected font data and close dialog
     store.clearSelectedFontFile();
