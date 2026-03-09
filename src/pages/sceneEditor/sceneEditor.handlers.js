@@ -374,7 +374,7 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     return;
   }
 
-  let characterId = null;
+  let characterId;
   if (!isClearShortcut) {
     const repositoryState = projectService.getState();
     characterId = findCharacterIdByShortcut(repositoryState, shortcut);
@@ -586,7 +586,7 @@ export const handleLineNavigation = (deps, payload) => {
           goalColumn: isEndNavigation
             ? Number.MAX_SAFE_INTEGER
             : targetCursorPosition,
-          direction: direction ?? null,
+          direction: direction ?? undefined,
         });
       }
 

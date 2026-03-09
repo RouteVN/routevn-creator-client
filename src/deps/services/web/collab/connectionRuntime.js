@@ -68,14 +68,14 @@ export const createCollabConnectionRuntime = ({
     endpointUrl: DEFAULT_COLLAB_ENDPOINT,
     autoConnectMode: "not_started",
     remoteEnabled: false,
-    lastConnectError: null,
-    userId: null,
-    clientId: null,
-    token: null,
+    lastConnectError: undefined,
+    userId: undefined,
+    clientId: undefined,
+    token: undefined,
     reconnectAttempts: 0,
-    lastReconnectAttemptAt: null,
+    lastReconnectAttemptAt: undefined,
     lastConnectionErrorAt: 0,
-    lastConnectionErrorSignature: null,
+    lastConnectionErrorSignature: undefined,
   };
 
   const reportCollabConnectionError = (message, meta = {}) => {
@@ -157,7 +157,7 @@ export const createCollabConnectionRuntime = ({
           partitions,
         });
         collabRuntime.endpointUrl = candidateEndpointUrl;
-        collabRuntime.lastConnectError = null;
+        collabRuntime.lastConnectError = undefined;
         return session;
       } catch (error) {
         lastError = error;
@@ -180,9 +180,9 @@ export const createCollabConnectionRuntime = ({
     throw lastError || new Error("Collaboration connect failed");
   };
 
-  let collabAutoConnectInFlight = null;
-  let collabReconnectTimer = null;
-  let collabHeartbeatTimer = null;
+  let collabAutoConnectInFlight;
+  let collabReconnectTimer;
+  let collabHeartbeatTimer;
 
   const shouldAttemptAutoConnect = () => {
     if (collabRuntime.autoConnectMode === "not_started") return false;
@@ -194,7 +194,7 @@ export const createCollabConnectionRuntime = ({
     const sessionMode =
       typeof projectService.getCollabSessionMode === "function"
         ? projectService.getCollabSessionMode(projectId)
-        : null;
+        : undefined;
 
     return !hasSession || sessionMode === "local";
   };
@@ -220,7 +220,7 @@ export const createCollabConnectionRuntime = ({
           clientId,
           token,
         });
-        collabRuntime.lastConnectError = null;
+        collabRuntime.lastConnectError = undefined;
         collabDebugLog("info", "auto-reconnect success", {
           reason,
           endpointUrl,
@@ -241,7 +241,7 @@ export const createCollabConnectionRuntime = ({
         });
         return false;
       } finally {
-        collabAutoConnectInFlight = null;
+        collabAutoConnectInFlight = undefined;
       }
     })();
 
@@ -276,7 +276,7 @@ export const createCollabConnectionRuntime = ({
     if (collabHeartbeatTimer) return;
     collabHeartbeatTimer = setInterval(() => {
       const { hasSession, session } = getCollabDebugStatus();
-      const sessionError = session?.getLastError?.() || null;
+      const sessionError = session?.getLastError?.() || undefined;
 
       collabDebugLog("info", "heartbeat", {
         mode: collabRuntime.autoConnectMode,
@@ -315,17 +315,17 @@ export const createCollabConnectionRuntime = ({
     collabRuntime.endpointUrl = endpointUrl;
     collabRuntime.autoConnectMode = autoConnectMode;
     collabRuntime.remoteEnabled = remoteEnabled;
-    collabRuntime.lastConnectError = null;
+    collabRuntime.lastConnectError = undefined;
     collabRuntime.userId = userId;
     collabRuntime.clientId = clientId;
-    collabRuntime.token = token || null;
+    collabRuntime.token = token || undefined;
     collabRuntime.reconnectAttempts = 0;
-    collabRuntime.lastReconnectAttemptAt = null;
+    collabRuntime.lastReconnectAttemptAt = undefined;
 
     if (!remoteEnabled) {
       collabDebugLog("info", "auto-connect skipped for local project", {
         mode: autoConnectMode,
-        projectId: projectId || null,
+        projectId: projectId || undefined,
         isLocalProject: localProject,
       });
       return;
@@ -336,7 +336,7 @@ export const createCollabConnectionRuntime = ({
       endpointUrl,
       userId,
       clientId,
-      projectId: projectId || null,
+      projectId: projectId || undefined,
     });
 
     try {
@@ -351,7 +351,7 @@ export const createCollabConnectionRuntime = ({
         endpointUrl,
         userId,
         clientId,
-        projectId: projectId || null,
+        projectId: projectId || undefined,
       });
     } catch (error) {
       collabRuntime.lastConnectError = error?.message || "unknown";
@@ -363,7 +363,7 @@ export const createCollabConnectionRuntime = ({
           endpointUrl,
           userId,
           clientId,
-          projectId: projectId || null,
+          projectId: projectId || undefined,
           error: error?.message || "unknown",
         },
       );
@@ -372,7 +372,7 @@ export const createCollabConnectionRuntime = ({
         endpointUrl,
         userId,
         clientId,
-        projectId: projectId || null,
+        projectId: projectId || undefined,
         error: error?.message || "unknown",
       });
     }

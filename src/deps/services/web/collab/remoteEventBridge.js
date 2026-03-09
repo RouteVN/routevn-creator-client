@@ -34,7 +34,7 @@ const resolveRemoteTarget = ({ command, event } = {}) => {
   }
 
   const scope = command?.scope;
-  return typeof scope === "string" && scope.length > 0 ? scope : null;
+  return typeof scope === "string" && scope.length > 0 ? scope : undefined;
 };
 
 const normalizeRemoteEvent = ({
@@ -44,12 +44,12 @@ const normalizeRemoteEvent = ({
   committedEvent,
   event,
 } = {}) => ({
-  projectId: projectId ?? null,
-  sourceType: sourceType ?? null,
-  commandType: command?.type ?? null,
-  eventType: event?.type ?? null,
+  projectId: projectId ?? undefined,
+  sourceType: sourceType ?? undefined,
+  commandType: command?.type ?? undefined,
+  eventType: event?.type ?? undefined,
   target: resolveRemoteTarget({ command, event }),
-  committedId: committedEvent?.committed_id ?? null,
+  committedId: committedEvent?.committed_id ?? undefined,
   command,
   event,
   committedEvent,

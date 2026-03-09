@@ -192,6 +192,20 @@ Handlers must stay thin.
 Stores must not absorb domain logic.
 Views must stay declarative.
 
+## JavaScript Style
+
+Prefer `undefined` over `null`.
+
+Use `undefined` for:
+
+- missing optional values
+- cleared references
+- absent handler payload fields
+- uninitialized local variables that will be assigned later
+
+Do not introduce new `null`-based state or payload conventions unless a
+specific external API requires `null`.
+
 ## Repository-Driven Rendering
 
 For project-backed pages, repository state is the authoritative source of truth.
