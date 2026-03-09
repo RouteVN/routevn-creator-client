@@ -192,6 +192,35 @@ Handlers must stay thin.
 Stores must not absorb domain logic.
 Views must stay declarative.
 
+## Browser Side Effects
+
+Page and component handlers must not reach for browser globals directly for
+cross-cutting side effects such as:
+
+- `document.activeElement.blur()`
+- `window.addEventListener(...)`
+- `document.querySelector(...)` outside local component DOM ownership
+- global focus, history, or viewport manipulation
+
+Those side effects must live behind an explicit dependency or primitive:
+
+- `src/deps/services/shared/*` when the behavior is app-shell/browser
+  orchestration
+- `src/deps/infra/*` for low-level platform adapters
+- `src/primitives/*` for DOM-heavy browser primitives such as custom elements
+
+This keeps page handlers orchestration-only and prevents hidden browser
+coupling from spreading through route code.
+
+Allowed exceptions:
+
+- local DOM work inside a primitive
+- local DOM work inside a reusable component when that DOM is the component's
+  owned editing or interaction surface
+
+If a page handler needs to affect browser state, add a method to `deps` and
+call that method instead of touching `window` or `document` directly.
+
 ## Resource Page Pattern
 
 Resource pages should stay explicit at the page level.
