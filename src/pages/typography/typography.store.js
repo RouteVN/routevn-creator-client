@@ -354,7 +354,7 @@ export const selectViewData = ({ state }) => {
       : { fontFamily: fontId, fileId: undefined };
   };
 
-  // Apply selection styling and add typography-specific preview data (collapse state is now handled by groupResourcesView)
+  // Add typography-specific preview data. Collapse state is owned by the center view.
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
     children: (group.children ?? []).map((item) => {

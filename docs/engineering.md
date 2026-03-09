@@ -207,6 +207,16 @@ Current family pattern:
 - `src/deps/features/resourcePages/catalog/`
   shared store/handler helpers for catalog-family pages
 
+Outlier resource pages may keep their own center-pane components when they do
+not fit a stable shared family.
+
+Current custom resource center components:
+
+- `src/components/charactersResourcesView/`
+  UI-only center-pane component for the characters page
+- `src/components/typographyResourcesView/`
+  UI-only center-pane component for the typography page
+
 Page-family helpers should own:
 
 - repeated page-store shape
