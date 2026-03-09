@@ -1,4 +1,5 @@
 import { toHierarchyStructure } from "../../domain/treeHelpers.js";
+import { buildSceneEditorLineViewModels } from "../../deps/features/sceneEditing/lineViewModels.js";
 import { layoutHierarchyStructureToRenderState } from "../../utils/index.js";
 import { constructProjectData } from "../../utils/projectDataConstructor.js";
 import { getSectionPresentation } from "../../utils/sectionPresentation.js";
@@ -654,6 +655,11 @@ export const selectViewData = ({ state }) => {
   const selectedLine = currentSection?.lines?.find(
     (line) => line.id === state.selectedLineId,
   );
+  const currentLines = buildSceneEditorLineViewModels({
+    lines: Array.isArray(currentSection?.lines) ? currentSection.lines : [],
+    repositoryState,
+    sectionLineChanges: state.sectionLineChanges,
+  });
 
   const sectionCreateForm = {
     title: "Create Section",
@@ -682,16 +688,13 @@ export const selectViewData = ({ state }) => {
     sections,
     sectionsOverviewOpen: state.sectionsOverviewPanel.isOpen,
     sectionsOverviewItems,
-    currentLines: Array.isArray(currentSection?.lines)
-      ? currentSection.lines
-      : [],
+    currentLines,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
     form: sectionForm,
     selectedLineId: state.selectedLineId,
     selectedLine,
     selectedLineActions: toPlainObject(selectedLine?.actions),
-    repositoryState,
     sectionsGraphView: state.sectionsGraphView,
     layouts: Object.entries(selectLayouts({ state })).map(([id, item]) => ({
       id,

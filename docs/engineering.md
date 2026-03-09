@@ -256,6 +256,51 @@ They must not own:
 When a set of resource pages shares the same interaction model, add a family-specific component and shared feature helpers.
 Do not force unrelated resource pages into one universal resource-page system.
 
+## Scene Editor Pattern
+
+Scene editing uses three layers:
+
+- `src/primitives/editableText.js`
+  low-level contenteditable/caret behavior
+- `src/components/linesEditor/`
+  UI-only editing surface for line focus, keyboard handling, caret movement,
+  and semantic editor events
+- `src/deps/features/sceneEditing/`
+  shared scene-editing workflows such as line mutations, dialogue queue
+  coordination, and line view-model shaping
+- `src/pages/sceneEditor/`
+  page orchestration, asset loading, preview/canvas rendering, and dialogs
+
+Current scene-editing feature modules:
+
+- `lineViewModels.js`
+  builds enriched line view models for the editor surface
+- `lineOperations.js`
+  owns split/merge/new/paste/swap flows and dialogue queue writes
+- `runtime.js`
+  owns scene-editor runtime concerns such as asset loading, canvas rendering,
+  preview reset, and render subscriptions
+- `sectionOperations.js`
+  owns section selection, section creation, and section-selection reconciliation
+
+Keep `linesEditor` in its fixed Rettangoli component files.
+Do not add ad hoc sibling helper files inside the component folder when the
+logic is really scene-editing orchestration.
+
+`linesEditor` must not own:
+
+- repository or domain state reads
+- project service orchestration
+- split/merge/create/delete persistence workflows
+- scene-specific preview and badge shaping
+
+Those responsibilities belong in `src/deps/features/sceneEditing/` and
+`src/pages/sceneEditor/`.
+
+`sceneEditor.handlers.js` should stay as the page composition layer.
+It may export many handlers because of the framework contract, but the heavy
+work should be delegated into `src/deps/features/sceneEditing/`.
+
 ## Public Service Facades
 
 UI handlers should normally talk to only:
