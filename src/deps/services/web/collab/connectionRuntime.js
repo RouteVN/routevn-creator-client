@@ -13,15 +13,12 @@ const BASE58_ALPHABET =
 const generateClientIdSuffix = customAlphabet(BASE58_ALPHABET, 12);
 
 const getCollabEndpointCandidates = (endpointUrl) => {
-  const raw =
-    typeof endpointUrl === "string" && endpointUrl.length > 0
-      ? endpointUrl
-      : DEFAULT_COLLAB_ENDPOINT;
+  const raw = endpointUrl || DEFAULT_COLLAB_ENDPOINT;
   const candidates = [];
   const seen = new Set();
 
   const addCandidate = (value) => {
-    if (typeof value !== "string" || value.length === 0 || seen.has(value)) {
+    if (!value || seen.has(value)) {
       return;
     }
     seen.add(value);

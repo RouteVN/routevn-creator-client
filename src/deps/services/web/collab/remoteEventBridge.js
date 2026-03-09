@@ -2,17 +2,17 @@ import { COLLAB_REMOTE_EVENT_ACTION } from "../../../../collab/remoteEvents.js";
 
 const resolveRemoteTarget = ({ command, event } = {}) => {
   const eventTarget = event?.payload?.target;
-  if (typeof eventTarget === "string" && eventTarget.length > 0) {
+  if (eventTarget) {
     return eventTarget;
   }
 
   const commandTarget = command?.payload?.target;
-  if (typeof commandTarget === "string" && commandTarget.length > 0) {
+  if (commandTarget) {
     return commandTarget;
   }
 
   const resourceType = command?.payload?.resourceType;
-  if (typeof resourceType === "string" && resourceType.length > 0) {
+  if (resourceType) {
     return resourceType;
   }
 
@@ -34,7 +34,7 @@ const resolveRemoteTarget = ({ command, event } = {}) => {
   }
 
   const scope = command?.scope;
-  return typeof scope === "string" && scope.length > 0 ? scope : undefined;
+  return scope || undefined;
 };
 
 const normalizeRemoteEvent = ({

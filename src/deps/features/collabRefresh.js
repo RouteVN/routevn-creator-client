@@ -3,10 +3,10 @@ import { COLLAB_REMOTE_EVENT_ACTION } from "../../collab/remoteEvents.js";
 
 const normalizeTargets = (targets) => {
   if (Array.isArray(targets)) {
-    return targets.filter((target) => typeof target === "string" && target);
+    return targets.filter(Boolean);
   }
 
-  if (typeof targets === "string" && targets) {
+  if (targets) {
     return [targets];
   }
 
@@ -22,7 +22,7 @@ export const matchesRemoteTargets = (targets) => {
     }
 
     const target = payload.target;
-    if (typeof target !== "string" || target.length === 0) {
+    if (!target) {
       return false;
     }
 
