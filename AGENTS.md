@@ -83,6 +83,9 @@ Read the links from the following files to familiarize with the code before star
 - Do not store handler runtime state on `refs.__...Runtime`.
 - For async project or collab subscriptions, prefer RxJS streams/subscriptions mounted from `handleBeforeMount`.
 - For plain local non-render values that must survive within one mounted instance, prefer top-level store fields with explicit actions/selectors over handler-owned runtime bags.
+- Do not store cleanup functions, callbacks, or service instances in store.
+- Use store only for plain local values in this case (for example timer ids, cache entries, pending ids).
+- For project-backed page sync, prefer `createProjectStateStream(...)` over `handleAfterMount` + stored unsubscribe handles.
 - Use one canonical event payload shape per handler; remove multi-fallback id extraction once event contract is known.
 - If two UIs emit similar events with different responsibilities (for example left explorer vs right list), use separate handlers to avoid recursion and side effects.
 

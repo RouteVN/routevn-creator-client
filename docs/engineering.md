@@ -212,6 +212,20 @@ instance:
   ids or cache entries
 
 Do not store handler runtime state on `refs.__...Runtime`.
+Do not store cleanup functions, callbacks, or service instances in store.
+
+The preferred pattern for project-backed pages is:
+
+```text
+handleBeforeMount
+-> mount RxJS subscriptions
+-> subscribe to project state via createProjectStateStream(...)
+-> sync plain store data
+-> render
+```
+
+Do not use `handleAfterMount` plus stored unsubscribe handles on refs/store just
+to keep project state in sync.
 
 Handler module files must be safe for multiple mounted instances at the same
 time.
