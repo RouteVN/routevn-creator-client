@@ -8,11 +8,16 @@ const createNoopUpdater = () => ({
   isUpdateAvailable: () => false,
 });
 
-const isInputFocused = (root = document) => {
+const getActiveElement = (root = document) => {
   let active = root.activeElement;
   while (active && active.shadowRoot && active.shadowRoot.activeElement) {
     active = active.shadowRoot.activeElement;
   }
+  return active;
+};
+
+const isInputFocused = (root = document) => {
+  let active = getActiveElement(root);
   if (active) {
     const tagName = active.tagName;
     if (!["BODY", "DIALOG"].includes(tagName)) {
@@ -102,6 +107,13 @@ export const createAppShellService = ({
     },
 
     isInputFocused,
+
+    blurActiveElement(root = document) {
+      const active = getActiveElement(root);
+      if (active?.blur) {
+        active.blur();
+      }
+    },
 
     getAppVersion() {
       return appVersion;

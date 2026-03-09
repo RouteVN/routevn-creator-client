@@ -417,14 +417,12 @@ export const handleSectionAddClick = (deps) => {
 };
 
 export const handleSectionsOverviewClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   if (payload?._event) {
     payload._event.preventDefault();
   }
 
-  if (typeof document !== "undefined" && document.activeElement?.blur) {
-    document.activeElement.blur();
-  }
+  appService.blurActiveElement();
 
   store.hideDeadEndTooltip();
   store.openSectionsOverviewPanel();
