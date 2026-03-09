@@ -59,10 +59,6 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleAfterMount = async ({ projectService }) => {
-  await projectService.ensureRepository();
-};
-
 const refreshCharactersData = async (deps) => {
   const { store, render, projectService } = deps;
   syncCharactersData({ store, projectService });

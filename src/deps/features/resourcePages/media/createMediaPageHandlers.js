@@ -15,9 +15,10 @@ export const createMediaPageHandlers = ({
 }) => {
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
+    const repositoryState = projectService.getState();
     syncMediaPageData({
       store,
-      projectService,
+      repositoryState,
       resourceType,
     });
     render();
@@ -77,10 +78,6 @@ export const createMediaPageHandlers = ({
 
   const handleBeforeMount = (deps) => {
     return mountSubscriptions(deps);
-  };
-
-  const handleAfterMount = async ({ projectService }) => {
-    await projectService.ensureRepository();
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {
@@ -148,7 +145,6 @@ export const createMediaPageHandlers = ({
     refreshData,
     openEditDialogWithValues,
     handleBeforeMount,
-    handleAfterMount,
     handleFileExplorerSelectionChanged,
     handleFileExplorerDoubleClick,
     handleFileExplorerAction,

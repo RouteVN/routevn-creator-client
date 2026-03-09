@@ -68,7 +68,6 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
 
 const {
   handleBeforeMount,
-  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -84,7 +83,6 @@ export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 
 export {
   handleBeforeMount,
-  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleSearchInput,

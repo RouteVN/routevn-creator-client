@@ -186,7 +186,7 @@ export const createProjectRepositoryService = ({
     return repository;
   };
 
-  const subscribeProjectState = async (
+  const subscribeProjectState = (
     listener,
     { projectId, emitCurrent = true } = {},
   ) => {
@@ -195,7 +195,22 @@ export const createProjectRepositoryService = ({
       throw new Error("No project selected (missing ?p= in URL)");
     }
 
-    const repository = await getRepositoryByProject(targetProjectId);
+    let repository =
+      targetProjectId === currentProjectId ? currentRepository : undefined;
+
+    if (!repository) {
+      const reference = referencesByProject.get(targetProjectId);
+      if (reference) {
+        repository = repositoriesByCacheKey.get(reference.cacheKey);
+      }
+    }
+
+    if (!repository) {
+      throw new Error(
+        "Repository not initialized. App must ensure it before subscribing.",
+      );
+    }
+
     return repository.subscribe(
       (repositoryState) => {
         listener({
@@ -262,7 +277,7 @@ export const createProjectRepositoryService = ({
     async ensureRepository() {
       return ensureRepository();
     },
-    async subscribeProjectState(listener, options) {
+    subscribeProjectState(listener, options) {
       return subscribeProjectState(listener, options);
     },
     ...(typeof getRepositoryByPath === "function"

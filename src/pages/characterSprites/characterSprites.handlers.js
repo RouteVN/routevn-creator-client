@@ -285,10 +285,6 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleAfterMount = async ({ projectService }) => {
-  await projectService.ensureRepository();
-};
-
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createCharacterSpritesFileExplorerHandlers({
     getCharacterId: (deps) =>

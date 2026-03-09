@@ -36,10 +36,6 @@ export const createCatalogPageHandlers = ({
     };
   };
 
-  const handleAfterMount = async ({ projectService }) => {
-    await projectService.ensureRepository();
-  };
-
   const handleFileExplorerSelectionChanged = (deps, payload) => {
     const { store, render } = deps;
     const { itemId, isFolder } = payload._event.detail;
@@ -82,7 +78,6 @@ export const createCatalogPageHandlers = ({
   return {
     refreshData,
     handleBeforeMount,
-    handleAfterMount,
     handleFileExplorerSelectionChanged,
     handleFileExplorerAction,
     handleFileExplorerTargetChanged,

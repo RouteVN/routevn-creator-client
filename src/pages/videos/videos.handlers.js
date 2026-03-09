@@ -95,7 +95,6 @@ const openVideoPreviewById = async ({ deps, itemId } = {}) => {
 
 const {
   handleBeforeMount,
-  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerDoubleClick,
@@ -113,7 +112,6 @@ const {
 
 export {
   handleBeforeMount,
-  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerDoubleClick,

@@ -86,6 +86,7 @@ Read the links from the following files to familiarize with the code before star
 - Do not store cleanup functions, callbacks, or service instances in store.
 - Use store only for plain local values in this case (for example timer ids, cache entries, pending ids).
 - For project-backed page sync, prefer `createProjectStateStream(...)` over `handleAfterMount` + stored unsubscribe handles.
+- `projectService.subscribeProjectState(...)` is synchronous and assumes app/route orchestration has already ensured the repository.
 - Use one canonical event payload shape per handler; remove multi-fallback id extraction once event contract is known.
 - If two UIs emit similar events with different responsibilities (for example left explorer vs right list), use separate handlers to avoid recursion and side effects.
 

@@ -38,10 +38,6 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleAfterMount = async ({ projectService }) => {
-  await projectService.ensureRepository();
-};
-
 const refreshTypographyData = async (deps) => {
   const { store, render, projectService } = deps;
   syncRepositoryToStore({ store, projectService });

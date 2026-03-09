@@ -269,6 +269,8 @@ mutation
 ```
 
 Use `projectService.subscribeProjectState(...)` for project-backed pages.
+This subscription API is synchronous and assumes app-level route orchestration
+already ensured the repository before the page mounted.
 
 Page stores should keep:
 

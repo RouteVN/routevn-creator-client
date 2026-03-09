@@ -64,7 +64,7 @@ export const createProjectServiceCore = ({
     getRepositoryById: repositoryService.getRepositoryById,
     getAdapterById: repositoryService.getAdapterById,
     ensureRepository: repositoryService.ensureRepository,
-    async subscribeProjectState(listener, options) {
+    subscribeProjectState(listener, options) {
       return repositoryService.subscribeProjectState(
         ({ projectId, repositoryState }) => {
           const resolvedProjectId =

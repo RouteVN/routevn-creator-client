@@ -32,10 +32,6 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleAfterMount = async ({ projectService }) => {
-  await projectService.ensureRepository();
-};
-
 const refreshVariablesData = async (deps) => {
   const { store, render, projectService } = deps;
   syncVariablesData({ store, projectService });

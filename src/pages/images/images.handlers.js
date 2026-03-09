@@ -5,7 +5,6 @@ import { resolveResourceParentId } from "../../deps/features/resourcePages/media
 const {
   refreshData: handleDataChanged,
   handleBeforeMount,
-  handleAfterMount,
   handleFileExplorerSelectionChanged,
   handleFileExplorerDoubleClick,
   handleFileExplorerAction,
@@ -22,7 +21,6 @@ const {
 
 export {
   handleBeforeMount,
-  handleAfterMount,
   handleFileExplorerSelectionChanged,
   handleFileExplorerDoubleClick,
   handleFileExplorerAction,

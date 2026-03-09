@@ -5,7 +5,6 @@ import { createLayoutsFileExplorerHandlers } from "../../deps/features/fileExplo
 
 const {
   handleBeforeMount,
-  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -22,7 +21,6 @@ const {
 
 export {
   handleBeforeMount,
-  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,

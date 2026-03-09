@@ -134,7 +134,6 @@ const openTransformDialog = async ({
 
 const {
   handleBeforeMount,
-  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -147,7 +146,6 @@ const {
 
 export {
   handleBeforeMount,
-  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
