@@ -187,11 +187,6 @@ const syncChangedRenderedLineContent = (refs, oldLines, newLines) => {
 
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 
-const getRuntime = (refs) => {
-  refs.__linesEditorRuntime ??= {};
-  return refs.__linesEditorRuntime;
-};
-
 const isShortcutDigit = (key) => {
   return /^[0-9]$/.test(key);
 };
@@ -248,30 +243,31 @@ const handleBlockModeCharacterShortcut = (deps, payload, { lineId } = {}) => {
   return true;
 };
 
-const clearDeleteShortcutState = (store, refs) => {
-  const runtime = getRuntime(refs);
+const clearDeleteShortcutState = (store) => {
   store.setAwaitingDeleteShortcut({
     awaitingDeleteShortcut: false,
   });
-  if (runtime.deleteShortcutTimerId !== undefined) {
-    clearTimeout(runtime.deleteShortcutTimerId);
-    runtime.deleteShortcutTimerId = undefined;
+  const timerId = store.selectDeleteShortcutTimerId();
+  if (timerId !== undefined) {
+    clearTimeout(timerId);
+    store.clearDeleteShortcutTimer();
   }
 };
 
-const armDeleteShortcutState = (store, refs) => {
-  const runtime = getRuntime(refs);
-  if (runtime.deleteShortcutTimerId !== undefined) {
-    clearTimeout(runtime.deleteShortcutTimerId);
+const armDeleteShortcutState = (store) => {
+  const timerId = store.selectDeleteShortcutTimerId();
+  if (timerId !== undefined) {
+    clearTimeout(timerId);
   }
 
-  runtime.deleteShortcutTimerId = setTimeout(() => {
-    clearDeleteShortcutState(store, refs);
+  const nextTimerId = setTimeout(() => {
+    clearDeleteShortcutState(store);
   }, DELETE_SHORTCUT_TIMEOUT_MS);
+  store.setDeleteShortcutTimerId({ timerId: nextTimerId });
 };
 
 const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
-  const { store, dispatchEvent, props, refs } = deps;
+  const { store, dispatchEvent, props } = deps;
   const event = payload._event;
   const key = String(event.key || "");
   const isDeleteShortcutKey =
@@ -283,7 +279,7 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
   const isAwaitingDeleteShortcut = store.selectAwaitingDeleteShortcut();
 
   if (isAwaitingDeleteShortcut) {
-    clearDeleteShortcutState(store, refs);
+    clearDeleteShortcutState(store);
 
     if (!isDeleteShortcutKey) {
       return false;
@@ -314,7 +310,7 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
   store.setAwaitingDeleteShortcut({
     awaitingDeleteShortcut: true,
   });
-  armDeleteShortcutState(store, refs);
+  armDeleteShortcutState(store);
   event.preventDefault();
   event.stopPropagation();
   return true;
@@ -377,11 +373,11 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, refs } = deps;
+  const { store } = deps;
   store.setReady();
 
   return () => {
-    clearDeleteShortcutState(store, refs);
+    clearDeleteShortcutState(store);
   };
 };
 
