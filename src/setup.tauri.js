@@ -19,6 +19,9 @@ import { createApiService } from "./deps/services/apiService";
 import Subject from "./deps/subject";
 import Router from "./deps/infra/router";
 import { createGraphicsService } from "./deps/services/graphicsService";
+import { registerPrimitives } from "./primitives/registerPrimitives";
+
+registerPrimitives();
 
 // Initialize app database
 const appDb = createDb({ path: "sqlite:app.db" });

@@ -1,143 +1,25 @@
-// Helper function to find the position on the last line closest to goal column
-const findLastLinePosition = (element, goalColumn) => {
-  const text = element.textContent;
-  const textLength = text.length;
-
-  // If no text or goal column is at end, return end position
-  if (textLength === 0 || goalColumn >= textLength) {
-    return textLength;
+const getLineContent = (element) => {
+  if (!element || typeof element.getContent !== "function") {
+    return "";
   }
 
-  // Create a range to test each position and find where the last line starts
-  let lastLineStartPos = 0;
-  let lastLineTop = null;
-
-  // Walk backwards from the end to find where the last line starts
-  for (let pos = textLength; pos >= 0; pos--) {
-    try {
-      const range = document.createRange();
-
-      // Position the range at this character position
-      let currentPos = 0;
-      let foundNode = false;
-
-      const walkTextNodes = (node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const nodeLength = node.textContent.length;
-          if (currentPos + nodeLength >= pos) {
-            const offset = pos - currentPos;
-            range.setStart(node, offset);
-            range.setEnd(node, offset);
-            foundNode = true;
-            return true;
-          }
-          currentPos += nodeLength;
-        } else {
-          for (let child of node.childNodes) {
-            if (walkTextNodes(child)) return true;
-          }
-        }
-        return false;
-      };
-
-      walkTextNodes(element);
-
-      if (foundNode) {
-        const rect = range.getBoundingClientRect();
-
-        if (lastLineTop === null) {
-          // First position (end of text) - this is definitely the last line
-          lastLineTop = rect.top;
-          lastLineStartPos = pos;
-        } else if (Math.abs(rect.top - lastLineTop) > 5) {
-          // We've moved to a different line (more than 5px difference)
-          // The previous position was the start of the last line
-          break;
-        } else {
-          // Still on the same line
-          lastLineStartPos = pos;
-        }
-      }
-    } catch {
-      // If range creation fails, continue
-      continue;
-    }
-  }
-
-  // Now find the position on the last line closest to the goal column
-  const lastLineLength = textLength - lastLineStartPos;
-  const positionOnLastLine = Math.min(goalColumn, lastLineLength);
-  const finalPosition = lastLineStartPos + positionOnLastLine;
-
-  return finalPosition;
+  return element.getContent();
 };
 
-// Helper function to get selection range, handling Shadow DOM with getComposedRanges
-const getSelectionRange = (element) => {
-  const shadowRoot = element.getRootNode();
-  const isShadowRoot = shadowRoot instanceof ShadowRoot;
-
-  let selection = window.getSelection();
-
-  // Try shadowRoot.getSelection() first for Shadow DOM (non-standard but works in some browsers)
-  if (isShadowRoot && typeof shadowRoot.getSelection === "function") {
-    const shadowSelection = shadowRoot.getSelection();
-    if (shadowSelection && shadowSelection.rangeCount > 0) {
-      const range = shadowSelection.getRangeAt(0);
-      if (element.contains(range.startContainer)) {
-        return range;
-      }
-    }
-  }
-
-  if (!selection || selection.rangeCount === 0) return null;
-
-  // Use getComposedRanges for Shadow DOM (Safari 17+, Chrome 137+, Firefox 142+)
-  if (isShadowRoot && typeof selection.getComposedRanges === "function") {
-    try {
-      const ranges = selection.getComposedRanges(shadowRoot);
-      if (ranges.length > 0) {
-        const staticRange = ranges[0];
-
-        // Validate that the range is actually inside our element
-        // On some browsers (Windows Chrome), getComposedRanges may return body instead of actual element
-        if (element.contains(staticRange.startContainer)) {
-          // Convert StaticRange to Range (StaticRange doesn't have getBoundingClientRect)
-          const range = document.createRange();
-          range.setStart(staticRange.startContainer, staticRange.startOffset);
-          range.setEnd(staticRange.endContainer, staticRange.endOffset);
-          return range;
-        }
-      }
-    } catch {
-      // getComposedRanges not supported, fall through to fallback
-    }
-  }
-
-  // Fallback to regular getRangeAt
-  const range = selection.getRangeAt(0);
-  if (element.contains(range.startContainer)) {
-    return range;
-  }
-
-  return null;
-};
-
-// Helper function to get cursor position in contenteditable
 const getCursorPosition = (element) => {
-  if (!element) {
+  if (!element || typeof element.getCaretPosition !== "function") {
     return 0;
   }
 
-  const range = getSelectionRange(element);
-  if (!range) return 0;
+  return element.getCaretPosition();
+};
 
-  // For StaticRange (from getComposedRanges), we need to create a new range
-  const preCaretRange = document.createRange();
-  preCaretRange.selectNodeContents(element);
-  preCaretRange.setEnd(range.endContainer, range.endOffset);
-  const position = preCaretRange.toString().length;
-  return position;
+const hasSelectionRange = (element) => {
+  if (!element || typeof element.hasSelectionRange !== "function") {
+    return true;
+  }
+
+  return element.hasSelectionRange();
 };
 
 const getLineIdFromElement = (element) => {
@@ -148,6 +30,118 @@ const getLineElementById = (refs, lineId) => {
   return Object.values(refs || {}).find(
     (element) => getLineIdFromElement(element) === lineId,
   );
+};
+
+const syncStoredCursorState = (
+  store,
+  element,
+  { updateGoalColumn = true, remainingFrames = 2 } = {},
+) => {
+  requestAnimationFrame(() => {
+    const cursorPosition = getCursorPosition(element);
+    const selectionReady = hasSelectionRange(element);
+
+    if (!selectionReady && remainingFrames > 0) {
+      syncStoredCursorState(store, element, {
+        updateGoalColumn,
+        remainingFrames: remainingFrames - 1,
+      });
+      return;
+    }
+
+    store.setCursorPosition({ position: cursorPosition });
+    if (updateGoalColumn) {
+      store.setGoalColumn({ goalColumn: cursorPosition });
+    }
+  });
+};
+
+const focusContainerAfterPaint = (refs) => {
+  requestAnimationFrame(() => {
+    const container = refs["container"];
+    if (container) {
+      container.focus();
+    }
+  });
+};
+
+const getActualActiveElement = (element) => {
+  const root = element?.getRootNode();
+
+  if (root instanceof ShadowRoot && root.activeElement) {
+    return root.activeElement;
+  }
+
+  return document.activeElement;
+};
+
+const isLineElement = (element) => {
+  return Boolean(element && getLineIdFromElement(element));
+};
+
+const getLineText = (line) => {
+  return line?.actions?.dialogue?.content?.[0]?.text ?? "";
+};
+
+const syncRenderedLineContent = (refs, lines, lineId) => {
+  if (!lineId) {
+    return;
+  }
+
+  const lineRef = getLineElementById(refs, lineId);
+  if (!lineRef || typeof lineRef.updateContent !== "function") {
+    return;
+  }
+
+  const line = (lines || []).find((item) => item.id === lineId);
+  if (!line) {
+    return;
+  }
+
+  lineRef.updateContent(getLineText(line));
+};
+
+const syncAllRenderedLineContent = (refs, lines) => {
+  for (const line of lines || []) {
+    syncRenderedLineContent(refs, lines, line.id);
+  }
+};
+
+const didLineStructureChange = (oldLines, newLines) => {
+  if ((oldLines || []).length !== (newLines || []).length) {
+    return true;
+  }
+
+  for (let i = 0; i < (newLines || []).length; i++) {
+    if (oldLines?.[i]?.id !== newLines?.[i]?.id) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const syncChangedRenderedLineContent = (refs, oldLines, newLines) => {
+  if (!oldLines || oldLines.length === 0) {
+    syncAllRenderedLineContent(refs, newLines);
+    return;
+  }
+
+  if (didLineStructureChange(oldLines, newLines)) {
+    syncAllRenderedLineContent(refs, newLines);
+    return;
+  }
+
+  const oldLineContentById = new Map(
+    oldLines.map((line) => [line.id, getLineText(line)]),
+  );
+
+  for (const line of newLines || []) {
+    const nextContent = getLineText(line);
+    if (oldLineContentById.get(line.id) !== nextContent) {
+      syncRenderedLineContent(refs, newLines, line.id);
+    }
+  }
 };
 
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
@@ -307,7 +301,7 @@ const enterInsertModeAtLineEnd = (deps, lineId) => {
     return;
   }
 
-  const textLength = lineElement.textContent.length;
+  const textLength = getLineContent(lineElement).length;
   store.setCursorPosition({ position: textLength });
   store.setGoalColumn({ goalColumn: textLength });
   store.setNavigationDirection({ direction: "end" });
@@ -329,113 +323,6 @@ const dispatchBlockModeSwapLine = (dispatchEvent, lineId, direction) => {
   );
 };
 
-// Helper function to check if cursor is on the first line of contenteditable
-const isCursorOnFirstLine = (element) => {
-  const range = getSelectionRange(element);
-  if (!range) return false;
-
-  // Get the bounding rectangle of the cursor position
-  const cursorRect = range.getBoundingClientRect();
-
-  // Create a range at the very beginning of the element
-  const startRange = document.createRange();
-
-  // Instead of using selectNodeContents and collapse, let's position at the actual start
-  let firstTextNode = null;
-
-  // Walk through all text nodes to find the actual first position
-  const walkTextNodes = (node) => {
-    if (node.nodeType === Node.TEXT_NODE && !firstTextNode) {
-      firstTextNode = node;
-      return true; // Stop walking once we find the first text node
-    } else {
-      for (let child of node.childNodes) {
-        if (walkTextNodes(child)) return true;
-      }
-    }
-    return false;
-  };
-
-  walkTextNodes(element);
-
-  // If we found a text node, position the range there
-  if (firstTextNode) {
-    startRange.setStart(firstTextNode, 0);
-    startRange.setEnd(firstTextNode, 0);
-  } else {
-    // Fallback to element positioning if no text nodes found
-    startRange.selectNodeContents(element);
-    startRange.collapse(true);
-  }
-
-  const startRect = startRange.getBoundingClientRect();
-
-  // Consider the cursor on the first line if it's within a reasonable tolerance of the first line
-  const tolerance = 5; // pixels
-  const isOnFirstLine = Math.abs(cursorRect.top - startRect.top) <= tolerance;
-
-  return isOnFirstLine;
-};
-
-// Helper function to check if cursor is on the last line of contenteditable
-const isCursorOnLastLine = (element) => {
-  // First, check if the element has multiple visual lines
-  const elementHeight = element.scrollHeight;
-  const lineHeight =
-    parseFloat(window.getComputedStyle(element).lineHeight) || 20;
-  const hasMultipleLines = elementHeight > lineHeight * 1.5; // Allow some tolerance
-
-  if (!hasMultipleLines) {
-    // Single line content - always navigate to next editor on ArrowDown
-    return true;
-  }
-
-  const range = getSelectionRange(element);
-  if (!range) return false;
-
-  // Get the bounding rectangle of the cursor position
-  const cursorRect = range.getBoundingClientRect();
-
-  // Create a range at the very end of the element
-  const endRange = document.createRange();
-
-  // Instead of using selectNodeContents and collapse, let's position at the actual end
-  let lastTextNode = null;
-  let lastOffset = 0;
-
-  // Walk through all text nodes to find the actual last position
-  const walkTextNodes = (node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      lastTextNode = node;
-      lastOffset = node.textContent.length;
-    } else {
-      for (let child of node.childNodes) {
-        walkTextNodes(child);
-      }
-    }
-  };
-
-  walkTextNodes(element);
-
-  // If we found a text node, position the range there
-  if (lastTextNode) {
-    endRange.setStart(lastTextNode, lastOffset);
-    endRange.setEnd(lastTextNode, lastOffset);
-  } else {
-    // Fallback to element positioning if no text nodes found
-    endRange.selectNodeContents(element);
-    endRange.collapse(false);
-  }
-
-  const endRect = endRange.getBoundingClientRect();
-
-  // Consider the cursor on the last line if it's within a reasonable tolerance of the last line
-  const tolerance = 5; // pixels
-  const isOnLastLine = Math.abs(cursorRect.top - endRect.top) <= tolerance;
-
-  return isOnLastLine;
-};
-
 export const handleAfterMount = async (deps) => {
   const { store, refs, projectService } = deps;
 
@@ -444,12 +331,7 @@ export const handleAfterMount = async (deps) => {
   store.setReady();
 
   // Focus container on mount to enable keyboard navigation
-  setTimeout(() => {
-    const container = refs["container"];
-    if (container) {
-      container.focus();
-    }
-  }, 0);
+  focusContainerAfterPaint(refs);
 };
 
 export const handlePreviewRightClick = async (deps, payload) => {
@@ -493,7 +375,7 @@ export const handleContainerKeyDown = (deps, payload) => {
   const mode = store.selectMode();
 
   // Only handle container keydown if the target is the container itself
-  // If it's a contenteditable, let the line handler handle it
+  // If focus is already inside an editable line primitive, let the line handler own it.
   if (payload._event.target.id !== "container") {
     return;
   }
@@ -544,12 +426,6 @@ export const handleContainerKeyDown = (deps, payload) => {
     if (navKey === "o" || navKey === "O") {
       payload._event.preventDefault();
       payload._event.stopPropagation();
-
-      console.log("[linesEditor][block-new-line] shortcut", {
-        key: navKey,
-        selectedLineId: currentLineId || null,
-        linesCount: lines.length,
-      });
 
       dispatchEvent(
         new CustomEvent("newLine", {
@@ -843,7 +719,7 @@ export const handleLineKeyDown = (deps, payload) => {
       if (mode === "text-editor") {
         // Check if cursor is at position 0
         const currentPos = getCursorPosition(payload._event.currentTarget);
-        const currentContent = payload._event.currentTarget.textContent;
+        const currentContent = getLineContent(payload._event.currentTarget);
         const currentLineId = getLineIdFromElement(
           payload._event.currentTarget,
         );
@@ -892,7 +768,7 @@ export const handleLineKeyDown = (deps, payload) => {
 
         // Get current cursor position and text content
         const cursorPos = getCursorPosition(payload._event.currentTarget);
-        const fullText = payload._event.currentTarget.textContent;
+        const fullText = getLineContent(payload._event.currentTarget);
 
         // Split the content at cursor position
         const leftContent = fullText.substring(0, cursorPos);
@@ -1005,7 +881,7 @@ export const handleLineKeyDown = (deps, payload) => {
         }
       } else {
         // In text-editor mode, check if cursor is on first line
-        const isOnFirstLine = isCursorOnFirstLine(payload._event.currentTarget);
+        const isOnFirstLine = payload._event.currentTarget.isCaretOnFirstLine();
 
         if (isOnFirstLine) {
           // Cursor is on first line, move to previous line
@@ -1074,7 +950,7 @@ export const handleLineKeyDown = (deps, payload) => {
         }
       } else {
         // In text-editor mode, check if cursor is on last line
-        const isOnLastLine = isCursorOnLastLine(payload._event.currentTarget);
+        const isOnLastLine = payload._event.currentTarget.isCaretOnLastLine();
 
         if (isOnLastLine) {
           // Cursor is on last line, move to next line
@@ -1107,7 +983,7 @@ export const handleLineKeyDown = (deps, payload) => {
       if (mode === "text-editor") {
         // Check if cursor is at the end of the text
         const currentPos = getCursorPosition(payload._event.currentTarget);
-        const textLength = payload._event.currentTarget.textContent.length;
+        const textLength = getLineContent(payload._event.currentTarget).length;
 
         if (currentPos >= textLength) {
           // Cursor is at end, move to next line
@@ -1169,29 +1045,14 @@ export const handleLineKeyDown = (deps, payload) => {
 export const handleLineMouseUp = (deps, payload) => {
   const { store } = deps;
 
-  // Save cursor position after mouse up (selection change)
-  // Use multiple attempts with slight delays to ensure selection is established
-  setTimeout(() => {
-    const cursorPos = getCursorPosition(payload._event.currentTarget);
-    if (cursorPos > 0) {
-      store.setCursorPosition({ position: cursorPos });
-      store.setGoalColumn({ goalColumn: cursorPos });
-    } else {
-      // Try again with longer delay if position is 0
-      setTimeout(() => {
-        const cursorPos2 = getCursorPosition(payload._event.currentTarget);
-        store.setCursorPosition({ position: cursorPos2 });
-        store.setGoalColumn({ goalColumn: cursorPos2 });
-      }, 10);
-    }
-  }, 0);
+  syncStoredCursorState(store, payload._event.currentTarget);
 };
 
 export const handleOnInput = (deps, payload) => {
   const { dispatchEvent, store } = deps;
 
   const lineId = getLineIdFromElement(payload._event.currentTarget);
-  const content = payload._event.currentTarget.textContent;
+  const content = getLineContent(payload._event.currentTarget);
 
   // Save cursor position on every input
   const cursorPos = getCursorPosition(payload._event.currentTarget);
@@ -1237,7 +1098,7 @@ export const handleLinePaste = (deps, payload) => {
   // Get current cursor position and line content
   const lineId = getLineIdFromElement(event.currentTarget);
   const cursorPos = getCursorPosition(event.currentTarget);
-  const currentContent = event.currentTarget.textContent;
+  const currentContent = getLineContent(event.currentTarget);
 
   // Split current content at cursor position
   const leftContent = currentContent.substring(0, cursorPos);
@@ -1257,19 +1118,20 @@ export const handleLinePaste = (deps, payload) => {
 };
 
 export const forceSyncContentLine = (deps, payload) => {
-  const { store, refs } = deps;
-  const refIds = refs;
+  const { refs, props } = deps;
+  syncRenderedLineContent(refs, props.lines, payload?.lineId);
+};
 
-  const { lineId } = payload;
-  const lineRef = getLineElementById(refIds, lineId);
-  // Check if lineRef exists and has the elm property
-  if (!lineRef) {
-    return;
-  }
-  const lineContent = store.selectLineContent({ lineId });
-  if (lineRef.textContent !== lineContent) {
-    lineRef.textContent = lineContent;
-  }
+export const forceSyncAllContentLines = (deps) => {
+  const { refs, props } = deps;
+  syncAllRenderedLineContent(refs, props.lines);
+};
+
+export const handleOnUpdate = (deps, payload) => {
+  const { refs } = deps;
+  const oldLines = payload?.oldProps?.lines;
+  const newLines = payload?.newProps?.lines;
+  syncChangedRenderedLineContent(refs, oldLines, newLines);
 };
 
 export const updateSelectedLine = (deps, payload) => {
@@ -1285,14 +1147,14 @@ export const updateSelectedLine = (deps, payload) => {
 
   // Get goal column (desired position) instead of current position
   const goalColumn = store.selectGoalColumn() || 0;
-  const textLength = lineRef.textContent.length;
+  const textLength = getLineContent(lineRef).length;
   const direction = store.selectNavigationDirection();
 
   // Choose positioning strategy based on direction
   let targetPosition;
   if (direction === "up") {
     // For upward navigation, find position on last line
-    targetPosition = findLastLinePosition(lineRef, goalColumn);
+    targetPosition = lineRef.findLastLinePosition(goalColumn);
   } else if (direction === "end") {
     // For end positioning (ArrowLeft navigation), position at absolute end
     targetPosition = textLength;
@@ -1301,77 +1163,10 @@ export const updateSelectedLine = (deps, payload) => {
     targetPosition = Math.min(goalColumn, textLength);
   }
 
-  // Get shadow root for selection if needed
-  let shadowRoot = lineRef.getRootNode();
-  let selection = window.getSelection();
-
-  // Check if we're in a shadow DOM
-  if (shadowRoot && shadowRoot.getSelection) {
-    selection = shadowRoot.getSelection();
-  }
-
-  // Create a range at the desired position before focusing
-  const range = document.createRange();
-
-  // Try to set position before focus
-  let currentPos = 0;
-  let foundNode = false;
-  let lastTextNode = null;
-  let lastTextNodeLength = 0;
-  let actualPosition = 0;
-
-  const walkTextNodes = (node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const nodeLength = node.textContent.length;
-      lastTextNode = node;
-      lastTextNodeLength = nodeLength;
-
-      if (currentPos + nodeLength >= targetPosition) {
-        const offset = targetPosition - currentPos;
-        range.setStart(node, offset);
-        range.setEnd(node, offset);
-        actualPosition = targetPosition;
-        foundNode = true;
-        return true;
-      }
-      currentPos += nodeLength;
-    } else {
-      for (let child of node.childNodes) {
-        if (walkTextNodes(child)) return true;
-      }
-    }
-    return false;
-  };
-
-  walkTextNodes(lineRef);
-
-  // If we didn't find a position (cursor beyond text), position at end
-  if (!foundNode && lastTextNode) {
-    range.setStart(lastTextNode, lastTextNodeLength);
-    range.setEnd(lastTextNode, lastTextNodeLength);
-    actualPosition = textLength;
-    foundNode = true;
-  }
-
-  // Now focus - this must happen before setting selection in Shadow DOM
-  lineRef.focus({ preventScroll: true });
-
-  // After focus, set the selection using setBaseAndExtent which works better with Shadow DOM
-  if (foundNode) {
-    // Re-get selection after focus - this is important for Shadow DOM
-    selection = window.getSelection();
-
-    // Use setBaseAndExtent instead of addRange - works better in Shadow DOM
-    selection.setBaseAndExtent(
-      range.startContainer,
-      range.startOffset,
-      range.endContainer,
-      range.endOffset,
-    );
-
-    // Update the current cursor position in store to reflect where we actually landed
-    store.setCursorPosition({ position: actualPosition });
-  }
+  const actualPosition = lineRef.setCaretPosition(targetPosition, {
+    preventScroll: true,
+  });
+  store.setCursorPosition({ position: actualPosition });
 };
 
 export const handleOnFocus = (deps, payload) => {
@@ -1411,12 +1206,7 @@ export const handleOnFocus = (deps, payload) => {
   }
 
   // When user clicks to focus (not navigating), set goal column to current position
-  setTimeout(() => {
-    const cursorPos = getCursorPosition(payload._event.currentTarget);
-    if (cursorPos >= 0) {
-      store.setGoalColumn({ goalColumn: cursorPos });
-    }
-  }, 10);
+  syncStoredCursorState(store, payload._event.currentTarget);
 
   render();
 };
@@ -1424,7 +1214,7 @@ export const handleOnFocus = (deps, payload) => {
 export const handleLineBlur = (deps, payload) => {
   const { store, render, refs } = deps;
 
-  // Capture element references before the timeout
+  // Capture element references before focus settles on the next paint.
   const blurredElement = payload._event.currentTarget;
   const shadowRoot = blurredElement.getRootNode();
 
@@ -1433,18 +1223,14 @@ export const handleLineBlur = (deps, payload) => {
     return;
   }
 
-  // Small delay to check if focus is moving to another line or staying within the editor
-  setTimeout(() => {
-    const activeElement = document.activeElement;
+  // Wait one paint so the next focused element is observable.
+  requestAnimationFrame(() => {
     const actualActiveElement =
-      (shadowRoot && shadowRoot.activeElement) || activeElement;
+      (shadowRoot && shadowRoot.activeElement) ||
+      getActualActiveElement(blurredElement);
 
     // Check if focus moved to another line within the editor
-    if (
-      actualActiveElement &&
-      actualActiveElement.id &&
-      actualActiveElement.id.startsWith("line")
-    ) {
+    if (isLineElement(actualActiveElement)) {
       // Focus moved to another line, stay in text-editor mode
       return;
     }
@@ -1466,5 +1252,5 @@ export const handleLineBlur = (deps, payload) => {
 
       render();
     }
-  }, 0);
+  });
 };

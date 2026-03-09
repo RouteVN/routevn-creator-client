@@ -1239,7 +1239,7 @@ export const handleSplitLine = async (deps, payload) => {
         currentLineId: newLineId,
       });
 
-      linesEditorRef.transformedHandlers.forceSyncContentLine({
+      linesEditorRef.syncContentLine({
         lineId,
       });
 
@@ -1404,7 +1404,7 @@ export const handlePasteLines = async (deps, payload) => {
         currentLineId: lastCreatedLineId,
       });
 
-      linesEditorRef.transformedHandlers.forceSyncContentLine({
+      linesEditorRef.syncContentLine({
         lineId,
       });
 
@@ -1419,17 +1419,14 @@ export const handlePasteLines = async (deps, payload) => {
 export const handleNewLine = async (deps, payload) => {
   const { store, render, projectService, subject, refs } = deps;
   const detail = payload?._event?.detail || {};
-  console.log("[sceneEditor][handleNewLine] received", detail);
 
   if (isSectionsOverviewOpen(store)) {
-    console.log("[sceneEditor][handleNewLine] skipped: sections overview open");
     return;
   }
 
   const newLineId = nanoid();
   const sectionId = store.selectSelectedSectionId();
   if (!sectionId) {
-    console.log("[sceneEditor][handleNewLine] skipped: missing sectionId");
     return;
   }
 
@@ -1444,22 +1441,12 @@ export const handleNewLine = async (deps, payload) => {
   const selectedLineId = store.selectSelectedLineId();
   const baseLineId = referenceLineId || selectedLineId || selectedLine?.id;
 
-  console.log("[sceneEditor][handleNewLine] resolved", {
-    sectionId,
-    requestedPosition,
-    referenceLineId,
-    selectedLineId: selectedLineId || null,
-    selectedLineEntityId: selectedLine?.id || null,
-    baseLineId: baseLineId || null,
-    newLineId,
-  });
-
   if (requestedPosition && !baseLineId) {
-    console.log(
-      "[sceneEditor][handleNewLine] skipped: position requested without baseLineId",
-    );
     return;
   }
+
+  // Persist pending line text before mutating the section structure.
+  await flushDialogueQueue(deps);
 
   const domainState = projectService.getDomainState();
   const existingDialogue = baseLineId
@@ -1513,17 +1500,6 @@ export const handleNewLine = async (deps, payload) => {
     createLinePayload.position = "last";
   }
 
-  console.log("[sceneEditor][handleNewLine] createLineItem payload", {
-    sectionId: createLinePayload.sectionId,
-    lineId: createLinePayload.lineId,
-    position: createLinePayload.position ?? null,
-    afterLineId: createLinePayload.afterLineId ?? null,
-    requestedPosition,
-    baseLineId: baseLineId ?? null,
-    baseLineIndex,
-    inheritedMode: newLineActions?.dialogue?.mode || null,
-  });
-
   await projectService.createLineItem(createLinePayload);
 
   if (requestedPosition === "before" && baseLineIndex === 0) {
@@ -1532,15 +1508,7 @@ export const handleNewLine = async (deps, payload) => {
       toSectionId: sectionId,
       index: 0,
     });
-    console.log("[sceneEditor][handleNewLine] moved new line to index 0", {
-      newLineId,
-      sectionId,
-    });
   }
-
-  console.log("[sceneEditor][handleNewLine] createLineItem done", {
-    newLineId,
-  });
 
   syncStoreProjectState(store, projectService);
   store.setSelectedLineId({ selectedLineId: newLineId });
