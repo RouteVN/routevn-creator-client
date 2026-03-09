@@ -69,6 +69,44 @@ const getPreviewImageSrc = async ({ projectService, item } = {}) => {
   return url;
 };
 
+const clearCharacterSpritesView = ({ store } = {}) => {
+  store.setCharacterName({ characterName: undefined });
+  store.setItems({ spritesData: EMPTY_TREE });
+  store.setSelectedItemId({ itemId: undefined });
+  store.setContext({
+    context: {
+      fileId: {
+        src: undefined,
+      },
+    },
+  });
+};
+
+const resolveSelectedPreviewImageSrc = async ({
+  projectService,
+  store,
+  previousSelectedItem,
+  selectedItem,
+} = {}) => {
+  if (!selectedItem?.fileId) {
+    return undefined;
+  }
+
+  const currentPreviewImageSrc = store.selectPreviewImageSrc();
+  if (
+    currentPreviewImageSrc &&
+    previousSelectedItem?.id === selectedItem.id &&
+    previousSelectedItem?.fileId === selectedItem.fileId
+  ) {
+    return currentPreviewImageSrc;
+  }
+
+  return getPreviewImageSrc({
+    projectService,
+    item: selectedItem,
+  });
+};
+
 const syncCharacterSpritesData = async (deps) => {
   const { appService, projectService, store } = deps;
   const characterId =
@@ -135,15 +173,26 @@ const syncCharacterSpritesRepositoryState = async ({
   deps,
   repositoryState,
 } = {}) => {
-  const { projectService, store, render, refs } = deps;
+  const { appService, projectService, store, render, refs } = deps;
   const characterId =
     store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
   const character = repositoryState?.characters?.items?.[characterId];
 
-  if (!characterId || !character) {
+  if (!characterId) {
+    appService.showToast("Character is missing.", { title: "Error" });
+    clearCharacterSpritesView({ store });
+    render();
     return;
   }
 
+  if (!character) {
+    appService.showToast("Character not found.", { title: "Error" });
+    clearCharacterSpritesView({ store });
+    render();
+    return;
+  }
+
+  const previousSelectedItem = store.selectSelectedItem();
   store.setCharacterId({ characterId });
   store.setCharacterName({ characterName: character.name });
   store.setItems({ spritesData: character.sprites ?? EMPTY_TREE });
@@ -153,9 +202,11 @@ const syncCharacterSpritesRepositoryState = async ({
   }
 
   const selectedItem = store.selectSelectedItem();
-  const imageSrc = await getPreviewImageSrc({
+  const imageSrc = await resolveSelectedPreviewImageSrc({
     projectService,
-    item: selectedItem,
+    store,
+    previousSelectedItem,
+    selectedItem,
   });
 
   store.setContext({

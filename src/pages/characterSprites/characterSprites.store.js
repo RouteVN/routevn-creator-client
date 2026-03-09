@@ -115,6 +115,10 @@ export const selectCharacterId = ({ state }) => {
   return state.characterId;
 };
 
+export const selectPreviewImageSrc = ({ state }) => {
+  return state.context?.fileId?.src;
+};
+
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   const item = state.spritesData.items?.[itemId];
 
