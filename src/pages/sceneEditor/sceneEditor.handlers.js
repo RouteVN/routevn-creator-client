@@ -1,4 +1,8 @@
 import {
+  mountCollabRemoteRefresh,
+  matchesRemoteTargets,
+} from "../../deps/features/collabRefresh.js";
+import {
   applyPendingDialogueQueueToStore,
   findCharacterIdByShortcut,
   flushDialogueQueue,
@@ -28,6 +32,7 @@ import { debugLog, previewDebugText } from "../../utils/debugLog.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
+let cleanupCollabRemoteRefresh;
 
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
@@ -55,6 +60,8 @@ export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSceneEditorSubscriptions(deps);
 
   return async () => {
+    cleanupCollabRemoteRefresh?.();
+    cleanupCollabRemoteRefresh = undefined;
     cleanupSubscriptions();
     await flushDialogueQueue(deps);
     resetSceneEditorRuntime(deps);
@@ -65,6 +72,25 @@ export const handleAfterMount = async (deps) => {
   await initializeSceneEditorPage({
     ...deps,
     syncProjectState: syncStoreProjectState,
+  });
+  cleanupCollabRemoteRefresh?.();
+  cleanupCollabRemoteRefresh = mountCollabRemoteRefresh({
+    deps,
+    matches: matchesRemoteTargets([
+      "story",
+      "layouts",
+      "images",
+      "colors",
+      "fonts",
+      "typography",
+      "characters",
+      "variables",
+      "sounds",
+      "videos",
+      "transforms",
+      "tweens",
+    ]),
+    refresh: handleDataChanged,
   });
 };
 

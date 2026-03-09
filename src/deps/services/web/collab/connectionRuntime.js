@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import {
   COLLAB_CONNECTION_ERROR_THROTTLE_MS,
   COLLAB_HEARTBEAT_INTERVAL_MS,
@@ -6,12 +7,7 @@ import {
 } from "./constants.js";
 import { isLocalProjectId } from "./localProjectMode.js";
 
-const generateClientIdSuffix = () => {
-  if (typeof crypto?.randomUUID === "function") {
-    return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-  }
-  return Math.random().toString(36).slice(2, 14);
-};
+const generateClientIdSuffix = () => nanoid(12);
 
 const getCollabEndpointCandidates = (endpointUrl) => {
   const raw =
