@@ -1,16 +1,69 @@
 import { customAlphabet } from "nanoid";
-import {
-  COLLAB_CONNECTION_ERROR_THROTTLE_MS,
-  COLLAB_HEARTBEAT_INTERVAL_MS,
-  COLLAB_RECONNECT_INTERVAL_MS,
-  DEFAULT_COLLAB_ENDPOINT,
-} from "./constants.js";
-import { isLocalProjectId } from "./localProjectMode.js";
+
+const DEFAULT_COLLAB_ENDPOINT = "wss://127.0.0.1:8787/sync";
+const COLLAB_HEARTBEAT_INTERVAL_MS = 10_000;
+const COLLAB_RECONNECT_INTERVAL_MS = 5_000;
+const COLLAB_CONNECTION_ERROR_THROTTLE_MS = 10_000;
 
 const BASE58_ALPHABET =
   "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 const generateClientIdSuffix = customAlphabet(BASE58_ALPHABET, 12);
+
+const parseEnabledFlag = (value) => value === "1" || value === "true";
+
+export const resolveCollabDebugEnabled = () => {
+  const params = new URLSearchParams(window.location.search);
+  if (parseEnabledFlag(params.get("collabDebug"))) {
+    return true;
+  }
+
+  try {
+    const storedValue = localStorage.getItem("routevn.collab.debug");
+    return parseEnabledFlag(storedValue);
+  } catch {
+    return false;
+  }
+};
+
+export const createCollabDebugLogger =
+  ({ enabled }) =>
+  (level, message, meta = {}) => {
+    if (!enabled && level !== "error") {
+      return;
+    }
+
+    const fn =
+      level === "error"
+        ? console.error.bind(console)
+        : level === "warn"
+          ? console.warn.bind(console)
+          : console.info.bind(console);
+
+    fn(`[routevn.collab.debug] ${message}`, meta);
+  };
+
+const loadLocalProjectEntries = async ({ db } = {}) => {
+  if (!db?.get) {
+    return [];
+  }
+
+  try {
+    const entries = await db.get("projectEntries");
+    return Array.isArray(entries) ? entries : [];
+  } catch {
+    return [];
+  }
+};
+
+const isLocalProjectId = async ({ db, projectId } = {}) => {
+  if (!projectId) {
+    return false;
+  }
+
+  const entries = await loadLocalProjectEntries({ db });
+  return entries.some((entry) => entry?.id === projectId);
+};
 
 const getCollabEndpointCandidates = (endpointUrl) => {
   const raw = endpointUrl || DEFAULT_COLLAB_ENDPOINT;

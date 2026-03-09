@@ -1,9 +1,9 @@
 import { createProjectService } from "./projectService.js";
-import { createCollabConnectionRuntime } from "./collab/connectionRuntime.js";
 import {
   createCollabDebugLogger,
+  createCollabConnectionRuntime,
   resolveCollabDebugEnabled,
-} from "./collab/debug.js";
+} from "./collab/connectionRuntime.js";
 import { createRemoteEventBridge } from "./collab/remoteEventBridge.js";
 
 export const createWebProjectServiceWithCollab = async ({
