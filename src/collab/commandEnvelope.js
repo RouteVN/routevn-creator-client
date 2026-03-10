@@ -1,4 +1,4 @@
-import { COMMAND_VERSION } from "../domain/constants.js";
+import { COMMAND_EVENT_MODEL } from "../domain/commandCatalog.js";
 import { buildScopePartition } from "insieme/client";
 
 const defaultUuid = () =>
@@ -49,7 +49,7 @@ export const createCommandEnvelope = ({
   payload,
   actor,
   clientTs = Date.now(),
-  commandVersion = COMMAND_VERSION,
+  commandVersion = COMMAND_EVENT_MODEL.commandVersion,
   meta,
 }) => {
   const basePartition =

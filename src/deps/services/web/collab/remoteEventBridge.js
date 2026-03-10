@@ -1,4 +1,9 @@
 import { COLLAB_REMOTE_EVENT_ACTION } from "../../../../collab/remoteEvents.js";
+import {
+  getCommandDefinition,
+  isLayoutCommandType,
+  isStoryCommandType,
+} from "../../../../domain/commandCatalog.js";
 
 const resolveRemoteTarget = ({ command, event } = {}) => {
   const eventTarget = event?.payload?.target;
@@ -17,20 +22,17 @@ const resolveRemoteTarget = ({ command, event } = {}) => {
   }
 
   const commandType = command?.type ?? "";
-  if (commandType.startsWith("variable.")) {
-    return "variables";
-  }
-
-  if (commandType.startsWith("layout.")) {
+  if (isLayoutCommandType(commandType)) {
     return "layouts";
   }
 
-  if (
-    commandType.startsWith("scene.") ||
-    commandType.startsWith("section.") ||
-    commandType.startsWith("line.")
-  ) {
+  if (isStoryCommandType(commandType)) {
     return "story";
+  }
+
+  const commandScope = getCommandDefinition(commandType)?.scope;
+  if (commandScope) {
+    return commandScope;
   }
 
   const scope = command?.scope;

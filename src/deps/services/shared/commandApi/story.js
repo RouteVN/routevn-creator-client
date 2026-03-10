@@ -3,6 +3,7 @@ import {
   findSectionLocation,
   normalizeParentId,
 } from "../projectRepository.js";
+import { COMMAND_TYPES } from "../../../../domain/commandCatalog.js";
 
 export const createStoryCommandApi = (shared) => ({
   async createSceneItem({
@@ -30,7 +31,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "scene.create",
+      type: COMMAND_TYPES.SCENE_CREATE,
       payload: {
         sceneId: finalSceneId,
         name,
@@ -55,7 +56,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "scene.update",
+      type: COMMAND_TYPES.SCENE_UPDATE,
       payload: {
         sceneId,
         patch: structuredClone(patch || {}),
@@ -75,7 +76,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "scene.rename",
+      type: COMMAND_TYPES.SCENE_RENAME,
       payload: {
         sceneId,
         name,
@@ -95,7 +96,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "scene.delete",
+      type: COMMAND_TYPES.SCENE_DELETE,
       payload: {
         sceneId,
       },
@@ -114,7 +115,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "scene.set_initial",
+      type: COMMAND_TYPES.SCENE_SET_INITIAL,
       payload: {
         sceneId,
       },
@@ -145,7 +146,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "scene.move",
+      type: COMMAND_TYPES.SCENE_MOVE,
       payload: {
         sceneId,
         parentId: normalizeParentId(parentId),
@@ -183,7 +184,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "section.create",
+      type: COMMAND_TYPES.SECTION_CREATE,
       payload: {
         sceneId,
         sectionId: nextSectionId,
@@ -211,7 +212,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "section.rename",
+      type: COMMAND_TYPES.SECTION_RENAME,
       payload: {
         sectionId,
         name,
@@ -234,7 +235,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "section.delete",
+      type: COMMAND_TYPES.SECTION_DELETE,
       payload: {
         sectionId,
       },
@@ -270,7 +271,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "section.reorder",
+      type: COMMAND_TYPES.SECTION_REORDER,
       payload: {
         sectionId,
         parentId: normalizeParentId(parentId),
@@ -314,7 +315,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "line.insert_after",
+      type: COMMAND_TYPES.LINE_INSERT_AFTER,
       payload: {
         sectionId,
         lineId: nextLineId,
@@ -343,7 +344,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "line.update_actions",
+      type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
       payload: {
         lineId,
         patch: structuredClone(patch || {}),
@@ -366,7 +367,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "line.delete",
+      type: COMMAND_TYPES.LINE_DELETE,
       payload: {
         lineId,
       },
@@ -404,7 +405,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "line.move",
+      type: COMMAND_TYPES.LINE_MOVE,
       payload: {
         lineId,
         toSectionId,

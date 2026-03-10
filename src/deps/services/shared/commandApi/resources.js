@@ -1,4 +1,5 @@
 import { normalizeParentId } from "../projectRepository.js";
+import { COMMAND_TYPES } from "../../../../domain/commandCatalog.js";
 
 export const createResourceCommandApi = (shared) => ({
   async createResourceItem({
@@ -27,7 +28,7 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.create",
+      type: COMMAND_TYPES.RESOURCE_CREATE,
       payload: {
         resourceType,
         resourceId: nextResourceId,
@@ -52,7 +53,7 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.update",
+      type: COMMAND_TYPES.RESOURCE_UPDATE,
       payload: {
         resourceType,
         resourceId,
@@ -87,7 +88,7 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.move",
+      type: COMMAND_TYPES.RESOURCE_MOVE,
       payload: {
         resourceType,
         resourceId,
@@ -110,7 +111,7 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.delete",
+      type: COMMAND_TYPES.RESOURCE_DELETE,
       payload: {
         resourceType,
         resourceId,
@@ -151,7 +152,7 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.duplicate",
+      type: COMMAND_TYPES.RESOURCE_DUPLICATE,
       payload: {
         resourceType,
         sourceId,

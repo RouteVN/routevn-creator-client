@@ -1,3 +1,5 @@
+import { COMMAND_TYPES } from "../../../../domain/commandCatalog.js";
+
 export const createSettingsCommandApi = (shared) => ({
   async updateProjectFields({ patch }) {
     const context = await shared.ensureCommandContext();
@@ -10,7 +12,7 @@ export const createSettingsCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "settings",
-      type: "project.update",
+      type: COMMAND_TYPES.PROJECT_UPDATE,
       payload: {
         patch: structuredClone(patch),
       },

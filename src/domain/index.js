@@ -1,4 +1,5 @@
 export * from "./constants.js";
+export * from "./commandCatalog.js";
 export * from "./errors.js";
 export * from "./model.js";
 export * from "./validateCommand.js";

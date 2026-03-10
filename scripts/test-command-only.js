@@ -7,6 +7,7 @@ import {
   committedEventToCommand,
   createProjectCollabService,
 } from "../src/collab/index.js";
+import { COMMAND_TYPES } from "../src/domain/commandCatalog.js";
 import { validateCommand } from "../src/domain/validateCommand.js";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -97,6 +98,25 @@ assert.equal(
   `Found write-path bypasses:\n${(bypassScan.stdout || "").trim()}`,
 );
 
+const hardcodedCommandTypeScan = spawnSync(
+  "rg",
+  [
+    "-n",
+    'type:\\s*"(project|scene|section|line|resource|layout\\.element)\\.',
+    "src/deps/services/shared/commandApi",
+  ],
+  {
+    encoding: "utf8",
+  },
+);
+assert.equal(
+  hardcodedCommandTypeScan.status,
+  1,
+  `Found hardcoded command types outside command catalog:\n${(
+    hardcodedCommandTypeScan.stdout || ""
+  ).trim()}`,
+);
+
 const observedSchemas = [];
 const store = createInMemorySyncStore();
 const server = createSyncServer({
@@ -168,7 +188,7 @@ try {
     scope: "settings",
     partition: `project:${projectId}:settings`,
     partitions: [`project:${projectId}:settings`],
-    type: "project.update",
+    type: COMMAND_TYPES.PROJECT_UPDATE,
     payload: {
       patch: {
         name: "Command Project",
@@ -186,7 +206,7 @@ try {
       `project:${projectId}:resources`,
       `project:${projectId}:resources:images:image-1`,
     ],
-    type: "resource.create",
+    type: COMMAND_TYPES.RESOURCE_CREATE,
     payload: {
       resourceType: "images",
       resourceId: "image-1",
@@ -206,8 +226,8 @@ try {
   await sleep(30);
 
   const observedSet = new Set(observedSchemas);
-  assert.ok(observedSet.has("project.update"));
-  assert.ok(observedSet.has("resource.create"));
+  assert.ok(observedSet.has(COMMAND_TYPES.PROJECT_UPDATE));
+  assert.ok(observedSet.has(COMMAND_TYPES.RESOURCE_CREATE));
   assert.ok(
     [...observedSet].every((schema) => !schema.startsWith("legacy.")),
     `unexpected schemas: ${[...observedSet].join(", ")}`,

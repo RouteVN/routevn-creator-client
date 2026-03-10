@@ -21,6 +21,7 @@ import {
   assertSupportedProjectState,
   repositoryEventToCommand,
 } from "../shared/projectRepository.js";
+import { COMMAND_TYPES } from "../../../domain/commandCatalog.js";
 import { createBundle } from "../../../utils/bundleUtils.js";
 
 const countImageEntries = (imagesData) =>
@@ -78,7 +79,7 @@ const summarizeRepositoryEventsForSync = (events = []) => {
     .slice(0, 8)
     .map((command) => command?.type || "unknown");
   const hasProjectCreated = commands.some(
-    (command) => command?.type === "project.created",
+    (command) => command?.type === COMMAND_TYPES.PROJECT_CREATED,
   );
 
   return {

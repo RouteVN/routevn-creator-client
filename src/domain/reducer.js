@@ -1,4 +1,5 @@
 import { touchUpdatedAt } from "./model.js";
+import { COMMAND_TYPES } from "./commandCatalog.js";
 import {
   insertAtIndex,
   normalizeIndex,
@@ -413,7 +414,7 @@ const toDomainLayoutResource = ({
 };
 
 const reducers = {
-  "project.created": ({ state, payload }) => {
+  [COMMAND_TYPES.PROJECT_CREATED]: ({ state, payload }) => {
     const nextState = structuredClone(payload?.state || {});
     for (const key of Object.keys(state)) {
       delete state[key];
@@ -421,7 +422,7 @@ const reducers = {
     Object.assign(state, nextState);
   },
 
-  "project.update": ({ state, payload }) => {
+  [COMMAND_TYPES.PROJECT_UPDATE]: ({ state, payload }) => {
     const patch = structuredClone(payload.patch || {});
     delete patch.id;
     delete patch.createdAt;
@@ -429,7 +430,7 @@ const reducers = {
     state.project = { ...state.project, ...patch };
   },
 
-  "scene.create": ({ state, payload, now }) => {
+  [COMMAND_TYPES.SCENE_CREATE]: ({ state, payload, now }) => {
     const sceneData = structuredClone(payload.data || {});
     const sceneType = sceneData.type === "folder" ? "folder" : "scene";
     state.scenes[payload.sceneId] = {
@@ -454,7 +455,7 @@ const reducers = {
     }
   },
 
-  "scene.update": ({ state, payload, now }) => {
+  [COMMAND_TYPES.SCENE_UPDATE]: ({ state, payload, now }) => {
     const current = state.scenes[payload.sceneId];
     const patch = structuredClone(payload.patch || {});
     delete patch.id;
@@ -467,20 +468,20 @@ const reducers = {
     };
   },
 
-  "scene.rename": ({ state, payload, now }) => {
+  [COMMAND_TYPES.SCENE_RENAME]: ({ state, payload, now }) => {
     state.scenes[payload.sceneId].name = payload.name;
     state.scenes[payload.sceneId].updatedAt = now;
   },
 
-  "scene.delete": ({ state, payload }) => {
+  [COMMAND_TYPES.SCENE_DELETE]: ({ state, payload }) => {
     cascadeDeleteScene(state, payload.sceneId);
   },
 
-  "scene.set_initial": ({ state, payload }) => {
+  [COMMAND_TYPES.SCENE_SET_INITIAL]: ({ state, payload }) => {
     state.story.initialSceneId = payload.sceneId;
   },
 
-  "scene.move": ({ state, payload }) => {
+  [COMMAND_TYPES.SCENE_MOVE]: ({ state, payload }) => {
     upsertNoDuplicate(
       state.story.sceneOrder,
       payload.sceneId,
@@ -490,7 +491,7 @@ const reducers = {
       typeof payload.parentId === "string" ? payload.parentId : null;
   },
 
-  "section.create": ({ state, payload, now }) => {
+  [COMMAND_TYPES.SECTION_CREATE]: ({ state, payload, now }) => {
     state.sections[payload.sectionId] = {
       id: payload.sectionId,
       sceneId: payload.sceneId,
@@ -507,12 +508,12 @@ const reducers = {
     });
   },
 
-  "section.rename": ({ state, payload, now }) => {
+  [COMMAND_TYPES.SECTION_RENAME]: ({ state, payload, now }) => {
     state.sections[payload.sectionId].name = payload.name;
     state.sections[payload.sectionId].updatedAt = now;
   },
 
-  "section.delete": ({ state, payload }) => {
+  [COMMAND_TYPES.SECTION_DELETE]: ({ state, payload }) => {
     const section = state.sections[payload.sectionId];
     if (!section) return;
     for (const lineId of section.lineIds || []) {
@@ -525,7 +526,7 @@ const reducers = {
     delete state.sections[payload.sectionId];
   },
 
-  "section.reorder": ({ state, payload }) => {
+  [COMMAND_TYPES.SECTION_REORDER]: ({ state, payload }) => {
     const section = state.sections[payload.sectionId];
     upsertNoDuplicate(
       state.scenes[section.sceneId].sectionIds,
@@ -534,7 +535,7 @@ const reducers = {
     );
   },
 
-  "line.insert_after": ({ state, payload, now }) => {
+  [COMMAND_TYPES.LINE_INSERT_AFTER]: ({ state, payload, now }) => {
     const section = state.sections[payload.sectionId];
     state.lines[payload.lineId] = {
       id: payload.lineId,
@@ -558,7 +559,7 @@ const reducers = {
     }
   },
 
-  "line.update_actions": ({ state, payload, now }) => {
+  [COMMAND_TYPES.LINE_UPDATE_ACTIONS]: ({ state, payload, now }) => {
     const line = state.lines[payload.lineId];
     if (payload.replace === true) {
       line.actions = structuredClone(payload.patch);
@@ -568,14 +569,14 @@ const reducers = {
     line.updatedAt = now;
   },
 
-  "line.delete": ({ state, payload }) => {
+  [COMMAND_TYPES.LINE_DELETE]: ({ state, payload }) => {
     const line = state.lines[payload.lineId];
     if (!line) return;
     removeFromArray(state.sections[line.sectionId].lineIds, payload.lineId);
     delete state.lines[payload.lineId];
   },
 
-  "line.move": ({ state, payload }) => {
+  [COMMAND_TYPES.LINE_MOVE]: ({ state, payload }) => {
     const line = state.lines[payload.lineId];
     removeFromArray(state.sections[line.sectionId].lineIds, payload.lineId);
     line.sectionId = payload.toSectionId;
@@ -586,7 +587,7 @@ const reducers = {
     );
   },
 
-  "resource.create": ({ state, payload, now }) => {
+  [COMMAND_TYPES.RESOURCE_CREATE]: ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     ensureCollectionTree(collection);
     const parentId =
@@ -620,7 +621,7 @@ const reducers = {
     });
   },
 
-  "resource.update": ({ state, payload, now }) => {
+  [COMMAND_TYPES.RESOURCE_UPDATE]: ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     const current = collection.items[payload.resourceId];
     const patch = structuredClone(payload.patch || {});
@@ -636,14 +637,14 @@ const reducers = {
     });
   },
 
-  "resource.rename": ({ state, payload, now }) => {
+  [COMMAND_TYPES.RESOURCE_RENAME]: ({ state, payload, now }) => {
     const item =
       state.resources[payload.resourceType].items[payload.resourceId];
     item.name = payload.name;
     item.updatedAt = now;
   },
 
-  "resource.move": ({ state, payload, now }) => {
+  [COMMAND_TYPES.RESOURCE_MOVE]: ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     const item = collection.items[payload.resourceId];
     ensureCollectionTree(collection);
@@ -661,7 +662,7 @@ const reducers = {
     item.updatedAt = now;
   },
 
-  "resource.delete": ({ state, payload }) => {
+  [COMMAND_TYPES.RESOURCE_DELETE]: ({ state, payload }) => {
     const collection = state.resources[payload.resourceType];
     ensureCollectionTree(collection);
     const idsToDelete = collectCollectionDescendantIds({
@@ -678,7 +679,7 @@ const reducers = {
     });
   },
 
-  "resource.duplicate": ({ state, payload, now }) => {
+  [COMMAND_TYPES.RESOURCE_DUPLICATE]: ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     const source = collection.items[payload.sourceId];
     const clone = structuredClone(source);
@@ -695,7 +696,7 @@ const reducers = {
     });
   },
 
-  "layout.element.create": ({ state, payload, now }) => {
+  [COMMAND_TYPES.LAYOUT_ELEMENT_CREATE]: ({ state, payload, now }) => {
     const layout = state.resources.layouts.items[payload.layoutId];
     layout.elements[payload.elementId] = {
       id: payload.elementId,
@@ -715,7 +716,7 @@ const reducers = {
     layout.updatedAt = now;
   },
 
-  "layout.element.update": ({ state, payload, now }) => {
+  [COMMAND_TYPES.LAYOUT_ELEMENT_UPDATE]: ({ state, payload, now }) => {
     const layout = state.resources.layouts.items[payload.layoutId];
     const element = layout.elements[payload.elementId];
     const patch = structuredClone(payload.patch);
@@ -723,7 +724,7 @@ const reducers = {
     layout.updatedAt = now;
   },
 
-  "layout.element.move": ({ state, payload, now }) => {
+  [COMMAND_TYPES.LAYOUT_ELEMENT_MOVE]: ({ state, payload, now }) => {
     const layout = state.resources.layouts.items[payload.layoutId];
     const element = layout.elements[payload.elementId];
 
@@ -746,7 +747,7 @@ const reducers = {
     layout.updatedAt = now;
   },
 
-  "layout.element.delete": ({ state, payload, now }) => {
+  [COMMAND_TYPES.LAYOUT_ELEMENT_DELETE]: ({ state, payload, now }) => {
     const layout = state.resources.layouts.items[payload.layoutId];
     const stack = [payload.elementId];
 

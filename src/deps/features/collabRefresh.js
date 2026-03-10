@@ -1,5 +1,6 @@
 import { filter, tap } from "rxjs";
 import { COLLAB_REMOTE_EVENT_ACTION } from "../../collab/remoteEvents.js";
+import { COMMAND_TYPES } from "../../domain/commandCatalog.js";
 
 const normalizeTargets = (targets) => {
   if (Array.isArray(targets)) {
@@ -17,7 +18,7 @@ export const matchesRemoteTargets = (targets) => {
   const normalizedTargets = normalizeTargets(targets);
 
   return (payload = {}) => {
-    if (payload.eventType === "project.created") {
+    if (payload.eventType === COMMAND_TYPES.PROJECT_CREATED) {
       return true;
     }
 
