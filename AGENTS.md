@@ -79,6 +79,15 @@ Read the links from the following files to familiarize with the code before star
 - Call known methods directly (`formRef.reset()`, `formRef.setValues(...)`).
 - Avoid defensive guard noise when data contract is already stable.
 - Define/deconstruct refs at the top of handlers for clarity.
+- Do not use module-scoped mutable runtime state in `*.handlers.js` (`let cleanupX`, timers, mutable caches, drag state, etc).
+- Do not store handler runtime state on `refs.__...Runtime`.
+- For async project or collab subscriptions, prefer RxJS streams/subscriptions mounted from `handleBeforeMount`.
+- For plain local non-render values that must survive within one mounted instance, prefer top-level store fields with explicit actions/selectors over handler-owned runtime bags.
+- Do not store cleanup functions, callbacks, or service instances in store.
+- Use store only for plain local values in this case (for example timer ids, cache entries, pending ids).
+- For project-backed page sync, prefer `createProjectStateStream(...)` over `handleAfterMount` + stored unsubscribe handles.
+- `projectService.subscribeProjectState(...)` is synchronous and assumes app/route orchestration has already ensured the repository.
+- For short-lived app-level event windows such as key chords, prefer RxJS stream composition over handler-owned timer/runtime bags.
 - Use one canonical event payload shape per handler; remove multi-fallback id extraction once event contract is known.
 - If two UIs emit similar events with different responsibilities (for example left explorer vs right list), use separate handlers to avoid recursion and side effects.
 

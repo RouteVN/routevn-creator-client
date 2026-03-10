@@ -26,6 +26,10 @@ export const createProjectRepositoryService = ({
     return router.getPayload()?.p;
   };
 
+  const getEnsuredProjectId = () => {
+    return currentProjectId;
+  };
+
   const getProjectMetadataFromEntries = async (projectId) => {
     if (!db || typeof db.get !== "function") {
       return {
@@ -186,6 +190,34 @@ export const createProjectRepositoryService = ({
     return repository;
   };
 
+  const subscribeProjectState = (
+    listener,
+    { projectId, emitCurrent = true } = {},
+  ) => {
+    const targetProjectId = projectId || getCurrentProjectId();
+    if (!targetProjectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    let repository =
+      targetProjectId === currentProjectId ? currentRepository : undefined;
+
+    if (!repository) {
+      const reference = referencesByProject.get(targetProjectId);
+      if (reference) {
+        repository = repositoriesByCacheKey.get(reference.cacheKey);
+      }
+    }
+
+    if (!repository) {
+      throw new Error(
+        "Repository not initialized. App must ensure it before subscribing.",
+      );
+    }
+
+    return repository.subscribe(listener, { emitCurrent });
+  };
+
   const getCachedRepository = () => {
     const projectId = getCurrentProjectId();
     if (!currentRepository || currentProjectId !== projectId) {
@@ -218,6 +250,7 @@ export const createProjectRepositoryService = ({
 
   return {
     getCurrentProjectId,
+    getEnsuredProjectId,
     getProjectMetadataFromEntries,
     resolveProjectReferenceByProjectId,
     getStoreByProject,
@@ -240,6 +273,9 @@ export const createProjectRepositoryService = ({
     },
     async ensureRepository() {
       return ensureRepository();
+    },
+    subscribeProjectState(listener, options) {
+      return subscribeProjectState(listener, options);
     },
     ...(typeof getRepositoryByPath === "function"
       ? {

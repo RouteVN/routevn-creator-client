@@ -1,4 +1,6 @@
 import { createResourceFileExplorerHandlers } from "../../fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../projectStateStream.js";
+import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -17,10 +19,21 @@ export const createCatalogPageHandlers = ({
     render();
   };
 
-  const handleAfterMount = async (deps) => {
-    const { projectService } = deps;
-    await projectService.ensureRepository();
-    await refreshData(deps);
+  const handleBeforeMount = (deps) => {
+    const { projectService, store, render } = deps;
+    const subscription = createProjectStateStream({ projectService })
+      .pipe(
+        tap(({ repositoryState }) => {
+          const data = repositoryState?.[resourceType] ?? EMPTY_TREE;
+          store.setItems({ data });
+          render();
+        }),
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {
@@ -64,7 +77,7 @@ export const createCatalogPageHandlers = ({
 
   return {
     refreshData,
-    handleAfterMount,
+    handleBeforeMount,
     handleFileExplorerSelectionChanged,
     handleFileExplorerAction,
     handleFileExplorerTargetChanged,

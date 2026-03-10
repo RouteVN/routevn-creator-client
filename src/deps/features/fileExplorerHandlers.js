@@ -110,6 +110,8 @@ const createActionHandlers = ({ handleAction, handleMove }) => {
   };
 };
 
+const noopRefresh = async () => {};
+
 const applyCharacterSpritesPatch = async ({
   projectService,
   characterId,
@@ -198,7 +200,7 @@ const validateResourceDeletion = async ({
 
 export const createResourceFileExplorerHandlers = ({
   resourceType,
-  refresh,
+  refresh = noopRefresh,
 }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
@@ -335,7 +337,9 @@ export const createResourceFileExplorerHandlers = ({
   });
 };
 
-export const createLayoutsFileExplorerHandlers = ({ refresh }) => {
+export const createLayoutsFileExplorerHandlers = ({
+  refresh = noopRefresh,
+}) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -462,7 +466,7 @@ export const createLayoutsFileExplorerHandlers = ({ refresh }) => {
 
 export const createLayoutElementsFileExplorerHandlers = ({
   getLayoutId,
-  refresh,
+  refresh = noopRefresh,
 }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
@@ -609,7 +613,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
   });
 };
 
-export const createScenesFileExplorerHandlers = ({ refresh }) => {
+export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -686,7 +690,9 @@ export const createScenesFileExplorerHandlers = ({ refresh }) => {
   });
 };
 
-export const createVariablesFileExplorerHandlers = ({ refresh }) => {
+export const createVariablesFileExplorerHandlers = ({
+  refresh = noopRefresh,
+}) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -791,7 +797,7 @@ export const createVariablesFileExplorerHandlers = ({ refresh }) => {
 
 export const createCharacterSpritesFileExplorerHandlers = ({
   getCharacterId,
-  refresh,
+  refresh = noopRefresh,
 }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {

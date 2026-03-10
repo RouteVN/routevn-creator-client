@@ -34,7 +34,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 };
 
 const {
-  handleAfterMount,
+  handleBeforeMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -46,7 +46,7 @@ const {
 });
 
 export {
-  handleAfterMount,
+  handleBeforeMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,

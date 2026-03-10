@@ -1,5 +1,6 @@
 export const createInitialState = () => ({
   ready: false,
+  deleteShortcutTimerId: undefined,
   mode: "block", // 'block' or 'text-editor'
   cursorPosition: 0, // Track cursor position for navigation
   goalColumn: 0, // Remember the desired column when moving vertically
@@ -51,6 +52,14 @@ export const setAwaitingDeleteShortcut = (
   state.awaitingDeleteShortcut = awaitingDeleteShortcut;
 };
 
+export const setDeleteShortcutTimerId = ({ state }, { timerId } = {}) => {
+  state.deleteShortcutTimerId = timerId;
+};
+
+export const clearDeleteShortcutTimer = ({ state }, _payload = {}) => {
+  state.deleteShortcutTimerId = undefined;
+};
+
 export const selectMode = ({ state }) => {
   return state.mode;
 };
@@ -77,6 +86,10 @@ export const selectAwaitingCharacterShortcut = ({ state }) => {
 
 export const selectAwaitingDeleteShortcut = ({ state }) => {
   return state.awaitingDeleteShortcut;
+};
+
+export const selectDeleteShortcutTimerId = ({ state }) => {
+  return state.deleteShortcutTimerId;
 };
 
 export const selectLineContent = ({ props }, payload) => {

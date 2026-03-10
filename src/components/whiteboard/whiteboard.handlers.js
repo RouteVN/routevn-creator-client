@@ -1,8 +1,5 @@
 import { fromEvent, tap } from "rxjs";
 
-let dragOffset = { x: 0, y: 0 };
-let lastDraggedPosition = null;
-
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
@@ -193,15 +190,17 @@ export const handleItemMouseDown = (deps, payload) => {
   const itemY = parseInt(itemElement.style.top, 10) || 0;
 
   // Calculate drag offset relative to item's top-left corner
-  dragOffset.x = mouseInCanvasX - itemX;
-  dragOffset.y = mouseInCanvasY - itemY;
+  store.setDragOffset({
+    x: mouseInCanvasX - itemX,
+    y: mouseInCanvasY - itemY,
+  });
 
   store.startDragging({ itemId });
-  lastDraggedPosition = {
+  store.setLastDraggedPosition({
     itemId,
     x: itemX,
     y: itemY,
-  };
+  });
 
   // Dispatch selection event
   deps.dispatchEvent(
@@ -311,6 +310,7 @@ export const handleWindowMouseMove = (deps, payload) => {
     const dragItemId = store.selectDragItemId();
     const pan = store.selectPan();
     const zoomLevel = store.selectZoomLevel();
+    const dragOffset = store.selectDragOffset();
 
     // Calculate current mouse position in canvas coordinate space
     const mouseInCanvasX =
@@ -346,11 +346,11 @@ export const handleWindowMouseMove = (deps, payload) => {
 
     const snappedX = Math.round(constrainedX / 5) * 5;
     const snappedY = Math.round(constrainedY / 5) * 5;
-    lastDraggedPosition = {
+    store.setLastDraggedPosition({
       itemId: dragItemId,
       x: snappedX,
       y: snappedY,
-    };
+    });
 
     // Dispatch real-time position update to parent (scenes page)
     dispatchEvent(
@@ -376,6 +376,7 @@ export const handleWindowMouseUp = (deps) => {
       (candidate) => candidate?.dataset?.itemId === dragItemId,
     );
 
+    const lastDraggedPosition = store.selectLastDraggedPosition();
     let finalX = lastDraggedPosition?.x;
     let finalY = lastDraggedPosition?.y;
 
@@ -404,7 +405,7 @@ export const handleWindowMouseUp = (deps) => {
     }
 
     store.stopDragging();
-    lastDraggedPosition = null;
+    store.clearLastDraggedPosition();
   }
 };
 

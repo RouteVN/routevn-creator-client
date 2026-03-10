@@ -32,15 +32,8 @@ const loadAssets = async (deps, fileReferences) => {
   return assets;
 };
 
-const createAssetLoadCache = () => ({
-  sceneIds: new Set(),
-  fileIds: new Set(),
-});
-
-let assetLoadCache = createAssetLoadCache();
-
-const resetAssetLoadCache = () => {
-  assetLoadCache = createAssetLoadCache();
+const resetAssetLoadCache = (store) => {
+  store.resetAssetLoadCache();
 };
 
 const setAssetLoading = (deps, isLoading) => {
@@ -55,7 +48,7 @@ async function loadAssetsForSceneIds(
   sceneIds,
   { showLoading = true } = {},
 ) {
-  const { appService } = deps;
+  const { appService, store } = deps;
   const allScenes = projectData?.story?.scenes || {};
 
   const uniqueSceneIds = Array.from(new Set(sceneIds || [])).filter(
@@ -68,10 +61,10 @@ async function loadAssetsForSceneIds(
   const fileReferences = extractFileIdsForScenes(projectData, uniqueSceneIds);
   const missingFileReferences = fileReferences.filter((fileReference) => {
     const fileId = fileReference?.url;
-    return fileId && !assetLoadCache.fileIds.has(fileId);
+    return fileId && !store.hasLoadedAssetFileId({ fileId });
   });
   const isAnySceneUntracked = uniqueSceneIds.some(
-    (sceneId) => !assetLoadCache.sceneIds.has(sceneId),
+    (sceneId) => !store.hasLoadedAssetSceneId({ sceneId }),
   );
 
   if (missingFileReferences.length === 0 && !isAnySceneUntracked) {
@@ -90,15 +83,13 @@ async function loadAssetsForSceneIds(
       const { graphicsService } = deps;
       await graphicsService.loadAssets(assets);
 
-      Object.keys(assets).forEach((fileId) => {
-        if (fileId) {
-          assetLoadCache.fileIds.add(fileId);
-        }
+      store.markAssetFileIdsLoaded({
+        fileIds: Object.keys(assets),
       });
     }
 
-    uniqueSceneIds.forEach((sceneId) => {
-      assetLoadCache.sceneIds.add(sceneId);
+    store.markAssetSceneIdsLoaded({
+      sceneIds: uniqueSceneIds,
     });
   } catch (error) {
     appService?.showToast("Failed to load some preview assets", {
@@ -131,6 +122,7 @@ const preloadDirectTransitionScenes = async (deps, projectData, sceneIds) => {
 };
 
 const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
+  const { store } = deps;
   const uniqueLayoutIds = Array.from(new Set(layoutIds || [])).filter(
     (layoutId) => Boolean(projectData?.resources?.layouts?.[layoutId]),
   );
@@ -142,7 +134,7 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
   const fileReferences = extractFileIdsForLayouts(projectData, uniqueLayoutIds);
   const missingFileReferences = fileReferences.filter((fileReference) => {
     const fileId = fileReference?.url;
-    return fileId && !assetLoadCache.fileIds.has(fileId);
+    return fileId && !store.hasLoadedAssetFileId({ fileId });
   });
 
   if (missingFileReferences.length === 0) {
@@ -153,10 +145,8 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
   const { graphicsService } = deps;
   await graphicsService.loadAssets(assets);
 
-  Object.keys(assets).forEach((fileId) => {
-    if (fileId) {
-      assetLoadCache.fileIds.add(fileId);
-    }
+  store.markAssetFileIdsLoaded({
+    fileIds: Object.keys(assets),
   });
 };
 
@@ -208,7 +198,7 @@ export const handleBeforeMount = (deps) => {
   window.addEventListener("keydown", handleKeyDown);
   return () => {
     store.setAssetLoading({ isLoading: false });
-    resetAssetLoadCache();
+    resetAssetLoadCache(store);
     window.removeEventListener("keydown", handleKeyDown);
   };
 };
@@ -246,7 +236,7 @@ export const handleAfterMount = async (deps) => {
     canvas: canvas,
     beforeHandleActions,
   });
-  resetAssetLoadCache();
+  resetAssetLoadCache(store);
   store.setAssetLoading({ isLoading: false });
 
   const initialSceneIds = extractInitialHybridSceneIds(

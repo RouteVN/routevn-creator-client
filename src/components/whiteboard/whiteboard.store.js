@@ -41,6 +41,8 @@ const getNextZoomLevel = (currentZoom, direction) => {
 export const createInitialState = () => ({
   isDragging: false,
   dragItemId: null,
+  dragOffset: { x: 0, y: 0 },
+  lastDraggedPosition: undefined,
   hoveredItemId: undefined,
   // Pan state
   isPanMode: false,
@@ -63,6 +65,27 @@ export const startDragging = ({ state }, { itemId } = {}) => {
 export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
   state.dragItemId = null;
+};
+
+export const setDragOffset = ({ state }, { x, y } = {}) => {
+  state.dragOffset = {
+    x: x ?? 0,
+    y: y ?? 0,
+  };
+};
+
+export const selectDragOffset = ({ state }) => state.dragOffset;
+
+export const setLastDraggedPosition = ({ state }, { itemId, x, y } = {}) => {
+  state.lastDraggedPosition = { itemId, x, y };
+};
+
+export const clearLastDraggedPosition = ({ state }, _payload = {}) => {
+  state.lastDraggedPosition = undefined;
+};
+
+export const selectLastDraggedPosition = ({ state }) => {
+  return state.lastDraggedPosition;
 };
 
 // Pan functions

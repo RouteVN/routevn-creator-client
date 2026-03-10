@@ -1,0 +1,52 @@
+import { filter, tap } from "rxjs";
+import { COLLAB_REMOTE_EVENT_ACTION } from "../../collab/remoteEvents.js";
+
+const normalizeTargets = (targets) => {
+  if (Array.isArray(targets)) {
+    return targets.filter(Boolean);
+  }
+
+  if (targets) {
+    return [targets];
+  }
+
+  return [];
+};
+
+export const matchesRemoteTargets = (targets) => {
+  const normalizedTargets = normalizeTargets(targets);
+
+  return (payload = {}) => {
+    if (payload.eventType === "project.created") {
+      return true;
+    }
+
+    const target = payload.target;
+    if (!target) {
+      return false;
+    }
+
+    return normalizedTargets.some((expectedTarget) => {
+      return (
+        target === expectedTarget || target.startsWith(`${expectedTarget}.`)
+      );
+    });
+  };
+};
+
+export const createCollabRemoteRefreshStream = ({
+  deps,
+  refresh,
+  matches = () => true,
+}) => {
+  const { subject } = deps;
+
+  return subject.pipe(
+    filter(({ action, payload }) => {
+      return action === COLLAB_REMOTE_EVENT_ACTION && matches(payload);
+    }),
+    tap(({ payload }) => {
+      void refresh(deps, payload);
+    }),
+  );
+};

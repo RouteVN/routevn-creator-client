@@ -192,6 +192,98 @@ Handlers must stay thin.
 Stores must not absorb domain logic.
 Views must stay declarative.
 
+## Handler Runtime State
+
+Do not keep mutable module-scoped runtime state in `*.handlers.js`.
+
+Forbidden:
+
+- module-level subscription cleanup refs
+- module-level timers
+- module-level mutable caches or drag state
+- cross-instance mutable `let` state in handler files
+
+If handler runtime state must survive across lifecycle hooks, keep it per
+instance:
+
+- prefer the `handleBeforeMount` cleanup closure when the state is owned there
+- prefer RxJS streams/subscriptions for async project or collab lifecycles
+- prefer RxJS stream composition for short-lived app-level event windows such
+  as key chords
+- use explicit top-level store fields only for plain local values such as timer
+  ids or cache entries
+
+Do not store handler runtime state on `refs.__...Runtime`.
+Do not store cleanup functions, callbacks, or service instances in store.
+
+The preferred pattern for project-backed pages is:
+
+```text
+handleBeforeMount
+-> mount RxJS subscriptions
+-> subscribe to project state via createProjectStateStream(...)
+-> sync plain store data
+-> render
+```
+
+Do not use `handleAfterMount` plus stored unsubscribe handles on refs/store just
+to keep project state in sync.
+
+Handler module files must be safe for multiple mounted instances at the same
+time.
+
+## JavaScript Style
+
+Prefer `undefined` over `null`.
+
+Use `undefined` for:
+
+- missing optional values
+- cleared references
+- absent handler payload fields
+- uninitialized local variables that will be assigned later
+
+Do not introduce new `null`-based state or payload conventions unless a
+specific external API requires `null`.
+
+## Repository-Driven Rendering
+
+For project-backed pages, repository state is the authoritative source of truth.
+
+Preferred flow:
+
+```text
+command or remote collab event
+-> repository state changes
+-> projectService emits subscribed state update
+-> page store updates its subscribed snapshot
+-> selectors derive view data
+-> render updates
+```
+
+Prefer this over:
+
+```text
+mutation
+-> page calls refresh handler
+-> page copies repository slices manually
+-> render
+```
+
+Use `projectService.subscribeProjectState(...)` for project-backed pages.
+This subscription API is synchronous and assumes app-level route orchestration
+already ensured the repository before the page mounted.
+
+Page stores should keep:
+
+- subscribed repository/domain snapshot needed for selectors
+- UI-local state such as selection, search, dialog open state, hover state,
+  zoom, or editor mode
+
+Page handlers should not be responsible for manually refreshing copied
+repository data after every mutation. If the repository changes, subscribed
+pages should update from that change naturally.
+
 ## Browser Side Effects
 
 Page and component handlers must not reach for browser globals directly for
@@ -387,6 +479,24 @@ Put these concerns there:
 - sync protocol behavior
 
 Page handlers must not know protocol details.
+
+`src/deps/services/web/collabBootstrapService.js` must stay a web-runtime
+composition layer only:
+
+- create the web project service
+- create the collab connection runtime
+- publish normalized remote collab events
+- expose debug helpers when enabled
+
+It must not:
+
+- scan the DOM for mounted pages
+- know page tags or handler names
+- call page handlers directly
+
+During the migration to repository-driven rendering, page-owned refresh policy
+belongs in page handlers or shared page-family helpers. If a page still needs a
+remote refresh bridge, subscribe to normalized collab events in the page layer.
 
 ### Platform-Specific Logic
 

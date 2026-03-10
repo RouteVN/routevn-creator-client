@@ -1,4 +1,8 @@
 import {
+  createCollabRemoteRefreshStream,
+  matchesRemoteTargets,
+} from "../../deps/features/collabRefresh.js";
+import {
   applyPendingDialogueQueueToStore,
   findCharacterIdByShortcut,
   flushDialogueQueue,
@@ -53,8 +57,27 @@ const scrollLinesEditorLineIntoView = (refs, lineId) => {
 
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSceneEditorSubscriptions(deps);
+  const collabRefreshSubscription = createCollabRemoteRefreshStream({
+    deps,
+    matches: matchesRemoteTargets([
+      "story",
+      "layouts",
+      "images",
+      "colors",
+      "fonts",
+      "typography",
+      "characters",
+      "variables",
+      "sounds",
+      "videos",
+      "transforms",
+      "tweens",
+    ]),
+    refresh: handleDataChanged,
+  }).subscribe();
 
   return async () => {
+    collabRefreshSubscription.unsubscribe();
     cleanupSubscriptions();
     await flushDialogueQueue(deps);
     resetSceneEditorRuntime(deps);
@@ -348,7 +371,7 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     return;
   }
 
-  let characterId = null;
+  let characterId;
   if (!isClearShortcut) {
     const repositoryState = projectService.getState();
     characterId = findCharacterIdByShortcut(repositoryState, shortcut);
@@ -560,7 +583,7 @@ export const handleLineNavigation = (deps, payload) => {
           goalColumn: isEndNavigation
             ? Number.MAX_SAFE_INTEGER
             : targetCursorPosition,
-          direction: direction ?? null,
+          direction: direction ?? undefined,
         });
       }
 

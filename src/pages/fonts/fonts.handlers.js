@@ -67,6 +67,7 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
 };
 
 const {
+  handleBeforeMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -80,13 +81,8 @@ const {
 
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 
-export const handleAfterMount = async (deps) => {
-  const { projectService } = deps;
-  await projectService.ensureRepository();
-  await handleDataChanged(deps);
-};
-
 export {
+  handleBeforeMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleSearchInput,

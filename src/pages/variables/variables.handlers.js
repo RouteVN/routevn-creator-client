@@ -1,22 +1,40 @@
 import { nanoid } from "nanoid";
 import { createVariablesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { tap } from "rxjs";
+
+const EMPTY_TREE = { tree: [], items: {} };
 
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
-  await projectService.ensureRepository();
-  const { variables } = projectService.getState();
-  store.setItems({ variablesData: variables ?? { tree: [], items: {} } });
-  render();
+const syncVariablesData = ({ store, repositoryState, projectService } = {}) => {
+  const state = repositoryState ?? projectService?.getState?.();
+  store.setItems({
+    variablesData: state?.variables ?? EMPTY_TREE,
+  });
+};
+
+export const handleBeforeMount = (deps) => {
+  const { projectService, store, render } = deps;
+  const subscription = createProjectStateStream({ projectService })
+    .pipe(
+      tap(({ repositoryState }) => {
+        syncVariablesData({ store, repositoryState });
+        render();
+      }),
+    )
+    .subscribe();
+
+  return () => {
+    subscription.unsubscribe();
+  };
 };
 
 const refreshVariablesData = async (deps) => {
   const { store, render, projectService } = deps;
-  const { variables } = projectService.getState();
-  store.setItems({ variablesData: variables ?? { tree: [], items: {} } });
+  syncVariablesData({ store, projectService });
   render();
 };
 
@@ -86,7 +104,7 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { projectService } = deps;
   const {
     groupId,
     name,
@@ -105,13 +123,11 @@ export const handleVariableCreated = async (deps, payload) => {
     position: "last",
   });
 
-  const { variables } = projectService.getState();
-  store.setItems({ variablesData: variables ?? { tree: [], items: {} } });
-  render();
+  await refreshVariablesData(deps);
 };
 
 export const handleVariableUpdated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, projectService } = deps;
   const { itemId, name, scope, default: defaultValue } = payload._event.detail;
 
   if (!itemId) {
@@ -129,13 +145,11 @@ export const handleVariableUpdated = async (deps, payload) => {
 
   store.setSelectedItemId({ itemId });
 
-  const { variables } = projectService.getState();
-  store.setItems({ variablesData: variables ?? { tree: [], items: {} } });
-  render();
+  await refreshVariablesData(deps);
 };
 
 export const handleVariableDelete = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, projectService } = deps;
   const { itemId } = payload._event.detail;
 
   await projectService.deleteVariableItem({
@@ -146,7 +160,5 @@ export const handleVariableDelete = async (deps, payload) => {
     store.setSelectedItemId({ itemId: undefined });
   }
 
-  const { variables } = projectService.getState();
-  store.setItems({ variablesData: variables ?? { tree: [], items: {} } });
-  render();
+  await refreshVariablesData(deps);
 };

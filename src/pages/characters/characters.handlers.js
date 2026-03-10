@@ -1,6 +1,17 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { tap } from "rxjs";
+
+const syncCharactersData = ({
+  store,
+  repositoryState,
+  projectService,
+} = {}) => {
+  const state = repositoryState ?? projectService?.getState?.();
+  store.setItems({ charactersData: state?.characters });
+};
 
 const getCharacterItemById = ({ store, itemId } = {}) => {
   if (!itemId) return undefined;
@@ -32,18 +43,25 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
-export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
-  await projectService.ensureRepository();
-  const { characters } = projectService.getState();
-  store.setItems({ charactersData: characters });
-  render();
+export const handleBeforeMount = (deps) => {
+  const { projectService, store, render } = deps;
+  const subscription = createProjectStateStream({ projectService })
+    .pipe(
+      tap(({ repositoryState }) => {
+        syncCharactersData({ store, repositoryState });
+        render();
+      }),
+    )
+    .subscribe();
+
+  return () => {
+    subscription.unsubscribe();
+  };
 };
 
 const refreshCharactersData = async (deps) => {
   const { store, render, projectService } = deps;
-  const { characters } = projectService.getState();
-  store.setItems({ charactersData: characters });
+  syncCharactersData({ store, projectService });
   render();
 };
 
@@ -62,7 +80,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: null });
+    store.setSelectedItemId({ itemId: undefined });
     render();
     return;
   }
@@ -101,7 +119,7 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
 };
 
 export const handleCharacterCreated = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { projectService } = deps;
   const { groupId, name, description, shortcut, avatarFileId } =
     payload._event.detail;
 
@@ -146,9 +164,7 @@ export const handleCharacterCreated = async (deps, payload) => {
     });
 
     // Update store with new data
-    const { characters } = projectService.getState();
-    store.setItems({ charactersData: characters });
-    render();
+    await refreshCharactersData(deps);
   } catch (error) {
     console.error("Failed to create character:", error);
 
@@ -171,7 +187,7 @@ export const handleSpritesButtonClick = (deps, payload) => {
 };
 
 export const handleDetailPanelAvatarClick = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
 
   // Get the currently selected item
   const selectedItem = store.selectSelectedItem();
@@ -216,9 +232,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       });
 
       // Update the store with the new repository state and get new file URL
-      const { characters } = projectService.getState();
-      store.setItems({ charactersData: characters });
-      render();
+      await refreshCharactersData(deps);
     } else {
       console.error("Avatar upload failed:", file.name);
     }
@@ -403,8 +417,7 @@ export const handleEditFormAction = async (deps, payload) => {
       patch: updateData,
     });
 
-    const { characters } = projectService.getState();
-    store.setItems({ charactersData: characters });
+    await refreshCharactersData(deps);
     store.closeEditDialog();
     render();
   }

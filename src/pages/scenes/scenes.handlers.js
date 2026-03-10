@@ -1,4 +1,8 @@
 import { nanoid } from "nanoid";
+import {
+  createCollabRemoteRefreshStream,
+  matchesRemoteTargets,
+} from "../../deps/features/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
@@ -348,6 +352,18 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
   editForm.setValues({ values: editValues });
 };
 
+export const handleBeforeMount = (deps) => {
+  const subscription = createCollabRemoteRefreshStream({
+    deps,
+    matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
+    refresh: refreshScenesData,
+  }).subscribe();
+
+  return () => {
+    subscription.unsubscribe();
+  };
+};
+
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
@@ -437,7 +453,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const isFolder = detail.isFolder === true || detail.item?.type === "folder";
 
   if (isFolder) {
-    setSelectedScene({ store, appService, sceneId: null });
+    setSelectedScene({ store, appService, sceneId: undefined });
     render();
     return;
   }
@@ -741,7 +757,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   // Clear selection if the deleted item was selected
   const selectedItemId = store.selectSelectedItemId();
   if (selectedItemId === itemId) {
-    setSelectedScene({ store, appService, sceneId: null });
+    setSelectedScene({ store, appService, sceneId: undefined });
   }
 
   render();
@@ -839,7 +855,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     // Clear selection if the deleted item was selected
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId === itemId) {
-      setSelectedScene({ store, appService, sceneId: null });
+      setSelectedScene({ store, appService, sceneId: undefined });
     }
 
     render();

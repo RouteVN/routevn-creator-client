@@ -1,5 +1,7 @@
 import { createResourceFileExplorerHandlers } from "../../fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../projectStateStream.js";
 import { syncMediaPageData } from "./mediaPageShared.js";
+import { tap } from "rxjs";
 
 export const createMediaPageHandlers = ({
   resourceType,
@@ -13,9 +15,10 @@ export const createMediaPageHandlers = ({
 }) => {
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
+    const repositoryState = projectService.getState();
     syncMediaPageData({
       store,
-      projectService,
+      repositoryState,
       resourceType,
     });
     render();
@@ -49,7 +52,21 @@ export const createMediaPageHandlers = ({
   };
 
   const mountSubscriptions = (deps) => {
-    const streams = subscriptions?.(deps) ?? [];
+    const { projectService, store, render } = deps;
+    const streams = [
+      createProjectStateStream({ projectService }).pipe(
+        tap(({ repositoryState }) => {
+          syncMediaPageData({
+            store,
+            repositoryState,
+            resourceType,
+          });
+          render();
+        }),
+      ),
+      ...(subscriptions?.(deps) ?? []),
+    ];
+
     if (!streams.length) {
       return undefined;
     }
@@ -60,12 +77,6 @@ export const createMediaPageHandlers = ({
   };
 
   const handleBeforeMount = (deps) => {
-    const { store, projectService } = deps;
-    syncMediaPageData({
-      store,
-      projectService,
-      resourceType,
-    });
     return mountSubscriptions(deps);
   };
 

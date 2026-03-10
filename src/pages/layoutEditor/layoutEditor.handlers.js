@@ -1,4 +1,8 @@
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
+import {
+  createCollabRemoteRefreshStream,
+  matchesRemoteTargets,
+} from "../../deps/features/collabRefresh.js";
 import { toHierarchyStructure } from "../../domain/treeHelpers.js";
 import {
   extractFileIdsFromRenderState,
@@ -30,14 +34,17 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
-// File content cache to avoid redundant API calls
-const fileContentCache = new Map();
-
-// Track keyboard navigation timeout
-let keyboardNavigationTimeout = null;
-
 export const handleBeforeMount = (deps) => {
-  return mountSubscriptions(deps);
+  const cleanupSubscriptions = mountSubscriptions(deps);
+  return () => {
+    const keyboardNavigationTimeoutId =
+      deps.store.selectKeyboardNavigationTimeoutId();
+    if (keyboardNavigationTimeoutId !== undefined) {
+      clearTimeout(keyboardNavigationTimeoutId);
+      deps.store.clearKeyboardNavigationTimeout();
+    }
+    cleanupSubscriptions?.();
+  };
 };
 
 /**
@@ -47,17 +54,19 @@ export const handleBeforeMount = (deps) => {
  * @param {string} layoutId - The layout ID
  */
 const scheduleKeyboardSave = (deps, itemId, layoutId) => {
+  const { store } = deps;
+  const keyboardNavigationTimeoutId = store.selectKeyboardNavigationTimeoutId();
   // Clear existing timeout if still navigating
-  if (keyboardNavigationTimeout) {
-    clearTimeout(keyboardNavigationTimeout);
+  if (keyboardNavigationTimeoutId !== undefined) {
+    clearTimeout(keyboardNavigationTimeoutId);
   }
 
-  keyboardNavigationTimeout = setTimeout(() => {
-    const { store, subject } = deps;
+  const timeoutId = setTimeout(() => {
+    const { subject } = deps;
 
     // Check if the selected item has changed
     if (store.selectSelectedItemId() !== itemId) {
-      keyboardNavigationTimeout = null;
+      store.clearKeyboardNavigationTimeout();
       return;
     }
 
@@ -75,8 +84,10 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
       });
     }
 
-    keyboardNavigationTimeout = null;
+    store.clearKeyboardNavigationTimeout();
   }, DEBOUNCE_DELAYS.KEYBOARD);
+
+  store.setKeyboardNavigationTimeoutId({ timeoutId });
 };
 
 /**
@@ -87,7 +98,7 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileReferences, fontsItems) => {
-  const { projectService } = deps;
+  const { projectService, store } = deps;
   const assets = {};
 
   for (const fileObj of fileReferences) {
@@ -97,13 +108,14 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
     let url;
     const cacheKey = fileId;
 
-    if (fileContentCache.has(cacheKey)) {
-      const cachedUrl = fileContentCache.get(cacheKey);
+    const cachedUrl = store.selectCachedFileContent({ fileId: cacheKey });
+
+    if (cachedUrl) {
       if (!isBlobUrl(cachedUrl)) {
         url = cachedUrl;
       } else {
         // Blob URLs are short-lived and can be revoked by consumers.
-        fileContentCache.delete(cacheKey);
+        store.clearCachedFileContent({ fileId: cacheKey });
       }
     }
 
@@ -113,7 +125,7 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
       url = result.url;
       // Cache only stable URLs. Blob URLs can become invalid after revoke.
       if (!isBlobUrl(url)) {
-        fileContentCache.set(cacheKey, url);
+        store.cacheFileContent({ fileId: cacheKey, url });
       }
     }
 
@@ -242,7 +254,7 @@ const renderLayoutPreview = async (deps) => {
       await graphicsService.loadAssets(assets);
     } catch {
       // Recover from stale URL cache (especially revoked blob URLs).
-      fileContentCache.clear();
+      deps.store.clearFileContentCache();
       assets = await loadAssets(deps, fileReferences, fontsItems);
       await graphicsService.loadAssets(assets);
     }
@@ -357,7 +369,7 @@ export const handleAfterMount = async (deps) => {
   const repository = await projectService.getRepository();
   const { layouts, images, typography, colors, fonts, variables } =
     repository.getState();
-  const layout = layoutId ? layouts.items?.[layoutId] : null;
+  const layout = layoutId ? layouts.items?.[layoutId] : undefined;
   store.setLayout({ id: layoutId, layout });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images });
@@ -579,6 +591,18 @@ const subscriptions = (deps) => {
   const { subject, appService } = deps;
   const { isInputFocused } = appService;
   return [
+    createCollabRemoteRefreshStream({
+      deps,
+      matches: matchesRemoteTargets([
+        "layouts",
+        "images",
+        "typography",
+        "colors",
+        "fonts",
+        "variables",
+      ]),
+      refresh: refreshLayoutElementsData,
+    }),
     fromEvent(window, "keydown").pipe(
       filter((e) => {
         const isInput = isInputFocused();

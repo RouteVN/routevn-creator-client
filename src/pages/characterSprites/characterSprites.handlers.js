@@ -7,6 +7,8 @@ import {
 } from "../../domain/treeMutations.js";
 import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { tap } from "rxjs";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
@@ -67,6 +69,31 @@ const getPreviewImageSrc = async ({ projectService, item } = {}) => {
   return url;
 };
 
+const resolveSelectedPreviewImageSrc = async ({
+  projectService,
+  store,
+  previousSelectedItem,
+  selectedItem,
+} = {}) => {
+  if (!selectedItem?.fileId) {
+    return undefined;
+  }
+
+  const currentPreviewImageSrc = store.selectPreviewImageSrc();
+  if (
+    currentPreviewImageSrc &&
+    previousSelectedItem?.id === selectedItem.id &&
+    previousSelectedItem?.fileId === selectedItem.fileId
+  ) {
+    return currentPreviewImageSrc;
+  }
+
+  return getPreviewImageSrc({
+    projectService,
+    item: selectedItem,
+  });
+};
+
 const syncCharacterSpritesData = async (deps) => {
   const { appService, projectService, store } = deps;
   const characterId =
@@ -119,6 +146,64 @@ const syncCharacterSpritesData = async (deps) => {
 const refreshCharacterSpritesData = async (deps) => {
   const { render, refs } = deps;
   const { selectedItem, imageSrc } = await syncCharacterSpritesData(deps);
+  render();
+
+  if (selectedItem) {
+    syncDetailForm({
+      refs,
+      values: createDetailFormValues(selectedItem, imageSrc),
+    });
+  }
+};
+
+const syncCharacterSpritesRepositoryState = async ({
+  deps,
+  repositoryState,
+} = {}) => {
+  const { appService, projectService, store, render, refs } = deps;
+  const characterId =
+    store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
+  const character = repositoryState?.characters?.items?.[characterId];
+
+  if (!characterId) {
+    appService.showToast("Character is missing.", { title: "Error" });
+    store.clearCharacterSpritesView();
+    render();
+    return;
+  }
+
+  if (!character) {
+    appService.showToast("Character not found.", { title: "Error" });
+    store.clearCharacterSpritesView();
+    render();
+    return;
+  }
+
+  const previousSelectedItem = store.selectSelectedItem();
+  store.setCharacterId({ characterId });
+  store.setCharacterName({ characterName: character.name });
+  store.setItems({ spritesData: character.sprites ?? EMPTY_TREE });
+
+  if (store.selectSelectedItemId() && !store.selectSelectedItem()) {
+    store.setSelectedItemId({ itemId: undefined });
+  }
+
+  const selectedItem = store.selectSelectedItem();
+  const imageSrc = await resolveSelectedPreviewImageSrc({
+    projectService,
+    store,
+    previousSelectedItem,
+    selectedItem,
+  });
+
+  store.setContext({
+    context: {
+      fileId: {
+        src: imageSrc,
+      },
+    },
+  });
+
   render();
 
   if (selectedItem) {
@@ -220,10 +305,22 @@ const createSpritesFromFiles = async ({
   await refreshCharacterSpritesData(deps);
 };
 
-export const handleAfterMount = async (deps) => {
+export const handleBeforeMount = (deps) => {
   const { projectService } = deps;
-  await projectService.ensureRepository();
-  await refreshCharacterSpritesData(deps);
+  const subscription = createProjectStateStream({ projectService })
+    .pipe(
+      tap(({ repositoryState }) => {
+        void syncCharacterSpritesRepositoryState({
+          deps,
+          repositoryState,
+        });
+      }),
+    )
+    .subscribe();
+
+  return () => {
+    subscription.unsubscribe();
+  };
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =

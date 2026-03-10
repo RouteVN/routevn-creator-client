@@ -1,16 +1,19 @@
 const EMPTY_TREE = { tree: [], items: {} };
 
-export const getMediaPageData = ({ projectService, resourceType } = {}) => {
-  return projectService.getState()[resourceType] ?? EMPTY_TREE;
+export const getMediaPageData = ({ repositoryState, resourceType } = {}) => {
+  return repositoryState?.[resourceType] ?? EMPTY_TREE;
 };
 
 export const syncMediaPageData = ({
   store,
-  projectService,
+  repositoryState,
   resourceType,
 } = {}) => {
   store.setItems({
-    data: getMediaPageData({ projectService, resourceType }),
+    data: getMediaPageData({
+      repositoryState,
+      resourceType,
+    }),
   });
 };
 

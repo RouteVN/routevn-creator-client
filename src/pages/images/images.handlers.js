@@ -1,9 +1,6 @@
 import { nanoid } from "nanoid";
-import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
-
-const COLLAB_IMAGES_REFRESH_ACTION = "collab.images.refresh";
 
 const {
   refreshData: handleDataChanged,
@@ -18,17 +15,6 @@ const {
   handleItemEdit: handleImageItemEdit,
 } = createMediaPageHandlers({
   resourceType: "images",
-  subscriptions: (deps) => {
-    const { subject } = deps;
-    return [
-      subject.pipe(
-        filter(({ action }) => action === COLLAB_IMAGES_REFRESH_ACTION),
-        tap(() => {
-          deps.handlers.handleDataChanged(deps);
-        }),
-      ),
-    ];
-  },
   selectItemById: (store, { itemId }) => store.selectImageItemById({ itemId }),
   getEditPreviewFileId: (item) => item?.fileId,
 });

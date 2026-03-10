@@ -4,7 +4,7 @@ import { createCatalogPageHandlers } from "../../deps/features/resourcePages/cat
 import { createLayoutsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const {
-  handleAfterMount,
+  handleBeforeMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -20,7 +20,7 @@ const {
 });
 
 export {
-  handleAfterMount,
+  handleBeforeMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
