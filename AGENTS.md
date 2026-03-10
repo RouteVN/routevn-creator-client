@@ -146,6 +146,11 @@ Put it in `src/pages/<page-name>/` with:
 - `<page>.store.js`
 - `<page>.handlers.js`
 
+If it is a route-level page, also wire it into:
+
+- `src/pages/app/app.view.yaml`
+- `src/pages/app/app.store.js`
+
 ### Add a reusable component
 
 Put it in `src/components/<component-name>/`.
@@ -179,6 +184,8 @@ Put it in:
 
 - `src/deps/infra/*` for low-level platform primitives
 - `src/deps/services/web/*` or `src/deps/services/tauri/*` for service adapters
+- `src-tauri/` for native desktop-shell behavior such as Tauri commands,
+  plugin setup, packaging, updater wiring, and Rust-side integration
 
 ### Add collaboration behavior
 
