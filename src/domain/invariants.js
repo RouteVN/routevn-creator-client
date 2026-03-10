@@ -104,7 +104,7 @@ const validateLineActionReferences = (state) => {
 
     const background = actions.background || actions.actions?.background;
     if (background?.resourceType === "layout" && background.resourceId) {
-      if (!state.layouts[background.resourceId]) {
+      if (!state.resources?.layouts?.items?.[background.resourceId]) {
         fail("Line references missing layout", {
           lineId: line.id,
           layoutId: background.resourceId,
@@ -115,7 +115,9 @@ const validateLineActionReferences = (state) => {
 };
 
 const validateLayoutElementReferences = (state) => {
-  for (const layout of Object.values(state.layouts)) {
+  const layoutItems = state.resources?.layouts?.items || {};
+  for (const layout of Object.values(layoutItems)) {
+    if (!layout || layout.type !== "layout") continue;
     ensureUnique(
       layout.rootElementOrder || [],
       `layout(${layout.id}).rootElementOrder`,
@@ -386,26 +388,6 @@ export const assertDomainInvariants = (state) => {
       collectionLabel: `resources.${resourceType}`,
       itemLabel: "resource",
     });
-  }
-
-  const variables = state.variables;
-  validateHierarchicalCollection({
-    collection: variables,
-    collectionLabel: "variables",
-    itemLabel: "variable",
-  });
-
-  for (const [variableId, variable] of Object.entries(variables?.items || {})) {
-    const parentId = variable?.parentId;
-    if (parentId === undefined || parentId === null || parentId === "") {
-      continue;
-    }
-    if (parentId === variableId) {
-      fail("Variable cannot reference itself as parent", { variableId });
-    }
-    if (!variables.items[parentId]) {
-      fail("Variable parent reference missing", { variableId, parentId });
-    }
   }
 
   validateLineActionReferences(state);

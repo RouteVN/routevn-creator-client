@@ -145,7 +145,7 @@ export const createStoryCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "story",
-      type: "scene.reorder",
+      type: "scene.move",
       payload: {
         sceneId,
         parentId: normalizeParentId(parentId),

@@ -38,13 +38,13 @@ const mapTransportEvent = (entry = {}) => {
       return {
         level: "debug",
         message: "message received",
-        meta: { eventType: entry?.message_type },
+        meta: { eventType: entry?.messageType },
       };
     case "message_sent":
       return {
         level: "debug",
         message: "message sent",
-        meta: { eventType: entry?.message_type },
+        meta: { eventType: entry?.messageType },
       };
     case "message_parse_failed":
       return {

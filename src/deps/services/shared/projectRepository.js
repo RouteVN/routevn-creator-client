@@ -181,6 +181,7 @@ export const createProjectCreatedCommand = ({
   clientTs,
   partition,
   partitions,
+  meta,
 }) => {
   const resolvedProjectId =
     typeof projectId === "string" && projectId.length > 0
@@ -222,6 +223,7 @@ export const createProjectCreatedCommand = ({
     ),
     clientTs: Number.isFinite(Number(clientTs)) ? Number(clientTs) : Date.now(),
     commandVersion: COMMAND_VERSION,
+    ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };
 };
 
@@ -270,8 +272,9 @@ export const createRepositoryCommandEvent = ({ command }) => {
   }
 
   const repositoryEvent = {
+    id: command.id,
     partitions,
-    event: commandToSyncEvent(command),
+    ...commandToSyncEvent(command),
   };
   assertRepositoryCommandEvent(repositoryEvent);
   return repositoryEvent;
@@ -279,15 +282,9 @@ export const createRepositoryCommandEvent = ({ command }) => {
 
 export const repositoryEventToCommand = (repositoryEvent) => {
   assertRepositoryCommandEvent(repositoryEvent);
-  const command = committedSyncEventToCommand(
-    {
-      partitions: repositoryEvent.partitions,
-      event: repositoryEvent.event,
-    },
-    {
-      defaultCommandVersion: COMMAND_VERSION,
-    },
-  );
+  const command = committedSyncEventToCommand(repositoryEvent, {
+    defaultCommandVersion: COMMAND_VERSION,
+  });
   if (!command) {
     throw new Error("Failed to convert repository event to command");
   }
@@ -302,6 +299,7 @@ export const createProjectCreatedRepositoryEvent = ({
   clientTs,
   partition,
   partitions,
+  meta,
 }) =>
   createRepositoryCommandEvent({
     command: createProjectCreatedCommand({
@@ -312,6 +310,7 @@ export const createProjectCreatedRepositoryEvent = ({
       clientTs,
       partition,
       partitions,
+      meta,
     }),
   });
 
@@ -322,8 +321,7 @@ export const isDirectDomainProjectionCommand = (command) =>
   hasCommandTypePrefix(command?.type, "scene.") ||
   hasCommandTypePrefix(command?.type, "section.") ||
   hasCommandTypePrefix(command?.type, "line.") ||
-  hasCommandTypePrefix(command?.type, "layout.") ||
-  hasCommandTypePrefix(command?.type, "variable.");
+  hasCommandTypePrefix(command?.type, "layout.");
 
 const flattenTreeIds = (nodes, output = []) => {
   if (!Array.isArray(nodes)) return output;
@@ -432,6 +430,51 @@ const projectDomainResourceCollectionToRepository = (domainCollection) => {
   };
 };
 
+const projectDomainLayoutsResourceCollectionToRepository = ({
+  domainCollection,
+  repositoryLayouts,
+}) => {
+  const items = domainCollection?.items || {};
+  const projectedItems = {};
+
+  for (const [layoutId, layout] of Object.entries(items)) {
+    const existingLayout = repositoryLayouts?.items?.[layoutId] || {};
+    const layoutClone = structuredClone(layout || {});
+    const entryType = layoutClone.type || existingLayout.type || "layout";
+    delete layoutClone.elements;
+    delete layoutClone.rootElementOrder;
+
+    const projectedLayout = {
+      ...structuredClone(existingLayout),
+      ...layoutClone,
+      id: layoutId,
+      type: entryType,
+    };
+
+    if (entryType === "folder") {
+      delete projectedLayout.layoutType;
+      delete projectedLayout.elements;
+      delete projectedLayout.rootElementOrder;
+    } else {
+      projectedLayout.elements = projectDomainLayoutElementsToRepository({
+        layout,
+        existingRepositoryElements: existingLayout?.elements,
+      });
+    }
+
+    projectedItems[layoutId] = projectedLayout;
+  }
+
+  const tree = buildHierarchyOrderFromFlatCollection({
+    items,
+    tree: domainCollection?.tree || [],
+  });
+  return {
+    items: projectedItems,
+    tree,
+  };
+};
+
 const projectDomainLayoutElementsToRepository = ({
   layout,
   existingRepositoryElements = {},
@@ -490,103 +533,6 @@ const projectDomainLayoutElementsToRepository = ({
   return {
     items: projectedItems,
     tree: order,
-  };
-};
-
-const projectDomainLayoutsToRepository = ({ domainState, repositoryState }) => {
-  const repositoryLayouts = repositoryState?.layouts || createTreeCollection();
-  const domainLayoutTree = Array.isArray(domainState?.layoutTree)
-    ? domainState.layoutTree
-    : getHierarchyNodes(repositoryLayouts);
-  const repositoryOrderIds = flattenTreeIds(domainLayoutTree);
-  const layoutIds = Object.keys(domainState?.layouts || {});
-  const orderedLayoutIds = uniqueIdsInOrder(repositoryOrderIds, layoutIds);
-  const projectedItems = {};
-
-  for (const layoutId of orderedLayoutIds) {
-    const layout = domainState?.layouts?.[layoutId];
-    if (!layout) continue;
-    const existingLayout = repositoryLayouts?.items?.[layoutId] || {};
-    const layoutClone = structuredClone(layout || {});
-    const entryType = layoutClone.type || existingLayout.type || "layout";
-    delete layoutClone.elements;
-    delete layoutClone.rootElementOrder;
-
-    const projectedLayout = {
-      ...structuredClone(existingLayout),
-      ...layoutClone,
-      id: layoutId,
-      type: entryType,
-    };
-
-    if (entryType === "folder") {
-      delete projectedLayout.layoutType;
-      delete projectedLayout.elements;
-      delete projectedLayout.rootElementOrder;
-    } else {
-      projectedLayout.elements = projectDomainLayoutElementsToRepository({
-        layout,
-        existingRepositoryElements: existingLayout?.elements,
-      });
-    }
-
-    projectedItems[layoutId] = projectedLayout;
-  }
-
-  const tree = buildHierarchyOrderFromFlatCollection({
-    items: projectedItems,
-    tree: domainLayoutTree,
-  });
-  return {
-    items: projectedItems,
-    tree,
-  };
-};
-
-const projectDomainVariablesToRepository = ({ domainState }) => {
-  const domainVariables = domainState?.variables || { items: {}, tree: [] };
-  const items = domainVariables.items || {};
-  const projectedItems = {};
-
-  for (const [variableId, variable] of Object.entries(items)) {
-    const clone = structuredClone(variable || {});
-    delete clone.parentId;
-
-    if (clone.type === "folder") {
-      projectedItems[variableId] = {
-        ...clone,
-        id: variableId,
-        type: "folder",
-      };
-      continue;
-    }
-
-    const valueType =
-      typeof clone.type === "string" && clone.type.length > 0
-        ? clone.type
-        : clone.variableType || "string";
-    const defaultValue = Object.prototype.hasOwnProperty.call(clone, "default")
-      ? structuredClone(clone.default)
-      : structuredClone(clone.value ?? "");
-
-    projectedItems[variableId] = {
-      ...clone,
-      id: variableId,
-      itemType: "variable",
-      type: valueType,
-      variableType: valueType,
-      default: defaultValue,
-      value: structuredClone(defaultValue),
-    };
-  }
-
-  const tree = buildHierarchyOrderFromFlatCollection({
-    items,
-    tree: domainVariables.tree || [],
-  });
-  return {
-    items: projectedItems,
-    tree,
   };
 };
 
@@ -734,7 +680,13 @@ const projectDomainStateToRepositoryState = ({
     domainState?.resources || {},
   )) {
     nextState[resourceType] =
-      projectDomainResourceCollectionToRepository(domainCollection);
+      resourceType === "layouts"
+        ? projectDomainLayoutsResourceCollectionToRepository({
+            domainCollection,
+            repositoryLayouts:
+              repositoryState?.layouts || createTreeCollection(),
+          })
+        : projectDomainResourceCollectionToRepository(domainCollection);
   }
 
   const projectedStory = projectDomainStoryToRepository({
@@ -743,14 +695,6 @@ const projectDomainStateToRepositoryState = ({
   });
   nextState.story = projectedStory.story;
   nextState.scenes = projectedStory.scenes;
-
-  nextState.layouts = projectDomainLayoutsToRepository({
-    domainState,
-    repositoryState,
-  });
-  nextState.variables = projectDomainVariablesToRepository({
-    domainState,
-  });
 
   return nextState;
 };

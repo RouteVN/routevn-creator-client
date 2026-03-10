@@ -153,10 +153,14 @@ assert.equal(preconditionFailed, true);
 
 apply(
   makeCommand({
-    type: "layout.create",
+    type: "resource.create",
     ts: 1600,
-    partition: `project:${projectId}:layouts`,
-    payload: { layoutId: "layout-1", name: "L1", layoutType: "scene" },
+    partition: `project:${projectId}:resources:layouts`,
+    payload: {
+      resourceType: "layouts",
+      resourceId: "layout-1",
+      data: { name: "L1", layoutType: "scene" },
+    },
   }),
 );
 apply(
@@ -207,47 +211,65 @@ assert.equal(invariantFailed, true);
 
 apply(
   makeCommand({
-    type: "variable.create",
+    type: "resource.create",
     ts: 2000,
-    partition: `project:${projectId}:settings`,
+    partition: `project:${projectId}:resources:variables`,
     payload: {
-      variableId: "var-a",
-      name: "A",
-      variableType: "string",
-      initialValue: "",
+      resourceType: "variables",
+      resourceId: "var-a",
+      data: {
+        itemType: "variable",
+        name: "A",
+        type: "string",
+        variableType: "string",
+        default: "",
+        value: "",
+      },
       position: "last",
     },
   }),
 );
 apply(
   makeCommand({
-    type: "variable.create",
+    type: "resource.create",
     ts: 2100,
-    partition: `project:${projectId}:settings`,
+    partition: `project:${projectId}:resources:variables`,
     payload: {
-      variableId: "var-b",
-      name: "B",
-      variableType: "string",
-      initialValue: "",
-      position: { after: "var-a" },
+      resourceType: "variables",
+      resourceId: "var-b",
+      data: {
+        itemType: "variable",
+        name: "B",
+        type: "string",
+        variableType: "string",
+        default: "",
+        value: "",
+      },
+      index: 1,
     },
   }),
 );
 apply(
   makeCommand({
-    type: "variable.create",
+    type: "resource.create",
     ts: 2200,
-    partition: `project:${projectId}:settings`,
+    partition: `project:${projectId}:resources:variables`,
     payload: {
-      variableId: "var-c",
-      name: "C",
-      variableType: "string",
-      initialValue: "",
-      position: { before: "var-b" },
+      resourceType: "variables",
+      resourceId: "var-c",
+      data: {
+        itemType: "variable",
+        name: "C",
+        type: "string",
+        variableType: "string",
+        default: "",
+        value: "",
+      },
+      index: 1,
     },
   }),
 );
-assert.deepEqual(flattenTreeIds(state.variables.tree), [
+assert.deepEqual(flattenTreeIds(state.resources.variables.tree), [
   "var-a",
   "var-c",
   "var-b",
@@ -255,11 +277,12 @@ assert.deepEqual(flattenTreeIds(state.variables.tree), [
 
 apply(
   makeCommand({
-    type: "variable.update",
+    type: "resource.update",
     ts: 2250,
-    partition: `project:${projectId}:settings`,
+    partition: `project:${projectId}:resources:variables`,
     payload: {
-      variableId: "var-a",
+      resourceType: "variables",
+      resourceId: "var-a",
       patch: {
         name: "A Renamed",
         type: "string",
@@ -267,18 +290,19 @@ apply(
     },
   }),
 );
-assert.equal(state.variables.items["var-a"].name, "A Renamed");
-assert.equal(state.variables.items["var-a"].type, "string");
+assert.equal(state.resources.variables.items["var-a"].name, "A Renamed");
+assert.equal(state.resources.variables.items["var-a"].type, "string");
 
 let variableTypeChangeBlocked = false;
 try {
   apply(
     makeCommand({
-      type: "variable.update",
+      type: "resource.update",
       ts: 2260,
-      partition: `project:${projectId}:settings`,
+      partition: `project:${projectId}:resources:variables`,
       payload: {
-        variableId: "var-a",
+        resourceType: "variables",
+        resourceId: "var-a",
         patch: {
           type: "number",
         },
@@ -294,11 +318,12 @@ let variableVariableTypeChangeBlocked = false;
 try {
   apply(
     makeCommand({
-      type: "variable.update",
+      type: "resource.update",
       ts: 2270,
-      partition: `project:${projectId}:settings`,
+      partition: `project:${projectId}:resources:variables`,
       payload: {
-        variableId: "var-a",
+        resourceType: "variables",
+        resourceId: "var-a",
         patch: {
           variableType: "boolean",
         },
@@ -309,18 +334,18 @@ try {
   variableVariableTypeChangeBlocked = error instanceof DomainPreconditionError;
 }
 assert.equal(variableVariableTypeChangeBlocked, true);
-assert.equal(state.variables.items["var-a"].type, "string");
+assert.equal(state.resources.variables.items["var-a"].type, "string");
 
 apply(
   makeCommand({
-    type: "layout.create",
+    type: "resource.create",
     ts: 2300,
-    partition: `project:${projectId}:layouts`,
+    partition: `project:${projectId}:resources:layouts`,
     payload: {
-      layoutId: "layout-folder",
-      name: "Layout Folder",
-      layoutType: "scene",
+      resourceType: "layouts",
+      resourceId: "layout-folder",
       data: {
+        name: "Layout Folder",
         type: "folder",
       },
     },
@@ -329,18 +354,24 @@ apply(
 
 apply(
   makeCommand({
-    type: "layout.create",
+    type: "resource.create",
     ts: 2350,
-    partition: `project:${projectId}:layouts`,
+    partition: `project:${projectId}:resources:layouts`,
     payload: {
-      layoutId: "layout-2",
-      name: "L2",
-      layoutType: "scene",
+      resourceType: "layouts",
+      resourceId: "layout-2",
+      data: {
+        name: "L2",
+        layoutType: "scene",
+      },
       parentId: "layout-folder",
     },
   }),
 );
-assert.equal(state.layouts["layout-2"].parentId, "layout-folder");
+assert.equal(
+  state.resources.layouts.items["layout-2"].parentId,
+  "layout-folder",
+);
 
 const collab = createProjectCollabService({
   projectId,
@@ -425,19 +456,19 @@ const projectedDomainState = projectRepositoryStateToDomainState({
   projectId: projectionProjectId,
 });
 assert.equal(
-  projectedDomainState.layouts["layout-a"].parentId,
+  projectedDomainState.resources.layouts.items["layout-a"].parentId,
   "default-folder",
 );
 assert.equal(
-  projectedDomainState.layouts["layout-b"].parentId,
+  projectedDomainState.resources.layouts.items["layout-b"].parentId,
   "default-folder",
 );
 assert.equal(
-  projectedDomainState.layouts["layout-c"].parentId,
+  projectedDomainState.resources.layouts.items["layout-c"].parentId,
   "default-folder",
 );
 assert.equal(
-  projectedDomainState.layouts["layout-fallback"].parentId,
+  projectedDomainState.resources.layouts.items["layout-fallback"].parentId,
   "default-folder",
 );
 

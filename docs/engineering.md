@@ -306,6 +306,39 @@ Allowed exceptions:
 If a rule changes what a project means, it belongs in `src/domain/`, not in
 stores or handlers.
 
+### Domain Command Family Direction
+
+Project-authored collection items should converge on the generic
+`resource.*` family unless they are truly document-internal structures.
+
+Use `resource.*` for collection-level lifecycle such as:
+
+- create
+- rename
+- move/reorder
+- delete
+- duplicate
+
+This applies to normal resource collections and also to authored collections
+such as:
+
+- `variables`
+- `layouts` at the collection/item level
+
+Keep separate command families only where the structure is not just a
+collection item lifecycle. Current examples:
+
+- `scene.*`
+- `section.*`
+- `line.*`
+- `layout.element.*`
+
+The intended model is:
+
+- `variables` belong under the generic resource family
+- `layouts` should also use `resource.*` for collection lifecycle
+- `layout.element.*` remains separate for internal layout document editing
+
 ### Platform Ownership
 
 Platform-specific differences belong in:

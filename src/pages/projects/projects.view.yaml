@@ -111,13 +111,13 @@ template:
               - rtgl-view sm-w=f w=640 d=h av=c:
                   - rtgl-image h=26 w=144 sm-w=112 of=con src="/public/logo1.png": null
                   - rtgl-view w=1fg: null
-                  # TEMP: hide login/user area on projects page (restore later)
-                  # - $if isLoggedIn:
-                  #     - rtgl-view#avatarButton d=h av=c g=sm p=xs br=md cur=pointer h-bgc=mu:
-                  #         - rtgl-text s=sm: ${profileDisplayName}
-                  #         - rtgl-image wh=36 br=f bw=xs bc=bo of=cov src=${avatarImageSrc}: null
-                  #   $else:
-                  #     - rtgl-button#loginButton variant=se: ${loginButtonText}
+                  - $if showCloudProjects:
+                      - $if isLoggedIn:
+                          - rtgl-view#avatarButton d=h av=c g=sm p=xs br=md cur=pointer h-bgc=mu:
+                              - rtgl-text s=sm: ${profileDisplayName}
+                              - rtgl-image wh=36 br=f bw=xs bc=bo of=cov src=${avatarImageSrc}: null
+                        $else:
+                          - rtgl-button#loginButton variant=se: ${loginButtonText}
           - rtgl-view w=f h=1fg ah=c:
               - rtgl-view sm-w=f w=640 h=f d=v mt=xl:
                   - rtgl-view w=f h=1fg oy=a d=v g=xl:
@@ -146,33 +146,33 @@ template:
                                           - rtgl-view d=h g=sm av=c mt=xs:
                                               - rtgl-svg wh=14 svg=folder c=mu-fg: null
                                               - rtgl-text s=xs c=mu-fg: ${project.projectPath}
-                      # TEMP: hide entire cloud projects section (restore later)
-                      # - $if isLoggedIn:
-                      #     - rtgl-view w=f d=v g=md:
-                      #         - rtgl-view d=h w=f av=c:
-                      #             - rtgl-text s=h3: ${cloudTitle}
-                      #             - rtgl-view w=1fg: null
-                      #             - rtgl-button#cloudCreateButton variant=pr: ${createCloudButtonText}
-                      #         - rtgl-text s=sm c=mu-fg mb=xl: Cloud projects are the projects stored in your RouteVN account.
-                      #         - rtgl-view w=f g=md:
-                      #             - $if cloudEmptyMessage:
-                      #                 - rtgl-view w=f h=120 ah=c av=c:
-                      #                     - rtgl-view d=v ah=c g=md:
-                      #                         - rtgl-text s=lg c=mu-fg: ${cloudEmptyMessage}
-                      #                         - rtgl-text s=sm c=mu-fg: ${cloudEmptySubMessage}
-                      #             - $for project, i in cloudProjects:
-                      #                 - rtgl-view#cloudProjectItem${i} data-project-id=${project.id} h=auto w=f bw=xs bc=bo h-bc=ac p=md d=h av=c g=md cur=pointer:
-                      #                     - rtgl-image wh=48 src="/public/project_logo_placeholder.png" bc=fg of=con br=sm: null
-                      #                     - rtgl-view w=1fg:
-                      #                         - rtgl-view d=h av=c:
-                      #                             - rtgl-text: ${project.name}
-                      #                             - rtgl-view w=1fg: null
-                      #                             - rtgl-text s=xs c=mu-fg: ${project.role}
-                      #                         - $if project.description:
-                      #                             - rtgl-text s=sm c=mu-fg mt=xs: ${project.description}
-                      #                         - rtgl-view d=h g=sm av=c mt=xs:
-                      #                             - rtgl-text s=xs c=mu-fg: Members
-                      #                             - rtgl-text s=xs c=mu-fg: ${project.memberCount}
+                      - $if showCloudProjects:
+                          - rtgl-view w=f d=v g=md:
+                              - rtgl-view d=h w=f av=c:
+                                  - rtgl-text s=h3: ${cloudTitle}
+                                  - rtgl-view w=1fg: null
+                                  - $if isLoggedIn:
+                                      - rtgl-button#cloudCreateButton variant=pr: ${createCloudButtonText}
+                              - rtgl-text s=sm c=mu-fg mb=xl: Cloud projects are the projects stored in your RouteVN account.
+                              - rtgl-view w=f g=md:
+                                  - $if cloudEmptyMessage:
+                                      - rtgl-view w=f h=120 ah=c av=c:
+                                          - rtgl-view d=v ah=c g=md:
+                                              - rtgl-text s=lg c=mu-fg: ${cloudEmptyMessage}
+                                              - rtgl-text s=sm c=mu-fg: ${cloudEmptySubMessage}
+                                  - $for project, i in cloudProjects:
+                                      - rtgl-view#cloudProjectItem${i} data-project-id=${project.id} h=auto w=f bw=xs bc=bo h-bc=ac p=md d=h av=c g=md cur=pointer:
+                                          - rtgl-image wh=48 src="/public/project_logo_placeholder.png" bc=fg of=con br=sm: null
+                                          - rtgl-view w=1fg:
+                                              - rtgl-view d=h av=c:
+                                                  - rtgl-text: ${project.name}
+                                                  - rtgl-view w=1fg: null
+                                                  - rtgl-text s=xs c=mu-fg: ${project.role}
+                                              - $if project.description:
+                                                  - rtgl-text s=sm c=mu-fg mt=xs: ${project.description}
+                                              - rtgl-view d=h g=sm av=c mt=xs:
+                                                  - rtgl-text s=xs c=mu-fg: Members
+                                                  - rtgl-text s=xs c=mu-fg: ${project.memberCount}
   - rtgl-dialog#createProjectDialog ?open=${isOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#form key=${isOpen} :defaultValues=defaultValues :form=form :context=context w=f:

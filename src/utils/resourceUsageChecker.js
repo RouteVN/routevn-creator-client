@@ -406,9 +406,15 @@ export const buildFilteredStateForExport = (
       state.typography,
       usedIds.typography || [],
     ),
-    layouts: filterCollectionItemsByIds(state.layouts, usedIds.layouts || []),
+    layouts: filterCollectionItemsByIds(
+      state.resources?.layouts,
+      usedIds.layouts || [],
+    ),
     variables: keepAllVariables
-      ? state.variables
-      : filterCollectionItemsByIds(state.variables, usedIds.variables || []),
+      ? state.resources?.variables
+      : filterCollectionItemsByIds(
+          state.resources?.variables,
+          usedIds.variables || [],
+        ),
   };
 };

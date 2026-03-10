@@ -7,20 +7,27 @@ CREATE TABLE committed_events (
   committed_id INTEGER PRIMARY KEY AUTOINCREMENT,
   id TEXT NOT NULL UNIQUE,
   project_id TEXT NOT NULL,
-  client_id TEXT NOT NULL,
+  user_id TEXT,
   partitions TEXT NOT NULL,
-  event TEXT NOT NULL,
-  canonical TEXT NOT NULL,
-  status_updated_at INTEGER NOT NULL
+  type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  meta TEXT NOT NULL,
+  created INTEGER NOT NULL
 );
 ```
 
-## Client SQLite / IndexedDB Logical Model
+`canonical` is derived for dedupe and should not be stored as a full text
+column.
+
+## Client Sync Logical Model
 
 - `local_drafts`
 - `committed_events`
-- `app_state` (`cursor_committed_id`)
+- `app_state` (`collab.lastCommittedId:{projectId}`)
 - optional materialized view state tables
+
+RouteVN's local project repository event store is separate from this collab
+sync model.
 
 ## Durability Settings
 

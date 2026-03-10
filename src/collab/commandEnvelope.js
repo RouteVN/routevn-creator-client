@@ -50,6 +50,7 @@ export const createCommandEnvelope = ({
   actor,
   clientTs = Date.now(),
   commandVersion = COMMAND_VERSION,
+  meta,
 }) => {
   const basePartition =
     toNonEmptyString(partition) || partitionFor({ projectId, scope });
@@ -67,5 +68,6 @@ export const createCommandEnvelope = ({
     actor,
     clientTs,
     commandVersion,
+    ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };
 };

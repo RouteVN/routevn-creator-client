@@ -11,8 +11,11 @@ export const createWebProjectServiceWithCollab = async ({
   filePicker,
   subject,
   db,
+  collabConfig = {},
 }) => {
-  const collabDebugEnabled = resolveCollabDebugEnabled();
+  const collabDebugEnabled = resolveCollabDebugEnabled({
+    enabled: collabConfig.debugEnabled,
+  });
   const collabDebugLog = createCollabDebugLogger({
     enabled: collabDebugEnabled,
   });
@@ -34,6 +37,10 @@ export const createWebProjectServiceWithCollab = async ({
     router,
     db,
     collabDebugLog,
+    endpointUrl: collabConfig.endpointUrl,
+    userId: collabConfig.userId,
+    clientId: collabConfig.clientId,
+    token: collabConfig.token,
   });
 
   if (typeof window !== "undefined") {
@@ -56,7 +63,7 @@ export const createWebProjectServiceWithCollab = async ({
   }
 
   Promise.resolve()
-    .then(() => collabConnectionRuntime.bootCollabFromQuery())
+    .then(() => collabConnectionRuntime.bootCollabAutoConnect())
     .catch((error) => {
       collabDebugLog("warn", "background collab boot failed", {
         error: error?.message || "unknown",

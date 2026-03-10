@@ -1,6 +1,7 @@
 export const createInitialState = () => ({
   localTitle: "Local Projects",
   cloudTitle: "Cloud Projects",
+  showCloudProjects: false,
   loginButtonText: "Login",
   createButtonText: "Create Local Project",
   createCloudButtonText: "Create Cloud Project",
@@ -297,6 +298,10 @@ export const selectProjects = ({ state }) => {
 
 export const selectCloudProjects = ({ state }) => {
   return state.cloudProjects;
+};
+
+export const selectShowCloudProjects = ({ state }) => {
+  return Boolean(state.showCloudProjects);
 };
 
 export const openCloudCreateDialog = ({ state }, _payload = {}) => {

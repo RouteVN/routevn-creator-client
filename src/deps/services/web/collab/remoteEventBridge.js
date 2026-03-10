@@ -49,7 +49,7 @@ const normalizeRemoteEvent = ({
   commandType: command?.type ?? undefined,
   eventType: event?.type ?? undefined,
   target: resolveRemoteTarget({ command, event }),
-  committedId: committedEvent?.committed_id ?? undefined,
+  committedId: committedEvent?.committedId ?? undefined,
   command,
   event,
   committedEvent,

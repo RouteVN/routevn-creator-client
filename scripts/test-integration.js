@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
+import { validateCommandSubmitItem } from "insieme/client";
 import { createInMemorySyncStore, createSyncServer } from "insieme/server";
 import {
   createCommandEnvelope,
+  committedEventToCommand,
   createProjectCollabService,
 } from "../src/collab/index.js";
-import { COMMAND_VERSION } from "../src/domain/constants.js";
 import { processCommand } from "../src/domain/engine.js";
 import { createEmptyProjectState } from "../src/domain/model.js";
 import { validateCommand } from "../src/domain/validateCommand.js";
@@ -102,8 +103,6 @@ const normalizeStateForCompare = (state) => ({
   sections: state.sections,
   lines: state.lines,
   resources: state.resources,
-  layouts: state.layouts,
-  variables: state.variables,
 });
 
 const createHarness = ({ authorizePartitions } = {}) => {
@@ -142,23 +141,13 @@ const createHarness = ({ authorizePartitions } = {}) => {
     },
     validation: {
       validate: async (item) => {
-        if (item?.event?.type !== "event") {
-          const error = new Error("invalid event envelope type");
+        validateCommandSubmitItem(item);
+        const command = committedEventToCommand(item);
+        if (!command) {
+          const error = new Error("failed to convert normalized submit item");
           error.code = "validation_failed";
           throw error;
         }
-
-        const payload = item.event.payload;
-        const command = {
-          id: item.id,
-          projectId: payload?.projectId,
-          partition: Array.isArray(item.partitions) ? item.partitions[0] : "",
-          type: payload?.schema,
-          payload: payload?.data,
-          commandVersion: payload?.commandVersion ?? COMMAND_VERSION,
-          actor: payload?.actor,
-          clientTs: payload?.clientTs,
-        };
 
         validateCommand(command);
         const currentState = ensureProjectState(command.projectId);

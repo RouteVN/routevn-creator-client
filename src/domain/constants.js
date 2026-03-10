@@ -19,6 +19,8 @@ export const RESOURCE_TYPES = [
   "transforms",
   "colors",
   "typography",
+  "variables",
+  "layouts",
   "components",
 ];
 
@@ -31,7 +33,7 @@ export const COMMAND_TYPES = {
   SCENE_RENAME: "scene.rename",
   SCENE_DELETE: "scene.delete",
   SCENE_SET_INITIAL: "scene.set_initial",
-  SCENE_REORDER: "scene.reorder",
+  SCENE_MOVE: "scene.move",
 
   SECTION_CREATE: "section.create",
   SECTION_RENAME: "section.rename",
@@ -50,18 +52,10 @@ export const COMMAND_TYPES = {
   RESOURCE_DELETE: "resource.delete",
   RESOURCE_DUPLICATE: "resource.duplicate",
 
-  LAYOUT_CREATE: "layout.create",
-  LAYOUT_RENAME: "layout.rename",
-  LAYOUT_DELETE: "layout.delete",
-  LAYOUT_REORDER: "layout.reorder",
   LAYOUT_ELEMENT_CREATE: "layout.element.create",
   LAYOUT_ELEMENT_UPDATE: "layout.element.update",
   LAYOUT_ELEMENT_MOVE: "layout.element.move",
   LAYOUT_ELEMENT_DELETE: "layout.element.delete",
-
-  VARIABLE_CREATE: "variable.create",
-  VARIABLE_UPDATE: "variable.update",
-  VARIABLE_DELETE: "variable.delete",
 };
 
 export const ALL_COMMAND_TYPES = Object.values(COMMAND_TYPES);

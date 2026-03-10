@@ -62,7 +62,7 @@ export const assertCommandPreconditions = (state, command) => {
         },
       );
       return;
-    case COMMAND_TYPES.SCENE_REORDER:
+    case COMMAND_TYPES.SCENE_MOVE:
       assert(!!state.scenes[p.sceneId], "scene not found", {
         sceneId: p.sceneId,
       });
@@ -159,6 +159,41 @@ export const assertCommandPreconditions = (state, command) => {
         "resource not found",
         { resourceType: p.resourceType, resourceId: p.resourceId },
       );
+      if (command.type === COMMAND_TYPES.RESOURCE_UPDATE) {
+        const currentItem =
+          state.resources?.[p.resourceType]?.items?.[p.resourceId];
+
+        if (p.resourceType === "variables" && currentItem?.type !== "folder") {
+          const nextType = p.patch?.type;
+          const nextVariableType = p.patch?.variableType;
+
+          if (
+            nextType !== undefined &&
+            currentItem.type !== undefined &&
+            nextType !== currentItem.type
+          ) {
+            assert(false, "variable type cannot be changed", {
+              resourceType: p.resourceType,
+              resourceId: p.resourceId,
+              currentType: currentItem.type,
+              nextType,
+            });
+          }
+
+          if (
+            nextVariableType !== undefined &&
+            currentItem.variableType !== undefined &&
+            nextVariableType !== currentItem.variableType
+          ) {
+            assert(false, "variable type cannot be changed", {
+              resourceType: p.resourceType,
+              resourceId: p.resourceId,
+              currentVariableType: currentItem.variableType,
+              nextVariableType,
+            });
+          }
+        }
+      }
       return;
     case COMMAND_TYPES.RESOURCE_DUPLICATE:
       assert(
@@ -173,47 +208,16 @@ export const assertCommandPreconditions = (state, command) => {
       );
       return;
 
-    case COMMAND_TYPES.LAYOUT_CREATE:
-      assert(!state.layouts[p.layoutId], "layout already exists", {
-        layoutId: p.layoutId,
-      });
-      return;
-    case COMMAND_TYPES.LAYOUT_RENAME:
-    case COMMAND_TYPES.LAYOUT_DELETE:
-      assert(!!state.layouts[p.layoutId], "layout not found", {
-        layoutId: p.layoutId,
-      });
-      return;
-    case COMMAND_TYPES.LAYOUT_REORDER:
-      assert(!!state.layouts[p.layoutId], "layout not found", {
-        layoutId: p.layoutId,
-      });
-      if (p.parentId !== undefined && p.parentId !== null) {
-        assert(p.parentId !== p.layoutId, "layout cannot parent itself", {
-          layoutId: p.layoutId,
-          parentId: p.parentId,
-        });
-        assert(!!state.layouts[p.parentId], "layout parent not found", {
-          layoutId: p.layoutId,
-          parentId: p.parentId,
-        });
-        assert(
-          state.layouts[p.parentId].type === "folder",
-          "layout parent must be folder",
-          {
-            layoutId: p.layoutId,
-            parentId: p.parentId,
-            parentType: state.layouts[p.parentId].type,
-          },
-        );
-      }
-      return;
     case COMMAND_TYPES.LAYOUT_ELEMENT_CREATE:
-      assert(!!state.layouts[p.layoutId], "layout not found", {
-        layoutId: p.layoutId,
-      });
       assert(
-        !state.layouts[p.layoutId].elements[p.elementId],
+        !!state.resources?.layouts?.items?.[p.layoutId],
+        "layout not found",
+        {
+          layoutId: p.layoutId,
+        },
+      );
+      assert(
+        !state.resources.layouts.items[p.layoutId].elements[p.elementId],
         "layout element already exists",
         { layoutId: p.layoutId, elementId: p.elementId },
       );
@@ -221,84 +225,18 @@ export const assertCommandPreconditions = (state, command) => {
     case COMMAND_TYPES.LAYOUT_ELEMENT_UPDATE:
     case COMMAND_TYPES.LAYOUT_ELEMENT_MOVE:
     case COMMAND_TYPES.LAYOUT_ELEMENT_DELETE:
-      assert(!!state.layouts[p.layoutId], "layout not found", {
-        layoutId: p.layoutId,
-      });
       assert(
-        !!state.layouts[p.layoutId].elements[p.elementId],
+        !!state.resources?.layouts?.items?.[p.layoutId],
+        "layout not found",
+        {
+          layoutId: p.layoutId,
+        },
+      );
+      assert(
+        !!state.resources.layouts.items[p.layoutId].elements[p.elementId],
         "layout element not found",
         { layoutId: p.layoutId, elementId: p.elementId },
       );
-      return;
-
-    case COMMAND_TYPES.VARIABLE_CREATE:
-      assert(
-        !state.variables?.items?.[p.variableId],
-        "variable already exists",
-        {
-          variableId: p.variableId,
-        },
-      );
-      if (p.parentId !== undefined && p.parentId !== null) {
-        assert(p.parentId !== p.variableId, "variable cannot parent itself", {
-          variableId: p.variableId,
-          parentId: p.parentId,
-        });
-        assert(
-          !!state.variables?.items?.[p.parentId],
-          "variable parent not found",
-          {
-            variableId: p.variableId,
-            parentId: p.parentId,
-          },
-        );
-      }
-      return;
-    case COMMAND_TYPES.VARIABLE_UPDATE:
-    case COMMAND_TYPES.VARIABLE_DELETE:
-      assert(!!state.variables?.items?.[p.variableId], "variable not found", {
-        variableId: p.variableId,
-      });
-      if (command.type === COMMAND_TYPES.VARIABLE_UPDATE && p.patch) {
-        const currentVariable = state.variables?.items?.[p.variableId];
-        const currentType =
-          currentVariable?.type ?? currentVariable?.variableType ?? null;
-        if (Object.prototype.hasOwnProperty.call(p.patch, "type")) {
-          assert(p.patch.type === currentType, "variable type is immutable", {
-            variableId: p.variableId,
-            currentType,
-            nextType: p.patch.type,
-          });
-        }
-        if (Object.prototype.hasOwnProperty.call(p.patch, "variableType")) {
-          assert(
-            p.patch.variableType === currentType,
-            "variable type is immutable",
-            {
-              variableId: p.variableId,
-              currentType,
-              nextType: p.patch.variableType,
-            },
-          );
-        }
-        if (Object.prototype.hasOwnProperty.call(p.patch, "parentId")) {
-          const parentId = p.patch.parentId;
-          if (parentId !== undefined && parentId !== null) {
-            assert(parentId !== p.variableId, "variable cannot parent itself", {
-              variableId: p.variableId,
-              parentId,
-            });
-            assert(
-              !!state.variables?.items?.[parentId],
-              "variable parent not found",
-              {
-                variableId: p.variableId,
-                parentId,
-              },
-            );
-          }
-        }
-      }
       return;
 
     default:

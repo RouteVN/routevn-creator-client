@@ -1,6 +1,6 @@
 import { customAlphabet } from "nanoid";
 
-const DEFAULT_COLLAB_ENDPOINT = "wss://127.0.0.1:8787/sync";
+export const DEFAULT_WEB_COLLAB_ENDPOINT = "ws://127.0.0.1:8787/sync";
 const COLLAB_HEARTBEAT_INTERVAL_MS = 10_000;
 const COLLAB_RECONNECT_INTERVAL_MS = 5_000;
 const COLLAB_CONNECTION_ERROR_THROTTLE_MS = 10_000;
@@ -12,10 +12,9 @@ const generateClientIdSuffix = customAlphabet(BASE58_ALPHABET, 12);
 
 const parseEnabledFlag = (value) => value === "1" || value === "true";
 
-export const resolveCollabDebugEnabled = () => {
-  const params = new URLSearchParams(window.location.search);
-  if (parseEnabledFlag(params.get("collabDebug"))) {
-    return true;
+export const resolveCollabDebugEnabled = ({ enabled } = {}) => {
+  if (enabled !== undefined) {
+    return Boolean(enabled);
   }
 
   try {
@@ -66,7 +65,7 @@ const isLocalProjectId = async ({ db, projectId } = {}) => {
 };
 
 const getCollabEndpointCandidates = (endpointUrl) => {
-  const raw = endpointUrl || DEFAULT_COLLAB_ENDPOINT;
+  const raw = endpointUrl || DEFAULT_WEB_COLLAB_ENDPOINT;
   const candidates = [];
   const seen = new Set();
 
@@ -83,10 +82,9 @@ const getCollabEndpointCandidates = (endpointUrl) => {
   try {
     const parsed = new URL(raw);
     const isWsProtocol = parsed.protocol === "ws:";
-    const isDefaultPort = parsed.port === "" || parsed.port === "8787";
-    const isDefaultPath = parsed.pathname === "/sync";
+    const isSyncPath = parsed.pathname === "/sync";
 
-    if (isWsProtocol && isDefaultPort && isDefaultPath) {
+    if (isWsProtocol && isSyncPath) {
       if (parsed.hostname === "localhost") {
         parsed.hostname = "127.0.0.1";
         addCandidate(parsed.toString());
@@ -112,16 +110,20 @@ export const createCollabConnectionRuntime = ({
   router,
   db,
   collabDebugLog,
+  endpointUrl = DEFAULT_WEB_COLLAB_ENDPOINT,
+  userId,
+  clientId,
+  token,
 }) => {
   const clientIdSuffix = generateClientIdSuffix();
   const collabRuntime = {
-    endpointUrl: DEFAULT_COLLAB_ENDPOINT,
+    endpointUrl,
     autoConnectMode: "not_started",
     remoteEnabled: false,
     lastConnectError: undefined,
-    userId: undefined,
-    clientId: undefined,
-    token: undefined,
+    userId,
+    clientId,
+    token,
     reconnectAttempts: 0,
     lastReconnectAttemptAt: undefined,
     lastConnectionErrorAt: 0,
@@ -173,18 +175,19 @@ export const createCollabConnectionRuntime = ({
   };
 
   const connectCollabDebugSession = async ({
-    endpointUrl = DEFAULT_COLLAB_ENDPOINT,
-    userId = "web-debug-user",
+    endpointUrl = collabRuntime.endpointUrl || DEFAULT_WEB_COLLAB_ENDPOINT,
+    userId = collabRuntime.userId || "web-debug-user",
     clientId,
     token,
     partitions,
   } = {}) => {
     const projectId = getCollabProjectId();
-    const resolvedClientId = clientId || buildDefaultClientId(projectId);
+    const resolvedClientId =
+      clientId || collabRuntime.clientId || buildDefaultClientId(projectId);
     const resolvedToken = buildDebugToken({
       userId,
       clientId: resolvedClientId,
-      token,
+      token: token || collabRuntime.token,
     });
     const endpointCandidates = getCollabEndpointCandidates(endpointUrl);
     let lastError;
@@ -207,6 +210,9 @@ export const createCollabConnectionRuntime = ({
           partitions,
         });
         collabRuntime.endpointUrl = candidateEndpointUrl;
+        collabRuntime.userId = userId;
+        collabRuntime.clientId = resolvedClientId;
+        collabRuntime.token = token || collabRuntime.token;
         collabRuntime.lastConnectError = undefined;
         return session;
       } catch (error) {
@@ -254,7 +260,8 @@ export const createCollabConnectionRuntime = ({
     if (collabAutoConnectInFlight) return collabAutoConnectInFlight;
 
     const projectId = getCollabProjectId();
-    const endpointUrl = collabRuntime.endpointUrl || DEFAULT_COLLAB_ENDPOINT;
+    const endpointUrl =
+      collabRuntime.endpointUrl || DEFAULT_WEB_COLLAB_ENDPOINT;
     const userId = collabRuntime.userId || `web-${projectId || "debug-user"}`;
     const clientId = collabRuntime.clientId || buildDefaultClientId(projectId);
     const token = collabRuntime.token || undefined;
@@ -342,24 +349,17 @@ export const createCollabConnectionRuntime = ({
     });
   };
 
-  const bootCollabFromQuery = async () => {
-    const params = new URLSearchParams(window.location.search);
-    const enabledParam = params.get("collab");
-    const projectId = params.get("p");
+  const bootCollabAutoConnect = async () => {
+    const projectId = getCollabProjectId();
     const localProject = await isLocalProjectId({ db, projectId });
     const remoteEnabled = Boolean(projectId) && !localProject;
-    const enabledByQuery = enabledParam === "1" || enabledParam === "true";
-
-    const endpointUrl = params.get("collabEndpoint") || DEFAULT_COLLAB_ENDPOINT;
-    const userId =
-      params.get("collabUser") || `web-${projectId || "debug-user"}`;
-    const clientId =
-      params.get("collabClient") || buildDefaultClientId(projectId);
-    const token = params.get("collabToken") || undefined;
+    const endpointUrl =
+      collabRuntime.endpointUrl || DEFAULT_WEB_COLLAB_ENDPOINT;
+    const userId = collabRuntime.userId || `web-${projectId || "debug-user"}`;
+    const clientId = collabRuntime.clientId || buildDefaultClientId(projectId);
+    const token = collabRuntime.token || undefined;
     const autoConnectMode = remoteEnabled
-      ? enabledByQuery
-        ? "query_enabled"
-        : "always_enabled"
+      ? "always_enabled"
       : "disabled_for_local_project";
 
     collabRuntime.endpointUrl = endpointUrl;
@@ -431,7 +431,7 @@ export const createCollabConnectionRuntime = ({
   };
 
   return {
-    bootCollabFromQuery,
+    bootCollabAutoConnect,
     connectCollabDebugSession,
     disconnectCollabDebugSession,
     getCollabDebugStatus,
