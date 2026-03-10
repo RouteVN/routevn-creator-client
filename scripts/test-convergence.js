@@ -1,207 +1,46 @@
 import assert from "node:assert/strict";
-import { validateCommandSubmitItem } from "insieme/client";
-import { createInMemorySyncStore, createSyncServer } from "insieme/server";
 import {
   createCommandEnvelope,
-  committedEventToCommand,
-  createProjectCollabService,
 } from "../src/collab/index.js";
-import { processCommand } from "../src/domain/engine.js";
-import { createEmptyProjectState } from "../src/domain/model.js";
-import { validateCommand } from "../src/domain/validateCommand.js";
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const waitFor = async (
-  predicate,
-  { timeoutMs = 3000, intervalMs = 20, label = "condition" } = {},
-) => {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    if (predicate()) return;
-    await sleep(intervalMs);
-  }
-  throw new Error(`Timed out waiting for ${label}`);
-};
-
-const parseToken = (token) => {
-  const parts = String(token || "").split(":");
-  if (parts.length !== 4 || parts[0] !== "user" || parts[2] !== "client") {
-    throw new Error("invalid token");
-  }
-  return {
-    userId: parts[1],
-    clientId: parts[3],
-  };
-};
-
-const createInMemoryServerTransport = ({
-  server,
-  connectionId,
-  latencyMs = 0,
-}) => {
-  let session = null;
-  let messageHandler = null;
-  let connected = false;
-
-  const deliver = async (message) => {
-    if (latencyMs > 0) await sleep(latencyMs);
-    if (messageHandler) messageHandler(structuredClone(message));
-  };
-
-  return {
-    async connect() {
-      if (connected) return;
-      connected = true;
-      session = server.attachConnection({
-        connectionId,
-        send: async (message) => {
-          await deliver(message);
-        },
-        close: async () => {
-          connected = false;
-        },
-      });
-    },
-
-    async disconnect() {
-      if (!connected || !session) return;
-      const current = session;
-      session = null;
-      connected = false;
-      await current.close("client_disconnect");
-    },
-
-    async send(message) {
-      if (!connected || !session) {
-        throw new Error("transport is not connected");
-      }
-      if (latencyMs > 0) await sleep(latencyMs);
-      await session.receive(structuredClone(message));
-    },
-
-    onMessage(handler) {
-      messageHandler = handler;
-      return () => {
-        if (messageHandler === handler) {
-          messageHandler = null;
-        }
-      };
-    },
-  };
-};
-
-const normalizeStateForCompare = (state) => ({
-  model_version: state.model_version,
-  project: {
-    id: state.project.id,
-    name: state.project.name,
-    description: state.project.description,
-  },
-  story: state.story,
-  scenes: state.scenes,
-  sections: state.sections,
-  lines: state.lines,
-  resources: state.resources,
-});
-
-const projectStates = new Map();
-const ensureProjectState = (projectId) => {
-  if (!projectStates.has(projectId)) {
-    projectStates.set(
-      projectId,
-      createEmptyProjectState({
-        projectId,
-        name: "Convergence",
-        description: "Server projection",
-      }),
-    );
-  }
-  return projectStates.get(projectId);
-};
-
-const store = createInMemorySyncStore();
-const server = createSyncServer({
-  auth: {
-    verifyToken: async (token) => {
-      const identity = parseToken(token);
-      return {
-        clientId: identity.clientId,
-        claims: {
-          userId: identity.userId,
-        },
-      };
-    },
-  },
-  authz: {
-    authorizePartitions: async (_identity, partitions) =>
-      Array.isArray(partitions) && partitions.length > 0,
-  },
-  validation: {
-    validate: async (item) => {
-      validateCommandSubmitItem(item);
-      const command = committedEventToCommand(item);
-      if (!command) {
-        const error = new Error("failed to convert normalized submit item");
-        error.code = "validation_failed";
-        throw error;
-      }
-
-      validateCommand(command);
-
-      const currentState = ensureProjectState(command.projectId);
-      const { state: nextState } = processCommand({
-        state: currentState,
-        command,
-      });
-      projectStates.set(command.projectId, nextState);
-    },
-  },
-  store,
-  clock: {
-    now: () => Date.now(),
-  },
-});
+import {
+  createProjectedSyncHarness,
+  normalizeStateForCompare,
+  waitFor,
+} from "./collabTestSupport.js";
 
 const projectId = "project-conv-001";
-const actorA = { userId: "user-1", clientId: "client-a" };
-const actorB = { userId: "user-2", clientId: "client-b" };
-
-const clientA = createProjectCollabService({
-  projectId,
+const harness = createProjectedSyncHarness({
   projectName: "Convergence",
   projectDescription: "two-client",
-  token: "user:user-1:client:client-a",
-  actor: actorA,
+});
+const clientAEntry = harness.createClient({
+  projectId,
+  userId: "user-1",
+  clientId: "client-a",
   partitions: [
     `project:${projectId}:story`,
     `project:${projectId}:resources`,
     `project:${projectId}:layouts`,
   ],
-  transport: createInMemoryServerTransport({
-    server,
-    connectionId: "conn-a",
-    latencyMs: 5,
-  }),
+  connectionId: "conn-a",
+  latencyMs: 5,
 });
-
-const clientB = createProjectCollabService({
+const clientBEntry = harness.createClient({
   projectId,
-  projectName: "Convergence",
-  projectDescription: "two-client",
-  token: "user:user-2:client:client-b",
-  actor: actorB,
+  userId: "user-2",
+  clientId: "client-b",
   partitions: [
     `project:${projectId}:story`,
     `project:${projectId}:resources`,
     `project:${projectId}:layouts`,
   ],
-  transport: createInMemoryServerTransport({
-    server,
-    connectionId: "conn-b",
-    latencyMs: 5,
-  }),
+  connectionId: "conn-b",
+  latencyMs: 5,
 });
+const clientA = clientAEntry.client;
+const clientB = clientBEntry.client;
+const actorA = clientAEntry.actor;
+const actorB = clientBEntry.actor;
 
 try {
   await clientA.start();
@@ -345,5 +184,5 @@ try {
 } finally {
   await clientA.stop();
   await clientB.stop();
-  await server.shutdown();
+  await harness.server.shutdown();
 }

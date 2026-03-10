@@ -9,19 +9,11 @@ import {
 } from "../src/collab/index.js";
 import { COMMAND_TYPES } from "../src/domain/commandCatalog.js";
 import { validateCommand } from "../src/domain/validateCommand.js";
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const parseToken = (token) => {
-  const parts = String(token || "").split(":");
-  if (parts.length !== 4 || parts[0] !== "user" || parts[2] !== "client") {
-    throw new Error("invalid token");
-  }
-  return {
-    userId: parts[1],
-    clientId: parts[3],
-  };
-};
+import {
+  createInMemoryServerTransport,
+  parseToken,
+  sleep,
+} from "./collabTestSupport.js";
 
 const commandFromItem = (item) => {
   validateCommandSubmitItem(item);
@@ -30,56 +22,6 @@ const commandFromItem = (item) => {
     throw new Error("failed to convert normalized submit item to command");
   }
   return command;
-};
-
-const createInMemoryServerTransport = ({ server, connectionId }) => {
-  let session = null;
-  let messageHandler = null;
-  let connected = false;
-
-  const deliver = async (message) => {
-    if (messageHandler) messageHandler(structuredClone(message));
-  };
-
-  return {
-    async connect() {
-      if (connected) return;
-      connected = true;
-      session = server.attachConnection({
-        connectionId,
-        send: async (message) => {
-          await deliver(message);
-        },
-        close: async () => {
-          connected = false;
-        },
-      });
-    },
-
-    async disconnect() {
-      if (!connected || !session) return;
-      const current = session;
-      session = null;
-      connected = false;
-      await current.close("client_disconnect");
-    },
-
-    async send(message) {
-      if (!connected || !session) {
-        throw new Error("transport is not connected");
-      }
-      await session.receive(structuredClone(message));
-    },
-
-    onMessage(handler) {
-      messageHandler = handler;
-      return () => {
-        if (messageHandler === handler) {
-          messageHandler = null;
-        }
-      };
-    },
-  };
 };
 
 const projectId = "project-command-only-001";

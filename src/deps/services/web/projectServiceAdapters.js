@@ -1,5 +1,4 @@
 import JSZip from "jszip";
-import { commandToSyncEvent } from "insieme/client";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
@@ -16,83 +15,23 @@ import {
   saveCommittedCursor,
 } from "./collabCommittedCursorStore.js";
 import {
+  enqueueSerialTask,
+  ensureCachedCommittedCursor,
+  persistCachedCommittedCursor,
+  summarizeRepositoryEventsForSync,
+  toReplaySubmissionEvent,
+  toUncommittedSyncSubmissionEvents,
+} from "./projectServiceCollabRuntime.js";
+import {
   applyCommandToRepository,
-  assertRepositoryCommandEvent,
   assertSupportedProjectState,
-  repositoryEventToCommand,
 } from "../shared/projectRepository.js";
-import { COMMAND_TYPES } from "../../../domain/commandCatalog.js";
 import { createBundle } from "../../../utils/bundleUtils.js";
 
 const countImageEntries = (imagesData) =>
   Object.values(imagesData?.items || {}).filter(
     (item) => item?.type === "image",
   ).length;
-
-const toSyncSubmissionEvents = (repositoryEvents = []) =>
-  repositoryEvents.map((repositoryEvent) => {
-    assertRepositoryCommandEvent(repositoryEvent);
-    return structuredClone(repositoryEvent);
-  });
-
-const toUncommittedSyncSubmissionEvents = ({
-  repositoryEvents = [],
-  committedCursor = 0,
-}) => {
-  const normalizedEvents = Array.isArray(repositoryEvents)
-    ? repositoryEvents
-    : [];
-  const cursor = Number.isFinite(Number(committedCursor))
-    ? Math.max(0, Math.floor(Number(committedCursor)))
-    : 0;
-  const startIndex = Math.min(cursor, normalizedEvents.length);
-  return toSyncSubmissionEvents(normalizedEvents.slice(startIndex));
-};
-
-const toReplaySubmissionEvent = ({ repositoryEvent, actor }) => {
-  assertRepositoryCommandEvent(repositoryEvent);
-  const command = repositoryEventToCommand(repositoryEvent);
-  const replayCommand = {
-    ...command,
-    actor: {
-      userId: actor?.userId,
-      clientId: actor?.clientId,
-    },
-  };
-
-  return {
-    id: replayCommand.id,
-    partitions: Array.isArray(repositoryEvent?.partitions)
-      ? [...repositoryEvent.partitions]
-      : [],
-    ...commandToSyncEvent(replayCommand),
-  };
-};
-
-const summarizeRepositoryEventsForSync = (events = []) => {
-  const normalizedEvents = Array.isArray(events) ? events : [];
-  const commands = normalizedEvents.map((event) =>
-    repositoryEventToCommand(event),
-  );
-  const firstCommand = commands[0] || null;
-  const commandTypes = commands
-    .slice(0, 8)
-    .map((command) => command?.type || "unknown");
-  const hasProjectCreated = commands.some(
-    (command) => command?.type === COMMAND_TYPES.PROJECT_CREATED,
-  );
-
-  return {
-    repositoryEventCount: normalizedEvents.length,
-    commandEventCount: commands.length,
-    hasProjectCreated,
-    commandTypesSample: commandTypes,
-    firstCommandType: firstCommand?.type || null,
-    firstCommandId: firstCommand?.id || null,
-    firstCommandProjectId: firstCommand?.projectId || null,
-    firstCommandPartition: firstCommand?.partition || null,
-  };
-};
 
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
@@ -105,23 +44,20 @@ export const createWebProjectServiceAdapters = ({
   const collabAppliedCommittedIdsByProject = new Map();
 
   const ensureCommittedIdLoaded = async (projectId, getStoreByProject) => {
-    if (collabLastCommittedIdByProject.has(projectId)) {
-      return collabLastCommittedIdByProject.get(projectId);
-    }
-
-    const adapter = await getStoreByProject(projectId);
-    let loaded = 0;
-    try {
-      loaded = await loadCommittedCursor({ adapter, projectId });
-    } catch (error) {
-      collabLog("warn", "failed to load committed cursor", {
-        projectId,
-        error: error?.message || "unknown",
-      });
-    }
-
-    collabLastCommittedIdByProject.set(projectId, loaded);
-    return loaded;
+    return ensureCachedCommittedCursor({
+      key: projectId,
+      cache: collabLastCommittedIdByProject,
+      loadCursor: async () => {
+        const adapter = await getStoreByProject(projectId);
+        return loadCommittedCursor({ adapter, projectId });
+      },
+      onWarn: ({ error }) => {
+        collabLog("warn", "failed to load committed cursor", {
+          projectId,
+          error: error?.message || "unknown",
+        });
+      },
+    });
   };
 
   const persistCommittedCursor = async (
@@ -129,32 +65,30 @@ export const createWebProjectServiceAdapters = ({
     cursor,
     getStoreByProject,
   ) => {
-    const normalized = Number.isFinite(Number(cursor))
-      ? Math.max(0, Math.floor(Number(cursor)))
-      : 0;
-    const current = await ensureCommittedIdLoaded(projectId, getStoreByProject);
-    if (normalized <= current) {
-      return current;
-    }
-
-    collabLastCommittedIdByProject.set(projectId, normalized);
-    const adapter = await getStoreByProject(projectId);
-
-    try {
-      await saveCommittedCursor({
-        adapter,
-        projectId,
-        cursor: normalized,
-      });
-    } catch (error) {
-      collabLog("warn", "failed to persist committed cursor", {
-        projectId,
-        cursor: normalized,
-        error: error?.message || "unknown",
-      });
-    }
-
-    return normalized;
+    return persistCachedCommittedCursor({
+      key: projectId,
+      cursor,
+      cache: collabLastCommittedIdByProject,
+      loadCursor: async () => {
+        const adapter = await getStoreByProject(projectId);
+        return loadCommittedCursor({ adapter, projectId });
+      },
+      saveCursor: async (normalized) => {
+        const adapter = await getStoreByProject(projectId);
+        await saveCommittedCursor({
+          adapter,
+          projectId,
+          cursor: normalized,
+        });
+      },
+      onWarn: ({ cursor: normalized, error }) => {
+        collabLog("warn", "failed to persist committed cursor", {
+          projectId,
+          cursor: normalized,
+          error: error?.message || "unknown",
+        });
+      },
+    });
   };
 
   const getAppliedCommittedSet = (projectId) => {
@@ -167,19 +101,17 @@ export const createWebProjectServiceAdapters = ({
   };
 
   const queueCollabApply = (projectId, task) => {
-    const previous =
-      collabApplyQueueByProject.get(projectId) || Promise.resolve();
-    const next = previous
-      .catch(() => {})
-      .then(task)
-      .catch((error) => {
+    return enqueueSerialTask({
+      key: projectId,
+      queueByKey: collabApplyQueueByProject,
+      task,
+      onError: ({ error }) => {
         collabLog("error", "remote apply failed", {
           projectId,
           error: error?.message || "unknown",
         });
-      });
-    collabApplyQueueByProject.set(projectId, next);
-    return next;
+      },
+    });
   };
 
   const storageAdapter = {
