@@ -3,6 +3,28 @@
 Commands become committed events with a server-assigned `committed_id`
 ordering cursor and a command-owned `id`.
 
+There is no longer a nested legacy wrapper like:
+
+```json
+{
+  "event": {
+    "type": "...",
+    "payload": {},
+    "meta": {}
+  }
+}
+```
+
+Both client commands and committed events use top-level `type`, `payload`, and
+`meta`.
+
+## Relationship To Client Commands
+
+- Client submission uses the command envelope documented in
+  [02-command-catalog.md](./02-command-catalog.md).
+- Storage/commit uses the committed event envelope below.
+- Both use the same canonical operation `type` names.
+
 ## Committed Event Envelope
 
 ```json
@@ -51,6 +73,7 @@ comparison only and should not be stored as a full text column.
 
 ## Event Taxonomy
 
+- Project: `project.*`
 - Story: `scene.*`, `section.*`, `line.*`
 - Resources: `resource.*`
   This includes collection-level lifecycle for `variables` and `layouts`.
@@ -62,3 +85,5 @@ comparison only and should not be stored as a full text column.
 - Reducer must be deterministic and side-effect free.
 - Unknown event type is invalid and must be rejected before commit.
 - There is no separate legacy `type: "event"` or `payload.schema` wrapper.
+- Payload shape validation happens before reducer apply.
+- Domain preconditions run before reducer apply and may reject otherwise shape-valid commands.
