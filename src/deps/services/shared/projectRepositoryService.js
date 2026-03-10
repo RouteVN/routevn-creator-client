@@ -26,6 +26,10 @@ export const createProjectRepositoryService = ({
     return router.getPayload()?.p;
   };
 
+  const getEnsuredProjectId = () => {
+    return currentProjectId;
+  };
+
   const getProjectMetadataFromEntries = async (projectId) => {
     if (!db || typeof db.get !== "function") {
       return {
@@ -211,15 +215,7 @@ export const createProjectRepositoryService = ({
       );
     }
 
-    return repository.subscribe(
-      (repositoryState) => {
-        listener({
-          projectId: targetProjectId,
-          repositoryState,
-        });
-      },
-      { emitCurrent },
-    );
+    return repository.subscribe(listener, { emitCurrent });
   };
 
   const getCachedRepository = () => {
@@ -254,6 +250,7 @@ export const createProjectRepositoryService = ({
 
   return {
     getCurrentProjectId,
+    getEnsuredProjectId,
     getProjectMetadataFromEntries,
     resolveProjectReferenceByProjectId,
     getStoreByProject,

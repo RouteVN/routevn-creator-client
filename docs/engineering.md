@@ -208,6 +208,8 @@ instance:
 
 - prefer the `handleBeforeMount` cleanup closure when the state is owned there
 - prefer RxJS streams/subscriptions for async project or collab lifecycles
+- prefer RxJS stream composition for short-lived app-level event windows such
+  as key chords
 - use explicit top-level store fields only for plain local values such as timer
   ids or cache entries
 

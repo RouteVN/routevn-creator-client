@@ -89,6 +89,17 @@ export const setCharacterName = ({ state }, { characterName } = {}) => {
   state.characterName = characterName;
 };
 
+export const clearCharacterSpritesView = ({ state }) => {
+  state.characterName = undefined;
+  state.spritesData = EMPTY_TREE;
+  state.selectedItemId = undefined;
+  state.context = {
+    fileId: {
+      src: undefined,
+    },
+  };
+};
+
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };

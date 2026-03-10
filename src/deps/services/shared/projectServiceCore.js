@@ -63,25 +63,22 @@ export const createProjectServiceCore = ({
     getRepository: repositoryService.getRepository,
     getRepositoryById: repositoryService.getRepositoryById,
     getAdapterById: repositoryService.getAdapterById,
+    getEnsuredProjectId: repositoryService.getEnsuredProjectId,
     ensureRepository: repositoryService.ensureRepository,
     subscribeProjectState(listener, options) {
-      return repositoryService.subscribeProjectState(
-        ({ projectId, repositoryState }) => {
-          const resolvedProjectId =
-            repositoryState?.project?.id || projectId || "unknown-project";
-          const domainState = projectRepositoryStateToDomainState({
-            repositoryState,
-            projectId: resolvedProjectId,
-          });
+      return repositoryService.subscribeProjectState((repositoryState) => {
+        const projectId = repositoryState.project.id;
+        const domainState = projectRepositoryStateToDomainState({
+          repositoryState,
+          projectId,
+        });
 
-          listener({
-            projectId: resolvedProjectId,
-            repositoryState,
-            domainState,
-          });
-        },
-        options,
-      );
+        listener({
+          projectId,
+          repositoryState,
+          domainState,
+        });
+      }, options);
     },
     ...("getRepositoryByPath" in repositoryService
       ? {

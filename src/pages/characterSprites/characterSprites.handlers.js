@@ -69,19 +69,6 @@ const getPreviewImageSrc = async ({ projectService, item } = {}) => {
   return url;
 };
 
-const clearCharacterSpritesView = ({ store } = {}) => {
-  store.setCharacterName({ characterName: undefined });
-  store.setItems({ spritesData: EMPTY_TREE });
-  store.setSelectedItemId({ itemId: undefined });
-  store.setContext({
-    context: {
-      fileId: {
-        src: undefined,
-      },
-    },
-  });
-};
-
 const resolveSelectedPreviewImageSrc = async ({
   projectService,
   store,
@@ -180,14 +167,14 @@ const syncCharacterSpritesRepositoryState = async ({
 
   if (!characterId) {
     appService.showToast("Character is missing.", { title: "Error" });
-    clearCharacterSpritesView({ store });
+    store.clearCharacterSpritesView();
     render();
     return;
   }
 
   if (!character) {
     appService.showToast("Character not found.", { title: "Error" });
-    clearCharacterSpritesView({ store });
+    store.clearCharacterSpritesView();
     render();
     return;
   }
