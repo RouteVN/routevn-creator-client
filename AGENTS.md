@@ -42,6 +42,9 @@ Read the links from the following files to familiarize with the code before star
 - [State Management](https://raw.githubusercontent.com/yuusoft-org/rettangoli/refs/heads/main/packages/rettangoli-fe/docs/store.md)
 - [Handlers](https://raw.githubusercontent.com/yuusoft-org/rettangoli/refs/heads/main/packages/rettangoli-fe/docs/handlers.md)
 
+If you need deeper or broader Rettangoli framework reference material, use
+`https://rettangoli.dev/llms.txt` as the framework reference index.
+
 ## JavaScript Style
 
 - Prefer direct property access or nullish coalescing (`??`) for defaults.
@@ -132,3 +135,51 @@ Read the links from the following files to familiarize with the code before star
 
 - Project `name`, `description`, and `iconFileId` are owned by local project DB entries (app-level project entries), not repository/insieme state.
 - Prefer synchronous project context reads via app service cache (`getCurrentProjectEntry`, current project id helpers) in page handlers.
+
+## Where New Code Goes
+
+### Add a page
+
+Put it in `src/pages/<page-name>/` with:
+
+- `<page>.view.yaml`
+- `<page>.store.js`
+- `<page>.handlers.js`
+
+### Add a reusable component
+
+Put it in `src/components/<component-name>/`.
+
+If it is not truly reusable, keep it close to the page instead of forcing an abstraction.
+
+### Add a primitive
+
+Put it in `src/primitives/` when the code owns low-level DOM behavior or a browser-native custom element.
+
+### Add shared feature orchestration
+
+Put it in `src/deps/features/*` when the code is shared across pages, sits above domain rules, and is not part of the public `appService` / `projectService` facade.
+
+### Add a handler-facing service behavior
+
+Put it behind:
+
+- `appService`
+- `projectService`
+
+Prefer extending an existing coarse facade over adding a random helper file.
+
+### Add a domain rule
+
+Put it in `src/domain/`.
+
+### Add platform-specific behavior
+
+Put it in:
+
+- `src/deps/infra/*` for low-level platform primitives
+- `src/deps/services/web/*` or `src/deps/services/tauri/*` for service adapters
+
+### Add collaboration behavior
+
+Put sync/session/transport behavior in `src/collab/` or in the runtime-specific collab service composition layer.
