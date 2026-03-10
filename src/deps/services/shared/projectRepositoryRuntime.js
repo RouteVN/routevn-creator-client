@@ -12,12 +12,22 @@ export const projectRepositoryStatePartitionFor = (projectId) =>
   `project:${projectId}:repository_state`;
 
 const toCommittedProjectStateEvent = ({ event, committedId, projectId }) => ({
-  committed_id: committedId,
-  id: `repository-${projectId}-${committedId}`,
-  client_id: "repository",
+  ...structuredClone(event),
+  committedId,
+  id:
+    typeof event?.id === "string" && event.id.length > 0
+      ? event.id
+      : `repository-${projectId}-${committedId}`,
   partitions: [projectRepositoryStatePartitionFor(projectId)],
-  event: structuredClone(event),
-  status_updated_at: committedId,
+  projectId: event?.projectId || projectId,
+  meta: {
+    ...(event?.meta ? structuredClone(event.meta) : {}),
+    clientId: event?.meta?.clientId || "repository",
+    clientTs: Number.isFinite(Number(event?.meta?.clientTs))
+      ? Number(event.meta.clientTs)
+      : committedId,
+  },
+  created: committedId,
 });
 
 const replayEventsToRepositoryState = ({
@@ -69,18 +79,13 @@ export const createProjectRepositoryRuntime = async ({
         initialState: () => createInitialState(),
         reduce: ({ state, event, partition }) => {
           if (partition !== projectPartition) return state;
-          const repositoryEvent = event?.event;
-          if (
-            !repositoryEvent ||
-            typeof repositoryEvent !== "object" ||
-            Array.isArray(repositoryEvent)
-          ) {
+          if (!event || typeof event !== "object" || Array.isArray(event)) {
             return state;
           }
 
           const nextState = reduceEventToState({
             repositoryState: state,
-            event: repositoryEvent,
+            event,
           });
           return nextState === undefined ? state : nextState;
         },

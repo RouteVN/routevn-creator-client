@@ -15,19 +15,34 @@ export const createLayoutCommandApi = (shared) => ({
   }) {
     const context = await shared.ensureCommandContext();
     const nextLayoutId = layoutId || shared.createId();
+    const resolvedIndex = shared.resolveResourceIndex({
+      state: context.state,
+      resourceType: "layouts",
+      parentId,
+      position,
+    });
+    const resourcePartition = shared.resourceTypePartitionFor(
+      context.projectId,
+      "layouts",
+    );
 
     await shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: "layout.create",
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: "resource.create",
       payload: {
-        layoutId: nextLayoutId,
-        name,
-        layoutType,
-        elements: structuredClone(elements || createTreeCollection()),
+        resourceType: "layouts",
+        resourceId: nextLayoutId,
+        data: {
+          ...structuredClone(data || {}),
+          name,
+          layoutType,
+          elements: structuredClone(elements || createTreeCollection()),
+        },
         parentId: normalizeParentId(parentId),
+        index: resolvedIndex,
         position,
-        data: structuredClone(data || {}),
       },
       partitions: [],
     });
@@ -37,13 +52,19 @@ export const createLayoutCommandApi = (shared) => ({
 
   async renameLayoutItem({ layoutId, name }) {
     const context = await shared.ensureCommandContext();
+    const resourcePartition = shared.resourceTypePartitionFor(
+      context.projectId,
+      "layouts",
+    );
 
     await shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: "layout.rename",
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: "resource.rename",
       payload: {
-        layoutId,
+        resourceType: "layouts",
+        resourceId: layoutId,
         name,
       },
       partitions: [],
@@ -52,13 +73,19 @@ export const createLayoutCommandApi = (shared) => ({
 
   async deleteLayoutItem({ layoutId }) {
     const context = await shared.ensureCommandContext();
+    const resourcePartition = shared.resourceTypePartitionFor(
+      context.projectId,
+      "layouts",
+    );
 
     await shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: "layout.delete",
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: "resource.delete",
       payload: {
-        layoutId,
+        resourceType: "layouts",
+        resourceId: layoutId,
       },
       partitions: [],
     });
@@ -71,20 +98,27 @@ export const createLayoutCommandApi = (shared) => ({
     index,
   }) {
     const context = await shared.ensureCommandContext();
-    const resolvedIndex = shared.resolveLayoutIndex({
+    const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
+      resourceType: "layouts",
       parentId,
       position,
       index,
       movingId: layoutId,
     });
+    const resourcePartition = shared.resourceTypePartitionFor(
+      context.projectId,
+      "layouts",
+    );
 
     await shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: "layout.reorder",
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: "resource.move",
       payload: {
-        layoutId,
+        resourceType: "layouts",
+        resourceId: layoutId,
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,

@@ -43,6 +43,10 @@ const updater = {
 
 // Create subject for inter-component communication
 const subject = new Subject();
+const collabConfig = {
+  endpointUrl: "ws://127.0.0.1:8787/sync",
+  debugEnabled: false,
+};
 
 // Create project service (web version)
 const projectService = await createWebProjectServiceWithCollab({
@@ -50,6 +54,7 @@ const projectService = await createWebProjectServiceWithCollab({
   filePicker,
   subject,
   db: appDb,
+  collabConfig,
 });
 
 // Create app service (web version)

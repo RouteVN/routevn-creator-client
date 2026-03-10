@@ -11,7 +11,18 @@ This document defines the required end-state write contract for the current plat
 
 ## Write Path Contract
 
-- Persist only typed domain commands/events (`scene.*`, `section.*`, `line.*`, `resource.*`, `layout.*`, `variable.*`, `project.update`).
+- Persist only typed domain commands/events.
+- End-state command families should be:
+  - `project.*`
+  - `scene.*`
+  - `section.*`
+  - `line.*`
+  - `resource.*`
+  - `layout.element.*`
+- Collection-level authored entities should converge on `resource.*`.
+- `variables` belong under `resource.*`.
+- `layouts` should use `resource.*` for collection lifecycle, while
+  `layout.element.*` remains separate for internal layout editing.
 - Do not persist intermediary legacy repository mutation events:
   - `set`
   - `unset`

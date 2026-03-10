@@ -1,4 +1,6 @@
 import { createSyncServer, createSqliteSyncStore } from "insieme/server";
+import { validateCommandSubmitItem } from "insieme/client";
+import { committedEventToCommand } from "../../src/collab/index.js";
 import { processCommand } from "../../src/domain/engine.js";
 import { createEmptyProjectState } from "../../src/domain/model.js";
 import { validateCommand } from "../../src/domain/validateCommand.js";
@@ -47,19 +49,12 @@ const ensureProjectState = (projectId) => {
 };
 
 const commandFromItem = (item) => {
-  const payload = item?.event?.payload || {};
-  const partitions = Array.isArray(item?.partitions) ? item.partitions : [];
-  return {
-    id: payload.commandId || item.id,
-    projectId: payload.projectId || parseProjectIdFromPartitions(partitions),
-    partition: partitions[0],
-    partitions,
-    type: payload.schema,
-    payload: payload.data,
-    commandVersion: payload.commandVersion,
-    actor: payload.actor,
-    clientTs: payload.clientTs,
-  };
+  validateCommandSubmitItem(item);
+  const command = committedEventToCommand(item);
+  if (!command) {
+    throw new Error("failed to convert normalized submit item to command");
+  }
+  return command;
 };
 
 const server = createSyncServer({
@@ -88,12 +83,6 @@ const server = createSyncServer({
   },
   validation: {
     validate: async (item) => {
-      if (!item?.event || item.event.type !== "event") {
-        const error = new Error("invalid event");
-        error.code = "validation_failed";
-        throw error;
-      }
-
       const command = commandFromItem(item);
       if (!command.projectId) {
         const error = new Error("missing projectId");

@@ -52,15 +52,32 @@ const loadCloudProjects = async ({
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, apiService, store, render } = deps;
   const platform = appService.getPlatform();
   store.setPlatform({ platform: platform });
   const authUser = getPersistedAuthenticatedUser(appService);
+  const cloudSession = getAuthenticatedSession(appService);
   store.setAuthUser({ user: authUser });
   store.setCloudProjects({ projects: [] });
 
-  const projects = await appService.loadAllProjects();
+  const projectsPromise = appService.loadAllProjects();
+  const cloudProjectsPromise = cloudSession
+    ? loadCloudProjects({
+        appService,
+        apiService,
+        store,
+        authToken: cloudSession.authToken,
+      }).catch((error) => {
+        console.error("Failed to load cloud projects:", error);
+        appService.showToast(
+          "Failed to load cloud projects. Please try again later.",
+        );
+      })
+    : Promise.resolve();
+
+  const projects = await projectsPromise;
   store.setProjects({ projects: projects });
+  await cloudProjectsPromise;
   render();
 };
 

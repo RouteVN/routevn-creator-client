@@ -33,7 +33,7 @@ All mutations are commands. UI must only submit commands from this catalog.
 - `scene.rename`: `{ sceneId, name }`
 - `scene.delete`: `{ sceneId }`
 - `scene.set_initial`: `{ sceneId }`
-- `scene.reorder`: `{ sceneId, index }`
+- `scene.move`: `{ sceneId, index }`
 
 - `section.create`: `{ sectionId, sceneId, name, index? }`
 - `section.rename`: `{ sectionId, name }`
@@ -48,26 +48,24 @@ All mutations are commands. UI must only submit commands from this catalog.
 ## Resource Commands
 
 - `resource.create`: `{ resourceType, resourceId, data, parentId?, index? }`
+- `resource.update`: `{ resourceType, resourceId, patch, replace? }`
 - `resource.rename`: `{ resourceType, resourceId, name }`
 - `resource.move`: `{ resourceType, resourceId, parentId?, index }`
 - `resource.delete`: `{ resourceType, resourceId }`
 - `resource.duplicate`: `{ resourceType, sourceId, newId }`
 
+Collection-level authored entities should converge on `resource.*`, including:
+
+- media/resource collections (`images`, `sounds`, `videos`, `fonts`, `colors`, `typography`, `characters`, `transforms`, `tweens`, `components`)
+- `variables`
+- `layouts`
+
 ## Layout Commands
 
-- `layout.create`: `{ layoutId, name, layoutType }`
-- `layout.rename`: `{ layoutId, name }`
-- `layout.delete`: `{ layoutId }`
 - `layout.element.create`: `{ layoutId, elementId, parentId?, index?, element }`
 - `layout.element.update`: `{ layoutId, elementId, patch, replace? }`
 - `layout.element.move`: `{ layoutId, elementId, parentId?, index }`
 - `layout.element.delete`: `{ layoutId, elementId }`
-
-## Variable Commands
-
-- `variable.create`: `{ variableId, name, variableType, initialValue }`
-- `variable.update`: `{ variableId, patch, replace? }`
-- `variable.delete`: `{ variableId }`
 
 ## Validation Rules
 

@@ -5,11 +5,6 @@ const createResourceCollection = () => ({
   tree: [],
 });
 
-const createVariableCollection = () => ({
-  items: {},
-  tree: [],
-});
-
 export const createEmptyProjectState = ({
   projectId,
   name = "",
@@ -36,9 +31,6 @@ export const createEmptyProjectState = ({
     sections: {},
     lines: {},
     resources,
-    layouts: {},
-    layoutTree: [],
-    variables: createVariableCollection(),
   };
 };
 

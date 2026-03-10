@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { commandToSyncEvent } from "insieme/client";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
@@ -45,6 +46,26 @@ const toUncommittedSyncSubmissionEvents = ({
     : 0;
   const startIndex = Math.min(cursor, normalizedEvents.length);
   return toSyncSubmissionEvents(normalizedEvents.slice(startIndex));
+};
+
+const toReplaySubmissionEvent = ({ repositoryEvent, actor }) => {
+  assertRepositoryCommandEvent(repositoryEvent);
+  const command = repositoryEventToCommand(repositoryEvent);
+  const replayCommand = {
+    ...command,
+    actor: {
+      userId: actor?.userId,
+      clientId: actor?.clientId,
+    },
+  };
+
+  return {
+    id: replayCommand.id,
+    partitions: Array.isArray(repositoryEvent?.partitions)
+      ? [...repositoryEvent.partitions]
+      : [],
+    ...commandToSyncEvent(replayCommand),
+  };
 };
 
 const summarizeRepositoryEventsForSync = (events = []) => {
@@ -313,7 +334,7 @@ export const createWebProjectServiceAdapters = ({
         "creating local-only session (backend transport not attached)",
         {
           projectId,
-          hint: "Set collabEndpoint or use default wss://127.0.0.1:8787/sync auto-connect.",
+          hint: "Configure the web collab endpoint in src/setup.web.js to attach backend auto-connect.",
         },
       );
     },
@@ -385,9 +406,7 @@ export const createWebProjectServiceAdapters = ({
         clientStore,
         logger: (entry) => {
           if (entry?.event === "connected") {
-            const globalLastCommittedId = Number(
-              entry?.global_last_committed_id,
-            );
+            const globalLastCommittedId = Number(entry?.globalLastCommittedId);
             if (Number.isFinite(globalLastCommittedId)) {
               collabLog("debug", "connected cursor", {
                 projectId: resolvedProjectId,
@@ -417,9 +436,9 @@ export const createWebProjectServiceAdapters = ({
                   commandId: command?.id || null,
                   commandType: command?.type || null,
                   committedId: Number.isFinite(
-                    Number(committedEvent?.committed_id),
+                    Number(committedEvent?.committedId),
                   )
-                    ? Number(committedEvent.committed_id)
+                    ? Number(committedEvent.committedId)
                     : null,
                 });
                 return;
@@ -466,7 +485,7 @@ export const createWebProjectServiceAdapters = ({
               }
             };
 
-            const committedId = Number(committedEvent?.committed_id);
+            const committedId = Number(committedEvent?.committedId);
             const hasCommittedId = Number.isFinite(committedId);
             const lastCommittedId = await ensureCommittedIdLoaded(
               projectId,
@@ -573,18 +592,19 @@ export const createWebProjectServiceAdapters = ({
             localCommittedCursor,
             localRepositoryEventCount: repositoryEvents.length,
             uncommittedEventCount: uncommittedEvents.length,
-            firstUncommittedSchema:
-              uncommittedEvents[0]?.event?.payload?.schema || null,
-            firstUncommittedProjectId:
-              uncommittedEvents[0]?.event?.payload?.projectId || null,
+            firstUncommittedType: uncommittedEvents[0]?.type || null,
+            firstUncommittedProjectId: uncommittedEvents[0]?.projectId || null,
           });
 
           if (uncommittedEvents.length > 0) {
+            const actor = collabSession.getActor();
             for (const entry of uncommittedEvents) {
-              await collabSession.submitEvent({
-                partitions: entry.partitions,
-                event: entry.event,
-              });
+              await collabSession.submitEvent(
+                toReplaySubmissionEvent({
+                  repositoryEvent: entry,
+                  actor,
+                }),
+              );
             }
             await collabSession.flushDrafts();
             await collabSession.syncNow({

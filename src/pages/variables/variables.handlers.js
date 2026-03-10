@@ -5,14 +5,32 @@ import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
+const createVariableResourceData = ({
+  name,
+  scope = "global",
+  type = "string",
+  defaultValue = "",
+} = {}) => ({
+  itemType: "variable",
+  name,
+  scope,
+  type,
+  variableType: type,
+  default: defaultValue,
+  value: defaultValue,
+});
+
+const getVariablesData = ({ repositoryState } = {}) => {
+  return repositoryState?.variables ?? EMPTY_TREE;
+};
+
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
 };
 
-const syncVariablesData = ({ store, repositoryState, projectService } = {}) => {
-  const state = repositoryState ?? projectService?.getState?.();
+const syncVariablesData = ({ store, repositoryState } = {}) => {
   store.setItems({
-    variablesData: state?.variables ?? EMPTY_TREE,
+    variablesData: getVariablesData({ repositoryState }),
   });
 };
 
@@ -34,7 +52,10 @@ export const handleBeforeMount = (deps) => {
 
 const refreshVariablesData = async (deps) => {
   const { store, render, projectService } = deps;
-  syncVariablesData({ store, projectService });
+  syncVariablesData({
+    store,
+    repositoryState: projectService.getState(),
+  });
   render();
 };
 
@@ -113,12 +134,15 @@ export const handleVariableCreated = async (deps, payload) => {
     default: defaultValue,
   } = payload._event.detail;
 
-  await projectService.createVariableItem({
-    variableId: nanoid(),
-    name,
-    scope,
-    type,
-    defaultValue,
+  await projectService.createResourceItem({
+    resourceType: "variables",
+    resourceId: nanoid(),
+    data: createVariableResourceData({
+      name,
+      scope,
+      type,
+      defaultValue,
+    }),
     parentId: groupId,
     position: "last",
   });
@@ -134,12 +158,14 @@ export const handleVariableUpdated = async (deps, payload) => {
     return;
   }
 
-  await projectService.updateVariableItem({
-    variableId: itemId,
+  await projectService.updateResourceItem({
+    resourceType: "variables",
+    resourceId: itemId,
     patch: {
       name,
       scope,
       default: defaultValue,
+      value: defaultValue,
     },
   });
 
@@ -152,8 +178,9 @@ export const handleVariableDelete = async (deps, payload) => {
   const { store, projectService } = deps;
   const { itemId } = payload._event.detail;
 
-  await projectService.deleteVariableItem({
-    variableId: itemId,
+  await projectService.deleteResourceItem({
+    resourceType: "variables",
+    resourceId: itemId,
   });
 
   if (store.selectSelectedItemId() === itemId) {

@@ -104,98 +104,6 @@ const buildTreeFromParentMap = ({
   return tree;
 };
 
-const projectRepositoryLayouts = ({ repositoryLayoutsCollection = {} }) => {
-  const repositoryLayouts = repositoryLayoutsCollection.items || {};
-  const { parentById: treeParentById } = buildHierarchyParentMap(
-    getHierarchyNodes(repositoryLayoutsCollection),
-  );
-  const fallbackParentById = new Map(
-    Object.entries(repositoryLayouts).map(([layoutId, layout]) => [
-      layoutId,
-      layout?.parentId ?? null,
-    ]),
-  );
-  const result = {};
-  for (const [layoutId, repositoryLayout] of Object.entries(
-    repositoryLayouts,
-  )) {
-    if (!repositoryLayout || typeof repositoryLayout !== "object") continue;
-    const clonedLayout = cloneOr(repositoryLayout, {});
-    const entryType = clonedLayout.type || "layout";
-    const createdAt = toFiniteTimestamp(repositoryLayout.createdAt, Date.now());
-    const updatedAt = toFiniteTimestamp(repositoryLayout.updatedAt, createdAt);
-    const parentId = treeParentById.has(layoutId)
-      ? treeParentById.get(layoutId)
-      : (fallbackParentById.get(layoutId) ?? null);
-
-    if (entryType === "folder") {
-      result[layoutId] = {
-        ...clonedLayout,
-        id: layoutId,
-        type: "folder",
-        name: repositoryLayout.name || `Folder ${layoutId}`,
-        parentId,
-        createdAt,
-        updatedAt,
-      };
-      continue;
-    }
-
-    const repositoryElements = repositoryLayout.elements || {
-      items: {},
-      tree: [],
-    };
-    const elementItems = repositoryElements.items || {};
-    const { parentById, orderedIds } = buildHierarchyParentMap(
-      getHierarchyNodes(repositoryElements),
-    );
-
-    const elements = {};
-    for (const [elementId, element] of Object.entries(elementItems)) {
-      const parentId = parentById.has(elementId)
-        ? parentById.get(elementId)
-        : (element?.parentId ?? null);
-      const children = [];
-      elements[elementId] = {
-        id: elementId,
-        ...cloneOr(element, {}),
-        parentId,
-        children,
-      };
-    }
-
-    for (const id of orderedIds) {
-      const parentId = parentById.get(id) ?? null;
-      if (!parentId) continue;
-      if (!elements[parentId] || !elements[id]) continue;
-      elements[parentId].children.push(id);
-    }
-
-    const rootElementOrder = appendMissingIds(
-      orderedIds.filter((id) => (parentById.get(id) ?? null) === null),
-      Object.keys(elements).filter((id) => {
-        const parentId = elements[id]?.parentId ?? null;
-        return !parentId || !elements[parentId];
-      }),
-    );
-
-    result[layoutId] = {
-      ...clonedLayout,
-      id: layoutId,
-      type: entryType,
-      name: repositoryLayout.name || `Layout ${layoutId}`,
-      layoutType: repositoryLayout.layoutType || "base",
-      parentId,
-      elements,
-      rootElementOrder,
-      createdAt,
-      updatedAt,
-    };
-  }
-
-  return result;
-};
-
 const projectRepositoryResources = ({ repositoryState }) => {
   const resources = Object.fromEntries(
     RESOURCE_TYPES.map((type) => [type, { items: {}, tree: [] }]),
@@ -226,94 +134,87 @@ const projectRepositoryResources = ({ repositoryState }) => {
       const parentId = parentById.has(resourceId)
         ? parentById.get(resourceId)
         : (item?.parentId ?? null);
+      const createdAt = toFiniteTimestamp(item?.createdAt, Date.now());
+      const updatedAt = toFiniteTimestamp(item?.updatedAt, createdAt);
+
+      if (resourceType === "layouts") {
+        const clonedLayout = cloneOr(item, {});
+        const entryType = clonedLayout.type || "layout";
+
+        if (entryType === "folder") {
+          resources[resourceType].items[resourceId] = {
+            id: resourceId,
+            ...clonedLayout,
+            type: "folder",
+            name: item?.name || `Folder ${resourceId}`,
+            parentId,
+            createdAt,
+            updatedAt,
+          };
+          continue;
+        }
+
+        const repositoryElements = item?.elements || { items: {}, tree: [] };
+        const elementItems = repositoryElements.items || {};
+        const { parentById: elementParentById, orderedIds: elementOrderedIds } =
+          buildHierarchyParentMap(getHierarchyNodes(repositoryElements));
+
+        const elements = {};
+        for (const [elementId, element] of Object.entries(elementItems)) {
+          const elementParentId = elementParentById.has(elementId)
+            ? elementParentById.get(elementId)
+            : (element?.parentId ?? null);
+          elements[elementId] = {
+            id: elementId,
+            ...cloneOr(element, {}),
+            parentId: elementParentId,
+            children: [],
+          };
+        }
+
+        for (const id of elementOrderedIds) {
+          const elementParentId = elementParentById.get(id) ?? null;
+          if (!elementParentId) continue;
+          if (!elements[elementParentId] || !elements[id]) continue;
+          elements[elementParentId].children.push(id);
+        }
+
+        const rootElementOrder = appendMissingIds(
+          elementOrderedIds.filter(
+            (id) => (elementParentById.get(id) ?? null) === null,
+          ),
+          Object.keys(elements).filter((id) => {
+            const elementParentId = elements[id]?.parentId ?? null;
+            return !elementParentId || !elements[elementParentId];
+          }),
+        );
+
+        resources[resourceType].items[resourceId] = {
+          id: resourceId,
+          ...clonedLayout,
+          type: entryType,
+          name: item?.name || `Layout ${resourceId}`,
+          layoutType: item?.layoutType || "base",
+          parentId,
+          elements,
+          rootElementOrder,
+          createdAt,
+          updatedAt,
+        };
+        continue;
+      }
+
       resources[resourceType].items[resourceId] = {
         id: resourceId,
         ...cloneOr(item, {}),
         parentId,
-        createdAt: toFiniteTimestamp(item?.createdAt, Date.now()),
-        updatedAt: toFiniteTimestamp(
-          item?.updatedAt,
-          toFiniteTimestamp(item?.createdAt, Date.now()),
-        ),
+        createdAt,
+        updatedAt,
       };
     }
   }
 
   return resources;
-};
-
-const projectRepositoryVariables = ({ repositoryVariables = {} }) => {
-  const result = {
-    items: {},
-    tree: [],
-  };
-  const items = repositoryVariables.items || {};
-  const { parentById, orderedIds } = buildHierarchyParentMap(
-    getHierarchyNodes(repositoryVariables),
-  );
-  const allIds = Object.keys(items);
-  const fallbackParentById = new Map(
-    Object.entries(items).map(([variableId, variable]) => [
-      variableId,
-      variable?.parentId ?? null,
-    ]),
-  );
-  result.tree = buildTreeFromParentMap({
-    orderedIds,
-    allIds,
-    parentById,
-    fallbackParentById,
-  });
-
-  for (const [variableId, variable] of Object.entries(items)) {
-    if (!variable || typeof variable !== "object") continue;
-    const parentId = parentById.has(variableId)
-      ? parentById.get(variableId)
-      : (variable?.parentId ?? null);
-    const createdAt = toFiniteTimestamp(variable.createdAt, Date.now());
-    const updatedAt = toFiniteTimestamp(variable.updatedAt, createdAt);
-
-    if (variable.type === "folder") {
-      result.items[variableId] = {
-        id: variableId,
-        ...cloneOr(variable, {}),
-        type: "folder",
-        name: variable.name || `Folder ${variableId}`,
-        parentId,
-        createdAt,
-        updatedAt,
-      };
-      continue;
-    }
-
-    const inferredType =
-      variable.type ||
-      variable.variableType ||
-      (typeof variable.default === "number" ||
-      typeof variable.value === "number"
-        ? "number"
-        : typeof variable.default === "boolean" ||
-            typeof variable.value === "boolean"
-          ? "boolean"
-          : "string");
-    const inferredDefault =
-      variable.default !== undefined
-        ? cloneOr(variable.default, "")
-        : cloneOr(variable.value, "");
-
-    result.items[variableId] = {
-      id: variableId,
-      ...cloneOr(variable, {}),
-      itemType: "variable",
-      type: inferredType,
-      default: inferredDefault,
-      parentId,
-      createdAt,
-      updatedAt,
-    };
-  }
-
-  return result;
 };
 
 export const projectRepositoryStateToDomainState = ({
@@ -457,16 +358,6 @@ export const projectRepositoryStateToDomainState = ({
     null;
 
   state.resources = projectRepositoryResources({ repositoryState });
-  state.layoutTree = structuredClone(
-    getHierarchyNodes(repositoryState?.layouts),
-  );
-  state.layouts = projectRepositoryLayouts({
-    repositoryLayoutsCollection: repositoryState?.layouts || {},
-  });
-  state.variables = projectRepositoryVariables({
-    repositoryVariables: repositoryState?.variables,
-  });
-
   state.project.createdAt = toFiniteTimestamp(
     repositoryState?.project?.createdAt,
     now,

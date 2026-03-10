@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createInMemorySyncStore, createSyncServer } from "insieme/server";
+import { validateCommandSubmitItem } from "insieme/client";
 import {
   createCommandEnvelope,
+  committedEventToCommand,
   createProjectCollabService,
 } from "../src/collab/index.js";
 import { validateCommand } from "../src/domain/validateCommand.js";
@@ -20,26 +22,13 @@ const parseToken = (token) => {
   };
 };
 
-const parseProjectIdFromPartitions = (partitions = []) => {
-  const first = partitions[0] || "";
-  const parts = first.split(":");
-  return parts.length >= 3 ? parts[1] : null;
-};
-
 const commandFromItem = (item) => {
-  const payload = item?.event?.payload || {};
-  const partitions = Array.isArray(item?.partitions) ? item.partitions : [];
-  return {
-    id: payload.commandId,
-    projectId: payload.projectId || parseProjectIdFromPartitions(partitions),
-    partition: partitions[0],
-    partitions,
-    type: payload.schema,
-    commandVersion: payload.commandVersion,
-    clientTs: payload.clientTs,
-    actor: payload.actor,
-    payload: payload.data,
-  };
+  validateCommandSubmitItem(item);
+  const command = committedEventToCommand(item);
+  if (!command) {
+    throw new Error("failed to convert normalized submit item to command");
+  }
+  return command;
 };
 
 const createInMemoryServerTransport = ({ server, connectionId }) => {
@@ -130,12 +119,6 @@ const server = createSyncServer({
   },
   validation: {
     validate: async (item) => {
-      if (item?.event?.type !== "event") {
-        const error = new Error("invalid event envelope type");
-        error.code = "validation_failed";
-        throw error;
-      }
-
       const command = commandFromItem(item);
       if (command.type.startsWith("legacy.")) {
         const error = new Error("legacy commands are not supported");

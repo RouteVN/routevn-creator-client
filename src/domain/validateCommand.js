@@ -107,7 +107,7 @@ const commandPayloadValidators = {
   [COMMAND_TYPES.SCENE_SET_INITIAL]: (payload, errors) => {
     requireFields(payload, ["sceneId"], errors);
   },
-  [COMMAND_TYPES.SCENE_REORDER]: (payload, errors) => {
+  [COMMAND_TYPES.SCENE_MOVE]: (payload, errors) => {
     requireFields(payload, ["sceneId", "index"], errors);
   },
 
@@ -166,18 +166,6 @@ const commandPayloadValidators = {
     requireFields(payload, ["resourceType", "sourceId", "newId"], errors);
   },
 
-  [COMMAND_TYPES.LAYOUT_CREATE]: (payload, errors) => {
-    requireFields(payload, ["layoutId", "name", "layoutType"], errors);
-  },
-  [COMMAND_TYPES.LAYOUT_RENAME]: (payload, errors) => {
-    requireFields(payload, ["layoutId", "name"], errors);
-  },
-  [COMMAND_TYPES.LAYOUT_DELETE]: (payload, errors) => {
-    requireFields(payload, ["layoutId"], errors);
-  },
-  [COMMAND_TYPES.LAYOUT_REORDER]: (payload, errors) => {
-    requireFields(payload, ["layoutId", "index"], errors);
-  },
   [COMMAND_TYPES.LAYOUT_ELEMENT_CREATE]: (payload, errors) => {
     requireFields(payload, ["layoutId", "elementId", "element"], errors);
   },
@@ -189,20 +177,6 @@ const commandPayloadValidators = {
   },
   [COMMAND_TYPES.LAYOUT_ELEMENT_DELETE]: (payload, errors) => {
     requireFields(payload, ["layoutId", "elementId"], errors);
-  },
-
-  [COMMAND_TYPES.VARIABLE_CREATE]: (payload, errors) => {
-    requireFields(
-      payload,
-      ["variableId", "name", "variableType", "initialValue"],
-      errors,
-    );
-  },
-  [COMMAND_TYPES.VARIABLE_UPDATE]: (payload, errors) => {
-    requireFields(payload, ["variableId", "patch"], errors);
-  },
-  [COMMAND_TYPES.VARIABLE_DELETE]: (payload, errors) => {
-    requireFields(payload, ["variableId"], errors);
   },
 };
 
