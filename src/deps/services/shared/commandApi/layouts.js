@@ -2,6 +2,7 @@ import {
   createTreeCollection,
   normalizeParentId,
 } from "../projectRepository.js";
+import { COMMAND_TYPES } from "../../../../domain/commandCatalog.js";
 
 export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({
@@ -30,7 +31,7 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.create",
+      type: COMMAND_TYPES.RESOURCE_CREATE,
       payload: {
         resourceType: "layouts",
         resourceId: nextLayoutId,
@@ -61,7 +62,7 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.rename",
+      type: COMMAND_TYPES.RESOURCE_RENAME,
       payload: {
         resourceType: "layouts",
         resourceId: layoutId,
@@ -82,7 +83,7 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.delete",
+      type: COMMAND_TYPES.RESOURCE_DELETE,
       payload: {
         resourceType: "layouts",
         resourceId: layoutId,
@@ -115,7 +116,7 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: "resource.move",
+      type: COMMAND_TYPES.RESOURCE_MOVE,
       payload: {
         resourceType: "layouts",
         resourceId: layoutId,
@@ -133,7 +134,7 @@ export const createLayoutCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "layouts",
-      type: "layout.element.update",
+      type: COMMAND_TYPES.LAYOUT_ELEMENT_UPDATE,
       payload: {
         layoutId,
         elementId,
@@ -165,7 +166,7 @@ export const createLayoutCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "layouts",
-      type: "layout.element.create",
+      type: COMMAND_TYPES.LAYOUT_ELEMENT_CREATE,
       payload: {
         layoutId,
         elementId: nextElementId,
@@ -200,7 +201,7 @@ export const createLayoutCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "layouts",
-      type: "layout.element.move",
+      type: COMMAND_TYPES.LAYOUT_ELEMENT_MOVE,
       payload: {
         layoutId,
         elementId,
@@ -218,7 +219,7 @@ export const createLayoutCommandApi = (shared) => ({
     await shared.submitCommandWithContext({
       context,
       scope: "layouts",
-      type: "layout.element.delete",
+      type: COMMAND_TYPES.LAYOUT_ELEMENT_DELETE,
       payload: {
         layoutId,
         elementId,

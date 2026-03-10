@@ -19,8 +19,7 @@ Date baseline: February 24, 2026.
 ## Spec Index
 
 1. `01-domain-model.md`
-2. `02-command-catalog.md`
-3. `03-event-model.md`
+2. `02-command-and-event-model.md`
 4. `04-sync-protocol.md`
 5. `05-storage.md`
 6. `09-partitioning-and-write-contract.md`

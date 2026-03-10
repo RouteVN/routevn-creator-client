@@ -1,7 +1,11 @@
 import { processCommand } from "../../../domain/engine.js";
-import { COMMAND_VERSION } from "../../../domain/constants.js";
 import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
+import {
+  COMMAND_EVENT_MODEL,
+  COMMAND_TYPES,
+  isSupportedCommandType,
+} from "../../../domain/commandCatalog.js";
 import {
   commandToSyncEvent,
   committedSyncEventToCommand,
@@ -154,9 +158,6 @@ export const findLineLocation = (state, lineId) => {
   return null;
 };
 
-const hasCommandTypePrefix = (commandType, prefix) =>
-  typeof commandType === "string" && commandType.startsWith(prefix);
-
 const generateCommandId = () =>
   typeof crypto?.randomUUID === "function"
     ? crypto.randomUUID()
@@ -214,7 +215,7 @@ export const createProjectCreatedCommand = ({
     projectId: resolvedProjectId,
     partition: basePartition,
     partitions: resolvedPartitions,
-    type: "project.created",
+    type: COMMAND_TYPES.PROJECT_CREATED,
     payload: {
       state: structuredClone(state),
     },
@@ -222,7 +223,7 @@ export const createProjectCreatedCommand = ({
       actor || defaultInitializationActor(resolvedProjectId),
     ),
     clientTs: Number.isFinite(Number(clientTs)) ? Number(clientTs) : Date.now(),
-    commandVersion: COMMAND_VERSION,
+    commandVersion: COMMAND_EVENT_MODEL.commandVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };
 };
@@ -283,7 +284,7 @@ export const createRepositoryCommandEvent = ({ command }) => {
 export const repositoryEventToCommand = (repositoryEvent) => {
   assertRepositoryCommandEvent(repositoryEvent);
   const command = committedSyncEventToCommand(repositoryEvent, {
-    defaultCommandVersion: COMMAND_VERSION,
+    defaultCommandVersion: COMMAND_EVENT_MODEL.commandVersion,
   });
   if (!command) {
     throw new Error("Failed to convert repository event to command");
@@ -315,13 +316,7 @@ export const createProjectCreatedRepositoryEvent = ({
   });
 
 export const isDirectDomainProjectionCommand = (command) =>
-  command?.type === "project.created" ||
-  command?.type === "project.update" ||
-  hasCommandTypePrefix(command?.type, "resource.") ||
-  hasCommandTypePrefix(command?.type, "scene.") ||
-  hasCommandTypePrefix(command?.type, "section.") ||
-  hasCommandTypePrefix(command?.type, "line.") ||
-  hasCommandTypePrefix(command?.type, "layout.");
+  isSupportedCommandType(command?.type);
 
 const flattenTreeIds = (nodes, output = []) => {
   if (!Array.isArray(nodes)) return output;
