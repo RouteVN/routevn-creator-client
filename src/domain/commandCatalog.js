@@ -159,7 +159,6 @@ const assertLayoutElementExists = (state, layoutId, elementId) => {
 
 const COMMAND_DEFINITIONS = [
   {
-    key: "PROJECT_CREATED",
     type: "project.created",
     scope: "settings",
     payload: {
@@ -168,7 +167,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "PROJECT_UPDATE",
     type: "project.update",
     scope: "settings",
     payload: {
@@ -177,7 +175,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SCENE_CREATE",
     type: "scene.create",
     scope: "story",
     payload: {
@@ -199,7 +196,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SCENE_UPDATE",
     type: "scene.update",
     scope: "story",
     payload: {
@@ -212,7 +208,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SCENE_RENAME",
     type: "scene.rename",
     scope: "story",
     payload: {
@@ -224,7 +219,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SCENE_DELETE",
     type: "scene.delete",
     scope: "story",
     payload: {
@@ -236,7 +230,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SCENE_SET_INITIAL",
     type: "scene.set_initial",
     scope: "story",
     payload: {
@@ -254,7 +247,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SCENE_MOVE",
     type: "scene.move",
     scope: "story",
     payload: {
@@ -273,7 +265,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SECTION_CREATE",
     type: "section.create",
     scope: "story",
     payload: {
@@ -302,7 +293,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SECTION_RENAME",
     type: "section.rename",
     scope: "story",
     payload: {
@@ -314,7 +304,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SECTION_DELETE",
     type: "section.delete",
     scope: "story",
     payload: {
@@ -326,7 +315,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "SECTION_REORDER",
     type: "section.reorder",
     scope: "story",
     payload: {
@@ -341,7 +329,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LINE_INSERT_AFTER",
     type: "line.insert_after",
     scope: "story",
     payload: {
@@ -373,7 +360,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LINE_UPDATE_ACTIONS",
     type: "line.update_actions",
     scope: "story",
     payload: {
@@ -387,7 +373,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LINE_DELETE",
     type: "line.delete",
     scope: "story",
     payload: {
@@ -399,7 +384,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LINE_MOVE",
     type: "line.move",
     scope: "story",
     payload: {
@@ -416,7 +400,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "RESOURCE_CREATE",
     type: "resource.create",
     scope: "resources",
     payload: {
@@ -438,7 +421,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "RESOURCE_UPDATE",
     type: "resource.update",
     scope: "resources",
     payload: {
@@ -484,7 +466,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "RESOURCE_RENAME",
     type: "resource.rename",
     scope: "resources",
     payload: {
@@ -498,7 +479,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "RESOURCE_MOVE",
     type: "resource.move",
     scope: "resources",
     payload: {
@@ -515,7 +495,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "RESOURCE_DELETE",
     type: "resource.delete",
     scope: "resources",
     payload: {
@@ -529,7 +508,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "RESOURCE_DUPLICATE",
     type: "resource.duplicate",
     scope: "resources",
     payload: {
@@ -552,7 +530,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LAYOUT_ELEMENT_CREATE",
     type: "layout.element.create",
     scope: "layouts",
     payload: {
@@ -574,7 +551,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LAYOUT_ELEMENT_UPDATE",
     type: "layout.element.update",
     scope: "layouts",
     payload: {
@@ -589,7 +565,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LAYOUT_ELEMENT_MOVE",
     type: "layout.element.move",
     scope: "layouts",
     payload: {
@@ -605,7 +580,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    key: "LAYOUT_ELEMENT_DELETE",
     type: "layout.element.delete",
     scope: "layouts",
     payload: {
@@ -621,7 +595,10 @@ const COMMAND_DEFINITIONS = [
 
 export const COMMAND_TYPES = Object.freeze(
   Object.fromEntries(
-    COMMAND_DEFINITIONS.map((definition) => [definition.key, definition.type]),
+    COMMAND_DEFINITIONS.map((definition) => [
+      definition.type.replaceAll(".", "_").toUpperCase(),
+      definition.type,
+    ]),
   ),
 );
 
