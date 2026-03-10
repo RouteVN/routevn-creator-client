@@ -85,20 +85,6 @@ const validateOptionalBooleanField = (payload, field, errors) => {
   }
 };
 
-const buildCommandDefinition = ({
-  key,
-  type,
-  scope,
-  payload = {},
-  assertPreconditions,
-}) => ({
-  key,
-  type,
-  scope,
-  payload,
-  assertPreconditions,
-});
-
 const assertSceneExists = (state, sceneId, details = {}) => {
   assertPrecondition(!!state.scenes?.[sceneId], "scene not found", {
     sceneId,
@@ -172,7 +158,7 @@ const assertLayoutElementExists = (state, layoutId, elementId) => {
 };
 
 const COMMAND_DEFINITIONS = [
-  buildCommandDefinition({
+  {
     key: "PROJECT_CREATED",
     type: "project.created",
     scope: "settings",
@@ -180,8 +166,8 @@ const COMMAND_DEFINITIONS = [
       requiredFields: ["state"],
       objectFields: ["state"],
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "PROJECT_UPDATE",
     type: "project.update",
     scope: "settings",
@@ -189,8 +175,8 @@ const COMMAND_DEFINITIONS = [
       requiredFields: ["patch"],
       objectFields: ["patch"],
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SCENE_CREATE",
     type: "scene.create",
     scope: "story",
@@ -211,8 +197,8 @@ const COMMAND_DEFINITIONS = [
         assertSceneFolderParent(state, sceneId, parentId);
       }
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SCENE_UPDATE",
     type: "scene.update",
     scope: "story",
@@ -224,8 +210,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertSceneExists(state, command.payload.sceneId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SCENE_RENAME",
     type: "scene.rename",
     scope: "story",
@@ -236,8 +222,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertSceneExists(state, command.payload.sceneId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SCENE_DELETE",
     type: "scene.delete",
     scope: "story",
@@ -248,8 +234,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertSceneExists(state, command.payload.sceneId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SCENE_SET_INITIAL",
     type: "scene.set_initial",
     scope: "story",
@@ -266,8 +252,8 @@ const COMMAND_DEFINITIONS = [
         { sceneId },
       );
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SCENE_MOVE",
     type: "scene.move",
     scope: "story",
@@ -285,8 +271,8 @@ const COMMAND_DEFINITIONS = [
         assertSceneFolderParent(state, sceneId, parentId);
       }
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SECTION_CREATE",
     type: "section.create",
     scope: "story",
@@ -314,8 +300,8 @@ const COMMAND_DEFINITIONS = [
         },
       );
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SECTION_RENAME",
     type: "section.rename",
     scope: "story",
@@ -326,8 +312,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertSectionExists(state, command.payload.sectionId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SECTION_DELETE",
     type: "section.delete",
     scope: "story",
@@ -338,8 +324,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertSectionExists(state, command.payload.sectionId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "SECTION_REORDER",
     type: "section.reorder",
     scope: "story",
@@ -353,8 +339,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertSectionExists(state, command.payload.sectionId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LINE_INSERT_AFTER",
     type: "line.insert_after",
     scope: "story",
@@ -385,8 +371,8 @@ const COMMAND_DEFINITIONS = [
         );
       }
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LINE_UPDATE_ACTIONS",
     type: "line.update_actions",
     scope: "story",
@@ -399,8 +385,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertLineExists(state, command.payload.lineId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LINE_DELETE",
     type: "line.delete",
     scope: "story",
@@ -411,8 +397,8 @@ const COMMAND_DEFINITIONS = [
     assertPreconditions: (state, command) => {
       assertLineExists(state, command.payload.lineId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LINE_MOVE",
     type: "line.move",
     scope: "story",
@@ -428,8 +414,8 @@ const COMMAND_DEFINITIONS = [
       assertLineExists(state, lineId);
       assertSectionExists(state, toSectionId, { toSectionId });
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "RESOURCE_CREATE",
     type: "resource.create",
     scope: "resources",
@@ -450,8 +436,8 @@ const COMMAND_DEFINITIONS = [
         { resourceType, resourceId },
       );
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "RESOURCE_UPDATE",
     type: "resource.update",
     scope: "resources",
@@ -496,8 +482,8 @@ const COMMAND_DEFINITIONS = [
         }
       }
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "RESOURCE_RENAME",
     type: "resource.rename",
     scope: "resources",
@@ -510,8 +496,8 @@ const COMMAND_DEFINITIONS = [
       const { resourceType, resourceId } = command.payload;
       assertResourceExists(state, resourceType, resourceId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "RESOURCE_MOVE",
     type: "resource.move",
     scope: "resources",
@@ -527,8 +513,8 @@ const COMMAND_DEFINITIONS = [
       const { resourceType, resourceId } = command.payload;
       assertResourceExists(state, resourceType, resourceId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "RESOURCE_DELETE",
     type: "resource.delete",
     scope: "resources",
@@ -541,8 +527,8 @@ const COMMAND_DEFINITIONS = [
       const { resourceType, resourceId } = command.payload;
       assertResourceExists(state, resourceType, resourceId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "RESOURCE_DUPLICATE",
     type: "resource.duplicate",
     scope: "resources",
@@ -564,8 +550,8 @@ const COMMAND_DEFINITIONS = [
         { resourceType, newId },
       );
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LAYOUT_ELEMENT_CREATE",
     type: "layout.element.create",
     scope: "layouts",
@@ -586,8 +572,8 @@ const COMMAND_DEFINITIONS = [
         { layoutId, elementId },
       );
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LAYOUT_ELEMENT_UPDATE",
     type: "layout.element.update",
     scope: "layouts",
@@ -601,8 +587,8 @@ const COMMAND_DEFINITIONS = [
       const { layoutId, elementId } = command.payload;
       assertLayoutElementExists(state, layoutId, elementId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LAYOUT_ELEMENT_MOVE",
     type: "layout.element.move",
     scope: "layouts",
@@ -617,8 +603,8 @@ const COMMAND_DEFINITIONS = [
       const { layoutId, elementId } = command.payload;
       assertLayoutElementExists(state, layoutId, elementId);
     },
-  }),
-  buildCommandDefinition({
+  },
+  {
     key: "LAYOUT_ELEMENT_DELETE",
     type: "layout.element.delete",
     scope: "layouts",
@@ -630,7 +616,7 @@ const COMMAND_DEFINITIONS = [
       const { layoutId, elementId } = command.payload;
       assertLayoutElementExists(state, layoutId, elementId);
     },
-  }),
+  },
 ];
 
 export const COMMAND_TYPES = Object.freeze(
