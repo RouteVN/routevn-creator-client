@@ -828,13 +828,21 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
   );
 
   return dedupeFileReferences([
-    ...extractFileIdsFromRenderState(pickByIds(resources.images, selection.images)),
-    ...extractFileIdsFromRenderState(pickByIds(resources.videos, selection.videos)),
-    ...extractFileIdsFromRenderState(pickByIds(resources.sounds, selection.sounds)),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.images, selection.images),
+    ),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.videos, selection.videos),
+    ),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.sounds, selection.sounds),
+    ),
     ...extractFileIdsFromRenderState(
       pickFontsByFamily(resources.fonts, fontFamilies),
     ),
-    ...extractFileIdsFromRenderState(pickByIds(resources.layouts, selection.layouts)),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.layouts, selection.layouts),
+    ),
     ...extractFileIdsFromRenderState(
       pickByIds(resources.transforms, selection.transforms),
     ),
@@ -875,13 +883,21 @@ export const extractFileIdsForLayouts = (projectData, layoutIds = []) => {
   );
 
   return dedupeFileReferences([
-    ...extractFileIdsFromRenderState(pickByIds(resources.images, selection.images)),
-    ...extractFileIdsFromRenderState(pickByIds(resources.videos, selection.videos)),
-    ...extractFileIdsFromRenderState(pickByIds(resources.sounds, selection.sounds)),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.images, selection.images),
+    ),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.videos, selection.videos),
+    ),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.sounds, selection.sounds),
+    ),
     ...extractFileIdsFromRenderState(
       pickFontsByFamily(resources.fonts, fontFamilies),
     ),
-    ...extractFileIdsFromRenderState(pickByIds(resources.layouts, selection.layouts)),
+    ...extractFileIdsFromRenderState(
+      pickByIds(resources.layouts, selection.layouts),
+    ),
     ...extractFileIdsFromRenderState(
       pickByIds(resources.transforms, selection.transforms),
     ),
@@ -902,10 +918,7 @@ export const extractInitialHybridSceneIds = (projectData, sceneId) => {
     return [];
   }
 
-  return [
-    sceneId,
-    ...extractTransitionTargetSceneIds(projectData, sceneId),
-  ];
+  return [sceneId, ...extractTransitionTargetSceneIds(projectData, sceneId)];
 };
 
 export const layoutHierarchyStructureToRenderState = (
