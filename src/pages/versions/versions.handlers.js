@@ -1,9 +1,9 @@
 import { nanoid } from "nanoid";
-import { constructProjectData } from "../../internal/projectData.js";
 import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
-} from "../../internal/projectResources.js";
+  constructProjectData,
+} from "../../internal/project/projection.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, projectService, appService } = deps;

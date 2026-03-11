@@ -1,4 +1,4 @@
-import { createCatalogPageStore } from "../../deps/features/resourcePages/catalog/createCatalogPageStore.js";
+import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 
 const createTransformForm = ({ editMode = false } = {}) => ({
   title: editMode ? "Edit Transform" : "Add Transform",

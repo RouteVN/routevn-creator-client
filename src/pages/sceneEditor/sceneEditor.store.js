@@ -1,8 +1,10 @@
 import { buildLayoutRenderElements } from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
-import { buildSceneEditorLineViewModels } from "../../deps/features/sceneEditing/lineViewModels.js";
-import { constructProjectData } from "../../internal/projectData.js";
-import { getSectionPresentation } from "../../internal/projectStory.js";
+import { buildSceneEditorLineViewModels } from "../../internal/ui/sceneEditor/lineViewModels.js";
+import {
+  constructProjectData,
+  getSectionPresentation,
+} from "../../internal/project/projection.js";
 
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();

@@ -1,9 +1,9 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { getFileType } from "../../internal/fileTypes.js";
-import { recursivelyCheckResource } from "../../internal/projectResources.js";
-import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
-import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
+import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
+import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 
 const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
 

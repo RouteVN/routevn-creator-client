@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
-import { recursivelyCheckResource } from "../../internal/projectResources.js";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
-import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
 const syncCharactersData = ({

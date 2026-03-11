@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
-import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
-import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
+import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
+import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 
 const {
   refreshData: handleDataChanged,

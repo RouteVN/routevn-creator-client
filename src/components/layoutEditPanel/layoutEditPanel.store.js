@@ -1,7 +1,7 @@
 import { parseAndRender } from "jempl";
 import { toFlatGroups } from "../../internal/project/tree.js";
 import { getFirstTypographyId } from "../../constants/typography.js";
-import { getVariableOptions } from "../../internal/projectVariables.js";
+import { getVariableOptions } from "../../internal/project/projection.js";
 
 const config = {
   sections: [

@@ -1,5 +1,5 @@
-import { createResourceFileExplorerHandlers } from "../../fileExplorerHandlers.js";
-import { createProjectStateStream } from "../../projectStateStream.js";
+import { createResourceFileExplorerHandlers } from "../../fileExplorer.js";
+import { createProjectStateStream } from "../../../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };

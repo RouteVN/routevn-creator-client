@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
-import { createVariablesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
-import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { createVariablesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };

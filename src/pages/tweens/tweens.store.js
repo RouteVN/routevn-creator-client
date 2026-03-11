@@ -1,5 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
-import { createCatalogPageStore } from "../../deps/features/resourcePages/catalog/createCatalogPageStore.js";
+import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { resetState } from "./tweens.constants";
 
 const createAddKeyframeForm = (property) => {

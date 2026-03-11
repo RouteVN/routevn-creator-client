@@ -2,7 +2,7 @@ import { filter, fromEvent, tap, debounceTime } from "rxjs";
 import {
   createCollabRemoteRefreshStream,
   matchesRemoteTargets,
-} from "../../deps/features/collabRefresh.js";
+} from "../../internal/ui/collabRefresh.js";
 import {
   createLayoutPreviewData,
   createSelectedLayoutOverlay,
@@ -10,8 +10,8 @@ import {
 } from "./layoutPreview.js";
 import { buildLayoutRenderElements } from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
-import { extractFileIdsFromRenderState } from "../../internal/projectPreview.js";
-import { createLayoutElementsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
+import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];

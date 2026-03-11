@@ -1,4 +1,72 @@
-import { createBundle } from "../../../internal/projectBundle.js";
+/**
+ * Bundle format:
+ * [version(1)] [indexLength(4)] [reserved(11)] [index(JSON)] [assets...] [instructions(JSON)]
+ */
+export const createBundle = async (projectData, assets = {}) => {
+  const arrayBuffers = [];
+  let currentOffset = 0;
+
+  for (const [assetId, assetData] of Object.entries(assets)) {
+    if (!assetData || !assetData.buffer) {
+      console.warn(`Invalid asset data for: ${assetId}`);
+      continue;
+    }
+
+    arrayBuffers.push({
+      id: assetId,
+      start: currentOffset,
+      end: currentOffset + assetData.buffer.length - 1,
+      responseArrayBuffer: assetData.buffer,
+      mime: assetData.mime || "application/octet-stream",
+    });
+    currentOffset += assetData.buffer.length;
+  }
+
+  const instructionsBuffer = new TextEncoder().encode(
+    JSON.stringify(projectData),
+  ).buffer;
+
+  arrayBuffers.push({
+    id: "instructions",
+    start: currentOffset,
+    end: currentOffset + instructionsBuffer.byteLength - 1,
+    responseArrayBuffer: instructionsBuffer,
+    mime: "application/json",
+  });
+  currentOffset += instructionsBuffer.byteLength;
+
+  const indexFile = arrayBuffers.reduce((acc, item) => {
+    acc[item.id] = {
+      start: item.start,
+      end: item.end,
+      mime: item.mime,
+    };
+    return acc;
+  }, {});
+
+  const indexFileBytes = new TextEncoder().encode(JSON.stringify(indexFile));
+  const headerBuffer = new Uint8Array(16);
+  headerBuffer[0] = 1;
+
+  const lengthView = new DataView(headerBuffer.buffer);
+  lengthView.setUint32(1, indexFileBytes.length, false);
+
+  const headerSize = headerBuffer.length;
+  const totalSize = headerSize + indexFileBytes.length + currentOffset;
+  const finalBundle = new Uint8Array(totalSize);
+  finalBundle.set(headerBuffer, 0);
+  finalBundle.set(indexFileBytes, headerSize);
+
+  const dataBlockStart = headerSize + indexFileBytes.length;
+  for (const arrayBuffer of arrayBuffers) {
+    finalBundle.set(
+      new Uint8Array(arrayBuffer.responseArrayBuffer),
+      arrayBuffer.start + dataBlockStart,
+    );
+  }
+
+  return finalBundle;
+};
 
 const getBundleStaticFiles = async () => {
   let indexHtml;

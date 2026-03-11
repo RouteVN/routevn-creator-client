@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { debugLog, previewDebugText } from "../../services/shared/debugLog.js";
+import { debugLog, previewDebugText } from "../../../deps/services/shared/debugLog.js";
 
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;

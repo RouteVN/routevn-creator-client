@@ -1,5 +1,5 @@
 import { formatFileSize } from "../../internal/files.js";
-import { createMediaPageStore } from "../../deps/features/resourcePages/media/createMediaPageStore.js";
+import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 
 const buildDetailFields = (item) => {
   if (!item) {

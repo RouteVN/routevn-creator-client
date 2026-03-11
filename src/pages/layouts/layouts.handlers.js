@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
-import { recursivelyCheckResource } from "../../internal/projectResources.js";
-import { createCatalogPageHandlers } from "../../deps/features/resourcePages/catalog/createCatalogPageHandlers.js";
-import { createLayoutsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 
 const {
   handleBeforeMount,

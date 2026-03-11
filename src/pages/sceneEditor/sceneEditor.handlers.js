@@ -1,7 +1,7 @@
 import {
   createCollabRemoteRefreshStream,
   matchesRemoteTargets,
-} from "../../deps/features/collabRefresh.js";
+} from "../../internal/ui/collabRefresh.js";
 import {
   applyPendingDialogueQueueToStore,
   findCharacterIdByShortcut,
@@ -12,7 +12,7 @@ import {
   handleSplitLineOperation,
   handleSwapLineOperation,
   syncSceneEditorProjectState as syncStoreProjectState,
-} from "../../deps/features/sceneEditing/lineOperations.js";
+} from "../../internal/ui/sceneEditor/lineOperations.js";
 import {
   cloneWithDiagnostics,
   initializeSceneEditorPage,
@@ -21,13 +21,13 @@ import {
   resetSceneEditorRuntime,
   restoreSceneEditorFromPreview,
   updateSceneEditorSectionChanges,
-} from "../../deps/features/sceneEditing/runtime.js";
+} from "../../internal/ui/sceneEditor/runtime.js";
 import {
   createSceneEditorSectionWithName,
   isSectionsOverviewOpen,
   reconcileSceneEditorSelection,
   selectSceneEditorSection,
-} from "../../deps/features/sceneEditing/sectionOperations.js";
+} from "../../internal/ui/sceneEditor/sectionOperations.js";
 import {
   debugLog,
   previewDebugText,
