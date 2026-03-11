@@ -32,6 +32,10 @@ const toPreviewVariableValue = (variable = {}) => {
     return Boolean(value);
   }
 
+  if (variable.type === "object") {
+    return value && typeof value === "object" ? value : {};
+  }
+
   return value ?? "";
 };
 
@@ -93,9 +97,16 @@ const isSelectableMatch = (elementId, selectedItemId) => {
     return false;
   }
 
-  return (
-    elementId === selectedItemId || elementId.startsWith(`${selectedItemId}-`)
-  );
+  if (elementId === selectedItemId) {
+    return true;
+  }
+
+  if (!elementId.startsWith(`${selectedItemId}-`)) {
+    return false;
+  }
+
+  const repeatedInstanceSuffix = elementId.slice(selectedItemId.length + 1);
+  return /^\d+$/.test(repeatedInstanceSuffix);
 };
 
 const collectMatchingPaths = (
